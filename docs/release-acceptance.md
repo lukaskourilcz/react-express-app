@@ -1,5 +1,24 @@
 # Release acceptance matrix
 
+## 15 October — PR #401 exact production
+
+PR #401 is merged at a4e934948e8522a036726868da89669bca6c1316. Frozen head
+148c6100646b7359e0a1b43378cfd6606053f8c7 passes required run38681978040:
+verify30m32s, SQL41s. READY preview dpl_9HgmaeZyZW4wM5ws9RGQt1yR3ujg passes
+eleven general guest checks. READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA
+matches the merge SHA, owns devshark.app, has no alias error and passes eleven
+general guest checks at zero XP/null progress. No Challenge score, name, owner
+progression or authenticated account fixture was created. Issue #397 closes with
+the trusted diagnostic fix. Its actual authenticated production acceptance stays
+separate from these public checks and the isolated local report fixtures.
+
+The first verify failed the initial budget by182gzip bytes. The route-local
+English dictionary correction retained the243000limit and passed the complete
+new required run. Production now carries100coding and all263current individual
+native model reviews. B015–b021 add35newer local coding reviews (135/725current,
+590remaining). These are same-session model records, not independent/human,
+full-catalogue, physical-device or authenticated native/Premium acceptance.
+
 ## 15 October — PR #401 initial-load correction
 
 The first required verify run38679526564 failed the production-shaped initial

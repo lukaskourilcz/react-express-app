@@ -1,5 +1,166 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b021 and PR #401 production
+
+Read all five cumulative Map-and-Set stages, their inherited requirements,
+checks and revealed boards. Align every isomorphism implementation and its
+instructions on literal Unicode code points; the old senior mixed iteration
+units between the two strings. Specify exact lower-case/whitespace tokenization,
+opaque Map/Set identity, fresh ownership and unique typed/falsy document ids.
+Search keeps document order, deduplicates query words and states the posting-set
+cost axes and a combined upper bound rather than a linear guarantee.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+complexity analyses retain25XP; five starters and ten wrong variants fail.
+Cases include punctuation, nonbreaking spaces, composed/decomposed tokens,
+1000-code-point strings, 1000 events/stop words and500documents. Copy sweep,
+focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Scores/final readings remain manual same-session model evidence.
+
+PR #401 passed verify30m32s/SQL41s at exact148c6100 and merged at a4e93494.
+READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches that SHA, owns
+devshark.app without alias errors and passes eleven general guest checks with
+zero XP/null progress. #397 is closed. Shipped coverage is100coding/263native;
+current coding coverage is135/725 (590remaining). B015–b021 are not yet shipped.
+No authenticated native/Premium or independent/human acceptance is inferred.
+
+## 15 October continuation — five coding items b020
+
+Read all five cumulative Set stages and their inherited material: unique,
+intersection, difference, first repeat and duplicate reporting. Specify bounded
+immutable opaque values and SameValueZero, original object identity, fresh array
+results and combined sizes for two-array work. Array results accept either zero
+sign as one Set value, retaining all correct existing reveals; firstRepeat
+returns the actual second encounter, including its zero sign. Duplicate order
+is the order counts reach two, not first-appearance order.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+Checks cover NaN/undefined/BigInt/object identity, frozen structures, two
+1000-item arrays, a repeat at item 1000 and reversed second-appearance order.
+Copy sweep, focused cumulative coding, API/script types, launch, build,
+263 native bindings, both zero-vulnerability production dependency audits and
+diff checks pass. The scores/final readings are manual same-session model work;
+finite execution is not independent/human review or an asymptotic proof.
+
+Current coding coverage is 130/725; 595 remain. Native coverage is 263/263.
+B015–b020 remain local while frozen PR #401 finishes required verification.
+
+## 15 October continuation — five coding items b019
+
+Read all five cumulative Map stages: counts, most common, two sum, top K and
+anagrams, including every inherited requirement/check and all revealed boards.
+Define SameValueZero and opaque identity, canonical Map zero keys, immutable
+bounded inputs, exact integer pair arithmetic and first-seen/earliest-second
+index ties. Each current function has an applicable authored cost model.
+The anagram junior now iterates Unicode code points rather than splitting
+surrogate pairs. Case, combining marks and normalization policies are explicit.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+New checks carry forward through later stages and cover opaque getters,
+NaN/undefined/BigInt/object keys, 1000 entries, competing valid pairs, fresh
+outputs and a Unicode surrogate-recombination collision. Anagrams also exercise
+500 words of 100 code points. No measured asymptotic or arbitrary source-style
+proof is claimed. Copy sweep, focused cumulative coding, API/script types,
+launch, build, 263 native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Reviews/final readings remain same-session model
+work, not independent/human verification.
+
+Current coding coverage is 125/725; 600 remain. Native coverage stays 263/263.
+B015–b019 remain local while frozen PR #401 completes required verification.
+
+## 15 October continuation — five coding items b018
+
+Individually read JSON parsing, readable JSON, public-field serialization,
+numeric sorting and chunking. Remove overbroad null-replacer/privacy guarantees,
+state an ordinary flat-data serialization domain and align the junior public
+field example with the taught property-list replacer. Preserve exact fallback
+identity, valid falsy parse results, Unicode/escaping, normal key order, one LF,
+stable signed-zero sorting and fresh shallow chunk ownership. Invalid chunk
+sizes are explicitly outside the positive-step exercise.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+Cases include 9999-unit JSON input, a 5003-unit formatted array, a private getter
+that must not be touched, a thousand-unit name and thousand-item sort/chunk
+boundaries. Input/output-sensitive cost models are explicit; engine timing and
+arbitrary source-style conformance are not inferred from these checks.
+Copy sweep, focused coding, API/script types, launch, build, 263 native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Manual same-session review/final reading is not independent/human approval.
+
+Current coding coverage is 120/725; 605 remain. Native coverage is 263/263.
+B015–b018 remain local while frozen PR #401 completes required verification.
+
+## 15 October continuation — five coding items b017
+
+Individually read indexed callback collection, predicate counting, multiplier
+factories, predicate negation and call recording. The countWhere senior reveal
+now uses the requested for-of loop. Specify exact invocation counts/arguments,
+opaque result/reference preservation, fresh outputs, ordinary Number products,
+and same-error propagation. Recorded calls are appended after normal return;
+throwing callbacks do not fabricate completed records. Cost models distinguish
+argument handling, callback work and accumulated log space.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+revealed/alternative analyses retain 25 XP; five starters and ten wrong variants
+fail. Boundary checks include 1000 callbacks/recorded calls, 100 arguments,
+frozen opaque inputs, signed zero and complete ordinary truthiness. Copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+production dependency audits (zero vulnerabilities) and diff checks pass.
+Scoring/final readings remain manual same-session model evidence; source-style
+claims and arbitrary-program complexity are not proved by finite execution.
+
+Current coding coverage is 115/725; 610 remain. Native coverage is 263/263.
+B015–b017 are local while frozen PR #401 completes its required verification.
+
+## 15 October continuation — five coding items b016
+
+Individually read recursive file counting/array depth and the change watcher,
+running averager and once wrapper. Define tree/array bounds and immutable input,
+strict-comparison identity/NaN/signed-zero semantics, unrounded Number arithmetic,
+and first-call argument/result identity. The once exercise explicitly scopes
+out throwing/reentrant callbacks and dynamic-this dependence; it does not claim
+to implement a general error/retry policy. Per-update costs are distinguished
+from total history cost, and opaque values are not traversed or cloned.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. All twenty valid
+revealed/alternative complexity analyses retain 25 XP. Ten previously accepted
+wrong variants now fail, along with five incomplete starters. A positional-sounding
+phrase was rewritten as cached-value wording; its seven final cases, focused
+coding checks and build were rerun. Copy now reports zero findings. Full focused
+coding, API/script types, launch, build, all 263 native bindings, both production
+dependency audits (zero vulnerabilities) and diff checks pass. Reviews and final
+readings are manual same-session model evidence, not independent/human approval.
+
+Current coding coverage is 110/725; 615 remain. Native coverage stays 263/263.
+PR #401 remains frozen at 148c6100; its updated READY preview passes all eleven
+general guest checks, with no XP/progress or Challenge/identity fixture written.
+Required SQL passes in 41s; verify is still pending. B015–b016 remain local.
+
+## 15 October continuation — five coding items b015
+
+Individually read factorial, recursive powers, default-bound clamping, recursive
+binary encoding and linked-list conversion. The senior binary example discarded
+high Number bits through32bit shifts; the senior clamp changed an in-range -0.
+Both are corrected. The clamp hint now uses the actual max||100zero-default
+counterexample. Specify exact numeric/stack domains, immutable opaque values,
+fresh outputs and the suffix/string-copy cost models without claiming engine
+performance. Every supplied field and revealed answer received a final reading.
+
+All35final-hash sandbox verdicts agree versus27/35before;20valid revealed and
+alternative forms retain25XP without false penalties. Five incomplete starters
+and ten wrong variants fail. Copy sweep, focused coding contracts, API/script
+types, launch, build, both zero-vulnerability production dependency audits and
+diff checks pass. This is bounded same-session model evidence, not an independent
+reader or arbitrary-program recursion/complexity proof.
+
+Current coding coverage is105/725;620remain. Native coverage stays263/263.
+PR #401is frozen at148c6100 with SQL passing41s and verify pending; this new
+five-item coding batch remains local while the required checks run.
+
 ## 15 October continuation — five coding items b014
 
 Individually read flattening, grouping, parameter defaults, Math.max spreading

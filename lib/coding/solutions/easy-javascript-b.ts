@@ -538,6 +538,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const countFiles = entry =>
   Array.isArray(entry.children) ? entry.children.reduce((total, child) => total + countFiles(child), 0) : 1;`,
     hiddenTests: [
+      {"call": "countFiles(Object.freeze({name:'same',children:Object.freeze([Object.freeze({name:'same'}),Object.freeze({name:'same'}),Object.freeze({name:'empty',children:Object.freeze([])})])}))", "expected": 2, "label": "duplicate names are separate file entries in a frozen tree"},
+      {"call": "(() => {let e=Object.freeze({name:'leaf'});for(let i=0;i<99;i++)e=Object.freeze({name:'dir',children:Object.freeze([e])});return countFiles(e);})()", "expected": 1, "label": "one hundred nested entries preserve the leaf"},
+      {"call": "countFiles(Object.freeze({name:'root',children:Object.freeze(Array.from({length:999},()=>Object.freeze({name:'same'})))}))", "expected": 999, "label": "maximum thousand-entry tree counts every file"},
       { call: 'countFiles({ name: "a", children: [{ name: "b", children: [{ name: "c", children: [{ name: "deep.txt" }] }] }] })', expected: 1 },
       { call: 'countFiles({ name: "root", children: [{ name: "1" }, { name: "d", children: [{ name: "2" }, { name: "3" }, { name: "e", children: [{ name: "4" }] }] }] })', expected: 4 },
       { call: 'countFiles({ name: "mixed", children: [{ name: "empty", children: [] }, { name: "readme.md" }] })', expected: 1 },
@@ -567,6 +570,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const depth = list => 1 + Math.max(0, ...list.filter(Array.isArray).map(item => depth(item)));`,
     hiddenTests: [
+      {"call": "depth(Object.freeze([null,Object.freeze({inside:[[[1]]]}),'[[x]]',Object.freeze([])]))", "expected": 2, "label": "only arrays add depth and opaque objects stay opaque"},
+      {"call": "(() => {let a=Object.freeze([]);for(let i=1;i<100;i++)a=Object.freeze([a]);return depth(a);})()", "expected": 100, "label": "one hundred frozen nesting levels"},
+      {"call": "depth(Object.freeze(Array(999).fill(null)))", "expected": 1, "label": "maximum array-plus-slot count without inner arrays"},
       { call: 'depth([[[[]]]])', expected: 4 },
       { call: 'depth(["a", ["b"]])', expected: 2 },
       { call: 'depth([1, [2], [3, [4, [5]]]])', expected: 4 },
@@ -612,6 +618,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const c=makeChangeWatcher();return [c(NaN),c(NaN),c(0),c(-0),c(0)];})()", "expected": [true, true, true, false, false], "label": "strict equality differs from Object.is for NaN and signed zero"},
+      {"call": "(() => {const c=makeChangeWatcher(),a={x:1},b={x:1};const first=c(a);a.x=2;return [first,c(a),c(b),c(b)];})()", "expected": [true, false, true, false], "label": "object identity is independent of matching or changed contents"},
+      {"call": "(() => {const c=makeChangeWatcher(),f=()=>0,s=Symbol('x');return [c(f),c(f),c(s),c(s),c(Symbol('x')),c(1n),c(1),c(undefined)];})()", "expected": [true, false, true, false, true, true, true, true], "label": "opaque functions symbols and BigInts use strict comparison"},
+      {"call": "(() => {const c=makeChangeWatcher(),a=Object.freeze(Object.defineProperty({},'unused',{get(){throw Error('inspect');}}));let ok=c(a);for(let i=1;i<1000;i++)ok=ok&&!c(a);return ok;})()", "expected": true, "label": "a thousand repeated opaque inputs are not inspected"},
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(null), changed(undefined), changed(null)]; })()', expected: [true, true, true] },
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(3), changed(3), changed(3), changed(4)]; })()', expected: [true, false, false, true] },
       { call: '(() => { const a = makeChangeWatcher(); const b = makeChangeWatcher(); return [a(1), b(2), a(1), b(3)]; })()', expected: [true, true, false, true] },
@@ -631,6 +641,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const multiplyBy = factor => n => n * factor;`,
     hiddenTests: [
+      {"call": "[Object.is(multiplyBy(-1)(0),-0),Object.is(multiplyBy(0)(-1),-0),Object.is(multiplyBy(-0)(-1),+0)]", "expected": [true, true, true], "label": "signed-zero products are not replaced by positive zero"},
+      {"call": "multiplyBy(0.1)(0.2)", "expected": 0.020000000000000004, "label": "ordinary unrounded floating-point product"},
+      {"call": "(() => {const a=multiplyBy(2),b=multiplyBy(2),c=multiplyBy(-0.5);return a!==b&&a(3)===6&&c(3)===-1.5&&a(4)===8&&b(-2)===-4&&multiplyBy(1000000)(1000000)===1000000000000;})()", "expected": true, "label": "fresh independent stable functions and maximal product"},
       { call: 'multiplyBy(-1)(4)', expected: -4 },
       { call: '[10, 20].map(multiplyBy(0.5))', expected: [5, 10] },
       { call: 'multiplyBy(2)(multiplyBy(3)(1))', expected: 6 },
@@ -660,6 +673,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   try { return JSON.parse(text); } catch { return fallback; }
 };`,
     hiddenTests: [
+      {"call": "(() => {const fallback=Object.freeze({id:1});return parseOr('{bad',fallback)===fallback&&parseOr('false',fallback)===false&&parseOr('\"\"',fallback)===''&&Object.is(parseOr('-0',fallback),-0);})()", "expected": true, "label": "exact fallback identity and valid falsy values"},
+      {"call": "(() => {const out=parseOr('{\"__proto__\":{\"x\":1},\"a\":1,\"a\":2}',null);return Object.hasOwn(out,'__proto__')&&out.a===2&&out.__proto__.x===1&&Object.getPrototypeOf(out)!==out.__proto__;})()", "expected": true, "label": "duplicate-key and prototype-like-name parsing semantics"},
+      {"call": "(() => {const text='['+'0,'.repeat(4998)+'0]';const out=parseOr(text,null);return out.length===4999&&out.every(x=>x===0);})()", "expected": true, "label": "near-maximum input text"},
+      {"call": "[parseOr('true false',7),parseOr('[1,]',7),parseOr('/*x*/null',7),parseOr('  null  ',7)]", "expected": [7, 7, 7, null], "label": "syntax errors and valid surrounding whitespace"},
       { call: 'parseOr("null", "x")', expected: null },
       { call: 'parseOr(\'"text"\', "")', expected: 'text' },
       { call: 'parseOr(\'{"a": }\', 7)', expected: 7 },
@@ -668,7 +685,7 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   },
   'js-easy3-pretty-json': {
     solution: `const toFileText = value => {
-  // null keeps every property; 2 indents each level by two spaces.
+  // null means no replacer; 2 indents each level by two spaces.
   return JSON.stringify(value, null, 2) + "\\n";
 };`,
     junior: `const toFileText = value => {
@@ -678,6 +695,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const toFileText = value => \`\${JSON.stringify(value, null, 2)}\\n\`;`,
     hiddenTests: [
+      {"call": "toFileText({z:'😀',a:'line\\nquote\"',empty:[]})", "expected": "{\n  \"z\": \"😀\",\n  \"a\": \"line\\nquote\\\"\",\n  \"empty\": []\n}\n", "label": "original key order, Unicode and escaping"},
+      {"call": "[toFileText(null),toFileText(false),toFileText(0),toFileText('')]", "expected": ["null\n", "false\n", "0\n", "\"\"\n"], "label": "top-level JSON scalar values"},
+      {"call": "toFileText(Object.freeze({nested:Object.freeze([Object.freeze({ok:true})])}))", "expected": "{\n  \"nested\": [\n    {\n      \"ok\": true\n    }\n  ]\n}\n", "label": "frozen nested ordinary JSON data"},
+      {"call": "(() => {const text=toFileText(Object.freeze(Array(1000).fill(1)));return text.length===5003&&text.startsWith('[\\n  1,')&&text.endsWith('  1\\n]\\n');})()", "expected": true, "label": "large indented array has exactly one final LF"},
       { call: 'toFileText({ a: { b: true } })', expected: '{\n  "a": {\n    "b": true\n  }\n}\n' },
       { call: 'toFileText("hi")', expected: '"hi"\n' },
       { call: 'toFileText(3)', expected: '3\n' },
@@ -808,6 +829,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const sortNumbers = numbers => numbers.toSorted((a, b) => a - b);`,
     hiddenTests: [
+      {"call": "(() => {const input=Object.freeze([-0,+0,-0,2,-2]);const out=sortNumbers(input);return out!==input&&out[0]===-2&&Object.is(out[1],-0)&&Object.is(out[2],+0)&&Object.is(out[3],-0)&&out[4]===2&&Object.is(input[0],-0);})()", "expected": true, "label": "stable signed zeros and frozen original order"},
+      {"call": "(() => {const input=[];const a=sortNumbers(input),b=sortNumbers(input);return a!==input&&a!==b&&a.length===0;})()", "expected": true, "label": "each empty result is fresh"},
+      {"call": "(() => {const a=sortNumbers(Object.freeze(Array.from({length:1000},(_,i)=>999-i)));return a.length===1000&&a.every((x,i)=>x===i);})()", "expected": true, "label": "thousand-number reverse ordering"},
+      {"call": "sortNumbers(Object.freeze([1000000,-1000000,0.125,0.125,-0.5]))", "expected": [-1000000, -0.5, 0.125, 0.125, 1000000], "label": "finite endpoints, duplicate fractions and multiplicity"},
       { call: 'sortNumbers([25, 100, 3])', expected: [3, 25, 100] },
       { call: 'sortNumbers([-10, -9, -100])', expected: [-100, -10, -9] },
       { call: 'sortNumbers([2, 2, 1])', expected: [1, 2, 2] },

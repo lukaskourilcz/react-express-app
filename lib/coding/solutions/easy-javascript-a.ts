@@ -328,6 +328,10 @@ const schedule = (task, ms) => {
     senior: `// Array.from calls the mapper once per slot, with the index second.
 const times = (n, callback) => Array.from({ length: n }, (_, index) => callback(index));`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),seen=[];const out=times(3,function(i){seen.push([i,arguments.length]);return i===1?undefined:value;});return out.length===3&&out[0]===value&&out[1]===undefined&&out[2]===value&&seen.every((x,i)=>x[0]===i&&x[1]===1);})()", "expected": true, "label": "exact single callback argument, order and opaque results"},
+      {"call": "(() => {const a=times(0,()=>{throw Error('zero');}),b=times(0,()=>0);return a!==b&&a.length===0;})()", "expected": true, "label": "fresh empty results without callback execution"},
+      {"call": "(() => {const error={},seen=[];try{times(5,i=>{seen.push(i);if(i===1)throw error;return i;});}catch(e){return e===error&&seen.join(',')==='0,1';}return false;})()", "expected": true, "label": "same thrown error stops subsequent indices"},
+      {"call": "(() => {const out=times(1000,i=>i);return out.length===1000&&out.every((x,i)=>x===i);})()", "expected": true, "label": "thousand-index boundary"},
       { call: 'times(5, i => i % 2 === 0)', expected: [true, false, true, false, true] },
       { call: 'times(1, i => [i])', expected: [[0]] },
       { call: 'times(3, i => "#" + (i + 1))', expected: ['#1', '#2', '#3'] },
@@ -414,6 +418,10 @@ const negate = test => function (...args) {
   return !test.apply(this, args);
 };`,
     hiddenTests: [
+      {"call": "(() => {let calls=0;const item=Object.freeze({});const a=negate(function(...args){calls++;return args.length===4&&args[0]===item&&args[1]===undefined&&args[2]===3&&args[3]===4;});return a(item,undefined,3,4)===false&&calls===1;})()", "expected": true, "label": "all argument references and exact callback count"},
+      {"call": "[NaN,0n,undefined,null,'',false,{},[],Symbol('x')].map(x=>negate(()=>x)())", "expected": [true, true, true, true, true, true, false, false, false], "label": "return a Boolean for every ordinary truthiness category"},
+      {"call": "(() => {const error={};const a=negate(()=>{throw error;});try{a();}catch(e){return e===error;}return false;})()", "expected": true, "label": "the original callback error propagates"},
+      {"call": "negate((...args)=>args.length===100)(...Array(100).fill(0))", "expected": false, "label": "hundred-argument boundary"},
       { call: '["", "a", null, "b"].filter(negate(Boolean))', expected: ['', null] },
       { call: 'negate(() => undefined)()', expected: true },
       { call: 'negate((a, b, c) => a + b + c === 6)(1, 2, 3)', expected: false },
@@ -465,8 +473,16 @@ const sortBy = (list, pick) =>
   }
   return count;
 };`,
-    senior: `const countWhere = (list, test) => list.reduce((count, item) => (test(item) ? count + 1 : count), 0);`,
+    senior: `const countWhere = (list, test) => {
+  let count = 0;
+  for (const item of list) if (test(item)) count++;
+  return count;
+};`,
     hiddenTests: [
+      {"call": "(() => {const list=Object.freeze([Object.freeze({id:0}),Object.freeze({id:1}),Object.freeze({id:2})]),seen=[];const n=countWhere(list,function(x){seen.push([x,arguments.length]);return {};});return n===3&&seen.length===3&&seen.every((x,i)=>x[0]===list[i]&&x[1]===1);})()", "expected": true, "label": "one original item argument per call in frozen caller order"},
+      {"call": "countWhere(Object.freeze([NaN,0n,undefined,null,'',false,{},[],Symbol('x')]),x=>x)", "expected": 3, "label": "full truthiness includes object array and symbol"},
+      {"call": "(() => {const error={},seen=[];try{countWhere(Object.freeze([0,1,2]),x=>{seen.push(x);if(x===1)throw error;return true;});}catch(e){return e===error&&seen.join(',')==='0,1';}return false;})()", "expected": true, "label": "predicate errors propagate and stop traversal"},
+      {"call": "countWhere(Object.freeze(Array.from({length:1000},(_,i)=>i)),x=>x%2===0)", "expected": 500, "label": "thousand-element count"},
       { call: 'countWhere([1, 2, 3], () => false)', expected: 0 },
       { call: 'countWhere([1, 2, 3, 4, 5, 6], n => n % 3 === 0)', expected: 2 },
       { call: 'countWhere([{ done: true }, { done: false }, { done: true }], task => task.done)', expected: 2 },
@@ -489,6 +505,9 @@ const sortBy = (list, pick) =>
 }`,
     senior: `const factorial = n => (n <= 1 ? 1 : n * factorial(n - 1));`,
     hiddenTests: [
+      {"call": "factorial(18)", "expected": 6402373705728000, "label": "largest supported exact factorial"},
+      {"call": "factorial(12)", "expected": 479001600, "label": "beyond the original ten-factor boundary"},
+      {"call": "factorial(-0)", "expected": 1, "label": "signed zero is the zero base case"},
       { call: 'factorial(10)', expected: 3628800 },
       { call: 'factorial(2)', expected: 2 },
       { call: 'factorial(7)', expected: 5040 },
@@ -514,6 +533,9 @@ const power = (base, exponent) => {
   return exponent % 2 === 0 ? half * half : half * half * base;
 };`,
     hiddenTests: [
+      {"call": "[Object.is(power(-0,3),-0),Object.is(power(-0,2),+0),power(0,0)]", "expected": [true, true, 1], "label": "signed zeros and zero exponent"},
+      {"call": "power(-1.5,5)", "expected": -7.59375, "label": "negative fractional base and odd exponent"},
+      {"call": "power(9.5,10)", "expected": 5987369392.383789, "label": "upper exponent with exact half-step base"},
       { call: 'power(5, 4)', expected: 625 },
       { call: 'power(0, 0)', expected: 1 },
       { call: 'power(1.5, 2)', expected: 2.25 },
@@ -540,6 +562,9 @@ const toArray = (node, values = []) => {
   return toArray(node.next, values);
 };`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),nested=Object.freeze([2]);const tail=Object.freeze({value:undefined,next:null});const mid=Object.freeze({value:nested,next:tail});const head=Object.freeze({value,next:mid});const a=toArray(head),b=toArray(head);return a!==b&&a.length===3&&a[0]===value&&a[1]===nested&&a[2]===undefined&&head.next===mid&&mid.next===tail;})()", "expected": true, "label": "frozen nodes, original opaque identities and fresh results"},
+      {"call": "(() => {const a=toArray(null),b=toArray(null);return a!==b&&a.length===0;})()", "expected": true, "label": "each empty result is fresh"},
+      {"call": "(() => {let node=null;for(let i=199;i>=0;i--)node=Object.freeze({value:i,next:node});const a=toArray(node);return a.length===200&&a.every((x,i)=>x===i);})()", "expected": true, "label": "two hundred frozen nodes preserve traversal order"},
       { call: 'toArray({ value: null, next: { value: false, next: null } })', expected: [null, false] },
       { call: '(() => { let node = null; for (let n = 5; n >= 1; n--) node = { value: n, next: node }; return toArray(node); })()', expected: [1, 2, 3, 4, 5] },
       { call: 'toArray({ value: [1], next: { value: { x: 1 }, next: null } })', expected: [[1], { x: 1 }] },
@@ -869,6 +894,9 @@ const loadOr = (load, fallback) => new Promise(resolve => resolve(load())).catch
   return value => (total += value) / ++count;
 };`,
     hiddenTests: [
+      {"call": "(() => {const a=makeAverager();a(0);a(0);return a(1);})()", "expected": 0.3333333333333333, "label": "do not round repeating fractional averages"},
+      {"call": "(() => {const a=makeAverager();let out;for(let i=0;i<1000;i++)out=a(i);return out;})()", "expected": 499.5, "label": "thousand-update call history"},
+      {"call": "(() => {const a=makeAverager(),b=makeAverager();return [a(-1000000),b(1000000),a(1000000),b(-1000000),a(0.5),b(-0.5)];})()", "expected": [-1000000, 1000000, 0, 0, 0.16666666666666666, -0.16666666666666666], "label": "interleaved independent signed and fractional totals"},
       { call: '(() => { const avg = makeAverager(); avg(-5); return avg(5); })()', expected: 0 },
       { call: '(() => { const avg = makeAverager(); return [avg(1), avg(2), avg(6)]; })()', expected: [1, 1.5, 3] },
       { call: '(() => { const avg = makeAverager(); return [avg(2.5), avg(3.5)]; })()', expected: [2.5, 3] },

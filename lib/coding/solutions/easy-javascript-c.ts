@@ -576,8 +576,11 @@ const clamp = (value, min = 0, max = 100) => {
     return value;
   }
 }`,
-    senior: `const clamp = (value, min = 0, max = 100) => Math.min(Math.max(value, min), max);`,
+    senior: `const clamp = (value, min = 0, max = 100) => value < min ? min : value > max ? max : value;`,
     hiddenTests: [
+      {"call": "[Object.is(clamp(-0),-0),Object.is(clamp(-0,-1,0),-0),Object.is(clamp(-1,-0,10),-0)]", "expected": [true, true, true], "label": "preserve original in-range signed zero and exact lower limit"},
+      {"call": "clamp(1.25,-2.5,3.5)", "expected": 1.25, "label": "fractional in-range value is not rounded"},
+      {"call": "[clamp(-1000000,-1000000,1000000),clamp(1000000,-1000000,1000000),clamp(3,2.5,2.5)]", "expected": [-1000000, 1000000, 2.5], "label": "inclusive maximal and equal limits"},
       { call: 'clamp(5, 0, 0)', expected: 0 },
       { call: 'clamp(-20, undefined, 10)', expected: 0 },
       { call: 'clamp(-1, -10, -5)', expected: -5 },
@@ -603,8 +606,12 @@ const clamp = (value, min = 0, max = 100) => {
   const rest = Math.floor(n / 2);
   return toBinary(rest) + String(lastDigit);
 }`,
-    senior: `const toBinary = n => (n < 2 ? String(n) : toBinary(n >> 1) + (n & 1));`,
+    senior: `const toBinary = n => (n < 2 ? String(n) : toBinary(Math.floor(n / 2)) + (n % 2));`,
     hiddenTests: [
+      {"call": "toBinary(2147483648)", "expected": "10000000000000000000000000000000", "label": "beyond signed 32-bit range"},
+      {"call": "toBinary(4294967296)", "expected": "100000000000000000000000000000000", "label": "beyond unsigned 32-bit range"},
+      {"call": "toBinary(Number.MAX_SAFE_INTEGER)", "expected": "11111111111111111111111111111111111111111111111111111", "label": "largest safe integer"},
+      {"call": "toBinary(-0)", "expected": "0", "label": "signed zero has a single zero digit"},
       { call: 'toBinary(255)', expected: '11111111' },
       { call: 'toBinary(2)', expected: '10' },
       { call: 'toBinary(1024)', expected: '10000000000' },
@@ -637,6 +644,10 @@ const clamp = (value, min = 0, max = 100) => {
   return result;
 };`,
     hiddenTests: [
+      {"call": "(() => {const marker=Object.freeze({old:true}),calls=[marker],value=Object.freeze({id:1});let n=0;const a=recorded((...args)=>{n++;if(calls.length!==1)throw Error('premature append');return value;},calls);const out=a(value,undefined,3,4,5);const record=calls[1];return out===value&&record.result===value&&record.args.length===5&&record.args[0]===value&&record.args[1]===undefined&&calls[0]===marker&&calls.length===2&&n===1&&Object.keys(record).sort().join(',')==='args,result';})()", "expected": true, "label": "append after callback and preserve existing entries and exact opaque values"},
+      {"call": "(() => {const calls=[],error={};const a=recorded(()=>{throw error;},calls);try{a(1);}catch(e){return e===error&&calls.length===0;}return false;})()", "expected": true, "label": "throwing invocations create no completed-call record"},
+      {"call": "(() => {const calls=[];const a=recorded((...args)=>args.length?undefined:false,calls);a();a(undefined);return calls[0]!==calls[1]&&calls[0].args!==calls[1].args&&calls[0].args.length===0&&calls[0].result===false&&calls[1].args.length===1&&Object.hasOwn(calls[1],'result')&&calls[1].result===undefined;})()", "expected": true, "label": "fresh records distinguish empty arguments and undefined results"},
+      {"call": "(() => {const calls=[],a=recorded((...args)=>args.length,calls);for(let i=0;i<1000;i++)a(...Array(100).fill(i));return calls.length===1000&&calls[999].args[99]===999&&calls.every(x=>x.result===100);})()", "expected": true, "label": "thousand completed calls of a hundred arguments"},
       { call: '(() => { const calls = []; const sum = recorded((...n) => n.reduce((a, b) => a + b, 0), calls); sum(1, 2, 3, 4); return calls; })()', expected: [{ args: [1, 2, 3, 4], result: 10 }] },
       { call: '(() => { const calls = []; const times = recorded((a, b) => a * b, calls); return [times(3, 4), times(0, 9), calls.length]; })()', expected: [12, 0, 2] },
       { call: '(() => { const log = []; const inc = recorded(x => x + 1, log); const dbl = recorded(x => x * 2, log); inc(1); dbl(5); return log; })()', expected: [{ args: [1], result: 2 }, { args: [5], result: 10 }] },
@@ -805,18 +816,16 @@ const clamp = (value, min = 0, max = 100) => {
 };`,
     junior: `const toPublicJson = user => {
   const allowed = ["id", "name", "avatar"];
-  const publicUser = {};
-  for (const field of allowed) {
-    if (field in user) {
-      publicUser[field] = user[field];
-    }
-  }
-  return JSON.stringify(publicUser);
+  const text = JSON.stringify(user, allowed);
+  return text;
 };`,
     senior: `const PUBLIC_FIELDS = ["id", "name", "avatar"];
 
 const toPublicJson = user => JSON.stringify(user, PUBLIC_FIELDS);`,
     hiddenTests: [
+      {"call": "(() => {const user={avatar:null,name:'  Ada  ',id:0};Object.defineProperty(user,'secret',{enumerable:true,get(){throw Error('private read');}});return toPublicJson(Object.freeze(user));})()", "expected": "{\"id\":0,\"name\":\"  Ada  \",\"avatar\":null}", "label": "only selected data is read from a frozen record"},
+      {"call": "toPublicJson(Object.freeze({id:undefined,name:false,avatar:''}))", "expected": "{\"name\":false,\"avatar\":\"\"}", "label": "omit undefined without dropping false or empty strings"},
+      {"call": "(() => {const name='x'.repeat(1000);return toPublicJson(Object.freeze({id:1,name,avatar:null}))==='{\"id\":1,\"name\":\"'+name+'\",\"avatar\":null}';})()", "expected": true, "label": "thousand-unit public name is preserved"},
       { call: 'toPublicJson({ avatar: "a.png", name: "Zed", id: 99, role: "admin" })', expected: '{"id":99,"name":"Zed","avatar":"a.png"}' },
       { call: 'JSON.parse(toPublicJson({ id: 3, name: "Mo", avatar: "m.png", token: "t" }))', expected: { id: 3, name: 'Mo', avatar: 'm.png' } },
       { call: 'toPublicJson({ id: 0, name: "", avatar: "" })', expected: '{"id":0,"name":"","avatar":""}' },

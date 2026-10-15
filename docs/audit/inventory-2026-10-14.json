@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used.",
-    "currentModelReviewedIssuedTasks": 100,
-    "issuedStillRequiringReview": 625,
-    "deployedModelReviewedIssuedTasks": 95,
-    "stagedModelReviewedIssuedTasks": 5,
-    "stagedExecutionEvidence": "15 October five-item commits through b014: 5 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
-    "deployedExecutionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used."
+    "executionEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review.",
+    "currentModelReviewedIssuedTasks": 135,
+    "issuedStillRequiringReview": 590,
+    "deployedModelReviewedIssuedTasks": 100,
+    "stagedModelReviewedIssuedTasks": 35,
+    "stagedExecutionEvidence": "15 October through b021: 35 newer coding reviews remain local; the latest five have 35/35 final-hash sandbox verdicts, twenty no-false-penalty analyses and passing release checks. These newer reviews are not part of PR #401.",
+    "deployedExecutionEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review."
   },
   "nativePaths": {
     "paths": 2,
@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 23,
+    "currentStagedModelReviewRecords": 0,
     "recordsStillRequiringReview": 0,
-    "reviewEvidence": "210 native records shipped through PR #399 at cabbaac4f9cf6378dcce5661b4178c5cb03bf549 after exact d3064e1f passed required verify/sql run 38672068466 (verify29m57s; SQL40s). Production dpl_2GeuJuFShFhFrhHKnWEsAxPdRZer is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general public health/Big O/correct-and-wrong coding checks pass with guest zero XP/null progress. Partial source/release evidence does not establish authenticated native/Premium acceptance or activation; n010 revisions add no unique coverage.",
-    "deployedModelReviewRecords": 240,
+    "reviewEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review. All 263 current individual native model reviews are shipped, including the two explicit n042 revisions with preserved history.",
+    "deployedModelReviewRecords": 263,
     "currentModelReviewRecords": 263,
-    "stagedReviewEvidence": "15 October through n042: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "stagedReviewEvidence": "No remaining local native records; authenticated production acceptance remains separate."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "95 reviewed coding and 240 native records are deployed; 5 coding records are staged through b014. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "100 reviewed coding and all 263 current individual native model records are deployed; 35 coding records remain local through b021. Overrides remain the explicitly dated 14 October snapshot.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

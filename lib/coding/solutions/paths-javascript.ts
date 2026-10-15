@@ -119,7 +119,7 @@ const MAP: Boards = {
   const groups = new Map();
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
-    const letters = word.split("");
+    const letters = [...word]; // iterate Unicode code points, like the reference key
     letters.sort();
     const key = letters.join("");
     if (!groups.has(key)) {
@@ -316,17 +316,16 @@ const MAP_AND_SET: Boards = {
   return users;
 }`,
     `function isIsomorphic(a, b) {
-  if (a.length !== b.length) return false;
-  const partner = new Map(); // character of a -> its character in b
-  const taken = new Set(); // characters of b already given out
-  for (let i = 0; i < a.length; i += 1) {
-    if (partner.has(a[i])) {
-      if (partner.get(a[i]) !== b[i]) return false;
+  const left = [...a], right = [...b];
+  if (left.length !== right.length) return false;
+  const partner = new Map(), taken = new Set();
+  for (let i = 0; i < left.length; i++) {
+    if (partner.has(left[i])) {
+      if (partner.get(left[i]) !== right[i]) return false;
     } else {
-      // Two characters of a cannot share one partner.
-      if (taken.has(b[i])) return false;
-      partner.set(a[i], b[i]);
-      taken.add(b[i]);
+      if (taken.has(right[i])) return false;
+      partner.set(left[i], right[i]);
+      taken.add(right[i]);
     }
   }
   return true;
@@ -388,22 +387,17 @@ const MAP_AND_SET: Boards = {
   return users;
 }`,
     `function isIsomorphic(a, b) {
-  if (a.length !== b.length) {
-    return false;
-  }
+  const left = Array.from(a);
+  const right = Array.from(b);
+  if (left.length !== right.length) return false;
   const partner = new Map();
   const taken = new Set();
-  for (let i = 0; i < a.length; i++) {
-    const from = a[i];
-    const to = b[i];
+  for (let i = 0; i < left.length; i++) {
+    const from = left[i], to = right[i];
     if (partner.has(from)) {
-      if (partner.get(from) !== to) {
-        return false;
-      }
+      if (partner.get(from) !== to) return false;
     } else {
-      if (taken.has(to)) {
-        return false;
-      }
+      if (taken.has(to)) return false;
       partner.set(from, to);
       taken.add(to);
     }
@@ -468,14 +462,14 @@ const MAP_AND_SET: Boards = {
   return users;
 };`,
     `const isIsomorphic = (a, b) => {
-  if (a.length !== b.length) return false;
-  const partner = new Map();
-  const taken = new Set();
-  return [...a].every((char, i) => {
-    if (partner.has(char)) return partner.get(char) === b[i];
-    if (taken.has(b[i])) return false;
-    partner.set(char, b[i]);
-    taken.add(b[i]);
+  const left = [...a], right = [...b];
+  if (left.length !== right.length) return false;
+  const partner = new Map(), taken = new Set();
+  return left.every((point, i) => {
+    if (partner.has(point)) return partner.get(point) === right[i];
+    if (taken.has(right[i])) return false;
+    partner.set(point, right[i]);
+    taken.add(right[i]);
     return true;
   });
 };`,
@@ -848,26 +842,450 @@ const LOOKUPS: Boards = {
 
 const HIDDEN: Record<string, Hidden> = {
   'js-path-map': [
-    [['[...countAll([0, 0, false])]', [[0, 2], [false, 1]]], ['countAll([true, true]).get(true)', 2]],
-    [['mostCommon([3, 1, 1, 3, 2])', 3], ['mostCommon([0, 0, 1])', 0]],
-    [['twoSum([0, 4, 0], 0)', [0, 2]], ['twoSum([1, 5, 9], 14)', [1, 2]], ['twoSum([2, 2, 2], 4)', [0, 1]]],
-    [['topK([5, 4, 4, 5, 3], 3)', [5, 4, 3]], ['topK(["b", "a", "a"], 2)', ['a', 'b']]],
-    [['groupAnagrams(["listen", "silent", "enlist", "google"])', [['listen', 'silent', 'enlist'], ['google']]], ['groupAnagrams(["", ""])', [['', '']]]],
-  ],
+    [
+        [
+            "[...countAll([0, 0, false])]",
+            [
+                [
+                    0,
+                    2
+                ],
+                [
+                    false,
+                    1
+                ]
+            ]
+        ],
+        [
+            "countAll([true, true]).get(true)",
+            2
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const input=Object.freeze([a,b,a,NaN,NaN,-0,+0,undefined,null,1n,1,'1']);const m=countAll(input),keys=[...m.keys()];return m.size===9&&m.get(a)===2&&m.get(b)===1&&m.get(NaN)===2&&m.get(0)===2&&m.get(undefined)===1&&m.get(1n)===1&&m.get(1)===1&&m.get('1')===1&&keys[0]===a&&keys[1]===b&&Object.is(keys[3],+0);})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll([]),b=countAll([]);a.set('x',1);return a!==b&&b.size===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll(Object.freeze(Array.from({length:1000},(_,i)=>i%20)));return a.size===20&&[...a.values()].every(n=>n===50);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "mostCommon([3, 1, 1, 3, 2])",
+            3
+        ],
+        [
+            "mostCommon([0, 0, 1])",
+            0
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});return mostCommon(Object.freeze([a,b,b,a]))===a&&Number.isNaN(mostCommon(Object.freeze([NaN,1,NaN])))&&mostCommon([undefined,undefined,1])===undefined&&Object.is(mostCommon([-0,+0]),+0);})()",
+            true
+        ],
+        [
+            "mostCommon(Object.freeze(Array.from({length:1000},(_,i)=>i%2)))",
+            0
+        ]
+    ],
+    [
+        [
+            "twoSum([0, 4, 0], 0)",
+            [
+                0,
+                2
+            ]
+        ],
+        [
+            "twoSum([1, 5, 9], 14)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "twoSum([2, 2, 2], 4)",
+            [
+                0,
+                1
+            ]
+        ],
+        [
+            "twoSum(Object.freeze([1,2,3,4]),5)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "[twoSum(Object.freeze([-1000000,1000000]),0),twoSum(Object.freeze([-0,+0]),0)]",
+            [
+                [
+                    0,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ]
+        ],
+        [
+            "twoSum(Object.freeze(Array.from({length:1000},(_,i)=>i*2)),-1)",
+            []
+        ]
+    ],
+    [
+        [
+            "topK([5, 4, 4, 5, 3], 3)",
+            [
+                5,
+                4,
+                3
+            ]
+        ],
+        [
+            "topK([\"b\", \"a\", \"a\"], 2)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1}),input=Object.freeze([a,NaN,b,NaN,b,a]);const out=topK(input,3);return out.length===3&&out[0]===a&&Number.isNaN(out[1])&&out[2]===b;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze([1,2]);const a=topK(input,0),b=topK(input,0),c=topK(input,1000);return a!==b&&a.length===0&&c.length===2&&c[0]===1&&c[1]===2;})()",
+            true
+        ],
+        [
+            "(() => {const out=topK(Object.freeze(Array.from({length:1000},(_,i)=>i%20)),1000);return out.length===20&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "groupAnagrams([\"listen\", \"silent\", \"enlist\", \"google\"])",
+            [
+                [
+                    "listen",
+                    "silent",
+                    "enlist"
+                ],
+                [
+                    "google"
+                ]
+            ]
+        ],
+        [
+            "groupAnagrams([\"\", \"\"])",
+            [
+                [
+                    "",
+                    ""
+                ]
+            ]
+        ],
+        [
+            "(() => {const a=String.fromCodePoint(0x1f600,0x1f9e1),b=String.fromCodePoint(0x1f5e1,0x1fa00),reverse=[...a].reverse().join('');const out=groupAnagrams(Object.freeze([a,b,reverse]));return out.length===2&&out[0].length===2&&out[0][0]===a&&out[0][1]===reverse&&out[1][0]===b;})()",
+            true
+        ],
+        [
+            "groupAnagrams(Object.freeze(['a','A','a','é','e\\u0301','\\u0301e']))",
+            [
+                [
+                    "a",
+                    "a"
+                ],
+                [
+                    "A"
+                ],
+                [
+                    "é"
+                ],
+                [
+                    "é",
+                    "́e"
+                ]
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['ab','ba']);const a=groupAnagrams(input),b=groupAnagrams(input);return a!==b&&a[0]!==b[0]&&a[0].join(',')==='ab,ba';})()",
+            true
+        ],
+        [
+            "(() => {const word='x'.repeat(100);const out=groupAnagrams(Object.freeze(Array(500).fill(word)));return out.length===1&&out[0].length===500&&out[0].every(x=>x===word);})()",
+            true
+        ]
+    ]
+],
   'js-path-set': [
-    [['unique([true, false, true])', [true, false]], ['unique([NaN, NaN]).length', 1]],
-    [['common(["a", "b"], ["b", "a"])', ['a', 'b']], ['common([1, 2, 2, 3], [2, 2])', [2]]],
-    [['difference([0, "0", 0], ["0"])', [0]], ['difference(["x", "y", "x"], ["y"])', ['x']]],
-    [['firstRepeat(["b", "a", "a", "b"])', 'a'], ['firstRepeat([false, true, false])', false]],
-    [['duplicates(["a", "b", "b", "a", "c"])', ['b', 'a']], ['duplicates([0, false, 0, false])', [0, false]]],
-  ],
+    [
+        [
+            "unique([true, false, true])",
+            [
+                true,
+                false
+            ]
+        ],
+        [
+            "unique([NaN, NaN]).length",
+            1
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const out=unique(Object.freeze([a,b,a,NaN,NaN,undefined,undefined,1n,1,'1',-0,+0]));return out.length===8&&out[0]===a&&out[1]===b&&Number.isNaN(out[2])&&out[3]===undefined&&out[4]===1n&&out[5]===1&&out[6]==='1'&&out[7]===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=unique([]),b=unique([]),input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=unique(input);return a!==b&&out!==input&&out.length===1000&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "common([\"a\", \"b\"], [\"b\", \"a\"])",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "common([1, 2, 2, 3], [2, 2])",
+            [
+                2
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=common(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===5&&out[0]===y&&Number.isNaN(out[1])&&out[2]===undefined&&out[3]===0&&out[4]===1;})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=common(a,b),y=common([],[]),z=common([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i+500);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "difference([0, \"0\", 0], [\"0\"])",
+            [
+                0
+            ]
+        ],
+        [
+            "difference([\"x\", \"y\", \"x\"], [\"y\"])",
+            [
+                "x"
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=difference(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===2&&out[0]===x&&out[1]==='1';})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=difference(a,b),y=difference([],[]),z=difference([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "firstRepeat([\"b\", \"a\", \"a\", \"b\"])",
+            "a"
+        ],
+        [
+            "firstRepeat([false, true, false])",
+            false
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});return firstRepeat(Object.freeze([x,y]))===null&&firstRepeat(Object.freeze([x,y,y,x]))===y&&Number.isNaN(firstRepeat([NaN,1,NaN]))&&firstRepeat([undefined,undefined])===undefined&&Object.is(firstRepeat([+0,-0]),-0);})()",
+            true
+        ],
+        [
+            "firstRepeat(Object.freeze([...Array.from({length:999},(_,i)=>i),500]))",
+            500
+        ]
+    ],
+    [
+        [
+            "duplicates([\"a\", \"b\", \"b\", \"a\", \"c\"])",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "duplicates([0, false, 0, false])",
+            [
+                0,
+                false
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=duplicates(Object.freeze([x,y,NaN,x,undefined,y,NaN,undefined,undefined]));return out.length===4&&out[0]===x&&out[1]===y&&Number.isNaN(out[2])&&out[3]===undefined;})()",
+            true
+        ],
+        [
+            "(() => {const a=duplicates([]),b=duplicates([]),input=Object.freeze([...Array.from({length:500},(_,i)=>i),...Array.from({length:500},(_,i)=>499-i)]);const out=duplicates(input);return a!==b&&out.length===500&&out.every((v,i)=>v===499-i);})()",
+            true
+        ]
+    ]
+],
   'js-path-mapset': [
-    [['[...countWords("a\\tb\\na", [])]', [['a', 2], ['b', 1]]], ['countWords("Stop stop", ["stop"]).size', 0]],
-    [['[...tagsByUser([{user: "b", tag: "1"}, {user: "a", tag: "2"}]).keys()]', ['b', 'a']], ['tagsByUser([{user: "a", tag: "x"}]).has("b")', false]],
-    [['isIsomorphic("badc", "baba")', false], ['isIsomorphic("abab", "cdcd")', true]],
-    [['buildIndex([{id: 1, text: "A b"}, {id: 2, text: "a"}]).get("a").size', 2], ['buildIndex([{id: 3, text: "x"}]).has("y")', false]],
-    [['search([{id: 1, text: "a b"}, {id: 2, text: "b a"}], "b a b")', [1, 2]], ['search([{id: "x", text: "a"}], "A")', ['x']], ['search([{id: 1, text: "redfish"}], "red")', []], ['search([{id: 1, text: "catalog"}, {id: 2, text: "a cat nap"}], "cat")', [2]]],
-  ],
+    [
+        [
+            "[...countWords(\"a\\tb\\na\", [])]",
+            [
+                [
+                    "a",
+                    2
+                ],
+                [
+                    "b",
+                    1
+                ]
+            ]
+        ],
+        [
+            "countWords(\"Stop stop\", [\"stop\"]).size",
+            0
+        ],
+        [
+            "[...countWords('Cat, cat CAT.\\u00a0é É e\\u0301',Object.freeze([]))]",
+            [
+                [
+                    "cat,",
+                    1
+                ],
+                [
+                    "cat",
+                    1
+                ],
+                [
+                    "cat.",
+                    1
+                ],
+                [
+                    "é",
+                    2
+                ],
+                [
+                    "é",
+                    1
+                ]
+            ]
+        ],
+        [
+            "(() => {const text='a '.repeat(4999)+'a',stop=Object.freeze(Array(1000).fill('skip'));const a=countWords(text,stop),b=countWords('',stop),c=countWords('',stop);return a.get('a')===5000&&a.size===1&&b!==c&&b.size===0;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "[...tagsByUser([{user: \"b\", tag: \"1\"}, {user: \"a\", tag: \"2\"}]).keys()]",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "tagsByUser([{user: \"a\", tag: \"x\"}]).has(\"b\")",
+            false
+        ],
+        [
+            "(() => {const user=Object.freeze({id:1}),other=Object.freeze({id:1}),tag=Object.freeze({x:1});const events=Object.freeze([Object.freeze({user,tag}),Object.freeze({user:other,tag:'x'}),Object.freeze({user,tag}),Object.freeze({user:1,tag:NaN}),Object.freeze({user:'1',tag:NaN})]);const a=tagsByUser(events),b=tagsByUser(events);return a.size===4&&a.get(user).size===1&&a.get(user).has(tag)&&a.get(other).has('x')&&a.get(1).has(NaN)&&a.get('1').has(NaN)&&a!==b&&a.get(user)!==b.get(user)&&a.get(user)!==a.get(other);})()",
+            true
+        ],
+        [
+            "(() => {const a=tagsByUser(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({user:i%10,tag:i%20}))));return a.size===10&&[...a.values()].every(s=>s.size===2)&&new Set(a.values()).size===10;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "isIsomorphic(\"badc\", \"baba\")",
+            false
+        ],
+        [
+            "isIsomorphic(\"abab\", \"cdcd\")",
+            true
+        ],
+        [
+            "[isIsomorphic('😀😀','aa'),isIsomorphic('😀😃','ab'),isIsomorphic('😀😃','aa'),isIsomorphic('😀a😀','aba'),isIsomorphic('e\\u0301','ab'),isIsomorphic('é','ab'),isIsomorphic('Aa','aa')]",
+            [
+                true,
+                true,
+                false,
+                true,
+                true,
+                false,
+                false
+            ]
+        ],
+        [
+            "isIsomorphic('a'.repeat(1000),'😀'.repeat(1000))",
+            true
+        ]
+    ],
+    [
+        [
+            "buildIndex([{id: 1, text: \"A b\"}, {id: 2, text: \"a\"}]).get(\"a\").size",
+            2
+        ],
+        [
+            "buildIndex([{id: 3, text: \"x\"}]).has(\"y\")",
+            false
+        ],
+        [
+            "(() => {const docs=Object.freeze([Object.freeze({id:0,text:'Z z __proto__'}),Object.freeze({id:'0',text:'z'}),Object.freeze({id:'',text:'__proto__'})]);const a=buildIndex(docs),b=buildIndex(docs),z=[...a.get('z')],p=[...a.get('__proto__')];return a!==b&&a.get('z')!==b.get('z')&&z.length===2&&z[0]===0&&z[1]==='0'&&p[0]===0&&p[1]==='';})()",
+            true
+        ],
+        [
+            "(() => {const docs=Object.freeze(Array.from({length:500},(_,i)=>Object.freeze({id:i,text:'a b a'})));const a=buildIndex(docs);return a.size===2&&a.get('a').size===500&&a.get('b').size===500;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "search([{id: 1, text: \"a b\"}, {id: 2, text: \"b a\"}], \"b a b\")",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "search([{id: \"x\", text: \"a\"}], \"A\")",
+            [
+                "x"
+            ]
+        ],
+        [
+            "search([{id: 1, text: \"redfish\"}], \"red\")",
+            []
+        ],
+        [
+            "search([{id: 1, text: \"catalog\"}, {id: 2, text: \"a cat nap\"}], \"cat\")",
+            [
+                2
+            ]
+        ],
+        [
+            "search(Object.freeze([Object.freeze({id:'z',text:'A b'}),Object.freeze({id:0,text:'a b'}),Object.freeze({id:'0',text:'a b'}),Object.freeze({id:'',text:'a b'})]),'b\\ta b')",
+            [
+                "z",
+                0,
+                "0",
+                ""
+            ]
+        ],
+        [
+            "(() => {const docs=Object.freeze(Array.from({length:500},(_,i)=>Object.freeze({id:'id'+i,text:'a b'})));const a=search(docs,'b a b'),b=search(docs,'   '),c=search(docs,'   ');return a.length===500&&a.every((id,i)=>id==='id'+i)&&b!==c&&b.length===0;})()",
+            true
+        ]
+    ]
+],
   'js-path-objects': [
     [['countByCategory([{category: "b"}, {category: "a"}]).b', 1], ['Object.keys(countByCategory([{category: "z"}, {category: "a"}]))', ['z', 'a']]],
     [['groupByCategory([{name: "A", category: "x"}, {name: "A", category: "x"}])', { x: ['A', 'A'] }], ['Object.keys(groupByCategory([{name: "A", category: "b"}, {name: "B", category: "a"}]))', ['b', 'a']]],

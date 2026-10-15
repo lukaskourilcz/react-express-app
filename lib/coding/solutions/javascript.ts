@@ -705,6 +705,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1});let n=0;const a=once(()=>{n++;return value;});const x=a(),y=a();return x===value&&y===value&&n===1;})()", "expected": true, "label": "cache the exact opaque object rather than a clone"},
+      {"call": "(() => {let n=0;const value=Object.freeze({});const a=once((...args)=>{n++;return args;});const x=a(1,undefined,3,value,5,6,7,8),y=a();return x===y&&x.length===8&&x[1]===undefined&&x[3]===value&&x[7]===8&&n===1;})()", "expected": true, "label": "forward all eight first-call arguments with exact count and references"},
+      {"call": "(() => {const values=[false,null,undefined,0,'',Symbol('x'),()=>1];return values.every(value=>{let n=0;const a=once(()=>{n++;return value;});for(let i=0;i<1000;i++)if(a(i)!==value)return false;return n===1;});})()", "expected": true, "label": "all supported cached values survive a thousand calls"},
+      {"call": "(() => {const a=once((...args)=>args.length);return [a(),a(1)];})()", "expected": [0, 0], "label": "the first empty argument list stays empty"},
       { call: "once(() => { const add = once((a, b) => a + b); return [add(2, 3), add(10, 10)]; })()", expected: [5, 5] },
       { call: "once(() => { let runs = 0; const empty = once(() => { runs += 1; return \"\"; }); return [empty(), empty(), runs]; })()", expected: ["", "", 1] },
       { call: "once(() => { let runs = 0; const nothing = once(() => { runs += 1; }); nothing(); nothing(); return runs; })()", expected: 1 },
@@ -959,6 +963,9 @@ const chunk = (items, size) =>
     return chunks;
   }, []);`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),nested=Object.freeze([2]);const input=Object.freeze([value,undefined,nested,null]);const a=chunk(input,3),b=chunk(input,3);return a!==b&&a[0]!==b[0]&&a[0]!==input&&a[0][0]===value&&a[0][1]===undefined&&a[0][2]===nested&&a[1][0]===null&&input.length===4;})()", "expected": true, "label": "fresh groups, frozen input and opaque item identity"},
+      {"call": "(() => {const input=Object.freeze([1]);const a=chunk(input,10000),b=chunk([],10000),c=chunk([],10000);return a[0]!==input&&a[0][0]===1&&b!==c&&b.length===0;})()", "expected": true, "label": "oversized and empty outputs remain fresh"},
+      {"call": "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=chunk(input,17);return out.length===59&&out[58].length===14&&out.every((group,i)=>group.every((x,j)=>x===i*17+j));})()", "expected": true, "label": "thousand-item uneven split preserves every slot"},
       { call: "chunk([1,2,3,4,5,6,7], 3)", expected: [[1, 2, 3], [4, 5, 6], [7]] },
       { call: "chunk([\"a\",\"b\",\"c\",\"d\"], 4)", expected: [["a", "b", "c", "d"]] },
       { call: "chunk([1,2,3], 10)", expected: [[1, 2, 3]] },

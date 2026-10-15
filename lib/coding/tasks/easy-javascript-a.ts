@@ -501,7 +501,7 @@ repeat(n => console.log(n), 3, 10);
     tier: 1,
     focus: ['callbacks', 'for'],
     title: 'Call it n times',
-    prompt: 'Write `times(n, callback)`, calling `callback` once for each index from 0 up to `n - 1` and returning an array of what each call returned. `times(3, i => i * 10)` gives `[0, 10, 20]`. When `n` is 0 the callback is never called and the result is empty.',
+    prompt: "Write `times(n, callback)`, calling `callback` once for each index from 0 up to `n - 1` and returning an array of what each call returned. `times(3, i => i * 10)` gives `[0, 10, 20]`. When `n` is 0 the callback is never called and the result is empty. Domain: n is an integer from 0 through 1,000. Call the synchronous callback with exactly one argument, the index, once per index in ascending order. Preserve returned values/references, including undefined and falsy results, in a fresh dense output array. If the callback throws, propagate the same error and stop further calls. Target: O(n) time and O(n) result slots under bounded-cost callbacks and amortized array append; the zero case does constant work.",
     starter: `const times = (n, callback) => {
 
 };
@@ -622,7 +622,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['higher-order'],
     title: 'Flip a test',
-    prompt: 'Write `negate(test)`, a higher-order function that returns a new function giving the opposite answer: `true` where `test` returns a falsy value and `false` where it returns a truthy one. The new function passes every argument it receives on to `test`. `[1, 2, 3, 4].filter(negate(n => n % 2 === 0))` gives `[1, 3]`.',
+    prompt: "Write `negate(test)`, a higher-order function that returns a new function giving the opposite answer: `true` where `test` returns a falsy value and `false` where it returns a truthy one. The new function passes every argument it receives on to `test`. `[1, 2, 3, 4].filter(negate(n => n % 2 === 0))` gives `[1, 3]`. Call test exactly once per wrapper invocation, preserving argument count, order and value references. Return a Boolean, not a truthy/falsy surrogate. If test throws, propagate that same error. Domain: synchronous tests independent of dynamic this, at most 100 arguments per invocation and 1,000 invocations per wrapper. Target: O(n) time per invocation, where n is 1 plus the argument count for rest/spread handling, excluding the test function’s own work.",
     starter: `const negate = test => {
 
 };
@@ -695,7 +695,7 @@ console.log(sortBy(["ccc", "a", "bb"], word => word.length));
     tier: 1,
     focus: ['higher-order', 'for-of'],
     title: 'Count where a test passes',
-    prompt: 'Write `countWhere(list, test)`, returning how many items make `test(item)` truthy, with a `for…of` loop that calls the function you were given. `countWhere([3, 8, 12], n => n > 5)` gives 2. An empty list gives 0.',
+    prompt: "Write `countWhere(list, test)`, returning how many items make `test(item)` truthy, with a `for…of` loop that calls the function you were given. `countWhere([3, 8, 12], n => n > 5)` gives 2. An empty list gives 0. Domain: a dense ordinary array of at most 1,000 opaque values, possibly frozen. Call the synchronous test exactly once for each item in input order, with only that original item as its argument. Do not mutate or inspect the items yourself. Any truthy return counts, including objects; falsy values such as NaN, 0n and undefined do not. A thrown test error propagates unchanged and stops traversal. Target: O(n) time, where n is list length, under bounded-cost tests; only O(1) additional state is needed.",
     starter: `const countWhere = (list, test) => {
 
 };
@@ -737,7 +737,7 @@ console.log(countWhere([3, 8, 12], n => n > 5));
     tier: 1,
     focus: ['recursion'],
     title: 'Factorial by recursion',
-    prompt: 'Write `factorial(n)` for a whole number `n` of zero or more, by recursion: the factorial of 0 is 1, and the factorial of any larger `n` is `n` times the factorial of `n - 1`. `factorial(5)` gives 120. Use no loop: the function calls itself.',
+    prompt: "Write `factorial(n)` for a whole number `n` of zero or more, by recursion: the factorial of 0 is 1, and the factorial of any larger `n` is `n` times the factorial of `n - 1`. `factorial(5)` gives 120. Use no loop: the function calls itself. Domain: n is an integer from 0 through 18, so the factorial is an exactly represented safe-integer Number. Negative, fractional, larger and BigInt inputs are outside this exercise. Target: O(n) time, where n is the requested integer, under unit-cost Number arithmetic; the direct recursion also uses O(n) call-stack space.",
     starter: `const factorial = n => {
 
 };
@@ -772,7 +772,7 @@ console.log(factorial(5));
     tier: 1,
     focus: ['recursion'],
     title: 'Power by recursion',
-    prompt: 'Write `power(base, exponent)` for a whole-number `exponent` of zero or more, by recursion and without `**` or `Math.pow`: any base to the power 0 is 1, and `base` to the power `exponent` is `base` times `base` to the power `exponent - 1`. `power(2, 5)` gives 32.',
+    prompt: "Write `power(base, exponent)` for a whole-number `exponent` of zero or more, by recursion and without `**` or `Math.pow`: any base to the power 0 is 1, and `base` to the power `exponent` is `base` times `base` to the power `exponent - 1`. `power(2, 5)` gives 32. Domain: exponent is an integer from 0 through 10; base is a Number from -10 through 10 in steps of 0.5, including signed zero. These bounds keep the specified multiplications exactly representable. Return 1 for exponent 0, including 0 to the power 0. For other exponents retain the sign of zero produced by multiplication. Target: O(n) time for the direct recursion, where n is the exponent under unit-cost arithmetic; faster recursive exponentiation is also accepted.",
     starter: `const power = (base, exponent) => {
 
 };
@@ -808,7 +808,7 @@ console.log(power(2, 5));
     tier: 2,
     focus: ['recursion'],
     title: 'Walk a linked list',
-    prompt: 'A linked list is a chain of nodes shaped `{ value, next }`, where the last node’s `next` is `null`. Write `toArray(node)`, returning the values from `node` to the end of the chain, in order, by recursion: `null` is the empty list and gives `[]`, and any other node gives its value followed by `toArray(node.next)`. `toArray({ value: 1, next: { value: 2, next: null } })` gives `[1, 2]`.',
+    prompt: "A linked list is a chain of nodes shaped `{ value, next }`, where the last node’s `next` is `null`. Write `toArray(node)`, returning the values from `node` to the end of the chain, in order, by recursion: `null` is the empty list and gives `[]`, and any other node gives its value followed by `toArray(node.next)`. `toArray({ value: 1, next: { value: 2, next: null } })` gives `[1, 2]`. Domain: an acyclic chain of at most 200 ordinary nodes ending in null. Nodes may be frozen and values are opaque JavaScript values, including undefined, nested arrays and object references. Return a fresh array every time, preserve exact value identities and do not change any node. Target: O(n²) time for the taught recursive suffix-copying approach, where n is the node count and copying k array slots costs O(k). An accumulator-based recursion can achieve O(n) time and is also accepted; call-stack space is O(n).",
     starter: `const toArray = node => {
 
 };
@@ -1206,7 +1206,7 @@ loadOr(() => Promise.reject(new Error("offline")), "guest").then(value => consol
     tier: 2,
     focus: ['closures'],
     title: 'Running average',
-    prompt: 'Write `makeAverager()`, returning a function that takes one number at a time and returns the average of every number it has received so far. Keep the running total and count in variables the returned function closes over, so each averager remembers only its own numbers. After `const avg = makeAverager()`, `avg(10)` gives 10 and then `avg(20)` gives 15.',
+    prompt: "Write `makeAverager()`, returning a function that takes one number at a time and returns the average of every number it has received so far. Keep the running total and count in variables the returned function closes over, so each averager remembers only its own numbers. After `const avg = makeAverager()`, `avg(10)` gives 10 and then `avg(20)` gives 15. Domain: at most 1,000 calls per averager, each receiving a finite Number from -1,000,000 through 1,000,000. Start the Number total at 0, add values in call order, and return total / count without rounding. Normal JavaScript floating-point arithmetic applies; do not promise exact decimal arithmetic. Target: O(1) time per update and O(1) stored state, independent of the number of earlier calls, under unit-cost Number arithmetic.",
     starter: `const makeAverager = () => {
 
 };

@@ -817,7 +817,7 @@ console.log(highest([3, 9, 4]));
     tier: 2,
     focus: ['recursion'],
     title: 'Count the files in a folder tree',
-    prompt: 'A folder is `{ name, children }`, where `children` is an array of files and folders. A file is `{ name }`, with no `children`. Write `countFiles(entry)`, returning how many files `entry` holds at any depth, by recursion: a file counts as 1, and a folder adds up the files of each of its children. An empty folder holds 0 files.',
+    prompt: "A folder is `{ name, children }`, where `children` is an array of files and folders. A file is `{ name }`, with no `children`. Write `countFiles(entry)`, returning how many files `entry` holds at any depth, by recursion: a file counts as 1, and a folder adds up the files of each of its children. An empty folder holds 0 files. Domain: an ordinary acyclic tree with at most 1,000 entries and nesting depth at most 100. Each entry occurs once: a file has no children property, and a folder has a dense children array. Names can repeat and do not determine identity; count file entries, not unique names. The tree and arrays may be frozen and must not be mutated. Target: O(n) time, where n counts all visited file/folder entries under constant-cost property access; the recursive call stack uses O(h) space for height h.",
     starter: `const countFiles = entry => {
 
 };
@@ -858,7 +858,7 @@ console.log(countFiles({ name: "src", children: [{ name: "a.js" }, { name: "lib"
     tier: 2,
     focus: ['recursion'],
     title: 'How deep it goes',
-    prompt: 'Write `depth(list)`, returning how many levels of arrays there are, by recursion. An array that holds no arrays has depth 1, and an array that holds arrays is one level deeper than the deepest of them. `depth([1, [2, [3]]])` gives 3, and `depth([])` gives 1.',
+    prompt: "Write `depth(list)`, returning how many levels of arrays there are, by recursion. An array that holds no arrays has depth 1, and an array that holds arrays is one level deeper than the deepest of them. `depth([1, [2, [3]]])` gives 3, and `depth([])` gives 1. Domain: an acyclic nesting of ordinary dense arrays with at most 1,000 total arrays plus item slots and depth at most 100. Non-array values, including null, objects and strings, are opaque: do not inspect inside them. Inputs may be frozen and must not be modified. Target: O(n) time, where n is 1 plus the total visited arrays and item slots, using unit-cost Array.isArray and property access. Recursive depth is O(h); the filter/map reveal also allocates intermediate arrays.",
     starter: `const depth = list => {
 
 };
@@ -903,7 +903,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 2,
     focus: ['closures'],
     title: 'Did it change?',
-    prompt: 'Write `makeChangeWatcher()`, returning a function `changed(value)`. Its first call returns `true`. Every later call returns `true` when `value` is not strictly equal to the value of the call before it, and `false` when it is. Keep the previous value in a variable the returned function closes over. A first value of `undefined` still counts as a change, and each watcher remembers only its own values.',
+    prompt: "Write `makeChangeWatcher()`, returning a function `changed(value)`. Its first call returns `true`. Every later call returns `true` when `value` is not strictly equal to the value of the call before it, and `false` when it is. Keep the previous value in a variable the returned function closes over. A first value of `undefined` still counts as a change, and each watcher remembers only its own values. Use JavaScript !== semantics exactly: repeated NaN counts as a change, +0 and -0 compare equal, and objects/functions/symbols compare by identity rather than by their contents. Do not inspect or mutate supplied objects. Domain: at most 1,000 calls per watcher with arbitrary JavaScript values; strings have at most 1,000 UTF-16 units. Target: O(1) time per call in the unit-cost bounded-value comparison model, with O(1) stored values per watcher, independent of call history length.",
     starter: `const makeChangeWatcher = () => {
 
 };
@@ -946,7 +946,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 1,
     focus: ['higher-order', 'closures'],
     title: 'A function that makes functions',
-    prompt: 'Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor.',
+    prompt: "Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor. Domain: factor and each supplied value are finite Numbers from -1,000,000 through 1,000,000, including signed zero. Use ordinary Number multiplication without rounding, coercing strings or replacing falsy products. Each factory call returns a fresh function, whose factor stays fixed across repeated/interleaved calls. Target: O(1) time and O(1) state for creating a multiplier or calling it under unit-cost Number arithmetic.",
     starter: `const multiplyBy = factor => {
 
 };
@@ -983,7 +983,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 1,
     focus: ['json'],
     title: 'Parse JSON safely',
-    prompt: 'Write `parseOr(text, fallback)`, returning what `JSON.parse(text)` gives, or `fallback` when the text is not valid JSON. `JSON.parse` throws on bad input, so call it inside `try` and return the fallback from `catch`. `parseOr("[1, 2]", [])` gives `[1, 2]`, and `parseOr("{bad", {})` gives `{}`. Valid JSON such as `"0"` or `"null"` parses to a real value, and that value is kept.',
+    prompt: "Write `parseOr(text, fallback)`, returning what `JSON.parse(text)` gives, or `fallback` when the text is not valid JSON. `JSON.parse` throws on bad input, so call it inside `try` and return the fallback from `catch`. `parseOr(\"[1, 2]\", [])` gives `[1, 2]`, and `parseOr(\"{bad\", {})` gives `{}`. Valid JSON such as `\"0\"` or `\"null\"` parses to a real value, and that value is kept. Domain: text is a string of at most 10,000 UTF-16 units; valid JSON has nesting depth at most 100. Use JSON.parse with no reviver. Keep every valid parsed value, including false, null, empty strings and signed zero; parsing is not schema validation. On a syntax error return the exact fallback reference/value without inspecting or cloning it. Inputs/fallback objects must not be mutated. Target: O(n) time in the usual linear JSON-parsing model, where n is 1 plus text length; parsing and output allocation belong to the built-in, not a constant-time operation.",
     starter: `const parseOr = (text, fallback) => {
 
 };
@@ -1022,7 +1022,7 @@ console.log(parseOr("[1, 2]", []), parseOr("{bad", {}));
     tier: 1,
     focus: ['json'],
     title: 'Save JSON people can read',
-    prompt: 'Write `toFileText(value)`, returning `value` as JSON indented by two spaces and followed by one newline, the way a settings file is saved. Pass the indent as the third argument of `JSON.stringify`. `toFileText({ a: 1 })` gives three lines, `{`, `  "a": 1` and `}`, then a final newline.',
+    prompt: "Write `toFileText(value)`, returning `value` as JSON indented by two spaces and followed by one newline, the way a settings file is saved. Pass the indent as the third argument of `JSON.stringify`. `toFileText({ a: 1 })` gives three lines, `{`, `  \"a\": 1` and `}`, then a final newline. Domain: an acyclic ordinary JSON data value: null, Boolean, finite Number, string, dense array or object with enumerable own string-keyed data properties. No getters, toJSON hooks, undefined, functions, symbols or BigInts; nesting depth is at most 30 and the result at most 100,000 UTF-16 units. Inputs may be frozen. Preserve normal JSON property order and escaping, do not mutate or sort the input, and append exactly one LF newline. Target: O(n) time in an output-sensitive serialization model, where n is 1 plus the emitted text length, including indentation.",
     starter: `const toFileText = value => {
 
 };
@@ -1033,10 +1033,10 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     skeleton: `const toFileText = value => {
   return JSON.stringify(value, /* no replacer */, /* the indent */) + /* a final newline */;
 };`,
-    hints: ['`JSON.stringify(value, null, 2)` puts each property on its own line, indented by two spaces. The second argument is a replacer, and `null` keeps everything.'],
+    hints: ['`JSON.stringify(value, null, 2)` puts each property on its own line, indented by two spaces. The second argument is a replacer; `null` means no replacer, while normal JSON serialization rules still apply.'],
     approach: [
       'Call `JSON.stringify` with `null` as the second argument and `2` as the third.',
-      'Add `"\\n"` at the end, because a text file ends with a newline.',
+      'Append exactly one LF newline (`"\\n"`) as required by this file format.',
       'Return the string. Empty objects and arrays stay on one line as `{}` and `[]`.',
     ],
     verify: 'tests',
@@ -1212,7 +1212,7 @@ loadProfile(() => Promise.resolve({ id: 7, name: "Ada" }), id => Promise.resolve
     tier: 1,
     focus: ['sort'],
     title: 'Sort numbers as numbers',
-    prompt: 'Write `sortNumbers(numbers)`, returning a new array of the numbers from smallest to largest. Without a compare function, `sort` compares items as text, so `[10, 9, 1].sort()` gives `[1, 10, 9]`. Pass a compare function that subtracts one number from the other, and sort a copy so `numbers` itself is not changed.',
+    prompt: "Write `sortNumbers(numbers)`, returning a new array of the numbers from smallest to largest. Without a compare function, `sort` compares items as text, so `[10, 9, 1].sort()` gives `[1, 10, 9]`. Pass a compare function that subtracts one number from the other, and sort a copy so `numbers` itself is not changed. Domain: an ordinary dense array of at most 1,000 finite Numbers from -1,000,000 through 1,000,000, possibly frozen. Return a fresh array even for empty input, preserving duplicates and stable order among equal values, including the signs/order of -0 and +0. Target: O(n log n) time under the comparison-sorting model, where n is array length; the language standard does not prescribe a particular sort algorithm or engine timing. The returned copy uses O(n) result space.",
     starter: `const sortNumbers = numbers => {
 
 };
