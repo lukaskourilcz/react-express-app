@@ -1,3 +1,4 @@
+import { runtimePolicyForTask } from '../../../../shared/coding-task-runtime';
 // Grade a code file against one coding task exactly the way the server does.
 //   node grade-task.mjs <taskId> <codeFile> [--visible-only]
 //   node grade-task.mjs <taskId> --design '[0,2,1,3,0]'   (guided design answers, original option order)
@@ -49,6 +50,7 @@ async function main() {
     codeToRun = checker.toJavaScript(code);
   }
   const { visible, hidden: hiddenRun } = await runChecks({
+    runtimePolicy: runtimePolicyForTask(task.id),
     code: codeToRun,
     visible: tests,
     hidden,

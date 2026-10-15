@@ -707,11 +707,7 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 
   /* ── promises and timers ──────────────────────────────────────────── */
   'js-easy3-list-failures': {
-    solution: `const failureMessages = promises => {
-  // allSettled never rejects: it reports how every promise ended.
-  return Promise.allSettled(promises).then(results =>
-    results.filter(result => result.status === "rejected").map(result => result.reason.message));
-};`,
+    solution: "const failureMessages = promises => {\n  // For these native-promise inputs, report every outcome instead of rejecting early.\n  return Promise.allSettled(promises).then(results =>\n    results.filter(result => result.status === \"rejected\").map(result => result.reason.message));\n};",
     junior: `const failureMessages = promises => {
   return Promise.allSettled(promises).then(results => {
     const messages = [];
@@ -728,6 +724,11 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return results.filter(({ status }) => status === "rejected").map(({ reason }) => reason.message);
 };`,
     hiddenTests: [
+      { call: "(() => {const a=Promise.reject(new Error(\"\")),b=Promise.reject(new Error(\"same\")),c=Promise.reject(new Error(\"same\"));a.catch(()=>{});b.catch(()=>{});c.catch(()=>{});return failureMessages(Object.freeze([Promise.resolve(new Error(\"fulfilled\")),a,b,c]));})()", expected: ["", "same", "same"], async: true },
+      { call: "(() => {const error=new Error(\"before\"),bad=Promise.reject(error);bad.catch(()=>{});let finished=false;const slow=new Promise(done=>setTimeout(()=>{finished=true;error.message=\"after\";done(1);},20));const inputs=[bad,slow],result=failureMessages(inputs);inputs.length=0;return result.then(messages=>[finished,messages]);})()", expected: [true, ["after"]], async: true },
+      { call: "(() => {const error=Object.freeze(new Error(\"repeated\")),bad=Promise.reject(error);bad.catch(()=>{});return failureMessages(Object.freeze(Array(1000).fill(bad))).then(messages=>[messages.length,messages[0],messages[999]]);})()", expected: [1000, "repeated", "repeated"], async: true },
+      { call: "(() => {const a=failureMessages([]),b=failureMessages([]);return Promise.all([a,b]).then(([x,y])=>[a instanceof Promise,x.length,y.length,x!==y]);})()", expected: [true, 0, 0, true], async: true },
+
       { call: '(() => { const one = Promise.reject(new Error("one")); const two = Promise.reject(new Error("two")); one.catch(() => {}); two.catch(() => {}); return failureMessages([one, two]); })()', expected: ['one', 'two'], async: true },
       { call: '(() => { const bad = Promise.reject(new Error("bad")); bad.catch(() => {}); return failureMessages([new Promise(resolve => setTimeout(() => resolve("slow"), 15)), bad]); })()', expected: ['bad'], async: true },
       { call: '(() => { const late = new Promise((resolve, reject) => setTimeout(() => reject(new Error("late")), 10)); late.catch(() => {}); return failureMessages([Promise.resolve(1), late, Promise.resolve(2)]); })()', expected: ['late'], async: true },

@@ -144,8 +144,12 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
   });
   return doubled;
 };`,
-    senior: `const doubleLater = async promise => (await promise) * 2;`,
+    senior: "const doubleLater = promise => promise.then(number => 2 * number);",
     hiddenTests: [
+      { call: "(() => {const error=Object.freeze({code:\"offline\"}),input=Promise.reject(error);input.catch(()=>{});const output=doubleLater(input);return output.then(()=>false,reason=>reason===error&&output!==input);})()", expected: true, async: true },
+      { call: "Promise.all([doubleLater(Promise.resolve(-0)).then(x=>Object.is(x,-0)),doubleLater(Promise.resolve(0.000000001)).then(x=>x===0.000000002),doubleLater(Promise.resolve(1000000000)).then(x=>x===2000000000),doubleLater(Promise.resolve(-1000000000)).then(x=>x===-2000000000)])", expected: [true, true, true, true], async: true },
+      { call: "(() => {const input=Object.freeze(Promise.resolve(4)),output=doubleLater(input);let settled=false;output.then(()=>{settled=true;});const immediate=settled;return output.then(value=>[output instanceof Promise,output!==input,immediate,value]);})()", expected: [true, true, false, 8], async: true },
+
       { call: 'doubleLater(Promise.resolve(21))', expected: 42, async: true },
       { call: 'doubleLater(doubleLater(Promise.resolve(3)))', expected: 12, async: true },
       { call: 'doubleLater(new Promise(resolve => setTimeout(() => resolve(5), 10)))', expected: 10, async: true },
@@ -162,14 +166,12 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
     return fallback;
   });
 };`,
-    senior: `const withFallback = async (promise, fallback) => {
-  try {
-    return await promise;
-  } catch {
-    return fallback;
-  }
-};`,
+    senior: "const withFallback = (promise, fallback) => promise.catch(function recover() { return fallback; });",
     hiddenTests: [
+      { call: "(() => {const object=Object.freeze({}),fn=()=>1,symbol=Symbol(\"x\");return Promise.all([object,fn,symbol,false,\"\",NaN,-0].map(value=>withFallback(Promise.resolve(value),\"unused\").then(actual=>Object.is(actual,value))));})()", expected: [true, true, true, true, true, true, true], async: true },
+      { call: "(() => {const object=Object.freeze({}),fn=()=>1,symbol=Symbol(\"fallback\"),input=Promise.reject(\"reason\");input.catch(()=>{});return Promise.all([object,fn,symbol].map(value=>withFallback(input,value).then(actual=>actual===value)));})()", expected: [true, true, true], async: true },
+      { call: "(() => {const first=Promise.reject(\"first\"),error=Object.freeze({}),fallback=Promise.reject(error);first.catch(()=>{});fallback.catch(()=>{});return Promise.all([withFallback(first,Promise.resolve(9)).then(value=>value===9),withFallback(first,fallback).then(()=>false,reason=>reason===error),withFallback(Promise.resolve(\"kept\"),fallback).then(value=>value===\"kept\")]);})()", expected: [true, true, true], async: true },
+
       { call: 'withFallback(Promise.resolve([1, 2]), [])', expected: [1, 2], async: true },
       { call: '(() => { const failing = Promise.reject("plain string"); failing.catch(() => {}); return withFallback(failing, "used"); })()', expected: 'used', async: true },
       { call: 'withFallback(new Promise(resolve => setTimeout(() => resolve("late"), 10)), "early")', expected: 'late', async: true },
@@ -193,6 +195,11 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
   return values.reduce((sum, value) => sum + value, 0);
 };`,
     hiddenTests: [
+      { call: "(() => {const error=Object.freeze({}),bad=Promise.reject(error);bad.catch(()=>{});const result=totalWhenReady(Object.freeze([new Promise(()=>{}),bad]));return Promise.race([result.then(()=>false,reason=>reason===error),new Promise(done=>setTimeout(()=>done(false),100))]);})()", expected: true, async: true },
+      { call: "totalWhenReady(Object.freeze([Promise.resolve(10000000000000000),new Promise(done=>setTimeout(()=>done(-10000000000000000),20)),Promise.resolve(1)]))", expected: 1, async: true },
+      { call: "(() => {const prices=[Promise.resolve(1),new Promise(done=>setTimeout(()=>done(2),5))],result=totalWhenReady(prices);prices.length=0;return result.then(sum=>[sum,prices.length]);})()", expected: [3, 0], async: true },
+      { call: "totalWhenReady(Object.freeze(Array.from({length:1000},(_,i)=>Promise.resolve(i))))", expected: 499500, async: true },
+
       { call: 'totalWhenReady([Promise.resolve(-4), Promise.resolve(4)])', expected: 0, async: true },
       { call: 'totalWhenReady([Promise.resolve(10)])', expected: 10, async: true },
       { call: 'totalWhenReady([new Promise(resolve => setTimeout(() => resolve(2), 20)), new Promise(resolve => setTimeout(() => resolve(3), 5))])', expected: 5, async: true },
@@ -274,41 +281,19 @@ const schedule = (task, ms) => {
     ],
   },
   'js-easy2-fire-in-delay-order': {
-    solution: `const inDelayOrder = jobs => new Promise(resolve => {
-  const fired = [];
-  // With no jobs no timer would ever resolve the promise, so answer now.
-  if (jobs.length === 0) return resolve(fired);
-  for (const { name, ms } of jobs) {
-    setTimeout(() => {
-      fired.push(name);
-      if (fired.length === jobs.length) resolve(fired);
-    }, ms);
-  }
-});`,
-    junior: `const inDelayOrder = jobs => {
-  return new Promise(resolve => {
-    const fired = [];
-    if (jobs.length === 0) {
-      resolve(fired);
-      return;
-    }
-    for (let i = 0; i < jobs.length; i++) {
-      const job = jobs[i];
-      setTimeout(() => {
-        fired.push(job.name);
-        if (fired.length === jobs.length) {
-          resolve(fired);
-        }
-      }, job.ms);
-    }
-  });
-};`,
+    solution: "const inDelayOrder = jobs => new Promise(resolve => {\n  const fired = [];\n  const total = jobs.length;\n  // With no jobs no timer would ever resolve the promise, so answer now.\n  if (jobs.length === 0) return resolve(fired);\n  for (const { name, ms } of jobs) {\n    setTimeout(() => {\n      fired.push(name);\n      if (fired.length === total) resolve(fired);\n    }, ms);\n  }\n});",
+    junior: "const inDelayOrder = jobs => {\n  return new Promise(resolve => {\n    const fired = [];\n    const total = jobs.length;\n    if (jobs.length === 0) {\n      resolve(fired);\n      return;\n    }\n    for (let i = 0; i < jobs.length; i++) {\n      const { name, ms } = jobs[i];\n      setTimeout(() => {\n        fired.push(name);\n        if (fired.length === total) {\n          resolve(fired);\n        }\n      }, ms);\n    }\n  });\n};",
     senior: `const inDelayOrder = async jobs => {
   const fired = [];
   await Promise.all(jobs.map(({ name, ms }) => new Promise(done => setTimeout(() => done(fired.push(name)), ms))));
   return fired;
 };`,
     hiddenTests: [
+      { call: "(() => {const jobs=[{name:\"first\",ms:5},{name:\"second\",ms:15}],result=inDelayOrder(jobs);jobs[0].name=\"changed\";jobs.push({name:\"new\",ms:0});return Promise.race([result,new Promise(done=>setTimeout(()=>done([\"timeout\"]),100))]);})()", expected: ["first", "second"], async: true },
+      { call: "(async()=>{const result=inDelayOrder([{name:\"later\",ms:20}]);let settled=false;result.then(()=>{settled=true;});await Promise.resolve();const beforeTimers=settled;const out=await result;return [result instanceof Promise,beforeTimers,out];})()", expected: [true, false, ["later"]], async: true },
+      { call: "inDelayOrder(Object.freeze([Object.freeze({name:\"\",ms:0}),Object.freeze({name:\"same\",ms:0}),Object.freeze({name:\"same\",ms:0})]))", expected: ["", "same", "same"], async: true },
+      { call: "inDelayOrder(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:\"n\"+i,ms:0})))).then(names=>[names.length,names[0],names[999]])", expected: [1000, "n0", "n999"], async: true },
+
       { call: 'inDelayOrder([{ name: "x", ms: 40 }, { name: "y", ms: 20 }, { name: "z", ms: 0 }])', expected: ['z', 'y', 'x'], async: true },
       { call: 'inDelayOrder([{ name: "solo", ms: 15 }])', expected: ['solo'], async: true },
       { call: 'inDelayOrder([{ name: "b", ms: 25 }, { name: "a", ms: 25 }, { name: "c", ms: 5 }])', expected: ['c', 'b', 'a'], async: true },

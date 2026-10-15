@@ -1,3 +1,4 @@
+import { runtimePolicyForTask } from '../../shared/coding-task-runtime';
 import type { ReactSuiteOutcome } from '../coding/react-runner';
 /** Grading for learning-path activities.
  *
@@ -174,7 +175,9 @@ export const pathCodeTooLarge = (code: string): boolean =>
  * criteria collapse to the single critical `core`, matching how the coding
  * section already grades it. */
 export function codeFromReusedTask(task: CodingTask): MergedCode {
+  const runtimePolicy = runtimePolicyForTask(task.id);
   return {
+    ...(runtimePolicy ? { runtimePolicy } : {}),
     language: task.track === 'react' ? 'react' : task.track === 'typescript' ? 'typescript' : 'javascript',
     prompt: task.prompt,
     starter: task.starter,
@@ -320,6 +323,7 @@ export async function gradePathCode(
   // its calls could otherwise answer them in authored order.
   const { visible: visibleRun, hidden: hiddenRun } = await runChecks({
     code: runnableSource,
+    runtimePolicy: code.runtimePolicy,
     visible,
     hidden,
     shuffle: secureShuffle,
