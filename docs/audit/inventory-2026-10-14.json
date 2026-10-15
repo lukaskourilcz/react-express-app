@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 45,
-    "recordsStillRequiringReview": 148,
+    "currentStagedModelReviewRecords": 50,
+    "recordsStillRequiringReview": 143,
     "reviewEvidence": "Seventy native records shipped through PR #394: D01–D05 plus n001–n002. Exact main 158cf64a is READY with public health/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
     "deployedModelReviewRecords": 70,
-    "currentModelReviewRecords": 115,
-    "stagedReviewEvidence": "15 October through n012: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentModelReviewRecords": 120,
+    "stagedReviewEvidence": "15 October through n013: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

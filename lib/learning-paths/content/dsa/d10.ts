@@ -165,7 +165,7 @@ export const DSA_D10: ModuleSource = {
       questions: [
         {
           id: 'dsa-v1-d10-q1',
-          prompt: 'The two inputs are unrelated: `spans` has n entries and `notes` has m. What is the tightest growth class for the running time of `report`?',
+          prompt: 'The independent dense arrays `spans` and `notes` have lengths n and m. Each span has ordinary finite-number start/end fields. Count field access, comparison and fixed-size pair creation as constant work, and append as amortized constant work. What is the tightest running-time growth class of `report`?',
           context: {
             language: 'javascript',
             code: 'const report = (spans, notes) => {\n  const out = [];\n\n  for (let i = 0; i < spans.length; i += 1) {\n    for (let j = i + 1; j < spans.length; j += 1) {\n      if (spans[i].end > spans[j].start) out.push([i, j]);\n    }\n  }\n\n  for (const note of notes) out.push(note);\n\n  return out;\n};',
@@ -179,7 +179,7 @@ export const DSA_D10: ModuleSource = {
         },
         {
           id: 'dsa-v1-d10-q2',
-          prompt: 'For an input of length n, what is the auxiliary space — the memory used beyond the input itself — of `buildRuns`?',
+          prompt: 'For an ordinary dense array of length n, what is the peak additional storage of `buildRuns`, including its returned arrays? Count array slots/references under the usual amortized array-storage model; input elements are not deep-copied.',
           context: {
             language: 'javascript',
             code: 'const buildRuns = values => {\n  const runs = [];\n  let current = [];\n\n  for (const value of values) {\n    if (current.length > 0 && current[current.length - 1] !== value) {\n      runs.push(current);\n      current = [];\n    }\n    current.push(value);\n  }\n\n  if (current.length > 0) runs.push(current);\n  return runs;\n};',
@@ -192,38 +192,38 @@ export const DSA_D10: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'Every element is pushed into exactly one run array, so the run arrays hold n entries between them, and there are at most n of them. Counting declarations is not counting memory: `runs` and `current` are two names for structures that both grow with the input. Nothing copies the input once per element, so the total never reaches n². And the distinct-value count does not bound it either: `[1, 2, 1, 2, 1, 2]` has two distinct values and six runs.',
+            'The returned arrays count here; some conventions exclude output from auxiliary space, which is not the measure asked for. Every element is pushed into exactly one run array, so the run arrays hold n entries between them, and there are at most n of them. Counting declarations is not counting memory: `runs` and `current` are two names for structures that both grow with the input. Nothing copies the input once per element, so the total never reaches n². And the distinct-value count does not bound it either: `[1, 2, 1, 2, 1, 2]` has two distinct values and six runs.',
           domain: 'complexity',
           competencies: ['complexity', 'arrays-strings'],
         },
         {
           id: 'dsa-v1-d10-q3',
           prompt:
-            'Handlers are stored under request ids that arrive as strings, some of them plain digit strings like `"12"` and `"305"`. The code looks a handler up by id on every request, and once a minute walks every entry in the order the handlers were registered. Which structure fits, and why?',
+            'Each distinct string request id is registered once with its handler. Ids arrive as strings, some of them plain digit strings like `"12"` and `"305"`. The code looks a handler up by id on every request, and once a minute walks every entry in the order the handlers were registered. Under the usual expected-constant hash-lookup model, which structure fits these requirements, and why?',
           options: [
-            'A `Map`: `get` is expected constant, keys iterate in insertion order whatever they look like, and an id like `"toString"` is an ordinary key.',
+            'A `Map`: it associates ids with handlers and iterates in registration order, including numeric-looking keys.',
             'A plain object: property access is expected constant and the keys come back in the order they were assigned.',
             'A `Set` of ids: membership is expected constant and iteration follows insertion order.',
             'An array of `[id, handler]` pairs: it preserves registration order exactly and a lookup is one indexed read.',
           ],
           correct: 0,
           explanation:
-            'A Map answers both requirements: expected constant lookup, and insertion-order iteration for keys of any shape. A plain object reorders keys that look like array indices, so `"12"` and `"305"` iterate first and in ascending numeric order, ahead of everything registered before them. Its prototype also already answers to names like `"toString"`, so a lookup can hand back a function nobody registered. A Set stores membership only, and there is nowhere in it to put the handler. An array of pairs keeps the order, but a lookup has to walk it, which is O(n) per request rather than expected constant.',
+            'A Map answers both requirements: expected constant lookup in the stated hash model, and insertion-order iteration for keys of any shape. JavaScript requires average sublinear access, not a universal O(1) implementation guarantee. A plain object reorders keys that look like array indices, so `"12"` and `"305"` iterate first and in ascending numeric order, ahead of everything registered before them. Its prototype also already answers to names like `"toString"`, so a lookup can hand back a function nobody registered. A Set stores membership only, and there is nowhere in it to put the handler. An array of pairs keeps the order, but a lookup has to walk it, which is O(n) per request rather than expected constant.',
           domain: 'structures',
           competencies: ['maps-sets'],
         },
         {
           id: 'dsa-v1-d10-q4',
-          prompt: 'This checker uses an array as a stack, and it is meant to return `true` only when the parentheses balance. Which input makes it return `true` when it should not?',
+          prompt: 'This checker receives a string containing only parentheses. Which input makes it return `true` for unbalanced text?',
           context: {
             language: 'javascript',
             code: "const balanced = text => {\n  const open = [];\n\n  for (const ch of text) {\n    if (ch === '(') open.push(ch);\n    else if (ch === ')') open.pop();\n  }\n\n  return open.length === 0;\n};",
           },
           options: [
-            '`"())"` — the third character pops an already empty array, which does nothing, so the stack ends empty and the check passes.',
-            '`")("` — the leading `)` pops an empty array, leaving only the `(` uncounted, so the stack ends empty.',
-            '`"(()"` — the last iteration pops the unmatched `(`, so the stack ends empty.',
-            '`"()()"` — two separate pairs cancel out, and the checker cannot tell them apart from a single nested pair.',
+            '`"())"`',
+            '`")("`',
+            '`"(()"`',
+            '`"()()"`',
           ],
           correct: 0,
           explanation:
@@ -233,7 +233,7 @@ export const DSA_D10: ModuleSource = {
         },
         {
           id: 'dsa-v1-d10-q5',
-          prompt: 'This search returns -1 for some targets that are in the array. Which description of the defect is right?',
+          prompt: 'The input is an ordinary dense array of ascending finite Numbers and the target is finite. This closed-interval search can return -1 for a present target. Which defect causes that missed match?',
           context: {
             language: 'javascript',
             code: 'const search = (sorted, target) => {\n  let low = 0;\n  let high = sorted.length - 1;\n\n  while (low < high) {\n    const middle = Math.floor((low + high) / 2);\n    if (sorted[middle] === target) return middle;\n    if (sorted[middle] < target) low = middle + 1;\n    else high = middle - 1;\n  }\n\n  return -1;\n};',
@@ -246,7 +246,7 @@ export const DSA_D10: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'With `low < high` the loop exits while `low === high`, and that surviving index is never read. `search([2], 2)` never enters the loop and returns -1; `search([1, 3, 5, 7], 7)` narrows to index 3 and then quits. Changing the condition to `low <= high` fixes it. Rounding down is correct for a closed interval, because the middle only has to land inside `[low, high]`, and it always does. `high = sorted.length - 1` is right for a closed interval; `sorted.length` belongs to the half-open variant, which pairs with `low < high` and `high = middle`. The last option describes real behaviour on runs of equal values, but it returns an index inside the run rather than -1, so it is not this defect.',
+            'With `low < high` the loop exits while `low === high`, and that surviving index is never read. `search([2], 2)` never enters the loop and returns -1; `search([1, 3, 5, 7], 7)` narrows to index 3 and then quits. Changing the condition to `low <= high` fixes it. Rounding down is correct for a closed interval, because the middle only has to land inside `[low, high]`, and it always does. `high = sorted.length - 1` is right for a closed interval; `sorted.length` belongs to the half-open variant, which pairs with `low < high` and `high = middle`. Returning the first equal value encountered can differ from returning the leftmost match, but either is a valid match here; that does not explain a -1 result for a present value.',
           domain: 'searching',
           competencies: ['searching'],
         },

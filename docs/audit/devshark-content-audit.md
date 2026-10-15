@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n013
+
+Reviewed foundation-assessment questions one through five, with exact source
+hashes, individual quality/relevance scores and separate final model readings.
+The triangular-loop question now states its two independent sizes and unit/
+amortized costs. Run storage explicitly includes returned arrays, removing the
+ambiguity of output-excluding auxiliary-space conventions. The handler registry
+uses a declared hash model and distinguishes the language's sublinear Map
+requirement from a universal constant-time claim. Parenthesis options are now
+parallel literals. Binary-search feedback names the behavior rather than the
+position of a shuffled option, and the finite ascending domain is explicit.
+
+Actual authored contexts verify triangular counts, run slots, numeric-looking
+key order, all four parenthesis choices and the missed-singleton defect/closed-
+interval repair. A signed-zero expectation in the proof was corrected before
+recording final results; application equality rules were untouched. Native
+bindings, path contracts, API/script types, launch, final build, both production
+dependency audits (zero vulnerabilities), copy sweep and diff checks pass.
+No authenticated activity or independent/human acceptance is claimed.
+
+Coverage is **120/263 native**, **143 remaining**, and **95/725 coding**,
+**630 remaining**. PR #395 merged at 1c8c0434 after exact-head required verify
+30m52s and SQL passed. Its production build is still pending, so the shipped
+counts remain ninety coding/seventy native until exact deployment verification.
+N008–n013 are outside that merged PR.
+
 ## 15 October continuation — five-item native batch n012
 
 Reviewed three tree coding exercises, the second reading and the full check.
