@@ -367,6 +367,10 @@ const fill = (template, values) =>
   return { allow, remaining };
 };`,
     hiddenTests: [
+      { call: "(() => {const a=createLimiter(1000,100),b=createLimiter(0,1);let accepted=0;for(let i=0;i<1000;i++)if(a.allow(0))accepted++;const refused=a.allow(99),before=a.remaining(99),after=a.remaining(100),same=a.remaining(100);return [accepted,refused,before,after,same,b.allow(0),b.remaining(1000000000000),a.allow(100),a.remaining(100)];})()", expected: [1000, false, 0, 1000, 1000, false, 0, true, 999] },
+      { call: "(() => {const a=createLimiter(1,1000000000);return [a.allow(999000000000),a.allow(999999999999),a.remaining(1000000000000),a.allow(1000000000000)];})()", expected: [true, false, 1, true] },
+      { call: "(() => {const a=createLimiter(1,1);let accepted=0;for(let i=0;i<10000;i++)if(a.allow(i))accepted++;return accepted;})()", expected: 10000 },
+
       { call: '(() => { const limiter = createLimiter(3, 100); limiter.allow(0); limiter.allow(1); limiter.allow(2); return [limiter.remaining(2), limiter.remaining(500)]; })()', expected: [0, 3] },
       { call: '(() => { const limiter = createLimiter(0, 1000); return [limiter.allow(0), limiter.remaining(0), limiter.allow(5000)]; })()', expected: [false, 0, false] },
       { call: '(() => { const limiter = createLimiter(1, 100); limiter.remaining(0); limiter.remaining(1); return [limiter.allow(2), limiter.allow(3)]; })()', expected: [true, false] },
@@ -401,6 +405,11 @@ const fill = (template, values) =>
   return args.length >= fn.length ? fn(...args) : (...more) => curried(...args, ...more);
 };`,
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),out=Object.freeze({});const pair=curry((x,y)=>[x,y]),p=pair(a),one=p(b),two=p(undefined);const r=curry((x,y)=>out)(a)(b);return [one[0]===a,one[1]===b,two[0]===a,two[1]===undefined,r===out];})()", expected: [true, true, true, true, true] },
+      { call: "(() => {let calls=0;const f=curry((a,b=2,...rest)=>{calls++;return [a,b,rest.length];});const before=typeof f;const a=f(1),b=f(1,3,4,5);const zero=curry((...args)=>args.length);return [before,a,b,calls,zero(),zero(1,2)];})()", expected: ["function", [1, 2, 0], [1, 3, 2], 2, 0, 2] },
+      { call: "(() => {const error=Object.freeze({});let calls=0;const f=curry((a,b)=>{calls++;throw error;}),p=f(-0);let same=0;for(let i=0;i<2;i++){try{p(undefined);}catch(e){if(e===error)same++;}}return [calls,same,typeof p];})()", expected: [2, 2, "function"] },
+      { call: "(() => {let calls=0;const fn=(...args)=>{calls++;return [args.length,args[0],args[999]];};Object.defineProperty(fn,\"length\",{value:100});const f=curry(fn),a=Array.from({length:1000},(_,i)=>i);return [f(...a),calls];})()", expected: [[1000, 0, 999], 1] },
+
       { call: '(() => { const volume = (l, w, h) => l * w * h; const base = curry(volume)(2); const wide = base(3); return [wide(4), wide(5), base(1)(1), base(1, 1)]; })()', expected: [24, 30, 2, 2] },
       { call: '(() => { const pair = (a, b) => [a, b]; const one = curry(pair); const two = curry(pair); one("x"); return [two("y")("z"), one("p")("q")]; })()', expected: [['y', 'z'], ['p', 'q']] },
       { call: 'curry((a, b) => a + b)(1)()(2)', expected: 3 },

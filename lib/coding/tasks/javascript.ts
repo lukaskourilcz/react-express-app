@@ -1876,7 +1876,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "map-set"],
     title: "Memoize results",
-    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache.",
+    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache. Keys use Map SameValueZero: NaN matches itself, +0 and -0 share a key, object/function keys match only by identity, and strings and numbers stay separate. The wrapper forwards every original argument to fn only on a miss and returns the exact cached result reference/value, including undefined, without cloning it. Calls with no arguments and an explicit first undefined share a key. Later arguments do not affect the cache key. A synchronous throw propagates unchanged and is not cached, so a retry calls fn again. fn does not depend on this or reenter the wrapper. Each wrapper has at most 1000 calls, at most 10 arguments per call and bounded 1000-character string keys; keys/results are opaque. Target: O(1) time for wrapper work per call under expected constant-cost Map access, excluding fn work; retained cache space is O(k) for k distinct successful keys. This is an access-cost model, not a language guarantee that Map operations always take constant time.",
     starter: `const memoize = fn => {
   
 };

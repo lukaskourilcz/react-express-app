@@ -992,21 +992,7 @@ const chunk = (items, size) =>
   },
   "js-memoize-results": {
     solution: "const memoize = fn => { const cache = new Map(); return (...args) => { if (!cache.has(args[0])) cache.set(args[0], fn(...args)); return cache.get(args[0]); }; };",
-    junior: `const memoize = fn => {
-  const seenArguments = [];
-  const seenResults = [];
-  return (...args) => {
-    const firstArgument = args[0];
-    const position = seenArguments.indexOf(firstArgument);
-    if (position !== -1) {
-      return seenResults[position];
-    }
-    const result = fn(...args);
-    seenArguments.push(firstArgument);
-    seenResults.push(result);
-    return result;
-  };
-};`,
+    junior: "const memoize = fn => {\n  const cache = new Map();\n  return (...args) => {\n    const key = args[0];\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = fn(...args);\n    cache.set(key, result);\n    return result;\n  };\n};",
     senior: `const memoizeBy = keyOf => fn => {
   const cache = new Map();
   return (...args) => {
@@ -1021,6 +1007,11 @@ const chunk = (items, size) =>
 // The task keys on the first argument; the factory lets another caller key on all of them.
 const memoize = memoizeBy(([first]) => first);`,
     hiddenTests: [
+      { call: "(() => {let calls=0;const a=Object.freeze({}),b=Object.freeze({}),result=Object.freeze({}),m=memoize((...args)=>{calls++;return result;});const x=m(a,1),y=m(a,2),z=m(b),nan1=m(NaN),nan2=m(NaN),zero1=m(-0),zero2=m(0);m(\"0\");m(0);return [x===result,y===result,z===result,nan1===result,nan2===result,zero1===result,zero2===result,calls];})()", expected: [true, true, true, true, true, true, true, 5] },
+      { call: "(() => {let runs=0;const m=memoize((...args)=>{runs++;return args.length;});const a=m(),b=m(undefined,123);let u=0;const missing=memoize(()=>{u++;return undefined;});const x=missing(1),y=missing(1);return [a,b,runs,x===undefined,y===undefined,u];})()", expected: [0, 0, 1, true, true, 1] },
+      { call: "(() => {const error=Object.freeze({}),key=Object.freeze({});let calls=0;const m=memoize(x=>{calls++;if(calls<3)throw error;return x;});let same=0;for(let i=0;i<2;i++){try{m(key);}catch(e){if(e===error)same++;}}const a=m(key),b=m(key);return [same,calls,a===key,b===key];})()", expected: [2, 3, true, true] },
+      { call: "(() => {let calls=0;const m=memoize(x=>{calls++;return x;});for(let i=0;i<500;i++)m(i);for(let i=0;i<500;i++)m(i);return calls;})()", expected: 500 },
+
       { call: "memoize(() => { let runs = 0; const square = memoize(n => { runs += 1; return n * n; }); return [square(3), square(4), square(3), square(4), runs]; })()", expected: [9, 16, 9, 16, 2] },
       { call: "memoize(() => { let runs = 0; const isEmpty = memoize(text => { runs += 1; return text.length === 0; }); return [isEmpty(\"x\"), isEmpty(\"x\"), runs]; })()", expected: [false, false, 1] },
       { call: "memoize(() => { let runs = 0; const add = memoize((a, b) => { runs += 1; return a + b; }); return [add(1, 2), add(1, 100), runs]; })()", expected: [3, 3, 1] },

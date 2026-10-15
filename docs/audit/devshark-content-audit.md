@@ -1,6 +1,31 @@
 # devShark content audit — the question bank
 
 
+## 15 October continuation — five coding items b037
+
+Read memoization, fixed-five-letter marking, the sliding limiter, curry and
+bowling scoring individually. Memoize junior now uses Map so NaN keys cache
+correctly; opaque results and synchronous throw retries are explicit. Marking
+examples use the required two indexed passes. Curry explains fn.length with
+default/rest parameters and immutable reusable argument prefixes. Bowling
+junior now exposes the requested rule helpers; legal-prefix scoring is retained.
+
+All 30 current-hash worker verdicts agree (20 valid, five starters, five wrongs)
+versus 27/30 baseline. Twenty target/base-25-XP checks, zero-artifact copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Cases
+include an independent consumed-position oracle for all 1024 binary-alphabet
+word pairs, 1000-key/call bounds, original error/reference predicates, equal
+expiry timestamps, 10000 limiter calls and pending tenth-frame bowling bonuses.
+Stateful/host/callback costs are described separately; structure estimates and
+finite execution are not measured asymptotic or arbitrary-program proof.
+
+Coverage is 215/725 coding, 510 remaining, and 263/263 native. Shipped coding
+coverage remains 155. B033–b037 are local and outside frozen PR #405. No live
+user progress, score/name or payment fixture was created. Same-session model
+review is not independent or human review.
+
+
 ## 15 October continuation — five coding items b036
 
 Individually read spiral traversal, expense balances, CSV parsing, undo/redo

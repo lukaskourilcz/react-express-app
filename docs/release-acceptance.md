@@ -3551,3 +3551,15 @@ and diff checks pass. Safe own-name dictionaries, CSV logical-record grammar,
 opaque history references, identity-preserving chain methods and bounded grid/
 operation sequences use local fixtures. No runtime/schema/UI policy change,
 no live user-state writes and no independent/human acceptance claim.
+
+## Cache, arity and scoring batch b037 — 15 October 2026
+
+Five individual model reviews raise coverage to 215/725 coding, 510 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 27/30
+before. Twenty authored-target/base-25-XP checks, copy sweep, focused coding,
+API/script types, launch, build, native bindings, both production dependency
+audits (zero vulnerabilities) and diff checks pass. NaN cache keys, exact
+opaque/error identity, all 1024 binary-word pairs, default/rest arity, high
+limiter bounds and incomplete bowling bonuses use local fixtures. No grader
+engine/schema/UI-policy change or live user-state write; same-session model
+and finite execution evidence only. PR #405 remains frozen separately.
