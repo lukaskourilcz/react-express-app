@@ -183,7 +183,7 @@ console.log(serveNext(line, "Cy"), line);
     tier: 1,
     focus: ["push", "pop"],
     title: "Swap the top",
-    prompt: "Write `swapTop(stack, item)`, replacing the top of a stack in place: remove the last element with `pop`, put `item` in its place with `push`, and return the removed element. With `stack = [1, 2, 3]`, `swapTop(stack, 9)` returns 3 and leaves `stack` as `[1, 2, 9]`. On an empty stack there is nothing to remove, so the item is pushed and `undefined` comes back.",
+    prompt: "Write `swapTop(stack, item)`, replacing the top of a stack in place: remove the last element with `pop`, put `item` in its place with `push`, and return the removed element. With `stack = [1, 2, 3]`, `swapTop(stack, 9)` returns 3 and leaves `stack` as `[1, 2, 9]`. On an empty stack there is nothing to remove, so the item is pushed and `undefined` comes back. stack is an ordinary mutable dense array with at most 10000 elements. Elements and item are opaque values: preserve their exact identities, including objects, undefined, NaN and signed zero. Do not inspect or clone them. Keep every earlier stack element unchanged. Use pop followed by push as requested. Target: O(1) time under the usual amortized dynamic-array append model; input size n is 1 + the original stack length.",
     starter: `const swapTop = (stack, item) => {
 
 };
@@ -221,7 +221,7 @@ console.log(swapTop(stack, 9), stack);
     tier: 1,
     focus: ["unshift"],
     title: "Add to the front",
-    prompt: "Write `addToFront(list, item)`, adding the item at the front of the list in place with `unshift` and returning the new length, which is what `unshift` itself returns. With `list = [2, 3]`, `addToFront(list, 1)` returns 3 and leaves `list` as `[1, 2, 3]`. An empty list gains its first item and returns 1.",
+    prompt: "Write `addToFront(list, item)`, adding the item at the front of the list in place with `unshift` and returning the new length, which is what `unshift` itself returns. With `list = [2, 3]`, `addToFront(list, 1)` returns 3 and leaves `list` as `[1, 2, 3]`. An empty list gains its first item and returns 1. list is an ordinary mutable dense array with at most 10000 elements. Treat every element and item as opaque: preserve exact references and values, including undefined and NaN. Add item as one element even when it is an array; preserve the order of all existing elements. Use unshift as requested. Target: O(n) time, where n is 1 + the original list length, because existing elements move to the right.",
     starter: `const addToFront = (list, item) => {
 
 };
@@ -256,7 +256,7 @@ console.log(addToFront(list, 1), list);
     tier: 1,
     focus: ["splice"],
     title: "Remove a range",
-    prompt: "Write `removeRange(list, start, count)`, removing `count` items in place beginning at index `start` with `splice` and returning the removed items as an array. With `list = [1, 2, 3, 4, 5]`, `removeRange(list, 1, 2)` returns `[2, 3]` and leaves `list` as `[1, 4, 5]`. A count of zero removes nothing, and a count past the end stops at the end.",
+    prompt: "Write `removeRange(list, start, count)`, removing `count` items in place beginning at index `start` with `splice` and returning the removed items as an array. With `list = [1, 2, 3, 4, 5]`, `removeRange(list, 1, 2)` returns `[2, 3]` and leaves `list` as `[1, 4, 5]`. A count of zero removes nothing, and a count past the end stops at the end. list is an ordinary mutable dense array of at most 10000 opaque values. start and count are integers from -10000 to 10000. Follow splice normalization: a negative start counts from the end and clips at zero; start beyond the end removes nothing; nonpositive count removes nothing. Return a fresh array of the original removed references in order, preserve all remaining references and do not inspect or clone elements. Use a single splice call rather than repeatedly shifting a growing tail. Target: O(n) time, where n is 1 + the original list length, including the removed output and shifted suffix.",
     starter: `const removeRange = (list, start, count) => {
 
 };
@@ -292,7 +292,7 @@ console.log(removeRange(list, 1, 2), list);
     tier: 1,
     focus: ["slice"],
     title: "Copy a range",
-    prompt: "Write `copyRange(list, start, end)`, returning a new array with the items from index `start` up to but not including `end`, taken with `slice` so the original list is never changed. `copyRange([1, 2, 3, 4], 1, 3)` gives `[2, 3]`. An end past the length stops at the end, and equal indexes give an empty array.",
+    prompt: "Write `copyRange(list, start, end)`, returning a new array with the items from index `start` up to but not including `end`, taken with `slice` so the original list is never changed. `copyRange([1, 2, 3, 4], 1, 3)` gives `[2, 3]`. An end past the length stops at the end, and equal indexes give an empty array. list is an ordinary read-only dense array of at most 10000 opaque values and may be frozen. start and end are integers from -10000 to 10000. Follow slice normalization: negative indexes count from the end and clip to zero, indexes past the length clip to the length, and an end before the normalized start gives an empty array. Return a fresh shallow array with the original element references, even when the range is empty; do not clone or inspect elements. Use slice as requested. Target: O(n) time as an upper bound, where n is 1 + list.length; more precisely, copying k returned elements costs O(k + 1).",
     starter: `const copyRange = (list, start, end) => {
 
 };
@@ -326,7 +326,7 @@ console.log(copyRange([1, 2, 3, 4], 1, 3));
     tier: 1,
     focus: ["splice"],
     title: "Insert at an index",
-    prompt: "Write `insertAt(list, index, item)`, inserting the item at that position in place with `splice` without removing anything, and returning the list. `insertAt([1, 3], 1, 2)` gives `[1, 2, 3]`. Index 0 puts the item first, and an index equal to the length appends it.",
+    prompt: "Write `insertAt(list, index, item)`, inserting the item at that position in place with `splice` without removing anything, and returning the list. `insertAt([1, 3], 1, 2)` gives `[1, 2, 3]`. Index 0 puts the item first, and an index equal to the length appends it. list is an ordinary mutable dense array with at most 10000 opaque values. index is an integer from 0 through list.length; out-of-range indexes are outside this exercise. Insert exactly one item, including when item is an array, and preserve every original value/reference and its relative order. Return the exact same list object, not a copy, without inspecting or cloning elements. Use splice as requested. Target: O(n) time, where n is 1 + the original list length, because the suffix may move right.",
     starter: `const insertAt = (list, index, item) => {
 
 };

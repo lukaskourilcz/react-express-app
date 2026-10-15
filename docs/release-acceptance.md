@@ -3411,3 +3411,15 @@ observe post-call price order and1.005without premature rounding. Exact READY
 PR #404 preview at3e8d209d passes11general guest checks; SQL41s passes, verify
 is pending. B026 is local and not part of that frozen PR. No real profile,
 billing transaction, progress, score or generated-name allocation is involved.
+
+## Array mutation/copy content batch b027 — 15 October 2026
+
+Five individual model reviews raise coding coverage to165/725,560remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass. Focused coding, API/script types, launch, build, native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Initial
+identical insertion boards were corrected to distinct explicit/literal argument
+forms and the final35verdicts/20target checks rerun. Ownership and normalization
+checks include10000-element arrays; finite tests do not prove arbitrary method
+conformance or asymptotics. B026–b027are local; #404 remains frozen separately.

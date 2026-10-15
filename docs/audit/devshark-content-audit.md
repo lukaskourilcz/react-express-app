@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b027
+
+Read all English fields, starters/skeletons, checks and boards for swap-top,
+prepend, remove-range, copy-range and insert-at. Revealed methods now match the
+explicit pop/push, unshift, slice and splice lessons. The junior range removal
+uses one splice instead of repeated suffix shifts, and copying normalizes
+negative endpoints through slice rather than raw comparisons/manual indexes.
+Opaque references, NaN, signed zero, undefined, fresh shallow results and
+mutable/read-only ownership are explicit. Insert-at is scoped to valid positions;
+range methods retain their documented negative-index behavior.
+
+All35final-hash worker verdicts agree versus25/35before, with20valid,
+five starters and ten wrongs. Twenty authored-target/base25XP checks and the
+zero-artifact copy sweep pass. Cases include10000-entry arrays, original value
+identities, normalized negative ranges, empty fresh arrays and exact caller-list
+identity. An initial content-contract run found identical insertion boards;
+the final junior names deleteCount explicitly, senior uses zero directly, and
+all35cases were rerun against the final hashes. Direct code reading establishes
+method conformance for supplied forms; probes do not prove arbitrary source
+style or asymptotic complexity. No independent/human review is claimed.
+
+Focused coding, API/script types, launch, build,263native bindings, both
+zero-vulnerability production dependency audits and diff checks pass.
+Coverage is165/725coding,560remaining,263/263native. B026–b027remain local;
+PR #404 stays frozen at3e8d209d while required CI runs. Archived Czech is untouched.
+
 ## 15 October continuation — five coding items b026
 
 Read all five cumulative edge/input stages and every inherited board and check.

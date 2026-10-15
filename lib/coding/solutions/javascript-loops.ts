@@ -139,12 +139,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   stack.push(item);
   return removed;
 };`,
-    senior: `const swapTop = (stack, item) => {
-  // splice(-1, 1, item) is pop-then-push in one call; on an empty stack it removes nothing and returns [].
-  const [top] = stack.splice(-1, 1, item);
-  return top;
-};`,
+    senior: "const swapTop = (stack, item) => {\n  const removed = stack.pop();\n  stack.push(item);\n  return removed;\n};",
     hiddenTests: [
+      { call: "(() => { const first=Object.freeze({n:1}),top=Object.freeze({n:2}),item=Object.freeze([3]),stack=[first,top];const removed=swapTop(stack,item);return [removed===top,stack[0]===first,stack[1]===item,stack.length]; })()", expected: [true, true, true, 2] },
+      { call: "(() => { const stack=[NaN];const top=swapTop(stack,undefined);const other=[-0];const zero=swapTop(other,null);return [Number.isNaN(top),stack.length,stack[0]===undefined,Object.is(zero,-0),other[0]===null]; })()", expected: [true, 1, true, true, true] },
+      { call: "(() => { const stack=Array.from({length:10000},(_,i)=>i);const top=swapTop(stack,\"last\");return [top,stack.length,stack[0],stack[9999]]; })()", expected: [9999, 10000, 0, "last"] },
+
       { call: "(() => { const stack = [7,8,9,10]; const top = swapTop(stack, 0); return [top, stack.length, stack[3]]; })()", expected: [10, 4, 0] },
       { call: "(() => { const stack = []; swapTop(stack, 1); swapTop(stack, 2); return stack; })()", expected: [2] },
       { call: "(() => { const stack = [\"x\"]; return swapTop(stack, \"y\") === \"x\" && stack[0] === \"y\"; })()", expected: true },
@@ -157,12 +157,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const newLength = list.length;
   return newLength;
 };`,
-    senior: `const addToFront = (list, item) => {
-  // An insert at index 0 through splice; the new length is then read straight off the list.
-  list.splice(0, 0, item);
-  return list.length;
-};`,
+    senior: "const addToFront = (list, item) => list.unshift(item);",
     hiddenTests: [
+      { call: "(() => { const old=Object.freeze({n:1}),item=Object.freeze([2]),list=[old];const size=addToFront(list,item);return [size,list[0]===item,list[1]===old,list.length]; })()", expected: [2, true, true, 2] },
+      { call: "(() => { const list=[NaN,-0];const size=addToFront(list,undefined);return [size,list[0]===undefined,Number.isNaN(list[1]),Object.is(list[2],-0)]; })()", expected: [3, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);return [addToFront(list,null),list[0],list[10000]]; })()", expected: [10001, null, 9999] },
+
       { call: "(() => { const list = [5,6,7,8]; const length = addToFront(list, 4); return [length, list[0], list.length]; })()", expected: [5, 4, 5] },
       { call: "(() => { const list = []; addToFront(list, null); return list; })()", expected: [null] },
       { call: "(() => { const list = [\"x\"]; return addToFront(list, \"y\") === 2 && list[0] === \"y\" && list[1] === \"x\"; })()", expected: true },
@@ -170,23 +170,17 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-remove-a-range": {
     solution: "const removeRange = (list, start, count) => list.splice(start, count);",
-    junior: `const removeRange = (list, start, count) => {
-  const removed = [];
-  for (let step = 0; step < count; step += 1) {
-    if (start >= list.length) {
-      break;
-    }
-    const taken = list.splice(start, 1);
-    removed.push(taken[0]);
-  }
-  return removed;
-};`,
+    junior: "const removeRange = (list, start, count) => {\n  const removed = list.splice(start, count);\n  return removed;\n};",
     senior: `const removeRange = (list, start, count) => {
   // Nothing to take out: leave the list alone rather than asking splice for zero items.
   if (count <= 0 || start >= list.length) return [];
   return list.splice(start, count);
 };`,
     hiddenTests: [
+      { call: "(() => { const first={},second=Object.freeze({}),last=Object.freeze([]),list=[first,second,last];const removed=removeRange(list,-2,1);const a=removeRange(list,2,0),b=removeRange(list,2,0);return [removed[0]===second,removed!==list,list[0]===first,list[1]===last,a!==b,a.length]; })()", expected: [true, true, true, true, true, 0] },
+      { call: "(() => { const a=[0,1,2,3];return [removeRange(a,-10000,2),a,removeRange(a,0,-1),a]; })()", expected: [[0, 1], [2, 3], [], [2, 3]] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=removeRange(list,1,9998);return [out.length,out[0],out[9997],list]; })()", expected: [9998, 1, 9998, [0, 9999]] },
+
       { call: "(() => { const list = [10,20,30,40,50,60]; const removed = removeRange(list, 2, 3); return [removed, list]; })()", expected: [[30, 40, 50], [10, 20, 60]] },
       { call: "(() => { const list = [\"p\",\"q\",\"r\",\"s\"]; removeRange(list, 3, 1); return list; })()", expected: ["p", "q", "r"] },
       { call: "(() => { const list = [1,2]; return [removeRange(list, 2, 1), list]; })()", expected: [[], [1, 2]] },
@@ -194,20 +188,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-copy-a-range": {
     solution: "const copyRange = (list, start, end) => list.slice(start, end);",
-    junior: `const copyRange = (list, start, end) => {
-  if (start >= end) {
-    return [];
-  }
-  const copy = list.slice(start, end);
-  return copy;
-};`,
-    senior: `const copyRange = (list, start, end) => {
-  // Clamp the end first, then build the copy from a known length; the source is never touched.
-  const stop = Math.min(end, list.length);
-  const length = Math.max(0, stop - start);
-  return Array.from({ length }, (_, offset) => list[start + offset]);
-};`,
+    junior: "const copyRange = (list, start, end) => {\n  const copy = list.slice(start, end);\n  return copy;\n};",
+    senior: "const copyRange = (list, start, end) => list.slice(start, end);",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined,NaN,-0]);const out=copyRange(input,0,10000),empty=copyRange(input,3,2);return [out!==input,out[0]===a,out[1]===b,out[2]===undefined,Number.isNaN(out[3]),Object.is(out[4],-0),empty.length,empty!==copyRange(input,3,2)]; })()", expected: [true, true, true, true, true, true, 0, true] },
+      { call: "[copyRange([0,1,2,3],1,-1),copyRange([0,1,2,3],-3,3),copyRange([0,1,2,3],-10000,10000),copyRange([0,1,2,3],-1,-3)]", expected: [[1, 2], [1, 2], [0, 1, 2, 3], []] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i));const out=copyRange(list,1,9999);return [out.length,out[0],out[9997],list[0]]; })()", expected: [9998, 1, 9998, 0] },
+
       { call: "copyRange([5,6,7,8,9], 2, 5)", expected: [7, 8, 9] },
       { call: "(() => { const list = [\"x\",\"y\",\"z\"]; const copy = copyRange(list, 0, 3); copy.push(\"w\"); return [list, copy.length]; })()", expected: [["x", "y", "z"], 4] },
       { call: "copyRange([], 0, 1)", expected: [] },
@@ -215,20 +202,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-insert-at-index": {
     solution: "const insertAt = (list, index, item) => { list.splice(index, 0, item); return list; };",
-    junior: `const insertAt = (list, index, item) => {
-  for (let slot = list.length; slot > index; slot -= 1) {
-    list[slot] = list[slot - 1];
-  }
-  list[index] = item;
-  return list;
-};`,
-    senior: `const insertAt = (list, index, item) => {
-  // Clamp so a negative index cannot count from the end, which splice would otherwise do.
-  const at = Math.min(Math.max(index, 0), list.length);
-  list.splice(at, 0, item);
-  return list;
-};`,
+    junior: "const insertAt = (list, index, item) => {\n  const deleteCount = 0;\n  list.splice(index, deleteCount, item);\n  return list;\n};",
+    senior: "const insertAt = (list, index, item) => {\n  list.splice(index, 0, item);\n  return list;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),item=Object.freeze({value:1}),list=[a,b];const out=insertAt(list,1,item);return [out===list,list.length,list[0]===a,list[1]===item,list[2]===b]; })()", expected: [true, 3, true, true, true] },
+      { call: "(() => { const list=[undefined,-0];const out=insertAt(list,1,NaN);return [out===list,list[0]===undefined,Number.isNaN(list[1]),Object.is(list[2],-0)]; })()", expected: [true, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=insertAt(list,0,null);return [out===list,list.length,list[0],list[10000]]; })()", expected: [true, 10001, null, 9999] },
+
       { call: "insertAt([10,20,30,40], 3, 35)", expected: [10, 20, 30, 35, 40] },
       { call: "(() => { const list = [\"a\",\"b\",\"c\"]; return insertAt(list, 1, \"z\") === list; })()", expected: true },
       { call: "insertAt([1,2,3], 1, [0])", expected: [1, [0], 2, 3] },
