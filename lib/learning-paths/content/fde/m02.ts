@@ -405,7 +405,7 @@ export const FDE_M02: ModuleSource = {
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Integration decisions',
-      summary: 'Four bounded decisions: which retry is safe to automate, what a 429 with Retry-After means, why a cursor beats an offset under concurrent writes, and which key detects a duplicate delivery.',
+      summary: 'Four integration decisions: justified retry semantics, rate-limit instructions, a documented stable keyset boundary, and tenant-scoped ticket-version deduplication.',
       competencies: ['integration'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
@@ -413,7 +413,7 @@ export const FDE_M02: ModuleSource = {
         {
           id: 'fde-v1-m02-q1',
           prompt:
-            'The Marlbrook sync makes these four calls. One of them your client may retry on its own, with no person in the loop and no extra machinery. Which one?',
+            'Which retry is justified by standard HTTP method semantics and the supplied header alone, without an extra application-specific idempotency guarantee? Assume the API follows those semantics and the client has a bounded retry budget.',
           options: [
             '`GET /v1/tickets?cursor=p2`, which returned 429 with `Retry-After: 2`.',
             '`POST /v1/tickets/TCK-1002/replies`, which timed out with no response and no idempotency key.',
@@ -422,42 +422,42 @@ export const FDE_M02: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'A GET changes nothing at the source, so a second identical request returns a representation and leaves Marlbrook exactly as it was. RFC 9110 calls that a safe method, and safe methods are the ones a client may repeat by itself, once it has waited the delay the 429 asked for. The timed-out POST is the hard case: no response means you cannot tell whether the reply was written, so a retry risks a second message to the customer, and without an idempotency key nothing on the server can collapse the two. The refund is that same ambiguity with money attached, and a 500 tells you the server failed somewhere, not that it failed before the ledger write. The PATCH is retryable only when you know nothing else touched the record in between, and a concurrent editor is precisely the case where the retry overwrites someone else’s change and reports success.',
+            'GET is defined as safe: its requested effect is read-only, though logging, accounting or other incidental effects can occur and the representation can change between requests. Respect Retry-After and the bounded retry policy. Idempotent methods can also justify retries; safety is not the only possible basis. The timed-out POST is the hard case: no response means you cannot tell whether the reply was written, so a retry risks a second message to the customer, and no deduplication contract is supplied, so the client cannot assume two writes will collapse. The refund is that same ambiguity with money attached, and a 500 tells you the server failed somewhere, not that it failed before the ledger write. PATCH is not inherently idempotent. Its operation semantics and preconditions matter; conditional requests can protect against lost updates. This option supplies no such guarantee, and the concurrent edit makes an unconditional replay especially unsafe to assume.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-m02-q2',
           prompt: 'The ticket API answers `HTTP/1.1 429 Too Many Requests` with `Retry-After: 2`. What has the server told you?',
           options: [
-            'The request was refused and not processed, and the server wants you to wait at least two seconds before sending it again.',
+            'The caller hit a rate limit; wait at least two seconds before a permitted retry. The response does not define account-wide scope.',
             'The request was processed but the response was truncated, so re-reading the page in two seconds gets you the rest of it.',
             'Your whole account is rate limited for two seconds, so every other request you have in flight will fail during that window too.',
             'The server has queued the request and will answer it within two seconds, so sending it again would create a second copy of the work.',
           ],
           correct: 0,
           explanation:
-            '429 is a client-error status: the server declined the request, nothing was read and nothing changed, so the page still has to be fetched. `Retry-After` carries the delay the server wants, as seconds or as an HTTP date, and waiting less than it usually earns you another 429 and a longer window. The truncation answer describes a partial response, which is what ranged requests and 206 are for; a 429 has no page in it at all. The account-wide answer invents a scope the header never states, because the limit may be per key, per endpoint or per tenant and the response does not say which, so assuming the widest one stalls work that would have succeeded. The queueing answer describes a server that accepted the request; a 429 says the opposite, and treating it as accepted means the page is never read and the sync quietly loses records.',
+            '429 reports too many requests in a time window. Retry-After: 2 asks for at least a two-second wait; other responses may use an HTTP date instead. It does not promise the next attempt will succeed, prove a transaction was rolled back, or identify the limiter’s scope. Retry only operations whose semantics make that safe. The truncation answer describes a partial response, which is what ranged requests and 206 are for; a 429 may include an explanatory error body rather than a successful page. The account-wide answer invents a scope the header never states, because the limit may be per key, per endpoint or per tenant and the response does not say which, so assuming the widest one stalls work that would have succeeded. Nothing in 429 or this header promises queued work or a later response; treating it as a successful fetch can leave a sync incomplete.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-m02-q3',
           prompt:
-            'Marlbrook’s ticket API pages either way: `?offset=300&limit=100` or `?cursor=...&limit=100`. You are syncing about 900 open tickets while agents keep opening and closing tickets. Why is the cursor the safer choice here?',
+            'The API sorts open tickets by unique immutable ticket id. Its documented cursor resumes strictly after the last returned id, without a snapshot guarantee; offset skips a current row count. Agents open and close tickets during the sync. Which advantage does this keyset cursor have?',
           options: [
-            'An offset counts into a result set that is being rewritten between your requests, so a ticket that crosses a page boundary is read twice or missed entirely. A cursor names a position in the ordering, so the next page continues from the last item you actually saw.',
+            'Removing an earlier row shifts offset positions; the stable last-id boundary still resumes after the same key.',
             'A cursor lets the server use an index, while an offset always forces a full scan, so only the cursor finishes within the sync window.',
             'A cursor guarantees you see every ticket exactly once, including the ones created after the sync started.',
             'An offset cannot be resumed after a crash, because the client has no way of knowing how far it got.',
           ],
           correct: 0,
           explanation:
-            'Skipping 300 rows means skipping 300 rows of whatever the result set holds at that moment. Close a ticket that sorted into page one and everything after it shifts down by one, so the first row of page four moves to the last row of page three and your sync never sees it. A cursor encodes where you stopped in the ordering, so the shift cannot slide a row past you. The index answer is often true and is a performance argument, not a correctness one; a fast offset scan still loses the row. The exactly-once answer overclaims: a cursor protects the rows behind you, and a ticket created ahead of your position is picked up while one created behind it is not, which is why syncs are written to tolerate both. The resume answer is simply wrong, since an offset is a number the client already has and can store.',
+            'Skipping 300 rows means skipping 300 rows of whatever the result set holds at that moment. Close a ticket that sorted into page one and everything after it shifts down by one, so the first row of page four moves to the last row of page three and your sync never sees it. This documented keyset cursor resumes after an immutable unique id, so removing earlier rows does not shift that boundary. An arbitrary API token called a cursor need not have these semantics. Both approaches can use indexes; actual performance depends on the query and implementation, so the always-full-scan claim is false. The exactly-once claim overreaches: a record becoming eligible behind the current key can be missed in this run, while one ahead may appear. This is not a consistent snapshot of the initial open-ticket set; reconciliation, deduplication or change tracking may still be needed. The resume answer is simply wrong, since an offset is a number the client already has and can store.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-m02-q4',
           prompt:
-            'Marlbrook’s webhook delivers ticket updates at least once, and it mints a fresh `deliveryId` for every attempt. You store one row per ticket version. Which key tells you that a delivery you have already stored has arrived again?',
+            'For one tenant, ticket ids are unique and each logical ticket version has a stable version number. The webhook delivers at least once and generates a fresh deliveryId per attempt. You store one row per ticket version. Which key deduplicates that row?',
           context: {
             language: 'json',
             code: '{\n  "deliveryId": "dlv-7c1f",\n  "deliveredAt": "2026-03-02T02:14:07Z",\n  "ticket": {\n    "id": "TCK-1004",\n    "version": 3,\n    "customerId": "CUS-88",\n    "subject": "Export fails at 02:00",\n    "updatedAt": "2026-03-02T02:14:00Z"\n  }\n}',
@@ -470,7 +470,7 @@ export const FDE_M02: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'A row means one version of one ticket, so the key has to name exactly that: the id says which ticket, the version says which state of it. A redelivery of version 3 matches the row you already wrote, and a genuine edit arrives as version 4 and does not. `deliveryId` is unique per attempt rather than per update, which is the opposite of what you need — every redelivery looks new and you store version 3 as many times as the webhook retries. Hashing the whole payload fails for the same reason one level down, because `deliveryId` and `deliveredAt` differ between attempts, so the hash differs too; hashing only the `ticket` object would work, which is worth knowing when a feed gives you no version field. The id alone collapses every version of a ticket into one row, so the second real update is discarded as a duplicate and the ticket is frozen at whatever state arrived first.',
+            'A row means one version of one ticket, so the key has to name exactly that: the id says which ticket, the version says which state of it. A redelivery of version 3 matches the row you already wrote, and a genuine edit arrives as version 4 and does not. `deliveryId` is unique per attempt rather than per update, which is the opposite of what you need — every redelivery looks new and you store version 3 as many times as the webhook retries. Hashing the whole payload fails for the same reason one level down, because `deliveryId` and `deliveredAt` differ between attempts, so the hash differs too; a canonical content hash can sometimes help under a documented content-deduplication policy, but is not a general replacement for stable event/version identity when separate updates can have equal content. The id alone collapses every version of a ticket into one row, so the second real update is discarded as a duplicate and the ticket is frozen at whatever state arrived first.',
           competencies: ['integration'],
         },
       ],

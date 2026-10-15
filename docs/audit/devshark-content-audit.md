@@ -1,5 +1,249 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n023
+
+Reviewed all four boundary questions and their check. Fixed-active-tenant
+behavior is now an explicit run policy and current authorization is rechecked;
+a membership-authorized selector can be valid in a different architecture.
+Broad fetches violate the stated storage policy and increase exposure risk,
+without claiming every log or crash already leaked rows. The grant item names
+twenty-row batches and a current-grant check before each; it no longer invents
+universal expiry/revocation semantics. Audit entry C supports attribution and
+correlation, while historical reconstruction needs more than a version number.
+The parent summary matches those limits.
+
+Literal JSON fields, forty-row partial-work arithmetic, exercise thresholds and
+feedback checks pass. Other authorization conclusions are manual under the
+stated policies, not live RLS, grant, retention or export acceptance. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Six public
+DSA catalogue probes per theme pass at 360–1440; they do not establish authenticated
+question/activity, keyboard, zoom or physical-device acceptance. Individual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **170/263 native**, **93 remaining**, and **95/725 coding**,
+**630 remaining**. PR #396 merged at 4b5b777c after exact-head required verify
+30m20s/SQL37s, and its exact READY production deployment with devshark.app passes
+eleven general checks. Source shipped coverage is 95 coding/125 native; no
+authenticated native activity acceptance is inferred. N015–n023 remain local.
+#397 still blocks acceptance of the FDE diagnostic parent.
+
+## 15 October continuation — five-item native batch n022
+
+Reviewed all four integration questions and their check. Retry reasoning now
+distinguishes requested read-only effects from incidental GET effects and
+recognizes idempotence/preconditions beyond safe methods. 429/Retry-After no
+longer promises no reads/writes, transaction rollback, empty bodies or future
+success. Pagination explicitly uses unique immutable ids and documented keyset
+semantics, without a snapshot guarantee or an always-full-scan offset claim.
+Ticket-version deduplication is explicitly single-tenant and content hashing is
+qualified rather than a universal replacement for logical event identity.
+
+The authored deletion example shows offset skipping id4 while key>3 retains it;
+the literal webhook's stable version key survives a fresh delivery id while its
+whole-payload hash changes. Exercise thresholds/feedback agree. HTTP conclusions
+are manual primary-RFC readings, not actual retries or provider behavior.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores/readings are not inferred from execution.
+
+Coverage is **165/263 native**, **98 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 remains
+frozen at 758d1bbb with SQL/exact-preview checks passing and verify pending;
+n015–n022 are local. Production-verified coverage remains 95 coding/95 native.
+
+## 15 October continuation — five-item native batch n021
+
+Reviewed discovery questions two through four, the complete check and the scope
+brief. The baseline choice now includes an observed value and is explicitly
+hypothetical. A prescribed mechanism is recognized as a design choice that can
+become an agreed requirement; unsupported substitute/cost claims are removed.
+The missing stakeholder question has an explicit company-policy launch gate
+instead of speculative veto certainty. Shuffled feedback no longer points at
+first/last options, and the parent summary matches the corrected objectives.
+
+The seven-field artifact distinguishes its single observed ticket from the
+hypothetical question note. Broader measurements can be marked unmeasured with
+a collection plan, and acceptance goals proposed pending agreement. False line-
+count claims are corrected to actual nonempty/length checks. Structural cases
+confirm missing/over-cap/blank failure and that even content-free complete boxes
+remain self-reviewed, never semantic verification. Rubric ids and exercise
+feedback/thresholds agree. No baseline or stakeholder approval is fabricated.
+
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from these executions.
+Coverage is **160/263 native**, **103 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 remains
+frozen at 758d1bbb with SQL/exact-preview checks passing and browser verification
+in progress; n015–n021 are local. Shipped coverage remains 95 coding/95 native.
+
+## 15 October continuation — five-item native batch n020
+
+Reviewed both remaining Python questions, the complete Python/incident bridge
+checks and the first discovery question. Environment defaults are retained.
+The HTTPX correct option formerly claimed a 301 passes raise_for_status; it now
+correctly rejects non-2xx, including 1xx/3xx. A 204 passes status checking but can
+fail later JSON parsing. The example names synchronous Client, default redirects
+and Python 3.10+ syntax. Parent copy no longer promises a separately recorded
+local-Python note that the activity does not store. Discovery observation is
+explicitly exploratory rather than a representative baseline by itself.
+
+Exact authored contexts pass under isolated Python 3.12.14 / HTTPX 0.28.1 with
+MockTransport and a dummy-only environment. The 101/200/201/204/301/400/500 matrix,
+invalid-200 JSON and no automatic redirect behavior agree with primary docs;
+no network or real credential is used. Both parent thresholds and diagnostic
+feedback behavior pass. Other discovery/incident conclusions remain manual.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. No server
+Python execution or authenticated activity acceptance is inferred.
+
+Coverage is **155/263 native**, **108 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 is
+frozen at 758d1bbb with SQL/exact-preview checks passing and verify pending;
+n015–n020 are local. Ninety-five coding/ninety-five native reviews are shipped.
+
+## 15 October continuation — five-item native batch n019
+
+Reviewed the two remaining incident questions and the first three Python reading
+questions. The literal record mapping is retained. Immediate rollback now has
+explicit tested compatibility/availability assumptions and requires verifying
+containment. Already sent replies remain consequences, without inventing an
+instance-replacement/cache-cleanup mechanism or an unconditional notification
+rule. Optional annotations are distinguished from runtime validation, including
+explicit None fallback and invalid dictionary contents. Coroutine creation is
+distinguished from later execution and warning timing is qualified.
+
+Three exact authored Python contexts pass locally under Python 3.9.6: Optional
+branches/defaults/runtime error, no client effects until a coroutine is driven,
+and the complete record mapping. Incident reasoning is manual against the
+fixture; no actual rollout, notification, Python server grader or static type-
+checker run is inferred. Native bindings, path contracts, API/script types,
+launch, build, both production dependency audits (zero vulnerabilities), copy
+and diff checks pass. Scores and final model readings remain individual.
+
+Coverage is **150/263 native**, **113 remaining**, and **95/725 coding**,
+**630 remaining**. Issue #397 still blocks acceptance of the FDE diagnostic
+parent. PR #396 freezes n008–n014 at 758d1bbb with SQL/exact-preview checks
+passing and verify pending; n015–n019 are local. Ninety-five coding and ninety-
+five native records are production-verified through PR #395.
+
+## 15 October continuation — five-item native batch n018
+
+Reviewed the last FDE diagnostic question, both diagnostic coding tasks and
+the first two incident-bridge questions. Demo evidence now describes chosen
+examples without claiming wider readiness. Pagination has explicit sequential
+fetch, reference/descriptor preservation, empty-page and declared upper bounds;
+the runtime TypeScript formatter specifies exact text, input ownership and
+state-only dispatch. Both have applicable authored input/output cost models.
+Incident monitoring asks for a direct tenant invariant rather than an inevitable
+first alert, and cache reuse is correctly scoped to one process/instance.
+Unobserved CPU decreases and a universal TTL-only-freshness claim are removed.
+
+Baseline expected sandbox verdicts match **8/12**: metadata writes, concurrent
+page requests and cloned entries passed old cases. Final verdicts are **12/12**,
+including compiler checks and four valid implementations. Four valid complexity
+analyses retain base 25 XP with unknown estimates unpenalized. A maximum 11000-
+entry collection, frozen values, overlapping-fetch rejection, Unicode/empty text
+and large delays are covered. The shared audit worker now selects each actual
+path instead of assuming DSA. Illustrative cache checks use no live tenant data.
+
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores/readings remain distinct from execution. Coverage is **145/263
+native**, **118 remaining**, and **95/725 coding**, **630 remaining**.
+
+The FDE diagnostic parent remains unreviewed: implementation issue #397 records
+that its competency labels use aggregate rather than individual competency
+results. It must be corrected and verified before that parent is accepted; filing
+an issue adds no coverage. PR #396 stays frozen at 758d1bbb with its SQL and exact
+preview passing, verify pending. N015–n018 are local; 95 coding/95 native records
+are shipped through PR #395.
+
+## 15 October continuation — five-item native batch n017
+
+Reviewed FDE diagnostic questions seven through eleven. Error/retry copy now
+allows visible automatic retries; the false-success answer is concise and still
+requires confirmation or visible reversal. The deletion item states both
+prevention/recovery and a permitted window, acknowledges other useful safeguards,
+and drops the invented fortnight habituation claim. The evaluation slice now
+uses possible integer counts: 24/60 billing, 916/940 other and 940/1000 overall.
+A 95% aggregate bar disproves the old claim that no threshold could catch this;
+the actual 90% bar does not enforce billing quality. Hold-out copy separates
+random sampling from tuning leakage and shortens its oversized keyed option.
+
+Exact bindings and metric arithmetic pass; the UI/retention/hold-out conclusions
+are manual scenario/primary-document readings, not fabricated runtime acceptance.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. No policy,
+UI implementation, AI feature or live evaluation changes. Individual manual
+quality/relevance and final readings are recorded independently of these runs.
+
+Coverage is **140/263 native**, **123 remaining**, and **95/725 coding**,
+**630 remaining**. All 129 DSA records are reviewed; eleven FDE questions are
+reviewed. PR #396 remains frozen at 758d1bbb with SQL/exact-preview checks
+passing and required verify pending. N015–n017 remain local, with 95 coding
+and 95 native records production-verified through PR #395.
+
+## 15 October continuation — five-item native batch n016
+
+Reviewed FDE diagnostic questions two through six individually. Invoice retries
+now require preserving automatic/concurrent retries and one persisted order key
+with atomic server handling; unsupported duplicate-rate claims are removed.
+CSV blanks explicitly target nullable text and return an array of empty-string
+matches, while JSON null remains distinct. Tenant-read exposure states known
+victim ids and an unrestricted database client without hidden row policies.
+The Vite question names a secret server key and browser delivery. Rollback
+states a code-only operation and the old column dependency, without inventing
+identical record failures or irretrievable copied data.
+
+Actual authored mapper/handler contexts run only against deterministic stubs;
+an in-memory claim illustrates stable-key behavior without pretending to test a
+provider or database transaction. Vite and dropped-column conclusions are
+manual primary-document/contract readings, not live secret or restore probes.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. These
+checks do not generate the individual editorial scores or independent approval.
+
+Coverage is **135/263 native**, **128 remaining**, and **95/725 coding**,
+**630 remaining**. PR #396 remains frozen at 758d1bbb, with required SQL and
+its exact READY preview's eleven general checks passing; verify is pending.
+N015–n016 are local. Ninety-five coding/ninety-five native records are shipped.
+
+## 15 October continuation — five-item native batch n015
+
+Reviewed the final DSA project check and three code projects, plus the first FDE
+diagnostic question. Every one of the **129 DSA native records** now has an
+individual current model review. This does not complete the other path or the
+coding catalogue: coverage is **130/263 native**, **133 remaining**, and
+**95/725 coding**, **630 remaining**.
+
+Record-index briefs now specify unique finite sorted ids, original-object
+identity, frozen input and separate closures. Per-lookup probes supplement the
+unchanged aggregate/build budgets; counters remain bounded method evidence.
+Traversal repair preserves exact node links/descriptors. Frequency indexing
+explicitly uses SameValueZero across NaN, signed zeros and reference values,
+with fresh outputs, input ownership and declared upper bounds. All three have
+applicable authored targets and input models. The parent check no longer
+promises unseen questions on retries. The FDE pagination item states accepted
+request parameters and uses the cursor sentinel even for an empty nonfinal page.
+
+Baseline verdicts match **13/18**; five wrong programs pass the old cases.
+Final sandbox verdicts match **18/18**, including six valid programs. Six valid
+complexity analyses retain base 25 XP with unknowns unpenalized. Threshold
+checks confirm all ten single misses and distributed 80% pass while a missing
+domain rejects 80%. The initial proof incorrectly assumed exercise-style key
+disclosure; it now verifies the existing project rule (right/wrong after failure,
+full keys/explanations after passing), without changing production policy.
+The authored vendor stub confirms cursor termination handles an empty middle page.
+
+Native bindings, path contracts/authority, API/script types, launch, build, both
+production dependency audits (zero vulnerabilities), copy and diff checks pass.
+No UI structure changed; source/sandbox evidence is not authenticated activity
+or independent/human acceptance. PR #396 freezes n008–n014 at 758d1bbb; n015
+is local. Ninety-five coding and ninety-five native reviews are production-
+verified through PR #395.
+
 ## 15 October continuation — five-item native batch n014
 
 Reviewed the remaining five foundation-assessment questions. The literal-tree

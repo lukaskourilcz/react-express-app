@@ -485,7 +485,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Discovery decisions',
-      summary: 'Four bounded decisions: the first question to ask, which baseline is measurable, which requirement is a solution, and whose absence stops the build.',
+      summary: 'Four bounded decisions: making routine work observable, recognizing a measured baseline, identifying a prescribed mechanism, and resolving an explicit data-access launch gate.',
       competencies: ['discovery'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
@@ -502,26 +502,26 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
           ],
           correct: 0,
           explanation:
-            'The word routine is doing all the work in that sentence and nobody has attached it to anything observable. Asking for the tickets turns it into a set you can count, and watching three of them gives you the step timings you will need for a baseline. The percentage question asks the sponsor to invent a target before anyone has measured the starting point, so you get a number with nothing behind it and an argument later about whether you hit it. The model question picks a mechanism before the problem exists, and nothing in the request implies a model is needed at all. Asking for wording assumes the expensive part is composing text, which is exactly the assumption the shadowing session is there to test.',
+            'The word routine is doing all the work in that sentence and nobody has attached it to anything observable. Recent examples and observation make the work inspectable and provide initial timings. Twenty selected tickets and three observations are an exploratory sample, not a representative baseline by themselves; check a broader labelled mix before claiming coverage or production savings. A coverage target can be useful, but a percentage alone does not define which cases count as routine or what handling them involves. The model question picks a mechanism before the workflow and constraints are understood, and nothing in the request implies a model is needed at all. Asking for wording assumes the expensive part is composing text, which is exactly the assumption the shadowing session is there to test.',
           competencies: ['discovery'],
         },
         {
           id: 'fde-v1-m01-q2',
-          prompt: 'Which of these can serve as the baseline for the Marlbrook support project?',
+          prompt: 'Which hypothetical note supplies the most complete measured baseline for the Marlbrook support project?',
           options: [
-            'Median minutes from ticket creation to first agent reply, tier-1 export tickets, August, 412 tickets, taken from the ticket system export.',
+            'Observed median first human reply: 19 minutes; tier-1 export tickets, August, 412 tickets; saved export query.',
             'The agents say that roughly half of their day goes to answering the same questions again.',
             'Support is costing too much for a team of four.',
             'Handle time will fall by 40 percent once the assistant is live.',
           ],
           correct: 0,
           explanation:
-            'The first option carries all four parts a baseline needs: a quantity, the population it covers, the window it was taken over, and a method a different person can repeat next quarter. The agents’ estimate has no defined population and no method, and “the same questions” has never been defined, so re-measuring it after launch would measure something else. “Costing too much” has no quantity at all. The last one is the target, not the starting point; it is the sentence that goes beside the baseline once the baseline exists, and on its own there is nothing for the 40 percent to be 40 percent of.',
+            'The measured 19-minute note carries a value and the four parts needed to interpret and repeat it: a quantity, the population it covers, the window it was taken over, and a method a different person can repeat next quarter. The agents’ estimate has no defined population and no method, and “the same questions” has never been defined, so re-measuring it after launch would measure something else. “Costing too much” has no quantity at all. A promised 40% improvement is a target, not a measured starting point; it is the sentence that goes beside the baseline once the baseline exists, and on its own there is nothing for the 40 percent to be 40 percent of.',
           competencies: ['discovery'],
         },
         {
           id: 'fde-v1-m01-q3',
-          prompt: 'Four lines arrived on the Marlbrook requirements list. Which one is a solution somebody already picked, rather than a requirement?',
+          prompt: 'Four lines arrived on the Marlbrook requirements list. Which one prescribes a particular processing mechanism, rather than leaving that mechanism open behind a capability, constraint or outcome?',
           options: [
             'The assistant must summarise the whole ticket thread before the agent reads it.',
             'No message reaches a customer without a person approving it.',
@@ -530,22 +530,22 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
           ],
           correct: 0,
           explanation:
-            'Summarising is a mechanism. State it without naming the thing that does the work and it becomes “the agent needs the account history without opening three tabs”, which a summariser answers, and which a link to the account timeline on the ticket also answers for a fraction of the cost. The approval line is a constraint on the outcome and says nothing about how the approval is built. Checking where an answer came from is a capability the agent needs, satisfied by a citation, a link or a panel. The last one is the success condition: a number, a population and a date, with the implementation left open.',
+            'Summarising the thread before it is read prescribes a particular processing step. Clarify the underlying need, such as understanding a long thread quickly, before treating that proposal as fixed. A summary, highlighted events or a timeline may help, depending on the actual workflow; the question does not establish that they are equivalent or quantify their cost. A prescribed mechanism can become an agreed requirement, but it should be recognized as a design choice. The approval line is a constraint on the outcome and says nothing about how the approval is built. Checking where an answer came from is a capability the agent needs, satisfied by a citation, a link or a panel. The 12-minute deadline is the success condition: a number, a population and a date, with the implementation left open.',
           competencies: ['discovery'],
         },
         {
           id: 'fde-v1-m01-q4',
           prompt:
-            'Marlbrook discovery has met the VP of Customer Operations, two support agents and the platform engineer who owns the ticket API. Whose continued absence is most likely to stop the project after it is built?',
+            'Discovery has met the sponsor, two operators and the ticket API engineer. Company policy requires customer-data access approval before launch, but nobody has identified who owns that review. Whose involvement is needed to resolve this explicit launch gate?',
           options: [
-            'The reviewer who must approve a system reading customer ticket content. Nobody has checked whether that review exists.',
+            'The owner of the required customer-data access review.',
             'A third support agent, so the shadowing covers more than two people.',
             'The frontend engineer who will build the approval screen.',
             'The sales engineer at the model provider you are considering.',
           ],
           correct: 0,
           explanation:
-            'That reviewer holds a veto and can use it at the end, when the build is finished and changing the data flow is most expensive. The other three cost you time or accuracy, not the project. A third agent would improve the sample your baseline rests on and is worth doing, but a thin sample is a measurement you can widen rather than a refusal. The frontend engineer is a scheduling question and can join in the build phase. The provider’s sales engineer holds nothing: no part of this scope requires a particular vendor, and the cheapest item in it, resolving the account, needs no model at all.',
+            'The stated policy makes this approval an explicit launch condition, so identify its owner and required evidence during discovery. More operator coverage and early frontend input can also matter; the question does not prove those people could never block delivery. A provider conversation can matter if a vendor is selected, but it does not grant the company’s customer-data approval. Do not infer permission from having met the sponsor or API engineer.',
           competencies: ['discovery'],
         },
       ],
@@ -562,7 +562,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
       estimatedMinutes: 60,
       artifact: {
         brief:
-          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations has sent one line: “Add AI to support.” Four agents handle roughly 400 tickets a month. The shadowing session in lesson one is the only measurement anyone has taken, and it covered a single ticket.\n\nWrite the one page that comes out of a discovery week. Seven fields, all required: the workflow as it runs today, five questions you would ask before writing any code, the baseline, what is in scope for this phase, what is not, the risks, and the condition that would let everyone agree this worked.\n\nThe company, the volumes, the clock and the transcript are fixtures written for this module. There is no live system to query and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each required field is present and inside its length limit, and that is the whole of what it establishes — it cannot judge whether your baseline is measurable, whether your questions would change anything, or whether you excluded the right things. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you move on.',
+          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations has sent one line: “Add AI to support.” Four agents handle roughly 400 tickets a month. The shadowing session in lesson one is the only measurement available for this submission, and it covered a single ticket. The separate multiple-choice baseline note is hypothetical; do not treat it as collected project evidence.\n\nWrite the one page that comes out of a discovery week. Seven fields, all required: the workflow as it runs today, five questions you would ask before writing any code, the baseline, what is in scope for this phase, what is not, the risks, and the condition that would let everyone agree this worked.\n\nThe company, the volumes, the clock and the transcript are fixtures written for this module. There is no live system to query and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer. Label one-ticket observations as preliminary; where a broader baseline or acceptance target has not been agreed, give a measurement/proposal plan and name the missing decision instead of claiming it already happened.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each required field is present and inside its length limit, and that is the whole of what it establishes — it cannot judge whether your baseline is measurable, whether your questions would change anything, or whether you excluded the right things. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you move on.',
         fields: [
           {
             id: 'workflow',
@@ -586,7 +586,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             id: 'baseline',
             label: 'Baseline',
             help:
-              'One measurement of what the work costs today: the quantity, the population it covers, the window it was taken over, and how a different person would take it again. A target is not a baseline. The check only confirms this box is non-empty and inside 400 characters — whether the number can be re-measured is yours to judge.',
+              'Use the supplied observation only as a one-ticket preliminary measure. For a broader baseline, mark it not yet measured and specify the quantity, population, time window and repeatable method you would collect; do not invent a project-wide value. A target is not a baseline. The check only confirms this box is non-empty and inside 400 characters — whether the number can be re-measured is yours to judge.',
             kind: 'short-text',
             required: true,
             maxLength: 400,
@@ -604,7 +604,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             id: 'non-goals',
             label: 'Non-goals',
             help:
-              'One line per thing this project will not do in this phase, each with the reason and, where you can give one, the condition that would put it back in. An exclusion you did not write down is not an exclusion. The check counts lines and cannot judge whether you excluded the right things.',
+              'One line per thing this project will not do in this phase, each with the reason and, where you can give one, the condition that would put it back in. An exclusion you did not write down is not an exclusion. The check only tests non-empty content and total length; it does not judge whether you excluded the right things.',
             kind: 'list',
             required: true,
             maxLength: 1200,
@@ -622,7 +622,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             id: 'acceptance',
             label: 'Acceptance condition',
             help:
-              'The condition that would let the sponsor, the support lead and you agree this worked: a number, measured the same way as the baseline, with a date. Say which slice it covers and what you would report beside it, since one median can improve while a ticket type gets worse. The check confirms the field is filled; the rest is your own review against the rubric.',
+              'Propose a condition for the sponsor and support lead to agree: a number measured like the baseline, with a date. Label it proposed if the fixture has not supplied agreement; name who would confirm it. Say which slice it covers and what you would report beside it, since one median can improve while a ticket type gets worse. The check confirms the field is filled; the rest is your own review against the rubric.',
             kind: 'long-text',
             required: true,
             maxLength: 1500,

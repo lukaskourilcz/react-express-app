@@ -157,7 +157,7 @@ export const DSA_D10: ModuleSource = {
       verification: 'machine_verified',
       title: 'Final checks across five domains',
       summary:
-        'Ten questions you have not seen: two on growth and space, two on structures, two on searching, two on sorting and two on trees. You need 80% overall, and each domain needs at least one of its two questions right, so a strong sorting score cannot cover two missed tree questions. Retry as often as you like.',
+        'Ten questions across the foundation topics: two on growth and space, two on structures, two on searching, two on sorting and two on trees. You need 80% overall, and each domain needs at least one of its two questions right, so a strong sorting score cannot cover two missed tree questions. Retry as often as you like.',
       competencies: ['complexity', 'arrays-strings', 'maps-sets', 'searching', 'sorting', 'trees'],
       estimatedMinutes: 30,
       passThreshold: 0.8,
@@ -329,17 +329,17 @@ export const DSA_D10: ModuleSource = {
       purpose: 'project',
       verification: 'machine_verified',
       title: 'A searchable record index',
-      summary: 'Wrap a sorted record array in a lookup that stays logarithmic, under two counted read budgets that rule out both a scan and a prebuilt copy.',
+      summary: 'Wrap a sorted record array in a lookup that stays logarithmic, under separate sampled read budgets for building and querying.',
       competencies: ['searching', 'complexity', 'arrays-strings'],
       estimatedMinutes: 30,
       code: {
         language: 'javascript',
         prompt:
-          '`buildIndex(records)` takes an array of `{ id, name }` objects already sorted ascending by `id`, and returns an object with one method: `lookup(id)`, which gives back the matching record object, or `null` when no record carries that id.\n\nThe index keeps the array it was handed and searches it; it does not build a second structure. The grade holds two budgets on a 64-record array. `buildIndex` itself may read at most 2 elements, so a copy or a `Map` built up front fails, because building one reads all 64. Each `lookup` may then read at most 20 elements, which a binary search meets with 7 and a linear scan cannot meet at all.\n\n`buildIndex([])` still returns a working index, and every lookup on it gives `null`. An id below the smallest, above the largest, or between two neighbours all give `null` as well.',
+          '`buildIndex(records)` takes an array of `{ id, name }` objects already sorted ascending by `id`, and returns an object with one method: `lookup(id)`, which gives back the matching record object, or `null` when no record carries that id.\n\nThe index keeps the array it was handed and searches it; it does not build a second structure. The grade holds two budgets on a 64-record array. `buildIndex` itself may read at most 2 elements, so a copy or a `Map` built up front fails, because building one reads all 64. Each sampled lookup on the 64-record fixture may read at most 20 elements. A cached-midpoint binary search needs at most 7; a full scan exceeds the bound for late or absent ids. These sampled counters do not prove a complexity bound for arbitrary source.\n\n`buildIndex([])` still returns a working index, and every lookup on it gives `null`. An id below the smallest, above the largest, or between two neighbours all give `null` as well.\n\nThe caller supplies an ordinary dense array of at most 1024 records with unique, strictly ascending finite Number ids and ordinary data fields. Query ids are finite Numbers, including fractions. The array and records stay unchanged for the lifetime of the index and may be frozen. Preserve their references, own properties, descriptors and prototypes; a found result is the original object. Separate indexes must keep separate state. Target: O(log n) time per lookup, where n is records.length under constant-cost field access and comparisons. Building the closure takes O(1) work and extra space; an empty lookup is constant work. Do not copy or preprocess the input into a second index.',
         contract: [
           'Return an object with a `lookup(id)` method; `lookup` gives back the record object, not its name and not its index.',
           '`buildIndex` reads at most 2 elements of the array: hold the reference, do not copy it and do not index it into a Map.',
-          'Each `lookup` reads at most 20 elements of a 64-element array, which rules out a scan.',
+          'Each sampled `lookup` reads at most 20 elements of the 64-element fixture; meet the individual budgets as well as the original aggregate budget.',
           'A missing id gives `null`, including on an index built from an empty array.',
           'Leave the records array as you found it: no sorting, no rewriting, no removing.',
         ],
@@ -389,7 +389,7 @@ console.log(index.lookup(4), index.lookup(5));
           },
           {
             id: 'logarithmic-lookup',
-            label: 'Logarithmic lookup, with nothing built up front',
+            label: 'Meets the sampled build and lookup budgets',
             critical: true,
             weight: 2,
             detail:
@@ -427,7 +427,7 @@ console.log(index.lookup(4), index.lookup(5));
           {
             call: '__lookupReads(__records64(), buildIndex, [100, 200, 352, 999]).reads <= 80',
             expected: true,
-            label: 'four lookups read at most twenty records each',
+            label: 'four lookups use at most eighty record reads in total',
             criterion: 'logarithmic-lookup',
           },
           {
@@ -452,7 +452,7 @@ console.log(index.lookup(4), index.lookup(5));
       code: {
         language: 'javascript',
         prompt:
-          'The `levelOrder` in the starter is broken on purpose, and the task is to repair it. When it works, `levelOrder(root)` returns the values of a binary tree level by level, and left to right inside each level.\n\nA node is a plain object `{ value, left, right }`, a missing child is `null`, and a tree is its root node or `null` when empty. `levelOrder(null)` returns `[]`, and a single node returns a one-element array.\n\nThere are three defects. The pending list is read from the back with `pop`, which produces a depth-first order rather than a level-by-level one. Missing children are pushed onto the list, so a later iteration reads `value` off `null` and throws. And an empty tree puts `null` into the list before the loop even starts. Fix all three; rewriting the function completely is fine.',
+          'The `levelOrder` in the starter is broken on purpose, and the task is to repair it. When it works, `levelOrder(root)` returns the values of a binary tree level by level, and left to right inside each level.\n\nA node is a plain object `{ value, left, right }`, a missing child is `null`, and a tree is its root node or `null` when empty. `levelOrder(null)` returns `[]`, and a single node returns a one-element array.\n\nThere are three defects. The pending list is read from the back with `pop`, which produces a depth-first order rather than a level-by-level one. Missing children are pushed onto the list, so a later iteration reads `value` off `null` and throws. And an empty tree puts `null` into the list before the loop even starts. Fix all three; rewriting the function completely is fine.\n\nInputs are finite acyclic binary trees of at most 128 nodes, with one parent per non-root node, ordinary fields and finite Number values. Preserve every node, link, property, descriptor and prototype, including on frozen input; do not replace nodes. Each invocation returns its own array and cannot change earlier outputs. Target: O(n) time, where n is the node count under constant-cost field operations and amortized append. The output uses O(n) space; the shown head-index queue also retains O(n) references. Empty input is constant work.',
         contract: [
           'Return an array of values, level by level, and left to right inside each level.',
           'Take the next node from the front of the pending list rather than the back: reading from the back is what makes it depth-first.',
@@ -499,7 +499,7 @@ console.log(levelOrder(tree));
   return out;
 };`,
         hints: [
-          'A queue is read from the front. Keep a `head` index into `queue`, read `queue[head]`, then step `head` forward. That avoids `shift`, which moves every remaining element down one place on each call.',
+          'A queue is read from the front. Keep a `head` index into `queue`, read `queue[head]`, then step `head` forward. Under the dense-array moving model, repeated shift calls can add quadratic work on a wide tree; actual engine timing can differ.',
           'Guard each child with a `!== null` test before pushing it, and the loop never meets a missing node.',
           'Handle the empty tree before the loop. Returning `[]` straight away is simpler than teaching the loop to skip a `null` root.',
         ],
@@ -566,10 +566,10 @@ console.log(levelOrder(tree));
       code: {
         language: 'javascript',
         prompt:
-          '`mostFrequent(values, queries)` takes an array of values and an array of query values, and returns an array of counts: one per query, in the same order, saying how many times that query value appears in `values`.\n\n`mostFrequent(["a", "b", "a", "c", "a"], ["a", "c", "z"])` gives `[3, 1, 0]`. A query value that never appears gives 0. An empty `queries` array gives `[]`, an empty `values` array gives a zero for every query, and a repeated query gets its own count each time. Values keep their type: the number `1` and the string `"1"` are different values and are counted separately.\n\nAnswering each query with its own scan works, and on the graded input it reads 40 × 50 = 2000 elements. Counting every value once first and then answering each query from that count reads 50. The grade counts element reads of `values` across the whole call and allows at most 200 for 40 queries against 50 values.',
+          '`mostFrequent(values, queries)` takes an array of values and an array of query values, and returns an array of counts: one per query, in the same order, saying how many times that query value appears in `values`.\n\n`mostFrequent(["a", "b", "a", "c", "a"], ["a", "c", "z"])` gives `[3, 1, 0]`. A query value that never appears gives 0. An empty `queries` array gives `[]`, an empty `values` array gives a zero for every query, and a repeated query gets its own count each time. Values keep their type: the number `1` and the string `"1"` are different values and are counted separately.\n\nAnswering each query with its own scan works, and on the graded input it reads 40 × 50 = 2000 elements. Counting every value once first and then answering each query from that count reads 50. The grade counts element reads of `values` across the whole call and allows at most 200 for 40 queries against 50 values.\n\nBoth inputs are ordinary dense arrays of at most 1000 values each and may be frozen. Values can be any JavaScript value. Use SameValueZero equality, as Map does: NaN matches NaN, +0 and -0 match, and objects, functions and symbols match only themselves. Preserve all input references, own properties, descriptors and prototypes; do not change item fields. Return a fresh result without changing prior results. Target: O(n) time, where n is values.length + queries.length under the usual expected-constant hash/key-operation and amortized append model. The result takes O(queries.length) space and the count index O(k), where k is the number of distinct values. Empty inputs are handled as above. The 200-read fixture is sampled method evidence, not proof of an arbitrary implementation’s complexity.',
         contract: [
           'Return a new array with one count per query, in the order the queries arrived.',
-          'Count each value by its own identity: `1` and `"1"` are two different values.',
+          'Use Map-style SameValueZero equality: types remain distinct, NaN matches NaN, signed zeros match, and object/function/symbol values match by identity.',
           'Read at most 200 elements of `values` across the whole call; the graded input is 40 queries against 50 values, so a scan per query cannot fit.',
           'Leave both input arrays as you found them.',
         ],
@@ -611,7 +611,7 @@ console.log(mostFrequent(['a', 'b', 'a', 'c', 'a'], ['a', 'c', 'z']));
           },
           {
             id: 'preprocessed',
-            label: 'One pass over the values, whatever the query count',
+            label: 'Meets the sampled preprocessing read budget',
             critical: true,
             weight: 2,
             detail: 'The read counter went over 200 for 40 queries against 50 values. Scanning `values` inside the query loop lands here even when every count is right.',

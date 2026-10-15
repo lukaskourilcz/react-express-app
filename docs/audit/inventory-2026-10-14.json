@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 30,
-    "recordsStillRequiringReview": 138,
-    "reviewEvidence": "Ninety-five native records shipped through PR #395: D01–D05, n001–n007. Exact main 1c8c0434 is READY with public general/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
-    "deployedModelReviewRecords": 95,
-    "currentModelReviewRecords": 125,
-    "stagedReviewEvidence": "15 October through n014: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentStagedModelReviewRecords": 45,
+    "recordsStillRequiringReview": 93,
+    "reviewEvidence": "125 native records shipped through PR #396 at 4b5b777cd0a7d0de55c998c3e8385a805b577973 after exact 758d1bbb passed required verify/sql run 38665436277 (verify 30m20s). Production dpl_53iTBLx23PzkgngidqaNJamoFnTQ is READY at that merge SHA with devshark.app and no alias error. Eleven general signed-out health/Big O/coding checks pass. This is partial source/release evidence, not authenticated native activity acceptance or activation. Five n010 target revisions add no unique coverage.",
+    "deployedModelReviewRecords": 125,
+    "currentModelReviewRecords": 170,
+    "stagedReviewEvidence": "15 October through n023: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

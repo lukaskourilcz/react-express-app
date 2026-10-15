@@ -1,14 +1,14 @@
 // Execute selected manually authored alternatives/counterexamples in the real sandbox.
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { pathById, activityIn } from '../../../../lib/learning-paths/catalog';
+import { LEARNING_PATHS, activityIn } from '../../../../lib/learning-paths/catalog';
 import { nativeContentHash, nativeGradingHash } from '../../../../lib/learning-paths/audit';
 import { solutionFor } from '../../../../lib/learning-paths/solutions';
 import { gradePathCode } from '../../../../lib/learning-paths/grade';
 const candidates = JSON.parse(readFileSync(process.argv[2], 'utf8')) as Record<string, Record<string, string>>;
-const path = pathById('dsa-foundations')!;
 const results = [];
 for (const [id, manual] of Object.entries(candidates)) {
+  const path = LEARNING_PATHS.find(p => p.modules.some(m => m.activities.some(a => a.id === id)))!;
   const activity = activityIn(path, id)!.activity;
   for (const [label, source] of Object.entries({ reference: solutionFor(id)!.solution, starter: activity.code!.starter, ...manual })) {
     const result = await gradePathCode(activity, activity.code!, source);

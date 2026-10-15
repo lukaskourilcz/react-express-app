@@ -75,7 +75,7 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
         {
           id: 'fde-v1-diagnostic-q1',
           prompt:
-            'A nightly job pulls contacts from a vendor API. The vendor documents two things: a page may come back shorter than `page_size` when records are filtered out after the page is assembled, and `next_cursor` is `null` only on the last page. The job finishes without an error and stores about 4,000 of the 11,000 contacts. Which line explains it?',
+            'A nightly job pulls contacts from a vendor API. The vendor accepts page_size 500 and null as the initial cursor. It may return a short page after filtering, even when more contacts remain; next_cursor is null only on the last page. The expected total across all returned pages is 11000 contacts. The job finishes without an error and stores about 4,000 of the 11,000 contacts. Which line explains it?',
           context: {
             language: 'javascript',
             code: 'const pullContacts = async () => {\n  const contacts = [];\n  let cursor = null;\n\n  while (true) {\n    const page = await vendor.contacts({ cursor, page_size: 500 });\n    contacts.push(...page.items);\n    if (page.items.length < 500) break;\n    cursor = page.next_cursor;\n  }\n\n  return contacts;\n};',
@@ -88,90 +88,90 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The vendor says a short page is normal and marks the end with `next_cursor: null`. Breaking on a short page stops at the first filtered page and reports success, which is the symptom: no error, most of the records missing. Spreading 500 arguments is well inside the engine limit, and going over it throws rather than dropping entries quietly. A null cursor is how a cursor scan starts, and the first page did arrive. A page size above the maximum would still come back with a `next_cursor`, so the loop would keep going instead of stopping early.',
+            'The vendor says a short page is normal and marks the end with `next_cursor: null`. Breaking on a short page stops at the first filtered page and reports success, which is the symptom: no error, most of the records missing. The shown push calls completed without an error; argument-limit failures would throw, not silently drop a tail. The documented initial cursor is null and the documented page size is accepted, so neither explains this successful but incomplete scan. Check page.next_cursor === null to stop, otherwise carry that cursor into the next request. An empty nonfinal page must also continue.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-diagnostic-q2',
           prompt:
-            'A connector posts one invoice per approved order. When the invoice service answers 504, the connector retries the same POST up to three times. Finance reports that roughly one order in two hundred produced two invoices. Which change stops the duplicates?',
+            'A connector posts one invoice per approved order. When the invoice service answers 504, the connector retries the same POST up to three times. Finance reports that roughly one order in two hundred produced two invoices. Which change prevents duplicate invoices while preserving automatic retries, including concurrent attempts for the same order?',
           options: [
             'Retry at most once, so at worst a single duplicate is created.',
             'Add exponential backoff with jitter between the attempts.',
-            'Send an idempotency key the connector generates once per order, and have the invoice service return the stored result for a repeated key instead of writing again.',
+            'Persist one idempotency key per order; the service atomically reuses the recorded result for repeated keys.',
             'Stop retrying on 504 and surface the timeout to the operator.',
           ],
           correct: 2,
           explanation:
-            'A 504 says the gateway stopped waiting, not that the write failed, so the invoice may already exist. Only a key the server remembers turns the second attempt into a read of the first result. Retrying once halves the duplicates and keeps making them. Backoff changes when the retry lands, never what it does when it gets there. Refusing to retry does avoid the second write, but it leaves the outcome unknown and hands the operator an order they will re-submit by hand, which duplicates it anyway.',
+            'A 504 says the gateway stopped waiting, not that the write failed, so the invoice may already exist. Reuse one persisted key for the same order and payload, with a server-side atomic claim/result record covering the retry window; concurrent attempts must not both create invoices. A fresh key on every retry would not help. Reducing retries can reduce exposure but does not make a retry safe, and backoff changes timing rather than write identity. Stopping retries can prevent that second automatic write, but fails the requirement to retry safely and leaves the first outcome unknown.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-diagnostic-q3',
           prompt:
-            'The nightly CSV export leaves `vat_id` blank for customers who have none, and the CSV reader hands blanks over as `""`. The same field arrives as `null` from the vendor JSON API. What happens to a blank row here?',
+            'The nightly CSV export leaves `vat_id` blank for customers who have none, and the CSV reader hands blanks over as `""`. The same field arrives as `null` from the vendor JSON API. Assume a nullable text field with no extra validation. What does this mapper store for a CSV blank, and what does an empty-string lookup match?',
           context: {
             language: 'javascript',
             code: 'const toCustomer = row => ({\n  externalId: row.customer_id,\n  name: row.name,\n  vatId: row.vat_id !== null ? row.vat_id : null,\n});\n\nconst findByVat = (customers, vatId) =>\n  customers.filter(one => one.vatId === vatId);',
           },
           options: [
-            'The empty string is falsy, so the conditional stores `null` and the two sources end up agreeing.',
-            'The empty string is not `null`, so it is stored as a VAT id, and `findByVat(customers, "")` then returns every blank customer as one match.',
-            'The CSV reader converts a blank column to `null` before the mapper sees it, so the two sources already agree.',
-            'The insert fails, because a nullable column rejects an empty string.',
+            'The mapper stores null because the empty string is falsy; a lookup for the empty string finds none of those rows.',
+            'The mapper stores `""`; `findByVat(customers, "")` returns all customers whose mapped vatId is the empty string.',
+            'The mapper receives null because the CSV reader converts blanks; the two source formats therefore agree.',
+            'The nullable text field rejects the empty string, so no mapped customer can be stored.',
           ],
           correct: 1,
           explanation:
-            '`row.vat_id !== null` is a null check, and `""` passes it, so a blank becomes a stored value that compares equal to every other blank. Nothing raises an error; a lookup by VAT id just starts matching a whole class of customers at once. The empty string is falsy, but the code tests `!== null` rather than truthiness, so a falsiness argument describes code that is not on the screen. The reader hands the raw column over, which is exactly why the two sources disagree. And a nullable column accepts `""` without complaint: the empty string is a value, not the absence of one.',
+            '`row.vat_id !== null` is a null check, and `""` passes it, so a CSV blank becomes a value equal to every other empty string. A JSON null remains null and is not matched by an empty-string lookup. Nothing raises an error; a lookup by VAT id just starts matching a whole class of customers at once. The empty string is falsy, but the code tests `!== null` rather than truthiness, so a falsiness argument describes code that is not on the screen. The reader hands the raw column over, which is exactly why the two sources disagree. And a nullable column accepts `""` without complaint: the empty string is a value, not the absence of one.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-diagnostic-q4',
           prompt:
-            'Every caller of this endpoint is authenticated, and the browser client always sends the tenant it is currently showing. What can a signed-in user of tenant A do?',
+            'The authenticated session authorizes only tenant A. The server database client can read every tenant, with no row policy or other authorization check. A user knows an existing tenant-B case id and can edit the request body. What can this handler expose?',
           context: {
             language: 'javascript',
             code: 'export default async function handler(req, res) {\n  const session = await requireSession(req);\n  const { tenantId, caseId } = req.body;\n\n  const record = await db.cases.findOne({ tenantId, id: caseId });\n  return res.json(record);\n}',
           },
           options: [
-            'Read any case from tenant B by putting tenant B’s id in the request body: the filter enforces the value the caller chose, not the one the session proves.',
+            'Tenant B’s requested case, because the server trusts the caller’s tenant and case ids.',
             'Nothing. The query is still filtered by tenant, so a user of tenant A gets no rows belonging to tenant B.',
             'Nothing, as long as the body is validated against a schema that requires `tenantId` to be a well-formed UUID.',
             'Nothing on reads. The pattern only matters for writes, where a wrong tenant id corrupts another tenant’s data.',
           ],
           correct: 0,
           explanation:
-            'The query filters on a value the caller supplies, so it enforces the caller’s claim instead of the session’s. Derive `tenantId` from the session and ignore the body field; a row-level policy scoped to the session tenant is the second layer, in the database rather than in the handler. Arguing that the filter protects the row assumes the attacker cannot change the filter, and changing it is the attack. A schema check proves the value is a well-formed UUID and never that it belongs to this user. Reads are not the lesser case either: the case body is the data, so reading tenant B’s case is the breach.',
+            'Authentication proves who called; this unrestricted database query still filters by the caller’s tenant claim rather than their authorized tenant. With both valid B ids supplied, the stated absence of another authorization layer lets the B record through. Derive `tenantId` from the session and ignore the body field; a row-level policy scoped to the session tenant is the second layer, in the database rather than in the handler. Arguing that the filter protects the row assumes the attacker cannot change the filter, and changing it is the attack. A schema check proves the value is a well-formed UUID and never that it belongs to this user. Reads are not the lesser case either: the case body is the data, so reading tenant B’s case is the breach.',
           competencies: ['boundaries'],
         },
         {
           id: 'fde-v1-diagnostic-q5',
           prompt:
-            'The operator dashboard calls a vendor API straight from the browser with a key read from `import.meta.env.VITE_VENDOR_KEY`. The value lives in the hosting provider’s encrypted environment settings and is never committed. Who can read the key?',
+            'A Vite-built operator dashboard calls a vendor API from the browser with a secret server API key read from `import.meta.env.VITE_VENDOR_KEY`. The value lives in the hosting provider’s encrypted environment settings and is never committed. Who can read the key?',
           options: [
             'Nobody outside the build. The value exists only in the encrypted settings and is injected at build time.',
             'Only someone with access to the hosting dashboard, because minification renames the variable in the output.',
-            'Anyone who loads the dashboard. A build-time variable is inlined into the JavaScript the browser downloads, so the key ships inside the bundle.',
+            'Anyone who loads the dashboard: the key ships to their browser in the client bundle.',
             'Anyone on the same network, unless the request is sent over TLS.',
           ],
           correct: 2,
           explanation:
-            'Injected at build time means injected into the artifact. The literal sits in the bundle, in the browser cache and in any proxy that saw the response. The repair is structural: move the call behind a server route that holds the key, then rotate the key that already shipped. Encrypted settings protect the value at rest inside the provider, not after a build copied it into the output. Minification renames identifiers and leaves string literals alone, and grepping a bundle for a key shape takes seconds. TLS protects the request in flight and does nothing about a secret the client already holds.',
+            'Injected at build time means injected into the artifact. Vite exposes VITE-prefixed values to client code. A user who loads this dashboard can inspect the compiled value or the vendor request carrying it; encryption in the hosting settings does not hide it from that browser. The repair is structural: move the call behind a server route that holds the key, then rotate the key that already shipped. Encrypted settings protect the value at rest inside the provider, not after a build copied it into the output. Minification or obfuscation does not make a credential secret from the client that must use it. TLS protects the request in flight and does nothing about a secret the client already holds.',
           competencies: ['boundaries', 'operations'],
         },
         {
           id: 'fde-v1-diagnostic-q6',
           prompt:
-            'Release 42 ships a migration that copies `legacy_owner` into a new `owner_id` column and then drops `legacy_owner`. Two hours later the new code is failing on a subset of records. The team redeploys release 41. What have they got?',
+            'Release 42 completes a migration that copies legacy_owner into owner_id and drops legacy_owner. Release 41 still reads legacy_owner. The team redeploys only release 41’s application artifact, without restoring data, changing schema or running migrations. What is the resulting compatibility problem?',
           options: [
             'A working system: redeploying release 41 also reverts the migrations release 42 applied.',
-            'Release 41 running against a schema with no `legacy_owner`, so it fails on the same records. The code rolled back and the schema did not.',
+            'Release 41 expects the removed legacy_owner column; redeploying its code leaves the changed schema in place.',
             'A working system, because release 41 recreates any column it needs from its own migration history when it starts.',
             'A working system, as long as the backfill is replayed in reverse from the application log first.',
           ],
           correct: 1,
           explanation:
-            'A deploy rollback moves code. It does not move a schema, and it cannot bring back the data in a dropped column. Release 41 reads `legacy_owner`, which is gone, so the rollback restores the previous failure rather than the previous behaviour. Migration tools do not run down-migrations because an older build started; a down-migration is a deliberate, separately tested step, and a drop is frequently not reversible at all. Replaying from the application log assumes the log holds every value and is complete, which describes a restore rather than a rollback. The way out is not to arrive here: add `owner_id`, write both columns, move readers across, and drop `legacy_owner` in a later release once no rollback target still needs it.',
+            'This code-only rollback changes the application artifact, not the schema. Release 41 still reads legacy_owner, so those reads now fail because that column is absent. Some values may still exist in owner_id, but redeploying old code does not reconstruct its expected column or prove a safe reverse migration. Migration tools do not run down-migrations because an older build started; a down-migration is a deliberate, separately tested step, and a drop is frequently not reversible at all. Replaying from the application log assumes the log holds every value and is complete, which describes a restore rather than a rollback. The way out is not to arrive here: add `owner_id`, write both columns, move readers across, and drop `legacy_owner` in a later release once no rollback target still needs it.',
           competencies: ['operations'],
         },
         {
@@ -186,15 +186,15 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           ],
           correct: 2,
           explanation:
-            'An operator has to be able to tell "still working" from "this did not work", and the retry has to be theirs to press. A delay notice leaves the two states looking identical, which is the defect being described. The empty-queue message is worse than silence: an operator who reads "no cases waiting" stops looking, and the queue may be full. Silent retries hide the failure from the one person who could escalate it, and they keep hitting a service that is already failing. Retry if you like, with backoff, and still show the state.',
+            'An operator must be able to tell "still working" from "this did not work", with a way to retry. Automatic retries can supplement that control, but must not conceal a completed failure. A delay notice leaves the two states looking identical, which is the defect being described. The empty-queue message is worse than silence: an operator who reads "no cases waiting" stops looking, and the queue may be full. Silent retries hide the failure from the one person who could escalate it, and they keep hitting a service that is already failing. Retry if you like, with backoff, and still show the state.',
           competencies: ['handoff'],
         },
         {
           id: 'fde-v1-diagnostic-q8',
           prompt:
-            'Pressing Approve shows a green "Case approved" toast immediately, then sends the POST. About one POST in fifty fails, and nothing on the screen changes when it does. What is wrong with this?',
+            'Pressing Approve shows a green "Case approved" toast immediately, then sends the POST. About one POST in fifty fails, and nothing on the screen changes when it does. Which fix addresses the operator being told that a failed approval succeeded?',
           options: [
-            'The screen has told the operator something that is not true, and one case in fifty is now approved in their head and not in the system. Either wait for the write to confirm, or keep the optimistic update and reverse it visibly when the write fails.',
+            'Wait for confirmation, or visibly reverse the optimistic approval and report its failure.',
             'Nothing. Optimistic updates are the standard pattern, and a 2% failure rate sits inside normal tolerance for a background write.',
             'Nothing, as long as the failed request is retried in the background until it goes through.',
             'The toast should stay on screen longer, so the operator is still looking when the error arrives.',
@@ -207,31 +207,31 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
         {
           id: 'fde-v1-diagnostic-q9',
           prompt:
-            'Delete case sits in the row menu directly under Duplicate case, and it deletes immediately and permanently. Operators hit the wrong row roughly once a week. Which change addresses that?',
+            'Delete case sits directly under Duplicate case and deletes immediately and permanently. Wrong-row clicks recur, and a defined recovery window is allowed. Which change both reduces those slips and lets operators recover a mistaken deletion?',
           options: [
             'Add a confirmation dialog. A second deliberate click is what separates an accident from an intention.',
             'Make the operator type the case number to confirm the deletion.',
             'Restrict deleting to supervisors and have operators request a deletion instead.',
-            'Make the deletion recoverable — mark the case deleted, keep it, and offer a visible undo for a set window — and move the action away from Duplicate in the menu.',
+            'Use recoverable deletion with a visible undo window, and separate Delete from Duplicate.',
           ],
           correct: 3,
           explanation:
-            'Once a week means the mistake will keep happening, so the design has to survive it: recovery, plus separation from the neighbouring action people are actually aiming for. A confirmation dialog helps a little against a slip of the mouse and not at all against the operator who confirms the wrong row, and a dialog on a weekly action becomes a reflex within a fortnight. Typing the case number raises the cost of every legitimate deletion and still leaves nothing to recover. Moving the permission upward moves the mistake to someone else and blocks routine work; that fits a rare action with a wide blast radius, not a weekly one.',
+            'The stated goal needs both prevention and recovery: separate the adjacent actions and allow reversal during the permitted window. A confirmation or typed case number can help prevent mistakes, but neither alone recovers a deletion after the operator confirms the wrong case. Restricting permissions may fit other risk models, but does not supply the recovery required here. Retain records only for the permitted recovery window and apply the actual retention policy.',
           competencies: ['handoff'],
         },
         {
           id: 'fde-v1-diagnostic-q10',
           prompt:
-            'A case-routing model scores 0.94 accuracy over 1,000 held-out cases, against a 0.90 bar. Billing cases are 6% of the volume and score 0.41 on their own. What should the team do with that?',
+            'A routing model labels 940 of 1000 held-out cases correctly, passing a 90% overall bar. Billing accounts for 60 cases, with only 24 correct (40%). Which conclusion should guide readiness?',
           options: [
             'Ship it. The number clears the bar, and billing is 6% of the traffic.',
-            'Report the slices next to the average and decide on those. Sixty billing cases at 0.41 move a 1,000-case average by about three points, so no threshold on the average could have caught this.',
+            'The overall pass hides poor billing routing; report slices and apply billing-specific readiness criteria.',
             'Gather more billing cases until the billing slice reaches the bar.',
             'Re-weight the average so small slices count for more, then hold the weighted number to the same bar.',
           ],
           correct: 1,
           explanation:
-            'The arithmetic is the argument: the other 940 cases run at about 0.974, and folding in sixty cases at 0.41 costs roughly three points. An average over a thousand cases cannot surface a slice that small failing, whatever the bar is set to. Shipping on the average sends billing cases to the wrong queue six times in ten, and billing is where the money questions arrive. Collecting more billing cases measures the slice more precisely without changing it. Re-weighting produces a different single number that is still a single number: other slices can drag it back over the bar, and it never says which slice broke.',
+            'The counts are consistent: billing contributes 24 correct cases, and the other 940 contribute 916, for 940 correct overall. The 90% aggregate bar passes despite the observed 40% billing accuracy. A stricter aggregate threshold could reject this particular run, but this bar does not enforce a minimum for each slice. Report slice counts and quality, define their acceptance criteria, and address the billing failures before automating them. More labelled billing examples can reduce uncertainty; collecting them alone does not repair the model or guarantee a higher score. A weighted aggregate can be useful, but should not replace the slice results. These finite held-out results are evidence, not an exact forecast of future traffic.',
           competencies: ['evaluation'],
         },
         {
@@ -239,14 +239,14 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           prompt:
             'The team wrote 120 labelled cases, then spent two weeks adjusting prompts, routing rules and thresholds until the score on those 120 went from 0.71 to 0.93. The report gives 0.93 as expected quality in production. What is wrong with the claim?',
           options: [
-            'The 120 cases steered every decision, so 0.93 measures how well the design fits them. A claim about unseen cases needs a set that was held back and never scored while the design was changing.',
+            'Those cases guided tuning; estimate unseen-case quality on an untouched test set.',
             'Nothing, provided the 120 cases were sampled at random from production traffic.',
             'Nothing, provided no case text was copied into the prompts.',
             'Nothing a split does not fix: score the finished design again on 24 of the 120 and report that number.',
           ],
           correct: 0,
           explanation:
-            'Tuning against a score is what leaks the set, whatever the prompt text contains. Every threshold that got nudged was nudged because of those cases, so the number that came out describes the fit rather than the future. Random sampling makes a set representative and does nothing about the leak: a representative set you optimised against is still a set you optimised against. Copying case text is one way to leak and not the one that happened here. A split made afterwards splits cases that all shaped the design already; the hold-out has to be set aside before the tuning starts, and scored as rarely as you can manage.',
+            'Tuning against a score is what leaks the set, whatever the prompt text contains. Every threshold that got nudged was nudged because of those cases, so the number that came out describes the fit rather than the future. Random sampling can improve representativeness, but it does not remove this tuning leak: a representative set you optimised against is still a set you optimised against. Copying case text is one way to leak and not the one that happened here. A split made afterwards splits cases that all shaped the design already; the hold-out has to be set aside before the tuning starts, and scored as rarely as you can manage.',
           competencies: ['evaluation'],
         },
         {
@@ -256,12 +256,12 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           options: [
             'That the workflow is covered end to end, and the remaining cases are variations on the same path.',
             'A yes, with a caveat in the notes that quality will vary on real traffic.',
-            'That the path runs and gives the right answer on three cases the engineer chose. It says nothing about the rate on cases nobody picked, and the honest answer names what was measured and what a go-live decision would still need.',
+            'The workflow worked on those three chosen cases; readiness for the wider queue has not been measured.',
             'Nothing yet. Put it on the live queue for a week and count the complaints.',
           ],
           correct: 2,
           explanation:
-            'Three self-selected cases are an existence proof: the path can work. Readiness is a rate on cases you did not choose, and nothing here measures one. Calling the rest variations assumes exactly what a labelled sample would have told you. A caveat is not a measurement; it turns an unsupported yes into a hedged unsupported yes. Running it on the live queue does produce real data, but with no labels, no baseline and no hold-out it measures customer patience: complaints arrive late, come from a biased slice, and cannot separate a routing error from a busy Monday.',
+            'Three self-selected cases demonstrate that this workflow can work on those cases. They do not estimate its success rate on unselected traffic. Readiness also needs representative quality checks, failure handling and operational evidence. Calling the remaining cases variations assumes coverage that the demo did not measure. A caveat is not a measurement; it turns an unsupported yes into a hedged unsupported yes. Running it on the live queue does produce real data, but with no labels, no baseline and no hold-out it measures customer patience: complaints arrive late, come from a biased slice, and cannot separate a routing error from a busy Monday.',
           competencies: ['evaluation'],
         },
       ],
@@ -278,7 +278,7 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'The starter is broken. Read it before you change it.\n\n`collectAll(fetchPage, known)` reads every page of a paginated source and returns `known` followed by all the items, in page order. `fetchPage(pageNumber)` takes a page number starting at 1 and resolves to `{ items, pageCount }`, where `pageCount` is the total number of pages and is the same on every page. `known` is the array of ids the caller already had.\n\nThere are two defects, and both are the quiet kind:\n\n- The last page is never fetched. The collection comes back short and nothing reports an error.\n- `known` is pushed into rather than copied, so the caller’s array changes underneath them.\n\nFix both. `fetchPage` is a synthetic in-memory fixture the grader builds, with a simulated delay that the sandbox’s virtual clock resolves instantly. There is no network here and no vendor API.',
+          'The starter is broken. Read it before you change it.\n\n`collectAll(fetchPage, known)` reads every page of a paginated source and returns `known` followed by all the items, in page order. `fetchPage(pageNumber)` takes a page number starting at 1 and resolves to `{ items, pageCount }`, where `pageCount` is the total number of pages and is the same on every page. `known` is the array of ids the caller already had.\n\nThere are two defects, and both are the quiet kind:\n\n- The last page is never fetched. The collection comes back short and nothing reports an error.\n- `known` is pushed into rather than copied, so the caller’s array changes underneath them.\n\nFix both. `fetchPage` is a synthetic in-memory fixture the grader builds, with a simulated delay that the sandbox’s virtual clock resolves instantly. There is no network here and no vendor API.\n\nThe source has 1 through 100 pages, with 0 through 100 entries per page. known has at most 1000 entries. These are ordinary dense arrays of opaque JavaScript values: preserve each value/reference, its order and duplicates. known, page item arrays and their objects may be frozen; do not change their fields, links, own properties, descriptors or prototypes. Fetch pages sequentially, each once in increasing order, awaiting one before starting the next. The supplied calls all resolve successfully. Return a fresh array without changing earlier outputs. Target: O(n) time, where n is known.length + pageCount + the total number of page entries under constant-cost reference operations and amortized append, excluding external wait time. Output space is linear in the number of returned entries; even empty pages require fetch work.',
         contract: [
           'Fetch every page through the `fetchPage` you are given; nothing else reaches a page.',
           'Read `pageCount` from the first page, then read pages 1 through `pageCount` in order, each one once.',
@@ -411,7 +411,7 @@ collectAll(fixture, seen).then(result => console.log(result, seen));
       code: {
         language: 'typescript',
         prompt:
-          'The starter is broken. It compiles, the tests fail, and the reason is the narrowing.\n\n`SyncOutcome` has three members: an `applied` record, a `queued` record with a `retryAfterMs` delay, and a `rejected` record with an `error`. `describeOutcome` turns one into a line of text:\n\n- applied → `applied r-1`\n- queued → `queued r-2 in 500ms`\n- rejected → `rejected r-3: MISSING_VAT`\n\nThe starter tests `outcome.state !== \'queued\'`, which is true for `applied` and for `rejected` alike, so every rejected record is described as an applied one. A failure reported as a success is the defect: nothing throws, and the sync log reads clean.\n\nFix the narrowing so each state is decided by its own name. The compiler is graded too, so the types have to stay clean.',
+          'The starter is broken. It compiles, the tests fail, and the reason is the narrowing.\n\n`SyncOutcome` has three members: an `applied` record, a `queued` record with a `retryAfterMs` delay, and a `rejected` record with an `error`. `describeOutcome` turns one into a line of text:\n\n- applied → `applied r-1`\n- queued → `queued r-2 in 500ms`\n- rejected → `rejected r-3: MISSING_VAT`\n\nThe starter tests `outcome.state !== \'queued\'`, which is true for `applied` and for `rejected` alike, so every rejected record is described as an applied one. A failure reported as a success is the defect: nothing throws, and the sync log reads clean.\n\nFix the narrowing so each state is decided by its own name. The compiler is graded too, so the types have to stay clean.\n\nInputs have ordinary data properties and one of the three declared states. recordId and error are strings of at most 10000 UTF-16 code units, possibly empty; queued delay is a whole Number from 0 through Number.MAX_SAFE_INTEGER. Extra unrelated fields may exist at runtime and do not choose the branch. Preserve all input fields, own properties, descriptors and prototypes, including on frozen input. Keep string contents exactly, with no trimming or normalization. Target: O(n) time in the output-character model, where n is the total number of UTF-16 code units materialized in the result. State dispatch itself uses constant work; this goal counts the returned text and does not predict rope allocation or engine timing.',
         contract: [
           'Decide each branch from `outcome.state`, not from which properties happen to be present.',
           'Keep the `SyncOutcome` union and the `(outcome: SyncOutcome) => string` signature. Widening either to `any` is not a fix.',
