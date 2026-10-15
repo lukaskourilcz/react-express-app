@@ -361,7 +361,7 @@ console.log(insertAt([1, 3], 1, 2));
     tier: 1,
     focus: ["shift", "push"],
     title: "Rotate once",
-    prompt: "Write `rotateOnce(list)`, moving the first element to the end in place with `shift` and `push`, and returning the list. `rotateOnce([1, 2, 3])` gives `[2, 3, 1]`. An empty list stays empty — watch what `shift` returns there — and a single item stays where it is.",
+    prompt: "Write `rotateOnce(list)`, moving the first element to the end in place with `shift` and `push`, and returning the list. `rotateOnce([1, 2, 3])` gives `[2, 3, 1]`. An empty list stays empty — watch what `shift` returns there — and a single item stays where it is. list is an ordinary mutable dense array with at most 10000 elements. Treat elements as opaque values and preserve exact identities, including objects, undefined, NaN and signed zero. Return that same list object, including when it is empty or has one item. Use shift and push as requested. Target: O(n) time, where n is 1 + list.length, because removing the front can move the remaining elements.",
     starter: `const rotateOnce = list => {
 
 };
@@ -399,7 +399,7 @@ console.log(rotateOnce([1, 2, 3]));
     tier: 1,
     focus: ["slice"],
     title: "Last item safely",
-    prompt: "Write `lastItem(list, fallback)`, returning the last element of the list without changing it, or `fallback` when the list is empty. `lastItem([1, 2, 3], 0)` gives 3 and `lastItem([], \"none\")` gives `\"none\"`. A last element that happens to be falsy, such as 0, is still returned rather than the fallback.",
+    prompt: "Write `lastItem(list, fallback)`, returning the last element of the list without changing it, or `fallback` when the list is empty. `lastItem([1, 2, 3], 0)` gives 3 and `lastItem([], \"none\")` gives `\"none\"`. A last element that happens to be falsy, such as 0, is still returned rather than the fallback. list is an ordinary read-only dense array with at most 10000 opaque values and may be frozen. Return the original last value/reference, including undefined, null, false, NaN, signed zero or an empty string. Only list.length === 0 selects the original fallback value/reference. Do not inspect, clone or change elements. Target: O(1) time under direct indexed access or a one-element slice; input size n is 1 + list.length.",
     starter: `const lastItem = (list, fallback) => {
 
 };
@@ -435,7 +435,7 @@ console.log(lastItem([1, 2, 3], 0));
     tier: 1,
     focus: ["for"],
     title: "Sum with for",
-    prompt: "Write `addUp(numbers)`, returning the total of every number using a `for` loop with an index rather than `reduce`. `addUp([1, 2, 3])` gives 6. An empty array totals 0, and negatives and decimals add up like anything else.",
+    prompt: "Write `addUp(numbers)`, returning the total of every number using a `for` loop with an index rather than `reduce`. `addUp([1, 2, 3])` gives 6. An empty array totals 0, and negatives and decimals add up like anything else. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000. Start the total at 0 and add in original left-to-right order with normal Number arithmetic, without rounding or sorting. Preserve the input, which may be frozen. Use an indexed for loop as requested. Target: O(n) time, where n is 1 + numbers.length.",
     starter: `const addUp = numbers => {
 
 };
@@ -476,7 +476,7 @@ console.log(addUp([1, 2, 3]));
     tier: 1,
     focus: ["for"],
     title: "Count matches",
-    prompt: "Write `countMatches(items, target)`, returning how many elements are strictly equal to `target`, counted with a `for` loop over the indexes. `countMatches([\"a\", \"b\", \"a\"], \"a\")` gives 2. No matches, or an empty array, gives 0, and a string `\"1\"` never matches the number 1.",
+    prompt: "Write `countMatches(items, target)`, returning how many elements are strictly equal to `target`, counted with a `for` loop over the indexes. `countMatches([\"a\", \"b\", \"a\"], \"a\")` gives 2. No matches, or an empty array, gives 0, and a string `\"1\"` never matches the number 1. items is a read-only dense array with at most 10000 opaque values and may be frozen. Use === exactly: object references match only themselves, NaN never matches NaN, and 0 and -0 match each other. Do not inspect, clone or change values. Use an indexed for loop as requested. Target: O(n) time, where n is 1 + items.length, using the usual constant-cost opaque comparison model.",
     starter: `const countMatches = (items, target) => {
 
 };
@@ -561,7 +561,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
     tier: 1,
     focus: ["while", "push"],
     title: "Countdown by step",
-    prompt: "Write `countdownBy(start, step)`, returning the values from `start` downwards in steps of `step` while they are still above zero, collected with a `while` loop. `countdownBy(10, 3)` gives `[10, 7, 4, 1]`. Zero is never included, so a start of zero or below gives an empty array; assume `step` is at least 1.",
+    prompt: "Write `countdownBy(start, step)`, returning the values from `start` downwards in steps of `step` while they are still above zero, collected with a `while` loop. `countdownBy(10, 3)` gives `[10, 7, 4, 1]`. Zero is never included, so a start of zero or below gives an empty array; assume `step` is at least 1. start is an integer from -10000 to 10000 and step is an integer from 1 to 10000. Return a fresh array on every call, including when the result is empty. Use a while loop and push as requested. Target: O(n) time, where n is 1 + Math.max(0, Math.ceil(start / step)), the output length plus one; output space is O(n).",
     starter: `const countdownBy = (start, step) => {
 
 };
@@ -579,7 +579,7 @@ console.log(countdownBy(10, 3));
 
   return result;
 };`,
-    hints: ["A while loop suits a countdown because you do not know in advance how many values there are — keep going only while the current value is still above zero."],
+    hints: ["A while loop states the stopping condition directly: keep going while the current value is above zero, then subtract the positive step after each push."],
     approach: [
       "Start with an empty result and a value equal to the start.",
       "While the value is above zero, push it and subtract the step.",

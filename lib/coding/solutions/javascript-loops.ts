@@ -224,12 +224,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   list.push(first);
   return list;
 };`,
-    senior: `const rotateOnce = list => {
-  // splice(0, 1) is [] on an empty list, so spreading it pushes nothing and no guard is needed.
-  list.push(...list.splice(0, 1));
-  return list;
-};`,
+    senior: "const rotateOnce = list => {\n  if (!list.length) return list;\n  list.push(list.shift());\n  return list;\n};",
     hiddenTests: [
+      { call: "(() => { const first=Object.freeze({}),second=Object.freeze([]),list=[first,second];const out=rotateOnce(list),empty=[],single=[first];return [out===list,list[0]===second,list[1]===first,rotateOnce(empty)===empty,empty.length,rotateOnce(single)===single,single[0]===first]; })()", expected: [true, true, true, true, 0, true, true] },
+      { call: "(() => { const list=[NaN,undefined,-0];rotateOnce(list);return [list[0]===undefined,Object.is(list[1],-0),Number.isNaN(list[2])]; })()", expected: [true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=rotateOnce(list);return [out===list,list.length,list[0],list[9999]]; })()", expected: [true, 10000, 1, 0] },
+
       { call: "rotateOnce([1,2,3,4,5])", expected: [2, 3, 4, 5, 1] },
       { call: "(() => { const list = [1,2,3]; rotateOnce(list); rotateOnce(list); return list; })()", expected: [3, 1, 2] },
       { call: "rotateOnce([]).length", expected: 0 },
@@ -244,12 +244,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const lastIndex = list.length - 1;
   return list[lastIndex];
 };`,
-    senior: `const lastItem = (list, fallback) => {
-  // slice(-1) is [] on an empty list, so the destructuring default applies only then.
-  const [last = fallback] = list.slice(-1);
-  return last;
-};`,
+    senior: "const lastItem = (list, fallback) => list.length ? list.slice(-1)[0] : fallback;",
     hiddenTests: [
+      { call: "(() => { const fallback=Object.freeze({}),value=Object.freeze({}),list=Object.freeze([value]);return [lastItem(Object.freeze([]),fallback)===fallback,lastItem(list,fallback)===value,lastItem(Object.freeze([undefined]),fallback)===undefined,lastItem(Object.freeze([null]),fallback)===null,lastItem(Object.freeze([false]),fallback)===false]; })()", expected: [true, true, true, true, true] },
+      { call: "(() => { return [Number.isNaN(lastItem(Object.freeze([NaN]),0)),Object.is(lastItem(Object.freeze([-0]),1),-0),lastItem(Object.freeze([\"\"]),\"fallback\")]; })()", expected: [true, true, ""] },
+      { call: "lastItem(Object.freeze(Array.from({length:10000},(_,i)=>i)),null)", expected: 9999 },
+
       { call: "lastItem([10,20,30,40], -1)", expected: 40 },
       { call: "(() => { const list = [\"x\",\"y\"]; return [lastItem(list, \"?\"), list.length]; })()", expected: ["y", 2] },
       { call: "lastItem([], null)", expected: null },
@@ -257,23 +257,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-sum-with-for": {
     solution: "const addUp = numbers => { let total = 0; for (let index = 0; index < numbers.length; index += 1) total += numbers[index]; return total; };",
-    junior: `const addUp = numbers => {
-  if (numbers.length === 0) {
-    return 0;
-  }
-  let total = numbers[0];
-  for (let index = 1; index < numbers.length; index += 1) {
-    total = total + numbers[index];
-  }
-  return total;
-};`,
-    senior: `const addUp = numbers => {
-  let total = 0;
-  // The index is only ever used to read, so for...of says the same thing with less to get wrong.
-  for (const number of numbers) total += number;
-  return total;
-};`,
+    junior: "const addUp = numbers => {\n  let total = 0;\n  for (let index = 0; index < numbers.length; index += 1) {\n    total = total + numbers[index];\n  }\n  return total;\n};",
+    senior: "const addUp = numbers => {\n  let sum = 0;\n  for (let i = 0; i < numbers.length; i++) sum += numbers[i];\n  return sum;\n};",
     hiddenTests: [
+      { call: "addUp(Object.freeze([1.005]))", expected: 1.005 },
+      { call: "(() => { const numbers=[3,1,2];const total=addUp(numbers);return [total,numbers,addUp(Object.freeze([1000000,0.1,-1000000]))]; })()", expected: [6, [3, 1, 2], 0.09999999997671694] },
+      { call: "addUp(Object.freeze(Array.from({length:10000},()=>-1000000)))", expected: -10000000000 },
+
       { call: "addUp([100,200,300,400])", expected: 1000 },
       { call: "addUp([7])", expected: 7 },
       { call: "addUp([1,1,1,1,1,1,1,1,1,1])", expected: 10 },
@@ -291,11 +281,11 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return count;
 };`,
-    senior: `const countMatches = (items, target) => {
-  // Keep the matches, then count them; filter compares strictly, so "1" never matches 1.
-  return items.filter(item => item === target).length;
-};`,
+    senior: "const countMatches = (items, target) => {\n  let count = 0;\n  for (let i = 0; i < items.length; i++) count += items[i] === target ? 1 : 0;\n  return count;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({x:1}),b=Object.freeze({x:1}),items=Object.freeze([a,b,a,NaN,0,-0,undefined,null]);return [countMatches(items,a),countMatches(items,NaN),countMatches(items,0),countMatches(items,-0),countMatches(items,undefined),countMatches(items,null)]; })()", expected: [2, 0, 2, 2, 1, 1] },
+      { call: "countMatches(Object.freeze(Array.from({length:10000},()=>\"x\")),\"x\")", expected: 10000 },
+
       { call: "countMatches([true,false,true,true], true)", expected: 3 },
       { call: "countMatches([0,0,0,0,0], 0)", expected: 5 },
       { call: "countMatches([null, undefined, null], null)", expected: 2 },
@@ -343,12 +333,11 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return values;
 };`,
-    senior: `const countdownBy = (start, step) => {
-  // How many values sit above zero is known up front, so build the array directly.
-  const count = Math.max(0, Math.ceil(start / step));
-  return Array.from({ length: count }, (_, index) => start - index * step);
-};`,
+    senior: "const countdownBy = (start, step) => {\n  const values = [];\n  while (start > 0) {\n    values.push(start);\n    start -= step;\n  }\n  return values;\n};",
     hiddenTests: [
+      { call: "(() => { const a=countdownBy(-10000,10000),b=countdownBy(0,1),c=countdownBy(1,10000);return [a.length,b.length,a!==b,c,c!==countdownBy(1,10000)]; })()", expected: [0, 0, true, [1], true] },
+      { call: "(() => { const a=countdownBy(10000,1),b=countdownBy(10000,9999);return [a.length,a[0],a[9999],b]; })()", expected: [10000, 10000, 1, [10000, 1]] },
+
       { call: "countdownBy(20, 7)", expected: [20, 13, 6] },
       { call: "countdownBy(1, 1)", expected: [1] },
       { call: "countdownBy(9, 3)", expected: [9, 6, 3] },

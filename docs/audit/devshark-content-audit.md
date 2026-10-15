@@ -1,5 +1,28 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b028
+
+Read every English field, starter/skeleton, board and probe for rotation,
+last-item fallback, indexed sum/matches and while countdown. The last-item
+senior no longer substitutes fallback for a present undefined element: an
+explicit length check precedes its one-item slice. Revealed rotation, sum,
+match counting and countdown now use their requested shift/push, indexed-for
+or while technique. The countdown hint no longer falsely claims its output
+length cannot be known in advance; its cost uses that output length.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms pass,
+five starters and ten wrongs fail. Twenty authored-target/base25XP checks,
+zero-artifact copy sweep, focused coding, API/script types, launch, build,
+263native bindings, both zero-vulnerability production dependency audits and
+diff checks pass. Cases include original/fallback references, present undefined,
+NaN and signed zero, strict object equality, unrounded order-sensitive Number
+sums, fresh empty arrays and10000-element scans/countdowns. The final supplied
+source was read for requested techniques; finite tests do not establish
+arbitrary source conformance or asymptotic timing. Same-session model review only.
+
+Coverage is170/725coding,555remaining,263/263native. B026–b028are local and
+PR #404 stays frozen at3e8d209d while required CI runs. No live user state changes.
+
 ## 15 October continuation — five coding items b027
 
 Read all English fields, starters/skeletons, checks and boards for swap-top,

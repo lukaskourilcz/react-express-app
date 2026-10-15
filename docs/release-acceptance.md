@@ -3423,3 +3423,15 @@ identical insertion boards were corrected to distinct explicit/literal argument
 forms and the final35verdicts/20target checks rerun. Ownership and normalization
 checks include10000-element arrays; finite tests do not prove arbitrary method
 conformance or asymptotics. B026–b027are local; #404 remains frozen separately.
+
+## Loop/fallback content batch b028 — 15 October 2026
+
+Five individual model reviews raise coding coverage to170/725,555remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass, as do focused coding, API/script types, launch, build, native bindings,
+both zero-vulnerability production dependency audits and diff checks. Correct
+fixed-one-element slice retains25XP againstO(1); uncertain countdown analysis
+remains unpenalized. Identity, strict-equality and10000-item cases are local
+fixtures; no real user progress, balances, scores or names were created.
+B026–b028are local and #404 remains frozen separately.
