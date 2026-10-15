@@ -826,7 +826,7 @@ console.log(insertAt([10, 20, 30], 25));
     tier: 1,
     focus: ['functions'],
     title: 'Keep it in range',
-    prompt: 'Write `clamp(value, min = 0, max = 100)`, returning `value` pulled into the range from `min` to `max`: `min` when it is below, `max` when it is above, and `value` itself otherwise. Give `min` and `max` their defaults in the parameter list, so `clamp(150)` gives 100 and `clamp(-5)` gives 0. A default applies when the argument is missing or `undefined`, so `clamp(7, undefined, 5)` gives 5. A 0 that is passed in is a real limit.',
+    prompt: "Write `clamp(value, min = 0, max = 100)`, returning `value` pulled into the range from `min` to `max`: `min` when it is below, `max` when it is above, and `value` itself otherwise. Give `min` and `max` their defaults in the parameter list, so `clamp(150)` gives 100 and `clamp(-5)` gives 0. A default applies when the argument is missing or `undefined`, so `clamp(7, undefined, 5)` gives 5. A 0 that is passed in is a real limit. Domain: value and supplied limits are finite Numbers from -1,000,000 through 1,000,000, with min <= max after defaults. Equal limits and fractions are valid. Return the original value when it is inside the inclusive range, preserving its sign if it is -0; otherwise return the exact applicable limit. Target: O(1) time under unit-cost Number comparisons.",
     starter: `const clamp = (value, min, max) => {
 
 };
@@ -839,7 +839,7 @@ console.log(clamp(150), clamp(-5), clamp(7, undefined, 5));
   // and the other side
   return value;
 };`,
-    hints: ['A default written as `min = 0` in the parameter list is used only when the argument is `undefined`. `min || 0` in the body looks similar, but it also replaces a 0 that was passed on purpose, and `max || 100` turns a max of 0 into 100.'],
+    hints: ['A default written as `min = 0` in the parameter list is used only when the argument is `undefined`. `max || 100` in the body also replaces a deliberately supplied max of 0 with 100.'],
     approach: [
       'Write the defaults into the parameter list: `min = 0, max = 100`.',
       'Return `min` when `value < min`, and `max` when `value > max`.',
@@ -864,7 +864,7 @@ console.log(clamp(150), clamp(-5), clamp(7, undefined, 5));
     tier: 1,
     focus: ['recursion'],
     title: 'A number in binary',
-    prompt: 'Write `toBinary(n)` for a whole number `n` of 0 or more, returning its binary digits as a string, with recursion rather than `toString(2)`. The last binary digit is `n % 2`, and the digits before it are the binary form of `Math.floor(n / 2)`. Stop when `n` is 0 or 1: it is its own single digit. `toBinary(6)` gives `"110"`.',
+    prompt: "Write `toBinary(n)` for a whole number `n` of 0 or more, returning its binary digits as a string, with recursion rather than `toString(2)`. The last binary digit is `n % 2`, and the digits before it are the binary form of `Math.floor(n / 2)`. Stop when `n` is 0 or 1: it is its own single digit. `toBinary(6)` gives `\"110\"`. Domain: n is a nonnegative safe-integer Number, up to Number.MAX_SAFE_INTEGER; -0 also returns \"0\". Return no leading zeros except the single digit for zero. Do not use 32-bit shifts to halve n: they truncate larger Numbers. Target: O(n²) time under a string-copying model, where n here is the number of binary output digits (not the numeric argument). Recursion has O(n) depth; copying each growing prefix gives the quadratic bound, while engines may optimize concatenation.",
     starter: `const toBinary = n => {
 
 };

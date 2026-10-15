@@ -489,6 +489,9 @@ const sortBy = (list, pick) =>
 }`,
     senior: `const factorial = n => (n <= 1 ? 1 : n * factorial(n - 1));`,
     hiddenTests: [
+      {"call": "factorial(18)", "expected": 6402373705728000, "label": "largest supported exact factorial"},
+      {"call": "factorial(12)", "expected": 479001600, "label": "beyond the original ten-factor boundary"},
+      {"call": "factorial(-0)", "expected": 1, "label": "signed zero is the zero base case"},
       { call: 'factorial(10)', expected: 3628800 },
       { call: 'factorial(2)', expected: 2 },
       { call: 'factorial(7)', expected: 5040 },
@@ -514,6 +517,9 @@ const power = (base, exponent) => {
   return exponent % 2 === 0 ? half * half : half * half * base;
 };`,
     hiddenTests: [
+      {"call": "[Object.is(power(-0,3),-0),Object.is(power(-0,2),+0),power(0,0)]", "expected": [true, true, 1], "label": "signed zeros and zero exponent"},
+      {"call": "power(-1.5,5)", "expected": -7.59375, "label": "negative fractional base and odd exponent"},
+      {"call": "power(9.5,10)", "expected": 5987369392.383789, "label": "upper exponent with exact half-step base"},
       { call: 'power(5, 4)', expected: 625 },
       { call: 'power(0, 0)', expected: 1 },
       { call: 'power(1.5, 2)', expected: 2.25 },
@@ -540,6 +546,9 @@ const toArray = (node, values = []) => {
   return toArray(node.next, values);
 };`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),nested=Object.freeze([2]);const tail=Object.freeze({value:undefined,next:null});const mid=Object.freeze({value:nested,next:tail});const head=Object.freeze({value,next:mid});const a=toArray(head),b=toArray(head);return a!==b&&a.length===3&&a[0]===value&&a[1]===nested&&a[2]===undefined&&head.next===mid&&mid.next===tail;})()", "expected": true, "label": "frozen nodes, original opaque identities and fresh results"},
+      {"call": "(() => {const a=toArray(null),b=toArray(null);return a!==b&&a.length===0;})()", "expected": true, "label": "each empty result is fresh"},
+      {"call": "(() => {let node=null;for(let i=199;i>=0;i--)node=Object.freeze({value:i,next:node});const a=toArray(node);return a.length===200&&a.every((x,i)=>x===i);})()", "expected": true, "label": "two hundred frozen nodes preserve traversal order"},
       { call: 'toArray({ value: null, next: { value: false, next: null } })', expected: [null, false] },
       { call: '(() => { let node = null; for (let n = 5; n >= 1; n--) node = { value: n, next: node }; return toArray(node); })()', expected: [1, 2, 3, 4, 5] },
       { call: 'toArray({ value: [1], next: { value: { x: 1 }, next: null } })', expected: [[1], { x: 1 }] },

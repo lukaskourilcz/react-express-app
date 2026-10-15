@@ -737,7 +737,7 @@ console.log(countWhere([3, 8, 12], n => n > 5));
     tier: 1,
     focus: ['recursion'],
     title: 'Factorial by recursion',
-    prompt: 'Write `factorial(n)` for a whole number `n` of zero or more, by recursion: the factorial of 0 is 1, and the factorial of any larger `n` is `n` times the factorial of `n - 1`. `factorial(5)` gives 120. Use no loop: the function calls itself.',
+    prompt: "Write `factorial(n)` for a whole number `n` of zero or more, by recursion: the factorial of 0 is 1, and the factorial of any larger `n` is `n` times the factorial of `n - 1`. `factorial(5)` gives 120. Use no loop: the function calls itself. Domain: n is an integer from 0 through 18, so the factorial is an exactly represented safe-integer Number. Negative, fractional, larger and BigInt inputs are outside this exercise. Target: O(n) time, where n is the requested integer, under unit-cost Number arithmetic; the direct recursion also uses O(n) call-stack space.",
     starter: `const factorial = n => {
 
 };
@@ -772,7 +772,7 @@ console.log(factorial(5));
     tier: 1,
     focus: ['recursion'],
     title: 'Power by recursion',
-    prompt: 'Write `power(base, exponent)` for a whole-number `exponent` of zero or more, by recursion and without `**` or `Math.pow`: any base to the power 0 is 1, and `base` to the power `exponent` is `base` times `base` to the power `exponent - 1`. `power(2, 5)` gives 32.',
+    prompt: "Write `power(base, exponent)` for a whole-number `exponent` of zero or more, by recursion and without `**` or `Math.pow`: any base to the power 0 is 1, and `base` to the power `exponent` is `base` times `base` to the power `exponent - 1`. `power(2, 5)` gives 32. Domain: exponent is an integer from 0 through 10; base is a Number from -10 through 10 in steps of 0.5, including signed zero. These bounds keep the specified multiplications exactly representable. Return 1 for exponent 0, including 0 to the power 0. For other exponents retain the sign of zero produced by multiplication. Target: O(n) time for the direct recursion, where n is the exponent under unit-cost arithmetic; faster recursive exponentiation is also accepted.",
     starter: `const power = (base, exponent) => {
 
 };
@@ -808,7 +808,7 @@ console.log(power(2, 5));
     tier: 2,
     focus: ['recursion'],
     title: 'Walk a linked list',
-    prompt: 'A linked list is a chain of nodes shaped `{ value, next }`, where the last node’s `next` is `null`. Write `toArray(node)`, returning the values from `node` to the end of the chain, in order, by recursion: `null` is the empty list and gives `[]`, and any other node gives its value followed by `toArray(node.next)`. `toArray({ value: 1, next: { value: 2, next: null } })` gives `[1, 2]`.',
+    prompt: "A linked list is a chain of nodes shaped `{ value, next }`, where the last node’s `next` is `null`. Write `toArray(node)`, returning the values from `node` to the end of the chain, in order, by recursion: `null` is the empty list and gives `[]`, and any other node gives its value followed by `toArray(node.next)`. `toArray({ value: 1, next: { value: 2, next: null } })` gives `[1, 2]`. Domain: an acyclic chain of at most 200 ordinary nodes ending in null. Nodes may be frozen and values are opaque JavaScript values, including undefined, nested arrays and object references. Return a fresh array every time, preserve exact value identities and do not change any node. Target: O(n²) time for the taught recursive suffix-copying approach, where n is the node count and copying k array slots costs O(k). An accumulator-based recursion can achieve O(n) time and is also accepted; call-stack space is O(n).",
     starter: `const toArray = node => {
 
 };

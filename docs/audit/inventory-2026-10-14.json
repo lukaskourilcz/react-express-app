@@ -26,11 +26,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used.",
-    "currentModelReviewedIssuedTasks": 100,
-    "issuedStillRequiringReview": 625,
+    "currentModelReviewedIssuedTasks": 105,
+    "issuedStillRequiringReview": 620,
     "deployedModelReviewedIssuedTasks": 95,
-    "stagedModelReviewedIssuedTasks": 5,
-    "stagedExecutionEvidence": "15 October five-item commits through b014: 5 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "stagedModelReviewedIssuedTasks": 10,
+    "stagedExecutionEvidence": "15 October five-item commits through b015: 10 staged reviews; latest batch 35/35 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
     "deployedExecutionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used."
   },
   "nativePaths": {
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "95 reviewed coding and 240 native records are deployed; 5 coding records are staged through b014. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "95 reviewed coding and 240 native records are deployed; 10 coding records are staged through b015. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

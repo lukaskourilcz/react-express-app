@@ -1,5 +1,26 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b015
+
+Individually read factorial, recursive powers, default-bound clamping, recursive
+binary encoding and linked-list conversion. The senior binary example discarded
+high Number bits through32bit shifts; the senior clamp changed an in-range -0.
+Both are corrected. The clamp hint now uses the actual max||100zero-default
+counterexample. Specify exact numeric/stack domains, immutable opaque values,
+fresh outputs and the suffix/string-copy cost models without claiming engine
+performance. Every supplied field and revealed answer received a final reading.
+
+All35final-hash sandbox verdicts agree versus27/35before;20valid revealed and
+alternative forms retain25XP without false penalties. Five incomplete starters
+and ten wrong variants fail. Copy sweep, focused coding contracts, API/script
+types, launch, build, both zero-vulnerability production dependency audits and
+diff checks pass. This is bounded same-session model evidence, not an independent
+reader or arbitrary-program recursion/complexity proof.
+
+Current coding coverage is105/725;620remain. Native coverage stays263/263.
+PR #401is frozen at148c6100 with SQL passing41s and verify pending; this new
+five-item coding batch remains local while the required checks run.
+
 ## 15 October continuation — five coding items b014
 
 Individually read flattening, grouping, parameter defaults, Math.max spreading

@@ -576,8 +576,11 @@ const clamp = (value, min = 0, max = 100) => {
     return value;
   }
 }`,
-    senior: `const clamp = (value, min = 0, max = 100) => Math.min(Math.max(value, min), max);`,
+    senior: `const clamp = (value, min = 0, max = 100) => value < min ? min : value > max ? max : value;`,
     hiddenTests: [
+      {"call": "[Object.is(clamp(-0),-0),Object.is(clamp(-0,-1,0),-0),Object.is(clamp(-1,-0,10),-0)]", "expected": [true, true, true], "label": "preserve original in-range signed zero and exact lower limit"},
+      {"call": "clamp(1.25,-2.5,3.5)", "expected": 1.25, "label": "fractional in-range value is not rounded"},
+      {"call": "[clamp(-1000000,-1000000,1000000),clamp(1000000,-1000000,1000000),clamp(3,2.5,2.5)]", "expected": [-1000000, 1000000, 2.5], "label": "inclusive maximal and equal limits"},
       { call: 'clamp(5, 0, 0)', expected: 0 },
       { call: 'clamp(-20, undefined, 10)', expected: 0 },
       { call: 'clamp(-1, -10, -5)', expected: -5 },
@@ -603,8 +606,12 @@ const clamp = (value, min = 0, max = 100) => {
   const rest = Math.floor(n / 2);
   return toBinary(rest) + String(lastDigit);
 }`,
-    senior: `const toBinary = n => (n < 2 ? String(n) : toBinary(n >> 1) + (n & 1));`,
+    senior: `const toBinary = n => (n < 2 ? String(n) : toBinary(Math.floor(n / 2)) + (n % 2));`,
     hiddenTests: [
+      {"call": "toBinary(2147483648)", "expected": "10000000000000000000000000000000", "label": "beyond signed 32-bit range"},
+      {"call": "toBinary(4294967296)", "expected": "100000000000000000000000000000000", "label": "beyond unsigned 32-bit range"},
+      {"call": "toBinary(Number.MAX_SAFE_INTEGER)", "expected": "11111111111111111111111111111111111111111111111111111", "label": "largest safe integer"},
+      {"call": "toBinary(-0)", "expected": "0", "label": "signed zero has a single zero digit"},
       { call: 'toBinary(255)', expected: '11111111' },
       { call: 'toBinary(2)', expected: '10' },
       { call: 'toBinary(1024)', expected: '10000000000' },
