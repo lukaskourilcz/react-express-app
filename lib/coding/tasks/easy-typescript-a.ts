@@ -193,7 +193,7 @@ const isWeekday = (day: Day): day is Weekday => {
     tier: 1,
     focus: ['constraints'],
     title: 'The longer of two',
-    prompt: 'Write `longer<T extends { length: number }>(a: T, b: T): T`, returning whichever argument has the greater `length`, or `a` when the two tie. The constraint lets the function read `.length` on anything that has one, so the same function works for two strings and for two arrays, and the caller gets back the type they passed in.',
+    prompt: "Write `longer<T extends { length: number }>(a: T, b: T): T`, returning whichever argument has the greater `length`, or `a` when the two tie. The constraint lets the function read `.length` on anything that has one, so the same function works for two strings and for two arrays, and the caller gets back the type they passed in. Domain: strings, native arrays, functions or stable ordinary/null-prototype records with a numeric length, without accessors/proxies. Record length may be own or inherited through a bounded prototype chain. Values and contents are opaque: compare numeric length properties without traversing, cloning, coercing or calling either argument, and leave them unchanged. Return the exact original argument. Use the strict comparison b.length > a.length: return b only when it is true, otherwise a. This includes equal lengths, signed zeros and unordered NaN comparisons; infinities are compared as Numbers. String length counts UTF-16 code units. Target: O(1) time and working state for two stable length reads and one comparison.",
     starter: `const longer = (a, b) => {
 
 };
@@ -234,7 +234,7 @@ console.log(longer("tea", "coffee"));
     tier: 2,
     focus: ['constraints', 'filter'],
     title: 'Only the active ones',
-    prompt: 'Users, products and sessions all carry an `active` flag. Write `onlyActive<T extends { active: boolean }>(items: T[]): T[]`, keeping the items whose `active` is `true`, in their original order. Each item keeps its other properties: filtering users gives back users, not bare `{ active: boolean }` objects.',
+    prompt: "Users, products and sessions all carry an `active` flag. Write `onlyActive<T extends { active: boolean }>(items: T[]): T[]`, keeping the items whose `active` is `true`, in their original order. Each item keeps its other properties: filtering users gives back users, not bare `{ active: boolean }` objects. Domain: a dense array of at most 1000 stable ordinary or null-prototype records, possibly frozen, whose active flag is an own or inherited boolean data property on a bounded prototype chain. No accessors/proxies are involved. Other fields are opaque. Retain each exact active record reference, all duplicates and their original order. Leave every flag, record and array order unchanged; do not inspect or clone unrelated fields. Return a fresh mutable outer array on every call, including all-active, none-active and empty input. Target: O(n) time and worst-case O(n) output space, where n is 1 + item count.",
     starter: `const onlyActive = (items) => {
 
 };

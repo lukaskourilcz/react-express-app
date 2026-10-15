@@ -203,20 +203,13 @@ const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [string,
   }
   return runs;
 };`,
-    senior: `interface Message {
-  from: string;
-  text: string;
-}
-
-const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [key: string, run: T[]][] =>
-  items.reduce<[key: string, run: T[]][]>((runs, item) => {
-    const key = keyOf(item);
-    const last = runs.at(-1);
-    if (last?.[0] === key) last[1].push(item);
-    else runs.push([key, [item]]);
-    return runs;
-  }, []);`,
+    senior: "interface Message {\n  from: string;\n  text: string;\n}\n\nconst groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [key: string, run: T[]][] => {\n  const runs: [key: string, run: T[]][] = [];\n  for (const item of items) {\n    const key = keyOf(item);\n    const last = runs.at(-1);\n    if (last !== undefined && last[0] === key) last[1].push(item);\n    else runs.push([key, [item]]);\n  }\n  return runs;\n};",
     hiddenTests: [
+      { call: "(()=>{const objects=[Object.freeze({}),Object.freeze({}),Object.freeze({}),Object.freeze({})],input=Object.freeze(objects.slice()),seen=[],keys=['','','x',''];let calls=0;const out=groupRuns(input,function(value){seen.push([value,arguments.length]);return keys[calls++];});return [calls,seen.every((row,i)=>row[0]===objects[i]&&row[1]===1),out.map(([key,run])=>[key,run.length]),out[0][1][0]===objects[0],out[2][1][0]===objects[3],input.length];})()", expected: [4, true, [["", 2], ["x", 1], ["", 1]], true, true, 4] },
+      { call: "(()=>{const input=Object.freeze([1,2,1]),a=groupRuns(input,String),b=groupRuns(input,String);a[0][1].push(99);a.push(['later',[]]);return [a!==b,a[0]!==b[0],a[0][1]!==b[0][1],b[0][1]!==b[2][1],b[0][1],input.length,groupRuns([],String)!==groupRuns([],String)];})()", expected: [true, true, true, true, [1], 3, true] },
+      { call: "(()=>{const marker={},seen=[];try{groupRuns([1,2,3],value=>{seen.push(value);if(value===2)throw marker;return 'x';});return false;}catch(error){return error===marker&&seen.join(',')==='1,2';}})()", expected: true },
+      { call: "(()=>{let calls=0;const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=groupRuns(input,()=>{calls++;return '__proto__';});return [out.length,out[0][0],out[0][1].length,out[0][1][999],calls];})()", expected: [1, "__proto__", 1000, 999, 1000] },
+
       { call: 'groupRuns(["a", "b", "c"], (s) => (s === "c" ? "x" : ""))', expected: [['', ['a', 'b']], ['x', ['c']]] },
       { call: 'groupRuns([..."aabbbaacc"], (c) => c).map(([key, run]) => key + run.length).join(" ")', expected: 'a2 b3 a2 c2' },
       { call: '(() => { const list = [1, 2]; const runs = groupRuns(list, () => "k"); runs[0][1].push(3); return list; })()', expected: [1, 2] },

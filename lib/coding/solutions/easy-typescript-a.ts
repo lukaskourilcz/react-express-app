@@ -152,10 +152,14 @@ const longer = <T extends { length: number }>(a: T, b: T): T => (b.length > a.le
   }
   return a;
 };`,
-    senior: `function longer<T extends { length: number }>(a: T, b: T): T {
-  return a.length >= b.length ? a : b;
-}`,
+    senior: "function longer<T extends { length: number }>(a: T, b: T): T {\n  return b.length > a.length ? b : a;\n}",
+    hiddenTypeTests: [{"code": "const __auditLabel: string = longer({length:1,label:\"a\"},{length:2,label:\"b\"}).label;"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({length:2,label:'a'}),b=Object.freeze({length:2,label:'b'}),c=Object.freeze({length:3,label:'c'});return [longer(a,b)===a,longer(a,c)===c,a.length,b.label];})()", expected: [true, true, 2, "b"] },
+      { call: "(()=>{const a={length:NaN},b={length:3},c={length:Infinity},d={length:Infinity},z={length:-0},zero={length:0};return [longer(a,b)===a,longer(b,a)===b,longer(c,d)===c,longer(b,c)===c,longer(z,zero)===z];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const a=Object.freeze(Object.assign(Object.create({length:-2.5}),{extra:1})),b=Object.freeze({length:-1.5}),fn=()=>{throw Error('called');};return [longer(a,b)===b,longer(fn,fn)===fn,longer('\ud83e\udd88','ab'),a.extra];})()", expected: [true, true, "\ud83e\udd88", 1] },
+      { call: "(()=>{const a=Object.freeze([1]),b=Object.freeze([2,3]);return [longer(a,b)===b,a.length,b.length];})()", expected: [true, 1, 2] },
+
       { call: 'longer("same", "four")', expected: 'same' },
       { call: 'longer(["a"], ["b", "c"])', expected: ['b', 'c'] },
       { call: 'longer("abc", "")', expected: 'abc' },
@@ -177,7 +181,12 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
     senior: `function onlyActive<T extends { active: boolean }>(items: readonly T[]): T[] {
   return items.filter(({ active }) => active);
 }`,
+    hiddenTypeTests: [{"code": "const __auditSymbol: symbol = onlyActive([{active:true,payload:Symbol()}])[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({active:true,meta}),off=Object.freeze({active:false}),b=Object.freeze(Object.assign(Object.create({active:true}),{id:1})),input=Object.freeze([off,a,b,a]),out=onlyActive(input),again=onlyActive(input);out.push(a);return [out!==again,again.length,again[0]===a,again[1]===b,again[2]===a,again[0].meta===meta,input[0]===off,off.active];})()", expected: [true, 3, true, true, true, true, true, false] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({active:i%2===1,id:i}))),out=onlyActive(input);return [out.length,out.every((item,i)=>item===input[i*2+1]),input.length,input[0].active];})()", expected: [500, true, 1000, false] },
+      { call: "(()=>{const a=onlyActive([]),b=onlyActive([{active:false}]);a.push({active:true});return [a.length,b.length,a!==onlyActive([])];})()", expected: [1, 0, true] },
+
       { call: 'onlyActive([{ id: 3, active: true }, { id: 1, active: false }, { id: 2, active: true }]).map((item) => item.id)', expected: [3, 2] },
       { call: '(() => { const a = { active: true }; return onlyActive([a])[0] === a; })()', expected: true },
       { call: 'onlyActive([{ sku: "x", active: false }, { sku: "y", active: false }])', expected: [] },

@@ -216,31 +216,15 @@ const orderTotal = (lines: readonly Line[]): number =>
   }
   return [...byId.values()];
 };`,
-    junior: `const latest = <T extends { id: string; version: number }>(records: readonly T[]): T[] => {
-  const result: T[] = [];
-  for (const record of records) {
-    let found = -1;
-    for (let i = 0; i < result.length; i++) {
-      if (result[i].id === record.id) {
-        found = i;
-      }
-    }
-    if (found === -1) {
-      result.push(record);
-    } else if (record.version > result[found].version) {
-      result[found] = record;
-    }
-  }
-  return result;
-};`,
-    senior: `const latest = <T extends { readonly id: string; readonly version: number }>(records: readonly T[]): T[] => {
-  const byId = new Map<string, T>();
-  for (const record of records) {
-    if (record.version > (byId.get(record.id)?.version ?? -Infinity)) byId.set(record.id, record);
-  }
-  return Array.from(byId.values());
-};`,
+    junior: "const latest = <T extends { id: string; version: number }>(records: readonly T[]): T[] => {\n  const byId = new Map<string, T>();\n  for (const record of records) {\n    const previous = byId.get(record.id);\n    if (previous === undefined) {\n      byId.set(record.id, record);\n    } else if (record.version > previous.version) {\n      byId.set(record.id, record);\n    }\n  }\n  return Array.from(byId.values());\n};",
+    senior: "const latest = <T extends { readonly id: string; readonly version: number }>(records: readonly T[]): T[] => {\n  const byId = new Map<string, T>();\n  for (const record of records) {\n    const previous = byId.get(record.id);\n    if (previous === undefined || record.version > previous.version) byId.set(record.id, record);\n  }\n  return [...byId.values()];\n};",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly {id:string;version:number;payload:symbol}[] = [{id:\"a\",version:0,payload:Symbol()}]; const __auditSymbol: symbol = latest(__auditInput)[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const records=Object.freeze(['constructor','__proto__','','2','1','toString'].map(id=>Object.freeze({id,version:0}))),out=latest(records);return [out.map(x=>x.id),out.every((x,i)=>x===records[i]),records.length];})()", expected: [["constructor", "__proto__", "", "2", "1", "toString"], true, 6] },
+      { call: "(()=>{const old=Object.freeze({id:'a',version:1}),winner=Object.freeze({id:'a',version:3,meta:{}}),tie=Object.freeze({id:'a',version:3}),other=Object.freeze({id:'b',version:2}),input=Object.freeze([old,other,winner,tie]),a=latest(input),b=latest(input);a.pop();return [a!==b,b[0]===winner,b[1]===other,b[0].meta===winner.meta,input[0]===old,input.length];})()", expected: [true, true, true, true, true, 4] },
+      { call: "(()=>{const records=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:'k'+i%10,version:i}))),out=latest(records);return [out.length,out.every((record,i)=>record===records[990+i]),records[0].version,latest([])!==latest([])];})()", expected: [10, true, 0, true] },
+      { call: "latest([{id:' x ',version:1000000000},{id:'x',version:0},{id:' x ',version:999999999}]).map(x=>[x.id,x.version])", expected: [[" x ", 1000000000], ["x", 0]] },
+
       { call: 'latest([{ id: "b", version: 1 }, { id: "a", version: 5 }, { id: "b", version: 4 }, { id: "c", version: 1 }, { id: "a", version: 2 }]).map((r) => r.id + r.version)', expected: ['b4', 'a5', 'c1'] },
       { call: 'latest([{ id: "a", version: 1 }, { id: "b", version: 1 }, { id: "a", version: 9 }]).map((r) => r.id)', expected: ['a', 'b'] },
       { call: 'latest([{ id: "z", version: 1, v: "old" }, { id: "z", version: 2, v: "mid" }, { id: "z", version: 2, v: "late" }])[0].v', expected: 'mid' },

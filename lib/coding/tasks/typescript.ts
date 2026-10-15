@@ -755,7 +755,7 @@ console.log(describeValue("hi"));
     tier: 2,
     focus: ["generics"],
     title: "First item",
-    prompt: "Write `first<T>(items: T[]): T | undefined`, returning the opening item of an array of anything, and `undefined` when there is nothing in it. One type parameter is enough — the caller should get back the type they put in.",
+    prompt: "Write `first<T>(items: T[]): T | undefined`, returning the opening item of an array of anything, and `undefined` when there is nothing in it. One type parameter is enough \u2014 the caller should get back the type they put in. Domain: an ordinary native array of at most 1000 opaque values, possibly frozen or sparse, with unmodified Array methods, no accessors/proxies and no inherited numeric entries. Return the exact value at index 0, including null, undefined, symbols, functions or object references; a hole there gives undefined. Leave the array unchanged and do not inspect, clone, call or coerce the selected value or later items. Target: O(1) time and working state for selecting the first slot; work a returned function might later perform is outside this call.",
     starter: `const first = (items) => {
   
 };
