@@ -1,5 +1,28 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n030
+
+Reviewed four handoff questions and their check. Conditional UAT acceptance now
+requires explicit exception authority and preserves the missed timing result.
+A ten-case median is calculable without proving wider performance. The runbook
+item asks for its specific verification/escalation gap without dismissing useful
+diagrams or certifying overall readiness. Refund confirmation states the actual
+irreversible boundary, with no impossible undo promise. Repeated workarounds
+across one customer's sites support investigation, not cross-customer demand;
+individual requests are also legitimate product input.
+
+Mixed keys, immediate review and timing arithmetic pass. No rollout, refund,
+customer validation or actual handoff was executed. Native bindings, path
+contracts, API/script types, launch, build, both production dependency audits
+(zero vulnerabilities), copy and diff checks pass. Manual editorial scores and
+final readings remain separate from these checks.
+
+Coverage is **205/263 native**, **58 remaining**, and **95/725 coding**,
+**630 remaining**. N024–n030 are local. PR #398 is merged at 46e0dd63;
+its exact production deployment is READY on devshark.app, with general QA
+running. Release acceptance will record the actual outcome. Diagnostic parent
+still awaits #397.
+
 ## 15 October continuation — five-item native batch n029
 
 Reviewed four incident questions and their check. Inclusive sequential timing
