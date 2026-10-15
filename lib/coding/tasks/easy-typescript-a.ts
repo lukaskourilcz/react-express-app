@@ -929,7 +929,7 @@ const addTag = (note: Note, tag: string): Note => {
     tier: 2,
     focus: ['while', 'narrowing'],
     title: 'Path up to the root',
-    prompt: 'Each `Folder` has a `name` and a `parent`, which is another folder, or `null` for the root. Write `pathOf(folder: Folder): string`, returning every name from the root down to the folder, joined with `/`. Walk up with a `while` loop that follows `parent` until it reaches `null`. The condition `current !== null` narrows `current` to a `Folder` inside the loop, so reading `current.name` compiles.',
+    prompt: "Each `Folder` has a `name` and a `parent`, which is another folder, or `null` for the root. Write `pathOf(folder: Folder): string`, returning every name from the root down to the folder, joined with `/`. Walk up with a `while` loop that follows `parent` until it reaches `null`. The condition `current !== null` narrows `current` to a `Folder` inside the loop, so reading `current.name` compiles. Domain: a nonempty acyclic parent chain of at most 1000 stable Folder data records, possibly frozen, ending at parent null. Names contain at most 200 UTF-16 units and may be empty or include slashes, spaces and Unicode. Join every name exactly, including empty names: an empty root followed by child gives /child. Do not trim, escape, resolve dot segments or normalize a filesystem path. Leave records and links unchanged. Target: O(n) time and storage using append, one reverse and join, where n is 1 + chain length + total name length. Repeated unshift or repeated full-path string copying may be quadratic in the number of folders.",
     starter: `interface Folder {
   name: string;
   parent: Folder | null;
@@ -953,15 +953,15 @@ const pathOf = (folder: Folder): string => {
   const names: string[] = [];
   let current: Folder | null = folder;
   while (/* current is a folder */) {
-    // put its name in front, then step up to its parent
+    // append its name, then step up to its parent
   }
-  return names.join("/");
+  return names.reverse().join("/");
 };`,
-    hints: ['Type the loop variable as `Folder | null` so it can hold the root’s `null` parent. Add each name at the front with `unshift`, or collect them and reverse once at the end.'],
+    hints: ['Type the loop variable as `Folder | null` so it can hold the root’s `null` parent. Append each name with push, then reverse the array once and join with /. Empty names still need their separators.'],
     approach: [
       'Start `current` at the folder, typed `Folder | null`.',
-      'While `current !== null`, put `current.name` at the front of a list and move to `current.parent`.',
-      'Join the names with `/`.',
+      'While `current !== null`, append `current.name` to a list and move to `current.parent`.',
+      'Reverse the names once, then join them with `/`.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -1125,7 +1125,7 @@ const isAccent = (value: string): value is Accent => {
     tier: 2,
     focus: ['narrowing', 'for-of'],
     title: 'The first error',
-    prompt: 'A batch job reports one `Result` per step: `{ ok: true; value: number }` when the step worked and `{ ok: false; error: string }` when it failed. Write `firstError(results: Result[]): string | null`, walking the results with `for...of` and returning the first error message, or `null` when every step worked. `result.error` only compiles after a check on `result.ok` has narrowed the union to the failed shape.',
+    prompt: "A batch job reports one `Result` per step: `{ ok: true; value: number }` when the step worked and `{ ok: false; error: string }` when it failed. Write `firstError(results: Result[]): string | null`, walking the results with `for...of` and returning the first error message, or `null` when every step worked. `result.error` only compiles after a check on `result.ok` has narrowed the union to the failed shape. Domain: a dense array of at most 1000 stable Result data records, possibly frozen, with exactly the stated true/value or false/error shape. No accessors or proxies are involved. Error strings have at most 200 UTF-16 units and must be returned exactly, including whitespace, empty text and Unicode. Successful values are finite numbers. Read results in their original order, return the first failed message or null, and leave the array and records unchanged. Target: O(n) time in the worst case and O(1) working state, where n is 1 + result count; returning an existing message does not scan its text.",
     starter: `type Result = { ok: true; value: number } | { ok: false; error: string };
 
 const firstError = (results: Result[]): string | null => {

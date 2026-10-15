@@ -318,7 +318,7 @@ const pathLength = (points: Point[]): number => {
     tier: 2,
     focus: ["narrowing", "unions", "for-of"],
     title: "Mixed total",
-    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0.",
+    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0. Domain: a dense array of at most 1000 primitive strings or finite numbers from -1000000000000 through 1000000000000, possibly frozen. Each string has at most 200 UTF-16 units. String length means the JavaScript length property in UTF-16 code units, including spaces, combining marks and surrogate pairs; do not parse numeric-looking text. Start at numeric zero and add contributions from left to right using Number arithmetic, without rounding or reordering. Leave the array unchanged. Target: O(n) time and O(1) working state, where n is 1 + element count: reading a string length does not traverse its text.",
     starter: `const mixedTotal = (values: (string | number)[]): number => {
 
 };

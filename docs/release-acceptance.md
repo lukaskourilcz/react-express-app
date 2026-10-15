@@ -4151,3 +4151,11 @@ schema/RLS, handler, dependency, UI or entitlement/reward-policy change; no real
 account state is a test fixture. Nine existing issues remain open for actual
 residuals/owner holds; none is closed merely because its implementation subset
 has passed. Marketing draft #365 stays held.
+
+## Five-item continuation B053 — 15 October 2026
+
+Individually audited UTC fillDays, mixedTotal, parent paths, reply errors and firstError. Preserved exact inputs, empty segments/messages, UTF-16 lengths, ordered Number folds and independent output tuples. Changed the incorrect junior path join to append/reverse/join and replaced potentially quadratic instructional boards with linear collection. Date bounds include output day count; the original fixed-UTC alternative remains accepted.
+
+All 30 final-hash selected verdicts agree (20 valid, five starters, five wrong), versus 25/30 baseline. Twenty authored-target/base-25-XP checks pass after correcting a target phrase the guidance parser did not recognize. The earlier failed target and transient stale registry are not final acceptance. Seventeen added runtime/four added static assertions retain existing date tuple checks. Canonical focused coding includes actual TypeScript, native Run, reversed hidden cases and this calendar task in UTC plus four other time zones. API/script types, launch, build, registry/index generation, 263 native bindings, both production dependency audits (zero vulnerabilities), copy sweep (zero findings) and diff pass. All 295 current coding hashes match; 430 remain.
+
+All 80 fixture-backed light/dark responsive probes over five task routes at 320–1440px pass, zero issues/unprobed. B051–B052 remain frozen in PR #415 at cd003932eeaab7c8c42957cfe45278ba2864e0a5; B053 is separate, with 15 later reviews above the 280 deployed in #414. No schema/RLS, handler, dependency, UI or reward-policy change. Same-session model/finite execution, not independent/human, authenticated Premium or full-catalogue acceptance. All owner holds, including draft #365, remain unchanged.

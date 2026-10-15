@@ -186,9 +186,13 @@ const pathLength = (points: Point[]): number => {
   }
   return total;
 };`,
-    senior: `const mixedTotal = (values: (string | number)[]): number =>
-  values.reduce<number>((total, value) => total + (typeof value === "number" ? value : value.length), 0);`,
+    senior: "const mixedTotal = (values: (string | number)[]): number => {\n  let total = 0;\n  for (const value of values) {\n    if (typeof value === \"number\") total += value;\n    else total += value.length;\n  }\n  return total;\n};",
+    hiddenTypeTests: [{"code": "mixedTotal([null]);", "rejects": true}],
     hiddenTests: [
+      { call: "mixedTotal(['\ud83e\udd88','e\u0301','  ','12',-1])", expected: 7 },
+      { call: "(()=>{const values=Object.freeze([1000000000000,0.0001,-1000000000000]),actual=mixedTotal(values),expected=(1000000000000+0.0001)-1000000000000;return [Object.is(actual,expected),values.length,values[0]];})()", expected: [true, 3, 1000000000000] },
+      { call: "(()=>{const input=Object.freeze(Array(1000).fill('x'.repeat(200)));return [mixedTotal(input),input.length,input[0].length,Object.is(mixedTotal([-0]),0)];})()", expected: [200000, 1000, 200, true] },
+
       { call: "mixedTotal([10, \"\", 5])", expected: 15 },
       { call: "mixedTotal([\"abcd\"])", expected: 4 },
     ],

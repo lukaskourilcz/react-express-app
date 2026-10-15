@@ -557,26 +557,13 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   }
   return filled;
 };`,
-    senior: `type Reading = [date: string, value: number];
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const toTime = (date: string): number => Date.parse(\`\${date}T00:00:00Z\`);
-const toDate = (time: number): string => new Date(time).toISOString().slice(0, 10);
-
-const fillDays = (readings: readonly Reading[]): Reading[] => {
-  const totals = new Map<string, number>();
-  for (const [date, value] of readings) totals.set(date, (totals.get(date) ?? 0) + value);
-  if (totals.size === 0) return [];
-
-  const times = [...totals.keys()].map(toTime);
-  const first = Math.min(...times);
-  const count = (Math.max(...times) - first) / DAY_MS + 1;
-  return Array.from({ length: count }, (_, i): Reading => {
-    const date = toDate(first + i * DAY_MS);
-    return [date, totals.get(date) ?? 0];
-  });
-};`,
+    senior: "type Reading = [date: string, value: number];\n\nconst fillDays = (readings: readonly Reading[]): Reading[] => {\n  const totals = new Map<string, number>();\n  let first = \"\";\n  let last = \"\";\n  for (const [date, value] of readings) {\n    totals.set(date, (totals.get(date) ?? 0) + value);\n    if (first === \"\" || date < first) first = date;\n    if (last === \"\" || date > last) last = date;\n  }\n  const filled: Reading[] = [];\n  if (first === \"\") return filled;\n  const day = new Date(first + \"T00:00:00Z\");\n  let text = first;\n  while (text <= last) {\n    filled.push([text, totals.get(text) ?? 0]);\n    day.setUTCDate(day.getUTCDate() + 1);\n    text = day.toISOString().slice(0, 10);\n  }\n  return filled;\n};",
     hiddenTests: [
+      { call: "(()=>{const first=Object.freeze(['2026-01-01',7]),last=Object.freeze(['2026-01-03',9]),input=Object.freeze([last,first]),out=fillDays(input),again=fillDays(input);out[0][1]=99;out.push(['2026-01-04',0]);return [out!==input,out!==again,out[0]!==first,out[2]!==last,again[0][1],again.length,input[0]===last,first[1],last[1]];})()", expected: [true, true, true, true, 7, 3, true, 7, 9] },
+      { call: "(()=>{const readings=Object.freeze([Object.freeze(['2000-02-28',-2]),Object.freeze(['2000-03-01',5]),Object.freeze(['2000-02-28',2])]);return fillDays(readings);})()", expected: [["2000-02-28", 0], ["2000-02-29", 0], ["2000-03-01", 5]] },
+      { call: "(()=>{const input=Array.from({length:1000},()=>['1000-01-01',1000000000]),out=fillDays(input),empty=fillDays([]);return [out,empty!==fillDays([]),input.length,input[0][1]];})()", expected: [[["1000-01-01", 1000000000000]], true, 1000, 1000000000] },
+      { call: "(()=>{const out=fillDays([['2024-09-26',2],['2022-01-01',1]]);return [out.length,out[0],out[999],out[424][0]];})()", expected: [1000, ["2022-01-01", 1], ["2024-09-26", 2], "2023-03-01"] },
+
       { call: 'fillDays([["2024-02-28", 1], ["2024-03-01", 1]]).map(([date]) => date)', expected: ['2024-02-28', '2024-02-29', '2024-03-01'] },
       { call: 'fillDays([["2026-01-01", 2], ["2025-12-31", 1]])', expected: [['2025-12-31', 1], ['2026-01-01', 2]] },
       { call: 'fillDays([["2100-02-28", 1], ["2100-03-01", 1]]).map(([date]) => date)', expected: ['2100-02-28', '2100-03-01'] },

@@ -1105,7 +1105,7 @@ const readUser = (text: string): User | null => {
     tier: 2,
     focus: ['narrowing', 'filter'],
     title: 'Data or an error',
-    prompt: 'A batch of API replies holds two shapes: `{ data }` when a call worked and `{ error }` when it failed. There is no shared `kind` field to compare, so narrow with the `in` operator: inside `if ("error" in reply)`, TypeScript knows `reply` is the error shape. Write `errorsOf(replies: readonly Reply[]): string[]`, returning every error message, in order.',
+    prompt: "A batch of API replies holds two shapes: `{ data }` when a call worked and `{ error }` when it failed. There is no shared `kind` field to compare, so narrow with the `in` operator: inside `if (\"error\" in reply)`, TypeScript knows `reply` is the error shape. Write `errorsOf(replies: readonly Reply[]): string[]`, returning every error message, in order. Domain: a dense readonly array of at most 1000 stable ordinary or null-prototype data records, possibly frozen. Each reply has exactly one own error string or own data array as declared, with no accessors/proxies. Text has at most 200 UTF-16 units; data arrays contain at most 100 strings. Preserve error text exactly, including whitespace, empty text, Unicode and duplicate messages. Do not change replies or data. Return a fresh mutable message array each call, including when empty. Target: O(n) time and worst-case O(n) storage, where n is 1 + reply count; message strings and successful data are retained or ignored without traversing their contents.",
     starter: `type Reply = { data: string[] } | { error: string };
 
 const errorsOf = (replies) => {

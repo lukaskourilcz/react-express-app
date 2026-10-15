@@ -967,7 +967,12 @@ type Failure = Extract<Reply, { error: string }>;
 const isFailure = (reply: Reply): reply is Failure => "error" in reply;
 
 const errorsOf = (replies: readonly Reply[]): string[] => replies.filter(isFailure).map(({ error }) => error);`,
+    hiddenTypeTests: [{"code": "const __auditRead: readonly Reply[] = [{error:\"x\"}]; const __auditOut: string[] = errorsOf(__auditRead); __auditOut.push(\"y\");"}],
     hiddenTests: [
+      { call: "errorsOf([Object.freeze({error:' x '}),Object.freeze(Object.assign(Object.create(null),{error:''})),Object.freeze({data:Object.freeze(['error'])}),Object.freeze({error:'\ud83e\udd88'}),Object.freeze({error:' x '})])", expected: [" x ", "", "\ud83e\udd88", " x "] },
+      { call: "(()=>{const data=Object.freeze(['a']),reply=Object.freeze({data}),err=Object.freeze({error:'x'}),input=Object.freeze([reply,err]),out=errorsOf(input),again=errorsOf(input);out.push('later');return [out!==again,again,input[0]===reply,reply.data===data,data.length,errorsOf([])!==errorsOf([])];})()", expected: [true, ["x"], true, true, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{error:String(i)}:{data:[]}))),out=errorsOf(input);return [out.length,out[0],out[499],input.length];})()", expected: [500, "1", "999", 1000] },
+
       { call: 'errorsOf([{ error: "A" }, { data: ["b"] }, { error: "C" }, { data: [] }, { error: "E" }])', expected: ['A', 'C', 'E'] },
       { call: 'errorsOf([{ data: ["error"] }])', expected: [] },
       { call: 'errorsOf([{ error: "x" }, { error: "x" }])', expected: ['x', 'x'] },
