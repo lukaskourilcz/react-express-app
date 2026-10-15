@@ -623,15 +623,13 @@ const paintBucket = (grid, row, col, colour) => {
   }
   return topLevel;
 };`,
-    senior: `const buildThread = comments => {
-  const nodes = new Map(comments.map(({ id, text }) => [id, { id, text, replies: [] }]));
-  const roots = [];
-  for (const { id, parentId } of comments) {
-    (nodes.get(parentId)?.replies ?? roots).push(nodes.get(id));
-  }
-  return roots;
-};`,
+    senior: "const buildThread = comments => {\n  const nodes = new Map();\n  for (const { id, text } of comments) nodes.set(id, { id, text, replies: [] });\n  const roots = [];\n  for (const { id, parentId } of comments) {\n    (nodes.get(parentId)?.replies ?? roots).push(nodes.get(id));\n  }\n  return roots;\n};",
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([Object.freeze({id:1,parentId:null,text:'number'}),Object.freeze({id:'1',parentId:null,text:'string'}),Object.freeze({id:2,parentId:1,text:'n'}),Object.freeze({id:'2',parentId:'1',text:'s'}),Object.freeze({id:'null',parentId:null,text:'literal'})]);return buildThread(input).map(node=>[node.id,node.replies.map(child=>child.id)]);})()", expected: [[1, [2]], ["1", ["2"]], ["null", []]], async: false },
+      { call: "(()=>{const row=Object.assign(Object.create(null),{id:-0,parentId:null,text:'',extra:123}),child={id:'__proto__',parentId:0,text:'\ud83e\udd88'};Object.freeze(row);Object.freeze(child);const input=Object.freeze([child,row]),a=buildThread(input),b=buildThread(input);return [a!==b,a[0]!==b[0],a[0].replies!==b[0].replies,a[0].replies[0]!==child,Object.is(a[0].id,-0),a[0].text,a[0].replies[0].text,Object.keys(a[0]).sort().join(','),row.extra,input[0]===child];})()", expected: [true, true, true, true, true, "", "\ud83e\udd88", "id,replies,text", 123, true], async: false },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:i,parentId:i===0?null:i-1,text:String(i)})).reverse());let nodes=buildThread(input),count=0,valid=true;while(nodes.length){valid=valid&&nodes.length===1&&nodes[0].id===count;count++;nodes=nodes[0].replies;}const empty=buildThread([]);return [count,valid,empty.length,empty!==buildThread([])];})()", expected: [100, true, 0, true], async: false },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i,parentId:i===0?null:0,text:String(i)})));const [root]=buildThread(input);return [root.id,root.replies.length,root.replies[998].id,new Set(root.replies.map(x=>x.replies)).size,root.replies.every(x=>x.replies.length===0)];})()", expected: [0, 999, 999, 999, true], async: false },
+
       { call: 'buildThread([{ id: 3, parentId: 2, text: "c" }, { id: 2, parentId: 1, text: "b" }, { id: 1, parentId: null, text: "a" }])', expected: [{ id: 1, text: 'a', replies: [{ id: 2, text: 'b', replies: [{ id: 3, text: 'c', replies: [] }] }] }] },
       { call: 'buildThread([{ id: 0, parentId: null, text: "zero" }, { id: 1, parentId: 0, text: "one" }])', expected: [{ id: 0, text: 'zero', replies: [{ id: 1, text: 'one', replies: [] }] }] },
       { call: '(() => { const comments = [{ id: 1, parentId: null, text: "a" }, { id: 2, parentId: 1, text: "b" }]; buildThread(comments); return comments; })()', expected: [{ id: 1, parentId: null, text: 'a' }, { id: 2, parentId: 1, text: 'b' }] },
@@ -1635,42 +1633,7 @@ const diffSettings = (before, after) => {
     gathering.get(id).push({ resolve, reject });
   });
 };`,
-    junior: `const createLoader = (loadMany, waitMs) => {
-  let currentBatch = null;
-  const load = id => {
-    return new Promise((resolve, reject) => {
-      if (currentBatch === null) {
-        const batch = { ids: [], waiting: new Map() };
-        currentBatch = batch;
-        setTimeout(async () => {
-          currentBatch = null;
-          try {
-            const results = await loadMany(batch.ids);
-            for (let i = 0; i < batch.ids.length; i++) {
-              const callers = batch.waiting.get(batch.ids[i]);
-              for (const caller of callers) {
-                caller.resolve(results[i]);
-              }
-            }
-          } catch (error) {
-            for (const id of batch.ids) {
-              const callers = batch.waiting.get(id);
-              for (const caller of callers) {
-                caller.reject(error);
-              }
-            }
-          }
-        }, waitMs);
-      }
-      if (!currentBatch.waiting.has(id)) {
-        currentBatch.ids.push(id);
-        currentBatch.waiting.set(id, []);
-      }
-      currentBatch.waiting.get(id).push({ resolve: resolve, reject: reject });
-    });
-  };
-  return load;
-};`,
+    junior: "const createLoader = (loadMany, waitMs) => {\n  let currentBatch = null;\n  const load = id => {\n    return new Promise((resolve, reject) => {\n      if (currentBatch === null) {\n        const batch = { ids: [], waiting: new Map() };\n        currentBatch = batch;\n        setTimeout(async () => {\n          currentBatch = null;\n          try {\n            const results = await loadMany(batch.ids);\n            for (let i = 0; i < batch.ids.length; i++) {\n              const callers = batch.waiting.get(batch.ids[i]);\n              for (const caller of callers) {\n                caller.resolve(results[i]);\n              }\n            }\n          } catch (error) {\n            for (const id of batch.ids) {\n              const callers = batch.waiting.get(id);\n              for (const caller of callers) {\n                caller.reject(error);\n              }\n            }\n          }\n        }, waitMs);\n      }\n      if (!currentBatch.waiting.has(id)) {\n        currentBatch.ids.push(id === 0 ? 0 : id);\n        currentBatch.waiting.set(id, []);\n      }\n      currentBatch.waiting.get(id).push({ resolve: resolve, reject: reject });\n    });\n  };\n  return load;\n};",
     senior: `const createLoader = (loadMany, waitMs) => {
   let batch = null;
   return id => {
@@ -1690,6 +1653,12 @@ const diffSettings = (before, after) => {
   };
 };`,
     hiddenTests: [
+      { call: "(async()=>{let calls=0;const load=createLoader(async ids=>ids.map(()=>++calls),0);const a=await load('same'),b=await load('same');return [a,b,calls];})()", expected: [1, 2, 2], async: true },
+      { call: "(async()=>{let started,finish;const start=new Promise(done=>{started=done;}),gate=new Promise(done=>{finish=done;});let calls=0;const load=createLoader(ids=>{calls++;if(calls===1){started();return gate;}return Promise.resolve(ids.map(()=>'new'));},0);const first=load('x');await start;const second=await load('x');finish(['old']);return [await first,second,calls];})()", expected: ["old", "new", 2], async: true },
+      { call: "(async()=>{let seen,arity;const obj=Object.freeze({}),fn=()=>1,sym=Symbol('v'),values=[obj,fn,sym,undefined,NaN,-0],ids=[-0,0,'0','__proto__','',1,'1'];const load=createLoader(function(keys){arity=arguments.length;seen=keys;return Promise.resolve(values);},0);const output=await Promise.all(ids.map(load));return [arity,seen.length,Object.is(seen[0],0),seen.slice(1),output.every((x,i)=>Object.is(x,values[i===0?0:i-1]))];})()", expected: [1, 6, true, ["0", "__proto__", "", 1, "1"], true], async: true },
+      { call: "(async()=>{let calls=0,inner;const reason=Symbol('bad');const load=createLoader(ids=>{calls++;if(calls===1){inner=load('later');throw reason;}return Promise.resolve(ids.map(id=>id+'!'));},0);const failures=await Promise.allSettled([load('a'),load('a'),load('b')]);return [failures.every(x=>x.status==='rejected'&&x.reason===reason),await inner,calls];})()", expected: [true, "later!", 2], async: true },
+      { call: "(async()=>{let calls=0,keys,inline=true;const load=createLoader(async ids=>{calls++;keys=ids;return ids.map(id=>id*2);},0);const promises=[];for(let i=0;i<1000;i++)promises.push(load(i%500));await Promise.resolve();inline=calls!==0;const values=await Promise.all(promises);return [inline,calls,keys.length,keys.every((id,i)=>id===i),values.length,values.every((value,i)=>value===(i%500)*2)];})()", expected: [false, 1, 500, true, 1000, true], async: true },
+
       { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids.map(id => -id); }, 10); const values = await Promise.all([load(3), load(1), load(3), load(2)]); return [values, calls]; })()', expected: [[-3, -1, -3, -2], [[3, 1, 2]]], async: true },
       { call: '(async () => { const calls = []; const a = createLoader(async ids => { calls.push("a:" + ids.join()); return ids; }, 10); const b = createLoader(async ids => { calls.push("b:" + ids.join()); return ids; }, 10); await Promise.all([a(1), b(2), a(3)]); return calls.sort(); })()', expected: ['a:1,3', 'b:2'], async: true },
       { call: '(async () => { let fail = true; const load = createLoader(async ids => { if (fail) { fail = false; throw new Error("once"); } return ids.map(id => id + "!"); }, 10); const first = await load("x").catch(error => error.message); const second = await load("x"); return [first, second]; })()', expected: ['once', 'x!'], async: true },
@@ -1754,6 +1723,11 @@ const diffSettings = (before, after) => {
   };
 };`,
     hiddenTests: [
+      { call: "(async()=>{let calls=0;const keys=[1,'1',{},Object.freeze({}),()=>1,Symbol('k'),null,undefined,NaN,-0];const seen=[],get=shareRequests(function(key){seen.push([key,arguments.length]);calls++;return Promise.resolve(key);},1000,()=>0);const results=await Promise.all(keys.map(key=>get(key)));const same=get(NaN)===get(NaN)&&get(-0)===get(0);return [calls,same,seen.every((pair,i)=>Object.is(pair[0],keys[i])&&pair[1]===1),results.every((x,i)=>Object.is(x,keys[i]))];})()", expected: [10, true, true, true], async: true },
+      { call: "(async()=>{let time=0,calls=0,fail;const reason=Symbol('old'),get=shareRequests(()=>{calls++;return calls===1?new Promise((_,reject)=>{fail=reject;}):Promise.resolve('new');},10,()=>time);const first=get('x').catch(error=>error===reason);time=10;const second=get('x');fail(reason);const firstResult=await first;const third=get('x');return [firstResult,second===third,await third,calls];})()", expected: [true, true, "new", 2], async: true },
+      { call: "(async()=>{let calls=0;const get=shareRequests(async()=>++calls,0,()=>0),a=get('x'),b=get('x');return [a!==b,await a,await b,calls];})()", expected: [true, 1, 2, 2], async: true },
+      { call: "(async()=>{let calls=0;const values=[Object.freeze({}),()=>1,Symbol('v'),undefined,NaN,-0],get=shareRequests(key=>{calls++;return Promise.resolve(values[key]);},1000,()=>0);const output=await Promise.all(values.map((_,i)=>get(i)));const failed=shareRequests(()=>Promise.reject(undefined),1000,()=>0);const a=failed('x'),b=failed('x');const results=await Promise.allSettled([a,b]);return [calls,output.every((x,i)=>Object.is(x,values[i])),a===b,results.every(x=>x.status==='rejected'&&x.reason===undefined),await failed('x').then(()=>false,()=>true)];})()", expected: [6, true, true, true, true], async: true },
+
       { call: '(async () => { let time = 0; let calls = 0; const get = shareRequests(() => { calls++; const mine = calls; return new Promise((done, fail) => setTimeout(() => (mine === 1 ? fail(new Error("slow failure")) : done("fresh")), mine === 1 ? 50 : 10)); }, 20, () => time); const first = get("k").catch(error => error.message); time = 30; const second = get("k"); const firstResult = await first; const third = get("k"); return [firstResult, await second, await third, calls]; })()', expected: ['slow failure', 'fresh', 'fresh', 2], async: true },
       { call: '(async () => { let time = 0; let calls = 0; const get = shareRequests(async () => ++calls, 100, () => time); const first = get("k"); time = 150; const second = get("k"); return [await first, await second]; })()', expected: [1, 2], async: true },
       { call: '(async () => { let time = 0; const seen = []; const get = shareRequests(async key => { seen.push(key); return key; }, 50, () => time); await get("a"); time = 40; await get("b"); time = 60; await get("a"); await get("b"); return seen; })()', expected: ['a', 'b', 'a'], async: true },

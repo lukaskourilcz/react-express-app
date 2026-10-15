@@ -936,23 +936,16 @@ const sleep = async (ms = 0) => {
     ],
   },
   "js-run-tasks-in-order": {
-    solution: "const runSequentially = async tasks => { const results = []; for (const task of tasks) results.push(await task()); return results; };",
-    junior: `const runSequentially = async tasks => {
-  const results = [];
-  for (let index = 0; index < tasks.length; index += 1) {
-    const task = tasks[index];
-    const result = await task();
-    results.push(result);
-  }
-  return results;
-};`,
-    senior: `// Each task starts inside the then of the one before it, so no two can overlap.
-const runSequentially = tasks =>
-  tasks.reduce(
-    (chain, task) => chain.then(async results => [...results, await task()]),
-    Promise.resolve([]),
-  );`,
+    solution: "const runSequentially = async tasks => { const initial = [...tasks]; const results = []; for (const task of initial) results.push(await task()); return results; };",
+    junior: "const runSequentially = async tasks => {\n  const initialTasks = tasks.slice();\n  const results = [];\n  for (let index = 0; index < initialTasks.length; index += 1) {\n    const task = initialTasks[index];\n    results.push(await task());\n  }\n  return results;\n};",
+    senior: "const runSequentially = async tasks => {\n  const initial = Array.from(tasks);\n  const results = [];\n  // Each call happens after the preceding await, without copying growing results.\n  for (const task of initial) results.push(await task());\n  return results;\n};",
     hiddenTests: [
+      { call: "(async()=>{let release;const gate=new Promise(done=>{release=done;}),seen=[],tasks=[()=>{seen.push(1);return gate;},()=>{seen.push(2);return 2;}];const output=runSequentially(tasks);tasks[1]=()=>99;tasks.push(()=>3);release(1);return [await output,seen];})()", expected: [[1, 2], [1, 2]], async: true },
+      { call: "(async()=>{const reason=Symbol('bad'),out=[];for(const sync of [false,true]){const seen=[];const result=runSequentially([()=>{seen.push(1);if(sync)throw reason;return Promise.reject(reason);},()=>seen.push(2)]);out.push([result instanceof Promise,await result.then(()=>false,error=>error===reason),seen]);}return out;})()", expected: [[true, true, [1]], [true, true, [1]]], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),values=[obj,fn,sym,undefined,NaN,-0];let arity=true;const tasks=Object.freeze(values.map(value=>function(){arity=arity&&arguments.length===0;return value;})),a=await runSequentially(tasks),b=await runSequentially([]),c=await runSequentially([]);return [arity,a!==values,a.length,a.every((value,i)=>Object.is(value,values[i])),b!==c,b.length];})()", expected: [true, true, 6, true, true, 0], async: true },
+      { call: "(async()=>{let active=0,maximum=0,calls=0;const tasks=Object.freeze(Array.from({length:1000},(_,i)=>()=>{active++;calls++;maximum=Math.max(maximum,active);return Promise.resolve().then(()=>{active--;return i;});}));const values=await runSequentially(tasks);return [calls,maximum,active,values.length,values[0],values[999]];})()", expected: [1000, 1, 0, 1000, 0, 999], async: true },
+      { call: "(async()=>{let firstStarted,release;const started=new Promise(done=>{firstStarted=done;}),gate=new Promise(done=>{release=done;});let later=0;const result=runSequentially([()=>{firstStarted();return gate;},()=>{later++;return 2;}]);if(!await Promise.race([started.then(()=>true),Promise.resolve(result).then(()=>false,()=>false)]))return false;await Promise.resolve();const before=later;release(1);return [before,await result,later];})()", expected: [0, [1, 2], 1], async: true },
+
       { call: "(() => { let running = 0, most = 0; const task = value => async () => { running += 1; most = Math.max(most, running); await new Promise(done => setTimeout(done, 10)); running -= 1; return value; }; return runSequentially([task(\"a\"), task(\"b\"), task(\"c\")]).then(values => [values, most]); })()", expected: [["a", "b", "c"], 1], async: true },
       { call: "(() => { const log = []; const step = (name, ms) => () => new Promise(done => { log.push(\"start \" + name); setTimeout(() => { log.push(\"end \" + name); done(name); }, ms); }); return runSequentially([step(\"x\", 30), step(\"y\", 5)]).then(() => log); })()", expected: ["start x", "end x", "start y", "end y"], async: true },
       { call: "runSequentially([() => 1, async () => 2, () => \"three\"])", expected: [1, 2, "three"], async: true },
@@ -1094,6 +1087,10 @@ const LRUCache = strArr => {
   return [...cache].join("-");
 };`,
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['A','B','C','D','E','A','F']),copy=input.join(',');const a=LRUCache(input),b=LRUCache(Object.freeze(['Z'])),c=LRUCache(input);return [a,b,c,input.join(',')===copy,LRUCache(Object.freeze([]))];})()", expected: ["C-D-E-A-F", "Z", "C-D-E-A-F", true, ""], async: false },
+      { call: "LRUCache(Object.freeze(Array.from({length:10000},(_,i)=>String.fromCharCode(65+i%26))))", expected: "L-M-N-O-P", async: false },
+      { call: "LRUCache(Object.freeze(Array(10000).fill('A')))", expected: "A", async: false },
+
       { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"C\"])", expected: "A-B-D-E-C" },
       { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"A\",\"F\"])", expected: "C-D-E-A-F" },
       { call: "LRUCache([\"Z\",\"Y\",\"Z\",\"Y\"])", expected: "Z-Y" },

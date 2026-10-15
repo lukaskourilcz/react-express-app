@@ -1687,7 +1687,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["async-await", "promises"],
     title: "Run tasks in order",
-    prompt: "Write `runSequentially(tasks)`, calling an array of async functions one after another — never in parallel — and resolving with their results in order. Plain return values and an empty array both work.",
+    prompt: "Write `runSequentially(tasks)`, calling an array of async functions one after another \u2014 never in parallel \u2014 and resolving with their results in order. Plain return values and an empty array both work. Domain: tasks is an ordinary dense array of at most 1000 functions, possibly frozen. Capture its initial membership before any task is invoked; later edits to the original array must not change the run. Call each task with no arguments, only after the preceding one fulfills. A task returns an opaque nonthenable value or an ordinary native Promise, or throws synchronously. Keep exact value and rejection identities, including functions, Symbols, undefined, NaN and -0. On the first throw/rejection, reject with that original reason and start no later task. Return a new native Promise immediately and a fresh dense result array on success, even for empty input. Starting the first task after a microtask is allowed. Leave the input and values unchanged. Target: O(n) time and snapshot/result space, where n is 1 + the initial task count; exclude callback work, waiting and host scheduling.",
     starter: `const runSequentially = tasks => {
   
 };
@@ -1699,9 +1699,9 @@ console.log(flatten([[1,2],[3]]));
   // await the work, and decide what happens when it rejects
   return /* resolved value */;
 };`,
-    hints: ["Await each task inside a loop instead of starting them all at once."],
+    hints: ["Take a shallow snapshot before starting; call and await each captured task inside the loop."],
     approach: [
-      "Walk the tasks with an ordinary loop and await each one before moving on, which is what makes them run one at a time.",
+      "Capture the initial task list first, then await each task in an ordinary loop before moving on.",
       "Collect each awaited value as you go, so the results line up with the order the tasks were given in.",
       "Calling every task up front would start them all at once, so the call itself has to happen inside the loop.",
     ],
@@ -2019,7 +2019,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["map-set", "for-of"],
     title: "LRU cache",
-    prompt: "Write `LRUCache(strArr)`, taking an array of letters that were accessed in order and returning what is left in a cache holding at most 5, joined with hyphens. Accessing a letter already in the cache moves it to the most recent end rather than adding it again; once the cache is full, the least recently used letter is dropped. `LRUCache([\"A\", \"B\", \"A\", \"C\", \"A\", \"B\"])` gives `\"C-A-B\"`.",
+    prompt: "Write `LRUCache(strArr)`, taking an array of letters that were accessed in order and returning what is left in a cache holding at most 5, joined with hyphens. Accessing a letter already in the cache moves it to the most recent end rather than adding it again; once the cache is full, the least recently used letter is dropped. `LRUCache([\"A\", \"B\", \"A\", \"C\", \"A\", \"B\"])` gives `\"C-A-B\"`. Domain: strArr is an ordinary read-only dense array of at most 10000 one-character uppercase ASCII letters A through Z, possibly frozen. Leave it unchanged. The cache starts empty on every call and has fixed capacity 5; return a string ordered from least to most recently used, with one hyphen between letters and no trailing hyphen. Empty input returns empty text. Target: O(n) time and O(1) retained cache space, where n is 1 + the access count. A scan, splice, shift or copy of at most five cached letters is constant work; the capacity is not an input parameter.",
     starter: `const LRUCache = strArr => {
   
 };
