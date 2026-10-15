@@ -349,7 +349,7 @@ console.log(balanced(2));
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Is it a search tree?',
-    prompt: 'In a binary search tree, every value in a node’s left subtree is smaller than the node’s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h.',
+    prompt: "In a binary search tree, every value in a node\u2019s left subtree is smaller than the node\u2019s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h. Input is null or an acyclic tree of at most 2,000 distinct plain or null-prototype node objects, with finite primitive Number values in [-1000000000000,1000000000000]; fractions and signed zero are valid. Each left/right is a node or null, and no node is shared by two parents. Nodes may be frozen and all values/links must remain unchanged. n is the node count and h is the number of nodes on the longest root-to-leaf path (0 for null), at most 128 so the taught recursive helper fits the practice runtime. Comparisons are strict: -0 and 0 are equal and cannot appear as a valid duplicate. An iterative traversal is also valid. A full inorder-values array uses O(n) extra space and does not meet the O(h) goal on a shallow tree; stream the previous value instead.",
     starter: `const isSearchTree = root => {
 
 };
@@ -368,7 +368,7 @@ console.log(isSearchTree(node(2, node(1), node(3))));
 };`,
     hints: [
       'Every node sits inside a range that all its ancestors set together: going left lowers the ceiling to the parent’s value, and going right raises the floor. A node’s own children cannot tell you that range.',
-      'Start with `-Infinity` and `Infinity`, so the root may hold any number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
+      'Start with `-Infinity` and `Infinity`, so the root may hold any finite Number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
     ],
     approach: [
       'Write `within(node, low, high)`. A `null` node returns `true`.',

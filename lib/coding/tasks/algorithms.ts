@@ -806,7 +806,7 @@ console.log(isValid("{[]()}"));
     tier: 3,
     focus: ['sort', 'for'],
     title: 'Merge intervals',
-    prompt: 'Write `mergeIntervals(intervals)`, merging every group of `[start, end]` ranges that overlap or touch and returning the result ordered by start. `mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])` gives `[[1, 6], [8, 10], [15, 18]]`, and `[[1, 4], [4, 5]]` merges into `[[1, 5]]` because touching counts. Sort by start first, then walk once, extending the last range whenever the next one begins at or before its end. `sort` reorders in place, so copy before sorting — the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space.',
+    prompt: "Write `mergeIntervals(intervals)`, merging every group of `[start, end]` ranges that overlap or touch and returning the result ordered by start. `mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])` gives `[[1, 6], [8, 10], [15, 18]]`, and `[[1, 4], [4, 5]]` merges into `[[1, 5]]` because touching counts. Sort by start first, then walk once, extending the last range whenever the next one begins at or before its end. `sort` reorders in place, so copy before sorting \u2014 the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2,000 closed [start,end] ranges with finite Number endpoints in [-1000000000,1000000000] and start <= end; fractions are valid. A zero-width range retains its point and merges when it touches or lies inside another range. The input array and pairs may be frozen and must remain unchanged. Return a fresh mutable outer array containing fresh mutable pairs; no returned pair may alias an input pair or another output pair. Either sign of a zero output endpoint is equivalent; preserve input zero signs. n is intervals.length.",
     starter: `const mergeIntervals = intervals => {
 
 };
@@ -834,6 +834,7 @@ console.log(mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]));
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "(() => {const source=[[0,1]],result=mergeIntervals(source);result[0][1]=2;return source[0][1];})()", "expected": 1, "label": "result pairs do not alias input pairs"},
       { call: 'mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])', expected: [[1, 6], [8, 10], [15, 18]] },
       { call: 'mergeIntervals([[1, 4], [4, 5]])', expected: [[1, 5]], label: 'ranges that only touch still merge' },
       { call: 'mergeIntervals([])', expected: [], label: 'empty input', edge: true },
@@ -855,7 +856,7 @@ console.log(mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]));
     tier: 3,
     focus: ['sort', 'objects'],
     title: 'Sort by several keys',
-    prompt: 'Write `sortTasks(tasks)`, returning a new array of `{ name, priority }` objects ordered by `priority` from high to low and, where two share a priority, by `name` from A to Z. `sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])` puts the priority-10 task first. Pass a comparator: the default `sort` compares values as text, which orders 100, 10, 2 as 10, 100, 2. Return the difference for the numbers and fall through to the names only when it is zero. `sort` reorders in place, so copy first — the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space.',
+    prompt: "Write `sortTasks(tasks)`, returning a new array of `{ name, priority }` objects ordered by `priority` from high to low and, where two share a priority, by `name` in ascending JavaScript string order. `sortTasks([{ name: \"b\", priority: 2 }, { name: \"a\", priority: 10 }])` puts the priority-10 task first. Pass a comparator: the default `sort` compares values as text, which orders 100, 10, 2 as 10, 100, 2. Return the difference for the numbers and fall through to the names only when it is zero. `sort` reorders in place, so copy first \u2014 the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2,000 plain or null-prototype records with own name and priority fields. name is a primitive string of at most 80 UTF-16 code units; empty names, mixed case, Unicode and lone surrogates are valid. priority is a finite Number in [-1000000000,1000000000], including fractions and signed zero. Compare names with JavaScript < and > (raw UTF-16 order), without locale rules, case folding or normalization. A complete priority/name tie preserves input order. Return a fresh mutable array of the exact original record objects; input array/records may be frozen and every field, extra payload and identity must stay unchanged. n is tasks.length; the fixed name-length bound keeps string comparison cost bounded.",
     starter: `const sortTasks = tasks => {
 
 };
@@ -872,12 +873,13 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
     approach: [
       'Copy the array with a spread before sorting, since sort reorders the array it is given.',
       'In the comparator, compare the priorities first: right minus left puts the larger priority earlier.',
-      'When that difference is zero the two tie, so compare the names instead — returning a negative number when the left name comes first alphabetically.',
-      'Returning the raw subtraction rather than a hand-rolled -1 / 0 / 1 keeps the comparator honest about equality, which is what preserves the tie for the name to settle.',
+      'When that difference is zero the two tie, so compare the names instead — returning a negative number when the left name comes first in raw UTF-16 order.',
+      "Both a numeric difference and explicit negative/zero/positive results are valid. Return zero for a complete tie so stable sorting keeps the original record order.",
     ],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "sortTasks([{name:\"a\",priority:1},{name:\"Z\",priority:1}]).map(task=>task.name)", "expected": ["Z", "a"], "label": "names use raw JavaScript string order"},
       { call: 'sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])', expected: [{ name: 'a', priority: 10 }, { name: 'b', priority: 2 }] },
       { call: 'sortTasks([{ name: "crawl", priority: 2 }, { name: "parse", priority: 100 }, { name: "store", priority: 10 }])', expected: [{ name: 'parse', priority: 100 }, { name: 'store', priority: 10 }, { name: 'crawl', priority: 2 }], label: 'the default text sort would order these 10, 100, 2' },
       { call: 'sortTasks([])', expected: [], label: 'empty input', edge: true },

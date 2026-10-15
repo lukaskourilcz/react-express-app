@@ -474,22 +474,17 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   return within(root, -Infinity, Infinity);
 };`,
     junior: `const isSearchTree = root => {
-  const values = [];
-  const collect = node => {
-    if (node === null) {
-      return;
-    }
-    collect(node.left);
-    values.push(node.value);
-    collect(node.right);
+  let previous;
+  let seen = false;
+  const visit = node => {
+    if (node === null) return true;
+    if (!visit(node.left)) return false;
+    if (seen && node.value <= previous) return false;
+    previous = node.value;
+    seen = true;
+    return visit(node.right);
   };
-  collect(root);
-  for (let i = 1; i < values.length; i++) {
-    if (values[i] <= values[i - 1]) {
-      return false;
-    }
-  }
-  return true;
+  return visit(root);
 };`,
     senior: `// Defaults carry the range, so the root call needs only the tree.
 const isSearchTree = (node, low = -Infinity, high = Infinity) =>
@@ -499,6 +494,10 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
     isSearchTree(node.left, low, node.value) &&
     isSearchTree(node.right, node.value, high));`,
     hiddenTests: [
+      { call: "(() => {const make=(value,left=null,right=null)=>Object.freeze(Object.assign(Object.create(null),{value,left,right}));return [isSearchTree(make(0,make(-.5),make(.5))),isSearchTree(make(-0,null,make(0))),isSearchTree(make(-1000000000000,null,make(1000000000000))),isSearchTree(make(Number.MIN_VALUE)),isSearchTree(null)];})()", expected: [true, false, true, true, true] },
+      { call: "(() => {const memo=[[null]],shapes=n=>{if(memo[n])return memo[n];const out=[];for(let k=0;k<n;k++)for(const left of shapes(k))for(const right of shapes(n-k-1))out.push([left,right]);return memo[n]=out;};const oracle=node=>{if(node===null)return true;const all=one=>one===null?[]:[one.value,...all(one.left),...all(one.right)];return all(node.left).every(v=>v<node.value)&&all(node.right).every(v=>v>node.value)&&oracle(node.left)&&oracle(node.right);};for(let n=0;n<=4;n++)for(const shape of shapes(n))for(let code=0;code<3**n;code++){let digits=code;const make=shape=>{if(shape===null)return null;const value=[-.5,0,.5][digits%3];digits=Math.floor(digits/3);return Object.freeze({value,left:make(shape[0]),right:make(shape[1])});};const root=make(shape);if(isSearchTree(root)!==oracle(root))return false;}return true;})()", expected: true },
+      { call: "(() => {let chain=null;for(let i=127;i>=0;i--)chain=Object.freeze({value:i/2,left:null,right:chain});const build=(lo,hi)=>{if(lo>=hi)return null;const mid=Math.floor((lo+hi)/2);return Object.freeze({value:mid-1000,left:build(lo,mid),right:build(mid+1,hi)});};return [isSearchTree(chain),isSearchTree(build(0,2000)),isSearchTree(Object.freeze({value:1,left:null,right:Object.freeze({value:2,left:Object.freeze({value:.5,left:null,right:null}),right:null})})),isSearchTree(chain)];})()", expected: [true, true, false, true] },
+
       { call: withTree('isSearchTree(node(10, node(5), node(15, node(6), node(20))))'), expected: false },
       { call: withTree('isSearchTree(node(0, node(-5), node(5)))'), expected: true },
       { call: withTree('isSearchTree(node(0, null, node(3, node(-1))))'), expected: false },

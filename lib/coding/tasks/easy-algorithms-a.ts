@@ -590,7 +590,7 @@ console.log(median([4, 1, 3, 2]));
     tier: 2,
     focus: ['sort'],
     title: 'Largest product of three',
-    prompt: 'Write `maxProductOfThree(numbers)`, returning the largest product of any three of the numbers. `maxProductOfThree([1, 2, 3, 4])` gives 24. Negative numbers change the answer: in `[-10, -10, 1, 3, 2]` it is 300, from -10 × -10 × 3, because two negatives multiply to a positive. Sort a copy numerically, and the winning three sit at the ends of the sorted array. There are always at least three numbers, and the caller\'s array keeps its order. Target: O(n log n) time for the sort, where trying every triple would be O(n³).',
+    prompt: "Write `maxProductOfThree(numbers)`, returning the largest product of any three of the numbers. `maxProductOfThree([1, 2, 3, 4])` gives 24. Negative numbers change the answer: in `[-10, -10, 1, 3, 2]` it is 300, from -10 \u00d7 -10 \u00d7 3, because two negatives multiply to a positive. Sort a copy numerically, and the winning three sit at the ends of the sorted array. There are always at least three numbers, and the caller's array keeps its order. Target: O(n log n) time for the sort, where trying every triple would be O(n\u00b3). Input is a dense, possibly frozen array of 3..2000 primitive integers in [-100000,100000], including duplicate values and either zero sign. Choose three distinct indices; equal values at different indices may all be used. These bounds keep every three-value product an exact safe integer. Preserve the input order and element values, including zero signs; either zero sign in the result is equivalent. n is numbers.length. The copy/sort approach uses O(n) extra space; a linear scan retaining three largest and two smallest values is also valid.",
     starter: `const maxProductOfThree = numbers => {
 
 };
@@ -614,6 +614,7 @@ console.log(maxProductOfThree([-10, -10, 1, 3, 2]));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      {"call": "maxProductOfThree([-100000,-100000,100000])", "expected": 1000000000000000, "label": "the product need not fit a 32-bit integer"},
       { call: 'maxProductOfThree([1, 2, 3, 4])', expected: 24 },
       { call: 'maxProductOfThree([-10, -10, 1, 3, 2])', expected: 300, label: 'two negatives make a positive' },
       { call: 'maxProductOfThree([10, 3, 5, 6, 20])', expected: 1200, label: 'the input arrives in any order' },
@@ -629,7 +630,7 @@ console.log(maxProductOfThree([-10, -10, 1, 3, 2]));
     tier: 2,
     focus: ['sort', 'two-pointer'],
     title: 'Hand out the snacks',
-    prompt: 'Each child has an appetite, and a child is happy with any snack at least that big. Each snack can go to one child. Write `happyChildren(appetites, snacks)`, returning the most children you can make happy. `happyChildren([1, 2, 3], [1, 1])` gives 1, and `happyChildren([1, 2], [1, 2, 3])` gives 2. Sort copies of both lists from smallest to largest, then walk them with two pointers, giving the least hungry waiting child the smallest snack that fits. Leave both arrays in their order. Target: O(n log n + m log m) time for the two sorts.',
+    prompt: "Each child has an appetite, and a child is happy with any snack at least that big. Each snack can go to one child. Write `happyChildren(appetites, snacks)`, returning the most children you can make happy. `happyChildren([1, 2, 3], [1, 1])` gives 1, and `happyChildren([1, 2], [1, 2, 3])` gives 2. Sort copies of both lists from smallest to largest, then walk them with two pointers, giving the least hungry waiting child the smallest snack that fits. Leave both arrays in their order. Target: O(n log n + m log m) time for the two sorts. Both inputs are dense arrays of at most 2,000 finite Number sizes in [0,1000000000], including fractions, duplicates and either zero sign. A zero appetite can be satisfied by a zero snack. Match only when size >= appetite, with no rounding or coercion. Each child and snack may be used at most once. The arrays may be frozen or may be the same array; preserve their order, values and zero signs. n is appetites.length and m is snacks.length; sorting copies uses O(n + m) extra space. A descending greedy scan that skips an appetite when the largest remaining snack is too small is also valid.",
     starter: `const happyChildren = (appetites, snacks) => {
 
 };
@@ -657,6 +658,7 @@ console.log(happyChildren([1, 2, 3], [1, 1]));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "happyChildren([.75],[.5])", "expected": 0, "label": "fractional sizes are not rounded"},
       { call: 'happyChildren([1, 2, 3], [1, 1])', expected: 1 },
       { call: 'happyChildren([1, 2], [1, 2, 3])', expected: 2 },
       { call: 'happyChildren([10, 9, 8, 7], [5, 6, 7, 8])', expected: 2, label: 'the lists arrive in any order' },
