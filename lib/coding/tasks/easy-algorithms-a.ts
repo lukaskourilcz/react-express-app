@@ -128,7 +128,7 @@ console.log(canWrite("aab", "baa"));
     tier: 2,
     focus: ['for-of', 'map-set'],
     title: 'The majority value',
-    prompt: 'Write `majority(values)`, returning the value that appears more than half the time, or `null` when no value does. `majority([3, 1, 3, 3, 2])` gives 3, which appears three times out of five. `majority([1, 2, 1, 2])` gives `null`: two out of four is exactly half, and a majority needs more. Walk the values with `for...of`, count each one in a `Map`, and return a value as soon as its count passes half the length. A `Map` keeps `1` and `"1"` apart, and a plain object would merge them into one key. Target: O(n) time and O(n) space.',
+    prompt: "Write `majority(values)`, returning the value that appears more than half the time, or `null` when no value does. `majority([3, 1, 3, 3, 2])` gives 3, which appears three times out of five. `majority([1, 2, 1, 2])` gives `null`: two out of four is exactly half, and a majority needs more. Walk the values with `for...of`, count each one in a `Map`, and return a value as soon as its count passes half the length. A `Map` keeps `1` and `\"1\"` apart, and a plain object would merge them into one key. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 stable values, possibly frozen, with no array accessors/proxies. Values are opaque and use Map/SameValueZero equality: NaN equals NaN, -0/+0 share a class, and objects/Symbols compare by identity. Keep 1 and \"1\" separate. Return the majority value itself, retaining object identity; either sign of a zero result is acceptable. A genuine null majority also returns null, and an undefined majority returns undefined. Do not clone/inspect items or change the input. A verified Boyer\u2013Moore vote using the same equality is valid too. n is 1 + input length under average constant Map operations and bounded primitive-key processing; strings have at most 100 UTF-16 units.",
     starter: `const majority = values => {
 
 };
@@ -152,6 +152,7 @@ console.log(majority([3, 1, 3, 3, 2]));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      { call: "Number.isNaN(majority([NaN, 1, NaN]))", expected: true, label: "NaN keys match themselves under Map equality", edge: true },
       { call: 'majority([3, 1, 3, 3, 2])', expected: 3 },
       { call: 'majority(["a", "b", "a"])', expected: 'a' },
       { call: 'majority([7])', expected: 7, label: 'one value is a majority of one' },
@@ -167,7 +168,7 @@ console.log(majority([3, 1, 3, 3, 2]));
     tier: 2,
     focus: ['while', 'map-set'],
     title: 'Happy number',
-    prompt: 'Take a positive whole number, replace it with the sum of the squares of its digits, and repeat. The number is happy when this reaches 1: 19 gives 1² + 9² = 82, then 68, then 100, then 1. An unhappy number never reaches 1 and goes round a cycle instead; 2 lands in a loop that passes through 4. Write `isHappy(n)`, returning `true` or `false`. Loop `while` the number is not 1, keep every number you have seen in a `Set`, and answer `false` the moment one comes back. Target: O(log n) time per step to read the digits, with a repeat ending the loop.',
+    prompt: "Take a positive whole number, replace it with the sum of the squares of its digits, and repeat. The number is happy when this reaches 1: 19 gives 1\u00b2 + 9\u00b2 = 82, then 68, then 100, then 1. An unhappy number never reaches 1 and goes round a cycle instead; 2 lands in a loop that passes through 4. Write `isHappy(n)`, returning `true` or `false`. Loop `while` the number is not 1, keep every number you have seen in a `Set`, and answer `false` the moment one comes back. Target: O(log n) time at the initial digit scale, with a repeat ending the loop. Domain: a primitive positive safe-integer Number from 1 through Number.MAX_SAFE_INTEGER. Do not coerce it to a signed 32-bit integer. Process the base-ten digits exactly; each call has independent cycle state and returns an actual boolean. A Floyd two-speed cycle detector is a valid alternative to the Set. n in the complexity target is the initial numeric value, with log(max(2,n)) measuring its digit scale, under unit-cost safe-Number arithmetic. At most 16 initial digits reduce the next value to at most 1296, then at most 324, then at most 243; subsequent cycle detection is a bounded tail. Thus the whole safe-Number algorithm has O(log n) digit-scale work, not an unbounded number of full-size rescans.",
     starter: `const isHappy = n => {
 
 };
@@ -192,6 +193,7 @@ console.log(isHappy(19));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      { call: "isHappy(1000000000000000)", expected: true, label: "positive safe integers are not limited to signed 32-bit values", edge: true },
       { call: 'isHappy(19)', expected: true },
       { call: 'isHappy(2)', expected: false },
       { call: 'isHappy(7)', expected: true, label: '7, 49, 97, 130, 10, 1' },
@@ -209,7 +211,7 @@ console.log(isHappy(19));
     tier: 1,
     focus: ['strings', 'for'],
     title: 'Longest common prefix',
-    prompt: 'Write `commonPrefix(words)`, returning the longest string that every word starts with. `commonPrefix(["flower", "flow", "flight"])` gives `"fl"`, and `commonPrefix(["dog", "car"])` gives `""`. Take the first word as the candidate and walk its characters with a `for` loop. At each index, check that every other word has the same character there, and stop at the first one that does not. An empty list gives `""`. Target: O(n · k) time for n words of up to k characters, and O(1) extra space.',
+    prompt: "Write `commonPrefix(words)`, returning the longest string that every word starts with. `commonPrefix([\"flower\", \"flow\", \"flight\"])` gives `\"fl\"`, and `commonPrefix([\"dog\", \"car\"])` gives `\"\"`. Take the first word as the candidate and walk its characters with a `for` loop. At each index, check that every other word has the same character there, and stop at the first one that does not. An empty list gives `\"\"`. Target: O(n \u00b7 k) time for n words of up to k characters, and O(1) extra space. Domain: a dense ordinary readonly array of at most 1000 primitive strings, each at most 1000 UTF-16 units, possibly frozen, without accessors/proxies. This helper uses raw JavaScript string-index/startsWith semantics: characters and prefix lengths here are UTF-16 units, without normalization/case folding. A common prefix may end between a surrogate pair; a code-point/grapheme prefix is a different task. Leave words and their order unchanged. n=max(1,word count), k=max(1,longest input UTF-16 length); O(1) auxiliary storage excludes the returned substring. Track a prefix length and slice once instead of repeatedly copying a growing/shrinking candidate.",
     starter: `const commonPrefix = words => {
 
 };
@@ -250,7 +252,7 @@ console.log(commonPrefix(["flower", "flow", "flight"]));
     tier: 2,
     focus: ['objects', 'for'],
     title: 'Roman numerals to a number',
-    prompt: 'Write `fromRoman(numeral)`, turning a Roman numeral into a number. The letters are worth `I` 1, `V` 5, `X` 10, `L` 50, `C` 100, `D` 500 and `M` 1000. You add the letters up, so `"VIII"` is 8, except that a letter worth less than the one after it is subtracted: `"IV"` is 4 and `"MCMXCIV"` is 1994. Keep the values in an object used as a lookup table, walk the numeral with a `for` loop, and compare each letter with the next one. Every input is a valid numeral in capital letters, and `""` gives 0. Target: O(n) time and O(1) space.',
+    prompt: "Write `fromRoman(numeral)`, turning a Roman numeral into a number. The letters are worth `I` 1, `V` 5, `X` 10, `L` 50, `C` 100, `D` 500 and `M` 1000. You add the letters up, so `\"VIII\"` is 8, except that a letter worth less than the one after it is subtracted: `\"IV\"` is 4 and `\"MCMXCIV\"` is 1994. Keep the values in an object used as a lookup table, walk the numeral with a `for` loop, and compare each letter with the next one. Every input is a valid numeral in capital letters, and `\"\"` gives 0. Target: O(n) time and O(1) space. Nonempty inputs are the standard canonical uppercase numerals for integers 1..3999: at most three initial M letters, then hundreds/tens/ones with the usual CM/CD, XC/XL and IX/IV pairs. Empty text is the stated special case 0. There is no malformed/lowercase-input validation policy to implement. Do not alter a reused lookup across calls. n=max(1,numeral UTF-16 length); the thirteen single/subtractive tokens have fixed size, so an equivalent token-pair decoder also meets the goal.",
     starter: `const fromRoman = numeral => {
 
 };

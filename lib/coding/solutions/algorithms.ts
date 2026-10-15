@@ -59,54 +59,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-top-k-frequent': {
-    solution: `const topKFrequent = (numbers, k) => {
-  if (!(k > 0)) return [];
-  const counts = new Map();
-  for (const value of numbers) counts.set(value, (counts.get(value) ?? 0) + 1);
-  return [...counts.entries()]
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, k)
-    .map(entry => entry[0]);
-};`,
-    junior: `const topKFrequent = (numbers, k) => {
-  if (k <= 0) {
-    return [];
-  }
-  const counts = new Map();
-  for (let index = 0; index < numbers.length; index += 1) {
-    const value = numbers[index];
-    const seenSoFar = counts.get(value);
-    counts.set(value, seenSoFar === undefined ? 1 : seenSoFar + 1);
-  }
-  const pairs = [];
-  counts.forEach((count, value) => pairs.push({ value, count }));
-  pairs.sort((left, right) => right.count - left.count);
-  const result = [];
-  for (let index = 0; index < pairs.length && index < k; index += 1) {
-    result.push(pairs[index].value);
-  }
-  return result;
-};`,
-    senior: `const topKFrequent = (numbers, k) => {
-  if (!(k > 0)) return [];
-  const counts = new Map();
-  for (const value of numbers) counts.set(value, (counts.get(value) ?? 0) + 1);
-  // Bucket by count instead of sorting: O(n), and walking the buckets from the
-  // top down keeps ties in the Map's first-seen order.
-  const buckets = [];
-  for (const [value, count] of counts) {
-    if (!buckets[count]) buckets[count] = [];
-    buckets[count].push(value);
-  }
-  const result = [];
-  for (let count = buckets.length - 1; count > 0 && result.length < k; count -= 1) {
-    for (const value of buckets[count] ?? []) {
-      if (result.length < k) result.push(value);
-    }
-  }
-  return result;
-};`,
+    solution: "const topKFrequent = (numbers, k) => {\n  if (!(k > 0)) return [];\n  const counts = new Map();\n  for (const value of numbers) counts.set(value, (counts.get(value) ?? 0) + 1);\n  return [...counts.entries()]\n    .sort((left, right) => right[1] - left[1])\n    .slice(0, k)\n    .map(entry => entry[0]);\n};",
+    junior: "const topKFrequent = (numbers, k) => {\n  if (k <= 0) {\n    return [];\n  }\n  const counts = new Map();\n  for (let index = 0; index < numbers.length; index += 1) {\n    const value = numbers[index];\n    const seenSoFar = counts.get(value);\n    counts.set(value, seenSoFar === undefined ? 1 : seenSoFar + 1);\n  }\n  const pairs = [];\n  counts.forEach((count, value) => pairs.push({ value, count }));\n  pairs.sort((left, right) => right.count - left.count);\n  const result = [];\n  for (let index = 0; index < pairs.length && index < k; index += 1) {\n    result.push(pairs[index].value);\n  }\n  return result;\n};",
+    senior: "const topKFrequent = (numbers, k) => {\n  if (!(k > 0)) return [];\n  const counts = new Map();\n  for (const value of numbers) counts.set(value, (counts.get(value) ?? 0) + 1);\n  const buckets = [];\n  for (const [value, count] of counts) {\n    if (!buckets[count]) buckets[count] = [];\n    buckets[count].push(value);\n  }\n  const result = [];\n  for (let count = buckets.length - 1; count > 0 && result.length < k; count -= 1) {\n    for (const value of buckets[count] ?? []) {\n      if (result.length < k) result.push(value);\n    }\n  }\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => {const input=Object.freeze([NaN,Infinity,-0,NaN,-Infinity,0,Infinity,1.5,1.5]);const out=topKFrequent(input,20);return [out.length,Number.isNaN(out[0]),out[1]===Infinity,Object.is(out[2],0),out[3]===1.5,out[4]===-Infinity,input.length];})()", expected: [5, true, true, true, true, true, 9] },
+      { call: "(() => {const input=[9,2,9,2,5];const a=topKFrequent(input,2),b=topKFrequent(input,2);const zero=topKFrequent(input,0),zero2=topKFrequent(input,0);const empty=topKFrequent([],3),empty2=topKFrequent([],3);a.push(99);zero.push(1);return [input,a!==b,b,zero!==zero2,zero2,empty!==empty2,empty2];})()", expected: [[9, 2, 9, 2, 5], true, [9, 2], true, [], true, []] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>999-i));const all=topKFrequent(input,2000);return [all.length,all[0],all[999],topKFrequent(input,1),topKFrequent(input,0).length,input[0]];})()", expected: [1000, 999, 0, [999], 0, 999] },
+
       { call: 'topKFrequent([1], 1)', expected: [1] },
       { call: 'topKFrequent([5, 5, 4, 4, 3, 3], 3)', expected: [5, 4, 3] },
       { call: 'topKFrequent([0, -1, -1], 2)', expected: [-1, 0] },
@@ -115,53 +75,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-longest-consecutive': {
-    solution: `const longestConsecutive = numbers => {
-  const values = new Set(numbers);
-  let longest = 0;
-  for (const value of values) {
-    if (values.has(value - 1)) continue;
-    let length = 1;
-    while (values.has(value + length)) length += 1;
-    if (length > longest) longest = length;
-  }
-  return longest;
-};`,
-    junior: `const longestConsecutive = numbers => {
-  const values = new Set();
-  for (let index = 0; index < numbers.length; index += 1) {
-    values.add(numbers[index]);
-  }
-  const unique = Array.from(values);
-  let longest = 0;
-  for (let index = 0; index < unique.length; index += 1) {
-    const value = unique[index];
-    const hasPredecessor = values.has(value - 1);
-    if (hasPredecessor === false) {
-      let current = value;
-      let length = 1;
-      while (values.has(current + 1)) {
-        current = current + 1;
-        length = length + 1;
-      }
-      if (length > longest) {
-        longest = length;
-      }
-    }
-  }
-  return longest;
-};`,
-    senior: `const longestConsecutive = numbers => {
-  const values = new Set(numbers);
-  // Only a value with no predecessor starts a run, so every run is walked once
-  // and the whole scan stays linear despite the inner loop.
-  const runFrom = start => {
-    let length = 1;
-    while (values.has(start + length)) length += 1;
-    return length;
-  };
-  return [...values].reduce((longest, value) => (values.has(value - 1) ? longest : Math.max(longest, runFrom(value))), 0);
-};`,
+    solution: "const longestConsecutive = numbers => {\n  const values = new Set(numbers);\n  let longest = 0;\n  for (const value of values) {\n    if (values.has(value - 1)) continue;\n    let length = 1;\n    while (values.has(value + length)) length += 1;\n    if (length > longest) longest = length;\n  }\n  return longest;\n};",
+    junior: "const longestConsecutive = numbers => {\n  const values = new Set();\n  for (let index = 0; index < numbers.length; index += 1) {\n    values.add(numbers[index]);\n  }\n  const unique = Array.from(values);\n  let longest = 0;\n  for (let index = 0; index < unique.length; index += 1) {\n    const value = unique[index];\n    const hasPredecessor = values.has(value - 1);\n    if (hasPredecessor === false) {\n      let current = value;\n      let length = 1;\n      while (values.has(current + 1)) {\n        current = current + 1;\n        length = length + 1;\n      }\n      if (length > longest) {\n        longest = length;\n      }\n    }\n  }\n  return longest;\n};",
+    senior: "const longestConsecutive = numbers => {\n  const values = new Set(numbers);\n  const runFrom = start => {\n    let length = 1;\n    while (values.has(start + length)) length += 1;\n    return length;\n  };\n  return [...values].reduce((longest, value) => (values.has(value - 1) ? longest : Math.max(longest, runFrom(value))), 0);\n};",
     hiddenTests: [
+      { call: "[longestConsecutive(Object.freeze([1000000000,999999999,-1000000000,-999999999,-999999998])),longestConsecutive(Object.freeze([-0,0,1,2,2])),longestConsecutive([8,6,7,1,2,3]),longestConsecutive([])]", expected: [3, 3, 3, 0] },
+      { call: "(() => {const input=[3,1,2,2];const result=longestConsecutive(input);return [result,input,longestConsecutive(Object.freeze([5])),longestConsecutive(Object.freeze([5,5]))];})()", expected: [3, [3, 1, 2, 2], 1, 1] },
+      { call: "[longestConsecutive(Object.freeze(Array.from({length:1000},(_,i)=>999-i))),longestConsecutive(Object.freeze(Array.from({length:1000},()=>7))),longestConsecutive(Object.freeze(Array.from({length:1000},(_,i)=>i*2)))]", expected: [1000, 1, 1] },
+
       { call: 'longestConsecutive([1, 2, 0, 1])', expected: 3 },
       { call: 'longestConsecutive([9])', expected: 1 },
       { call: 'longestConsecutive([4, 2, 1, 6, 5])', expected: 3 },
@@ -170,45 +91,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-valid-palindrome': {
-    solution: `const isPalindrome = text => {
-  const keep = /[a-z0-9]/i;
-  let left = 0;
-  let right = text.length - 1;
-  while (left < right) {
-    if (!keep.test(text[left])) { left += 1; continue; }
-    if (!keep.test(text[right])) { right -= 1; continue; }
-    if (text[left].toLowerCase() !== text[right].toLowerCase()) return false;
-    left += 1;
-    right -= 1;
-  }
-  return true;
-};`,
-    junior: `const isPalindrome = text => {
-  const lower = text.toLowerCase();
-  const letters = [];
-  for (let index = 0; index < lower.length; index += 1) {
-    const character = lower[index];
-    const isLetter = character >= "a" && character <= "z";
-    const isDigit = character >= "0" && character <= "9";
-    if (isLetter || isDigit) {
-      letters.push(character);
-    }
-  }
-  const reversed = letters.slice().reverse();
-  for (let index = 0; index < letters.length; index += 1) {
-    if (letters[index] !== reversed[index]) {
-      return false;
-    }
-  }
-  return true;
-};`,
-    senior: `const isPalindrome = text => {
-  // Cleaning first costs O(n) space but reads plainly; the two-pointer walk in
-  // the reference is the O(1)-space version of exactly this comparison.
-  const cleaned = text.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return cleaned === [...cleaned].reverse().join("");
-};`,
+    solution: "const isPalindrome = text => {\n  const keep = /[a-z0-9]/i;\n  let left = 0;\n  let right = text.length - 1;\n  while (left < right) {\n    if (!keep.test(text[left])) { left += 1; continue; }\n    if (!keep.test(text[right])) { right -= 1; continue; }\n    if (text[left].toLowerCase() !== text[right].toLowerCase()) return false;\n    left += 1;\n    right -= 1;\n  }\n  return true;\n};",
+    junior: "const isPalindrome = text => {\n  const letters = [];\n  for (let index = 0; index < text.length; index += 1) {\n    const character = text[index];\n    const code = character.charCodeAt(0);\n    const isLetter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);\n    const isDigit = code >= 48 && code <= 57;\n    if (isLetter || isDigit) letters.push(character.toLowerCase());\n  }\n  const reversed = letters.slice().reverse();\n  for (let index = 0; index < letters.length; index += 1) {\n    if (letters[index] !== reversed[index]) return false;\n  }\n  return true;\n};",
+    senior: "const isPalindrome = text => {\n  // Filter original ASCII characters first; Unicode lowercasing can add ASCII content.\n  const cleaned = text.replace(/[^A-Za-z0-9]/g, \"\").toLowerCase();\n  return cleaned === [...cleaned].reverse().join(\"\");\n};",
     hiddenTests: [
+      { call: "[isPalindrome(\"\u212aa\"),isPalindrome(\"\u0130a\"),isPalindrome(\"\u00e9A\"),isPalindrome(\"\u03b1\u03b2\"),isPalindrome(\"\uff112\"),isPalindrome(\"\ud83d\ude00A\ud83d\ude03a\"),isPalindrome(\"a\\u0301B\")]", expected: [true, true, true, true, true, true, false] },
+      { call: "[isPalindrome(\"a0A\"),isPalindrome(\"0P\"),isPalindrome(\"1@2@1\"),isPalindrome(\"1@2@3\"),isPalindrome(\"_\\n\\t\"),isPalindrome(\"z\"),isPalindrome(\"ab\"),isPalindrome(\"aba\"),typeof isPalindrome(\"x\")]", expected: [true, false, true, false, true, true, false, true, "boolean"] },
+      { call: "[isPalindrome(\"A\".repeat(500)+\"a\".repeat(500)),isPalindrome(\"a\".repeat(999)+\"b\"),isPalindrome(\"!\".repeat(1000)),isPalindrome(\"\u212a\".repeat(500)),isPalindrome(\"\u0130\".repeat(500))]", expected: [true, false, true, true, true] },
+
       { call: 'isPalindrome("a")', expected: true },
       { call: 'isPalindrome("ab")', expected: false },
       { call: 'isPalindrome("12 21")', expected: true },
@@ -218,26 +108,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-reverse-words': {
-    solution: `const reverseWords = text => text.trim().split(/\\s+/).reverse().join(" ");`,
-    junior: `const reverseWords = text => {
-  const pieces = text.split(/\\s+/);
-  const words = [];
-  for (let index = 0; index < pieces.length; index += 1) {
-    if (pieces[index] !== "") {
-      words.push(pieces[index]);
-    }
-  }
-  const reversed = [];
-  for (let index = words.length - 1; index >= 0; index -= 1) {
-    reversed.push(words[index]);
-  }
-  return reversed.join(" ");
-};`,
-    senior: `const reverseWords = text =>
-  // filter(Boolean) drops the empty pieces a run of spaces leaves behind, so
-  // no trim is needed and a whitespace-only string falls out as "".
-  text.split(/\\s+/).filter(Boolean).reverse().join(" ");`,
+    solution: "const reverseWords = text => text.trim().split(/\\s+/).reverse().join(\" \");",
+    junior: "const reverseWords = text => {\n  const pieces = text.split(/\\s+/);\n  const words = [];\n  for (let index = 0; index < pieces.length; index += 1) {\n    if (pieces[index] !== \"\") {\n      words.push(pieces[index]);\n    }\n  }\n  const reversed = [];\n  for (let index = words.length - 1; index >= 0; index -= 1) {\n    reversed.push(words[index]);\n  }\n  return reversed.join(\" \");\n};",
+    senior: "const reverseWords = text =>\n  text.split(/\\s+/).filter(Boolean).reverse().join(\" \");",
     hiddenTests: [
+      { call: "[reverseWords(\"one\\ntwo\\r\\nthree\"),reverseWords(\"\\ufeffa\\u00a0b\\ufeff\"),reverseWords(\"a\\u200bb c\"),reverseWords(\"a\\u0085b c\"),reverseWords(\"\\t\\n\\r\\u00a0\\ufeff\")]", expected: ["three two one", "b a", "c a\u200bb", "c a\u0085b", ""] },
+      { call: "[reverseWords(\"\ud83d\ude00a e\\u0301\"),reverseWords(\"\\ud800x y\\udc00\"),reverseWords(\"  AbC!\\tX.Y  \"),reverseWords(\"one\"),reverseWords(\"\"),reverseWords(\"one two\")]", expected: ["e\u0301 \ud83d\ude00a", "y\udc00 \ud800x", "X.Y AbC!", "one", "", "two one"] },
+      { call: "(() => {const input=\"a \".repeat(499)+\"bc\";const result=reverseWords(input);return [input.length,result.startsWith(\"bc a\"),result.split(\" \").length,reverseWords(\" \".repeat(1000))];})()", expected: [1000, true, 500, ""] },
+
       { call: 'reverseWords("a good   example")', expected: 'example good a' },
       { call: 'reverseWords("  x  ")', expected: 'x' },
       { call: 'reverseWords("one two three four")', expected: 'four three two one' },
@@ -245,39 +123,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-chunk-array': {
-    solution: `const chunk = (items, size) => {
-  if (!Number.isInteger(size) || size < 1) return [];
-  const pieces = [];
-  for (let start = 0; start < items.length; start += size) {
-    pieces.push(items.slice(start, start + size));
-  }
-  return pieces;
-};`,
-    junior: `const chunk = (items, size) => {
-  if (Number.isInteger(size) === false || size < 1) {
-    return [];
-  }
-  const pieces = [];
-  let current = [];
-  for (let index = 0; index < items.length; index += 1) {
-    current.push(items[index]);
-    if (current.length === size) {
-      pieces.push(current);
-      current = [];
-    }
-  }
-  if (current.length > 0) {
-    pieces.push(current);
-  }
-  return pieces;
-};`,
-    senior: `const chunk = (items, size) =>
-  // slice clamps the final piece to the end of the array, so the short last
-  // chunk needs no special case.
-  Number.isInteger(size) && size > 0
-    ? Array.from({ length: Math.ceil(items.length / size) }, (_, piece) => items.slice(piece * size, piece * size + size))
-    : [];`,
+    solution: "const chunk = (items, size) => {\n  if (!Number.isInteger(size) || size < 1) return [];\n  const pieces = [];\n  for (let start = 0; start < items.length; start += size) {\n    pieces.push(items.slice(start, start + size));\n  }\n  return pieces;\n};",
+    junior: "const chunk = (items, size) => {\n  if (Number.isInteger(size) === false || size < 1) {\n    return [];\n  }\n  const pieces = [];\n  let current = [];\n  for (let index = 0; index < items.length; index += 1) {\n    current.push(items[index]);\n    if (current.length === size) {\n      pieces.push(current);\n      current = [];\n    }\n  }\n  if (current.length > 0) {\n    pieces.push(current);\n  }\n  return pieces;\n};",
+    senior: "const chunk = (items, size) =>\n  Number.isInteger(size) && size > 0\n    ? Array.from({ length: Math.ceil(items.length / size) }, (_, piece) => items.slice(piece * size, piece * size + size))\n    : [];",
     hiddenTests: [
+      { call: "(() => {const object=Object.freeze({x:1}),symbol=Symbol(\"s\"),fn=()=>0;const input=Object.freeze([object,undefined,symbol,fn,null,-0]);const a=chunk(input,2),b=chunk(input,2);a[0].push(9);return [a.length,a[0][0]===object,a[0][1]===undefined,a[1][0]===symbol,a[1][1]===fn,a[2][0]===null,Object.is(a[2][1],-0),a!==b,a[0]!==b[0],a[0]!==a[1],b[0].length,input.length];})()", expected: [3, true, true, true, true, true, true, true, true, true, 2, 6] },
+      { call: "(() => {const input=[1,2];const a=chunk(input,5),b=chunk(input,Number.MAX_VALUE);a[0].push(3);const empty=chunk([],1),empty2=chunk([],1),bad=chunk(input,\"2\"),bad2=chunk(input,\"2\");bad.push([]);const invalid=[NaN,Infinity,-Infinity,0,-0,-1,1.5,\"2\",true,null,undefined,2n,Symbol(\"s\"),new Number(2),{valueOf(){throw Error(\"no coercion\");}}].map(size=>chunk(input,size).length);return [input,a[0]!==input,b[0]!==input,b,empty!==empty2,bad!==bad2,bad2.length,invalid];})()", expected: [[1, 2], true, true, [[1, 2]], true, true, 0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));const ones=chunk(input,1),parts=chunk(input,333);return [ones.length,ones[0][0],ones[999][0],parts.map(part=>part.length),parts[3][0],input.length];})()", expected: [1000, 0, 999, [333, 333, 333, 1], 999, 1000] },
+
       { call: 'chunk([1, 2, 3], -1)', expected: [] },
       { call: 'chunk([1, 2, 3], 1.5)', expected: [] },
       { call: 'chunk(["a", "b", "c"], 2)', expected: [['a', 'b'], ['c']] },
@@ -286,54 +139,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-merge-sorted': {
-    solution: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    if (a[i] <= b[j]) { merged.push(a[i]); i += 1; }
-    else { merged.push(b[j]); j += 1; }
-  }
-  while (i < a.length) { merged.push(a[i]); i += 1; }
-  while (j < b.length) { merged.push(b[j]); j += 1; }
-  return merged;
-};`,
-    junior: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let indexA = 0;
-  let indexB = 0;
-  while (indexA < a.length && indexB < b.length) {
-    const left = a[indexA];
-    const right = b[indexB];
-    if (left <= right) {
-      merged.push(left);
-      indexA = indexA + 1;
-    } else {
-      merged.push(right);
-      indexB = indexB + 1;
-    }
-  }
-  for (let index = indexA; index < a.length; index += 1) {
-    merged.push(a[index]);
-  }
-  for (let index = indexB; index < b.length; index += 1) {
-    merged.push(b[index]);
-  }
-  return merged;
-};`,
-    senior: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let i = 0;
-  let j = 0;
-  // One loop over the combined length: whichever side is spent loses its
-  // comparison and the other drains, so no tail loop is needed.
-  while (i < a.length || j < b.length) {
-    const takeLeft = j >= b.length || (i < a.length && a[i] <= b[j]);
-    merged.push(takeLeft ? a[i++] : b[j++]);
-  }
-  return merged;
-};`,
+    solution: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length && j < b.length) {\n    if (a[i] <= b[j]) { merged.push(a[i]); i += 1; }\n    else { merged.push(b[j]); j += 1; }\n  }\n  while (i < a.length) { merged.push(a[i]); i += 1; }\n  while (j < b.length) { merged.push(b[j]); j += 1; }\n  return merged;\n};",
+    junior: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let indexA = 0;\n  let indexB = 0;\n  while (indexA < a.length && indexB < b.length) {\n    const left = a[indexA];\n    const right = b[indexB];\n    if (left <= right) {\n      merged.push(left);\n      indexA = indexA + 1;\n    } else {\n      merged.push(right);\n      indexB = indexB + 1;\n    }\n  }\n  for (let index = indexA; index < a.length; index += 1) {\n    merged.push(a[index]);\n  }\n  for (let index = indexB; index < b.length; index += 1) {\n    merged.push(b[index]);\n  }\n  return merged;\n};",
+    senior: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length || j < b.length) {\n    const takeLeft = j >= b.length || (i < a.length && a[i] <= b[j]);\n    merged.push(takeLeft ? a[i++] : b[j++]);\n  }\n  return merged;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze([-0,0.5,2]),b=Object.freeze([0,0.5,1]);const out=mergeSorted(a,b);return [out.length,Object.is(out[0],-0),Object.is(out[1],0),out.slice(2),a.length,b.length,mergeSorted(a,a).slice(2)];})()", expected: [6, true, true, [0.5, 0.5, 1, 2], 3, 3, [0.5, 0.5, 2, 2]] },
+      { call: "(() => {const a=[1,3],b=[2];const out=mergeSorted(a,b),again=mergeSorted(a,b);out.push(4);const empty=mergeSorted([],[]),empty2=mergeSorted([],[]),left=[],right=[1,2];const single=mergeSorted(left,right);single.push(3);return [a,b,out!==again,again,empty!==empty2,left,right,single!==right,mergeSorted(Object.freeze([1,2]),Object.freeze([]))];})()", expected: [[1, 3], [2], true, [1, 2, 3], true, [], [1, 2], true, [1, 2]] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i*2)),b=Object.freeze(Array.from({length:1000},(_,i)=>i*2+1));const out=mergeSorted(a,b);return [out.length,out[0],out[1999],out.every((value,index)=>value===index),a.length,b.length];})()", expected: [2000, 0, 1999, true, 1000, 1000] },
+
       { call: 'mergeSorted([5], [])', expected: [5] },
       { call: 'mergeSorted([1, 4, 7], [2, 3, 8, 9])', expected: [1, 2, 3, 4, 7, 8, 9] },
       { call: '(() => { const left = [1, 3]; const right = [2]; mergeSorted(left, right); return [left, right]; })()', expected: [[1, 3], [2]] },

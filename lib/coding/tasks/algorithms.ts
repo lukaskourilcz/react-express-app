@@ -170,7 +170,7 @@ console.log(firstUniqueChar("swiss"));
     tier: 3,
     focus: ['map-set', 'sort'],
     title: 'Top K frequent elements',
-    prompt: 'Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort — bucketing by count reaches O(n) if you want it.',
+    prompt: "Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort \u2014 bucketing by count reaches O(n) if you want it. Domain: a dense ordinary readonly array of at most 1000 primitive Numbers, possibly frozen, with no accessors/proxies; all Number values are valid, including fractions, NaN, infinities and signed zero. Use Map/SameValueZero classes; returned Map keys canonicalize zero to +0. k is an integer from 0 through 2000. Preserve inputs and return a fresh mutable array every call, including k=0 and empty input. Equal frequencies retain the first appearance of each distinct key, without numeric-value tie sorting. n=max(2,input length), and O(n) auxiliary space is allowed; average constant Map operations and a comparison-sort model give the stated bound, while bucketing is also valid.",
     starter: `const topKFrequent = (numbers, k) => {
 
 };
@@ -215,7 +215,7 @@ console.log(topKFrequent([1, 1, 1, 2, 2, 3], 2));
     tier: 3,
     focus: ['map-set'],
     title: 'Longest consecutive sequence',
-    prompt: 'Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive whole numbers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space.',
+    prompt: "Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive integers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 safe integers in [-1000000000,1000000000], possibly frozen, without accessors/proxies. Only exact +1 adjacency counts; duplicates and -0/+0 represent one integer. Leave input values and order unchanged. These bounds make predecessor/successor arithmetic exact and advancing a run safe. n is 1 + input length under average constant Set/Map operations. The nested loops are amortized linear because only starts walk a run; an interval-endpoint Map merge with equivalent behavior is valid too.",
     starter: `const longestConsecutive = numbers => {
 
 };
@@ -266,7 +266,7 @@ console.log(longestConsecutive([100, 4, 200, 1, 3, 2]));
     tier: 1,
     focus: ['two-pointer', 'strings'],
     title: 'Valid palindrome',
-    prompt: 'Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not a letter or a digit is ignored and case is set aside. `isPalindrome("A man, a plan, a canal: Panama")` gives `true`; `isPalindrome("race a car")` gives `false`. Digits count as content, so `"0P"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy.',
+    prompt: "Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not an ASCII letter or an ASCII digit is ignored and ASCII case is set aside. `isPalindrome(\"A man, a plan, a canal: Panama\")` gives `true`; `isPalindrome(\"race a car\")` gives `false`. Digits count as content, so `\"0P\"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy. The exercise uses ASCII letters A-Z/a-z and ASCII digits 0-9 only; all other UTF-16 units, including non-ASCII letters/digits, emoji and combining marks, are ignored. Classify the original characters before converting retained ASCII letters to lowercase: Unicode characters such as the Kelvin sign must not become new ASCII content through lowercasing. No Unicode normalization or full-language case folding is intended. text is a primitive string of at most 1000 UTF-16 units; n is 1 + that length. Return an actual boolean without retaining cross-call state. The pointer solution meets O(1) auxiliary space; a cleaned-copy solution is behaviorally valid and O(n) time, but uses O(n) auxiliary space.",
     starter: `const isPalindrome = text => {
 
 };
@@ -296,6 +296,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      { call: "isPalindrome(\"\u212aa\")", expected: true, label: "filter original ASCII content before folding case", edge: true },
       { call: 'isPalindrome("A man, a plan, a canal: Panama")', expected: true },
       { call: 'isPalindrome("race a car")', expected: false },
       { call: 'isPalindrome("")', expected: true, label: 'empty input is a palindrome', edge: true },
@@ -317,7 +318,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     tier: 2,
     focus: ['strings', 'split', 'join'],
     title: 'Reverse words in a string',
-    prompt: 'Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords("  the sky   is blue ")` gives `"blue is sky the"`. Leading, trailing and repeated spaces all disappear, so splitting on a single space is not enough — trim first and split on runs of whitespace, or filter the empty pieces out. The letters inside a word are not touched, and a string of spaces alone gives `""`. Target: O(n) time and O(n) space.',
+    prompt: "Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords(\"  the sky   is blue \")` gives `\"blue is sky the\"`. Use runs of JavaScript whitespace as delimiters. Trim first, or discard empty edge pieces; splitting only on literal spaces misses other whitespace. The letters inside a word are not touched, and a string of spaces alone gives `\"\"`. Target: O(n) time and O(n) space. text is primitive text of at most 1000 UTF-16 units. Delimiters are exactly JavaScript /\\s/ characters, including tabs, line breaks, nonbreaking spaces and BOM; zero-width space and U+0085 are not delimiters. A word is a maximal nonempty run of non-whitespace units and its exact text/case is preserved, including Unicode or unpaired surrogates. Join reversed words with one ASCII space and keep no cross-call state. n is 1 + text UTF-16 length; scanning from right to left is another valid linear approach.",
     starter: `const reverseWords = text => {
 
 };
@@ -330,12 +331,12 @@ console.log(reverseWords("  the sky   is blue "));
 
   return words.reverse().join(" ");
 };`,
-    hints: ['Splitting "a  b" on a single space leaves an empty string between the words. Split on a run of whitespace instead, or drop the empty pieces before joining.'],
+    hints: ["Use a whitespace-run split such as /\\s+/ or a non-whitespace match such as /\\S+/g. Without trimming, drop empty edge pieces. Splitting only on a literal space misses tabs and line breaks."],
     approach: [
       'Trim the ends so a leading or trailing space cannot become an empty word.',
       'Split on one-or-more whitespace characters rather than on a single space, which collapses the runs between words.',
       'Reverse the list of words and join it with a single space.',
-      'A string that is only whitespace trims to nothing and gives an empty list, which joins to the empty string.',
+      'Whitespace-only input returns an empty string. After trimming, split may leave one empty placeholder that joins back to empty; filtering empty pieces is another valid approach.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -361,7 +362,7 @@ console.log(reverseWords("  the sky   is blue "));
     tier: 1,
     focus: ['slice', 'for'],
     title: 'Chunk an array',
-    prompt: 'Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` — the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space.',
+    prompt: "Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` \u2014 the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 stable opaque items with standard array methods, possibly frozen, without accessors/proxies. Preserve exact values/references, including undefined, null, Symbols, functions and signed zero; do not clone or inspect item fields. size may be any value: accept only a primitive finite Number for which Number.isInteger(size) is true and size>0, with no coercion. A huge finite integer size is valid and gives one short piece for nonempty input. Return a fresh mutable outer array and fresh independent mutable piece arrays on every call; empty/invalid-size results are fresh too. n is 1 + input length and output reference copies are included in O(n) space.",
     starter: `const chunk = (items, size) => {
 
 };
@@ -389,6 +390,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "chunk([1, 2], \"2\")", "expected": [], "label": "a numeric string is not a Number size", "edge": true},
       { call: 'chunk([1, 2, 3, 4, 5], 2)', expected: [[1, 2], [3, 4], [5]] },
       { call: 'chunk([1, 2, 3, 4], 2)', expected: [[1, 2], [3, 4]] },
       { call: 'chunk([], 3)', expected: [], label: 'empty input', edge: true },
@@ -410,7 +412,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ['two-pointer', 'while'],
     title: 'Merge two sorted arrays',
-    prompt: 'Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space — sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know.',
+    prompt: "Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space \u2014 sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know. Domain: dense ordinary readonly arrays of at most 1000 finite Numbers each, within [-1000000000,1000000000] and already nondecreasing, possibly frozen, without accessors/proxies. Fractions and signed zero are valid; NaN is outside this ordering domain. Preserve exact values, duplicates and both inputs, including when they are the same array. When values compare equal take from a first, preserving order within each side and the signs of zeros. Return a fresh mutable array every call, including empty/one-sided inputs. n is 1 + a.length and m is 1 + b.length; a generator-based nonmutating merge is also valid, with no sort call.",
     starter: `const mergeSorted = (a, b) => {
 
 };
@@ -430,7 +432,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
   // one side is spent; append the rest of the other
   return merged;
 };`,
-    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, exactly one array has values left — append them as they are, since they are already in order.'],
+    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, at most one array has values left — append them as they are, since they are already in order.'],
     approach: [
       'Keep an index into each array and build a third array to write into.',
       'While both indices are still inside their array, compare the two heads and push the smaller one, advancing only the pointer you took from.',

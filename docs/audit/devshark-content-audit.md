@@ -4,11 +4,11 @@
 
 315/725 coding reviews match current hashes;410 remain. B057 passes30/30 selected verdicts,20 no-false-penalty checks,canonical coding/type contracts,release gates and80 responsive probes. #416 is verified in production (300 coding plus263 native). Fifteen later reviews remain separate: ten frozen in #417 and five in this continuation. Same-session model/finite execution; no whole-catalogue or authenticated Premium claim.
 
-## Current release checkpoint — 15 October 2026, PR #423
+## Current release checkpoint — 15 October 2026, PR #424
 
-PR #423 passed required run 38773819510 at exact head 520dc8a16a0c5a86fe94b523bce4e7ceb1133007 (verify 30m08s; SQL 1m02s), then merged at 932303922e62eef7ce9b9f05d656f5a414df8bc7 on 15 October 2026 at 17:33:34 UTC. READY production dpl_3kv8bKDqAVgveSet6pHPA2N2YSuB matches that merge, owns devshark.app and has no alias error before/after probes. Exact preview and production each pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts. Dedicated authorized Premium acceptance remains outstanding. General guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark probes. Shipped model-review coverage is 350/725 coding and 263/263 native. No independent/human, physical-device, authenticated Premium or whole-catalogue acceptance claim.
+PR #424 passed required run 38776931495 at exact head 6310f6ffac17248bc74c268cf0262f6fd6693ee7 (verify 25m44s; SQL 42s), then merged at b149805003cf9d7b6c69f9976a235d406fd0c4a4 on 15 October 2026 at 17:52:36 UTC. READY production dpl_E6BdPKHwxGwvqu1JWSgoNYDV64c4 matches that merge, owns devshark.app and has no alias error before/after probes. Exact preview and production each pass eleven general guest checks plus six actual changed-task Submit verdicts on free playlist interleaving and generic grouping: reference/valid alternative pass and meaningful wrong fails. Eight other changed tasks return 402 and await dedicated authorized Premium acceptance. All guest submissions grant zero XP and return null progress. Local cohort evidence is 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark probes. Shipped model-review coverage is 360/725 coding and 263/263 native. No independent/human, physical-device, authenticated Premium or whole-catalogue acceptance claim.
 
-Historical entries below retain their original checkpoints. Twenty B065–B068 source reviews are separate from this release.
+Historical entries below retain their original checkpoints. Fifteen B067–B069 source reviews remain separate from this release.
 
 ## 15 October continuation — five coding items b043
 
