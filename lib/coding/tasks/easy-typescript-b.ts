@@ -415,7 +415,7 @@ console.log(everyNth(["f1", "f2", "f3", "f4", "f5", "f6"], 3));
     tier: 2,
     focus: ['keyof'],
     title: 'A setting or its default',
-    prompt: 'An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, "sounds")` is a `boolean` and `settingOr(saved, "fontSize")` is a `number`. A saved `false` or `0` is a real choice: keep it.',
+    prompt: "An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, \"sounds\")` is a `boolean` and `settingOr(saved, \"fontSize\")` is a `number`. A saved `false` or `0` is a real choice: keep it. Domain: a stable ordinary or null-prototype saved record, possibly frozen, with optional own or inherited data properties on a bounded prototype chain and no accessors/proxies. Missing or undefined values use the default; null is outside Partial<Settings>. Theme is light or dark, sounds is boolean, and fontSize is a finite Number from -1000000000 through 1000000000, including fractions, negatives and signed zero. Preserve false, 0 and -0 exactly. Do not add defaults to saved, change saved values, inspect unrelated opaque metadata or modify DEFAULTS. Target: O(1) time and working state: read one of the three fixed setting keys and at most its default, regardless of unrelated saved fields.",
     starter: `interface Settings {
   theme: "light" | "dark";
   fontSize: number;
@@ -442,7 +442,7 @@ const DEFAULTS: Settings = { theme: "light", fontSize: 16, sounds: true };
 const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K] => {
   // the saved value when there is one, otherwise the default
 };`,
-    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`. `||` would also replace a saved `false`, and switch the sounds back on.'],
+    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`; this task’s typed inputs allow undefined, but not null. `||` would also replace a saved `false`, and switch the sounds back on.'],
     approach: [
       'Give the function a type parameter `K extends keyof Settings` and the return type `Settings[K]`.',
       'Read `saved[key]`.',
@@ -472,7 +472,7 @@ const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): 
     tier: 2,
     focus: ['keyof', 'spread'],
     title: 'Change one field',
-    prompt: 'A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, "price", 5)` compiles and `setField(mug, "price", "5")` does not. Build the new product with spread, and leave the original as it is.',
+    prompt: "A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, \"price\", 5)` compiles and `setField(mug, \"price\", \"5\")` does not. Build the new product with spread, and leave the original as it is. Domain: stable ordinary or null-prototype product records, possibly frozen, with own name text of at most 200 UTF-16 units, a finite Number price from -1000000000 through 1000000000, and a boolean inStock. Up to 100 extra own enumerable string/Symbol data fields may carry opaque values; no accessors/proxies are involved. Copy those fields shallowly, including a literal own __proto__ field, without copying inherited fields. Return a fresh plain mutable product even when the chosen value is unchanged; preserve exact metadata references and leave the source unchanged. The allowed key is one of the three Product fields with its matching value type. Target: O(n) time and output space, where n is 1 + the number of copied own enumerable fields under bounded property-key operations; do not traverse opaque values.",
     starter: `interface Product {
   name: string;
   price: number;

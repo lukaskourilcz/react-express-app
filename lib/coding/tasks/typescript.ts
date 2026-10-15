@@ -931,7 +931,7 @@ console.log(transform([1,2,3], n => n * 2));
     tier: 3,
     focus: ["constraints", "sort"],
     title: "Sort by name",
-    prompt: "Write `sortByName<T extends { name: string }>(items: T[]): T[]`, returning a new array ordered A to Z by `name`. Anything with a name is allowed in, its other properties survive, and the array handed in is not reordered.",
+    prompt: "Write `sortByName<T extends { name: string }>(items: T[]): T[]`, returning a new array ordered by ascending, case-sensitive UTF-16 code-unit comparison of `name`. Anything with a name is allowed in, its other properties survive, and the array handed in is not reordered. Domain: a dense ordinary array of at most 1000 stable records, possibly frozen, with own string names of at most 200 UTF-16 units and no accessors/proxies. Use JavaScript string < and > ordering, including case, spaces and Unicode; do not trim, normalize or apply locale collation. Ties keep original order. Return a fresh mutable outer array on every call, including empty/singleton input, containing the exact original records and opaque extra fields. Leave the input order and records unchanged. Target: O(n log n) time in the comparison-sort model and O(n) output space, where n is 1 + item count and name lengths are bounded. The language specification does not promise a particular built-in sorting algorithm.",
     starter: `const sortByName = (items) => {
   
 };
@@ -1012,7 +1012,7 @@ console.log(sortByName([{name:"Bo"},{name:"Ada"}]));
     tier: 3,
     focus: ["keyof", "map"],
     title: "Pluck a property",
-    prompt: "Write `pluck<T, K extends keyof T>(items: T[], key: K): T[K][]`, collecting one property from every object in the list. The key has to name a property that exists, and what comes back is an array of whatever that property holds.",
+    prompt: "Write `pluck<T, K extends keyof T>(items: T[], key: K): T[K][]`, collecting one property from every object in the list. The key has to belong to the item type, and what comes back is an array of whatever that property holds. Domain: a dense ordinary array of at most 1000 stable data objects or arrays, possibly frozen, with no accessors/proxies. The requested string, number or Symbol key belongs to T and may be an own or inherited data property on a bounded prototype chain. A missing optional property contributes undefined in its original position. Preserve exact opaque values/references, including arrays, objects, functions, symbols, null and undefined: do not clone, call, coerce or traverse them. Return a fresh mutable outer array on every call, including empty input; leave the input and its records unchanged. Target: O(n) time and output space, where n is 1 + item count under bounded property reads.",
     starter: `const pluck = (items, key) => {
   
 };

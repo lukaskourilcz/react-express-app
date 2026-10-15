@@ -414,7 +414,7 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
     ],
   },
   "ts-sort-by-name": {
-    solution: "const sortByName = <T extends {name: string}>(items: T[]): T[] => [...items].sort((one, other) => one.name.localeCompare(other.name));",
+    solution: "const sortByName = <T extends { name: string }>(items: T[]): T[] =>\n  [...items].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);",
     junior: `const sortByName = <T extends { name: string }>(items: T[]): T[] => {
   const copy: T[] = [];
   for (const item of items) {
@@ -431,9 +431,14 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   });
   return copy;
 };`,
-    senior: `// toSorted() returns a sorted copy, so the caller's list is never reordered under them.
-const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSorted((one, other) => one.name.localeCompare(other.name));`,
+    senior: "const sortByName = <T extends { name: string }>(items: T[]): T[] =>\n  items.toSorted((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);",
+    hiddenTypeTests: [{"code": "const __audit = sortByName([{name:\"x\",value:Symbol()}]); const __symbol: symbol = __audit[0].value; __audit.push({name:\"z\",value:Symbol()});"}],
     hiddenTests: [
+      { call: "(()=>{const names=['a','Z',' A','10','2','A','AA','\u00e9','\u00e4','\ud83d\ude00','\\uE000',''];return sortByName(names.map(name=>({name}))).map(x=>x.name);})()", expected: ["", " A", "10", "2", "A", "AA", "Z", "a", "\u00e4", "\u00e9", "\ud83d\ude00", "\ue000"] },
+      { call: "(()=>{const meta={},a=Object.freeze({name:'Z',meta}),b=Object.freeze({name:'A',meta}),c=Object.freeze({name:'A',meta}),input=Object.freeze([a,b,c,b]),out=sortByName(input),again=sortByName(input);out.pop();return [out[0]===b,out[1]===c,out[2]===b,again[3]===a,again[0].meta===meta,input[0]===a,input.length,out!==again,again.length];})()", expected: [true, true, true, true, true, true, 4, true, 4] },
+      { call: "(()=>{const item=Object.freeze({name:''}),input=Object.freeze([item]),a=sortByName(input),b=sortByName(input),x=sortByName([]),y=sortByName([]);a.push(item);x.push(item);return [a!==input,a!==b,b[0]===item,b.length,x!==y,y.length,input.length];})()", expected: [true, true, true, 1, true, 0, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:String(9-i%10),id:i}))),out=sortByName(input);return [out.length,out.every((item,i)=>item===input[9-Math.floor(i/100)+10*(i%100)]),input[0].id];})()", expected: [1000, true, 0] },
+
       { call: "sortByName([{name:\"Cy\"},{name:\"Ada\"},{name:\"Bo\"}])", expected: [{ name: "Ada" }, { name: "Bo" }, { name: "Cy" }] },
       { call: "(() => { const people = [{name:\"Zoe\"},{name:\"Amy\"}]; const sorted = sortByName(people); return [sorted.map(person => person.name), people.map(person => person.name)]; })()", expected: [["Amy", "Zoe"], ["Zoe", "Amy"]] },
       { call: "sortByName([{name:\"Bea\",score:3},{name:\"Al\",score:9}])", expected: [{ name: "Al", score: 9 }, { name: "Bea", score: 3 }] },
@@ -451,7 +456,12 @@ const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSort
 };`,
     senior: `// A computed key in the parameter pattern pulls out just the property asked for, typed T[K].
 const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({ [key]: value }) => value);`,
+    hiddenTypeTests: [{"code": "const __auditItems: {value?: string}[] = [{},{value:\"x\"}]; const __auditMaybe: (string|undefined)[] = pluck(__auditItems,\"value\"); const __auditKey = Symbol(); const __auditSymbols: symbol[] = pluck([{[__auditKey]:Symbol()}],__auditKey);"}],
     hiddenTests: [
+      { call: "(()=>{const key=Symbol('key'),meta={},arr=Object.freeze([1]),fn=()=>{throw 'do not call'},sym=Symbol('value'),values=[meta,arr,fn,sym,null,undefined],input=Object.freeze(values.map(value=>Object.freeze({[key]:value}))),out=pluck(input,key);return [out.length,out.every((value,i)=>value===values[i]),input.every((item,i)=>item[key]===values[i]),out!==input];})()", expected: [6, true, true, true] },
+      { call: "(()=>{const meta={},first=Object.freeze(Object.create({value:meta})),second=Object.freeze({value:undefined}),third=Object.freeze({}),input=Object.freeze([first,second,third]),a=pluck(input,'value'),b=pluck(input,'value');a.push(meta);return [b.length,b[0]===meta,b[1]===undefined,b[2]===undefined,Object.hasOwn(b,1),Object.hasOwn(b,2),a!==b,input.length];})()", expected: [3, true, true, true, true, true, true, 3] },
+      { call: "(()=>{const marker={},input=Object.freeze(Array.from({length:1000},()=>Object.freeze([marker]))),out=pluck(input,0),a=pluck([],'x'),b=pluck([],'x');a.push(marker);return [out.length,out.every(value=>value===marker),a!==b,b.length,input.length];})()", expected: [1000, true, true, 0, 1000] },
+
       { call: "pluck([{x:1,y:2},{x:3,y:4}], \"y\")", expected: [2, 4] },
       { call: "pluck([], \"id\")", expected: [] },
       { call: "pluck([{tags:[\"a\"]},{tags:[]}], \"tags\")", expected: [["a"], []] },

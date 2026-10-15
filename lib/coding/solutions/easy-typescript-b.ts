@@ -354,7 +354,12 @@ const DEFAULTS: Readonly<Settings> = { theme: "light", fontSize: 16, sounds: tru
 function settingOr<K extends keyof Settings>(saved: Readonly<Partial<Settings>>, key: K): Settings[K] {
   return saved[key] ?? DEFAULTS[key];
 }`,
+    hiddenTypeTests: [{"code": "settingOr({fontSize:null},\"fontSize\");", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const saved=Object.freeze({fontSize:undefined,theme:'dark',sounds:false}),before=Reflect.ownKeys(saved);const values=[settingOr(saved,'fontSize'),settingOr(saved,'theme'),settingOr(saved,'sounds')];return [values,Reflect.ownKeys(saved),before,saved.fontSize===undefined,DEFAULTS.theme,DEFAULTS.fontSize,DEFAULTS.sounds];})()", expected: [[16, "dark", false], ["fontSize", "theme", "sounds"], ["fontSize", "theme", "sounds"], true, "light", 16, true] },
+      { call: "(()=>{const saved=Object.freeze(Object.create({fontSize:-0,sounds:false})),empty=Object.freeze(Object.create(null));return [Object.is(settingOr(saved,'fontSize'),-0),settingOr(saved,'sounds'),settingOr(empty,'theme'),settingOr(empty,'fontSize'),settingOr(empty,'sounds'),Reflect.ownKeys(saved).length,Reflect.ownKeys(empty).length];})()", expected: [true, false, "light", 16, true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},saved={fontSize:-0.5};for(let i=0;i<100;i++)saved['x'+i]=meta;Object.freeze(saved);const values=[settingOr(saved,'sounds'),settingOr(saved,'fontSize'),settingOr(saved,'theme')];return [values,Reflect.ownKeys(saved).length,saved.x99===meta,!Object.hasOwn(saved,'sounds'),!Object.hasOwn(saved,'theme')];})()", expected: [[true, -0.5, "light"], 101, true, true, true] },
+
       { call: 'settingOr({ theme: "dark", fontSize: 12 }, "theme")', expected: 'dark' },
       { call: 'settingOr({ theme: "dark" }, "fontSize")', expected: 16 },
       { call: 'settingOr({ fontSize: undefined }, "fontSize")', expected: 16 },
@@ -383,22 +388,20 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
   copy[key] = value;
   return copy;
 };`,
-    senior: `interface Product {
-  name: string;
-  price: number;
-  inStock: boolean;
-}
-
-function setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {
-  return Object.assign({}, product, { [key]: value });
-}`,
+    senior: "interface Product {\n  name: string;\n  price: number;\n  inStock: boolean;\n}\n\nfunction setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {\n  return { ...product, [key]: value };\n}",
     hiddenTests: [
+      { call: "(()=>{const s=Symbol('meta'),meta={},proto={inherited:9},p=Object.create(proto);Object.assign(p,{name:'Mug',price:-0,inStock:false});Object.defineProperty(p,'__proto__',{value:meta,enumerable:true});p[s]=meta;p.extra=meta;Object.freeze(p);const out=setField(p,'price',-0);return [out!==p,Object.getPrototypeOf(out)===Object.prototype,Object.hasOwn(out,'__proto__'),out.__proto__===meta,out[s]===meta,out.extra===meta,!Object.hasOwn(out,'inherited'),Object.is(out.price,-0),Object.is(p.price,-0)];})()", expected: [true, true, true, true, true, true, true, true, true] },
+      { call: "(()=>{const p=Object.freeze(Object.assign(Object.create(null),{name:'',price:-0.5,inStock:false})),a=setField(p,'name',''),b=setField(p,'inStock',true);a.name='later';return [a!==b,b.name,p.name,b.price,b.inStock,p.inStock,Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, "", "", -0.5, true, false, true] },
+      { call: "(()=>{const meta={},p={name:'x',price:1,inStock:true};for(let i=0;i<100;i++)p['x'+i]=meta;Object.freeze(p);const out=setField(p,'price',1000000000);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),p.price,out.price];})()", expected: [103, true, 1, 1000000000] },
+
       { call: '(() => { const p = { name: "a", price: 1, inStock: true }; return setField(p, "name", "b") !== p; })()', expected: true },
       { call: 'Object.keys(setField({ name: "a", price: 1, inStock: true }, "name", "z"))', expected: ['name', 'price', 'inStock'] },
       { call: 'setField(setField({ name: "a", price: 1, inStock: true }, "price", 5), "name", "z")', expected: { name: 'z', price: 5, inStock: true } },
       { call: 'setField({ name: "a", price: 1, inStock: true }, "price", 0)', expected: { name: 'a', price: 0, inStock: true } },
     ],
     hiddenTypeTests: [
+      {"code": "setField({name:\"x\",price:1,inStock:true},\"inStock\",\"false\");", "rejects": true},
+
       { code: 'setField({ name: "a", price: 1, inStock: true }, "name", 3);', label: 'the name takes text', rejects: true },
     ],
   },
