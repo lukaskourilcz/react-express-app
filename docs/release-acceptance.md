@@ -3459,3 +3459,14 @@ NaN membership-versus-index semantics, fresh100×100rows, fractional thresholds,
 strict opaque ids and10000-item scans are covered. Only the fresh final export/
 execution after a private edit-helper boundary repair is recorded as evidence.
 B026–b030are local and #404 remains frozen separately; no live account changes.
+
+## Reduce/destructuring content batch b031 — 15 October 2026
+
+Five individual model reviews raise coding coverage to185/725,540remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy
+checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both zero-vulnerability production dependency audits and diff checks.
+Safe normalized own keys, exact callbacks/error identity, tuple labels and
+10000-item arrays use local fixtures. B026–b031are local and #404 remains
+frozen separately. No progress, account/name or score fixture was created.

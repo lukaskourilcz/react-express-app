@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b031
+
+Read all English fields, starters/skeletons, boards and checks for key counts,
+running totals, value pipelines, labelled-pair totals and neighbour swaps.
+Key-count dictionaries now use own safe buckets and normalize string/numeric
+keys before lookup on every board; the Map form no longer loses collisions
+between numeric1and string1. All supplied reducers/loops now match their explicit
+lessons: output-array reduce, current-value reduce, loop-head tuple destructuring
+and two-step destructuring swaps. Deferred callback composition is replaced by
+a direct value accumulator without inventing an observed stack-overflow claim.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks, zero-artifact
+copy sweep, focused coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Cases include reserved/empty/numeric keys, exact callback counts/arguments/errors,
+original opaque/falsy values, unrounded Number sums, frozen nested tuples,
+fresh copies and10000-item outputs/scans. Callback overhead is separated from
+callback work in the cost model. Finite probes and same-session readings do not
+establish arbitrary learner-source, asymptotic or independent/human acceptance.
+
+Coverage is185/725coding,540remaining,263/263native. B026–b031are local;
+PR #404 stays frozen at3e8d209d while required CI runs. No live user writes.
+
 ## 15 October continuation — five coding items b030
 
 Read all English fields, starters/skeletons, boards and checks for times tables,

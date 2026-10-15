@@ -552,29 +552,14 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   "js-count-by-key": {
-    solution: "const countBy = (items, keyFn) => items.reduce((counts, item) => { const key = keyFn(item); counts[key] = (counts[key] ?? 0) + 1; return counts; }, {});",
-    junior: `const countBy = (items, keyFn) => {
-  const counts = {};
-  for (const item of items) {
-    const key = keyFn(item);
-    if (counts[key] === undefined) {
-      counts[key] = 1;
-    } else {
-      counts[key] = counts[key] + 1;
-    }
-  }
-  return counts;
-};`,
-    senior: `const countBy = (items, keyFn) => {
-  // Count in a Map, which takes any key as it is, then hand back the plain object the caller expects.
-  const counts = new Map();
-  for (const item of items) {
-    const key = keyFn(item);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return Object.fromEntries(counts);
-};`,
+    solution: "const countBy = (items, keyFn) => items.reduce((counts, item) => { const key = String(keyFn(item)); counts[key] = (counts[key] ?? 0) + 1; return counts; }, Object.create(null));",
+    junior: "const countBy = (items, keyFn) => {\n  const counts = Object.create(null);\n  return items.reduce((result, item) => {\n    const key = String(keyFn(item));\n    const previous = Object.hasOwn(result, key) ? result[key] : 0;\n    result[key] = previous + 1;\n    return result;\n  }, counts);\n};",
+    senior: "const countBy = (items, keyFn) => {\n  const counts = items.reduce((map, item) => {\n    const key = String(keyFn(item));\n    map.set(key, (map.get(key) ?? 0) + 1);\n    return map;\n  }, new Map());\n  return Object.fromEntries(counts);\n};",
     hiddenTests: [
+      { call: "(() => { const keys=[\"__proto__\",\"constructor\",\"toString\",\"\",1,\"1\",-0,\"0\"],items=Object.freeze(keys.map(key=>Object.freeze({key}))),calls=[];const out=countBy(items,(...args)=>{calls.push(args);return args[0].key;});return [out.__proto__,out.constructor,out.toString,out[\"\"],out[\"1\"],out[\"0\"],Object.hasOwn(out,\"__proto__\"),calls.length,calls.every((a,i)=>a.length===1&&a[0]===items[i]),out!==countBy(Object.freeze([]),()=>\"x\")]; })()", expected: [1, 1, 1, 1, 2, 2, true, 8, true, true] },
+      { call: "(() => { const reason={},calls=[];try{countBy(Object.freeze([1,2,3]),value=>{calls.push(value);if(value===2)throw reason;return \"x\";});return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, [1, 2]] },
+      { call: "countBy(Object.freeze(Array.from({length:10000},()=>0)),()=>\"__proto__\").__proto__", expected: 10000 },
+
       { call: "countBy([{team:\"red\"},{team:\"blue\"},{team:\"red\"},{team:\"red\"}], person => person.team)", expected: { red: 3, blue: 1 } },
       { call: "countBy([\"aa\",\"b\",\"cc\",\"ddd\"], word => word.length)", expected: { "1": 1, "2": 2, "3": 1 } },
       { call: "countBy([true,false,true], value => String(value))", expected: { true: 2, false: 1 } },
@@ -582,21 +567,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-running-totals": {
     solution: "const runningTotals = numbers => numbers.reduce((totals, number) => { const previous = totals.length > 0 ? totals[totals.length - 1] : 0; totals.push(previous + number); return totals; }, []);",
-    junior: `const runningTotals = numbers => {
-  const totals = [];
-  let runningSum = 0;
-  for (const number of numbers) {
-    runningSum = runningSum + number;
-    totals.push(runningSum);
-  }
-  return totals;
-};`,
-    senior: `const runningTotals = numbers => {
-  let sum = 0;
-  // map keeps one output per input; the closure carries the running sum between calls.
-  return numbers.map(number => (sum += number));
-};`,
+    junior: "const runningTotals = numbers => {\n  return numbers.reduce((totals, number) => {\n    const previous = totals.length === 0 ? 0 : totals[totals.length - 1];\n    const next = previous + number;\n    totals.push(next);\n    return totals;\n  }, []);\n};",
+    senior: "const runningTotals = numbers => numbers.reduce((out, number) => {\n  out.push((out.length ? out[out.length - 1] : 0) + number);\n  return out;\n}, []);",
     hiddenTests: [
+      { call: "(() => { const input=Object.freeze([1.005,-1.005,0.1,0.2]);const a=runningTotals(input),b=runningTotals(input);return [a,a!==input,a!==b,runningTotals(Object.freeze([]))!==runningTotals(Object.freeze([]))]; })()", expected: [[1.005, 0, 0.1, 0.30000000000000004], true, true, true] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:10000},()=>-1000000)),out=runningTotals(input);return [out.length,out[0],out[9999],input[9999]]; })()", expected: [10000, -1000000, -10000000000, -1000000] },
+
       { call: "runningTotals([10,20,30,40,50])", expected: [10, 30, 60, 100, 150] },
       { call: "(() => { const numbers = [1,2,3]; runningTotals(numbers); return numbers; })()", expected: [1, 2, 3] },
       { call: "runningTotals([0.5,0.5,0.5])", expected: [0.5, 1, 1.5] },
@@ -604,19 +580,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-apply-all": {
     solution: "const applyAll = (value, steps) => steps.reduce((current, step) => step(current), value);",
-    junior: `const applyAll = (value, steps) => {
-  let current = value;
-  for (const step of steps) {
-    current = step(current);
-  }
-  return current;
-};`,
-    senior: `const applyAll = (value, steps) => {
-  // Fold the steps into one pipeline function first, then run it once; no steps leaves the identity.
-  const pipeline = steps.reduce((run, step) => input => step(run(input)), input => input);
-  return pipeline(value);
-};`,
+    junior: "const applyAll = (value, steps) => {\n  return steps.reduce((current, step) => {\n    const next = step(current);\n    return next;\n  }, value);\n};",
+    senior: "const applyAll = (value, steps) => steps.reduce((result, fn) => fn(result), value);",
     hiddenTests: [
+      { call: "(() => { const box=Object.freeze({}),calls=[],steps=Object.freeze([(...args)=>{calls.push(args.length,args[0]===box);return undefined;},(...args)=>{calls.push(args.length,args[0]===undefined);return false;},(...args)=>{calls.push(args.length,args[0]===false);return box;}]);return [applyAll(box,steps)===box,calls,applyAll(box,Object.freeze([]))===box]; })()", expected: [true, [1, true, 1, true, 1, true], true] },
+      { call: "(() => { const reason={},calls=[];try{applyAll(0,Object.freeze([v=>{calls.push(1);return v+1;},v=>{calls.push(2);throw reason;},v=>{calls.push(3);return v;} ]));return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, [1, 2]] },
+      { call: "applyAll(0,Object.freeze(Array.from({length:1000},()=>value=>value+1)))", expected: 1000 },
+
       { call: "applyAll(1, [n => n + 1, n => n + 1, n => n + 1, n => n + 1])", expected: 5 },
       { call: "applyAll(0, [n => n - 1])", expected: -1 },
       { call: "applyAll(\"a\", [text => text + \"b\", text => text + \"c\", text => text.length])", expected: 3 },
@@ -624,22 +594,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-swap-pairs": {
     solution: "const swapPairs = list => { const result = list.slice(); for (let index = 0; index + 1 < result.length; index += 2) { [result[index], result[index + 1]] = [result[index + 1], result[index]]; } return result; };",
-    junior: `const swapPairs = list => {
-  const copy = list.slice();
-  for (let index = 0; index < copy.length - 1; index += 2) {
-    const first = copy[index];
-    const second = copy[index + 1];
-    copy[index] = second;
-    copy[index + 1] = first;
-  }
-  return copy;
-};`,
-    senior: `const swapPairs = list => list.map((item, index, all) => {
-  // Even positions look one to the right, odd ones look one to the left; an odd tail has no partner.
-  const partner = index % 2 === 0 ? index + 1 : index - 1;
-  return partner < all.length ? all[partner] : item;
-});`,
+    junior: "const swapPairs = list => {\n  const copy = list.slice();\n  for (let index = 0; index + 1 < copy.length; index += 2) {\n    const partner = index + 1;\n    [copy[index], copy[partner]] = [copy[partner], copy[index]];\n  }\n  return copy;\n};",
+    senior: "const swapPairs = list => {\n  const out = [...list];\n  for (let i = 0; i + 1 < out.length; i += 2) [out[i], out[i + 1]] = [out[i + 1], out[i]];\n  return out;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined,NaN,-0]);const out=swapPairs(input);return [out!==input,out[0]===b,out[1]===a,Number.isNaN(out[2]),out[3]===undefined,Object.is(out[4],-0),input[0]===a,swapPairs(Object.freeze([]))!==swapPairs(Object.freeze([]))]; })()", expected: [true, true, true, true, true, true, true, true] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i)),out=swapPairs(list);return [out.length,out[0],out[1],out[9998],out[9999],out!==list]; })()", expected: [10000, 1, 0, 9999, 9998, true] },
+
       { call: "swapPairs([1,2,3,4,5,6,7,8])", expected: [2, 1, 4, 3, 6, 5, 8, 7] },
       { call: "swapPairs([true,false])", expected: [false, true] },
       { call: "(() => { const list = [\"x\",\"y\",\"z\"]; const out = swapPairs(list); return out !== list && out.join(\"\") === \"yxz\"; })()", expected: true },
@@ -647,20 +607,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-sum-labelled-pairs": {
     solution: "const totalOf = (pairs, label) => { let total = 0; for (const [name, value] of pairs) { if (name === label) total += value; } return total; };",
-    junior: `const totalOf = (pairs, label) => {
-  let total = 0;
-  for (const pair of pairs) {
-    const name = pair[0];
-    const value = pair[1];
-    if (name === label) {
-      total = total + value;
-    }
-  }
-  return total;
-};`,
-    senior: `// Destructure each pair in the reducer's parameter list; a non-matching label passes the total through.
-const totalOf = (pairs, label) => pairs.reduce((total, [name, value]) => (name === label ? total + value : total), 0);`,
+    junior: "const totalOf = (pairs, label) => {\n  let total = 0;\n  for (const [name, value] of pairs) {\n    if (name === label) {\n      total = total + value;\n    }\n  }\n  return total;\n};",
+    senior: "const totalOf = (pairs, label) => {\n  let sum = 0;\n  for (const [name, value] of pairs) if (name === label) sum += value;\n  return sum;\n};",
     hiddenTests: [
+      { call: "totalOf(Object.freeze([Object.freeze([\" x \",1.005]),Object.freeze([\"x\",99]),Object.freeze([\" x \",0.2])]),\" x \")", expected: 1.2049999999999998 },
+      { call: "(() => { const pairs=Object.freeze(Array.from({length:10000},(_,i)=>Object.freeze([i%2?\"🦈\":\"\",-1000000])));return [totalOf(pairs,\"🦈\"),totalOf(pairs,\"\")]; })()", expected: [-5000000000, -5000000000] },
+
       { call: "totalOf([[\"tea\",3],[\"coffee\",4],[\"tea\",3],[\"tea\",3]], \"tea\")", expected: 9 },
       { call: "totalOf([[\"k\",0.5],[\"k\",0.25]], \"k\")", expected: 0.75 },
       { call: "totalOf([[\"n\",1],[\"N\",100]], \"n\")", expected: 1 },

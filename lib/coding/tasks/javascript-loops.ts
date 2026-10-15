@@ -970,7 +970,7 @@ console.log(highest([3, 9, 2]));
     tier: 2,
     focus: ["reduce", "objects"],
     title: "Count by key",
-    prompt: "Write `countBy(items, keyFn)`, returning an object that maps each key `keyFn` returns to how many items produced it, built with `reduce` starting from an empty object. `countBy([\"apple\", \"avocado\", \"banana\"], word => word[0])` gives `{ a: 2, b: 1 }`. An empty array gives an empty object, and a numeric key becomes a string key as object keys always do.",
+    prompt: "Write `countBy(items, keyFn)`, returning an object that maps each key `keyFn` returns to how many items produced it, built with `reduce` starting from a safe empty dictionary. `countBy([\"apple\", \"avocado\", \"banana\"], word => word[0])` gives `{ a: 2, b: 1 }`. An empty array gives an empty object, and a numeric key becomes a string key under the string-key policy used here. items is a read-only dense array of at most 10000 opaque values and may be frozen. keyFn is synchronous, does not mutate items, and returns a string of at most 1000 characters or a finite Number between -1000000 and 1000000. Call it exactly once per original item in order, with that item as its only argument. Normalize returned keys with String before counting, so numeric 1 and string \"1\" share a bucket; any string, including empty, __proto__ and constructor, is valid. Return a fresh dictionary whose own enumerable keys hold the counts; its prototype is not part of the answer. Preserve inputs and propagate the original callback error without further calls. Use reduce as requested, with a safe empty dictionary. Target: O(n) time for bookkeeping under expected bounded-key access, where n is 1 + items.length, excluding callback work.",
     starter: `const countBy = (items, keyFn) => {
 
 };
@@ -1007,7 +1007,7 @@ console.log(countBy(["apple", "avocado", "banana"], word => word[0]));
     tier: 2,
     focus: ["reduce"],
     title: "Running totals",
-    prompt: "Write `runningTotals(numbers)`, returning a new array where each position holds the sum of every number up to and including that position, built with `reduce` whose accumulator is the output array. `runningTotals([1, 2, 3, 4])` gives `[1, 3, 6, 10]`. An empty array gives an empty array, and the input is not changed.",
+    prompt: "Write `runningTotals(numbers)`, returning a new array where each position holds the sum of every number up to and including that position, built with `reduce` whose accumulator is the output array. `runningTotals([1, 2, 3, 4])` gives `[1, 3, 6, 10]`. An empty array gives an empty array, and the input is not changed. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Begin from 0 and add in original order using normal Number arithmetic without rounding. Return fresh output arrays, including empty arrays, and leave the input unchanged. Use reduce with the output array as its accumulator as requested. Target: O(n) time and output space, where n is 1 + numbers.length, under amortized append; do not repeatedly copy the growing accumulator.",
     starter: `const runningTotals = numbers => {
 
 };
@@ -1044,7 +1044,7 @@ console.log(runningTotals([1, 2, 3, 4]));
     tier: 2,
     focus: ["reduce", "higher-order"],
     title: "Reduce as a pipeline",
-    prompt: "Write `applyAll(value, steps)`, running the value through each function in `steps` from left to right and returning the final result, with `reduce` over the functions and the value as the initial accumulator. `applyAll(3, [n => n + 1, n => n * 2])` gives 8. An empty `steps` array returns the value unchanged, and a step may return a different type from the one it received.",
+    prompt: "Write `applyAll(value, steps)`, running the value through each function in `steps` from left to right and returning the final result, with `reduce` over the functions and the value as the initial accumulator. `applyAll(3, [n => n + 1, n => n * 2])` gives 8. An empty `steps` array returns the value unchanged, and a step may return a different type from the one it received. steps is a read-only dense array of at most 1000 synchronous functions and may be frozen. The initial and intermediate values are opaque; preserve exact references and values, including objects, undefined and falsy values, without cloning or coercion. Invoke each step once in array order, as a plain function with only the previous result as its argument. Propagate the original thrown value immediately and make no later calls. Use reduce with the current value as its accumulator, not a nested chain of deferred functions. Target: O(n) time for pipeline overhead, where n is 1 + steps.length, excluding work inside callbacks.",
     starter: `const applyAll = (value, steps) => {
 
 };
@@ -1080,7 +1080,7 @@ console.log(applyAll(3, [n => n + 1, n => n * 2]));
     tier: 2,
     focus: ["destructuring", "for"],
     title: "Swap pairs",
-    prompt: "Write `swapPairs(list)`, returning a new array in which every two neighbours have traded places, swapped with array destructuring inside a `for` loop that steps by two over a copy of the list. `swapPairs([1, 2, 3, 4])` gives `[2, 1, 4, 3]`. With an odd length the last item stays where it is, an empty array gives an empty array, and the input is never changed.",
+    prompt: "Write `swapPairs(list)`, returning a new array in which every two neighbours have traded places, swapped with array destructuring inside a `for` loop that steps by two over a copy of the list. `swapPairs([1, 2, 3, 4])` gives `[2, 1, 4, 3]`. With an odd length the last item stays where it is, an empty array gives an empty array, and the input is never changed. list is a read-only dense array with at most 10000 opaque values and may be frozen. Make a fresh shallow array on every call, including empty and single-item inputs; preserve original references and values, including objects, undefined, NaN and signed zero. Do not inspect or clone elements. Use the requested for loop stepping by two over a copy, with an array-destructuring swap. Target: O(n) time and output space, where n is 1 + list.length.",
     starter: `const swapPairs = list => {
 
 };
@@ -1123,7 +1123,7 @@ console.log(swapPairs([1, 2, 3, 4]));
     tier: 1,
     focus: ["for-of", "destructuring"],
     title: "Sum labelled pairs",
-    prompt: "Write `totalOf(pairs, label)`, where `pairs` is an array of `[label, value]` pairs, returning the total of the values whose label matches, destructured straight in the head of a `for…of` loop. `totalOf([[\"food\", 12], [\"rent\", 500], [\"food\", 8]], \"food\")` gives 20. No matching label, or an empty array, gives 0.",
+    prompt: "Write `totalOf(pairs, label)`, where `pairs` is an array of `[label, value]` pairs, returning the total of the values whose label matches, destructured straight in the head of a `for…of` loop. `totalOf([[\"food\", 12], [\"rent\", 500], [\"food\", 8]], \"food\")` gives 20. No matching label, or an empty array, gives 0. pairs is a read-only dense array of at most 10000 ordinary two-element arrays; each contains a string label of at most 1000 characters and a finite Number from -1000000 to 1000000. The requested label has the same string domain. Compare labels with ===, preserving whitespace, case and Unicode exactly. Add matching values from 0 in input order with normal Number arithmetic, without rounding or modifying any array; inputs and pairs may be frozen. Use for-of with [name, value] destructuring in the loop head as requested. Target: O(n) time, where n is 1 + pairs.length under the stated bounded-label comparison model.",
     starter: `const totalOf = (pairs, label) => {
 
 };
