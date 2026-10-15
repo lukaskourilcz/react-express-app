@@ -423,7 +423,7 @@ const makeChange = cents => {
     tier: 2,
     focus: ['while', 'two-pointer'],
     title: 'First broken build',
-    prompt: 'Builds are numbered 1 to `n`. One of them broke the app, and every build after it is broken too. Write `firstBroken(n, isBroken)`, returning the number of the first broken build, or `null` when every build works. `isBroken(build)` checks one build, and each check is slow, so ask as few times as you can, the way `git bisect` does. Keep `low` and `high` ends of the range that can still hold the answer, check the middle build `while` the range is not empty, and move one end past it. For 1,000 builds that takes about ten checks. Target: O(log n) checks and O(1) space.',
+    prompt: "Builds are numbered 1 to `n`. A build may have broken the app; if so, every build after it is broken too. Write `firstBroken(n, isBroken)`, returning the number of the first broken build, or `null` when every build works. `isBroken(build)` checks one build, and each check is slow, so ask as few times as you can, the way `git bisect` does. Keep `low` and `high` ends of the range that can still hold the answer, check the middle build `while` the range is not empty, and move one end past it. For 1,000 builds that takes about ten checks. Target: O(log n) checks and O(1) space. n is an integer Number from 0 through Number.MAX_SAFE_INTEGER. With n=0 return null without calling isBroken. Otherwise isBroken is a synchronous monotone Boolean predicate and may be called only with one integer argument in 1..n, as a plain function without a receiver; propagate any error it throws. Use at most ceil(log2(n + 1)) + 1 checks for n>0; callback work itself is excluded from the target. n is the number of builds. Avoid 32-bit shifts and low + high when finding a midpoint: low + Math.floor((high - low) / 2) stays within the safe range.",
     starter: `const firstBroken = (n, isBroken) => {
 
 };
@@ -442,7 +442,7 @@ console.log(firstBroken(10, build => build >= 7));
   }
   return found;
 };`,
-    hints: ['`Math.floor((low + high) / 2)` is always a real build number. When the middle build is broken it might be the first one, so remember it before you move `high` to `mid - 1`.'],
+    hints: ['`low + Math.floor((high - low) / 2)` is always a real build number. When the middle build is broken it might be the first one, so remember it before you move `high` to `mid - 1`.'],
     approach: [
       'Start with `low = 1`, `high = n` and no answer yet.',
       'While `low <= high`, check the middle build. If it is broken, record it and set `high = mid - 1`; otherwise set `low = mid + 1`.',

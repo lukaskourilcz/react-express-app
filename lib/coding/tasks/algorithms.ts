@@ -563,7 +563,7 @@ console.log(missingNumber([3, 0, 1]));
     tier: 3,
     focus: ['two-pointer', 'map-set', 'strings'],
     title: 'Longest substring without repeating characters',
-    prompt: 'Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring("abcabcbb")` gives 3, for `"abc"`; `lengthOfLongestSubstring("bbbbb")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position — but never backwards, which is what `"abba"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters.',
+    prompt: "Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring(\"abcabcbb\")` gives 3, for `\"abc\"`; `lengthOfLongestSubstring(\"bbbbb\")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position \u2014 but never backwards, which is what `\"abba\"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters. A character means one value from the JavaScript string iterator (for...of): a Unicode code point, including a lone surrogate as one value. Count length in those iterator values, not UTF-16 units or displayed grapheme clusters. Do not normalize or fold case; combining marks and spaces count separately. Input has at most 4000 UTF-16 units; n is the number of iterator values and k the number of distinct values. For example, lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\") is 2. An equivalent moving Set window is also valid, and each edge advances only forward.",
     starter: `const lengthOfLongestSubstring = text => {
 
 };
@@ -571,17 +571,7 @@ console.log(missingNumber([3, 0, 1]));
 // Scratch pad — change this and press Run.
 console.log(lengthOfLongestSubstring("abcabcbb"));
 `,
-    skeleton: `const lengthOfLongestSubstring = text => {
-  const lastSeen = new Map(); // character -> the index it last sat at
-  let start = 0;
-  let longest = 0;
-
-  for (let end = 0; end < text.length; end += 1) {
-    // move start past a repeat, then measure the window
-  }
-
-  return longest;
-};`,
+    skeleton: "const lengthOfLongestSubstring = text => {\n  const lastSeen = new Map(); // iterator character -> last position\n  let start = 0, end = 0, longest = 0;\n  for (const character of text) {\n    // move start past a repeat, then measure the window\n    end += 1;\n  }\n  return longest;\n};",
     hints: ['In "abba", by the time the second "a" arrives the window has already moved past the first one. Only move the start forward — take the larger of where it is and just past the repeat.'],
     approach: [
       'Keep a Map from each character to the index it was last seen at, and an index where the current window starts.',
@@ -592,6 +582,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\")", "expected": 2, "label": "count iterator characters, not UTF-16 units", "edge": true},
       { call: 'lengthOfLongestSubstring("abcabcbb")', expected: 3 },
       { call: 'lengthOfLongestSubstring("bbbbb")', expected: 1 },
       { call: 'lengthOfLongestSubstring("")', expected: 0, label: 'empty input', edge: true },
@@ -613,7 +604,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     tier: 2,
     focus: ['two-pointer', 'for'],
     title: 'Max sum subarray of size K',
-    prompt: 'Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n · k).',
+    prompt: "Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n \u00b7 k). Input is a dense array of at most 2000 integer Numbers in [-1000000,1000000], possibly frozen, and must stay unchanged. These bounds make every window and sliding update exact; fractional values and nonfinite values are outside this task. k may be any value, but only a positive primitive Number integer not greater than numbers.length is usable; otherwise return null without coercion or reading array elements. n is numbers.length. Correctness does not require one particular loop syntax.",
     starter: `const maxSumSubarray = (numbers, k) => {
 
 };

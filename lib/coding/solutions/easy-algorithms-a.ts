@@ -259,7 +259,7 @@ const makeChange = (cents) => {
   let found = null;
   // Every build in low..high is still a candidate; each check halves the range.
   while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
+    const mid = low + Math.floor((high - low) / 2);
     if (isBroken(mid)) {
       found = mid; // it could be the first, so keep looking to its left
       high = mid - 1;
@@ -273,7 +273,7 @@ const makeChange = (cents) => {
   let low = 1;
   let high = n;
   while (low < high) {
-    const mid = Math.floor((low + high) / 2);
+    const mid = low + Math.floor((high - low) / 2);
     if (isBroken(mid)) {
       high = mid;
     } else {
@@ -288,13 +288,17 @@ const makeChange = (cents) => {
     senior: `const firstBroken = (n, isBroken) => {
   let [low, high] = [1, n + 1];
   while (low < high) {
-    const mid = low + ((high - low) >> 1);
+    const mid = low + Math.floor((high - low) / 2);
     if (isBroken(mid)) high = mid;
     else low = mid + 1;
   }
   return low <= n ? low : null;
 };`,
     hiddenTests: [
+      { call: "(() => {const n=Number.MAX_SAFE_INTEGER,thresholds=[1,4503599627370497,n,null];for(const threshold of thresholds){let checks=0;const result=firstBroken(n,function(build){checks++;if(arguments.length!==1||this!==undefined||!Number.isSafeInteger(build)||build<1||build>n)throw Error(\"invalid query\");return threshold!==null&&build>=threshold;});if(result!==threshold||checks>54)return false;}let checks=0;const none=firstBroken(0,()=>{checks++;throw Error(\"empty query\");});return none===null&&checks===0;})()", expected: true },
+      { call: "(() => {for(let n=1;n<=64;n++){for(let first=1;first<=n+1;first++){let checks=0;const result=firstBroken(n,function(build){checks++;if(this!==undefined||arguments.length!==1||!Number.isInteger(build)||build<1||build>n)throw Error(\"invalid query\");return build>=first;});if(result!==(first<=n?first:null)||checks>Math.ceil(Math.log2(n+1))+1)return false;}}return true;})()", expected: true },
+      { call: "(() => {const error=Object.freeze({reason:\"predicate\"});let caught;try{firstBroken(10,()=>{throw error;});}catch(value){caught=value;}return [caught===error,(() => {let checks=0;return firstBroken(4294967296,build=>{if(++checks>34||!Number.isSafeInteger(build)||build<1||build>4294967296)throw Error(\"invalid query\");return build>=4294967295;});})(),firstBroken(100,()=>false)];})()", expected: [true, 4294967295, null] },
+
       { call: '(() => { let checks = 0; const first = firstBroken(1000000, build => { checks += 1; return build >= 999999; }); return [first, checks <= 21]; })()', expected: [999999, true] },
       { call: '(() => { let checks = 0; const first = firstBroken(64, () => { checks += 1; return false; }); return [first, checks <= 7]; })()', expected: [null, true] },
       { call: 'firstBroken(2, build => build >= 2)', expected: 2 },

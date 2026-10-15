@@ -40,6 +40,9 @@ ALLOW = {
     # only hex characters. Read in this exact task, they are data, not revisions.
     ('js-run-length-encode', 'question', 'aaabccdddd'),
     ('js-run-length-encode', 'question', '3a1b2c4d'),
+    # The substring task's original example repeats abc; it is literal input
+    # in the brief and scratch pad, not a hexadecimal Git revision.
+    ('alg-longest-unique-substring', 'question', 'abcabcbb'),
     # OWASP ranks password hashing functions; "first choice" is its ranking,
     # not this item's option order.
     ('rm-security-25', 'explanation', 'the first choice'),

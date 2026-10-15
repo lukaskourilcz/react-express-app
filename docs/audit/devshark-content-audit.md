@@ -1,8 +1,8 @@
 # devShark content audit — the question bank
 
-## Current individual source checkpoint — B071, 15 October 2026
+## Current individual source checkpoint — B072, 15 October 2026
 
-385/725 coding reviews match current hashes;340 remain. B071 passes30/30 selected verdicts,20 no-false-penalty checks, canonical/native contracts, full grading/Learn integrity, release gates and80 responsive probes. Exact-production #425 has370coding/263native reviews. Ten later reviews and #426 are frozen in #427; five further B071 reviews are separate. Same-session model self-review/finite execution only.
+390/725 coding reviews match current hashes;335 remain. B071–B072 pass60/60 selected verdicts,40 no-false-penalty checks, canonical/native contracts, full grading/Learn integrity, release gates and160 responsive probes. Exact-production #425 has370coding/263native reviews. Ten later reviews and #426 are frozen in #427; ten further B071–B072 source reviews are separate. Same-session model self-review/finite execution only.
 
 ## Current release checkpoint — 15 October 2026, PR #425
 
@@ -3083,3 +3083,13 @@ All30 selected final-hash worker verdicts agree (20valid, five starters, five wr
 All385 coding review hashes match;340 remain. Native263/263. Canonical/native Run/reversed-hidden/applicable fixture checks, API/script types, full grading/Learn integrity, launch/build, registry/index, both production dependency audits (zero vulnerabilities), copy sweep (zero findings), diff and80 fixture-backed light/dark probes at320–1440px pass with zero issues/unprobed. Twelve physical handlers; archived Czech untouched. No sandbox-engine/dependency, schema/RLS, UI, real-account or entitlement/reward-policy change. This is same-session model self-review and finite execution, without independent/human, dedicated Premium, physical-device or whole-catalogue acceptance.
 
 Exact-production PR#425 has370 coding/263 native reviews and separate acceptance above. Ten later B069–B070 reviews plus #426 are frozen in #427 at847d6ff1; exact preview passes eleven general/nine changed-task/two range regression-control guest checks, with seven changed tasks returning402. Guarded release acceptance is still pending. This B071 adds five source reviews separately. #422 and all owner holds, including draft#365, remain open/preserved.
+
+## 15 October continuation — five coding items B072
+
+Individually reviewed unique three-sum triples, longest distinct-character windows, fixed-window sums, prefix-frequency stretch counts and first broken builds. Define bounded exact integers and ownership. All substring boards now stream JavaScript iterator values, including lone surrogates, with O(k) auxiliary storage; a visible Unicode example and the skeleton use the same units. Rewrite the quadratic junior window sum and eliminate the senior temporary slice. Use low+floor((high-low)/2) in every binary-search board and the hint, with explicit valid-query/empty/error rules through MAX_SAFE_INTEGER. Keep correct three-sum/prefix-frequency boards and clarify output-space exclusion.
+
+All30 selected final-hash worker verdicts agree (20valid, five starters, five wrongs), versus25/30 baseline. Fifteen new hidden/one visible assertions preserve old cases. Independent finite oracles cover781 short three-sum lists,1365 Unicode sequences,2005 window/size combinations,1820 prefix/target combinations and2144 monotone size/threshold combinations. The original32-bit search negative initially hit timeout in an unguarded large callback; applying the already-promised query-range/budget guard makes rejection prompt, then all six candidates reran at that final task hash. Twenty authored-target/base25 checks pass; uncertain estimates stay hidden/unpenalized. No TypeScript cases apply.
+
+All390 coding hashes match;335 remain. Native263/263. Canonical/native Run/reversed-hidden/applicable fixtures, API/script types, full final B071–B072 grading/Learn integrity, launch/build, registry/index, both production dependency audits (zero vulnerabilities), diff and80 fixture-backed light/dark probes at320–1440px pass with zero issues/unprobed. Copy sweep initially matched the original literal abcabcbb twice; the existing exact item/field/literal allowlist now documents that input, with zero outstanding findings and no broader suppression. Twelve physical handlers; archived Czech untouched. No sandbox-engine/dependency, schema/RLS, UI, real-account or entitlement/reward-policy change.
+
+Verified production remains #425 at370coding/263native; #427 separately freezes ten later B069–B070 reviews and the #426 correction. B071–B072 add another ten source reviews. Same-session model self-review/finite execution only, without independent/human, dedicated Premium, physical-device or whole-catalogue acceptance. #422 and owner holds, including draft#365, remain preserved.
