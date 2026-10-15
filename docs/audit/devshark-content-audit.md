@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n011
+
+Reviewed both tree lessons, the first linked reading and questions three/four.
+The reading is retained. Lessons now state the finite-tree/unit-cost model,
+correct the search direction for 10 at root 8, count cached-value comparisons,
+and distinguish edge-height h+1, output, call stack and retained queue storage.
+Nondecreasing inorder alone cannot validate strict-left duplicates; the lesson
+now gives the root-5/left-5 counterexample. The questions specify a perfect
+versus plain ascending-built tree and a traversal guarantee over all valid shapes.
+
+Actual authored examples confirm all four traversal outputs, seven queue
+frontiers, seven inorder frames, the two search paths and exact worst-case
+10/1023 visited nodes. These are deterministic example checks, not heap or
+physical timing measurements. All five records have individual manual quality,
+relevance and final model readings. Native bindings, path contracts, API/script
+types, launch, build, both production dependency audits (zero vulnerabilities),
+copy sweep and diff checks pass. No UI structure changed; authenticated activity
+acceptance and independent/human approval are not claimed.
+
+Coverage is **110/263 native**, **153 remaining**, and **95/725 coding**,
+**630 remaining**. N008–n011 are local; PR #395 remains frozen at 61900610
+while its required verification runs. Ninety coding/seventy native records
+are shipped through PR #394.
+
 ## 15 October continuation — five-item goal revision n010
 
 Revisited exactly five already reviewed native coding activities: recursive

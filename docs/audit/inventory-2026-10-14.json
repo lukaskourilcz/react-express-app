@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 35,
-    "recordsStillRequiringReview": 158,
+    "currentStagedModelReviewRecords": 40,
+    "recordsStillRequiringReview": 153,
     "reviewEvidence": "Seventy native records shipped through PR #394: D01–D05 plus n001–n002. Exact main 158cf64a is READY with public health/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
     "deployedModelReviewRecords": 70,
-    "currentModelReviewRecords": 105,
-    "stagedReviewEvidence": "Through n009: 105 unique individual native reviews. N010 revises five existing records for applicable authored complexity goals, with prior full evidence preserved; it adds no unique coverage. Release/authenticated acceptance remain separate."
+    "currentModelReviewRecords": 110,
+    "stagedReviewEvidence": "15 October through n011: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
