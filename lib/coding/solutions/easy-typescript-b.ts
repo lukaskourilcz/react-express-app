@@ -312,34 +312,15 @@ const replaceById = <T extends { id: number }>(items: readonly T[], edited: T): 
     ],
   },
   'ts-easy3-every-nth': {
-    solution: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
-  const picked: T[] = [];
-  // Below 1, i += n would never move forward.
-  if (n < 1) return picked;
-  // Position n, counting from 1, is index n - 1; each step jumps n places.
-  for (let i = n - 1; i < items.length; i += n) {
-    picked.push(items[i]);
-  }
-  return picked;
-};`,
-    junior: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
-  const picked: T[] = [];
-  if (n < 1) {
-    return picked;
-  }
-  let count = 0;
-  for (let i = 0; i < items.length; i++) {
-    count = count + 1;
-    if (count === n) {
-      picked.push(items[i]);
-      count = 0;
-    }
-  }
-  return picked;
-};`,
-    senior: `const everyNth = <T>(items: readonly T[], n: number): T[] =>
-  n < 1 ? [] : items.filter((_, index) => (index + 1) % n === 0);`,
+    solution: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const picked: T[] = [];\n  // Below 1, i += step would never move forward.\n  if (step < 1) return picked;\n  // Position step, counting from 1, is index step - 1; each step jumps step places.\n  for (let i = step - 1; i < items.length; i += step) {\n    picked.push(items[i]);\n  }\n  return picked;\n};",
+    junior: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const result: T[] = [];\n  if (step < 1) return result;\n  for (let index = step - 1; index < items.length; index += step) {\n    result.push(items[index]);\n  }\n  return result;\n};",
+    senior: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const result: T[] = [];\n  if (step < 1) return result;\n  for (let index = step - 1; index < items.length; index += step) result.push(items[index]);\n  return result;\n};",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly (null | undefined)[] = [null,undefined]; const __auditOut: (null | undefined)[] = everyNth(__auditInput,1);"}],
     hiddenTests: [
+      { call: "(()=>{const object=Object.freeze({}),fn=()=>{throw Error('called');},symbol=Symbol('x'),input=Object.freeze([0,object,null,fn,undefined,symbol]),out=everyNth(input,2);out.push('later');return [out[0]===object,out[1]===fn,out[2]===symbol,out.length,input.length,everyNth(input,1)!==input];})()", expected: [true, true, true, 4, 6, true] },
+      { call: "(()=>{const input=Object.freeze([undefined,null]),a=everyNth(input,1),b=everyNth(input,1);return [a!==b,a.length,a[0]===undefined,a[1]===null,everyNth(input,-1000000000),everyNth(input,1000000000),everyNth([],0)!==everyNth([],0)];})()", expected: [true, 2, true, true, [], [], true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=everyNth(input,333);return [out,input.length,input[0]];})()", expected: [[332, 665, 998], 1000, 0] },
+
       { call: 'everyNth([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 2)', expected: [1, 3, 5, 7, 9] },
       { call: 'everyNth(["a", "b", "c"], 3)', expected: ['c'] },
       { call: 'everyNth([1, 2, 3], -2)', expected: [] },
@@ -538,7 +519,13 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
 };`,
     senior: `const ranked = (scores: Readonly<Record<string, number>>): [string, number][] =>
   Object.entries(scores).sort(([, a], [, b]) => b - a);`,
+    hiddenTypeTests: [{"code": "const __auditBad: [number,string][] = ranked({a:1});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const scores=Object.assign(Object.create({inherited:999}),{b:2,a:2});Object.defineProperty(scores,'hidden',{value:1000,enumerable:false});scores[Symbol('meta')]=1001;Object.freeze(scores);return ranked(scores);})()", expected: [["b", 2], ["a", 2]] },
+      { call: "(()=>{const scores=Object.create(null);scores.z=5;scores['10']=5;scores['2']=5;scores.__proto__=5;return ranked(Object.freeze(scores)).map(([name])=>name);})()", expected: ["2", "10", "z", "__proto__"] },
+      { call: "(()=>{const input=Object.freeze({a:-0,b:0}),a=ranked(input),b=ranked(input);a[0][1]=99;a.push(['later',1]);return [a!==b,a[0]!==b[0],a[0]!==a[1],b.length,Object.is(b[0][1],-0),Object.is(input.a,-0),ranked({})!==ranked({})];})()", expected: [true, true, true, 2, true, true, true] },
+      { call: "(()=>{const scores=Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i%2]));Object.freeze(scores);const out=ranked(scores);return [out.length,out[0][0],out[499][0],out[500][0],out[999][0],scores.p0];})()", expected: [1000, "p1", "p999", "p0", "p998", 0] },
+
       { call: 'ranked({ a: 10, b: 9, c: 100, d: 2 }).map(([name]) => name)', expected: ['c', 'a', 'b', 'd'] },
       { call: 'ranked({ x: -1, y: 1 })', expected: [['y', 1], ['x', -1]] },
       { call: '(() => { const scores = { a: 1, b: 2 }; ranked(scores); return Object.keys(scores); })()', expected: ['a', 'b'] },

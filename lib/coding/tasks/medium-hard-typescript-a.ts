@@ -27,7 +27,7 @@ export const MEDIUM_HARD_TYPESCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['unions', 'narrowing', 'reduce', 'readonly'],
     title: 'Apply the discounts',
-    prompt: 'A checkout holds its lines and a list of discounts. Each discount is one member of the union `Discount`, told apart by its `kind`. `"percent"` takes that percentage off the running total, rounded to the nearest cent with `Math.round`. `"fixed"` takes a number of cents off. `"two-for-one"` makes every second item of one `sku` free, line by line, so a line of 3 teas pays for 2. Write `totalCents(lines: readonly Line[], discounts: readonly Discount[]): number`. Add up the lines with `reduce`, then apply the discounts in the order they are listed with a second `reduce`, using a `switch` on `kind` to work out each saving. The total never goes below 0: a discount that would take it lower stops at 0. End the `switch` with a `default` branch that assigns the discount to a variable of type `never`, so the compiler complains the day someone adds a kind without a branch for it.',
+    prompt: "A checkout holds its lines and a list of discounts. Each discount is one member of the union `Discount`, told apart by its `kind`. `\"percent\"` takes that percentage off the running total, rounded to the nearest cent with `Math.round`. `\"fixed\"` takes a number of cents off. `\"two-for-one\"` makes every second item of one `sku` free, line by line, so a line of 3 teas pays for 2. Write `totalCents(lines: readonly Line[], discounts: readonly Discount[]): number`. Add up the lines with `reduce`, then apply the discounts in the order they are listed with a second `reduce`, using a `switch` on `kind` to work out each saving. The total never goes below 0: a discount that would take it lower stops at 0. End the `switch` with a `default` branch that assigns the discount to a variable of type `never`, so the compiler complains the day someone adds a kind without a branch for it. Domain: dense stable arrays of at most 1000 lines and 1000 discounts, possibly frozen, with no accessors/proxies. Each priceCents is an integer from 0 through 1000000, quantity an integer from 0 through 1000, percent an integer from 0 through 100, and fixed cents an integer from 0 through 1000000000000. SKU strings have at most 200 UTF-16 units and match exactly, including empty text, case and spaces. Leave inputs unchanged. Percent discounts round the saving before subtraction: half off one cent leaves zero. Each two-for-one entry independently computes its saving from the original line quantities, even when repeated; duplicate SKU lines are not pooled. Target: O(n^2) time and O(n) temporary space for scanning lines per discount, where n is 1 + line count + discount count under bounded integer arithmetic. More precisely the work is O(l + d + t*l) for l lines, d discounts and t two-for-one entries. Precomputed SKU savings are a valid faster alternative.",
     starter: `interface Line {
   sku: string;
   priceCents: number;
@@ -623,7 +623,7 @@ console.log(importRows("name\\tprice\\nTea\\t3.5\\nCake\\t12", { name: String, p
     tier: 4,
     focus: ['unions', 'narrowing', 'sort', 'readonly'],
     title: 'Apply edits to a file',
-    prompt: 'A formatter or a linter’s quick fix does not hand back a new file. It hands back a list of edits, each one replacing the text from `start` up to, but not including, `end` with `insert`, and every offset refers to the original text. An insertion has `start === end`, and a deletion has an empty `insert`. Write `applyEdits(text: string, edits: readonly Edit[]): EditResult`. First check each edit in list order: it needs `0 <= start <= end <= text.length`, and the first one that fails gives `{ ok: false, reason: "out-of-range", edit: index }`. Two edits conflict when one starts before the other ends, or when they start at the same offset, because then their order would be a guess. Sort a copy of the edits by `start`, remembering each one’s index in the list you were given: `edits` is readonly, and the caller’s order must survive. Walk the sorted copy, and the first time an edit starts before the previous one ends, or at the same offset, return `{ ok: false, reason: "overlap", edits: [previous index, this index] }`. Otherwise build the new text in one pass: the original text up to each edit’s start, then its `insert`, then carry on from its `end`. `EditResult` is a union told apart by `ok` and then by `reason`, so a caller can read `text` only after checking `ok`, and `edits` only after checking the reason.',
+    prompt: "A formatter or a linter\u2019s quick fix does not hand back a new file. It hands back a list of edits, each one replacing the text from `start` up to, but not including, `end` with `insert`, and every offset refers to the original text. An insertion has `start === end`, and a deletion has an empty `insert`. Write `applyEdits(text: string, edits: readonly Edit[]): EditResult`. First check each edit in list order: it needs `0 <= start <= end <= text.length`, and the first one that fails gives `{ ok: false, reason: \"out-of-range\", edit: index }`. Two edits conflict when one starts before the other ends, or when they start at the same offset, because then their order would be a guess. Sort a copy of the edits by `start`, remembering each one\u2019s index in the list you were given: `edits` is readonly, and the caller\u2019s order must survive. Walk the sorted copy, and the first time an edit starts before the previous one ends, or at the same offset, return `{ ok: false, reason: \"overlap\", edits: [previous index, this index] }`. Otherwise build the new text in one pass: the original text up to each edit\u2019s start, then its `insert`, then carry on from its `end`. `EditResult` is a union told apart by `ok` and then by `reason`, so a caller can read `text` only after checking `ok`, and `edits` only after checking the reason. Domain: text has at most 10000 UTF-16 units and edits is a dense readonly array of at most 1000 stable data records, possibly frozen. Each insert has at most 1000 UTF-16 units; no accessors/proxies are involved. Offsets count UTF-16 code units, with no normalization. A fractional, NaN or infinite offset is out-of-range too: both offsets must be integers. Validate all ranges in original list order before checking overlaps; keep the stated first-error and stable equal-start index rules. Leave edit order and every record unchanged on success or failure. Target: O(n log n) time and O(n) storage for sorting a copy and joining output chunks, where n is 1 + edit count + text length + total inserted text length. More precisely the work is O(e log e + L + I) for e edits, L original UTF-16 units and I inserted units, under the comparison-sort model; repeated copying of a growing result is avoidable.",
     starter: `interface Edit {
   start: number;
   end: number;
@@ -651,12 +651,13 @@ console.log(applyEdits("let x = 1;", [{ start: 4, end: 5, insert: "count" }]));
 
   // 2. walk sorted: an edit that starts before the previous end, or at the same start
 
-  let result = "";
+  const parts: string[] = [];
   let from = 0;
   for (const edit of sorted) {
     // the text from \`from\` to edit.start, then edit.insert; carry on from edit.end
   }
-  return { ok: true, text: result + text.slice(from) };
+  parts.push(text.slice(from));
+  return { ok: true, text: parts.join("") };
 };`,
     hints: [
       '`[...edits].sort(...)` or `edits.map(...).sort(...)` sorts a new array; `edits.sort(...)` would reorder the caller’s list, and the `readonly` type refuses it. `sort` is stable, so edits with the same start keep their list order.',
@@ -666,7 +667,7 @@ console.log(applyEdits("let x = 1;", [{ start: 4, end: 5, insert: "count" }]));
       'Find the first edit, in list order, whose `start` and `end` are not both inside the text with `start <= end`, and return it as `out-of-range`.',
       'Pair each edit with its index, and sort that copy by `start`.',
       'Walk the sorted copy. When an edit’s start is before the previous edit’s end, or equal to the previous start, return both indexes as `overlap`.',
-      'Build the text: for each sorted edit, append the original text since the last edit’s end, then the insert, and at the end append the rest of the original.',
+      'Collect text chunks: for each sorted edit, push the original text since the last edit’s end and the insert; push the remaining original text and join once at the end.',
     ],
     verify: 'tests',
     estimatedMinutes: 35,

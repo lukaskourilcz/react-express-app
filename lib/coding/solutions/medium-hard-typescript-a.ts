@@ -50,83 +50,14 @@ const totalCents = (lines: readonly Line[], discounts: readonly Discount[]): num
   // In the order listed, and never below 0 after any one of them.
   return discounts.reduce((total, discount) => Math.max(0, total - saving(total, discount, lines)), subtotal);
 };`,
-    junior: `interface Line {
-  sku: string;
-  priceCents: number;
-  quantity: number;
-}
-
-type Discount =
-  | { kind: "percent"; percent: number }
-  | { kind: "fixed"; cents: number }
-  | { kind: "two-for-one"; sku: string };
-
-const totalCents = (lines: readonly Line[], discounts: readonly Discount[]): number => {
-  let total = 0;
-  for (const line of lines) {
-    total = total + line.priceCents * line.quantity;
-  }
-
-  for (const discount of discounts) {
-    let saving = 0;
-    if (discount.kind === "percent") {
-      saving = Math.round((total * discount.percent) / 100);
-    } else if (discount.kind === "fixed") {
-      saving = discount.cents;
-    } else if (discount.kind === "two-for-one") {
-      for (const line of lines) {
-        if (line.sku === discount.sku) {
-          const freeItems = Math.floor(line.quantity / 2);
-          saving = saving + freeItems * line.priceCents;
-        }
-      }
-    } else {
-      const unhandled: never = discount;
-      return unhandled;
-    }
-    total = total - saving;
-    if (total < 0) {
-      total = 0;
-    }
-  }
-  return total;
-};`,
-    senior: `interface Line {
-  sku: string;
-  priceCents: number;
-  quantity: number;
-}
-
-type Discount =
-  | { kind: "percent"; percent: number }
-  | { kind: "fixed"; cents: number }
-  | { kind: "two-for-one"; sku: string };
-
-const assertNever = (value: never): never => {
-  throw new Error(\`Unhandled discount: \${JSON.stringify(value)}\`);
-};
-
-const freeItemsCents = (lines: readonly Line[], sku: string): number =>
-  lines.reduce(
-    (sum, line) => (line.sku === sku ? sum + Math.floor(line.quantity / 2) * line.priceCents : sum),
-    0,
-  );
-
-const saving = (total: number, discount: Discount, lines: readonly Line[]): number => {
-  switch (discount.kind) {
-    case "percent": return Math.round((total * discount.percent) / 100);
-    case "fixed": return discount.cents;
-    case "two-for-one": return freeItemsCents(lines, discount.sku);
-    default: return assertNever(discount);
-  }
-};
-
-const totalCents = (lines: readonly Line[], discounts: readonly Discount[]): number =>
-  discounts.reduce(
-    (total, discount) => Math.max(0, total - saving(total, discount, lines)),
-    lines.reduce((sum, { priceCents, quantity }) => sum + priceCents * quantity, 0),
-  );`,
+    junior: "interface Line {\n  sku: string;\n  priceCents: number;\n  quantity: number;\n}\n\ntype Discount =\n  | { kind: \"percent\"; percent: number }\n  | { kind: \"fixed\"; cents: number }\n  | { kind: \"two-for-one\"; sku: string };\n\nconst totalCents = (lines: readonly Line[], discounts: readonly Discount[]): number => {\n  const subtotal = lines.reduce((total, line) => total + line.priceCents * line.quantity, 0);\n  return discounts.reduce((total, discount) => {\n    let amount: number;\n    switch (discount.kind) {\n      case \"percent\":\n        amount = Math.round(total * discount.percent / 100);\n        break;\n      case \"fixed\":\n        amount = discount.cents;\n        break;\n      case \"two-for-one\":\n        amount = lines.reduce((sum, line) => line.sku === discount.sku\n          ? sum + Math.floor(line.quantity / 2) * line.priceCents : sum, 0);\n        break;\n      default: {\n        const unhandled: never = discount;\n        return unhandled;\n      }\n    }\n    return Math.max(0, total - amount);\n  }, subtotal);\n};",
+    senior: "interface Line {\n  sku: string;\n  priceCents: number;\n  quantity: number;\n}\n\ntype Discount =\n  | { kind: \"percent\"; percent: number }\n  | { kind: \"fixed\"; cents: number }\n  | { kind: \"two-for-one\"; sku: string };\n\nconst assertNever = (value: never): never => {\n  throw new Error(`Unhandled discount: ${JSON.stringify(value)}`);\n};\n\nconst freeItemsCents = (lines: readonly Line[], sku: string): number =>\n  lines.reduce(\n    (sum, line) => (line.sku === sku ? sum + Math.floor(line.quantity / 2) * line.priceCents : sum),\n    0,\n  );\n\nconst saving = (total: number, discount: Discount, lines: readonly Line[]): number => {\n  switch (discount.kind) {\n    case \"percent\": return Math.round((total * discount.percent) / 100);\n    case \"fixed\": return discount.cents;\n    case \"two-for-one\": return freeItemsCents(lines, discount.sku);\n    default: {\n      const unhandled: never = discount;\n      return assertNever(unhandled);\n    }\n  }\n};\n\nconst totalCents = (lines: readonly Line[], discounts: readonly Discount[]): number =>\n  discounts.reduce(\n    (total, discount) => Math.max(0, total - saving(total, discount, lines)),\n    lines.reduce((sum, { priceCents, quantity }) => sum + priceCents * quantity, 0),\n  );",
     hiddenTests: [
+      { call: "[totalCents([{sku:'x',priceCents:1,quantity:1}],[{kind:'percent',percent:50}]),totalCents([{sku:'x',priceCents:3,quantity:1}],[{kind:'percent',percent:50}])]", expected: [0, 1] },
+      { call: "totalCents([{sku:'',priceCents:100,quantity:1},{sku:'',priceCents:100,quantity:1}],[{kind:'two-for-one',sku:''}])", expected: 200 },
+      { call: "(()=>{const line=Object.freeze({sku:' tea ',priceCents:100,quantity:4}),lines=Object.freeze([line]),discount=Object.freeze({kind:'two-for-one',sku:' tea '}),discounts=Object.freeze([discount,discount]);return [totalCents(lines,discounts),line.quantity,line.priceCents,lines[0]===line,discounts[0]===discount];})()", expected: [0, 4, 100, true, true] },
+      { call: "totalCents(Array.from({length:1000},()=>({sku:'x',priceCents:1000000,quantity:1000})),[{kind:'percent',percent:0},{kind:'fixed',cents:1}])", expected: 999999999999 },
+
       { call: 'totalCents([{ sku: "tea", priceCents: 999, quantity: 1 }], [{ kind: "percent", percent: 15 }])', expected: 849 },
       { call: 'totalCents([{ sku: "tea", priceCents: 300, quantity: 5 }, { sku: "tea", priceCents: 200, quantity: 2 }], [{ kind: "two-for-one", sku: "tea" }])', expected: 1100 },
       { call: 'totalCents([{ sku: "tea", priceCents: 300, quantity: 1 }, { sku: "cake", priceCents: 400, quantity: 2 }], [{ kind: "two-for-one", sku: "tea" }])', expected: 1100 },
@@ -1049,126 +980,15 @@ const importRows = <S extends Parsers>(text: string, schema: S): ImportResult<S>
     ],
   },
   'ts-mh-apply-edits': {
-    solution: `interface Edit {
-  start: number;
-  end: number;
-  insert: string;
-}
-
-type EditResult =
-  | { ok: true; text: string }
-  | { ok: false; reason: "out-of-range"; edit: number }
-  | { ok: false; reason: "overlap"; edits: [number, number] };
-
-const applyEdits = (text: string, edits: readonly Edit[]): EditResult => {
-  // 1. Every edit has to fit the text before anything else is looked at.
-  const invalid = edits.findIndex((edit) => !(0 <= edit.start && edit.start <= edit.end && edit.end <= text.length));
-  if (invalid !== -1) return { ok: false, reason: "out-of-range", edit: invalid };
-
-  // 2. A sorted copy that remembers where each edit sat in the caller's list.
-  // sort is stable, so two edits with the same start keep their list order.
-  const sorted = edits.map((edit, index) => ({ ...edit, index })).sort((a, b) => a.start - b.start);
-  for (let i = 1; i < sorted.length; i++) {
-    const previous = sorted[i - 1];
-    const edit = sorted[i];
-    // Sorted by start, so any overlap shows up between neighbours.
-    if (edit.start < previous.end || edit.start === previous.start) {
-      return { ok: false, reason: "overlap", edits: [previous.index, edit.index] };
-    }
-  }
-
-  // 3. One pass over the original text: every offset refers to it.
-  let result = "";
-  let from = 0;
-  for (const edit of sorted) {
-    result += text.slice(from, edit.start) + edit.insert;
-    from = edit.end;
-  }
-  return { ok: true, text: result + text.slice(from) };
-};`,
-    junior: `interface Edit {
-  start: number;
-  end: number;
-  insert: string;
-}
-
-type EditResult =
-  | { ok: true; text: string }
-  | { ok: false; reason: "out-of-range"; edit: number }
-  | { ok: false; reason: "overlap"; edits: [number, number] };
-
-interface Numbered {
-  start: number;
-  end: number;
-  insert: string;
-  index: number;
-}
-
-const applyEdits = (text: string, edits: readonly Edit[]): EditResult => {
-  for (let i = 0; i < edits.length; i++) {
-    const edit = edits[i];
-    const fits = edit.start >= 0 && edit.start <= edit.end && edit.end <= text.length;
-    if (!fits) {
-      return { ok: false, reason: "out-of-range", edit: i };
-    }
-  }
-
-  const sorted: Numbered[] = [];
-  for (let i = 0; i < edits.length; i++) {
-    sorted.push({ start: edits[i].start, end: edits[i].end, insert: edits[i].insert, index: i });
-  }
-  sorted.sort((a, b) => a.start - b.start);
-
-  for (let i = 1; i < sorted.length; i++) {
-    const previous = sorted[i - 1];
-    const current = sorted[i];
-    if (current.start < previous.end) {
-      return { ok: false, reason: "overlap", edits: [previous.index, current.index] };
-    }
-    if (current.start === previous.start) {
-      return { ok: false, reason: "overlap", edits: [previous.index, current.index] };
-    }
-  }
-
-  const parts: string[] = [];
-  let position = 0;
-  for (const edit of sorted) {
-    parts.push(text.slice(position, edit.start));
-    parts.push(edit.insert);
-    position = edit.end;
-  }
-  parts.push(text.slice(position));
-  return { ok: true, text: parts.join("") };
-};`,
-    senior: `interface Edit {
-  start: number;
-  end: number;
-  insert: string;
-}
-
-type EditResult =
-  | { ok: true; text: string }
-  | { ok: false; reason: "out-of-range"; edit: number }
-  | { ok: false; reason: "overlap"; edits: [number, number] };
-
-const inRange = (length: number) => ({ start, end }: Edit): boolean => 0 <= start && start <= end && end <= length;
-const conflicts = (previous: Edit, next: Edit): boolean => next.start < previous.end || next.start === previous.start;
-
-const applyEdits = (text: string, edits: readonly Edit[]): EditResult => {
-  const invalid = edits.findIndex((edit) => !inRange(text.length)(edit));
-  if (invalid >= 0) return { ok: false, reason: "out-of-range", edit: invalid };
-
-  const order = edits.map((_, index) => index).sort((a, b) => edits[a].start - edits[b].start);
-  const clash = order.findIndex((index, i) => i > 0 && conflicts(edits[order[i - 1]], edits[index]));
-  if (clash > 0) return { ok: false, reason: "overlap", edits: [order[clash - 1], order[clash]] };
-
-  const { out, from } = order.reduce(
-    (acc, index) => ({ out: acc.out + text.slice(acc.from, edits[index].start) + edits[index].insert, from: edits[index].end }),
-    { out: "", from: 0 },
-  );
-  return { ok: true, text: out + text.slice(from) };
-};`,
+    solution: "interface Edit {\n  start: number;\n  end: number;\n  insert: string;\n}\n\ntype EditResult =\n  | { ok: true; text: string }\n  | { ok: false; reason: \"out-of-range\"; edit: number }\n  | { ok: false; reason: \"overlap\"; edits: [number, number] };\n\nconst applyEdits = (text: string, edits: readonly Edit[]): EditResult => {\n  // 1. Every edit has to fit the text before anything else is looked at.\n  const invalid = edits.findIndex((edit) => !(Number.isInteger(edit.start) && Number.isInteger(edit.end) && 0 <= edit.start && edit.start <= edit.end && edit.end <= text.length));\n  if (invalid !== -1) return { ok: false, reason: \"out-of-range\", edit: invalid };\n\n  // 2. A sorted copy that remembers where each edit sat in the caller's list.\n  // sort is stable, so two edits with the same start keep their list order.\n  const sorted = edits.map((edit, index) => ({ ...edit, index })).sort((a, b) => a.start - b.start);\n  for (let i = 1; i < sorted.length; i++) {\n    const previous = sorted[i - 1];\n    const edit = sorted[i];\n    // Sorted by start, so any overlap shows up between neighbours.\n    if (edit.start < previous.end || edit.start === previous.start) {\n      return { ok: false, reason: \"overlap\", edits: [previous.index, edit.index] };\n    }\n  }\n\n  // 3. One pass over the original text: every offset refers to it.\n  const parts: string[] = [];\n  let from = 0;\n  for (const edit of sorted) {\n    parts.push(text.slice(from, edit.start), edit.insert);\n    from = edit.end;\n  }\n  parts.push(text.slice(from));\n  return { ok: true, text: parts.join(\"\") };\n};",
+    junior: "interface Edit {\n  start: number;\n  end: number;\n  insert: string;\n}\n\ntype EditResult =\n  | { ok: true; text: string }\n  | { ok: false; reason: \"out-of-range\"; edit: number }\n  | { ok: false; reason: \"overlap\"; edits: [number, number] };\n\ninterface Numbered {\n  start: number;\n  end: number;\n  insert: string;\n  index: number;\n}\n\nconst applyEdits = (text: string, edits: readonly Edit[]): EditResult => {\n  for (let i = 0; i < edits.length; i++) {\n    const edit = edits[i];\n    const fits = Number.isInteger(edit.start) && Number.isInteger(edit.end) && edit.start >= 0 && edit.start <= edit.end && edit.end <= text.length;\n    if (!fits) {\n      return { ok: false, reason: \"out-of-range\", edit: i };\n    }\n  }\n\n  const sorted: Numbered[] = [];\n  for (let i = 0; i < edits.length; i++) {\n    sorted.push({ start: edits[i].start, end: edits[i].end, insert: edits[i].insert, index: i });\n  }\n  sorted.sort((a, b) => a.start - b.start);\n\n  for (let i = 1; i < sorted.length; i++) {\n    const previous = sorted[i - 1];\n    const current = sorted[i];\n    if (current.start < previous.end) {\n      return { ok: false, reason: \"overlap\", edits: [previous.index, current.index] };\n    }\n    if (current.start === previous.start) {\n      return { ok: false, reason: \"overlap\", edits: [previous.index, current.index] };\n    }\n  }\n\n  const parts: string[] = [];\n  let position = 0;\n  for (const edit of sorted) {\n    parts.push(text.slice(position, edit.start));\n    parts.push(edit.insert);\n    position = edit.end;\n  }\n  parts.push(text.slice(position));\n  return { ok: true, text: parts.join(\"\") };\n};",
+    senior: "interface Edit {\n  start: number;\n  end: number;\n  insert: string;\n}\n\ntype EditResult =\n  | { ok: true; text: string }\n  | { ok: false; reason: \"out-of-range\"; edit: number }\n  | { ok: false; reason: \"overlap\"; edits: [number, number] };\n\nconst inRange = (length: number) => ({ start, end }: Edit): boolean => Number.isInteger(start) && Number.isInteger(end) && 0 <= start && start <= end && end <= length;\nconst conflicts = (previous: Edit, next: Edit): boolean => next.start < previous.end || next.start === previous.start;\n\nconst applyEdits = (text: string, edits: readonly Edit[]): EditResult => {\n  const invalid = edits.findIndex((edit) => !inRange(text.length)(edit));\n  if (invalid >= 0) return { ok: false, reason: \"out-of-range\", edit: invalid };\n\n  const order = edits.map((_, index) => index).sort((a, b) => edits[a].start - edits[b].start);\n  const clash = order.findIndex((index, i) => i > 0 && conflicts(edits[order[i - 1]], edits[index]));\n  if (clash > 0) return { ok: false, reason: \"overlap\", edits: [order[clash - 1], order[clash]] };\n\n  const parts: string[] = [];\n  let from = 0;\n  for (const index of order) {\n    const edit = edits[index];\n    parts.push(text.slice(from, edit.start), edit.insert);\n    from = edit.end;\n  }\n  parts.push(text.slice(from));\n  return { ok: true, text: parts.join(\"\") };\n};",
     hiddenTests: [
+      { call: "[applyEdits('abcd',[{start:0.5,end:1.5,insert:'x'}]),applyEdits('abcd',[{start:0,end:NaN,insert:''}]),applyEdits('abcd',[{start:Infinity,end:Infinity,insert:''}])]", expected: [{"ok": false, "reason": "out-of-range", "edit": 0}, {"ok": false, "reason": "out-of-range", "edit": 0}, {"ok": false, "reason": "out-of-range", "edit": 0}] },
+      { call: "applyEdits('abcd',[{start:0,end:3,insert:''},{start:1,end:2,insert:''},{start:0,end:0.5,insert:''}])", expected: {"ok": false, "reason": "out-of-range", "edit": 2} },
+      { call: "(()=>{const a=Object.freeze({start:1,end:3,insert:'X'}),b=Object.freeze({start:4,end:4,insert:'!'}),edits=Object.freeze([b,a]),out=applyEdits('A\ud83e\udd88B',edits);return [out,edits[0]===b,edits[1]===a,a.start,a.end];})()", expected: [{"ok": true, "text": "AXB!"}, true, true, 1, 3] },
+      { call: "(()=>{const text='x'.repeat(1000),edits=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({start:999-i,end:1000-i,insert:'abc'}))),out=applyEdits(text,edits);return [out.ok&&out.text==='abc'.repeat(1000),edits[0].start,edits[999].start];})()", expected: [true, 999, 0] },
+
       { call: 'applyEdits("abcdefgh", [{ start: 6, end: 7, insert: "" }, { start: 4, end: 7, insert: "" }, { start: 0, end: 1, insert: "" }])', expected: { ok: false, reason: 'overlap', edits: [1, 0] } },
       { call: 'applyEdits("abcdef", [{ start: 1, end: 1, insert: "x" }, { start: 3, end: 4, insert: "y" }, { start: 1, end: 2, insert: "z" }])', expected: { ok: false, reason: 'overlap', edits: [0, 2] } },
       { call: '[applyEdits("abc", [{ start: 2, end: 1, insert: "" }]), applyEdits("abc", [{ start: -1, end: 0, insert: "" }])]', expected: [{ ok: false, reason: 'out-of-range', edit: 0 }, { ok: false, reason: 'out-of-range', edit: 0 }] },

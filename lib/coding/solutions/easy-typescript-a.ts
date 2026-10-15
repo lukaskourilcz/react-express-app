@@ -735,16 +735,7 @@ const addTag = (note: Note, tag: string): Note =>
     const [minutes, seconds] = track.split(":").map(Number);
     return total + minutes * 60 + seconds;
   }, 0);`,
-    junior: `const playlistSeconds = (tracks: string[]): number => {
-  let total = 0;
-  for (const track of tracks) {
-    const parts = track.split(":");
-    const minutes = parseInt(parts[0], 10);
-    const seconds = parseInt(parts[1], 10);
-    total = total + minutes * 60 + seconds;
-  }
-  return total;
-};`,
+    junior: "const playlistSeconds = (tracks: string[]): number =>\n  tracks.reduce((total, track) => {\n    const parts = track.split(\":\");\n    const minutes = Number(parts[0]);\n    const seconds = Number(parts[1]);\n    return total + minutes * 60 + seconds;\n  }, 0);",
     senior: `const toSeconds = (track: string): number => {
   const [minutes, seconds] = track.split(":").map(Number);
   return minutes * 60 + seconds;
@@ -752,7 +743,12 @@ const addTag = (note: Note, tag: string): Note =>
 
 const playlistSeconds = (tracks: readonly string[]): number =>
   tracks.reduce((total, track) => total + toSeconds(track), 0);`,
+    hiddenTypeTests: [{"code": "playlistSeconds([null]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['000001:01','72:00','0:00']),out=playlistSeconds(input);return [out,input.length,input[0],input[1]];})()", expected: [4381, 3, "000001:01", "72:00"] },
+      { call: "playlistSeconds(Object.freeze(Array(1000).fill('999999:59')))", expected: 59999999000 },
+      { call: "(()=>{const input=['2:00','1:00','2:00'],a=playlistSeconds(input),b=playlistSeconds(input);return [a,b,input];})()", expected: [300, 300, ["2:00", "1:00", "2:00"]] },
+
       { call: 'playlistSeconds(["1:01", "1:01", "1:01"])', expected: 183 },
       { call: 'playlistSeconds(["10:59", "0:01"])', expected: 660 },
       { call: 'playlistSeconds(["0:00"])', expected: 0 },

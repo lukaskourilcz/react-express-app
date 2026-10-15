@@ -285,29 +285,14 @@ const onlyFiles = (entries: Entry[]): FileEntry[] => entries.flatMap((entry) => 
 
 const countStatus = (items: Status[], wanted: Status): number =>
   items.reduce((count, item) => (item === wanted ? count + 1 : count), 0);`,
-    junior: `enum Status {
-  Todo = "todo",
-  Doing = "doing",
-  Done = "done",
-}
-
-const countStatus = (items: Status[], wanted: Status): number => {
-  let count = 0;
-  for (const item of items) {
-    if (item === wanted) {
-      count = count + 1;
-    }
-  }
-  return count;
-};`,
-    senior: `enum Status {
-  Todo = "todo",
-  Doing = "doing",
-  Done = "done",
-}
-
-const countStatus = (items: Status[], wanted: Status): number => items.filter((item) => item === wanted).length;`,
+    junior: "enum Status {\n  Todo = \"todo\",\n  Doing = \"doing\",\n  Done = \"done\",\n}\n\nconst countStatus = (items: Status[], wanted: Status): number =>\n  items.reduce((count, item) => {\n    if (item === wanted) return count + 1;\n    return count;\n  }, 0);",
+    senior: "enum Status {\n  Todo = \"todo\",\n  Doing = \"doing\",\n  Done = \"done\",\n}\n\nconst countStatus = (items: Status[], wanted: Status): number =>\n  items.reduce((count, item) => count + (item === wanted ? 1 : 0), 0);",
+    hiddenTypeTests: [{"code": "countStatus([1],Status.Done);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const items=Object.freeze([Status.Todo,Status.Done,Status.Doing,Status.Done]);return [countStatus(items,Status.Done),countStatus(items,Status.Todo),items.join(','),Status.Todo,Status.Doing,Status.Done];})()", expected: [2, 1, "todo,done,doing,done", "todo", "doing", "done"] },
+      { call: "(()=>{const items=Object.freeze(Array.from({length:1000},(_,i)=>[Status.Todo,Status.Doing,Status.Done][i%3]));return [countStatus(items,Status.Todo),countStatus(items,Status.Doing),countStatus(items,Status.Done),items.length];})()", expected: [334, 333, 333, 1000] },
+      { call: "[Status.Todo,Status.Doing,Status.Done].map(status=>countStatus([],status))", expected: [0, 0, 0] },
+
       { call: "countStatus([Status.Todo, Status.Done, Status.Todo, Status.Todo], Status.Todo)", expected: 3 },
       { call: "countStatus([Status.Done], Status.Doing)", expected: 0 },
     ],
@@ -318,25 +303,14 @@ const countStatus = (items: Status[], wanted: Status): number => items.filter((i
   for (let start = 0; start < items.length; start += size) groups.push(items.slice(start, start + size));
   return groups;
 };`,
-    junior: `const chunk = <T>(items: T[], size: number): T[][] => {
-  const groups: T[][] = [];
-  let current: T[] = [];
-  for (const item of items) {
-    current.push(item);
-    if (current.length === size) {
-      groups.push(current);
-      current = [];
-    }
-  }
-  if (current.length > 0) {
-    groups.push(current);
-  }
-  return groups;
-};`,
-    senior: `const chunk = <T>(items: T[], size: number): T[][] =>
-  // The group count is known up front, so each group is one slice at its own offset.
-  Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));`,
+    junior: "const chunk = <T>(items: T[], size: number): T[][] => {\n  const groups: T[][] = [];\n  for (let start = 0; start < items.length; start += size) {\n    const group = items.slice(start, start + size);\n    groups.push(group);\n  }\n  return groups;\n};",
+    senior: "const chunk = <T>(items: T[], size: number): T[][] => {\n  const groups: T[][] = [];\n  for (let start = 0; start < items.length; start += size) groups.push(items.slice(start, start + size));\n  return groups;\n};",
+    hiddenTypeTests: [{"code": "const __auditOut: (number | null)[][] = chunk([1,null],2);"}],
     hiddenTests: [
+      { call: "(()=>{const object=Object.freeze({}),fn=()=>{throw Error('called');},symbol=Symbol('x'),input=Object.freeze([object,fn,undefined,symbol,null]),a=chunk(input,2),b=chunk(input,2);a[0].push('later');return [a!==b,a[0]!==b[0],a[0]!==a[1],b[0][0]===object,b[0][1]===fn,b[1][0]===undefined,b[1][1]===symbol,b[2][0]===null,input.length];})()", expected: [true, true, true, true, true, true, true, true, 5] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=chunk(input,333);return [out.map(group=>group.length),out[3][0],out.flat().every((x,i)=>x===i),input.length];})()", expected: [[333, 333, 333, 1], 999, true, 1000] },
+      { call: "(()=>{const a=chunk([],1),b=chunk([1],1000000000);a.push([2]);b[0].push(3);return [a, b,chunk([],1).length];})()", expected: [[[2]], [[1, 3]], 0] },
+
       { call: "chunk([1, 2, 3, 4, 5, 6], 3)", expected: [[1, 2, 3], [4, 5, 6]] },
       { call: "chunk([1, 2, 3, 4, 5, 6, 7], 3)", expected: [[1, 2, 3], [4, 5, 6], [7]] },
     ],
@@ -348,19 +322,14 @@ const countStatus = (items: Status[], wanted: Status): number => items.filter((i
   for (let i = 0; i < count; i += 1) pairs.push([left[i], right[i]]);
   return pairs;
 };`,
-    junior: `const zip = <A, B>(left: A[], right: B[]): [A, B][] => {
-  const pairs: [A, B][] = [];
-  let i = 0;
-  while (i < left.length && i < right.length) {
-    const pair: [A, B] = [left[i], right[i]];
-    pairs.push(pair);
-    i = i + 1;
-  }
-  return pairs;
-};`,
-    senior: `// Slicing left to right's length stops at the shorter list, so no index runs off the end.
-const zip = <A, B>(left: A[], right: B[]): [A, B][] => left.slice(0, right.length).map((item, index): [A, B] => [item, right[index]]);`,
+    junior: "const zip = <A, B>(left: A[], right: B[]): [A, B][] => {\n  const pairs: [A, B][] = [];\n  for (let i = 0; i < left.length && i < right.length; i += 1) {\n    const pair: [A, B] = [left[i], right[i]];\n    pairs.push(pair);\n  }\n  return pairs;\n};",
+    senior: "const zip = <A, B>(left: A[], right: B[]): [A, B][] => {\n  const pairs: [A, B][] = [];\n  const count = Math.min(left.length, right.length);\n  for (let i = 0; i < count; i += 1) pairs.push([left[i], right[i]]);\n  return pairs;\n};",
+    hiddenTypeTests: [{"code": "const __auditOut: [number | null,undefined][] = zip([1,null],[undefined]);"}],
     hiddenTests: [
+      { call: "(()=>{const object=Object.freeze({}),fn=()=>{throw Error('called');},symbol=Symbol('x'),left=Object.freeze([object,undefined]),right=Object.freeze([fn,symbol,null]),a=zip(left,right),b=zip(left,right);a[0][0]='changed';a.push(['later',0]);return [a!==b,a[0]!==b[0],b[0]!==b[1],b[0][0]===object,b[0][1]===fn,b[1][0]===undefined,b[1][1]===symbol,left.length,right.length,left[0]===object];})()", expected: [true, true, true, true, true, true, true, 2, 3, true] },
+      { call: "(()=>{const left=Object.freeze(Array(1000).fill(null)),right=Object.freeze([undefined]),out=zip(left,right);return [out.length,out[0][0]===null,out[0][1]===undefined,left.length,right.length,zip(left,[]).length,zip([],right).length];})()", expected: [1, true, true, 1000, 1, 0, 0] },
+      { call: "(()=>{const a=zip([],[]),b=zip([],[]);a.push([1,2]);return [a!==b,b.length,a.length];})()", expected: [true, 0, 1] },
+
       { call: "zip([1, 2, 3], [\"a\", \"b\", \"c\"])", expected: [[1, "a"], [2, "b"], [3, "c"]] },
       { call: "zip([], [])", expected: [] },
     ],

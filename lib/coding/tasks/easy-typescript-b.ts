@@ -370,39 +370,39 @@ console.log(legs(["Depot", "Park", "Station"]));
     tier: 2,
     focus: ['for', 'generics'],
     title: 'Every nth item',
-    prompt: 'A video editor builds a preview from every third frame of a clip. Write `everyNth<T>(items: readonly T[], n: number): T[]`, returning the items at positions `n`, `2n`, `3n` and so on, counting from 1. In a `for` loop that means starting at index `n - 1` and adding `n` each time. The type parameter hands the caller back the item type they passed in. An `n` below 1 gives `[]`.',
-    starter: `const everyNth = (items, n) => {
+    prompt: "A video editor builds a preview from every third frame of a clip. Write `everyNth<T>(items: readonly T[], step: number): T[]`, returning the items at positions `step`, `2 * step`, `3 * step` and so on, counting from 1. In a `for` loop that means starting at index `step - 1` and adding `step` each time. The type parameter hands the caller back the item type they passed in. A `step` below 1 gives `[]`. Domain: step is an integer from -1000000000 through 1000000000 and items is a dense readonly array of at most 1000 opaque values, possibly frozen. Preserve selected values by exact reference or primitive value, including null, undefined, symbols and functions; do not inspect, clone, call or coerce them. Leave the input unchanged and return a fresh mutable array every call, including an empty result or step of 1. Target: O(n) time and worst-case O(n) output space, where n is 1 + item count. This input-size variable is separate from the step argument. A jumping loop visits only the selected positions; a full filtering scan is also a valid linear-time alternative.",
+    starter: `const everyNth = (items, step) => {
 
 };
 
 // Scratch pad. Change this and press Run.
 console.log(everyNth(["f1", "f2", "f3", "f4", "f5", "f6"], 3));
 `,
-    skeleton: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
+    skeleton: `const everyNth = <T>(items: readonly T[], step: number): T[] => {
   const picked: T[] = [];
-  // return [] straight away when n is below 1
-  // loop i from n - 1 while it is inside the list, adding n each time, and keep items[i]
+  // return [] straight away when step is below 1
+  // loop i from step - 1 while it is inside the list, adding step each time, and keep items[i]
   return picked;
 };`,
-    hints: ['The third item sits at index 2, so the first index is `n - 1`, and `i += n` jumps straight to the next one. Check `n < 1` first: with `n` at 0, `i += n` never moves and the loop never ends.'],
+    hints: ['The third item sits at index 2, so the first index is `step - 1`, and `i += step` jumps straight to the next one. Check `step < 1` first: with `step` at 0, `i += step` never moves and the loop never ends.'],
     approach: [
-      'Return `[]` when `n` is below 1.',
-      'Loop `i` from `n - 1` while `i < items.length`, adding `n` each time.',
+      'Return `[]` when `step` is below 1.',
+      'Loop `i` from `step - 1` while `i < items.length`, adding `step` each time.',
       'Push `items[i]` on each pass, then return the list.',
     ],
     verify: 'tests',
     estimatedMinutes: 6,
     tests: [
       { call: 'everyNth(["f1", "f2", "f3", "f4", "f5", "f6", "f7"], 3)', expected: ['f3', 'f6'] },
-      { call: 'everyNth([1, 2, 3, 4], 1)', expected: [1, 2, 3, 4], label: 'n of 1 keeps everything' },
-      { call: 'everyNth([1, 2], 5)', expected: [], label: 'fewer items than n', edge: true },
-      { call: 'everyNth([1, 2, 3], 0)', expected: [], label: 'n of 0', edge: true },
+      { call: 'everyNth([1, 2, 3, 4], 1)', expected: [1, 2, 3, 4], label: 'step of 1 keeps everything' },
+      { call: 'everyNth([1, 2], 5)', expected: [], label: 'fewer items than step', edge: true },
+      { call: 'everyNth([1, 2, 3], 0)', expected: [], label: 'step of 0', edge: true },
     ],
     typeTests: [
       { code: 'const __s: string[] = everyNth(["a", "b"], 2);', label: 'strings in, strings out' },
       { code: 'const __n: number[] = everyNth([1, 2], 2);', label: 'numbers in, numbers out' },
       { code: 'const __x: number[] = everyNth(["a"], 1);', label: 'strings do not come out as numbers', rejects: true },
-      { code: 'everyNth([1], "2");', label: 'n is a number', rejects: true },
+      { code: 'everyNth([1], "2");', label: 'step is a number', rejects: true },
     ],
   },
 
@@ -627,7 +627,7 @@ const moveTo = (user: User, city: string): User => ({
     tier: 2,
     focus: ['sort', 'objects'],
     title: 'Rank the scores',
-    prompt: 'A quiz keeps its scores in an object from each player’s name to their points. Write `ranked(scores: Record<string, number>): [string, number][]`, returning `[name, points]` pairs from the most points to the fewest. `Object.entries(scores)` gives you the pairs; sort them by their second item. Players on the same points keep the order the object lists them in.',
+    prompt: "A quiz keeps its scores in an object from each player\u2019s name to their points. Write `ranked(scores: Record<string, number>): [string, number][]`, returning `[name, points]` pairs from the most points to the fewest. `Object.entries(scores)` gives you the pairs; sort them by their second item. Players on the same points keep the order the object lists them in. Domain: scores is a stable ordinary or null-prototype data record, possibly frozen, with at most 1000 own enumerable string-keyed scores. Player names have at most 200 UTF-16 units and scores are finite Numbers from -1000000000 through 1000000000. No accessors/proxies are involved. Ignore inherited, symbol and non-enumerable properties; at most 100 extra ignored properties are present. Ties keep Object.entries order: integer-index keys precede other string keys in their standard enumeration order. Return a fresh mutable outer array and fresh mutable pairs on every call, leaving scores unchanged. Target: O(n log n) time and O(n) output space, where n is 1 + own enumerable string-entry count under bounded numeric comparisons and the comparison-sort model.",
     starter: `const ranked = (scores) => {
 
 };
