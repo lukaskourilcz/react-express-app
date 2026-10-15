@@ -771,7 +771,7 @@ const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
     tier: 2,
     focus: ['keyof', 'record'],
     title: 'A heading for every column',
-    prompt: 'A contact table needs a heading for each column. Declare `const LABELS: Record<keyof Contact, string>` holding the headings `Full name`, `Email` and `Phone number`. With that type, leaving out a column, or adding one `Contact` does not have, is a compile error. Then write `headings(columns: (keyof Contact)[]): string[]`, returning the heading of each column in the order asked.',
+    prompt: "A contact table needs a heading for each column. Declare `const LABELS: Record<keyof Contact, string>` holding the headings `Full name`, `Email` and `Phone number`. When checking the fresh LABELS object literal against that type, a missing or extra column is a compile error. A wider compatible variable can still have extra properties: Record does not strip runtime fields. Then write `headings(columns: (keyof Contact)[]): string[]`, returning the heading of each column in the order asked. Domain: a dense ordinary array of at most 1000 exact Contact keys, possibly frozen. Preserve key order and duplicates, leaving columns and the fixed LABELS lookup unchanged. Return a fresh mutable array on every call, including repeated requests and empty input, with the exact three headings shown above. Target: O(n) time and output space, where n is 1 + requested column count; the three-key heading lookup has fixed size.",
     starter: `interface Contact {
   name: string;
   email: string;
@@ -798,7 +798,7 @@ const LABELS: Record<keyof Contact, string> = {
 const headings = (columns: (keyof Contact)[]): string[] => {
   // look up each column in LABELS
 };`,
-    hints: ['`Record<keyof Contact, string>` is an object type with exactly the keys `name`, `email` and `phone`, each holding a string. `LABELS[column]` is then a string for any column the function accepts.'],
+    hints: ['`Record<keyof Contact, string>` requires the keys `name`, `email` and `phone`, each holding a string. Excess keys are checked on fresh literals; compatible wider variables are still allowed. `LABELS[column]` is then a string for any column the function accepts.'],
     approach: [
       'Declare `LABELS` with the `Record` type and one heading per key.',
       'Type the parameter as `(keyof Contact)[]`.',
@@ -1172,7 +1172,7 @@ const firstError = (results: Result[]): string | null => {
     tier: 2,
     focus: ['for-of', 'record'],
     title: 'Build a query string',
-    prompt: 'Write `toQuery(params: Record<string, string | number>): string`, turning an object into a URL query string such as `"page=2&sort=new"`. Walk `Object.entries(params)` with `for...of`, destructuring each `[key, value]` pair, and encode both with `encodeURIComponent`, so a space becomes `%20` and an `&` inside a value becomes `%26`. Pairs keep the object’s key order, and an empty object gives an empty string.',
+    prompt: "Write `toQuery(params: Record<string, string | number>): string`, turning an object into a URL query string such as `\"page=2&sort=new\"`. Walk `Object.entries(params)` with `for...of`, destructuring each `[key, value]` pair, and encode both with `encodeURIComponent`, so a space becomes `%20` and an `&` inside a value becomes `%26`. Pairs keep the object\u2019s key order, and an empty object gives an empty string. Domain: a stable ordinary or null-prototype params object with at most 1000 own enumerable string keys, possibly frozen, with no accessors/proxies. Keys/string values have at most 200 UTF-16 units; values may also be any primitive Number, including nonfinite values and signed zero, using ordinary String conversion. Use Object.entries order and ignore inherited, nonenumerable and Symbol entries. Preserve inputs. Follow encodeURIComponent exactly: spaces are %20, not +, and its unescaped punctuation stays unescaped. A lone surrogate in an encoded key/value propagates URIError. Target: O(n) time and output space, where n is 1 + pair count + total key/value UTF-16 length after bounded numeric conversion; collect encoded pairs and join them rather than repeatedly copying a growing string.",
     starter: `const toQuery = (params: Record<string, string | number>): string => {
 
 };

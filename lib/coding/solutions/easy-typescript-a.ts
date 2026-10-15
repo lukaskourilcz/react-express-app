@@ -604,40 +604,8 @@ const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
     ],
   },
   'ts-easy2-column-headings': {
-    solution: `interface Contact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-// The Record type makes a missing or an extra heading a compile error.
-const LABELS: Record<keyof Contact, string> = {
-  name: "Full name",
-  email: "Email",
-  phone: "Phone number",
-};
-
-const headings = (columns: (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);`,
-    junior: `interface Contact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-const LABELS: Record<keyof Contact, string> = {
-  name: "Full name",
-  email: "Email",
-  phone: "Phone number",
-};
-
-const headings = (columns: (keyof Contact)[]): string[] => {
-  const result: string[] = [];
-  for (const column of columns) {
-    const label = LABELS[column];
-    result.push(label);
-  }
-  return result;
-};`,
+    solution: "interface Contact {\n  name: string;\n  email: string;\n  phone: string;\n}\n\n// The fresh literal is checked for missing and excess heading keys.\nconst LABELS: Record<keyof Contact, string> = {\n  name: \"Full name\",\n  email: \"Email\",\n  phone: \"Phone number\",\n};\n\nconst headings = (columns: (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);",
+    junior: "interface Contact {\n  name: string;\n  email: string;\n  phone: string;\n}\n\nconst LABELS: Record<keyof Contact, string> = {\n  name: \"Full name\",\n  email: \"Email\",\n  phone: \"Phone number\",\n};\n\nconst headings = (columns: (keyof Contact)[]): string[] => {\n  return columns.map((column) => {\n    const label = LABELS[column];\n    return label;\n  });\n};",
     senior: `interface Contact {
   name: string;
   email: string;
@@ -647,7 +615,12 @@ const headings = (columns: (keyof Contact)[]): string[] => {
 const LABELS = { name: "Full name", email: "Email", phone: "Phone number" } as const satisfies Record<keyof Contact, string>;
 
 const headings = (columns: readonly (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);`,
+    hiddenTypeTests: [{"code": "const __auditExtra:Record<keyof Contact,string>={name:\"n\",email:\"e\",phone:\"p\",age:\"a\"};", "rejects": true}, {"code": "const __auditWide={name:\"n\",email:\"e\",phone:\"p\",extra:\"x\"}; const __auditLabels:Record<keyof Contact,string>=__auditWide;"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['name','phone','name']),a=headings(input),b=headings(input);a[0]='changed';a.pop();return [a!==b,b,input,Reflect.ownKeys(LABELS).sort(),LABELS.name,LABELS.phone];})()", expected: [true, ["Full name", "Phone number", "Full name"], ["name", "phone", "name"], ["email", "name", "phone"], "Full name", "Phone number"] },
+      { call: "(()=>{const a=headings([]),b=headings([]);a.push('changed');return [a!==b,b.length,LABELS.email];})()", expected: [true, 0, "Email"] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>['name','email','phone'][i%3])),out=headings(input);return [out.length,out.every((label,i)=>label===['Full name','Email','Phone number'][i%3]),input.length];})()", expected: [1000, true, 1000] },
+
       { call: 'headings(["phone", "email", "name"])', expected: ['Phone number', 'Email', 'Full name'] },
       { call: 'Object.keys(LABELS).sort()', expected: ['email', 'name', 'phone'] },
       { call: 'headings(["email", "email", "phone"])', expected: ['Email', 'Email', 'Phone number'] },
@@ -859,23 +832,18 @@ const firstError = (results: Result[]): string | null => {
   }
   return pairs.join("&");
 };`,
-    junior: `const toQuery = (params: Record<string, string | number>): string => {
-  let query = "";
-  const keys = Object.keys(params);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (i > 0) {
-      query = query + "&";
-    }
-    query = query + encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
-  }
-  return query;
-};`,
+    junior: "const toQuery = (params: Record<string, string | number>): string => {\n  const pairs: string[] = [];\n  for (const [key, value] of Object.entries(params)) {\n    const encodedKey = encodeURIComponent(key);\n    const encodedValue = encodeURIComponent(value);\n    pairs.push(encodedKey + \"=\" + encodedValue);\n  }\n  return pairs.join(\"&\");\n};",
     senior: `const toQuery = (params: Readonly<Record<string, string | number>>): string =>
   Object.entries(params)
     .map(([key, value]) => \`\${encodeURIComponent(key)}=\${encodeURIComponent(value)}\`)
     .join("&");`,
+    hiddenTypeTests: [{"code": "toQuery({empty:null});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('ignore'),params=Object.create({inherited:'ignored'});params['2']='b';params['1']='a';params['__proto__']='lost';Object.defineProperty(params,'__proto__',{value:'kept',enumerable:true});params.a='';params[sym]='hidden';Object.defineProperty(params,'hidden',{value:'skip',enumerable:false});Object.freeze(params);return [toQuery(params),params.a,Object.getOwnPropertySymbols(params).length];})()", expected: ["1=a&2=b&__proto__=kept&a=", "", 1] },
+      { call: "(()=>{return [toQuery({'\u00e9':'\ud83d\ude00',\"!~*'()\":'a+b=% /'}),toQuery({n:NaN,i:Infinity,m:-Infinity,z:-0})];})()", expected: ["%C3%A9=%F0%9F%98%80&!~*'()=a%2Bb%3D%25%20%2F", "n=NaN&i=Infinity&m=-Infinity&z=0"] },
+      { call: "(()=>{const check=(params)=>{try{toQuery(params);return false}catch(error){return error instanceof URIError}};return [check({q:'\\ud800'}),check({['\\udc00']:'x'}),toQuery(Object.freeze(Object.create(null)))];})()", expected: [true, true, ""] },
+      { call: "(()=>{const params=Object.freeze(Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i]))),text=toQuery(params);return [text.split('&').length,text.startsWith('p0=0&'),text.endsWith('&p999=999'),Object.keys(params).length];})()", expected: [1000, true, true, 1000] },
+
       { call: 'toQuery({ "first name": "Ada", age: 36 })', expected: 'first%20name=Ada&age=36' },
       { call: 'toQuery({ a: "", b: "x" })', expected: 'a=&b=x' },
       { call: 'toQuery({ path: "a/b?c=d" })', expected: 'path=a%2Fb%3Fc%3Dd' },

@@ -259,7 +259,7 @@ console.log(checkForm({ email: "ada", age: 17 }, {
     tier: 3,
     focus: ['type-guards', 'literal-types', 'record', 'strings'],
     title: 'Release notes from commits',
-    prompt: 'Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `"other"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type’s list: the summary, with the scope and a colon in front when there is a scope, as in `"search: filter by date"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `"other"` exactly as written. Keep the order the subjects came in.',
+    prompt: "Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `\"other\"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type\u2019s list: the summary, with the scope and a colon in front when there is a scope, as in `\"search: filter by date\"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `\"other\"` exactly as written. Keep the order the subjects came in. Scope grammar for this simplified exercise: a scope contains one or more characters and no nested parentheses; colons, including colon-space text, are allowed inside it. Subjects are primitive strings with no CR/LF; there are at most 1000, each at most 1000 UTF-16 units. Use exact type text with no trimming/case changes. A nonempty summary may be only spaces or contain later colon-space separators; preserve it exactly. Unknown/malformed subjects stay whole in other. Return a fresh plain mutable Notes object with exactly its four own section keys and independent mutable arrays across sections/calls. Leave subjects and the fixed COMMIT_TYPES tuple unchanged. isCommitType accepts exactly the three listed literals and returns an actual boolean. This is the stated teaching grammar, not a complete Conventional Commits parser. Target: O(n) time and output space for releaseNotes, where n is 1 + subject count + total input UTF-16 length; isCommitType checks a fixed three-entry set in O(1) time.",
     starter: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
 type CommitType = (typeof COMMIT_TYPES)[number];
 type Notes = Record<CommitType | "other", string[]>;
@@ -275,29 +275,9 @@ const releaseNotes = (subjects) => {
 // Scratch pad. Change this and press Run.
 console.log(releaseNotes(["feat(search): filter by date", "chore: bump deps"]));
 `,
-    skeleton: `const isCommitType = (value: string): value is CommitType =>
-  /* is value one of COMMIT_TYPES? */;
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const colon = subject.indexOf(": ");
-    // no ": ", or nothing after it: other
-    // the text before it is the type, maybe followed by (scope)
-    // a known type: push the note into notes[type]; otherwise: other
-  }
-  return notes;
-};`,
-    hints: [
-      '`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.',
-      '`indexOf(": ")` finds the first colon followed by a space, so a summary may hold another one. When the text before it ends with `)`, the scope sits between the `(` and that last character.',
-    ],
-    approach: [
-      'Write the guard: return whether any entry of `COMMIT_TYPES` equals `value`, with the return type `value is CommitType`.',
-      'Build a fresh `Notes` object with four empty lists on every call.',
-      'For each subject, find `": "`. Split the text before it into a type and an optional scope, and check that neither the summary nor a bracketed scope is empty.',
-      'If the shape holds and the type passes `isCommitType`, push `scope ? scope + ": " + summary : summary` into that type’s list. Otherwise push the subject into `other`.',
-    ],
+    skeleton: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType => {\n  // exact membership in COMMIT_TYPES\n};\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    // find the type and optional scope; a scope may contain colon-space text\n    // require the summary separator after the closing parenthesis, when present\n    // push a recognized note, or preserve the whole malformed/unknown subject\n  }\n  return notes;\n};",
+    hints: ["`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.", "A scope can contain colon-space text. When a scope starts before the first separator, find its closing parenthesis and require colon-space immediately after it; the remainder is the complete summary. Otherwise use the first colon-space separator."],
+    approach: ["Write the exact three-type guard and create fresh independent section arrays.", "Identify the optional single pair of scope parentheses before the summary separator; reject empty or nested scopes and malformed separators.", "Keep the whole remaining nonempty summary, including spaces and later separators. A recognized type gets the note, otherwise keep the original subject in other."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [

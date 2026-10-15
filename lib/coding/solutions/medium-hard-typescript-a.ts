@@ -221,103 +221,15 @@ const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [string,
     ],
   },
   'ts-mh-release-notes': {
-    solution: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
-type CommitType = (typeof COMMIT_TYPES)[number];
-type Notes = Record<CommitType | "other", string[]>;
-
-// A type guard: when it returns true, the compiler treats value as a CommitType.
-// Comparing with each listed type means "toString" is never mistaken for one.
-const isCommitType = (value: string): value is CommitType =>
-  COMMIT_TYPES.some((type) => type === value);
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  // A new object every call, so two calls never share a list.
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const colon = subject.indexOf(": ");
-    const summary = colon === -1 ? "" : subject.slice(colon + 2);
-    let type = colon === -1 ? "" : subject.slice(0, colon);
-    let scope = "";
-    // "feat(search)": the scope sits between "(" and the closing ")".
-    if (type.endsWith(")")) {
-      const open = type.indexOf("(");
-      scope = open === -1 ? "" : type.slice(open + 1, -1);
-      type = open === -1 || scope === "" ? "" : type.slice(0, open);
-    }
-    if (summary !== "" && isCommitType(type)) {
-      // Narrowed: type is a CommitType here, so notes[type] is one of the lists.
-      notes[type].push(scope === "" ? summary : scope + ": " + summary);
-    } else {
-      notes.other.push(subject);
-    }
-  }
-  return notes;
-};`,
-    junior: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
-type CommitType = (typeof COMMIT_TYPES)[number];
-type Notes = Record<CommitType | "other", string[]>;
-
-const isCommitType = (value: string): value is CommitType => {
-  for (const type of COMMIT_TYPES) {
-    if (type === value) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const colon = subject.indexOf(": ");
-    if (colon === -1) {
-      notes.other.push(subject);
-      continue;
-    }
-    const head = subject.slice(0, colon);
-    const summary = subject.slice(colon + 2);
-    let type = head;
-    let scope = "";
-    const open = head.indexOf("(");
-    if (open !== -1 && head.endsWith(")")) {
-      type = head.slice(0, open);
-      scope = head.slice(open + 1, head.length - 1);
-      if (scope === "") {
-        notes.other.push(subject);
-        continue;
-      }
-    }
-    if (summary === "" || !isCommitType(type)) {
-      notes.other.push(subject);
-      continue;
-    }
-    let note = summary;
-    if (scope !== "") {
-      note = scope + ": " + summary;
-    }
-    notes[type].push(note);
-  }
-  return notes;
-};`,
-    senior: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
-type CommitType = (typeof COMMIT_TYPES)[number];
-type Notes = Record<CommitType | "other", string[]>;
-
-const isCommitType = (value: string): value is CommitType =>
-  (COMMIT_TYPES as readonly string[]).includes(value);
-
-const SUBJECT = /^(?<type>[^\\s():]+)(?:\\((?<scope>[^()]+)\\))?: (?<summary>.+)$/s;
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const { type = "", scope, summary = "" } = SUBJECT.exec(subject)?.groups ?? {};
-    if (isCommitType(type)) notes[type].push(scope ? \`\${scope}: \${summary}\` : summary);
-    else notes.other.push(subject);
-  }
-  return notes;
-};`,
+    solution: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType =>\n  COMMIT_TYPES.some((type) => type === value);\n\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    const colon = subject.indexOf(\": \");\n    if (colon === -1) { notes.other.push(subject); continue; }\n    const open = subject.indexOf(\"(\");\n    let type = subject.slice(0, colon);\n    let summary = subject.slice(colon + 2);\n    let scope = \"\";\n    // A scope may contain colons; its closing bracket identifies the separator.\n    if (open !== -1 && open < colon) {\n      const close = subject.indexOf(\")\", open + 1);\n      if (close === -1 || subject.slice(close + 1, close + 3) !== \": \") {\n        notes.other.push(subject); continue;\n      }\n      type = subject.slice(0, open);\n      scope = subject.slice(open + 1, close);\n      summary = subject.slice(close + 3);\n      if (scope === \"\" || scope.includes(\"(\")) { notes.other.push(subject); continue; }\n    }\n    if (summary === \"\" || !isCommitType(type)) { notes.other.push(subject); continue; }\n    notes[type].push(scope === \"\" ? summary : scope + \": \" + summary);\n  }\n  return notes;\n};",
+    junior: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType => {\n  for (const type of COMMIT_TYPES) {\n    if (type === value) return true;\n  }\n  return false;\n};\n\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    const colon = subject.indexOf(\": \");\n    if (colon === -1) { notes.other.push(subject); continue; }\n    const open = subject.indexOf(\"(\");\n    let type = subject.slice(0, colon);\n    let summary = subject.slice(colon + 2);\n    let scope = \"\";\n    // A scope may contain colons; its closing bracket identifies the separator.\n    if (open !== -1 && open < colon) {\n      const close = subject.indexOf(\")\", open + 1);\n      if (close === -1 || subject.slice(close + 1, close + 3) !== \": \") {\n        notes.other.push(subject); continue;\n      }\n      type = subject.slice(0, open);\n      scope = subject.slice(open + 1, close);\n      summary = subject.slice(close + 3);\n      if (scope === \"\" || scope.includes(\"(\")) { notes.other.push(subject); continue; }\n    }\n    if (summary === \"\" || !isCommitType(type)) { notes.other.push(subject); continue; }\n    notes[type].push(scope === \"\" ? summary : scope + \": \" + summary);\n  }\n  return notes;\n};",
+    senior: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType =>\n  (COMMIT_TYPES as readonly string[]).includes(value);\n\nconst SUBJECT = /^(?<type>[^\\s():]+)(?:\\((?<scope>[^()]+)\\))?: (?<summary>.+)$/s;\n\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    const { type = \"\", scope, summary = \"\" } = SUBJECT.exec(subject)?.groups ?? {};\n    if (isCommitType(type)) notes[type].push(scope ? `${scope}: ${summary}` : summary);\n    else notes.other.push(subject);\n  }\n  return notes;\n};",
     hiddenTests: [
+      { call: "releaseNotes(['feat(a(b)): x','fix(a)b): x','docs(a:b): x','feat(a: b): x','feat(ui: x','fix): y']).other", expected: ["feat(a(b)): x", "fix(a)b): x", "feat(ui: x", "fix): y"] },
+      { call: "releaseNotes(['feat:  ','feat(a: b): c','fix(ui): a: b','docs( ): x','docs(a:b): x','feat(): no','Feat: no'])", expected: {"feat": [" ", "a: b: c"], "fix": ["ui: a: b"], "docs": [" : x", "a:b: x"], "other": ["feat(): no", "Feat: no"]} },
+      { call: "(()=>{const input=Object.freeze([]),a=releaseNotes(input),b=releaseNotes(input);a.feat.push('changed');return [a!==b,a.feat!==a.fix,a.feat!==b.feat,a.fix.length,b.feat.length,Reflect.ownKeys(b).sort(),COMMIT_TYPES.join(','),['feat','fix','docs','Feat','constructor','toString',''].map(value=>isCommitType(value))];})()", expected: [true, true, true, 0, 0, ["docs", "feat", "fix", "other"], "feat,fix,docs", [true, true, true, false, false, false, false]] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>(i%2?'fix(ui): ':'feat: ')+i)),out=releaseNotes(input);return [out.feat.length,out.fix.length,out.feat[0],out.feat[499],out.fix[0],out.fix[499],input[0],input.length];})()", expected: [500, 500, "0", "998", "ui: 1", "ui: 999", "feat: 0", 1000] },
+
       { call: '[isCommitType("toString"), isCommitType("constructor"), isCommitType("fix"), isCommitType("")]', expected: [false, false, true, false] },
       { call: 'releaseNotes(["fix(parser): handle \\"a: b\\""])', expected: { feat: [], fix: ['parser: handle "a: b"'], docs: [], other: [] } },
       { call: 'releaseNotes(["Feat: shout", "feat(): empty scope", "feat (ui): space", "hasOwnProperty: x"]).other', expected: ['Feat: shout', 'feat(): empty scope', 'feat (ui): space', 'hasOwnProperty: x'] },
@@ -326,6 +238,8 @@ const releaseNotes = (subjects: readonly string[]): Notes => {
       { call: 'releaseNotes(["feat(api): add limits", "chore(deps): bump", "fix: tidy"])', expected: { feat: ['api: add limits'], fix: ['tidy'], docs: [], other: ['chore(deps): bump'] } },
     ],
     hiddenTypeTests: [
+      {"code": "const __audit=(value:CommitType|\"other\")=>{if(isCommitType(value)){const yes:CommitType=value;return yes;}const no:\"other\"=value;return no;}; const __auditSubjects:readonly string[]=[]; const __auditNotes:Notes=releaseNotes(__auditSubjects);"},
+
       { code: 'releaseNotes(["feat: x"]).other.push(5);', rejects: true },
       { code: 'const __value: string = "feat"; if (isCommitType(__value)) { const __narrowed: CommitType = __value; }' },
     ],
