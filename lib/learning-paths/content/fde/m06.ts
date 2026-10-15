@@ -132,29 +132,29 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Marlbrook Systems runs a support desk. Its assistant can already read a ticket, and the support lead now wants it to issue a refund when a customer was double-charged. That request turns into a tool definition, and the tool definition is the only place anyone writes down what the assistant may do with a customer’s money.',
+            'Adding a refund tool needs a declared input contract, current authorization, specific approval and safe effect handling. The tool definition helps describe these decisions, but it is not the only place policy exists and is not sufficient authority to move money.',
         },
         {
           kind: 'prose',
           body:
-            'A tool definition does two jobs that look identical on the page. Sent to the model, the schema is a hint: here are the arguments, here is what they mean, fill them in. Held in your dispatcher, the same schema is a gate: these arguments and no others, this type, this list of values. The model can ignore the hint. Your gate is the part that stops it.',
+            'A tool definition describes what callers may request; the application must enforce the relevant contract at execution. A decoder or framework may enforce some structure, but cannot establish current permission, balance or consent from a schema alone. Validate the actual arguments before passing them to an effectful handler, then enforce its live business invariants.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A schema you only ship to the model enforces nothing. The model produces text, a decoder may constrain that text, a framework may parse it, and none of those steps is your process. If the check that guards a refund lives in the prompt, an argument shaped the wrong way walks straight past it. Run the check again in your own code, on the arguments you are about to hand the handler.',
+            'Know which checks the chosen decoder, framework and server actually perform. Do not assume every schema is merely a hint or that external structured decoding enforces nothing. Server-side validation and authorization still guard the effect, including cases where a call reaches the handler through another path.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: "const registry = {\n  'refunds.create': {\n    scope: 'refunds.write',\n    approval: true,\n    schema: {\n      orderId: { type: 'string', required: true },\n      amountCents: { type: 'number', required: true },\n      currency: { type: 'string', required: true, enum: ['USD', 'EUR', 'GBP'] },\n    },\n    handler: args => ledger.refund(args),\n  },\n};",
-          caption: 'One registry entry carries four separate decisions: the permission it needs, whether a person signs it off, the arguments it accepts, and the code that acts.',
+          caption: 'An illustrative custom registry, not an MCP inputSchema or full JSON Schema. Type-only amountCents accepts more than a valid financial amount; the real handler must enforce numeric/range, authorization, approval and atomic balance rules.',
         },
         {
           kind: 'prose',
           body:
-            'Three checks the schema can settle on its own: a required field is present, a value is the declared type, a value is one of the listed ones. Each of them needs nothing but the arguments in front of it. In JavaScript the type test is `typeof`, which has one trap worth remembering — `typeof null` is `"object"`, so a `null` where a string was required fails the type check rather than the presence check.',
+            'This exercise uses a small argument-only schema language: own-field presence, JavaScript typeof and fixed enum membership. Here null is present and typeof null is object, so null for a string field is a type failure. Other schema languages define required/nullability differently and can express more than these three checks. Stateful validation still needs trusted external context.',
         },
         {
           kind: 'table',
@@ -166,12 +166,12 @@ export const FDE_M06: ModuleSource = {
             ['`orderId` is present at all', 'Schema', 'Presence is structural. Whether that id names a real order is not.'],
             ['The amount is within the order’s remaining refundable balance', 'Handler', 'It needs the order, which the argument only names.'],
             ['The operator’s session holds `refunds.write`', 'Handler', 'It needs the session. No argument supplies it, and no argument may override it.'],
-            ['This order has no refund recorded in the last hour', 'Handler', 'It needs the store and the clock, both of which move between calls.'],
+            ['This scenario’s refund policy requires checking current order/refund state', 'Handler', 'It needs authoritative state, and potentially a trusted clock; an arbitrary one-hour ban is not a universal refund rule.'],
           ],
         },
         {
           kind: 'trace',
-          caption: 'One refund call stepped through the gates. The arguments look reasonable and two of the three are fine.',
+          caption: 'One refund call through the gates: orderId is valid, but amountCents has the wrong type and currency is outside the enum.',
           trace: {
             shape: 'array',
             frames: [
@@ -190,7 +190,7 @@ export const FDE_M06: ModuleSource = {
                   { index: 0, role: 'settled' },
                   { index: 1, role: 'active' },
                 ],
-                note: 'The session holds refunds.write, so this operator may use the tool. Authorization is answered before the arguments are read, so a caller who may not use the tool learns nothing about its shape.',
+                note: 'The session holds refunds.write, so this operator may use the tool. Authorization is answered before the arguments are read, so this response does not disclose argument-validation details to an unauthorized caller. Other discovery, timing or error channels require separate controls.',
               },
               {
                 cells: ['Known tool', 'Scope', 'Arguments', 'Handler'],
@@ -217,7 +217,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The ordering is the whole point. Every refusal above happened before `ledger.refund` was called. Once the handler runs you are not validating any more, you are compensating, and a refund is one of the effects that compensating handles badly.',
+            'Refuse known-invalid calls before the effect. The handler must still validate current authority, approval and business state atomically with execution; reaching a handler is not automatically the point after which all validation is impossible. Recovery or compensation depends on what actually completed.',
         },
         {
           kind: 'prose',
@@ -227,29 +227,29 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Marlbrook’s first draft had one tool, `orders.manage`, with a `mode` argument that was either `read` or `refund`. Granting it granted both, so every operator who could look at an order could also refund one. Splitting it into `orders.read` under the `orders.read` scope and `refunds.create` under `refunds.write` moved the decision back where it belongs: the grant decides, and the argument is only a filter.',
+            'Marlbrook’s combined orders.manage tool used one broad grant for read and refund. Splitting the tools/scopes makes least-privilege grants easier to express. A combined tool can also be safe if it enforces distinct operation permissions correctly; a mode argument does not inherently require granting every branch.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Splitting a tool is a permission decision, not a tidiness one. The question is never whether the two branches share code. It is whether you would ever want to grant one and withhold the other. When the answer is yes, they are two tools, however similar the handlers look.',
+            'Separate tool definitions when they make authority, approval, input contracts and audit clearer. Shared implementation code can remain behind them. If operations need different permissions, enforce those distinctions whether the public interface is split or combined; tool count alone does not prove least privilege.',
         },
         {
           kind: 'prose',
           body:
-            'Across a process boundary, the Model Context Protocol is the convention a lot of this now runs on: a server advertises its tools with a name, a description and an input schema, and a client discovers and calls them. The specification is versioned, and the client and server settle on a protocol version when they connect. Reading it is worth an hour, because it names the shapes you will otherwise reinvent badly.',
+            'MCP standardizes versioned tool discovery and calls; this exercise instead uses a small in-process registry. Read the actual revision a client implements rather than assuming all MCP versions negotiate at connection time. The registry’s per-field type objects are not an MCP inputSchema.',
         },
         {
           kind: 'prose',
           body:
-            'Versions move, so your client will eventually meet one it does not implement. It must not guess. Either refuse the connection and report which versions it speaks, or propose one it does implement and treat the peer’s agreement as the answer. Reading a payload under the wrong version’s rules is worse than refusing to read it: a field whose meaning changed still parses cleanly, and the mistake shows up later as a tool call that did the wrong thing to a real record.',
+            'MCP 2026-07-28 uses per-request version metadata, with UnsupportedProtocolVersionError listing supported revisions; clients should choose mutual support or report incompatibility. Legacy 2025-03-26 uses initialization negotiation and says a client should disconnect if it cannot support the selected version. Follow the implemented revision and ordinary retry rules; never silently interpret an unsupported version as one you know.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Handling an unknown version is not the same as skipping an unknown field. A field you have never seen is often safe to ignore. A protocol version you have never seen tells you the rules for reading every field may have moved, including the fields you do recognise.',
+            'Unknown fields and unknown protocol versions need their documented compatibility rules. Ignoring a field is safe only when the contract permits it; authorization, required semantics or extensions may depend on that field. Parsing bytes successfully does not establish protocol support.',
         },
       ],
     },
@@ -280,18 +280,18 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The refund tool now exists and refuses everything it should refuse. Three questions are still open, and none of them is about the schema: how many times may this call try, what happens when the same call arrives twice, and who says yes before money moves.',
+            'A schema/permission gate is only part of execution safety. Define total retry/deadline budgets, operation identity and durable deduplication, approval binding and current-state enforcement. The in-memory exercise below isolates selected synchronous mechanics; it is not a production financial dispatcher.',
         },
         {
           kind: 'prose',
           body:
-            'A retry budget is a count of attempts for the whole call, held in one place. Marlbrook’s first version retried inside the HTTP client, retried again in the tool handler and retried once more in the agent loop. Three retries at each layer is twenty-seven attempts against a service that was already struggling. Count attempts where the call is dispatched, not where the failure happens to be noticed.',
+            'Nested retry layers multiply attempts. Three retries means four total attempts at a layer; three such layers can issue 4×4×4=64 underlying attempts, not 27. Three total attempts at each of three layers would give 27. Coordinate retry eligibility, counts, deadlines and delay policy across layers instead of assuming a dispatcher count sees hidden client retries.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: "const run = (tool, args) => {\n  const budget = tool.maxAttempts || 1;\n  let attempts = 0;\n  let error = '';\n\n  while (attempts < budget) {\n    attempts += 1;\n    try {\n      return { ok: true, value: tool.handler(args), attempts };\n    } catch (thrown) {\n      error = thrown.message;\n    }\n  }\n\n  return { ok: false, reason: 'tool_failed', attempts, error };\n};",
-          caption: 'The budget is a total, not a per-failure allowance, and the count comes back with the result so the caller can see what the answer cost.',
+          code: '// Illustrative asynchronous runner: maxAttempts is a trusted positive integer.\n// shouldRetry includes a reliable safe-replay contract and transient-error policy.\nconst run = async (tool, args) => {\n  const budget = tool.maxAttempts ?? 1;\n  for (let attempts = 1; attempts <= budget; attempts++) {\n    try { return {ok: true, value: await tool.handler(args), attempts}; }\n    catch (error) {\n      if (attempts === budget || !tool.shouldRetry(error))\n        return {ok: false, reason: \'tool_failed\', attempts};\n      await tool.waitBeforeRetry(attempts, error);\n    }\n  }\n};',
+          caption: 'This separate async sketch awaits rejections and retries only under an explicit safe-replay policy. The exercise uses synchronous synthetic handlers and its own exact result/error contract.',
         },
         {
           kind: 'callout',
@@ -302,7 +302,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'An idempotency key closes that gap. The caller mints one key per intended effect, before the first attempt, and sends it with every attempt of that effect. The receiver records the result under the key, and a second arrival with the same key returns the recorded result without running the handler again. HTTP already gives some methods this property by definition — repeating a PUT or a DELETE has the same intended effect as sending it once — and a refund is not one of them, so the key is what supplies what the method does not.',
+            'A stable key enables deduplication only when the receiver enforces the documented scoped operation contract against concurrency and crashes. Bind request identity and result, state which failures are retained and define the retention window. PUT/DELETE are idempotent in intended HTTP effect, not identical response. A refund API may supply its own idempotency mechanism; merely sending a key does not make arbitrary repeated financial effects safe.',
         },
         {
           kind: 'table',
@@ -315,26 +315,26 @@ export const FDE_M06: ModuleSource = {
               'A key generated per attempt makes every retry a new call, which is exactly the duplicate you were preventing.',
             ],
             [
-              'Record the result, not just the key',
-              'The stored entry holds what the first call returned.',
-              'A receiver that only remembers "seen" can refuse the replay but cannot answer it, so the caller keeps retrying.',
+              'Define the replay response',
+              'Retain enough state or a reference to provide the promised replay response.',
+              'A seen marker can support a duplicate acknowledgement, but cannot reconstruct the original response unless that response is stored or resolvable.',
             ],
             [
-              'Record it only when something completed',
-              'A call that never reached a verdict leaves no entry behind.',
-              'A key burned by a refusal blocks the corrected call that follows two seconds later.',
+              'Define pending, success and failure retention explicitly',
+              'The toy dispatcher caches success/pending and clears failed execution; real services may retain some failures or in-progress claims.',
+              'A retry must follow the service’s key/payload contract; a changed intended operation may require a new key rather than overwriting old meaning.',
             ],
             [
-              'Keys are scoped to one tenant and one operator',
-              'The lookup happens inside the boundary, never in a global table.',
-              'A key another tenant happens to reuse hands them a stored result they were never allowed to see.',
+              'Keys use an explicitly authorized namespace',
+              'Authorize the namespace before lookup; a shared table can safely enforce a tenant/caller/operation boundary.',
+              'Without a trusted namespace and access check, cross-tenant key collisions can expose another caller’s result.',
             ],
           ],
         },
         {
           kind: 'prose',
           body:
-            'The dispatcher you write next takes the simplest rule: a repeated key is the same call, and the stored result comes back whatever arguments arrive with it. Several payment APIs go further and reject a reused key whose arguments changed, on the grounds that the caller has a bug worth reporting. Both rules are defensible. Running the second call is not.',
+            'The exercise deliberately uses one immutable trusted session per dispatcher instance and replays its cached key before new gates, even if the later tool/arguments differ. This is a bounded toy contract, not a recommended production authorization order. A real service must authorize cached-result access, bind the intended operation/payload, handle concurrency durably and define failure/expiry semantics. Clearing a failed key is unsafe if the effect may already have happened without a recorded result.',
         },
         {
           kind: 'prose',
@@ -345,11 +345,11 @@ export const FDE_M06: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Show the validated arguments, not the assistant’s description of them. Model output is untrusted content: it can describe "a small courtesy refund" over arguments that read 240500 cents, and it can ask the operator to approve on grounds that are not in the record. The operator is approving what the dispatcher will run, so render that object.',
+            'Show the actual validated action, order, amount and currency in understandable terms; a rendered raw object alone is not necessarily usable consent. Bind an immutable snapshot or trusted server reference to that exact request. Model wording cannot alter the approved effect, and the server still enforces authority and current business rules.',
         },
         {
           kind: 'trace',
-          caption: 'An approval granted at 09:12 and executed at 09:17, with a colleague working the same order in between.',
+          caption: 'A hypothetical approval for the full 24050-cent remaining balance, reserving nothing. A colleague refunds it fully before execution; compare unchecked versus atomically checked execution.',
           trace: {
             shape: 'array',
             frames: [
@@ -397,7 +397,7 @@ export const FDE_M06: ModuleSource = {
                   { index: 2, role: 'settled' },
                   { index: 3, role: 'excluded' },
                 ],
-                note: '09:17, with the re-check in place. The dispatcher re-reads the order first, finds a refund it did not make, and refuses. The operator gets the call back with the reason and the new balance instead of a second refund.',
+                note: '09:17, with the re-check in place. The handler atomically checks current authorization/approval and remaining balance with the effect. It sees zero remaining after the full manual refund and refuses; a separate earlier read would still leave a race. The operator gets the call back with the reason and the new balance instead of a second refund.',
                 counter: { label: 'Refunded on ORD-4471, cents', value: 24050 },
               },
             ],
@@ -406,18 +406,18 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'So re-check at execution. An approval records a decision, not a fact about the world. Bind it to whatever the decision rested on — a version number on the order, an ETag, a hash of the fields you put on the screen — and compare that again before the handler runs. When it moved, refuse and ask the operator again with the new numbers.',
+            'At execution, enforce approval identity and relevant current state together with the effect, using a transaction, conditional write or the provider’s equivalent safe contract. A version/ETag/fingerprint can support this binding but does not by itself enforce authority or prevent a check-then-write race. If changed state invalidates the approved effect, refuse or request a fresh decision under policy. The memory exercise snapshots primitive arguments but does not implement these external-state controls.',
         },
         {
           kind: 'prose',
           body:
-            'Give approvals an expiry as well, short enough that the operator still remembers the call when it runs. An expiry is a cheap bound on how stale a decision can get, and it is not a substitute for the re-check: data moves in thirty seconds as readily as in five minutes.',
+            'Define an approval lifetime from the actual risk and workflow policy. Expiry bounds time, not concurrent state changes: a record can change immediately after approval. Enforce both the trusted expiry condition and current-state/approval binding; no universal five-minute or operator-memory interval proves safety.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'An approval is not a permission grant. Approving one refund does not add `refunds.write` to a session that lacked it, and it does not authorize the next refund. Scope is checked on every call, approved or not.',
+            'An approval is not a permission grant. Approving one refund does not add `refunds.write` to a session that lacked it, and it does not authorize the next refund. Production execution must check relevant current authority even for approved operations. The exercise instead assumes a fixed trusted session for its entire short lifetime.',
         },
       ],
     },
@@ -429,7 +429,7 @@ export const FDE_M06: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: tool schemas and what they are for',
-      summary: 'The schema as a gate rather than a description, one permission per tool, and a protocol version the client has never seen.',
+      summary: 'Custom schema limits, operation permissions, handler invariants and revision-specific MCP compatibility.',
       competencies: ['tools'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m06-l1',
@@ -440,7 +440,7 @@ export const FDE_M06: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: bounded execution and approval',
-      summary: 'Attempt budgets in one place, idempotency keys under duplicate delivery, and the approval that went stale before it ran.',
+      summary: 'Total retry budgets, scoped durable idempotency, explicit toy limits and approval binding at execution.',
       competencies: ['tools'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m06-l2',
@@ -522,7 +522,7 @@ export const FDE_M06: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'Write `createDispatcher(registry, session)`, returning `{ call, approve }`. It is the single place where a proposed tool call turns into an effect, so every boundary in this module lands in it.\n\n`registry` maps a tool name to `{ scope, schema, handler, approval?, maxAttempts? }`. A `schema` maps an argument name to `{ type, required, enum? }`, where `type` is compared with `typeof`. `session` is `{ operatorId, scopes }`, and `scopes` is the only place a permission may come from.\n\n`call(name, args, options)` works through the gates in this order and stops at the first refusal.\n\n1. **Idempotency replay.** When `options.idempotencyKey` is a key this dispatcher has already recorded, return the recorded result immediately and do nothing else, whatever name and arguments arrived with it.\n2. **Unknown tool.** A name that is not in `registry` gives `{ ok: false, reason: \'unknown_tool\', tool: name }`.\n3. **Scope.** When `session.scopes` does not contain the tool’s `scope` exactly, give `{ ok: false, reason: \'scope_denied\', scope: <the tool’s scope> }`. Match the whole string: a session holding `refunds` does not hold `refunds.write`.\n4. **Arguments.** Walk the schema fields in declaration order. A required field that is absent gives `problem: \'missing\'`; a present value whose `typeof` is not the declared `type` gives `\'type\'`; a present value outside a declared `enum` gives `\'enum\'`. Then walk the supplied arguments: any key the schema does not declare gives `\'unknown\'`. The first failure returns `{ ok: false, reason: \'invalid_arguments\', field, problem }` and the handler never runs. An absent optional field is fine, and `null` where a string was declared is a type failure, not a missing one.\n5. **Approval.** A tool with `approval: true` does not run. Record it and return `{ ok: false, reason: \'pending_approval\', callId }`, where `callId` is `\'CALL-1\'` for the first pending call this dispatcher creates, `\'CALL-2\'` for the second, and so on.\n6. **Execute.** Call `handler(args)`, retrying while it throws until `maxAttempts` attempts in total have been made. Missing `maxAttempts` means one attempt. Success gives `{ ok: true, value, attempts }`; exhausting the budget gives `{ ok: false, reason: \'tool_failed\', attempts, error }`, where `error` is the `message` of the last error thrown.\n\n`approve(callId)` runs a pending call under the same retry rules and returns the same shapes. A `callId` that is unknown, or that was already approved, gives `{ ok: false, reason: \'unknown_call\' }` and runs nothing.\n\nAn idempotency key records a call that produced a result: an `ok: true` execution, or a pending approval — so a replayed key returns the same `callId` instead of queuing a second refund. A refusal and a `tool_failed` are not recorded, so the caller can correct the call and use the same key again, and an approval that failed clears its key.\n\nEvery tool here is a synthetic fixture. The handlers push to an array and return authored values; nothing calls a provider, opens a socket or waits on a timer, so a failing handler is a thrown `Error` rather than real network behaviour.',
+          'Write `createDispatcher(registry, session)`, returning `{ call, approve }`. It is the single place where a proposed tool call turns into an effect, so every boundary in this module lands in it.\n\n`registry` maps a tool name to `{ scope, schema, handler, approval?, maxAttempts? }`. A `schema` maps an argument name to `{ type, required, enum? }`, where `type` is compared with `typeof`. `session` is `{ operatorId, scopes }`, and `scopes` is the only place a permission may come from.\n\n`call(name, args, options)` works through the gates in this order and stops at the first refusal.\n\n1. **Idempotency replay.** When `options.idempotencyKey` is a key this dispatcher has already recorded, return the recorded result immediately and do nothing else, whatever name and arguments arrived with it.\n2. **Unknown tool.** A name that is not in `registry` gives `{ ok: false, reason: \'unknown_tool\', tool: name }`.\n3. **Scope.** When `session.scopes` does not contain the tool’s `scope` exactly, give `{ ok: false, reason: \'scope_denied\', scope: <the tool’s scope> }`. Match the whole string: a session holding `refunds` does not hold `refunds.write`.\n4. **Arguments.** Walk the schema fields in declaration order. A required field that is absent gives `problem: \'missing\'`; a present value whose `typeof` is not the declared `type` gives `\'type\'`; a present value outside a declared `enum` gives `\'enum\'`. Then walk the supplied arguments: any key the schema does not declare gives `\'unknown\'`. The first failure returns `{ ok: false, reason: \'invalid_arguments\', field, problem }` and the handler never runs. An absent optional field is fine, and `null` where a string was declared is a type failure, not a missing one.\n5. **Approval.** A tool with `approval: true` does not run. Store a private shallow snapshot of the validated primitive arguments and return `{ ok: false, reason: \'pending_approval\', callId }`, where `callId` is `\'CALL-1\'` for the first pending call this dispatcher creates, `\'CALL-2\'` for the second, and so on.\n6. **Execute.** Call `handler(args)`, retrying while it throws until `maxAttempts` attempts in total have been made. Missing `maxAttempts` means one attempt. Success gives `{ ok: true, value, attempts }`; exhausting the budget gives `{ ok: false, reason: \'tool_failed\', attempts, error }`, where `error` is the `message` of the last error thrown.\n\n`approve(callId)` runs a pending call under the same retry rules and returns the same shapes. A `callId` that is unknown, or that was already approved, gives `{ ok: false, reason: \'unknown_call\' }` and runs nothing.\n\nAn idempotency key records a call that produced a result: an `ok: true` execution, or a pending approval — so a replayed key returns the same `callId` instead of queuing a second refund. A refusal and a `tool_failed` are not recorded, so the caller can correct the call and use the same key again, and an approval that failed clears its key.\n\nDomain: one immutable trusted tenant/operator authorization context per dispatcher. Registry, session and schema stay fixed; at most 10 tools/scopes/schema fields and 50 calls are used. Tool names, argument names and idempotency keys are strings of at most 100 UTF-16 units. Schemas use string/number/boolean typeof rules and primitive enums. Arguments are ordinary own enumerable flat primitive fields, optionally missing/null as a whole; no getters, proxies, nested mutable values or prototype tricks. maxAttempts is absent or an integer 1–3. Handlers are synchronous, return bounded JSON-like values, and throw Error objects on the authored transient failures. Treat returned results as read-only.\n\nThe early replay path is valid only for this fixed trusted instance; it is not production authentication, durable/concurrent idempotency or authorization of cached results. approve represents an already trusted approval event, not verification of a human identity. The exercise has no current-order store, provider transaction, approval expiry or revocation mechanism. Its unconditional throw-retry and failed-key clearing are fixture contracts, not safe defaults for real financial effects.\n\nEvery tool here is a synthetic fixture. The handlers push to an array and return authored values; nothing calls a provider, opens a socket or waits on a timer, so a failing handler is a thrown `Error` rather than real network behaviour.',
         contract: [
           'Read permissions only from `session.scopes`, and compare whole scope strings. No argument may widen what the session holds.',
           'No handler runs until the tool is known, the scope is held and the arguments have validated.',

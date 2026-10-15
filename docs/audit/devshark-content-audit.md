@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n036
+
+Reviewed both tool/execution lessons, reading activities and dispatcher.
+Custom typeof schema gates are distinguished from JSON Schema/MCP and handler
+invariants. Version-specific MCP compatibility replaces connection-only rules.
+Three retries at three layers can mean64attempts, versus27for three total
+attempts per layer. The async illustration awaits errors and requires a safe-
+replay policy. Durable idempotency, authorized cached-result access, immutable
+approval identity and atomic current-state execution are distinct from this
+fixed-context synchronous in-memory exercise.
+
+Null-prototype state fixes __proto__ replay; private primitive argument snapshots
+prevent a caller changing pending approval, and empty Error messages survive.
+Six real sandbox verdicts pass, covering frozen contexts, special/empty keys,
+failed-call/approval key clearing and scope/retry wrongs. Two valid no-target
+analyses retain base25; no misleading single stateful complexity target is
+invented. Trusted async/budget arithmetic passes without actual MCP, provider,
+concurrent storage, human approval or financial effects. Native bindings, paths,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Individual manual editorial/final
+readings remain separate from execution.
+
+Coverage is **235/263 native**, **28 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 merged at cabbaac4 after exact-head verify29m57s,
+SQL40s, eleven preview checks and six catalogue probes per theme passed.
+Production verification is pending. N032–n036 are local; exact-production-
+verified coverage remains95 coding/170 native through #398. Diagnostic parent
+still awaits #397.
+
 ## 15 October continuation — five-item native batch n035
 
 Reviewed both retrieval lessons, reading activities and selection exercise.
