@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n022
+
+Reviewed all four integration questions and their check. Retry reasoning now
+distinguishes requested read-only effects from incidental GET effects and
+recognizes idempotence/preconditions beyond safe methods. 429/Retry-After no
+longer promises no reads/writes, transaction rollback, empty bodies or future
+success. Pagination explicitly uses unique immutable ids and documented keyset
+semantics, without a snapshot guarantee or an always-full-scan offset claim.
+Ticket-version deduplication is explicitly single-tenant and content hashing is
+qualified rather than a universal replacement for logical event identity.
+
+The authored deletion example shows offset skipping id4 while key>3 retains it;
+the literal webhook's stable version key survives a fresh delivery id while its
+whole-payload hash changes. Exercise thresholds/feedback agree. HTTP conclusions
+are manual primary-RFC readings, not actual retries or provider behavior.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores/readings are not inferred from execution.
+
+Coverage is **165/263 native**, **98 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 remains
+frozen at 758d1bbb with SQL/exact-preview checks passing and verify pending;
+n015–n022 are local. Production-verified coverage remains 95 coding/95 native.
+
 ## 15 October continuation — five-item native batch n021
 
 Reviewed discovery questions two through four, the complete check and the scope
