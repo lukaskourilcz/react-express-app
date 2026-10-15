@@ -95,8 +95,9 @@ assert.equal(hung.timedOut, true);
 assert(!hung.logs.some((line) => line.includes('424242')), 'a hidden call that hangs still prints nothing');
 console.log('PASS integrity: hidden calls print nothing the learner sees');
 
-// The same through the Submit handler: js-digit-sum has three hidden checks
-// (99999, 305 and 10). An anonymous submit grades without a database.
+// The same through the Submit handler. Use the actual catalogue counts and
+// visible literal inputs so editorial additions do not turn this privacy
+// contract into a stale fixture-count check. Anonymous Submit needs no database.
 const response = { statusCode: 200, body: null as null | { verdict?: string; hidden?: unknown; logs?: string[] }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
 await handleCodingSubmit({
   method: 'POST', headers: {},
@@ -107,8 +108,16 @@ await handleCodingSubmit({
 } as never, response as never, null);
 assert.equal(response.statusCode, 200, JSON.stringify(response.body));
 assert.equal(response.body?.verdict, 'passed');
-assert.deepEqual(response.body?.hidden, { passed: 3, total: 3 });
-assert.deepEqual(response.body?.logs, ['digitSum of 493', 'digitSum of 1234', 'digitSum of 0', 'digitSum of 7', 'digitSum of 1000'], 'Submit returns only the visible calls\' console output');
+const loggedDigitTask = CODING_TASKS.find(task => task.id === 'js-digit-sum')!;
+const loggedDigitHidden = solutionFor(loggedDigitTask.id)!.hiddenTests!.length;
+assert(loggedDigitHidden > 0, 'the privacy probe must still exercise hidden calls');
+assert.deepEqual(response.body?.hidden, { passed: loggedDigitHidden, total: loggedDigitHidden });
+const loggedDigitExpected = loggedDigitTask.tests!.map(test => {
+  const literal = /^digitSum\((\d+)\)$/.exec(test.call);
+  assert(literal, 'Adapt the logging probe if its visible authored call shape changes');
+  return `digitSum of ${Number(literal[1])}`;
+});
+assert.deepEqual(response.body?.logs, loggedDigitExpected, 'Submit returns only the visible calls\' console output');
 console.log('PASS integrity: Submit shows the visible checks\' console only');
 
 // ── every changed submission in one session is recorded (CODE-1) ─────────
@@ -1188,10 +1197,25 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   const task = CODING_TASKS.find((one) => one.id === 'js-digit-sum')!;
   const hidden = solutionFor(task.id)!.hiddenTests!;
   const answers = [...task.tests!.map((one) => one.expected), ...hidden.map((one) => one.expected)];
+  const visibleInputs = task.tests!.map(test => {
+    const literal = /^digitSum\((\d+)\)$/.exec(test.call);
+    assert(literal, 'Adapt the phase probe if visible authored call shapes change');
+    return Number(literal[1]);
+  });
+  assert(hidden.every(test => test.call !== task.tests![0].call), 'the phase marker must not be a hidden input');
+  // Numeric answers can coincide across visible and hidden cases. Arm the
+  // ordered table only by seeing the visible input sequence, so a fresh
+  // hidden program deterministically returns undefined rather than scoring
+  // accidental equal answers. With a shared program and authored order this
+  // attack would pass every case.
+  const orderedAttack = `let k = 0; const A = ${JSON.stringify(answers)}; const inputs = ${JSON.stringify(visibleInputs)}; const digitSum = n => { if (k < inputs.length && n !== inputs[k]) return undefined; return A[k++]; };`;
+  const phase = await runChecks({ code: orderedAttack, visible: task.tests!, hidden, shuffle: list => list });
+  assert.ok(allPassed(phase.visible));
+  assert.equal(phase.hidden!.results.filter(result => result.pass).length, 0, 'fresh hidden state cannot inherit the armed visible phase');
   const response = { statusCode: 200, body: null as null | { verdict?: string; hidden?: { passed: number; total: number } }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
   await handleCodingSubmit({
     method: 'POST', headers: {},
-    body: { session: encodeCodingSession({ taskId: task.id, track: 'javascript', userId: null }), code: `let k = 0; const A = ${JSON.stringify(answers)}; const digitSum = () => A[k++];` },
+    body: { session: encodeCodingSession({ taskId: task.id, track: 'javascript', userId: null }), code: orderedAttack },
   } as never, response as never, null);
   assert.equal(response.statusCode, 200);
   assert.notEqual(response.body?.verdict, 'passed', 'answers served by call count do not pass');
