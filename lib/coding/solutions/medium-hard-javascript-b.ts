@@ -45,80 +45,13 @@ export const MEDIUM_HARD_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> 
     ],
   },
   'js-mh2-table-of-contents': {
-    solution: `const tableOfContents = markdown => {
-  const top = [];
-  const open = []; // headings that can still take children, shallowest first
-  let inCode = false;
-  for (const line of markdown.split("\\n")) {
-    if (line.startsWith("\`\`\`")) {
-      inCode = !inCode; // a fence opens or closes a code block
-      continue;
-    }
-    if (inCode) continue;
-    // One to six #s and a space: seven #s and "#tag" do not match.
-    const match = line.match(/^(#{1,6}) +(.+)$/);
-    if (!match) continue;
-    const depth = match[1].length;
-    const item = { title: match[2].trim(), children: [] };
-    // A heading closes every open heading at its own depth or deeper.
-    while (open.length > 0 && open[open.length - 1].depth >= depth) open.pop();
-    (open.length > 0 ? open[open.length - 1].item.children : top).push(item);
-    open.push({ depth, item });
-  }
-  return top;
-};`,
-    junior: `const tableOfContents = markdown => {
-  const result = [];
-  const stack = [];
-  let insideCode = false;
-  const lines = markdown.split("\\n");
-  for (const line of lines) {
-    if (line.startsWith("\`\`\`")) {
-      insideCode = !insideCode;
-      continue;
-    }
-    if (insideCode) {
-      continue;
-    }
-    const match = /^(#{1,6}) +(.+)$/.exec(line);
-    if (match === null) {
-      continue;
-    }
-    const depth = match[1].length;
-    const heading = { title: match[2].trim(), children: [] };
-    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
-      stack.pop();
-    }
-    if (stack.length === 0) {
-      result.push(heading);
-    } else {
-      const parent = stack[stack.length - 1].heading;
-      parent.children.push(heading);
-    }
-    stack.push({ depth: depth, heading: heading });
-  }
-  return result;
-};`,
-    senior: `const HEADING = /^(?<hashes>#{1,6}) +(?<title>.+)$/;
-
-const tableOfContents = markdown => {
-  // A root at depth 0 is never popped, so every heading has a parent to go into.
-  const root = { depth: 0, item: { children: [] } };
-  const open = [root];
-  let inCode = false;
-  for (const line of markdown.split("\\n")) {
-    if (line.startsWith("\`\`\`")) inCode = !inCode;
-    const heading = !inCode && line.match(HEADING)?.groups;
-    if (!heading) continue;
-    const depth = heading.hashes.length;
-    while (open.at(-1).depth >= depth) open.pop();
-    const item = { title: heading.title.trim(), children: [] };
-    open.at(-1).item.children.push(item);
-    open.push({ depth, item });
-  }
-  return root.item.children;
-};`,
+    solution: "const tableOfContents = markdown => {\n  const top = [];\n  const open = []; // headings that can still take children, shallowest first\n  let inCode = false;\n  for (const line of markdown.split(\"\\n\")) {\n    if (line.startsWith(\"```\")) {\n      inCode = !inCode; // a fence opens or closes a code block\n      continue;\n    }\n    if (inCode) continue;\n    // One to six #s and a space: seven #s and \"#tag\" do not match.\n    const match = line.match(/^(#{1,6}) +([\\s\\S]*)$/);\n    if (!match) continue;\n    const title = match[2].trim();\n    if (title === \"\") continue;\n    const depth = match[1].length;\n    const item = { title, children: [] };\n    // A heading closes every open heading at its own depth or deeper.\n    while (open.length > 0 && open[open.length - 1].depth >= depth) open.pop();\n    (open.length > 0 ? open[open.length - 1].item.children : top).push(item);\n    open.push({ depth, item });\n  }\n  return top;\n};",
+    junior: "const tableOfContents = markdown => {\n  const result = [];\n  const stack = [];\n  let insideCode = false;\n  const lines = markdown.split(\"\\n\");\n  for (const line of lines) {\n    if (line.startsWith(\"```\")) {\n      insideCode = !insideCode;\n      continue;\n    }\n    if (insideCode) {\n      continue;\n    }\n    const match = /^(#{1,6}) +([\\s\\S]*)$/.exec(line);\n    if (match === null) {\n      continue;\n    }\n    const title = match[2].trim();\n    if (title === \"\") continue;\n    const depth = match[1].length;\n    const heading = { title: title, children: [] };\n    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {\n      stack.pop();\n    }\n    if (stack.length === 0) {\n      result.push(heading);\n    } else {\n      const parent = stack[stack.length - 1].heading;\n      parent.children.push(heading);\n    }\n    stack.push({ depth: depth, heading: heading });\n  }\n  return result;\n};",
+    senior: "const HEADING = /^(?<hashes>#{1,6}) +(?<title>[\\s\\S]*)$/;\n\nconst tableOfContents = markdown => {\n  const root = { depth: 0, item: { children: [] } };\n  const open = [root];\n  let inCode = false;\n  for (const line of markdown.split(\"\\n\")) {\n    if (line.startsWith(\"```\")) inCode = !inCode;\n    const heading = !inCode && line.match(HEADING)?.groups;\n    if (!heading) continue;\n    const title = heading.title.trim();\n    if (title === \"\") continue;\n    const depth = heading.hashes.length;\n    while (open.at(-1).depth >= depth) open.pop();\n    const item = { title, children: [] };\n    open.at(-1).item.children.push(item);\n    open.push({ depth, item });\n  }\n  return root.item.children;\n};",
     hiddenTests: [
+      { call: "tableOfContents([\"# Parent\",\"### Deep\",\"##   \\t \",\"#### Leaf\",\"## Left\\u2028Right\",\"#   \",\"#\\tTab\",\" # Indent\",\"####### Seven\",\"````js\",\"# Hidden\",\"```close\",\"# End ###\",\"```\",\"# Hidden forever\"].join(\"\\n\"))", expected: [{"title": "Parent", "children": [{"title": "Deep", "children": [{"title": "Leaf", "children": []}]}, {"title": "Left\u2028Right", "children": []}]}, {"title": "End ###", "children": []}] },
+      { call: "(() => {const text=\"# x\\n\".repeat(5000),a=tableOfContents(text),b=tableOfContents(text);a[0].title=\"changed\";a[0].children.push({title:\"extra\",children:[]});return [a.length,b.length,b[0].title,b[0].children.length,a[0]!==a[1],a[1].children!==a[2].children,a!==b];})()", expected: [5000, 5000, "x", 0, true, true, true] },
+
       {
         call: 'tableOfContents(["# A", "## B", "# C", "## D"].join("\\n"))',
         expected: [{ title: 'A', children: [{ title: 'B', children: [] }] }, { title: 'C', children: [{ title: 'D', children: [] }] }],
@@ -207,32 +140,12 @@ const readLog = (text, minLevel) => {
   const entries = good.filter(entry => levels.indexOf(entry.level) >= minimum);
   return { entries: entries, bad: bad };
 };`,
-    senior: `const LEVELS = ["debug", "info", "warn", "error"];
-
-// The entry a line holds, or null when the line is bad.
-const parseEntry = line => {
-  try {
-    const value = JSON.parse(line);
-    return value && typeof value === "object" && !Array.isArray(value) && LEVELS.includes(value.level) ? value : null;
-  } catch {
-    return null;
-  }
-};
-
-const readLog = (text, minLevel) => {
-  const read = text
-    .split("\\n")
-    .map((line, index) => ({ number: index + 1, line }))
-    .filter(({ line }) => line.trim())
-    .map(({ number, line }) => ({ number, entry: parseEntry(line) }));
-  return {
-    entries: read
-      .filter(({ entry }) => entry && LEVELS.indexOf(entry.level) >= LEVELS.indexOf(minLevel))
-      .map(({ entry }) => entry),
-    bad: read.filter(({ entry }) => !entry).map(({ number }) => number),
-  };
-};`,
+    senior: "const LEVELS = [\"debug\", \"info\", \"warn\", \"error\"];\n\nconst parseEntry = line => {\n  try {\n    const value = JSON.parse(line);\n    return value && typeof value === \"object\" && !Array.isArray(value) && LEVELS.indexOf(value.level) !== -1 ? value : null;\n  } catch {\n    return null;\n  }\n};\n\nconst readLog = (text, minLevel) => {\n  const read = text\n    .split(\"\\n\")\n    .map((line, index) => ({ number: index + 1, line }))\n    .filter(({ line }) => line.trim())\n    .map(({ number, line }) => ({ number, entry: parseEntry(line) }));\n  return {\n    entries: read\n      .filter(({ entry }) => entry && LEVELS.indexOf(entry.level) >= LEVELS.indexOf(minLevel))\n      .map(({ entry }) => entry),\n    bad: read.filter(({ entry }) => !entry).map(({ number }) => number),\n  };\n};",
     hiddenTests: [
+      { call: "(() => {const text=[\"\\u00a0\", \"\\u00a0{\\\"level\\\":\\\"info\\\"}\", \"\\ufeff{\\\"level\\\":\\\"error\\\"}\", \"\\t{\\\"level\\\":\\\"warn\\\"}\\r\", \"{\\\"level\\\":\\\"debug\\\"}\"].join(\"\\n\");return readLog(text,\"warn\");})()", expected: {"entries": [{"level": "warn"}], "bad": [2, 3]} },
+      { call: "(() => {const text=\"{\\\"level\\\":\\\"warn\\\",\\\"level\\\":\\\"error\\\",\\\"__proto__\\\":{\\\"polluted\\\":true},\\\"nested\\\":[1,{\\\"ok\\\":false}]}\";const a=readLog(text,\"error\"),b=readLog(text,\"error\"),e=a.entries[0];return [a.bad.length,a.entries.length,e.level,Object.hasOwn(e,\"__proto__\"),Object.getPrototypeOf(e)===Object.prototype,e.polluted===undefined,e.__proto__.polluted,e.nested[1].ok,a.entries!==b.entries,e!==b.entries[0]];})()", expected: [0, 1, "error", true, true, true, true, false, true, true] },
+      { call: "(() => {const out=readLog(Array(5000).fill(\"bad\").join(\"\\n\"),\"debug\"),seed=JSON.stringify({level:\"info\",msg:\"\"}),text=JSON.stringify({level:\"info\",msg:\"x\".repeat(100000-seed.length)}),large=readLog(text,\"debug\");return [out.entries.length,out.bad.length,out.bad[0],out.bad[4999],text.length,large.entries.length,large.bad.length,large.entries[0].msg.length===100000-seed.length];})()", expected: [0, 5000, 1, 5000, 100000, 1, 0, true] },
+
       { call: 'readLog(["", "", "oops", \'{"level":"info"}\'].join("\\n"), "info")', expected: { entries: [{ level: 'info' }], bad: [3] } },
       { call: 'readLog(\'{"level":"INFO"}\', "debug")', expected: { entries: [], bad: [1] } },
       { call: 'readLog(\'{"level":"toString"}\', "debug")', expected: { entries: [], bad: [1] } },
@@ -502,56 +415,12 @@ const readLog = (text, minLevel) => {
   };
   return userRoles.some(grants);
 };`,
-    junior: `const allowed = (roles, userRoles, permission) => {
-  const visited = new Set();
-  const roleGrants = name => {
-    if (!Object.hasOwn(roles, name)) {
-      return false;
-    }
-    if (visited.has(name)) {
-      return false;
-    }
-    visited.add(name);
-    const role = roles[name];
-    if (role.can.includes(permission)) {
-      return true;
-    }
-    for (const rule of role.can) {
-      if (rule.endsWith(":*")) {
-        const prefix = rule.slice(0, rule.length - 1);
-        if (permission.startsWith(prefix)) {
-          return true;
-        }
-      }
-    }
-    const parents = role.inherits || [];
-    for (const parent of parents) {
-      if (roleGrants(parent)) {
-        return true;
-      }
-    }
-    return false;
-  };
-  for (const name of userRoles) {
-    if (roleGrants(name)) {
-      return true;
-    }
-  }
-  return false;
-};`,
-    senior: `const allowed = (roles, userRoles, permission) => {
-  // Every role the user has, directly or by inheritance, each collected once.
-  const reachable = new Set();
-  const collect = name => {
-    if (!Object.hasOwn(roles, name) || reachable.has(name)) return;
-    reachable.add(name);
-    roles[name].inherits?.forEach(collect);
-  };
-  userRoles.forEach(collect);
-  const covers = rule => rule === permission || (rule.endsWith(":*") && permission.startsWith(rule.slice(0, -1)));
-  return [...reachable].some(name => roles[name].can.some(covers));
-};`,
+    junior: "const allowed = (roles, userRoles, permission) => {\n  const visited = new Set();\n  const roleGrants = name => {\n    if (!Object.hasOwn(roles, name) || visited.has(name)) return false;\n    visited.add(name);\n    const role = roles[name];\n    if (role.can.includes(permission)) return true;\n    const wildcardMatches = role.can.some(rule => {\n      if (!rule.endsWith(\":*\")) return false;\n      return permission.startsWith(rule.slice(0, -1));\n    });\n    if (wildcardMatches) return true;\n    return (role.inherits ?? []).some(roleGrants);\n  };\n  return userRoles.some(roleGrants);\n};",
+    senior: "const allowed = (roles, userRoles, permission) => {\n  const seen = new Set();\n  const covers = rule => rule.endsWith(\":*\") && permission.startsWith(rule.slice(0, -1));\n  const grants = name => {\n    if (seen.has(name) || !Object.hasOwn(roles, name)) return false;\n    seen.add(name);\n    const { can, inherits = [] } = roles[name];\n    return can.includes(permission) || can.some(covers) || (inherits ?? []).some(grants);\n  };\n  return userRoles.some(grants);\n};",
     hiddenTests: [
+      { call: "(() => {const role=Object.freeze({can:Object.freeze([\"posts:*\",\"*\"]),inherits:null}),roles=Object.create({ghost:role});Object.defineProperty(roles,\"__proto__\",{value:role});roles.constructor=Object.freeze({can:Object.freeze([\"exact\"])});Object.freeze(roles);return [allowed(roles,Object.freeze([\"__proto__\"]),\"posts:\"),allowed(roles,[\"__proto__\"],\"postsbackup:x\"),allowed(roles,[\"__proto__\"],\"anything\"),allowed(roles,[\"__proto__\"],\"*\"),allowed(roles,[\"ghost\"],\"posts:x\"),allowed(roles,[\"constructor\"],\"exact\")];})()", expected: [true, false, false, true, false, true] },
+      { call: "(() => {const roles=Object.create(null);for(let i=0;i<100;i++)roles[\"r\"+i]=Object.freeze({can:Object.freeze(i===99?[\"target\"]:[]),inherits:Object.freeze(i===99?[\"r0\"]:[\"r\"+(i+1),\"r\"+(i+1),\"r0\"])});Object.freeze(roles);return [allowed(roles,Object.freeze(Array(1000).fill(\"r0\")),\"target\"),allowed(roles,[\"r0\"],\"missing\"),allowed(roles,[\"r99\"],\"target\"),roles.r0.can.length];})()", expected: [true, false, true, 0] },
+
       { call: `allowed(${ROLES}, ["admin"], "postsbackup:read")`, expected: false },
       { call: `allowed(${ROLES}, ["owner"], "users:read")`, expected: true },
       { call: 'allowed({ a: { can: [], inherits: ["b"] }, b: { can: [], inherits: ["a", "c"] }, c: { can: ["x"] } }, ["a"], "x")', expected: true },

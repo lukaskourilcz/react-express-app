@@ -70,7 +70,7 @@ console.log(fill("Hi {name}, your order {orderId} has shipped.", { name: "Ada", 
     tier: 3,
     focus: ['split', 'map', 'sort'],
     title: 'Sort version numbers',
-    prompt: 'Release tags such as `"1.10.0"` and `"1.9.2"` are whole numbers separated by dots. Sorted as text, `"1.10.0"` lands before `"1.9.2"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `"."`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `"2.1"` and `"2.1.0"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged.',
+    prompt: "Release tags such as `\"1.10.0\"` and `\"1.9.2\"` are whole numbers separated by dots. Sorted as text, `\"1.10.0\"` lands before `\"1.9.2\"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `\".\"`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `\"2.1\"` and `\"2.1.0\"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged. This is numeric dotted-version ordering, not full SemVer: no signs, suffixes or build metadata. versions is a read-only dense array of at most 1000 strings and may be frozen. Each string has 1 to 20 nonempty decimal parts of 1 to 10 ASCII digits, each worth at most 1000000000; leading zeros are allowed and do not change numeric value. These bounds make Number conversion exact. Preserve original strings and return a fresh array even for empty or single input. Target: O(n log n) time under the usual stable comparison-sort model and O(n) additional/output storage, where n is 2 + versions.length; version lengths are bounded here, and JavaScript does not guarantee native sort complexity.",
     starter: `const sortVersions = versions => {
 
 };
@@ -88,7 +88,7 @@ console.log(sortVersions(["1.10.0", "1.9.2", "1.2.10"]));
   return /* a sorted copy */;
 };`,
     hints: [
-      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. `sort` keeps equal items in their original order, but only if you really return 0 for them.',
+      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. Return 0 for equal versions so stable `sort` keeps their input order.',
       '`"1.10".split(".").map(Number)` gives `[1, 10]`. Read a part that is not there as 0 with `left[i] ?? 0`.',
     ],
     approach: [
@@ -439,7 +439,7 @@ console.log(spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9]]));
     tier: 3,
     focus: ['recursion', 'map'],
     title: 'Paint bucket',
-    prompt: 'A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy.',
+    prompt: "A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy. grid is a read-only dense nonempty rectangular array, possibly frozen with its rows, with 1 to 10 rows and columns. Starting indices are valid integers. Colours are literal strings of at most 50 UTF-16 code units, including the empty string, and compare by ===. Return a fresh outer array and a fresh independent copy of every row on every call, including unchanged rows and same-colour calls; the input may share row references. The small grid keeps this recursion exercise within a practical call-stack bound; larger images should use an explicit work stack. Target: O(n) time and copy/recursion space, where n is 1 + the number of cells, under bounded colour comparison.",
     starter: `const paintBucket = (grid, row, col, colour) => {
 
 };
@@ -460,7 +460,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
 };`,
     hints: [
       '`grid.map(row => [...row])` copies every row. `[...grid]` alone copies only the outer array, and the rows would still be the caller’s.',
-      'A painted cell no longer has the starting colour, so the recursion never visits it twice. That is also why a starting cell that already has `colour` must stop straight away: every cell would look unpainted forever.',
+      'Changing a cell’s colour marks it as processed, so later recursive calls stop there. Why must the same-colour case return before recursion starts?',
     ],
     approach: [
       'Copy the grid row by row with `map`, and read the starting colour from the copy.',

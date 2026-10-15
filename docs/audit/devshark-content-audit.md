@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b041
+
+Read dotted version sorting, heading trees, flood fill, JSON log lines and role
+inheritance individually. Heading boards now ignore trimmed-empty titles before
+changing the parent stack and preserve internal Unicode line-separator text.
+The format is explicitly a simplified heading/fence exercise. Roles’ junior and
+senior now follow the requested recursive includes/some predicate. Numeric
+version limits make Number conversion exact; recursion/ownership and raw JSON
+whitespace rules are explicit. Correct sort and fill algorithms remain intact.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 25/30 baseline. Twenty authored-target/base-25-XP checks, copy sweep,
+focused coding including reversed hidden/native Run, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. All 235 coding records match current full hashes.
+Cases cover 1000 versions/twenty parts, 5000 headings and independent children,
+100 frozen/shared-row cells and empty colour values, literal NBSP/BOM JSON
+framing, duplicate/prototype-like JSON data, 5000 bad lines/exact 100000-unit
+input and 100-level cyclic roles with duplicate edges/1000 roots. Cost targets
+state their parsing, comparison-sort and average constant-time Set models;
+finite checks are not universal engine guarantees or measured asymptotics.
+
+Coverage is 235/725 coding, 490 remaining, and 263/263 native. Ten coding
+reviews are staged after PR #406’s verified 225-review release. Same-session
+model self-review only; no live learner state, schema, grader engine, UI or
+entitlement policy change. Continue sequential five-item commits under #176/#391.
+
+
 ## 15 October continuation — five coding items b040
 
 Read template filling, streamed line buffering, bounded scores, debounce and

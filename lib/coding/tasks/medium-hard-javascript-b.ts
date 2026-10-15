@@ -86,7 +86,7 @@ console.log(mark("bobby", "abbey"));
     tier: 3,
     focus: ['regex', 'for-of', 'push', 'pop'],
     title: 'A table of contents from headings',
-    prompt: 'A Markdown heading is a line that starts with one to six `#` characters and a space, like `## Install`. Write `tableOfContents(markdown)`, returning the headings as a tree: an array of `{ title, children }` objects, where each heading goes into the `children` of the nearest heading above it that has fewer `#`s, or into the top level when there is none. The title is the text after the `#`s, trimmed. Walk the lines with `for...of` and match each one with a regular expression that captures the `#`s and the title. Keep a stack of the headings that are still open, with their depths. For each new heading, `pop` every heading at least as deep, `push` the new one into the children of the heading left on top (or into the top level), and push it onto the stack. Lines inside a fenced code block, from a line that starts with three backticks to the next such line, are code and never headings. `#hashtag`, with no space, is not a heading, and neither is a line that starts with seven `#`s.',
+    prompt: "In this exercise, a heading is a line that starts with one to six `#` characters and a space, like `## Install`. Write `tableOfContents(markdown)`, returning the headings as a tree: an array of `{ title, children }` objects, where each heading goes into the `children` of the nearest heading above it that has fewer `#`s, or into the top level when there is none. The title is the text after the `#`s, trimmed. Walk the lines with `for...of` and match each one with a regular expression that captures the `#`s and the title. Keep a stack of the headings that are still open, with their depths. For each new heading, `pop` every heading at least as deep, `push` the new one into the children of the heading left on top (or into the top level), and push it onto the stack. Lines inside a fenced code block, from a line that starts with three backticks to the next such line, are code and never headings. `#hashtag`, with no space, is not a heading, and neither is a line that starts with seven `#`s. Use this simplified heading/fence format, not a full Markdown parser. A heading starts in column zero and requires at least one ASCII space after its hashes; tabs alone do not qualify. After trimming JavaScript whitespace, an empty title is ignored without changing the open-heading stack. Preserve internal Unicode text and trailing hashes as title text. Split only on LF; a trailing CR is trimmed from a title. Any column-zero line starting with three backticks toggles the fence, including longer runs or following text; an unclosed fence hides the rest. Indented fences, tildes and HTML have no special meaning. Return fresh objects and independent children arrays for every heading and every call. markdown has at most 20000 UTF-16 code units. Target: O(n) time and output/split space, where n is 1 + markdown.length; each stack item is pushed/popped once and heading depth is bounded to six.",
     starter: `const tableOfContents = markdown => {
 
 };
@@ -109,16 +109,8 @@ console.log(JSON.stringify(tableOfContents("# Guide\\n## Install\\n## Use"), nul
   }
   return top;
 };`,
-    hints: [
-      'The pattern `/^(#{1,6}) +(.+)$/` does the checking: `match[1].length` is the depth and `match[2].trim()` the title. Six `#`s at most, then a space, is what rules out `#hashtag` and a line of seven.',
-      'The stack holds the chain of headings the next heading could belong to. A new heading closes everything at its own depth or deeper, so once those are popped, whatever is left on top is its parent.',
-    ],
-    approach: [
-      'Split on `"\\n"` and walk the lines with `for...of`. A line that starts with three backticks flips an `inCode` flag; skip every line while it is set.',
-      'Match the line against the heading pattern. If it does not match, go on to the next line.',
-      'Make `{ title, children: [] }`. `pop` while the heading on top of the stack is at least as deep, then push the item into its `children`, or into the top-level array when the stack is empty.',
-      'Push `{ depth, item }` onto the stack, and return the top-level array at the end.',
-    ],
+    hints: ["Capture the opening hashes separately from the rest of the line. The depth is the hash count; trim the captured title and ignore it when nothing remains.", "The stack holds the chain of headings the next heading could belong to. A real new heading closes everything at its own depth or deeper; an ignored line must leave that chain intact."],
+    approach: ["Split on LF and walk with for...of. A column-zero line starting with three backticks toggles the code flag; skip fence lines and everything inside.", "Match one to six leading hashes, ASCII spaces and the rest of the line (including Unicode line-separator characters). Trim the title and ignore empty titles before touching the stack.", "Create a fresh title/children object. Pop headings at least as deep, append it to the remaining parent or roots, then push its depth and object.", "Return the roots. This deliberately implements only the heading/fence rules in the brief."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -163,7 +155,7 @@ console.log(JSON.stringify(tableOfContents("# Guide\\n## Install\\n## Use"), nul
     tier: 3,
     focus: ['json', 'split', 'indexOf', 'filter'],
     title: 'Read a log of JSON lines',
-    prompt: 'A server writes its log as one JSON object per line: `{"level":"info","msg":"started"}`. Write `readLog(text, minLevel)`, returning `{ entries, bad }`. Split the text into lines on `"\\n"`; a line may also end in `"\\r"`, which `JSON.parse` treats like a space. Skip lines that are empty or hold only spaces, and parse every other line with `JSON.parse` inside `try...catch`. A line is bad when it is not valid JSON, when it is not an object (an array, a number, a string and `null` do not count), or when its `level` is not one of `"debug"`, `"info"`, `"warn"` and `"error"`. `bad` lists the line numbers of the bad lines, counting from 1. `entries` holds the parsed objects whose level is `minLevel` or more serious, in the order they came. Keep the four levels in an array in that order, compare positions with `indexOf`, and `filter` on it.',
+    prompt: "A server writes its log as one JSON object per line: `{\"level\":\"info\",\"msg\":\"started\"}`. Write `readLog(text, minLevel)`, returning `{ entries, bad }`. Split the text into lines on `\"\\n\"`; a line may also end in `\"\\r\"`, which `JSON.parse` treats like a space. Skip lines that are empty or hold only spaces, and parse every other line with `JSON.parse` inside `try...catch`. A line is bad when it is not valid JSON, when it is not an object (an array, a number, a string and `null` do not count), or when its `level` is not one of `\"debug\"`, `\"info\"`, `\"warn\"` and `\"error\"`. `bad` lists the line numbers of the bad lines, counting from 1. `entries` holds the parsed objects whose level is `minLevel` or more serious, in the order they came. Keep the four levels in an array in that order, compare positions with `indexOf`, and `filter` on it. minLevel is one of the four listed strings. Blank means line.trim() is empty, including whitespace beyond ASCII spaces; skip such a line but keep its position. Parse each nonblank original line without trimming it first: JSON accepts only its own whitespace grammar, so a nonblank line prefixed with a nonbreaking space or BOM is bad. Use standard JSON.parse semantics, preserve all fields/nested data of qualifying objects and validate only the root object and its level. Duplicate JSON keys follow JSON.parse’s last-value behavior; __proto__ is ordinary parsed data, not a prototype change. Each call returns fresh entries/bad arrays and newly parsed objects. text has at most 100000 UTF-16 code units, at most 5000 LF-delimited lines and JSON nesting depth at most 20. Target: O(n) time under the ordinary linear JSON-parsing model and O(n) parsed/split/output space, where n is 1 + text.length; the four-level lookup has fixed size.",
     starter: `const readLog = (text, minLevel) => {
 
 };
@@ -177,7 +169,7 @@ const readLog = (text, minLevel) => {
   const parsed = [];
   const bad = [];
   text.split("\\n").forEach((line, index) => {
-    // an empty line, or one of only spaces: skip it
+    // skip a line whose trim() is empty, but parse other lines unchanged
     try {
       const value = JSON.parse(line);
       // an object (not an array, not null) with a known level? keep it; otherwise it is bad
@@ -190,11 +182,11 @@ const readLog = (text, minLevel) => {
 };`,
     hints: [
       '`typeof null` and `typeof []` are both `"object"`, so an object check needs `value !== null && typeof value === "object" && !Array.isArray(value)`.',
-      '`LEVELS.indexOf(entry.level)` is -1 for anything that is not a level, so one lookup answers both "is this a level?" and "how serious is it?". A plain object used as a lookup would also answer for `"toString"`, which every object inherits.',
+      '`LEVELS.indexOf(entry.level)` is -1 for anything that is not a level, so one lookup answers both "is this a level?" and "how serious is it?". A lookup object with a default prototype also inherits names such as `"toString"`; it needs an own-property check.',
     ],
     approach: [
       'Split on `"\\n"` and go through the lines with their index. Skip a line whose `trim()` is empty; the line number is the index plus 1 either way.',
-      'Parse each other line in `try...catch`. A parse error, a value that is not a plain object, or a level that `indexOf` cannot find makes the line bad.',
+      'Parse each other line in `try...catch`. A parse error, a root value that is not an object record, or a level that `indexOf` cannot find makes the line bad.',
       'Keep the good entries in order, then `filter` them to those whose level position is at least that of `minLevel`.',
       'Return `{ entries, bad }`.',
     ],
@@ -440,7 +432,7 @@ console.log(scorecard([10, 7, 3, 9, 0]));
     tier: 3,
     focus: ['some', 'includes', 'recursion', 'map-set'],
     title: 'Can this role do it?',
-    prompt: 'An admin panel gives each role a list of permissions and, optionally, the roles it inherits from: `{ editor: { can: ["posts:edit"], inherits: ["viewer"] }, viewer: { can: ["posts:read"] } }`. Write `allowed(roles, userRoles, permission)`, returning `true` when any of the user’s roles grants `permission`, directly or through the roles it inherits, however deep. A permission ending in `:*` grants everything that starts with the text before the `*`, so `"posts:*"` covers `"posts:delete"` but not `"postsbackup:read"`. Write a recursive `grants(name)` that checks the role’s own `can` list with `includes`, then its wildcards, and then asks whether `some` of the roles it inherits grant the permission. Roles can inherit in a circle by mistake, so keep the roles already visited in a `Set` and never visit one twice. A name that `roles` does not have as its own property, checked with `Object.hasOwn`, grants nothing.',
+    prompt: "An admin panel gives each role a list of permissions and, optionally, the roles it inherits from: `{ editor: { can: [\"posts:edit\"], inherits: [\"viewer\"] }, viewer: { can: [\"posts:read\"] } }`. Write `allowed(roles, userRoles, permission)`, returning `true` when any of the user’s roles grants `permission`, directly or through the roles it inherits, however deep. A permission ending in `:*` grants everything that starts with the text before the `*`, so `\"posts:*\"` covers `\"posts:delete\"` but not `\"postsbackup:read\"`. Write a recursive `grants(name)` that checks the role’s own `can` list with `includes`, then its wildcards, and then asks whether `some` of the roles it inherits grant the permission. Roles can inherit in a circle by mistake, so keep the roles already visited in a `Set` and never visit one twice. A name that `roles` does not have as its own property, checked with `Object.hasOwn`, grants nothing. Inputs are read-only and may be frozen, including arrays and role records; there are no getters. roles is an ordinary data record, possibly with a null prototype, with at most 100 own role entries. Every own role has a dense can array of strings; inherits is absent, null or a dense array of role names. userRoles has at most 1000 names, and all role records together contain at most 10000 rules and inheritance links. Names, rules and permission have at most 100 UTF-16 code units. Treat every name literally, including __proto__ and constructor; never use inherited role entries. Only a rule ending exactly in :* is a prefix wildcard, and its prefix includes the colon; it also covers that prefix with an empty suffix. A bare * is only an exact literal permission. Return a Boolean without changing inputs; each allowed call has its own visited Set. Target: O(n) time under bounded-string comparisons and average constant-time Set access, where n is 1 + user-role names + own roles + permission rules + inheritance links; visited/recursion space is O(n).",
     starter: `const allowed = (roles, userRoles, permission) => {
 
 };

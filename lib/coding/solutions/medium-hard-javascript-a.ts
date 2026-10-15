@@ -98,6 +98,10 @@ export const MEDIUM_HARD_JAVASCRIPT_A_SOLUTIONS: Record<string, CodingSolution> 
     })
     .map(({ version }) => version);`,
     hiddenTests: [
+      { call: "sortVersions(Object.freeze([\"0001.0000000000\",\"1\",\"0.999999999\",\"1000000000\",\"1.000000001\",\"1.0.0\"]))", expected: ["0.999999999", "0001.0000000000", "1", "1.0.0", "1.000000001", "1000000000"] },
+      { call: "(() => {const zero=Array(20).fill(\"0\").join(\".\"),last=Array(19).fill(\"0\").concat(\"1\").join(\".\");const empty=Object.freeze([]),single=Object.freeze([\"1\"]);return [sortVersions([last,zero,\"0\"]),sortVersions(empty)!==empty,sortVersions(single)!==single,sortVersions(empty)!==sortVersions(empty)];})()", expected: [["0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0", "0", "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1"], true, true, true] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>(999-i)+\".0\"));const out=sortVersions(input);return [out.length,out[0],out[999],input[0],out!==input];})()", expected: [1000, "0.0", "999.0", "999.0", true] },
+
       { call: 'sortVersions(["0.1", "0.0.1", "0.1.0", "0.0.10", "0.0.2"])', expected: ['0.0.1', '0.0.2', '0.0.10', '0.1', '0.1.0'] },
       { call: 'sortVersions(["4.2.0", "4.2", "4.1.9"])', expected: ['4.1.9', '4.2.0', '4.2'] },
       { call: 'sortVersions(["1.1.1", "1.1", "1.1.1.1", "1"])', expected: ['1', '1.1', '1.1.1', '1.1.1.1'] },
@@ -493,7 +497,7 @@ export const MEDIUM_HARD_JAVASCRIPT_A_SOLUTIONS: Record<string, CodingSolution> 
     solution: `const paintBucket = (grid, row, col, colour) => {
   const copy = grid.map(cells => [...cells]); // new rows, so the caller's grid stays as it was
   const from = copy[row][col];
-  // Painting a cell its own colour would never end: every cell stays "unpainted".
+  // Without this guard, same-colour neighbours can recurse back into each other.
   if (from === colour) return copy;
   const paint = (r, c) => {
     if (r < 0 || r >= copy.length || c < 0 || c >= copy[r].length) return;
@@ -554,6 +558,9 @@ const paintBucket = (grid, row, col, colour) => {
   return copy;
 };`,
     hiddenTests: [
+      { call: "paintBucket(Object.freeze([Object.freeze([\"r\",\"r\"]),Object.freeze([\"b\",\"r\"])]),0,0,\"\")", expected: [["", ""], ["b", ""]] },
+      { call: "(() => {const row=Object.freeze(Array(10).fill(\"\")),grid=Object.freeze(Array(10).fill(row)),out=paintBucket(grid,9,9,\"__proto__\"),same=paintBucket(grid,0,0,\"\");return [out.length,out.every(r=>r.every(x=>x===\"__proto__\")),out!==grid,out.every((r,i)=>r!==grid[i]),new Set(out).size,new Set(same).size,same[0]!==row,grid[0][0],same[0][0]];})()", expected: [10, true, true, true, 10, 10, true, "", ""] },
+
       { call: 'paintBucket([["s", "s", "s", "s"], ["s", "t", "t", "s"], ["s", "t", "s", "s"], ["t", "s", "s", "t"]], 0, 0, "o")', expected: [['o', 'o', 'o', 'o'], ['o', 't', 't', 'o'], ['o', 't', 'o', 'o'], ['t', 'o', 'o', 't']] },
       { call: 'paintBucket([["a", "a", "a"], ["b", "b", "a"], ["a", "a", "a"]], 2, 0, "z")', expected: [['z', 'z', 'z'], ['b', 'b', 'z'], ['z', 'z', 'z']] },
       { call: 'paintBucket([["a", "a", "b", "a"]], 0, 3, "c")', expected: [['a', 'a', 'b', 'c']] },
