@@ -1105,7 +1105,7 @@ console.log(scheduleReminders([{ title: "standup", at: 1300 }, { title: "coffee"
     tier: 2,
     focus: ['json'],
     title: 'Only the public fields',
-    prompt: 'Write `toPublicJson(user)`, returning the user as JSON text that holds only `id`, `name` and `avatar`, in that order, so nothing private such as `email` leaves the server. `JSON.stringify` takes an array of property names as its second argument and writes only those, in the order listed. A listed field the user does not have is left out.',
+    prompt: "Write `toPublicJson(user)`, returning compact JSON text with only id, name and avatar, in that order, using JSON.stringify’s property-list replacer. Missing or undefined public fields are omitted; null, false, zero and empty strings are kept. This is serialization practice for the flat data contract below, not authorization or validation of arbitrary objects. Domain: user is an ordinary record whose public fields, if present, are own data properties holding strings up to 1,000 UTF-16 units, finite Numbers, Booleans, null or undefined. There are no inherited public fields, proxies or toJSON hooks. Other fields are opaque and must not be read or copied; an ignored extra may have a throwing getter. The record may be frozen and must not be mutated. Target: O(n) time under ordinary JSON serialization, where n is 1 plus the length of the selected string values; the number of ignored private properties does not add traversal work.",
     starter: `const toPublicJson = user => {
 
 };

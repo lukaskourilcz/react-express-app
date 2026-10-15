@@ -1743,7 +1743,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["slice", "for"],
     title: "Chunk an array",
-    prompt: "Write `chunk(items, size)`, splitting the array into groups of that size. A trailing group may be shorter, a size larger than the array gives one group, and an empty array gives an empty array.",
+    prompt: "Write `chunk(items, size)`, splitting the array into groups of that size. A trailing group may be shorter, a size larger than the array gives one group, and an empty array gives an empty array. Domain: an ordinary dense array with at most 1,000 opaque values and an integer size from 1 through 10,000. Zero, negative or fractional sizes are outside this exercise. Preserve every value/reference in input order, including nested arrays, undefined and null; do not mutate input. Return a fresh outer array and fresh group arrays every call, even when empty or oversized. Inputs may be frozen. Target: O(n) time, where n is 1 plus item count, under unit-cost indexed access and amortized append; disjoint slices copy each item only once. Result storage is O(n).",
     starter: `const chunk = (items, size) => {
   
 };

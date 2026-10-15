@@ -963,6 +963,9 @@ const chunk = (items, size) =>
     return chunks;
   }, []);`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),nested=Object.freeze([2]);const input=Object.freeze([value,undefined,nested,null]);const a=chunk(input,3),b=chunk(input,3);return a!==b&&a[0]!==b[0]&&a[0]!==input&&a[0][0]===value&&a[0][1]===undefined&&a[0][2]===nested&&a[1][0]===null&&input.length===4;})()", "expected": true, "label": "fresh groups, frozen input and opaque item identity"},
+      {"call": "(() => {const input=Object.freeze([1]);const a=chunk(input,10000),b=chunk([],10000),c=chunk([],10000);return a[0]!==input&&a[0][0]===1&&b!==c&&b.length===0;})()", "expected": true, "label": "oversized and empty outputs remain fresh"},
+      {"call": "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=chunk(input,17);return out.length===59&&out[58].length===14&&out.every((group,i)=>group.every((x,j)=>x===i*17+j));})()", "expected": true, "label": "thousand-item uneven split preserves every slot"},
       { call: "chunk([1,2,3,4,5,6,7], 3)", expected: [[1, 2, 3], [4, 5, 6], [7]] },
       { call: "chunk([\"a\",\"b\",\"c\",\"d\"], 4)", expected: [["a", "b", "c", "d"]] },
       { call: "chunk([1,2,3], 10)", expected: [[1, 2, 3]] },

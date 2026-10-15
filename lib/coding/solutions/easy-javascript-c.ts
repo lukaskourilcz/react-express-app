@@ -816,18 +816,16 @@ const clamp = (value, min = 0, max = 100) => {
 };`,
     junior: `const toPublicJson = user => {
   const allowed = ["id", "name", "avatar"];
-  const publicUser = {};
-  for (const field of allowed) {
-    if (field in user) {
-      publicUser[field] = user[field];
-    }
-  }
-  return JSON.stringify(publicUser);
+  const text = JSON.stringify(user, allowed);
+  return text;
 };`,
     senior: `const PUBLIC_FIELDS = ["id", "name", "avatar"];
 
 const toPublicJson = user => JSON.stringify(user, PUBLIC_FIELDS);`,
     hiddenTests: [
+      {"call": "(() => {const user={avatar:null,name:'  Ada  ',id:0};Object.defineProperty(user,'secret',{enumerable:true,get(){throw Error('private read');}});return toPublicJson(Object.freeze(user));})()", "expected": "{\"id\":0,\"name\":\"  Ada  \",\"avatar\":null}", "label": "only selected data is read from a frozen record"},
+      {"call": "toPublicJson(Object.freeze({id:undefined,name:false,avatar:''}))", "expected": "{\"name\":false,\"avatar\":\"\"}", "label": "omit undefined without dropping false or empty strings"},
+      {"call": "(() => {const name='x'.repeat(1000);return toPublicJson(Object.freeze({id:1,name,avatar:null}))==='{\"id\":1,\"name\":\"'+name+'\",\"avatar\":null}';})()", "expected": true, "label": "thousand-unit public name is preserved"},
       { call: 'toPublicJson({ avatar: "a.png", name: "Zed", id: 99, role: "admin" })', expected: '{"id":99,"name":"Zed","avatar":"a.png"}' },
       { call: 'JSON.parse(toPublicJson({ id: 3, name: "Mo", avatar: "m.png", token: "t" }))', expected: { id: 3, name: 'Mo', avatar: 'm.png' } },
       { call: 'toPublicJson({ id: 0, name: "", avatar: "" })', expected: '{"id":0,"name":"","avatar":""}' },

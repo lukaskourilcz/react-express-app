@@ -1,5 +1,28 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b018
+
+Individually read JSON parsing, readable JSON, public-field serialization,
+numeric sorting and chunking. Remove overbroad null-replacer/privacy guarantees,
+state an ordinary flat-data serialization domain and align the junior public
+field example with the taught property-list replacer. Preserve exact fallback
+identity, valid falsy parse results, Unicode/escaping, normal key order, one LF,
+stable signed-zero sorting and fresh shallow chunk ownership. Invalid chunk
+sizes are explicitly outside the positive-step exercise.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+Cases include 9999-unit JSON input, a 5003-unit formatted array, a private getter
+that must not be touched, a thousand-unit name and thousand-item sort/chunk
+boundaries. Input/output-sensitive cost models are explicit; engine timing and
+arbitrary source-style conformance are not inferred from these checks.
+Copy sweep, focused coding, API/script types, launch, build, 263 native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Manual same-session review/final reading is not independent/human approval.
+
+Current coding coverage is 120/725; 605 remain. Native coverage is 263/263.
+B015–b018 remain local while frozen PR #401 completes required verification.
+
 ## 15 October continuation — five coding items b017
 
 Individually read indexed callback collection, predicate counting, multiplier
