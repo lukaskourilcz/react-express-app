@@ -986,7 +986,7 @@ const pathOf = (folder: Folder): string => {
     tier: 1,
     focus: ['reduce', 'strings'],
     title: 'Playlist length',
-    prompt: 'Track lengths are written as minutes and seconds, such as `"3:05"`. Write `playlistSeconds(tracks: string[]): number`, adding up the length of every track in seconds with `reduce`. `playlistSeconds(["3:05", "0:55"])` gives 240. Minutes can run past 59, as in `"72:00"`, and an empty playlist lasts 0 seconds.',
+    prompt: "Track lengths are written as minutes and seconds, such as `\"3:05\"`. Write `playlistSeconds(tracks: string[]): number`, adding up the length of every track in seconds with `reduce`. `playlistSeconds([\"3:05\", \"0:55\"])` gives 240. Minutes can run past 59, as in `\"72:00\"`, and an empty playlist lasts 0 seconds. Domain: a dense array of at most 1000 valid track strings, possibly frozen. Each is one to six ASCII minute digits, a colon, then exactly two second digits from 00 through 59. Leading minute zeros are allowed. Leave track text and array order unchanged; do not remove duplicates. Return the safe integer sum of all whole seconds. Invalid track formats are outside this task. Target: O(n) time and O(1) working state, where n is 1 + track count + total track text length, accounting for splitting and numeric parsing with two bounded parts.",
     starter: `const playlistSeconds = (tracks: string[]): number => {
 
 };

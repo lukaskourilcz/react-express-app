@@ -1214,7 +1214,7 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
     tier: 3,
     focus: ["unions", "narrowing"],
     title: "Area of a shape",
-    prompt: "Declare a type alias named `Shape` for a square with a `side`, a rectangle with `width` and `height`, or a triangle with `base` and `height`, each tagged with a `kind`. Then write `area(shape: Shape): number` returning the area of whichever it turns out to be.",
+    prompt: "Declare a type alias named `Shape` for a square with a `side`, a rectangle with `width` and `height`, or a triangle with `base` and `height`, each tagged with a `kind`. Then write `area(shape: Shape): number` returning the area of whichever it turns out to be. Domain: shape is a stable ordinary or null-prototype data record of exactly one declared kind, possibly frozen, with finite nonnegative dimensions from 0 through 1000000. Leave all fields and opaque metadata unchanged. Use the square, rectangle and triangle formulas directly with Number arithmetic; do not round the area to a whole number. Unknown tags and malformed shapes are outside this task. Target: O(1) time and working state for one fixed tag decision and a bounded number of arithmetic operations.",
     starter: `const area = (shape) => {
   
 };
@@ -1283,7 +1283,7 @@ const area = (shape: Shape): number => {
     tier: 3,
     focus: ["type-guards", "filter"],
     title: "Only the strings",
-    prompt: "Write `isString(value: unknown): value is string`, then use it in `onlyStrings(values: unknown[]): string[]` to keep only the strings from a mixed list, in their original order. Without the predicate on the first, what the second filters out stays unknown to the compiler.",
+    prompt: "Write `isString(value: unknown): value is string`, then use it in `onlyStrings(values: unknown[]): string[]` to keep only the strings from a mixed list, in their original order. Use a reusable named guard to make the narrowing contract clear. Current TypeScript can infer a predicate from some simple typeof functions; the explicit predicate form is the focus of this exercise. Domain: values is a dense array of at most 1000 unknown values, possibly frozen. Keep only primitive strings, preserving their exact text, duplicates and order. Boxed String objects are objects, not primitive strings. Other values may contain cyclic data or methods that throw if called; ignore their contents without coercion or invoking methods. Leave input values and order unchanged. Return a fresh mutable string array every call, including when empty; strings have at most 200 UTF-16 units. Target: O(n) time and worst-case O(n) output space, where n is 1 + element count; typeof does not traverse values or string contents.",
     starter: `const isString = (value) => {
   
 };
@@ -1306,7 +1306,7 @@ const onlyStrings = (values: unknown[]): string[] => {
     approach: [
       "A type predicate is an ordinary boolean function whose return type tells the compiler what a true answer proves about its argument.",
       "Write the check first, as its own named function, and then hand that function to filter.",
-      "Filtering with a plain inline test would leave the result as wide as it started, which is the whole reason the predicate exists.",
+      "Current TypeScript can infer a predicate from simple typeof checks. An explicit named predicate documents the narrowing contract and can be reused by callers.",
     ],
     verify: "tests",
     estimatedMinutes: 10,

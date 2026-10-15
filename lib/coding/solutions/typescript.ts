@@ -583,7 +583,12 @@ const area = (shape: Shape): number => {
     }
   }
 };`,
+    hiddenTypeTests: [{"code": "area({kind:\"rectangle\",width:2});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const meta={},shape=Object.freeze(Object.assign(Object.create(null),{kind:'square',side:0.125,meta}));return [area(shape),shape.side,shape.meta===meta];})()", expected: [0.015625, 0.125, true] },
+      { call: "[area(Object.freeze({kind:'rectangle',width:0,height:1000000})),area(Object.freeze({kind:'triangle',base:1.5,height:2.5})),area({kind:'square',side:1000000})]", expected: [0, 1.875, 1000000000000] },
+      { call: "(()=>{const shape={kind:'rectangle',width:2,height:3};const a=area(shape),b=area(shape);return [a,b,shape.width,shape.height];})()", expected: [6, 6, 2, 3] },
+
       { call: "area({kind:\"rectangle\",width:1.5,height:4})", expected: 6 },
       { call: "area({kind:\"square\",side:2.5})", expected: 6.25 },
       { call: "area({kind:\"triangle\",base:10,height:0})", expected: 0 },
@@ -614,7 +619,12 @@ const onlyStrings = (values: unknown[]): string[] => {
 
 // flatMap doubles as a typed filter: the guard narrows value, and an empty array drops it.
 const onlyStrings = (values: unknown[]): string[] => values.flatMap((value) => (isString(value) ? [value] : []));`,
+    hiddenTypeTests: [{"code": "const __auditGuard: (value:unknown)=>value is string = isString;"}],
     hiddenTests: [
+      { call: "onlyStrings([new String('boxed'),'',' x ','\ud83e\udd88',1n,Symbol('x'),' x ',Object.freeze({toString(){throw Error('coerced');}})])", expected: ["", " x ", "\ud83e\udd88", " x "] },
+      { call: "(()=>{const input=Object.freeze(['b',0,'a']),a=onlyStrings(input),b=onlyStrings(input);a.push('changed');return [a!==input,a!==b,b,input[0],input.length,onlyStrings([])!==onlyStrings([])];})()", expected: [true, true, ["b", "a"], "b", 3, true] },
+      { call: "(()=>{const cycle=[];cycle.push(cycle);const input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?String(i):cycle)),out=onlyStrings(input);return [out.length,out[0],out[499],input[0]===cycle];})()", expected: [500, "1", "999", true] },
+
       { call: "onlyStrings([1,\"one\",true,\"two\",{}])", expected: ["one", "two"] },
       { call: "onlyStrings([\"\",0,false])", expected: [""] },
       { call: "onlyStrings([[\"a\"],\"b\"])", expected: ["b"] },
