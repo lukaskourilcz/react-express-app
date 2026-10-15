@@ -510,7 +510,7 @@ console.log(middle(list(1, 2, 3, 4, 5)));
     tier: 2,
     focus: ['sort', 'for'],
     title: 'Do any meetings clash?',
-    prompt: 'Each meeting is a `[start, end]` pair of minutes. Write `hasClash(meetings)`, returning `true` when any two meetings overlap. A meeting that ends at 10 and one that starts at 10 do not clash. `hasClash([[0, 30], [5, 10], [15, 20]])` is `true`, and `hasClash([[7, 10], [2, 4]])` is `false`. Sort a copy by start time, then walk it with a `for` loop: in start order, a clash always shows up between neighbours, so you only compare each meeting with the one before it. Leave the caller\'s array in its order. Target: O(n log n) time for the sort and O(n) space for the copy.',
+    prompt: "Each meeting is a `[start, end]` pair of minutes. Write `hasClash(meetings)`, returning `true` when any two meetings overlap. A meeting that ends at 10 and one that starts at 10 do not clash. `hasClash([[0, 30], [5, 10], [15, 20]])` is `true`, and `hasClash([[7, 10], [2, 4]])` is `false`. Remove empty intervals, sort the remaining copy by start time, then walk it with a `for` loop: in start order, a clash always shows up between neighbours, so you only compare each meeting with the one before it. Leave the caller's array in its order. Target: O(n log n) time for the sort and O(n) space for the copy. Input is a dense array of at most 2,000 pairs of finite Number minutes in 0..1440, with start <= end; fractional minutes are valid. Intervals are half-open [start,end). An empty interval (start === end) occupies no time and never clashes, even inside another meeting: discard it before comparing sorted neighbours. Both the outer array and its pairs may be frozen and must remain unchanged. n is meetings.length. A grouped event sweep with maximum occupancy above 1 is also valid.",
     starter: `const hasClash = meetings => {
 
 };
@@ -519,21 +519,22 @@ console.log(middle(list(1, 2, 3, 4, 5)));
 console.log(hasClash([[0, 30], [5, 10], [15, 20]]));
 `,
     skeleton: `const hasClash = meetings => {
-  const sorted = [...meetings].sort(/* by start time */);
+  const sorted = meetings.filter(([start, end]) => start < end).sort(/* by start time */);
   for (let i = 1; i < sorted.length; i++) {
     // does sorted[i] start before sorted[i - 1] ends?
   }
   return false;
 };`,
-    hints: ['`sort((a, b) => a[0] - b[0])` orders pairs by their first number. Copy the array first with `[...meetings]`, because `sort` rearranges the array you call it on.'],
+    hints: ["`sort((a, b) => a[0] - b[0])` orders pairs by their first number. Use `filter` to copy only pairs whose start is below their end, then sort that copy. Sorting the caller's array would rearrange it."],
     approach: [
-      'Copy the meetings and sort the copy by start time.',
+      'Copy only nonempty meetings, then sort by start time.',
       'Loop from the second meeting. If a meeting starts before the one before it ends, return `true`.',
       'If the loop finishes, nothing overlaps: return `false`.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      {"call": "hasClash([[0,2],[1,1]])", "expected": false, "label": "an empty interval never clashes", "edge": true},
       { call: 'hasClash([[0, 30], [5, 10], [15, 20]])', expected: true },
       { call: 'hasClash([[7, 10], [2, 4]])', expected: false, label: 'out of order, but apart' },
       { call: 'hasClash([[9, 12], [1, 3], [4, 8]])', expected: false, label: 'three meetings out of order, none overlapping' },
@@ -549,7 +550,7 @@ console.log(hasClash([[0, 30], [5, 10], [15, 20]]));
     tier: 1,
     focus: ['sort'],
     title: 'Median of a list',
-    prompt: 'Write `median(numbers)`, returning the middle value once the numbers are in order. `median([5, 1, 3])` gives 3. With an even count there are two middle values, and the median is their average: `median([4, 1, 3, 2])` gives 2.5. Sort a copy with a compare function, because `sort` on its own compares numbers as text and puts 10 before 9. Leave the caller\'s array as it was, and return `null` for an empty array. Target: O(n log n) time and O(n) space for the copy.',
+    prompt: "Write `median(numbers)`, returning the middle value once the numbers are in order. `median([5, 1, 3])` gives 3. With an even count there are two middle values, and the median is their average: `median([4, 1, 3, 2])` gives 2.5. Sort a copy with a compare function, because `sort` on its own compares numbers as text and puts 10 before 9. Leave the caller's array as it was, and return `null` for an empty array. Target: O(n log n) time and O(n) space for the copy. Input is a dense array of at most 2,000 finite primitive Numbers in [-1000000000000,1000000000000], with duplicates, fractions and either zero sign allowed. The array may be frozen and must stay unchanged, including its element values and zero signs. Use ordinary Number arithmetic: for an even length add the two middle values and divide by 2, with no extra rounding; either sign of a zero result is equivalent. n is numbers.length. NaN, infinities and sparse arrays are outside this task.",
     starter: `const median = numbers => {
 
 };
@@ -573,6 +574,7 @@ console.log(median([4, 1, 3, 2]));
     verify: 'tests',
     estimatedMinutes: 6,
     tests: [
+      {"call": "median([.5,.125])", "expected": 0.3125, "label": "fractional medians are not rounded"},
       { call: 'median([5, 1, 3])', expected: 3 },
       { call: 'median([4, 1, 3, 2])', expected: 2.5, label: 'an even count averages the two middles' },
       { call: 'median([10, 9, 100])', expected: 10, label: 'compared as numbers, not text' },

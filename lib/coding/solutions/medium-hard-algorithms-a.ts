@@ -310,6 +310,10 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   return head;
 };`,
     hiddenTests: [
+      { call: "(() => {for(let length=1;length<=24;length++)for(let n=1;n<=length;n++){const payload=Object.freeze({token:Symbol(\"payload\")}),nodes=[];for(let i=0;i<length;i++)nodes.push(Object.assign(Object.create(null),{value:i%3===0?payload:i%3===1?undefined:NaN,next:null}));for(let i=0;i<length-1;i++)nodes[i].next=nodes[i+1];const old=nodes.map(node=>[node.value,node.next]),removed=length-n,result=removeFromEnd(nodes[0],n);if(result!==(removed===0?(nodes[1]??null):nodes[0]))return false;for(let i=0;i<length;i++){const wanted=i===removed-1?(nodes[i+2]??null):old[i][1];if(nodes[i].next!==wanted||!Object.is(nodes[i].value,old[i][0]))return false;}}return true;})()", expected: true },
+      { call: "(() => {for(const n of [1,2500,5000]){const nodes=Array.from({length:5000},()=>({value:Symbol(\"node\"),next:null}));for(let i=0;i<4999;i++)nodes[i].next=nodes[i+1];const removed=5000-n,result=removeFromEnd(nodes[0],n);if(result!==(removed===0?nodes[1]:nodes[0]))return false;for(let i=0;i<5000;i++)if(nodes[i].next!==(i===removed-1?(nodes[i+2]??null):(nodes[i+1]??null)))return false;}return true;})()", expected: true },
+      { call: "(() => {const tail={value:null,next:null},removed={value:undefined,next:tail},head={value:NaN,next:removed};return [removeFromEnd(head,2)===head,head.next===tail,removed.next===tail,Number.isNaN(head.value),removeFromEnd({value:Symbol(\"only\"),next:null},1)===null];})()", expected: [true, true, true, true, true] },
+
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(10, 20, 30, 40), 4));`), expected: [20, 30, 40] },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(0, 0, 0), 2));`), expected: [0, 0] },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), 7));`), expected: [1, 2, 3, 5, 6, 7, 8, 9, 10] },
@@ -379,16 +383,24 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   'alg-mh-balanced-brackets': {
     solution: `const balanced = pairs => {
   const found = [];
-  const build = (text, opened, closed) => {
-    if (text.length === 2 * pairs) {
-      found.push(text); // every step kept it balanceable, so a full string is an answer
+  const path = [];
+  const build = (opened, closed) => {
+    if (closed === pairs) {
+      found.push(path.join(""));
       return;
     }
-    // "(" before ")": the answers come out in alphabetical order.
-    if (opened < pairs) build(text + "(", opened + 1, closed);
-    if (closed < opened) build(text + ")", opened, closed + 1);
+    if (opened < pairs) {
+      path.push("(");
+      build(opened + 1, closed);
+      path.pop();
+    }
+    if (closed < opened) {
+      path.push(")");
+      build(opened, closed + 1);
+      path.pop();
+    }
   };
-  build("", 0, 0);
+  build(0, 0);
   return found;
 };`,
     junior: `const balanced = pairs => {
@@ -415,21 +427,35 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
 };`,
     senior: `const balanced = pairs => {
   const found = [];
-  // The same walk with an explicit stack. ")" goes on first so "(" comes off
-  // first, which keeps the alphabetical order.
-  const stack = [["", 0, 0]];
-  while (stack.length > 0) {
-    const [text, opened, closed] = stack.pop();
-    if (text.length === 2 * pairs) {
-      found.push(text);
-      continue;
-    }
-    if (closed < opened) stack.push([text + ")", opened, closed + 1]);
-    if (opened < pairs) stack.push([text + "(", opened + 1, closed]);
+  const path = [];
+  const frames = [{ opened: 0, closed: 0, branch: 0 }];
+  while (frames.length) {
+    const frame = frames[frames.length - 1];
+    path.length = frame.opened + frame.closed;
+    if (frame.closed === pairs) {
+      found.push(path.join(""));
+      frames.pop();
+    } else if (frame.branch === 0) {
+      frame.branch = 1;
+      if (frame.opened < pairs) {
+        path.push("(");
+        frames.push({ opened: frame.opened + 1, closed: frame.closed, branch: 0 });
+      }
+    } else if (frame.branch === 1) {
+      frame.branch = 2;
+      if (frame.closed < frame.opened) {
+        path.push(")");
+        frames.push({ opened: frame.opened, closed: frame.closed + 1, branch: 0 });
+      }
+    } else frames.pop();
   }
   return found;
 };`,
     hiddenTests: [
+      { call: "(() => {for(let n=0;n<=6;n++){const wanted=[];for(let bits=0;bits<2**(2*n);bits++){let text=\"\",balance=0,valid=true;for(let i=2*n-1;i>=0;i--){if((bits>>i)&1){text+=\")\";balance--;}else{text+=\"(\";balance++;}if(balance<0)valid=false;}if(valid&&balance===0)wanted.push(text);}const got=balanced(n);if(got.length!==wanted.length||got.some((text,i)=>text!==wanted[i]))return false;}return true;})()", expected: true },
+      { call: "(() => {const all=balanced(11);if(all.length!==58786)return false;let previous;for(const text of all){if(typeof text!==\"string\"||text.length!==22||(previous!==undefined&&previous>=text))return false;let depth=0;for(const c of text){if(c===\"(\")depth++;else if(c===\")\")depth--;else return false;if(depth<0)return false;}if(depth!==0)return false;previous=text;}return true;})()", expected: true },
+      { call: "(() => {const first=balanced(3),second=balanced(3);if(first===second)return false;first.pop();const third=balanced(3),empty=balanced(0);return [first.length,second.length,third.length,third!==first,third!==second,empty.length,empty[0]];})()", expected: [4, 5, 5, true, true, 1, ""] },
+
       { call: 'balanced(4)', expected: ['(((())))', '((()()))', '((())())', '((()))()', '(()(()))', '(()()())', '(()())()', '(())(())', '(())()()', '()((()))', '()(()())', '()(())()', '()()(())', '()()()()'] },
       { call: 'balanced(6).length', expected: 132 },
       { call: '(() => { const all = balanced(7); return [all.length, new Set(all).size, [...all].sort().join() === all.join()]; })()', expected: [429, 429, true] },

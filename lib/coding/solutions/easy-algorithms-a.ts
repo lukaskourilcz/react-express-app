@@ -352,7 +352,7 @@ const makeChange = (cents) => {
   'alg-easy2-meetings-clash': {
     solution: `const hasClash = meetings => {
   // Sort a copy: sort reorders the array it is called on.
-  const sorted = [...meetings].sort((a, b) => a[0] - b[0]);
+  const sorted = meetings.filter(([start, end]) => start < end).sort((a, b) => a[0] - b[0]);
   for (let i = 1; i < sorted.length; i++) {
     // In start order, a clash always shows up between neighbours.
     if (sorted[i][0] < sorted[i - 1][1]) return true;
@@ -360,7 +360,7 @@ const makeChange = (cents) => {
   return false;
 };`,
     junior: `const hasClash = meetings => {
-  const sorted = meetings.slice();
+  const sorted = meetings.filter(meeting => meeting[0] < meeting[1]);
   sorted.sort(function (a, b) {
     return a[0] - b[0];
   });
@@ -374,10 +374,15 @@ const makeChange = (cents) => {
   return false;
 };`,
     senior: `const hasClash = (meetings) =>
-  [...meetings]
+  meetings
+    .filter(([start, end]) => start < end)
     .sort(([a], [b]) => a - b)
     .some(([start], i, sorted) => i > 0 && start < sorted[i - 1][1]);`,
     hiddenTests: [
+      { call: "(() => {const values=[[0,2],[1,1]],copy=values.map(pair=>pair.slice());return [hasClash(values),values.every((pair,i)=>pair.every((v,j)=>Object.is(v,copy[i][j]))),hasClash(Object.freeze([Object.freeze([0,.5]),Object.freeze([.5,1])])),hasClash([[0,.5],[.25,.75]]),hasClash([[1,1],[1,1]])];})()", expected: [false, true, false, true, false] },
+      { call: "(() => {const choices=[[0,0],[0,1],[0,2],[1,1],[1,2],[2,2]];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(Object.freeze(choices[digits%6].slice()));digits=Math.floor(digits/6);}let wanted=false;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.max(input[i][0],input[j][0])<Math.min(input[i][1],input[j][1]))wanted=true;if(hasClash(Object.freeze(input))!==wanted)return false;}return true;})()", expected: true },
+      { call: "[hasClash(Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze([i/2,(i+1)/2])))),hasClash(Object.freeze(Array.from({length:2000},()=>Object.freeze([0,1440])))),hasClash(Object.freeze(Array.from({length:2000},()=>Object.freeze([720,720]))))]", expected: [false, true, false] },
+
       { call: '(() => { const meetings = [[5, 6], [1, 2]]; hasClash(meetings); return meetings; })()', expected: [[5, 6], [1, 2]] },
       { call: 'hasClash([[1, 10], [2, 3], [11, 12]])', expected: true },
       { call: 'hasClash([[10, 20], [2, 9], [100, 200], [20, 30]])', expected: false },
@@ -416,6 +421,10 @@ const makeChange = (cents) => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };`,
     hiddenTests: [
+      { call: "(() => {const values=[.5,.125],before=values.slice();return [median(values),values.every((v,i)=>Object.is(v,before[i])),median(Object.freeze([3.25,-2,.125])),median(Object.freeze([])),median(Object.freeze([-0]))===0];})()", expected: [0.3125, true, 0.125, null, true] },
+      { call: "(() => {const alphabet=[-1,.125,0,5];for(let n=0;n<=5;n++)for(let code=0;code<4**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(alphabet[digits%4]);digits=Math.floor(digits/4);}const ordered=[];for(const value of input){let i=0;while(i<ordered.length&&ordered[i]<value)i++;ordered.splice(i,0,value);}const mid=Math.floor(n/2),wanted=n===0?null:n%2?ordered[mid]:(ordered[mid-1]+ordered[mid])/2;if(median(Object.freeze(input))!==wanted)return false;}return true;})()", expected: true },
+      { call: "(() => {const input=Array.from({length:2000},(_,i)=>i%2?1000000000000:-1000000000000),signs=[-0,0];const result=median(Object.freeze(input));median(signs);return [result,Object.is(signs[0],-0),Object.is(signs[1],0),median(Object.freeze([1000000000000,1000000000000]))];})()", expected: [0, true, true, 1000000000000] },
+
       { call: '(() => { const numbers = [3, 1, 2]; median(numbers); return numbers; })()', expected: [3, 1, 2] },
       { call: 'median([-5, -1, -3, -2])', expected: -2.5 },
       { call: 'median([2, 2, 2, 9])', expected: 2 },

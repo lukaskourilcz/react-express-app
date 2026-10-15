@@ -757,7 +757,7 @@ console.log(values);
     tier: 2,
     focus: ['push', 'pop', 'map-set'],
     title: 'Valid parentheses',
-    prompt: 'Write `isValid(text)`, deciding whether every bracket is closed by the matching kind in the right order, across `()`, `[]` and `{}`. `isValid("{[]()}")` gives `true`; `isValid("([)]")` gives `false`, because the brackets close out of order even though the counts match — which is why counting cannot do this job. Push each opening bracket onto a stack, and on a closing one check the top matches before popping it; anything still on the stack at the end means something was never closed. An empty string is valid, and the string holds nothing but brackets. Target: O(n) time and O(n) space.',
+    prompt: "Write `isValid(text)`, deciding whether every bracket is closed by the matching kind in the right order, across `()`, `[]` and `{}`. `isValid(\"{[]()}\")` gives `true`; `isValid(\"([)]\")` gives `false`, because the brackets close out of order even though the counts match \u2014 which is why counting cannot do this job. Push each opening bracket onto a stack, and on a closing one check the top matches before popping it; anything still on the stack at the end means something was never closed. An empty string is valid, and the string holds nothing but brackets. Target: O(n) time and O(n) space. `text` is a primitive string of at most 20,000 ASCII bracket characters from ()[]{}; no other input needs validation. n is text.length. The return value is a Boolean. There is no fixed nesting cap: every depth fitting that length must work.",
     starter: `const isValid = text => {
 
 };

@@ -500,6 +500,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return stack.length === 0;
 };`,
     hiddenTests: [
+      { call: "[isValid(\"(\".repeat(10000)+\")\".repeat(10000)),isValid(\"[\".repeat(10000)+\"]\".repeat(9999)),isValid(\"{\".repeat(9999)+\"[\"+\")\"+\"}\".repeat(9999))]", expected: [true, false, false] },
+      { call: "(() => {const chars=\"()[]{}\";for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let x=code,text=\"\";for(let i=0;i<n;i++){text+=chars[x%6];x=Math.floor(x/6);}let reduced=text,previous;do{previous=reduced;reduced=reduced.replace(/[(][)]|[\\[][\\]]|[{][}]/g,\"\");}while(reduced!==previous);if(isValid(text)!==(reduced.length===0))return false;}return true;})()", expected: true },
+      { call: "[isValid(\"{[(\".repeat(100)+\")]}\".repeat(100)),isValid(\"()[]{}\".repeat(3000)),isValid(\"([)]\"),isValid(\"\"),isValid(\"[]\")]", expected: [true, true, false, true, true] },
+
       { call: 'isValid("()[]{}")', expected: true },
       { call: 'isValid("([]")', expected: false },
       { call: 'isValid("]}")', expected: false },
