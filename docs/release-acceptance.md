@@ -3928,3 +3928,23 @@ audits (zero vulnerabilities), copy sweep (zero findings) and diff checks pass.
 B046 is not released. Frozen #411 contains only b044–b045 and scope #410;
 #409/runtime #408 are exact-production verified. No live-account, authenticated
 Premium, independent/human or complete-catalogue acceptance claim.
+
+## B046 batch-start fixture revision 2 — 15 October 2026
+
+The input-mutation fixture assumed the first worker registered before the
+wrapper returned. A valid async implementation captures items immediately and
+awaits one microtask before its first batch; the task does not forbid this.
+Adding that form reproduced a false failure (30/31 selected verdicts matched).
+The producer gate is now created before the wrapper is invoked, preserving the
+mutation check without that extra timing assumption. No prompt policy changed.
+
+Final evidence is 31/31 current-hash verdicts across the five items (21 valid
+forms, five starters, five wrongs), including seven for the revised batch item.
+Twenty existing target/base-25-XP checks plus the new form's check pass. The new
+form also passes every current visible/hidden check in isolated native Run and
+is a permanent canonical coding variant. Final curation/index generation,
+focused coding (reverse hidden/native Run), API/script types, launch/build,
+native 263, both production dependency audits (zero vulnerabilities) and diff
+checks pass. The original record/source commit are retained in history; one
+current record is revision 2, with zero added unique coverage. All 260 coding
+hashes match and 465 still require review. This remains unreleased.

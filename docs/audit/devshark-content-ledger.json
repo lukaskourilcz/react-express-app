@@ -268060,10 +268060,10 @@
    "level": 22,
    "objective": "Start a complete batch of promise-returning workers, wait before the next batch, and preserve snapshotted order and original failures.",
    "intendedLevel": "intermediate",
-   "revision": 1,
-   "contentHash": "53a138a004541d3f",
+   "revision": 2,
+   "contentHash": "fc8ed17b1c24aec8",
    "hashSchema": "task-hash:v2",
-   "previousHash": "41c33510baa45da9",
+   "previousHash": "53a138a004541d3f",
    "previousHashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -268100,22 +268100,25 @@
    "defects": [
     "Reference/junior reread mutable input membership after awaits while senior pre-cut batches.",
     "Size bounds, worker argument count and exact opaque values/reasons were unstated.",
-    "An implementation reading live input passed every previous check."
+    "An implementation reading live input passed every previous check.",
+    "The first pre-release mutation fixture assumed the first worker had already registered when inBatches returned, falsely rejecting a valid initial-await implementation."
    ],
-   "rationale": "Snapshot items before any worker and make all boards use that captured membership; keep slice plus whole-batch Promise.all. Bound dense/frozen arrays to 1000 and size to positive integers through 1000. Workers always return ordinary native Promises and do not throw synchronously, matching the taught domain; no synchronous-throw batch guarantee is invented. Require exactly one item argument, all batch starts before await, fresh dense output and exact reasons/values. A rejected current worker settles the result even beside a never-settling peer, stops later batches and does not cancel producers already started. Explain total linear wrapper/snapshot/result work excluding workers/wait. Cases mutate later items after the first batch starts, reject beside a never-settling peer, inspect original opaque values/arity and exercise one batch of 1000 with observed concurrency 1000.",
+   "rationale": "Snapshot items before any worker and make all boards use that captured membership; keep slice plus whole-batch Promise.all. Bound dense/frozen arrays to 1000 and size to positive integers through 1000. Workers always return ordinary native Promises and do not throw synchronously, matching the taught domain; no synchronous-throw batch guarantee is invented. Require exactly one item argument, all batch starts before await, fresh dense output and exact reasons/values. A rejected current worker settles the result even beside a never-settling peer, stops later batches and does not cancel producers already started. Explain total linear wrapper/snapshot/result work excluding workers/wait. Cases mutate later items after the first batch starts, reject beside a never-settling peer, inspect original opaque values/arity and exercise one batch of 1000 with observed concurrency 1000. Revision 2 creates the producer gate before invoking the wrapper. This preserves the membership-mutation check without requiring synchronous first-batch startup. A new valid async variant captures items and awaits Promise.resolve before starting its first batch; both real Submit and isolated Run accept it. No timing requirement is added to the task.",
    "evidence": [
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await",
-    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
-    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    "run: original pre-audit baseline matched 25/30 labels; the first reviewed revision passed its selected 30/30 forms.",
+    "run: adding a valid deferred-start form exposed one false failure in a 31-case pre-release probe; the gate-registration assumption was reproduced before correction.",
+    "run: final current-hash evidence is 31/31 across five items (21 valid forms, five starters and five wrongs); seven current-hash cases cover this revised item.",
+    "run: twenty existing target/base-25-XP checks plus the additional deferred-start target/base-25-XP check pass.",
+    "run: the additional form passes every current visible/hidden check in isolated native Run and is now a permanent canonical coding variant."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -268124,7 +268127,7 @@
      },
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -268133,7 +268136,7 @@
      },
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -268142,7 +268145,7 @@
      },
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -268151,7 +268154,7 @@
      },
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -268160,15 +268163,24 @@
      },
      {
       "id": "js-mh-in-batches",
-      "contentHash": "53a138a004541d3f",
+      "contentHash": "fc8ed17b1c24aec8",
       "label": "wrong-live-input",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
       "hidden": 9
+     },
+     {
+      "id": "js-mh-in-batches",
+      "contentHash": "fc8ed17b1c24aec8",
+      "label": "alternative-deferred-start",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
      }
     ],
-    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+    "notes": "Finite worker evidence, including an additional permitted scheduling form; not a timing or asymptotic proof."
    },
    "cs": {
     "hash": null,
@@ -268180,9 +268192,10 @@
     "passes": [
      "individual-item-review",
      "executable-recheck",
-     "self-review-of-final-English"
+     "self-review-of-final-English",
+     "valid-deferred-start-regression"
     ],
-    "run": "Codex session 2026-10-15, sequential five-item batch b046; no independent/human reader claim"
+    "run": "Codex session 2026-10-15, sequential five-item batch b046; no independent/human reader claim; revision 2 corrects one pre-release fixture, without adding unique coverage"
    },
    "reviewedAt": "2026-10-15",
    "verification": {
@@ -268193,11 +268206,13 @@
      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await",
-     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
-     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+     "run: original pre-audit baseline matched 25/30 labels; the first reviewed revision passed its selected 30/30 forms.",
+     "run: adding a valid deferred-start form exposed one false failure in a 31-case pre-release probe; the gate-registration assumption was reproduced before correction.",
+     "run: final current-hash evidence is 31/31 across five items (21 valid forms, five starters and five wrongs); seven current-hash cases cover this revised item.",
+     "run: twenty existing target/base-25-XP checks plus the additional deferred-start target/base-25-XP check pass.",
+     "run: the additional form passes every current visible/hidden check in isolated native Run and is now a permanent canonical coding variant."
     ],
-    "notes": "Read every field, all three revised boards and every fixture. Slice snapshots are shallow: value identities remain original. Functional concurrency/relative-timer assertions do not measure Big O; the target concerns total wrapper work, not number of nested syntactic loops. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read every field, all three revised boards and every fixture. Slice snapshots are shallow: value identities remain original. Functional concurrency/relative-timer assertions do not measure Big O; the target concerns total wrapper work, not number of nested syntactic loops. Final English material and execution reread; same-session self-review only. Revision reading: a shallow input snapshot is required during the call; worker startup itself is not required before the wrapper returns. The externally created gate accepts both immediate and initially deferred startup.",
     "pass": "second-reading"
    }
   },
