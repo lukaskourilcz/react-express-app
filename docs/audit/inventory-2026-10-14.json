@@ -26,11 +26,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.",
-    "currentModelReviewedIssuedTasks": 205,
-    "issuedStillRequiringReview": 520,
+    "currentModelReviewedIssuedTasks": 210,
+    "issuedStillRequiringReview": 515,
     "deployedModelReviewedIssuedTasks": 155,
-    "stagedModelReviewedIssuedTasks": 50,
-    "stagedExecutionEvidence": "15 October five-item commits through b035: 50 staged reviews; latest batch 34/34 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "stagedModelReviewedIssuedTasks": 55,
+    "stagedExecutionEvidence": "15 October five-item commits through b036: 55 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
     "deployedExecutionEvidence": "15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance."
   },
   "nativePaths": {
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "155 reviewed coding and 263 native records are deployed; 50 coding records are staged through b035. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "155 reviewed coding and 263 native records are deployed; 55 coding records are staged through b036. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

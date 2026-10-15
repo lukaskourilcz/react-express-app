@@ -733,26 +733,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
   return counter;
 };`,
-    senior: `class Counter {
-  #count = 0; // private, so nothing outside can change it except through the methods
-
-  increment() {
-    this.#count += 1;
-    return this;
-  }
-
-  reset() {
-    this.#count = 0;
-    return this;
-  }
-
-  value() {
-    return this.#count;
-  }
-}
-
-const makeCounter = () => new Counter();`,
+    senior: "const makeCounter = () => {\n  let count = 0;\n  const counter = {\n    increment() { count++; return counter; },\n    reset() { count = 0; return counter; },\n    value() { return count; },\n  };\n  return counter;\n};",
     hiddenTests: [
+      { call: "(() => {const a=makeCounter(),b=makeCounter();const first=a.increment(),second=a.reset();for(let i=0;i<9994;i++)a.increment();return [first===a,second===a,a!==b,a.value(),a.value(),b.value()];})()", expected: [true, true, true, 9994, 9994, 0] },
+
       { call: "(() => { const a = makeCounter(); const b = makeCounter(); a.increment(); a.increment(); b.increment(); return [a.value(), b.value()]; })()", expected: [2, 1] },
       { call: "(() => { const counter = makeCounter(); counter.increment(); counter.increment(); return counter.value(); })()", expected: 2 },
       { call: "(() => { const a = makeCounter(); a.increment().increment(); const b = makeCounter(); b.increment(); a.reset(); return [a.value(), b.value()]; })()", expected: [0, 1] },

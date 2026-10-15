@@ -1,6 +1,30 @@
 # devShark content audit — the question bank
 
 
+## 15 October continuation — five coding items b036
+
+Individually read spiral traversal, expense balances, CSV parsing, undo/redo
+and the counter object. Balances now use safe null-prototype accumulators in
+all supplied boards and teaching material; arbitrary names such as __proto__,
+constructor and toString remain own numeric balances. Junior reduce matches
+the lesson. Spiral and CSV examples use the requested loop forms, and the
+counter senior uses closure state. All correct history boards remain intact.
+
+All 30 final-hash verdicts agree (20 valid forms, five starters, five wrongs),
+versus 25/30 baseline. Twenty target/base-25-XP checks, zero-artifact copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Local
+fixtures cover original references/undefined, literal CSV CRLF/Unicode, safe
+integer-cent conservation through 100000 share visits, a 100×100 grid and
+10000 history/counter calls. Stateful targets distinguish whole-sequence work
+from per-call work; finite execution does not measure asymptotic performance.
+
+Coverage is 210/725 coding, 515 remaining; native is 263/263. Shipped coding
+coverage remains 155. B033–b036 are local and outside frozen PR #405. No live
+user progress, score/name or payment fixture was created. Review is same-session
+model work, with no independent/human or complete-catalogue acceptance claim.
+
+
 ## 15 October continuation — five coding items b035
 
 Read all English material for signed rotation, run-length encoding, pair sum,

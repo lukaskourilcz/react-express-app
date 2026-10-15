@@ -1292,7 +1292,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["closures"],
     title: "Counter object",
-    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count.",
+    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count. Keep the count in the factory closure and increment it by exactly one each time. increment and reset return the exact same counter object, not a copy. Calls use the returned object as their receiver; detached method calls are outside this exercise. Each factory returns a new object whose count is private to that instance, and up to 10000 method calls may occur per instance. value reads without changing the count. Target: O(1) time and auxiliary space per factory or method call.",
     starter: `const makeCounter = () => {
   
 };

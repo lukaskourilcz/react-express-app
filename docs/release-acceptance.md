@@ -3539,3 +3539,15 @@ copy sweep, focused coding, API/script types, launch, build, native bindings,
 both production dependency audits (zero vulnerabilities) and diff checks pass.
 PR #405's updated exact preview at 58686aaa passed eleven guest checks, all
 zero XP/null progress. Required verify is still pending. No user-state fixture.
+
+## Safe balances and stateful content batch b036 — 15 October 2026
+
+Five individual model reviews raise coverage to 210/725 coding, 515 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 25/30
+before, with 20 valid, five starters and five selected wrongs. Twenty authored-
+target/base-25-XP checks, copy sweep, focused coding, API/script types, launch,
+build, native bindings, both production dependency audits (zero vulnerabilities)
+and diff checks pass. Safe own-name dictionaries, CSV logical-record grammar,
+opaque history references, identity-preserving chain methods and bounded grid/
+operation sequences use local fixtures. No runtime/schema/UI policy change,
+no live user-state writes and no independent/human acceptance claim.
