@@ -502,7 +502,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
           ],
           correct: 0,
           explanation:
-            'The word routine is doing all the work in that sentence and nobody has attached it to anything observable. Asking for the tickets turns it into a set you can count, and watching three of them gives you the step timings you will need for a baseline. The percentage question asks the sponsor to invent a target before anyone has measured the starting point, so you get a number with nothing behind it and an argument later about whether you hit it. The model question picks a mechanism before the problem exists, and nothing in the request implies a model is needed at all. Asking for wording assumes the expensive part is composing text, which is exactly the assumption the shadowing session is there to test.',
+            'The word routine is doing all the work in that sentence and nobody has attached it to anything observable. Recent examples and observation make the work inspectable and provide initial timings. Twenty selected tickets and three observations are an exploratory sample, not a representative baseline by themselves; check a broader labelled mix before claiming coverage or production savings. A coverage target can be useful, but a percentage alone does not define which cases count as routine or what handling them involves. The model question picks a mechanism before the workflow and constraints are understood, and nothing in the request implies a model is needed at all. Asking for wording assumes the expensive part is composing text, which is exactly the assumption the shadowing session is there to test.',
           competencies: ['discovery'],
         },
         {

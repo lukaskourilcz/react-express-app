@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n020
+
+Reviewed both remaining Python questions, the complete Python/incident bridge
+checks and the first discovery question. Environment defaults are retained.
+The HTTPX correct option formerly claimed a 301 passes raise_for_status; it now
+correctly rejects non-2xx, including 1xx/3xx. A 204 passes status checking but can
+fail later JSON parsing. The example names synchronous Client, default redirects
+and Python 3.10+ syntax. Parent copy no longer promises a separately recorded
+local-Python note that the activity does not store. Discovery observation is
+explicitly exploratory rather than a representative baseline by itself.
+
+Exact authored contexts pass under isolated Python 3.12.14 / HTTPX 0.28.1 with
+MockTransport and a dummy-only environment. The 101/200/201/204/301/400/500 matrix,
+invalid-200 JSON and no automatic redirect behavior agree with primary docs;
+no network or real credential is used. Both parent thresholds and diagnostic
+feedback behavior pass. Other discovery/incident conclusions remain manual.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. No server
+Python execution or authenticated activity acceptance is inferred.
+
+Coverage is **155/263 native**, **108 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 is
+frozen at 758d1bbb with SQL/exact-preview checks passing and verify pending;
+n015–n020 are local. Ninety-five coding/ninety-five native reviews are shipped.
+
 ## 15 October continuation — five-item native batch n019
 
 Reviewed the two remaining incident questions and the first three Python reading

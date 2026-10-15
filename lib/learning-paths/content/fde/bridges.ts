@@ -488,7 +488,7 @@ const operatorReducer = (state, action) => {
       purpose: 'diagnostic',
       verification: 'machine_verified',
       title: 'Read an incident from its timeline',
-      summary: 'One cross-tenant cache incident, read four ways: the signal, the cause, the safe first action, and what the rollback leaves behind.',
+      summary: 'One cross-tenant cache incident: the direct correctness signal, the missing key scope, containment under stated rollback conditions, and consequences already outside the service.',
       competencies: ['operations'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
@@ -562,7 +562,7 @@ const operatorReducer = (state, action) => {
       verification: 'machine_verified',
       title: 'Read typed and asynchronous Python',
       summary:
-        'Five snippets of the kind a data team hands you: an Optional hint, a coroutine that has to be awaited, a dict reshape, an environment variable with a default, and what an HTTP client call returns. Reading is what is graded — no Python runs on the server, and any Python you run locally is your own note, recorded as self-reviewed.',
+        'Five Python reading questions: an Optional hint, a coroutine, a dict reshape, environment defaults and an HTTPX response. Multiple-choice reading is graded; the server does not execute Python. Running snippets locally is optional practice, not a separately recorded verified result. The HTTPX example uses Python 3.10 or newer.',
       competencies: ['python-reading'],
       estimatedMinutes: 20,
       passThreshold: 0.8,
@@ -675,7 +675,7 @@ TIMEOUT = float(os.getenv("TRIAGE_TIMEOUT_SECONDS", "5"))`,
         },
         {
           id: 'fde-v1-bridge-python-q5',
-          prompt: 'What does `client.get(...)` hand back here, and what does `raise_for_status()` do to it?',
+          prompt: 'With Python 3.10+ and a synchronous HTTPX Client using its default redirect behavior, what does client.get return and what does raise_for_status check?',
           context: {
             language: 'python',
             code: `import httpx
@@ -687,14 +687,14 @@ def fetch_page(client: httpx.Client, cursor: str | None) -> dict:
     return response.json()`,
           },
           options: [
-            'A Response carrying the status, the headers and the body together. `raise_for_status()` raises for a 4xx or 5xx and returns quietly otherwise, and the parsed body appears only when `response.json()` is called.',
+            'A Response; raise_for_status raises for a non-2xx status, while json parses the body separately.',
             'The parsed JSON body. `raise_for_status()` then re-inspects that body for an "error" key and raises if it finds one.',
             'A Response. `raise_for_status()` raises for any status other than exactly 200, so a 204 or a 301 would raise as well.',
             'A coroutine that has to be awaited, because httpx is an asynchronous library.',
           ],
           correct: 0,
           explanation:
-            'A Response object holds the status code, the headers and the raw body, and `response.json()` is the separate step that parses the body; a response with a 200 and unparseable body fails there, not before. `raise_for_status()` looks at the status code alone and never at the body. It raises for 4xx and 5xx, so a 204 or a 301 passes through it untouched. And `httpx.Client` is the synchronous client, which returns the Response directly; `httpx.AsyncClient` is the one whose calls you await.',
+            'HTTPX Client is synchronous and returns a Response with status, headers and content. For a response attached to its request, raise_for_status returns that response for a 2xx status and raises HTTPStatusError for non-2xx, including 1xx and 3xx as well as 4xx/5xx. A 204 passes this status check; a 301 does not. With default redirect behavior the 301 is not automatically followed. A later json call parses the content and can still fail on invalid or empty JSON, including a typical empty 204. AsyncClient uses await; this example uses Client.',
           competencies: ['python-reading'],
         },
       ],
