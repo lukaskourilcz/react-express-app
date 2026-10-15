@@ -1,5 +1,32 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n024
+
+Reviewed four architecture/output questions and their check. Routing arithmetic
+is corrected from the invented 71/29 split to 268/300≈89.3%; the scenario now
+explicitly supplies hypothetical lookup/model latencies and unresolved Other
+cases instead of asserting universal provider performance. Structural validation
+requires confidence as well as ticket/category and assumes a successful parsed,
+validated response. It does not establish truth, authority or calibration, and
+truncation is not always syntactically invalid. An out-of-range value violates
+the explicit contract, without proving a distribution shift. Agent choice needs
+evaluated planning benefit, bounded cost and the stated write-approval policy;
+dependent steps alone do not require a model-directed loop.
+
+Actual local JSON Schema examples under jsonschema 4.23.0 verify required/type/
+enum checks and the difference between number-only and explicit [0,1] bounds.
+Arithmetic and exercise review pass. The latencies are authored fixture facts,
+not measurements performed here; no provider/model/agent or AI feature is added.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All manual
+quality/relevance/final readings remain separate from these executions.
+
+Coverage is **175/263 native**, **88 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 freezes n015–n023 at 5f0145fa; its exact READY preview
+passes eleven general checks, required SQL passes and verify is pending. N024 is
+local. Source shipped coverage remains 95 coding/125 native through PR #396.
+#397 still blocks the FDE diagnostic parent.
+
 ## 15 October continuation — five-item native batch n023
 
 Reviewed all four boundary questions and their check. Fixed-active-tenant
