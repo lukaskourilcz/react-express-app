@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item goal revision n010
+
+Revisited exactly five already reviewed native coding activities: recursive
+list sum, bounded factorial, iterative countdown, linear search and first
+occurrence. Each now has its applicable authored time target and explicit
+input/cost model. The native UI already renders this guidance through the
+shared component; no parser, reward rule, handler or permission changed.
+
+Current root review records are revised individually, and all five complete
+prior records are preserved in the non-current history snapshot. Manual
+quality/relevance readings are retained and refreshed for the appended goals.
+This adds **zero** unique coverage: native remains **105/263**, **158
+remaining**; coding remains **95/725**, **630 remaining**.
+
+All **36/36** selected exact-hash sandbox verdicts agree (ten valid, five
+starters, twenty-one wrong). Ten reference/alternative complexity analyses
+retain base 25 XP, with unknowns unpenalized. Reconstructing each prior prompt
+reproduces its old hashes and gives a different sealed coding-attempt version,
+so a changed target cannot silently reuse that old version. Native bindings,
+path contracts, API/script types, launch, path-authority checks, build, both
+production dependency audits (zero vulnerabilities), copy sweep and diff checks
+pass. No live account XP or production tampering probe was used.
+
+N008–n010 remain local while PR #395 is frozen at 61900610. Its protected
+preview passes eleven general and twenty selected signed-out submissions;
+the binary Premium task returns 402. Required SQL passes and verify is pending.
+No independent/human, physical timing or authenticated native acceptance is
+inferred. Ninety coding/seventy native reviewed records are shipped.
+
 ## 15 October continuation — five-item native batch n009
 
 Reviewed three sorting code exercises and the first two tree questions. The
