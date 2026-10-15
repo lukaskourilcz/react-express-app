@@ -466,7 +466,7 @@ console.log(firstBroken(10, build => build >= 7));
     tier: 2,
     focus: ['while', 'two-pointer'],
     title: 'Middle of a linked list',
-    prompt: 'A linked list is a chain of `{ value, next }` nodes, and the last node\'s `next` is `null`. Write `middle(head)`, returning the middle node. A list with an even number of nodes has two middles; return the second. `middle(null)` gives `null`. Walk two pointers from the head `while` the fast one can still move: `slow` takes one step at a time and `fast` takes two, so `slow` is halfway when `fast` runs out. Return the node object from the list, and leave the list as it was. Target: O(n) time in one pass, and O(1) space.',
+    prompt: "A linked list is a chain of `{ value, next }` nodes, and the last node's `next` is `null`. Write `middle(head)`, returning the middle node. A list with an even number of nodes has two middles; return the second. `middle(null)` gives `null`. Walk two pointers from the head `while` the fast one can still move: `slow` takes one step at a time and `fast` takes two, so `slow` is halfway when `fast` runs out. Return the node object from the list, and leave the list as it was. Target: O(n) time in one pass, and O(1) space. Input is null or a finite acyclic chain of at most 2000 distinct node objects. Each next is a node or null; nodes may be frozen or have no prototype. Values are opaque payloads, including undefined, zero, NaN, objects or Symbols, and must not be changed. Return the exact original node for every length, including one node; preserve every node identity, next link and payload. The fast/slow scan is the suggested one-pass approach; equivalent forward pointer scans are accepted. n is the node count; cycle detection and validation of malformed links are outside this task.",
     starter: `const middle = head => {
 
 };
@@ -492,6 +492,7 @@ console.log(middle(list(1, 2, 3, 4, 5)));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      {"call": "(() => {const head=Object.freeze({value:0,next:null});return middle(head)===head;})()", "expected": true, "label": "one node is returned by identity", "edge": true},
       { call: withList('return middle(list(1, 2, 3, 4, 5)).value;'), expected: 3 },
       { call: withList('return middle(list(1, 2, 3, 4, 5, 6)).value;'), expected: 4, label: 'an even length gives the second middle' },
       { call: withList('const head = list(1, 2, 3); return middle(head) === head.next;'), expected: true, label: 'the node from the list, not a copy' },

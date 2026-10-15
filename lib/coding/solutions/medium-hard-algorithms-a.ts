@@ -165,6 +165,10 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   return most;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[[0,.5],[.25,.75],[1,1]],copy=input.map(pair=>pair.slice());const a=roomsNeeded(input);return [a,input.every((pair,i)=>pair.every((v,j)=>Object.is(v,copy[i][j]))),roomsNeeded(Object.freeze([Object.freeze([0,.5]),Object.freeze([.5,1])])),roomsNeeded(Object.freeze([Object.freeze([1,1]),Object.freeze([2,2])]))];})()", expected: [2, true, 1, 0] },
+      { call: "(() => {const intervals=[[0,0],[0,1],[0,2],[1,1],[1,2],[2,2]];for(let n=0;n<=4;n++){for(let code=0;code<Math.pow(6,n);code++){let digits=code;const meetings=[];for(let i=0;i<n;i++){meetings.push(Object.freeze(intervals[digits%6].slice()));digits=Math.floor(digits/6);}let wanted=0;for(const [time]of meetings){let count=0;for(const [start,end]of meetings)if(start<=time&&time<end)count++;wanted=Math.max(wanted,count);}if(roomsNeeded(Object.freeze(meetings))!==wanted)return false;}}return true;})()", expected: true },
+      { call: "[roomsNeeded(Object.freeze(Array.from({length:2000},()=>Object.freeze([0,1440])))),roomsNeeded(Object.freeze(Array.from({length:1440},(_,i)=>Object.freeze([i,i+1])))),roomsNeeded(Object.freeze([])),roomsNeeded([[1,1],[0,1440],[1,2]])]", expected: [2000, 1, 0, 2] },
+
       { call: 'roomsNeeded([[5, 9], [9, 12], [10, 15]])', expected: 2 },
       { call: 'roomsNeeded([[1, 3], [2, 5], [4, 6]])', expected: 2 },
       { call: 'roomsNeeded([[0, 5], [0, 5], [0, 5]])', expected: 3 },
@@ -246,6 +250,10 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   return -1;
 };`,
     hiddenTests: [
+      { call: "(() => {const values=[3.5,5.25,-2.5,0,1.25],copy=values.slice();return [findRotated(values,1.25),values.every((v,i)=>Object.is(v,copy[i])),findRotated(Object.freeze([-0]),0),findRotated(Object.freeze([0]),-0),findRotated(Object.freeze([Number.MIN_VALUE,1,-1,0]),Number.MIN_VALUE),findRotated(Object.freeze([]),0)];})()", expected: [4, true, 0, 0, 0, -1] },
+      { call: "(() => {for(let n=0;n<=16;n++){const sorted=Array.from({length:n},(_,i)=>i*2-16);for(let shift=0;shift<Math.max(1,n);shift++){const values=Object.freeze(sorted.slice(shift).concat(sorted.slice(0,shift)));for(const target of [...sorted,-17,n*2-15])if(findRotated(values,target)!==values.indexOf(target))return false;}}return true;})()", expected: true },
+      { call: "(() => {const base=Object.freeze(Array.from({length:65536},(_,i)=>((i+40000)%65536)*.5-20000));let reads=0;const values=new __probe.Proxy(base,{get(list,key,receiver){if(__probe.isIndex(key)){reads++;if(reads>200)throw Error(\"read budget or bounds\");}return __probe.get(list,key,receiver);}});for(const [target,index]of [[-20000,25536],[12767.5,25535],[0,0],[.25,-1]]){reads=0;if(findRotated(values,target)!==index||reads>200)return false;}return true;})()", expected: true },
+
       { call: 'findRotated([5, 1, 3], 5)', expected: 0 },
       { call: 'findRotated([5, 1, 3], 3)', expected: 2 },
       { call: 'findRotated([3, 1], 1)', expected: 1 },
