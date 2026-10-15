@@ -648,7 +648,7 @@ const deserialize = text => {
     tier: 4,
     focus: ['two-pointer', 'map-set', 'strings', 'while'],
     title: 'The smallest window that holds every letter',
-    prompt: 'Write `smallestWindow(text, letters)`, returning the shortest stretch of `text` that contains every character of `letters`, repeats counted: if `letters` is `"aab"`, the stretch needs two `a`s and a `b`. `smallestWindow("ADOBECODEBANC", "ABC")` gives `"BANC"`. Return `""` when no stretch holds them all or when `letters` is empty, and the leftmost one when two shortest stretches tie. Characters are case-sensitive. Trying every start and end is far too slow for the hidden text of fifty thousand characters. Count what `letters` needs in a `Map`, and keep one number for how many needed characters the window still lacks. Grow the window by moving its right edge; `while` it lacks nothing, record it if it is the shortest so far, then shrink it from the left. Each edge only ever moves forward. Target: O(n + m) time and O(k) space for k distinct letters.',
+    prompt: "Write `smallestWindow(text, letters)`, returning the shortest stretch of `text` that contains every character of `letters`, repeats counted: if `letters` is `\"aab\"`, the stretch needs two `a`s and a `b`. `smallestWindow(\"ADOBECODEBANC\", \"ABC\")` gives `\"BANC\"`. Return `\"\"` when no stretch holds them all or when `letters` is empty, and the leftmost one when two shortest stretches tie. Characters are case-sensitive. Trying every start and end is far too slow for the hidden text of fifty thousand characters. Count what `letters` needs in a `Map`, and keep one number for how many needed characters the window still lacks. Grow the window by moving its right edge; `while` it lacks nothing, record it if it is the shortest so far, then shrink it from the left. Each edge only ever moves forward. Target: O(n + m) time and O(n + m) extra space, where n and m are the UTF-16 lengths of text and letters. A streaming O(k)-space solution for k distinct wanted code points is valid too. Both inputs are primitive strings: text has at most 50,000 UTF-16 units and letters at most 20,000. A character means one item from the string iterator (for...of), including an emoji as one item and a lone surrogate as one item. Measure window length in these code points, not UTF-16 units. Compare exactly, without case folding or normalization; combining marks stay separate. Materialize text as code points, count wanted code points, and retain only the best start/length until forming the final string.",
     starter: `const smallestWindow = (text, letters) => {
 
 };
@@ -658,16 +658,17 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
 `,
     skeleton: `const smallestWindow = (text, letters) => {
   if (letters === "") return "";
+  const points = Array.from(text);
   const need = new Map(); // character -> how many more the window needs
   for (const char of letters) need.set(char, (need.get(char) ?? 0) + 1);
-  let missing = letters.length;
+  let missing = Array.from(letters).length;
   let best = "";
   let left = 0;
-  for (let right = 0; right < text.length; right++) {
-    // take text[right] in; if it was still needed, one fewer is missing
+  for (let right = 0; right < points.length; right++) {
+    // take points[right] in; if it was still needed, one fewer is missing
     while (missing === 0) {
       // keep the window if it is the shortest so far
-      // give text[left] back; if the window now lacks it, one more is missing
+      // give points[left] back; if the window now lacks it, one more is missing
       // move left on
     }
   }
@@ -677,15 +678,11 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
       'Keep a single number, `missing`: how many characters of `letters` the window still lacks, repeats counted. The window holds everything exactly when it is 0, so you never compare two Maps.',
       'Let a count in `need` go below zero when the window holds more of a character than it needs. Giving one back makes something missing only when its count goes from 0 to 1.',
     ],
-    approach: [
-      'Count what `letters` needs in a `Map`, and set `missing` to the length of `letters`.',
-      'Move the right edge along the text. When its character is in the Map, lower its count, and if the count was above 0, lower `missing` too.',
-      '`while (missing === 0)`: keep the window if it is shorter than the best so far, then give back the character at the left edge (raise its count, and if the count is now above 0, raise `missing`) and move the left edge on.',
-      'Return the best window, or `""` if the window never held everything.',
-    ],
+    approach: ["Convert text into code points; count letters by the same string iterator and initialize missing to that code-point count.", "Move right and update needed counts. While missing is zero, keep only a strictly shorter code-point range and shrink from left.", "Form the result once by joining the best code-point slice; strict improvement preserves the leftmost tie."],
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      {"call": "smallestWindow(\"x\ud83d\ude00y\",\"\ud83d\ude00\")", "expected": "\ud83d\ude00", "label": "an emoji is one character"},
       { call: 'smallestWindow("ADOBECODEBANC", "ABC")', expected: 'BANC' },
       { call: 'smallestWindow("cabwefgewcwaefgcf", "cae")', expected: 'cwae' },
       { call: 'smallestWindow("aaflslflsldkalskaaa", "aaa")', expected: 'aaa', label: 'a letter needed three times' },
@@ -702,7 +699,7 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
     tier: 4,
     focus: ['map-set', 'recursion', 'sort', 'objects'],
     title: 'Merge contacts that share an email',
-    prompt: 'An address book holds contacts `{ name, emails }`. Two contacts are the same person when they share an email, and that chains: if contact A shares an email with B, and B shares one with C, all three are one person even though A and C share nothing. Write `mergeContacts(contacts)`, returning one `{ name, emails }` per person, with the name of that person’s first contact in the book and every email they have, once each, sorted with `sort()`. List the people in the order their first contacts appear. Build a `Map` from each email to the contacts that list it. Then walk it with a recursive helper that visits a contact, collects its emails and visits every contact that shares one, keeping the visited contacts in a `Set` so none is visited twice. Leave `contacts` unchanged. Target: O(E log E) time for E emails in all, for the sorting, and O(E) space.',
+    prompt: "Write `mergeContacts(contacts)`. Each contact has own data fields `{ name, emails }`. Sharing an exact email joins contacts transitively. Return one fresh `{ name, emails }` per component, named after its first input contact; list components in that first-contact order. Collect each email once and sort emails with default sort(), which compares UTF-16 units. Equal names alone never join contacts. Empty-email contacts remain separate. Let N be contacts.length and E the total email occurrence count, including duplicates. The outer array and email arrays are dense ordinary arrays; N <= 2000 and E <= 10000. Names and emails are primitive strings of at most 128 UTF-16 units; empty strings, spaces, case differences, Unicode and lone surrogates are literal data. There is no address validation, trimming or normalization. Contact records may have a null prototype. The outer array, records and email arrays may be frozen; preserve all input values/order. Return fresh mutable records and email arrays on every call. Build email-to-contact adjacency, then consume each email list only once while traversing components; a stack avoids a deep recursive walk. A union-by-size disjoint-set approach is valid too. Target: O(N + E log E) time and O(N + E) extra space, using expected Map/Set access and bounded string costs; use log(E + 1) for E below 2. Sorting accounts for the logarithmic term.",
     starter: `const mergeContacts = contacts => {
 
 };
@@ -714,31 +711,20 @@ console.log(JSON.stringify(mergeContacts([
 ])));
 `,
     skeleton: `const mergeContacts = contacts => {
-  const byEmail = new Map(); // email -> the indexes of the contacts that list it
-  // fill it
+  const byEmail = new Map();
+  // Record the contact indices for each email.
   const visited = new Set();
-  const visit = (index, emails) => {
-    // mark the contact, add its emails, and visit every unvisited contact on each of them
-  };
   const people = [];
-  contacts.forEach((contact, index) => {
-    // a contact not visited yet starts a new person, named after it
-  });
+  // In book order, traverse each unseen component with a stack.
+  // Consume each email adjacency once and collect a fresh sorted email array.
   return people;
 };`,
-    hints: [
-      'Think of each contact as a point, and of each shared email as a line between two points. A person is everything you can reach from one contact by following lines, which is what a depth-first walk collects.',
-      'Going through the contacts in book order and starting a new person at each one not visited yet gives both the order of the people and their names: the first contact of each person is the one that starts it.',
-    ],
-    approach: [
-      'Build a `Map` from each email to the indexes of the contacts that list it.',
-      'Write a recursive `visit(index, emails)` that adds the index to a `visited` Set, adds the contact’s emails to a Set of emails, and visits every contact listed under each of those emails that is not visited yet.',
-      'Go through the contacts in order. Each one not visited yet starts a person: visit it, then push `{ name, emails: [...emails].sort() }`.',
-      'Return the people. Sorting a new array leaves each contact’s own `emails` as they were.',
-    ],
+    hints: ["An email connects all contacts that list it. Once its whole adjacency has been visited, delete or mark that email list so the next contact does not scan it again.", "Start components in book order to keep the first name and component order. Mark contacts when adding them to the stack, and sort a new email array."],
+    approach: ["Map each exact email to its contact indices.", "For each unseen contact in book order, mark it and start a stack; collect component emails in a Set.", "Pop contacts, consume each email adjacency at most once, and mark/push its unseen neighbors.", "Append the first name and a new default-sorted email array. A ranked disjoint-set implementation is valid too."],
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      {"call": "mergeContacts([{name:\" A \",emails:[\" x \"]}])", "expected": [{"name": " A ", "emails": [" x "]}], "label": "keep names and addresses literal"},
       {
         call: 'mergeContacts([{ name: "Ada", emails: ["ada@work.dev", "ada@home.dev"] }, { name: "Ada L", emails: ["lovelace@work.dev", "ada@work.dev"] }, { name: "Bo", emails: ["bo@home.dev"] }])',
         expected: [{ name: 'Ada', emails: ['ada@home.dev', 'ada@work.dev', 'lovelace@work.dev'] }, { name: 'Bo', emails: ['bo@home.dev'] }],
@@ -776,7 +762,7 @@ console.log(JSON.stringify(mergeContacts([
     tier: 4,
     focus: ['recursion', 'map-set', 'strings'],
     title: 'Split text into dictionary words',
-    prompt: 'Hashtags and domain names run words together. Write `splitWords(text, words)`, returning every way to cut `text` into words from the `words` list, each written as its words joined by single spaces, and the whole list sorted with `sort()`. `splitWords("catsanddog", ["cat", "cats", "and", "sand", "dog"])` gives `["cat sand dog", "cats and dog"]`. A word can be used any number of times, and an empty `text` has one split, the empty string. Return `[]` when there is no split. Write a recursive helper `from(start)` returning every split of the text from `start` to the end: for each word the text continues with at `start`, put that word in front of every split of what follows it. Put the words in a `Set` so each piece is one lookup. Many starts are reached along many paths, so keep each start’s answer in a `Map`, empty answers included. Without it, the hidden text of thirty `a`s followed by a `b` never finishes. Target: O(n² + the length of the answers) time for a text of n characters.',
+    prompt: "Write `splitWords(text, words)`, returning every way to cut text into dictionary words, joined by single ASCII spaces and sorted with default sort(). `splitWords(\"catsanddog\", [\"cat\", \"cats\", \"and\", \"sand\", \"dog\"])` gives `[\"cat sand dog\", \"cats and dog\"]`. Words may be reused; duplicate dictionary entries count once. Empty text has one split, `\"\"`; no split gives `[]`. Let n be text.length and D the total UTF-16 length of the dictionary entries. text is primitive with n <= 200; words is a dense ordinary array of at most 2000 nonempty primitive strings with D <= 20000. A word contains no ASCII space; other literal units, including tabs, Unicode and lone surrogates, are allowed. Match UTF-16 substrings exactly, without trimming, case folding or normalization. The dictionary may be frozen and must remain unchanged. Return a fresh mutable answer array. Let R be the answer count and L their total output length in UTF-16 units. Valid inputs have R <= 10000 and L <= 1000000. Build possible word cuts and mark which suffixes can reach the end; enumerate only those continuations, joining the chosen word list once per answer. Keep cut indices instead of storing every suffix sentence. Target: O(D + n\u00b3 + L + nR log R) time and O(D + n\u00b2 + L) total auxiliary/output space. The cubic term includes substring copying/hashing; the sort bound includes comparisons up to O(n) units long. Treat log R as log(max(2,R)); dictionary access uses the usual expected hashing model. A trie can improve cut discovery.",
     starter: `const splitWords = (text, words) => {
 
 };
@@ -786,29 +772,18 @@ console.log(splitWords("catsanddog", ["cat", "cats", "and", "sand", "dog"]));
 `,
     skeleton: `const splitWords = (text, words) => {
   const dictionary = new Set(words);
-  const memo = new Map(); // start -> every split of the text from start
-  const from = start => {
-    // the end of the text has one split: ""
-    // a start worked out before: reuse its answer
-    // for each end after start: if text.slice(start, end) is a word,
-    //   put it in front of every split from end
-    // remember the answer, empty or not
-  };
-  return /* every split from 0, sorted */;
+  const cuts = Array.from({length:text.length+1},()=>[]);
+  // From the end, record cuts whose following suffix can finish.
+  const answers = [], path = [];
+  // Walk valid cuts from zero; join path once at each complete answer.
+  return answers.sort();
 };`,
-    hints: [
-      'Every split of the text from `start` is a word the text continues with at `start`, followed by a split of what is left. So the splits from `start` are built out of the splits from later positions, and the end of the text has exactly one split, the empty one.',
-      'Store every start’s answer in the Map, empty lists included. A start with no split is the one most worth remembering: in a long run of `a`s it is reached along more paths than you could ever count.',
-    ],
-    approach: [
-      'Put the words in a `Set`. Write `from(start)`: at the end of the text return `[""]`, and return the Map’s answer when it has one.',
-      'Otherwise, for each `end` from `start + 1` to the length, when `text.slice(start, end)` is in the Set, add that word in front of every split from `end`, with a space between them unless the rest is empty.',
-      'Store the list under `start` before you return it.',
-      'Return a sorted copy of `from(0)`.',
-    ],
+    hints: ["Work backward to find word cuts that can reach the end. A suffix with no route must not be explored again during answer enumeration.", "Store cut indices, keep one current word path, and join it only for a complete answer. Sorting the final strings also takes time."],
+    approach: ["Deduplicate the nonempty dictionary in a Set.", "From the end backward, record each matching word end only when that suffix can finish. Store indices rather than every suffix sentence.", "Recursively follow those viable cuts from zero with one push/pop word path. At the end, join it with ASCII spaces.", "Default-sort the completed answers. Empty text reaches the end immediately and produces one empty string."],
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "splitWords(\"\\ta\",[\"\\ta\"])", "expected": ["\ta"], "label": "a tab is literal word data"},
       { call: `splitWords("catsanddog", ${WORDS})`, expected: ['cat sand dog', 'cats and dog'] },
       { call: 'splitWords("pineapplepenapple", ["apple", "pen", "applepen", "pine", "pineapple"])', expected: ['pine apple pen apple', 'pine applepen apple', 'pineapple pen apple'] },
       { call: 'splitWords("aaaa", ["a", "aa"])', expected: ['a a a a', 'a a aa', 'a aa a', 'aa a a', 'aa aa'], label: 'words used more than once' },

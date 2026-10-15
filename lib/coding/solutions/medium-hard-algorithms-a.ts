@@ -946,15 +946,16 @@ const deserialize = text => {
   'alg-mh-smallest-window': {
     solution: `const smallestWindow = (text, letters) => {
   if (letters === "") return "";
+  const points = Array.from(text);
   // How many more of each character the window needs; below 0 means spare.
   const need = new Map();
   for (const char of letters) need.set(char, (need.get(char) ?? 0) + 1);
-  let missing = letters.length; // needed characters the window still lacks, repeats counted
+  let missing = Array.from(letters).length; // needed characters the window still lacks, repeats counted
   let bestStart = 0;
   let bestLength = Infinity;
   let left = 0;
-  for (let right = 0; right < text.length; right++) {
-    const char = text[right];
+  for (let right = 0; right < points.length; right++) {
+    const char = points[right];
     if (need.has(char)) {
       if (need.get(char) > 0) missing--;
       need.set(char, need.get(char) - 1);
@@ -965,7 +966,7 @@ const deserialize = text => {
         bestStart = left; // strictly shorter only, so a tie keeps the leftmost
         bestLength = right - left + 1;
       }
-      const gone = text[left];
+      const gone = points[left];
       if (need.has(gone)) {
         need.set(gone, need.get(gone) + 1);
         if (need.get(gone) > 0) missing++;
@@ -973,13 +974,14 @@ const deserialize = text => {
       left++;
     }
   }
-  return bestLength === Infinity ? "" : text.slice(bestStart, bestStart + bestLength);
+  return bestLength === Infinity ? "" : points.slice(bestStart, bestStart + bestLength).join("");
 };`,
     junior: `const smallestWindow = (text, letters) => {
   if (letters.length === 0) {
     return "";
   }
-  const need = {};
+  const points = Array.from(text);
+  const need = Object.create(null);
   for (const char of letters) {
     if (need[char] === undefined) {
       need[char] = 1;
@@ -987,13 +989,13 @@ const deserialize = text => {
       need[char] = need[char] + 1;
     }
   }
-  let missing = letters.length;
+  let missing = Array.from(letters).length;
   let bestStart = 0;
   let bestLength = Infinity;
   let left = 0;
   let right = 0;
-  while (right < text.length) {
-    const added = text[right];
+  while (right < points.length) {
+    const added = points[right];
     if (need[added] !== undefined) {
       if (need[added] > 0) {
         missing = missing - 1;
@@ -1007,7 +1009,7 @@ const deserialize = text => {
         bestLength = length;
         bestStart = left;
       }
-      const removed = text[left];
+      const removed = points[left];
       if (need[removed] !== undefined) {
         need[removed] = need[removed] + 1;
         if (need[removed] > 0) {
@@ -1020,40 +1022,32 @@ const deserialize = text => {
   if (bestLength === Infinity) {
     return "";
   }
-  return text.slice(bestStart, bestStart + bestLength);
+  return points.slice(bestStart, bestStart + bestLength).join("");
 };`,
     senior: `const smallestWindow = (text, letters) => {
   if (!letters) return "";
+  const points = Array.from(text);
   const need = new Map();
   for (const char of letters) need.set(char, (need.get(char) ?? 0) + 1);
-  let missing = letters.length;
+  let missing = Array.from(letters).length;
   let [bestStart, bestEnd] = [0, Infinity];
-  for (let left = 0, right = 0; right < text.length; right++) {
-    const char = text[right];
+  for (let left = 0, right = 0; right < points.length; right++) {
+    const char = points[right];
     if (!need.has(char)) continue;
     if (need.get(char) > 0) missing--;
     need.set(char, need.get(char) - 1);
     for (; missing === 0; left++) {
       if (right + 1 - left < bestEnd - bestStart) [bestStart, bestEnd] = [left, right + 1];
-      const gone = text[left];
+      const gone = points[left];
       if (need.has(gone) && need.set(gone, need.get(gone) + 1).get(gone) > 0) missing++;
     }
   }
-  return bestEnd === Infinity ? "" : text.slice(bestStart, bestEnd);
+  return bestEnd === Infinity ? "" : points.slice(bestStart, bestEnd).join("");
 };`,
-    hiddenTests: [
-      { call: 'smallestWindow("abcabdebac", "cda")', expected: 'cabd' },
-      { call: 'smallestWindow("bba", "ab")', expected: 'ba' },
-      { call: 'smallestWindow("abcdebdde", "bde")', expected: 'deb' },
-      { call: 'smallestWindow("abxba", "ab")', expected: 'ab' },
-      { call: 'smallestWindow("xxxx", "y")', expected: '' },
-      { call: '(() => { const text = Array.from({ length: 50000 }, (_, i) => "abcdefghij"[(i * 7) % 10]).join(""); const found = smallestWindow(text, "jjaa"); return [found.length, text.indexOf(found)]; })()', expected: [14, 7] },
-      { call: 'smallestWindow("x".repeat(49999) + "y", "yx")', expected: 'xy' },
-    ],
+    hiddenTests: [{"call": "(() => {const strings=[''],alphabet=['a','b','\ud83d\ude00'];let frontier=[''];for(let n=1;n<=4;n++){frontier=frontier.flatMap(prefix=>alphabet.map(char=>prefix+char));strings.push(...frontier);}const wanted=strings.filter(value=>[...value].length<=2);for(const text of strings)for(const letters of wanted){const points=[...text],need=[...letters];let best='';if(need.length){let size=Infinity;for(let left=0;left<points.length;left++)for(let end=left+1;end<=points.length;end++){const counts=new Map();for(let i=left;i<end;i++)counts.set(points[i],(counts.get(points[i])||0)+1);const required=new Map();for(const char of need)required.set(char,(required.get(char)||0)+1);if([...required].every(([char,count])=>(counts.get(char)||0)>=count)&&end-left<size){size=end-left;best=points.slice(left,end).join('');}}}if(smallestWindow(text,letters)!==best)return false;}return true;})()", "expected": true}, {"call": "[smallestWindow('x\ud83d\ude00y','\ud83d\ude00'),smallestWindow('\ud83d\ude00','\\ud83d'),smallestWindow('x\\ud83dy','\\ud83d'),smallestWindow('\u00e9','e\\u0301'),smallestWindow('\ud83d\ude00abx\ud83d\ude00a','\ud83d\ude00a'),smallestWindow('abXba','ab')]", "expected": ["\ud83d\ude00", "", "\ud83d", "", "\ud83d\ude00a", "ab"]}, {"call": "[smallestWindow('\ud83d\ude00'.repeat(25000),'\ud83d\ude00'.repeat(10000)).length,smallestWindow('a'.repeat(49999)+'b','ab'),smallestWindow('a'.repeat(50000),'b'),smallestWindow('','\ud83d\ude00')]", "expected": [20000, "ab", "", ""]}, {"call": "smallestWindow(\"abcabdebac\", \"cda\")", "expected": "cabd"}, {"call": "smallestWindow(\"bba\", \"ab\")", "expected": "ba"}, {"call": "smallestWindow(\"abcdebdde\", \"bde\")", "expected": "deb"}, {"call": "smallestWindow(\"abxba\", \"ab\")", "expected": "ab"}, {"call": "smallestWindow(\"xxxx\", \"y\")", "expected": ""}, {"call": "(() => { const text = Array.from({ length: 50000 }, (_, i) => \"abcdefghij\"[(i * 7) % 10]).join(\"\"); const found = smallestWindow(text, \"jjaa\"); return [found.length, text.indexOf(found)]; })()", "expected": [14, 7]}, {"call": "smallestWindow(\"x\".repeat(49999) + \"y\", \"yx\")", "expected": "xy"}],
   },
   'alg-mh-merge-contacts': {
     solution: `const mergeContacts = contacts => {
-  // email -> the indexes of every contact that lists it
   const byEmail = new Map();
   contacts.forEach(({ emails }, index) => {
     for (const email of emails) {
@@ -1062,22 +1056,27 @@ const deserialize = text => {
     }
   });
   const visited = new Set();
-  // Depth first: a contact, then every contact reachable through one of its emails.
-  const visit = (index, emails) => {
-    visited.add(index);
-    for (const email of contacts[index].emails) {
-      emails.add(email);
-      for (const other of byEmail.get(email)) {
-        if (!visited.has(other)) visit(other, emails);
-      }
-    }
-  };
   const people = [];
   contacts.forEach(({ name }, index) => {
-    if (visited.has(index)) return; // already part of an earlier person
+    if (visited.has(index)) return;
+    visited.add(index);
+    const pending = [index];
     const emails = new Set();
-    visit(index, emails);
-    people.push({ name, emails: [...emails].sort() }); // a new array: the contacts keep theirs
+    while (pending.length) {
+      const current = pending.pop();
+      for (const email of contacts[current].emails) {
+        emails.add(email);
+        const neighbors = byEmail.get(email);
+        if (!neighbors) continue;
+        byEmail.delete(email); // consume this adjacency just once
+        for (const other of neighbors) {
+          if (visited.has(other)) continue;
+          visited.add(other);
+          pending.push(other);
+        }
+      }
+    }
+    people.push({ name, emails: [...emails].sort() });
   });
   return people;
 };`,
@@ -1104,7 +1103,10 @@ const deserialize = text => {
       const current = toVisit.pop();
       for (const email of contacts[current].emails) {
         emails.add(email);
-        for (const other of contactsByEmail.get(email)) {
+        const neighbors = contactsByEmail.get(email);
+        if (neighbors === undefined) continue;
+        contactsByEmail.delete(email);
+        for (const other of neighbors) {
           if (!visited.has(other)) {
             visited.add(other);
             toVisit.push(other);
@@ -1119,133 +1121,123 @@ const deserialize = text => {
   return people;
 };`,
     senior: `const mergeContacts = contacts => {
-  // Union-find: each contact points towards the first contact of its person.
-  const parent = contacts.map((_, index) => index);
-  const find = index => (parent[index] === index ? index : (parent[index] = find(parent[index])));
-  const union = (a, b) => {
-    const [rootA, rootB] = [find(a), find(b)];
-    if (rootA !== rootB) parent[Math.max(rootA, rootB)] = Math.min(rootA, rootB); // the earlier contact stays the root
+  const parent = contacts.map((_, i) => i);
+  const size = contacts.map(() => 1);
+  const find = index => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]];
+      index = parent[index];
+    }
+    return index;
   };
-  const firstWith = new Map(); // email -> the first contact that lists it
+  const firstWith = new Map();
   contacts.forEach(({ emails }, index) => {
     for (const email of emails) {
-      if (firstWith.has(email)) union(firstWith.get(email), index);
-      else firstWith.set(email, index);
+      if (!firstWith.has(email)) {
+        firstWith.set(email, index);
+        continue;
+      }
+      let a = find(index), b = find(firstWith.get(email));
+      if (a === b) continue;
+      if (size[a] < size[b]) [a, b] = [b, a];
+      parent[b] = a;
+      size[a] += size[b];
     }
   });
-  const people = new Map(); // root -> emails, in the order the roots first appear
-  contacts.forEach(({ emails }, index) => {
+  const groups = new Map();
+  contacts.forEach(({ name, emails }, index) => {
     const root = find(index);
-    if (!people.has(root)) people.set(root, new Set());
-    for (const email of emails) people.get(root).add(email);
+    if (!groups.has(root)) groups.set(root, { name, emails: new Set() });
+    for (const email of emails) groups.get(root).emails.add(email);
   });
-  return [...people].map(([root, emails]) => ({ name: contacts[root].name, emails: [...emails].sort() }));
+  return [...groups.values()].map(({ name, emails }) => ({ name, emails: [...emails].sort() }));
 };`,
-    hiddenTests: [
-      {
-        call: 'mergeContacts([{ name: "X", emails: [] }, { name: "Y", emails: ["y@x.dev"] }])',
-        expected: [{ name: 'X', emails: [] }, { name: 'Y', emails: ['y@x.dev'] }],
-      },
-      {
-        call: 'mergeContacts([{ name: "A", emails: ["a@x.dev"] }, { name: "B", emails: ["b@x.dev"] }, { name: "C", emails: ["c@x.dev"] }, { name: "D", emails: ["c@x.dev", "a@x.dev"] }])',
-        expected: [{ name: 'A', emails: ['a@x.dev', 'c@x.dev'] }, { name: 'B', emails: ['b@x.dev'] }],
-      },
-      {
-        call: 'mergeContacts([{ name: "Kim", emails: ["kim@x.dev", "Kim@x.dev"] }, { name: "K", emails: ["k@x.dev", "kim@x.dev"] }, { name: "Kay", emails: ["kim@x.dev"] }])',
-        expected: [{ name: 'Kim', emails: ['Kim@x.dev', 'k@x.dev', 'kim@x.dev'] }],
-      },
-      {
-        call: '(() => { const book = [{ name: "A", emails: ["z@x.dev", "a@x.dev"] }, { name: "B", emails: ["a@x.dev"] }]; mergeContacts(book); return book; })()',
-        expected: [{ name: 'A', emails: ['z@x.dev', 'a@x.dev'] }, { name: 'B', emails: ['a@x.dev'] }],
-      },
-      {
-        call: '(() => { const book = Array.from({ length: 300 }, (_, i) => ({ name: "c" + i, emails: ["e" + i + "@x.dev", "e" + (i + 1) + "@x.dev"] })); const people = mergeContacts(book); return [people.length, people[0].name, people[0].emails.length, people[0].emails[0], people[0].emails[299]]; })()',
-        expected: [1, 'c0', 301, 'e0@x.dev', 'e99@x.dev'],
-      },
-      {
-        call: '(() => { const book = Array.from({ length: 100 }, (_, i) => ({ name: "c" + i, emails: ["e" + i + "@x.dev"] })); book.push({ name: "hub", emails: Array.from({ length: 50 }, (_, i) => "e" + (i * 2 + 1) + "@x.dev") }); const people = mergeContacts(book); return [people.length, people[0].name, people[1].name, people[1].emails.length, people[2].name, people[50].name]; })()',
-        expected: [51, 'c0', 'c1', 50, 'c2', 'c98'],
-      },
-    ],
+    hiddenTests: [{"call": "(() => {const pool=['','a','b'];for(let code=0;code<512;code++){const book=Array.from({length:3},(_,i)=>({name:'n'+i,emails:pool.filter((_,j)=>code&(1<<(i*3+j)))}));const connected=Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>i===j||book[i].emails.some(email=>book[j].emails.includes(email))));for(let k=0;k<3;k++)for(let i=0;i<3;i++)for(let j=0;j<3;j++)connected[i][j] ||= connected[i][k]&&connected[k][j];const expected=[],used=new Set();for(let i=0;i<3;i++){if(used.has(i))continue;const emails=new Set();for(let j=0;j<3;j++)if(connected[i][j]){used.add(j);for(const email of book[j].emails)emails.add(email);}expected.push({name:book[i].name,emails:[...emails].sort()});}const out=mergeContacts(book);if(JSON.stringify(out)!==JSON.stringify(expected))return false;}return true;})()", "expected": true}, {"call": "(() => {const first=Object.assign(Object.create(null),{name:' A ',emails:Object.freeze([' z ','','__proto__','\ud83d\ude00','\\ud83d'])}),second={name:'B',emails:Object.freeze(['','Z','constructor'])},book=Object.freeze([Object.freeze(first),Object.freeze(second)]),before=JSON.stringify(book),a=mergeContacts(book),b=mergeContacts(book);if(a===b||a[0]===b[0]||a[0].emails===b[0].emails||a[0]===first||a.length!==1||a[0].name!==' A '||JSON.stringify(a[0].emails)!==JSON.stringify([' z ','','__proto__','\ud83d\ude00','\\ud83d','Z','constructor'].sort())||JSON.stringify(book)!==before)return false;a[0].name='changed';a[0].emails.push('extra');return a[0].name==='changed'&&a[0].emails.includes('extra')&&b[0].name===' A '&&!b[0].emails.includes('extra')&&mergeContacts([])!==mergeContacts([]);})()", "expected": true}, {"call": "(() => {const chain=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze({name:'n'+i,emails:Object.freeze(['e'+i,'e'+(i+1)])}))),star=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze({name:'s'+i,emails:Object.freeze(Array(5).fill('shared'))}))),empty=Object.freeze(Array.from({length:2000},()=>Object.freeze({name:'',emails:Object.freeze([])})));const a=mergeContacts(chain),b=mergeContacts(star),c=mergeContacts(empty);return a.length===1&&a[0].name==='n0'&&a[0].emails.length===2001&&b.length===1&&b[0].name==='s0'&&b[0].emails[0]==='shared'&&b[0].emails.length===1&&c.length===2000&&c.every(item=>item.name===''&&item.emails.length===0);})()", "expected": true}, {"call": "mergeContacts([{ name: \"X\", emails: [] }, { name: \"Y\", emails: [\"y@x.dev\"] }])", "expected": [{"name": "X", "emails": []}, {"name": "Y", "emails": ["y@x.dev"]}]}, {"call": "mergeContacts([{ name: \"A\", emails: [\"a@x.dev\"] }, { name: \"B\", emails: [\"b@x.dev\"] }, { name: \"C\", emails: [\"c@x.dev\"] }, { name: \"D\", emails: [\"c@x.dev\", \"a@x.dev\"] }])", "expected": [{"name": "A", "emails": ["a@x.dev", "c@x.dev"]}, {"name": "B", "emails": ["b@x.dev"]}]}, {"call": "mergeContacts([{ name: \"Kim\", emails: [\"kim@x.dev\", \"Kim@x.dev\"] }, { name: \"K\", emails: [\"k@x.dev\", \"kim@x.dev\"] }, { name: \"Kay\", emails: [\"kim@x.dev\"] }])", "expected": [{"name": "Kim", "emails": ["Kim@x.dev", "k@x.dev", "kim@x.dev"]}]}, {"call": "(() => { const book = [{ name: \"A\", emails: [\"z@x.dev\", \"a@x.dev\"] }, { name: \"B\", emails: [\"a@x.dev\"] }]; mergeContacts(book); return book; })()", "expected": [{"name": "A", "emails": ["z@x.dev", "a@x.dev"]}, {"name": "B", "emails": ["a@x.dev"]}]}, {"call": "(() => { const book = Array.from({ length: 300 }, (_, i) => ({ name: \"c\" + i, emails: [\"e\" + i + \"@x.dev\", \"e\" + (i + 1) + \"@x.dev\"] })); const people = mergeContacts(book); return [people.length, people[0].name, people[0].emails.length, people[0].emails[0], people[0].emails[299]]; })()", "expected": [1, "c0", 301, "e0@x.dev", "e99@x.dev"]}, {"call": "(() => { const book = Array.from({ length: 100 }, (_, i) => ({ name: \"c\" + i, emails: [\"e\" + i + \"@x.dev\"] })); book.push({ name: \"hub\", emails: Array.from({ length: 50 }, (_, i) => \"e\" + (i * 2 + 1) + \"@x.dev\") }); const people = mergeContacts(book); return [people.length, people[0].name, people[1].name, people[1].emails.length, people[2].name, people[50].name]; })()", "expected": [51, "c0", "c1", 50, "c2", "c98"]}],
   },
   'alg-mh-split-words': {
     solution: `const splitWords = (text, words) => {
   const dictionary = new Set(words);
-  // start -> every split of the text from start; empty lists are remembered too.
-  const memo = new Map();
-  const from = start => {
-    if (start === text.length) return [""]; // the end has one split: the empty one
-    if (memo.has(start)) return memo.get(start);
-    const splits = [];
+  const cuts = Array.from({ length: text.length + 1 }, () => []);
+  const canFinish = Array(text.length + 1).fill(false);
+  canFinish[text.length] = true;
+  for (let start = text.length - 1; start >= 0; start--) {
     for (let end = start + 1; end <= text.length; end++) {
-      const word = text.slice(start, end);
-      if (!dictionary.has(word)) continue;
-      for (const rest of from(end)) splits.push(rest === "" ? word : word + " " + rest);
+      if (canFinish[end] && dictionary.has(text.slice(start, end))) cuts[start].push(end);
     }
-    memo.set(start, splits);
-    return splits;
+    canFinish[start] = cuts[start].length > 0;
+  }
+  const answers = [], path = [];
+  const visit = start => {
+    if (start === text.length) {
+      answers.push(path.join(" "));
+      return;
+    }
+    for (const end of cuts[start]) {
+      path.push(text.slice(start, end));
+      visit(end);
+      path.pop();
+    }
   };
-  return [...from(0)].sort();
+  visit(0);
+  return answers.sort();
 };`,
     junior: `const splitWords = (text, words) => {
-  const unique = [];
-  for (const word of words) {
-    if (!unique.includes(word)) {
-      unique.push(word);
-    }
+  const dictionary = new Set(words);
+  const cuts = [];
+  const reachable = [];
+  for (let i = 0; i <= text.length; i++) {
+    cuts.push([]);
+    reachable.push(false);
   }
-  const memo = new Map();
-  const splitFrom = start => {
-    if (start === text.length) {
-      return [""];
-    }
-    if (memo.has(start)) {
-      return memo.get(start);
-    }
-    const results = [];
-    for (const word of unique) {
-      if (text.startsWith(word, start)) {
-        const rests = splitFrom(start + word.length);
-        for (const rest of rests) {
-          if (rest === "") {
-            results.push(word);
-          } else {
-            results.push(word + " " + rest);
-          }
-        }
+  reachable[text.length] = true;
+  for (let start = text.length - 1; start >= 0; start--) {
+    for (let end = start + 1; end <= text.length; end++) {
+      if (reachable[end] && dictionary.has(text.slice(start, end))) {
+        cuts[start].push(end);
+        reachable[start] = true;
       }
     }
-    memo.set(start, results);
-    return results;
-  };
-  const all = splitFrom(0);
-  const sorted = all.slice();
-  sorted.sort();
-  return sorted;
+  }
+  const answers = [];
+  const chosen = [];
+  function collect(start) {
+    if (start === text.length) {
+      answers.push(chosen.join(" "));
+      return;
+    }
+    for (let i = 0; i < cuts[start].length; i++) {
+      const end = cuts[start][i];
+      chosen.push(text.slice(start, end));
+      collect(end);
+      chosen.pop();
+    }
+  }
+  collect(0);
+  answers.sort();
+  return answers;
 };`,
     senior: `const splitWords = (text, words) => {
   const dictionary = new Set(words);
-  const memo = new Map([[text.length, [""]]]);
-  const from = start => {
-    if (!memo.has(start)) {
-      const splits = [];
-      for (let end = start + 1; end <= text.length; end++) {
-        const word = text.slice(start, end);
-        if (dictionary.has(word)) splits.push(...from(end).map(rest => (rest ? \`\${word} \${rest}\` : word)));
-      }
-      memo.set(start, splits);
+  const edges = Array.from({ length: text.length + 1 }, () => []);
+  const finishes = new Set([text.length]);
+  for (let start = text.length - 1; start >= 0; start--) {
+    for (let end = start + 1; end <= text.length; end++) {
+      if (finishes.has(end) && dictionary.has(text.slice(start, end))) edges[start].push(end);
     }
-    return memo.get(start);
+    if (edges[start].length) finishes.add(start);
+  }
+  const output = [], path = [];
+  const emit = start => {
+    if (start === text.length) output.push(path.join(" "));
+    else for (const end of edges[start]) {
+      path.push(text.slice(start, end));
+      emit(end);
+      path.pop();
+    }
   };
-  return from(0).toSorted();
+  emit(0);
+  return output.toSorted();
 };`,
-    hiddenTests: [
-      { call: 'splitWords("a".repeat(30) + "b", ["a", "aa", "aaa", "aaaa"])', expected: [] },
-      { call: '(() => { const all = splitWords("a".repeat(18), ["a", "aa"]); return [all.length, all[0], all[all.length - 1]]; })()', expected: [4181, 'a a a a a a a a a a a a a a a a a a', 'aa aa aa aa aa aa aa aa aa'] },
-      { call: 'splitWords("abcd", ["a", "abc", "b", "cd", "bcd", "d"])', expected: ['a b cd', 'a bcd', 'abc d'] },
-      { call: 'splitWords("dogdog", ["dog", "dog"])', expected: ['dog dog'] },
-      { call: 'splitWords("aaab", ["a", "aa", "aaa", "b", "ab"])', expected: ['a a a b', 'a a ab', 'a aa b', 'aa a b', 'aa ab', 'aaa b'] },
-      { call: 'splitWords("penpineapple", ["pen", "pine", "apple", "pineapple", "pin"])', expected: ['pen pine apple', 'pen pineapple'] },
-    ],
+    hiddenTests: [{"call": "(() => {const dictionary=['a','b','aa','ab','ba','bb'],texts=[''];for(let n=1;n<=4;n++)for(let bits=0;bits<2**n;bits++)texts.push(Array.from({length:n},(_,i)=>bits&(1<<i)?'a':'b').join(''));for(const text of texts)for(let mask=0;mask<64;mask++){const words=Object.freeze(dictionary.filter((_,i)=>mask&(1<<i))),expected=[];if(!text.length)expected.push('');else for(let cuts=0;cuts<2**(text.length-1);cuts++){const parts=[];let start=0;for(let end=1;end<=text.length;end++)if(end===text.length||cuts&(1<<(end-1))){parts.push(text.slice(start,end));start=end;}if(parts.every(part=>words.includes(part)))expected.push(parts.join(' '));}expected.sort();if(JSON.stringify(splitWords(text,words))!==JSON.stringify(expected))return false;}return true;})()", "expected": true}, {"call": "(() => {const words=Object.freeze(['\\ta','\ud83d\ude00','\\ud83d','a','\ud83d\ude00','e\\u0301']),a=splitWords('\\ta',words),b=splitWords('\\ta',words);if(JSON.stringify(a)!==JSON.stringify(['\\ta'])||a===b)return false;a.push('changed');return a.length===2&&b.length===1&&JSON.stringify(splitWords('\ud83d\ude00',['\\ud83d','\\ude00','\ud83d\ude00']))===JSON.stringify(['\\ud83d \\ude00','\ud83d\ude00'].sort())&&splitWords('\u00e9',['e\\u0301']).length===0&&splitWords('a b',['a','b']).length===0&&splitWords('',Object.freeze([]))[0]==='';})()", "expected": true}, {"call": "(() => {const words=Object.freeze(Array.from({length:2000},(_,i)=>'w'+i));const text='a'.repeat(200);return splitWords(text,Object.freeze(['a'])).join('')===Array(200).fill('a').join(' ')&&splitWords(text,words).length===0&&splitWords('a'.repeat(199)+'b',Object.freeze(['a','aa','aaa','aaaa'])).length===0;})()", "expected": true}, {"call": "splitWords(\"a\".repeat(30) + \"b\", [\"a\", \"aa\", \"aaa\", \"aaaa\"])", "expected": []}, {"call": "(() => { const all = splitWords(\"a\".repeat(18), [\"a\", \"aa\"]); return [all.length, all[0], all[all.length - 1]]; })()", "expected": [4181, "a a a a a a a a a a a a a a a a a a", "aa aa aa aa aa aa aa aa aa"]}, {"call": "splitWords(\"abcd\", [\"a\", \"abc\", \"b\", \"cd\", \"bcd\", \"d\"])", "expected": ["a b cd", "a bcd", "abc d"]}, {"call": "splitWords(\"dogdog\", [\"dog\", \"dog\"])", "expected": ["dog dog"]}, {"call": "splitWords(\"aaab\", [\"a\", \"aa\", \"aaa\", \"b\", \"ab\"])", "expected": ["a a a b", "a a ab", "a aa b", "aa a b", "aa ab", "aaa b"]}, {"call": "splitWords(\"penpineapple\", [\"pen\", \"pine\", \"apple\", \"pineapple\", \"pin\"])", "expected": ["pen pine apple", "pen pineapple"]}],
   },
 };

@@ -1145,8 +1145,8 @@ console.log(levelOrder(node(3, node(9), node(20))));
     tier: 4,
     focus: ['promises', 'async-await'],
     title: 'Promise pool with a concurrency limit',
-    prompt: 'Write `promisePool(tasks, limit)`, running an array of functions that each return a promise, with at most `limit` of them in flight at once, and resolving to their results in the order the tasks were given — not the order they finished. `promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)` resolves to `[1, 2]`. Start `limit` workers that each pull the next index off a shared counter and write their result into the slot that index owns; handing the whole batch to `Promise.all` would start everything at once and defeat the point. An empty task list resolves to `[]`, and a `limit` past the number of tasks simply runs them all. Target: O(n) time in the number of tasks and O(n) space for the results.',
-    starter: `const promisePool = (tasks, limit) => {
+    prompt: "Write `promisePool(tasks, limit)`, running an array of functions that each return a promise, with at most `limit` of them in flight at once, and resolving to their results in the order the tasks were given \u2014 not the order they finished. `promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)` resolves to `[1, 2]`. Start `limit` workers that each pull the next index off a shared counter and write their result into the slot that index owns; handing the whole batch to `Promise.all` would start everything at once and defeat the point. An empty task list resolves to `[]`, and a `limit` past the number of tasks simply runs them all. Target: O(n) time for scheduling overhead and O(n) extra space, where n is tasks.length; task work and elapsed waits are excluded from this time bound. tasks is a dense ordinary array of at most 2000 zero-argument functions; it may be frozen and must stay unchanged. limit is a primitive integer in 1..1000000000000. Invoke each function as a bare call with no arguments. It returns a native Promise that eventually settles. On a fully successful run, invoke every task exactly once and preserve every result value by identity, including undefined, Symbols and objects. Results are a fresh mutable dense array in input order. If a task rejects, reject with the same reason; other already-started workers need not be canceled and may continue. No all-or-nothing side-effect or cancellation guarantee is required. Batches that stay within the limit are valid too.",
+    starter: `const promisePool = async (tasks, limit) => {
 
 };
 
@@ -1179,6 +1179,7 @@ promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1).then(result
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "(async()=>{const value={ok:true};const result=await promisePool([()=>Promise.resolve(value)],1);return result[0]===value;})()", "expected": true, "label": "preserve result identity", "async": true},
       { call: 'promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)', expected: [1, 2], async: true },
       { call: '(async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = [async () => { await wait(30); return "slow"; }, async () => { await wait(5); return "fast"; }]; return promisePool(tasks, 2); })()', expected: ['slow', 'fast'], label: 'results keep task order, not finishing order', async: true },
       { call: 'promisePool([], 3)', expected: [], label: 'empty input', async: true, edge: true },
@@ -1199,8 +1200,8 @@ promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1).then(result
     tier: 4,
     focus: ['promises', 'timers', 'async-await'],
     title: 'Retry with exponential backoff',
-    prompt: 'Write `retryWithBackoff(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out, waiting 100 ms before the second attempt, 200 ms before the third, 400 ms before the fourth, and so on — each wait twice the one before. Resolve with the first success; when every attempt fails, reject with the error from the last one rather than the first. There is no wait before the first attempt and none after the final failure, so a run that succeeds on the third attempt has waited 300 ms in total. An `attempts` below one means no call at all and a rejection. Target: O(attempts) calls and O(1) space.',
-    starter: `const retryWithBackoff = (fn, attempts) => {
+    prompt: "Write `retryWithBackoff(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out, waiting 100 ms before the second attempt, 200 ms before the third, 400 ms before the fourth, and so on \u2014 each wait twice the one before. Resolve with the first success; when every attempt fails, reject with the error from the last one rather than the first. There is no wait before the first attempt and none after the final failure, so a run that succeeds on the third attempt has waited 300 ms in total. An `attempts` below one means no call at all and a rejection. Target: O(a) time for call/scheduling overhead and O(1) space for live state, where a = max(0, attempts). Callback work and waits are excluded: after a failed positive budget, the requested waits total 100 * (2 ** (a - 1) - 1) ms. attempts is a primitive integer in [-1000000000000,5]; either zero sign means no attempts. fn is a zero-argument function returning a native Promise that eventually settles; invoke it as a bare call with no arguments, and never overlap attempts. Synchronous throws and non-Promise returns are outside this exercise. Preserve the exact successful value or final rejection reason, including objects, Symbols, undefined and other falsy values. With no attempts, reject with an Error; its message is not prescribed. Timer callbacks may run later than their requested delay.",
+    starter: `const retryWithBackoff = async (fn, attempts) => {
 
 };
 
@@ -1228,6 +1229,7 @@ retryWithBackoff(async () => "ok", 3).then(result => console.log(result));
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "(async()=>{const reason={code:1};try{await retryWithBackoff(()=>Promise.reject(reason),1);}catch(error){return error===reason;}return false;})()", "expected": true, "label": "preserve the rejection reason", "async": true},
       { call: 'retryWithBackoff(async () => "ok", 3)', expected: 'ok', async: true },
       { call: '(() => { let runs = 0; return retryWithBackoff(async () => { runs += 1; if (runs < 3) throw new Error("flaky"); return "ok on " + runs; }, 5); })()', expected: 'ok on 3', label: 'it stops retrying the moment one succeeds', async: true },
       { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 3) throw new Error("flaky"); return runs; }, 5); const elapsed = Date.now() - started; return elapsed >= 250 && elapsed < 1200; })()', expected: true, label: 'the waits double: 100 ms, then 200 ms', async: true, edge: true },
