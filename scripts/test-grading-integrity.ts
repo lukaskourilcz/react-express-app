@@ -937,7 +937,7 @@ function ordersPerDay(timestamps) {
   const counts = {};
   for (const stamp of timestamps) {
     const at = new Date(stamp);
-    const day = at.getFullYear() + "-" + pad(at.getMonth() + 1) + "-" + pad(at.getDate());
+    const day = String(at.getFullYear()).padStart(4, "0") + "-" + pad(at.getMonth() + 1) + "-" + pad(at.getDate());
     counts[day] = (counts[day] ?? 0) + 1;
   }
   return counts;

@@ -3488,3 +3488,17 @@ bindings, both zero-vulnerability production dependency audits and diff checks.
 PR #404 is merged and exact-production verified (11 general + 4 direct clone
 checks); #403 is closed. B026–b032 remain local and add 35 coding reviews.
 No live account, stored balance, score or generated name was used.
+
+## PR #405 UTC parity fixture — 15 October 2026
+
+Required run 38692289923 passed SQL in 40 seconds but verify stopped at the
+UTC task-parity fixture: its local-getter example did not pad years to four
+digits, unlike the expanded b026 task contract. The example now pads only the
+year; timezone policy, task checks and expected outcomes are unchanged. Full
+local grading integrity and Learn integrity against the stand-in database pass
+after the fix. Required exact-head CI will rerun; the failed run is not a pass.
+
+The local cohort build passes all 264 fixture-backed responsive route/viewport
+probes, 320–1440 px, with zero issues/unprobed routes. Its exact initial preview
+at 533776fa also passes eleven general guest checks at zero XP/null progress.
+New b033 content remains uncommitted and is outside this 35-task PR.
