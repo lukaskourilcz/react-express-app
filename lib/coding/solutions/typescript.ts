@@ -469,28 +469,8 @@ const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({
     ],
   },
   "ts-apply-a-patch": {
-    solution: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => ({...settings, ...patch});`,
-    junior: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
-  let theme = settings.theme;
-  if (patch.theme !== undefined) {
-    theme = patch.theme;
-  }
-  let fontSize = settings.fontSize;
-  if (patch.fontSize !== undefined) {
-    fontSize = patch.fontSize;
-  }
-  return { theme: theme, fontSize: fontSize };
-};`,
+    solution: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n  return { ...settings, ...defined };\n};",
+    junior: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const next: Settings = { ...settings };\n  if (Object.hasOwn(patch, \"theme\") && patch.theme !== undefined) next.theme = patch.theme;\n  if (Object.hasOwn(patch, \"fontSize\") && patch.fontSize !== undefined) next.fontSize = patch.fontSize;\n  return next;\n};",
     senior: `interface Settings {
   theme: string;
   fontSize: number;
@@ -501,7 +481,12 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
   return { ...settings, ...defined };
 };`,
+    hiddenTypeTests: [{"code": "const __auditPatch:Partial<Settings>={fontSize:undefined}; const __auditSettings:Settings=applyPatch({theme:\"x\",fontSize:1},__auditPatch);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},settings=Object.freeze({theme:' ',fontSize:-0,extra:meta,[sym]:meta,['__proto__']:meta}),patch=Object.freeze({theme:undefined,fontSize:undefined}),a=applyPatch(settings,patch),b=applyPatch(settings,{});a.theme='later';return [a!==settings,a!==b,b.theme,Object.is(b.fontSize,-0),b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,settings.theme,patch.theme===undefined];})()", expected: [true, true, " ", true, true, true, true, true, true, " ", true] },
+      { call: "(()=>{const settings=Object.freeze(Object.assign(Object.create(null),{theme:'A',fontSize:1})),patch=Object.freeze(Object.assign(Object.create({theme:'ignored'}),{fontSize:0})),out=applyPatch(settings,patch);return [out.theme,out.fontSize,settings.fontSize,Object.hasOwn(patch,'theme'),Object.getPrototypeOf(out)===Object.prototype];})()", expected: ["A", 0, 1, false, true] },
+      { call: "(()=>{const meta={},settings={theme:'A',fontSize:1};for(let i=0;i<100;i++)settings['x'+i]=meta;Object.freeze(settings);const out=applyPatch(settings,{theme:'',fontSize:-0.5});return [out.theme,out.fontSize,Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),settings.theme];})()", expected: ["", -0.5, 102, true, "A"] },
+
       { call: "(() => { const settings = {theme:\"dark\",fontSize:14}; const next = applyPatch(settings, {fontSize:20}); return [settings, next, next === settings]; })()", expected: [{ theme: "dark", fontSize: 14 }, { theme: "dark", fontSize: 20 }, false] },
       { call: "applyPatch({theme:\"light\",fontSize:10}, {theme:\"solarized\"})", expected: { theme: "solarized", fontSize: 10 } },
       { call: "applyPatch({theme:\"x\",fontSize:1}, {theme:\"\",fontSize:0})", expected: { theme: "", fontSize: 0 } },
@@ -518,19 +503,7 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
   const {password, ...rest} = account;
   return rest;
 };`,
-    junior: `interface Account {
-  id: number;
-  email: string;
-  password: string;
-}
-
-const publicUser = (account: Account): Omit<Account, "password"> => {
-  const safe = {
-    id: account.id,
-    email: account.email,
-  };
-  return safe;
-};`,
+    junior: "interface Account {\n  id: number;\n  email: string;\n  password: string;\n}\n\nconst publicUser = (account: Account): Omit<Account, \"password\"> => {\n  const safe = { ...account };\n  delete (safe as Partial<Account>).password;\n  return safe;\n};",
     senior: `interface Account {
   id: number;
   email: string;
@@ -545,7 +518,12 @@ const omit = <T extends object, K extends keyof T>(source: T, key: K): Omit<T, K
 };
 
 const publicUser = (account: Account): Omit<Account, "password"> => omit(account, "password");`,
+    hiddenTypeTests: [{"code": "const __auditWide={id:1,email:\"e\",password:\"p\",extra:Symbol()}; const __auditOut:Omit<Account,\"password\">=publicUser(__auditWide); __auditOut.email=\"new\";"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},account=Object.freeze({id:0,email:' ',password:'secret',extra:meta,[sym]:meta,['__proto__']:meta}),a=publicUser(account),b=publicUser(account);a.email='later';return [a!==account,a!==b,b.email,b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,!('password'in b),account.password];})()", expected: [true, true, " ", true, true, true, true, true, true, "secret"] },
+      { call: "(()=>{const account=Object.assign(Object.create({inherited:9}),{id:-1,email:'',password:''});Object.freeze(account);const out=publicUser(account),nil=Object.freeze(Object.assign(Object.create(null),{id:1,email:'e',password:'p'})),other=publicUser(nil);return [Reflect.ownKeys(out).sort(),!Object.hasOwn(out,'inherited'),!Object.hasOwn(out,'password'),other.id,other.email,Object.getPrototypeOf(other)===Object.prototype,account.password];})()", expected: [["email", "id"], true, true, 1, "e", true, ""] },
+      { call: "(()=>{const meta={},account={id:1,email:'e',password:'p'};for(let i=0;i<100;i++)account['x'+i]=meta;Object.freeze(account);const out=publicUser(account);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),account.password];})()", expected: [102, true, "p"] },
+
       { call: "publicUser({id:5,email:\"lin@example.dev\",password:\"pw\"})", expected: { id: 5, email: "lin@example.dev" } },
       { call: "(() => { const account = {id:6,email:\"x@example.dev\",password:\"keep\"}; publicUser(account); return account; })()", expected: { id: 6, email: "x@example.dev", password: "keep" } },
       { call: "\"password\" in publicUser({id:7,email:\"y@example.dev\",password:\"z\"})", expected: false },

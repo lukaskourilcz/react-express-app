@@ -28,31 +28,8 @@ export const EASY_TYPESCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   'ts-easy3-only-the-clicks': {
-    solution: `type UiEvent =
-  | { kind: "click"; x: number; y: number }
-  | { kind: "key"; key: string };
-
-// Extract keeps the union members that fit the shape: here, only the click.
-type Click = Extract<UiEvent, { kind: "click" }>;
-
-const clicks = (events: readonly UiEvent[]): Click[] =>
-  // The predicate return type is what types the filtered array as Click[].
-  events.filter((event): event is Click => event.kind === "click");`,
-    junior: `type UiEvent =
-  | { kind: "click"; x: number; y: number }
-  | { kind: "key"; key: string };
-
-type Click = Extract<UiEvent, { kind: "click" }>;
-
-const clicks = (events: readonly UiEvent[]): Click[] => {
-  const result: Click[] = [];
-  for (const event of events) {
-    if (event.kind === "click") {
-      result.push(event);
-    }
-  }
-  return result;
-};`,
+    solution: "type UiEvent =\n  | { kind: \"click\"; x: number; y: number }\n  | { kind: \"key\"; key: string };\n\n// Extract keeps the union members that fit the shape: here, only the click.\ntype Click = Extract<UiEvent, { kind: \"click\" }>;\n\nconst clicks = (events: readonly UiEvent[]): Click[] =>\n  // This explicit predicate types the filtered array as Click[].\n  events.filter((event): event is Click => event.kind === \"click\");",
+    junior: "type UiEvent =\n  | { kind: \"click\"; x: number; y: number }\n  | { kind: \"key\"; key: string };\n\ntype Click = Extract<UiEvent, { kind: \"click\" }>;\n\nconst clicks = (events: readonly UiEvent[]): Click[] => {\n  return events.filter((event): event is Click => {\n    return event.kind === \"click\";\n  });\n};",
     senior: `type UiEvent =
   | { kind: "click"; x: number; y: number }
   | { kind: "key"; key: string };
@@ -62,7 +39,12 @@ type Click = Extract<UiEvent, { kind: "click" }>;
 const isClick = (event: UiEvent): event is Click => event.kind === "click";
 
 const clicks = (events: readonly UiEvent[]): Click[] => events.filter(isClick);`,
+    hiddenTypeTests: [{"code": "const __auditInput: readonly UiEvent[]=[{kind:\"click\",x:1,y:2}]; const __auditOutput:Click[]=clicks(__auditInput); __auditOutput.push({kind:\"click\",x:0,y:0}); const __auditKind:\"click\"=__auditOutput[0].kind;"}],
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({kind:'click',x:-0,y:NaN,meta}),key=Object.freeze({kind:'key',key:'Enter'}),input=Object.freeze([a,key,a]),out=clicks(input),again=clicks(input);out.pop();return [again[0]===a,again[1]===a,again[0].meta===meta,Object.is(again[0].x,-0),Number.isNaN(again[0].y),out!==input,out!==again,input.length,again.length];})()", expected: [true, true, true, true, true, true, true, 3, 2] },
+      { call: "(()=>{const a=Object.freeze(Object.assign(Object.create({kind:'click'}),{x:Infinity,y:-Infinity})),input=Object.freeze([a]),out=clicks(input),none=Object.freeze([{kind:'key',key:''}]),empty=clicks(none),again=clicks(none);empty.push(a);return [out[0]===a,out[0].x===Infinity,out[0].y===-Infinity,empty!==again,again.length,none.length,clicks([])!==clicks([])];})()", expected: [true, true, true, true, 0, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{kind:'key',key:String(i)}:{kind:'click',x:i,y:0}))),out=clicks(input);return [out.length,out.every((event,i)=>event===input[2*i]),input.length];})()", expected: [500, true, 1000] },
+
       { call: 'clicks([{ kind: "key", key: "a" }, { kind: "click", x: 3, y: 4 }, { kind: "key", key: "b" }, { kind: "click", x: 9, y: 9 }]).map((click) => click.x)', expected: [3, 9] },
       { call: '(() => { const events = [{ kind: "click", x: 1, y: 1 }]; return clicks(events) !== events; })()', expected: true },
       { call: 'clicks([{ kind: "click", x: -2, y: 7 }, { kind: "click", x: 4, y: -1 }])', expected: [{ kind: 'click', x: -2, y: 7 }, { kind: 'click', x: 4, y: -1 }] },
@@ -104,12 +86,18 @@ const isComplete = (profile: Profile): profile is Required<Profile> => {
 const isComplete = (profile: Profile): profile is Required<Profile> =>
   Boolean(profile.email && profile.phone);`,
     hiddenTests: [
+      { call: "(()=>{return [isComplete({name:'',email:' ',phone:'\\t'}),isComplete({name:'',email:'0',phone:'0'}),isComplete({name:'x',email:'\u00e9',phone:'\ud83d\ude00'}),isComplete({name:'x',email:'',phone:' '})];})()", expected: [true, true, true, false] },
+      { call: "(()=>{const meta={},profile=Object.freeze(Object.assign(Object.create({email:' ',phone:'0'}),{name:'',meta})),empty=Object.freeze(Object.assign(Object.create(null),{name:'x',email:undefined,phone:'p'}));return [isComplete(profile),isComplete(profile),profile.meta===meta,Reflect.ownKeys(profile),isComplete(empty),empty.email===undefined];})()", expected: [true, true, true, ["name", "meta"], false, true] },
+      { call: "(()=>{const values=[undefined,'',' ','0','\u00e9'];return values.map(email=>values.map(phone=>{const p=Object.freeze({name:'x',email,phone});return isComplete(p)===(email!==undefined&&email!==''&&phone!==undefined&&phone!=='');})).every(row=>row.every(Boolean));})()", expected: true },
+
       { call: 'isComplete({ name: "Bo", phone: "555 0101" })', expected: false },
       { call: 'isComplete({ name: "Bo", email: "bo@example.com", phone: "" })', expected: false },
       { call: 'isComplete({ name: "Cy", email: "cy@example.com", phone: "0" })', expected: true },
       { call: '[{ name: "A", email: "a@example.com", phone: "1" }, { name: "B" }, { name: "C", email: "c@example.com", phone: "3" }].filter(isComplete).map((p) => p.name)', expected: ['A', 'C'] },
     ],
     hiddenTypeTests: [
+      {"code": "const __audit:Profile={name:\"x\"}; if(isComplete(__audit)){const __phone:string=__audit.phone; const __full:Required<Profile>=__audit;}"},
+
       { code: 'const __g: (p: Profile) => p is Required<Profile> = isComplete;', label: 'isComplete is a type predicate' },
     ],
   },
@@ -125,21 +113,7 @@ type Line = ReturnType<typeof parseLine>;
 const orderTotal = (lines: readonly Line[]): number =>
   // The 0 is the total of an empty receipt, and reduce needs it to start from.
   lines.reduce((total, line) => total + line.qty * line.cents, 0);`,
-    junior: `const parseLine = (line: string) => {
-  const [name, qty, cents] = line.split(",");
-  return { name, qty: Number(qty), cents: Number(cents) };
-};
-
-type Line = ReturnType<typeof parseLine>;
-
-const orderTotal = (lines: readonly Line[]): number => {
-  let total = 0;
-  for (const line of lines) {
-    const cost = line.qty * line.cents;
-    total = total + cost;
-  }
-  return total;
-};`,
+    junior: "const parseLine = (line: string) => {\n  const [name, qty, cents] = line.split(\",\");\n  return { name, qty: Number(qty), cents: Number(cents) };\n};\n\ntype Line = ReturnType<typeof parseLine>;\n\nconst orderTotal = (lines: readonly Line[]): number => {\n  return lines.reduce((total, line) => {\n    const cost = line.qty * line.cents;\n    return total + cost;\n  }, 0);\n};",
     senior: `const parseLine = (line: string) => {
   const [name, qty, cents] = line.split(",");
   return { name, qty: Number(qty), cents: Number(cents) };
@@ -152,11 +126,17 @@ const lineCost = ({ qty, cents }: Line): number => qty * cents;
 const orderTotal = (lines: readonly Line[]): number =>
   lines.reduce((total, line) => total + lineCost(line), 0);`,
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({name:' x ',qty:2,cents:125,meta}),b=Object.freeze({name:'',qty:0,cents:99,meta}),input=Object.freeze([a,b,a]),first=orderTotal(input),second=orderTotal(input);return [first,second,input[0]===a,a.qty,a.cents,b.qty,a.meta===meta];})()", expected: [500, 500, true, 2, 125, 0, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},()=>Object.freeze({name:'x',qty:1000000,cents:1000000})));return [orderTotal(input),input[0].qty,input.length,Number.isSafeInteger(orderTotal(input))];})()", expected: [1000000000000000, 1000000, 1000, true] },
+      { call: "(()=>{return [Object.is(orderTotal([]),0),Object.is(orderTotal([{name:'x',qty:0,cents:0}]),0),orderTotal([parseLine('tea,0002,000350')])];})()", expected: [true, true, 700] },
+
       { call: 'orderTotal([parseLine("a,1,1"), parseLine("b,2,2"), parseLine("c,3,3")])', expected: 14 },
       { call: 'orderTotal([parseLine("gift,5,0")])', expected: 0 },
       { call: 'orderTotal(Object.freeze([parseLine("x,10,99")]))', expected: 990 },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditInput:readonly Line[]=[parseLine(\"x,1,2\")]; const __auditTotal:number=orderTotal(__auditInput);"},
+
       { code: 'const __m: Line = { name: "x", qty: 1 };', label: 'a line needs its price', rejects: true },
     ],
   },

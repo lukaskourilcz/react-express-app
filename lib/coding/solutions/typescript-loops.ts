@@ -389,48 +389,15 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-apply-patches-in-order": {
-    solution: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {
-  let current = profile;
-  for (const patch of patches) current = { ...current, ...patch };
-  return current;
-};`,
-    junior: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {
-  const current: Profile = { name: profile.name, age: profile.age, city: profile.city };
-  for (const patch of patches) {
-    if (patch.name !== undefined) {
-      current.name = patch.name;
-    }
-    if (patch.age !== undefined) {
-      current.age = patch.age;
-    }
-    if (patch.city !== undefined) {
-      current.city = patch.city;
-    }
-  }
-  return current;
-};`,
-    senior: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-// Each patch spreads over the result of the one before it, so later patches win.
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
-  patches.reduce<Profile>((current, patch) => ({ ...current, ...patch }), profile);`,
+    solution: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {\n  let current = profile;\n  for (const patch of patches) {\n    const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n    current = { ...current, ...defined };\n  }\n  return current;\n};",
+    junior: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {\n  let current = profile;\n  for (const patch of patches) {\n    const next: Profile = { ...current };\n    if (Object.hasOwn(patch, \"name\") && patch.name !== undefined) next.name = patch.name;\n    if (Object.hasOwn(patch, \"age\") && patch.age !== undefined) next.age = patch.age;\n    if (Object.hasOwn(patch, \"city\") && patch.city !== undefined) next.city = patch.city;\n    current = next;\n  }\n  return current;\n};",
+    senior: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>\n  patches.reduce<Profile>((current, patch) => {\n    const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n    return { ...current, ...defined };\n  }, profile);",
+    hiddenTypeTests: [{"code": "const __auditPatch:Partial<Profile>={age:undefined}; const __auditProfile:Profile=applyPatches({name:\"x\",age:1,city:\"y\"},[__auditPatch]);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},profile=Object.freeze({name:'A',age:1,city:'X',extra:meta,[sym]:meta,['__proto__']:meta}),none=applyPatches(profile,[]),one=applyPatches(profile,[Object.freeze({})]),again=applyPatches(profile,[Object.freeze({})]);one.age=9;return [none===profile,one!==profile,one!==again,again.extra===meta,again[sym]===meta,Object.hasOwn(again,'__proto__'),again.__proto__===meta,Object.getPrototypeOf(again)===Object.prototype,profile.age,again.age];})()", expected: [true, true, true, true, true, true, true, true, 1, 1] },
+      { call: "(()=>{const profile=Object.freeze({name:'A',age:1,city:'X'}),inherited=Object.freeze(Object.create({name:'ignored',age:99})),patches=Object.freeze([Object.freeze({name:'',age:0}),Object.freeze({name:undefined,age:undefined,city:' '}),inherited]),out=applyPatches(profile,patches);return [out.name,out.age,out.city,profile.name,profile.age,patches[1].name===undefined];})()", expected: ["", 0, " ", "A", 1, true] },
+      { call: "(()=>{const meta={},profile={name:'A',age:1,city:'X'};for(let i=0;i<100;i++)profile['x'+i]=meta;Object.freeze(profile);const patches=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({age:i}))),out=applyPatches(profile,patches);return [out.age,Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),profile.age,patches.length];})()", expected: [999, 103, true, 1, 1000] },
+
       {
         call: "(() => { const profile = { name: \"Ada\", age: 36, city: \"London\" }; applyPatches(profile, [{ age: 1 }]); return profile.age; })()",
         expected: 36,
@@ -442,44 +409,16 @@ const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
     ],
   },
   "ts-score-by-player": {
-    solution: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
-  for (const round of rounds) totals[round.player] = (totals[round.player] ?? 0) + round.points;
-  return totals;
-};`,
-    junior: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
-  for (const round of rounds) {
-    const player = round.player;
-    if (totals[player] === undefined) {
-      totals[player] = round.points;
-    } else {
-      totals[player] = totals[player] + round.points;
-    }
-  }
-  return totals;
-};`,
-    senior: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> =>
-  rounds.reduce<Record<string, number>>((totals, { player, points }) => {
-    totals[player] = (totals[player] ?? 0) + points;
-    return totals;
-  }, {});`,
+    solution: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {\n  const totals = Object.create(null) as Partial<Record<string, number>>;\n  for (const round of rounds) totals[round.player] = (totals[round.player] ?? 0) + round.points;\n  return totals;\n};",
+    junior: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {\n  const totals = Object.create(null) as Partial<Record<string, number>>;\n  for (const round of rounds) {\n    const player = round.player;\n    const previous = totals[player];\n    const start = previous === undefined ? 0 : previous;\n    totals[player] = start + round.points;\n  }\n  return totals;\n};",
+    senior: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> =>\n  rounds.reduce<Partial<Record<string, number>>>((totals, { player, points }) => {\n    totals[player] = (totals[player] ?? 0) + points;\n    return totals;\n  }, Object.create(null) as Partial<Record<string, number>>);",
+    hiddenTypeTests: [{"code": "const __auditLookup=(key:string):number|undefined=>scoreByPlayer([])[key];"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['constructor','__proto__','toString',''].map(player=>Object.freeze({player,points:1}))),out=scoreByPlayer(input),empty=scoreByPlayer([]);return [input.every(round=>Object.hasOwn(out,round.player)&&out[round.player]===1),Reflect.ownKeys(out).length,empty.constructor===undefined,empty.__proto__===undefined,empty.toString===undefined,Reflect.ownKeys(empty).length];})()", expected: [true, 4, true, true, true, 0] },
+      { call: "(()=>{const input=Object.freeze([Object.freeze({player:' x ',points:-0}),Object.freeze({player:'x',points:0.5}),Object.freeze({player:'x',points:-0.25}),Object.freeze({player:'X',points:2})]),a=scoreByPlayer(input),b=scoreByPlayer(input);a.x=99;return [Object.is(b[' x '],0),b.x,b.X,a!==b,input[1].points,input.length];})()", expected: [true, 0.25, 2, true, 0.5, 4] },
+      { call: "(()=>{const input=Object.freeze([{player:'p',points:1000000000},{player:'p',points:0.0000001},{player:'p',points:-1000000000}]),out=scoreByPlayer(input);let expected=0;for(const round of input)expected+=round.points;return [out.p===expected,Object.hasOwn(out,'p'),out.absent===undefined];})()", expected: [true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({player:'p'+i%10,points:1}))),out=scoreByPlayer(input);return [Object.keys(out).length,Object.values(out).every(total=>total===100),input.length,scoreByPlayer([])!==scoreByPlayer([])];})()", expected: [10, true, 1000, true] },
+
       {
         call: "scoreByPlayer([{ player: \"a\", points: 1 }, { player: \"b\", points: 2 }, { player: \"a\", points: 3 }, { player: \"b\", points: 4 }])",
         expected: { a: 4, b: 6 },

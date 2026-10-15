@@ -101,7 +101,12 @@ type Preview = Pick<Article, "id" | "title">;
 const toPreview = ({ id, title }: Article): Preview => ({ id, title });
 
 const toPreviews = (articles: readonly Article[]): Preview[] => articles.map(toPreview);`,
+    hiddenTypeTests: [{"code": "const __audit=toPreviews([{id:1,title:\"x\",body:\"b\",author:\"a\"}]); const __body:string=__audit[0].body;", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('secret'),secret={},article=Object.freeze({id:1,title:'x',body:'b',author:'a',internal:secret,[sym]:secret,['__proto__']:secret}),input=Object.freeze([article,article]),out=toPreviews(input),again=toPreviews(input);out[0].title='changed';return [out!==input,out!==again,out[0]!==out[1],again[0]!==out[0],Reflect.ownKeys(out[1]).sort(),out[1].title,Object.getPrototypeOf(out[1])===Object.prototype,input[0]===article,article.title,article[sym]===secret];})()", expected: [true, true, true, true, ["id", "title"], "x", true, true, "x", true] },
+      { call: "(()=>{const article=Object.freeze(Object.create({id:0,title:' ',body:'b',author:'a'})),out=toPreviews(Object.freeze([article])),a=toPreviews([]),b=toPreviews([]);a.push(out[0]);return [out[0].id,out[0].title,Reflect.ownKeys(out[0]).sort(),a!==b,b.length,Reflect.ownKeys(article).length];})()", expected: [0, " ", ["id", "title"], true, 0, 0] },
+      { call: "(()=>{const article=Object.freeze({id:-1,title:'',body:'x',author:'y'}),input=Object.freeze(Array(1000).fill(article)),out=toPreviews(input);return [out.length,new Set(out).size,out.every(item=>item.id===-1&&item.title===''&&Reflect.ownKeys(item).length===2),input.length];})()", expected: [1000, 1000, true, 1000] },
+
       { call: 'toPreviews([{ id: 7, title: "A", body: "", author: "" }, { id: 3, title: "B", body: "x", author: "y" }, { id: 7, title: "C", body: "z", author: "w" }])', expected: [{ id: 7, title: 'A' }, { id: 3, title: 'B' }, { id: 7, title: 'C' }] },
       { call: 'Object.keys(toPreviews([{ id: 2, title: "T", body: "B", author: "A" }])[0]).sort()', expected: ['id', 'title'] },
       { call: '(() => { const list = [{ id: 1, title: "x", body: "y", author: "z" }]; toPreviews(list); return list[0]; })()', expected: { id: 1, title: 'x', body: 'y', author: 'z' } },
