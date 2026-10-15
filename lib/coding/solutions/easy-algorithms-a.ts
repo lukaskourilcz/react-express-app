@@ -10,33 +10,14 @@ import { tree, withList, withTree } from '../tasks/easy-algorithms-a';
 export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── hash maps, sets and plain objects ─────────────────────────────── */
   'alg-easy2-count-jewels': {
-    solution: `const countJewels = (jewels, stones) => {
-  // One Set lookup per stone, where includes would rescan the jewels each time.
-  const kinds = new Set(jewels);
-  let count = 0;
-  for (const stone of stones) {
-    if (kinds.has(stone)) count += 1;
-  }
-  return count;
-};`,
-    junior: `const countJewels = (jewels, stones) => {
-  const kinds = new Set();
-  for (const jewel of jewels) {
-    kinds.add(jewel);
-  }
-  let count = 0;
-  for (const stone of stones) {
-    if (kinds.has(stone)) {
-      count = count + 1;
-    }
-  }
-  return count;
-};`,
-    senior: `const countJewels = (jewels, stones) => {
-  const kinds = new Set(jewels);
-  return [...stones].filter((stone) => kinds.has(stone)).length;
-};`,
+    solution: "const countJewels = (jewels, stones) => {\n  // One Set lookup per stone, where includes would rescan the jewels each time.\n  const kinds = new Set(jewels);\n  let count = 0;\n  for (const stone of stones) {\n    if (kinds.has(stone)) count += 1;\n  }\n  return count;\n};",
+    junior: "const countJewels = (jewels, stones) => {\n  const kinds = new Set();\n  for (const jewel of jewels) {\n    kinds.add(jewel);\n  }\n  let count = 0;\n  for (const stone of stones) {\n    if (kinds.has(stone)) {\n      count = count + 1;\n    }\n  }\n  return count;\n};",
+    senior: "const countJewels = (jewels, stones) => {\n  const kinds = new Set(jewels);\n  let count = 0;\n  for (const stone of stones) count += kinds.has(stone) ? 1 : 0;\n  return count;\n};",
     hiddenTests: [
+      { call: "[countJewels(\"\ud83d\ude00\",\"\ud83d\ude00\ud83d\ude00\ud83d\ude03\"),countJewels(\"\ud83d\ude00\ud83d\ude00\",\"\ud83d\ude00\"),countJewels(\"a\\u030a\",\"\u00e5\"),countJewels(\"\\ud800\",\"\\ud800x\\ud800\")]", expected: [2, 1, 0, 2] },
+      { call: "[countJewels(\" \\n\",\" \\nx\"),countJewels(\"Aa\",\"aAaa\"),countJewels(\"a\",\"bbb\"),countJewels(\"a\",\"a\"),countJewels(\"\",\" \")]", expected: [2, 4, 0, 1, 0] },
+      { call: "[countJewels(\"a\".repeat(1000),\"a\".repeat(1000)),countJewels(\"\ud83d\ude00\".repeat(500),\"\ud83d\ude00\".repeat(500)),countJewels(\"z\",\"a\".repeat(1000))]", expected: [1000, 500, 0] },
+
       { call: 'countJewels("aa", "a")', expected: 1 },
       { call: 'countJewels("xyz", "xyzxyz")', expected: 6 },
       { call: 'countJewels("!1 ", "a 1!b")', expected: 3 },
@@ -44,40 +25,14 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   'alg-easy2-letters-for-a-note': {
-    solution: `const canWrite = (note, magazine) => {
-  // How many of each character the magazine still has to give.
-  const counts = {};
-  for (const char of magazine) {
-    counts[char] = (counts[char] || 0) + 1;
-  }
-  for (const char of note) {
-    if (!counts[char]) return false; // missing, or all used up
-    counts[char] -= 1;
-  }
-  return true;
-};`,
-    junior: `const canWrite = (note, magazine) => {
-  const counts = {};
-  for (const char of magazine) {
-    if (counts[char] === undefined) {
-      counts[char] = 0;
-    }
-    counts[char] = counts[char] + 1;
-  }
-  for (const char of note) {
-    if (counts[char] === undefined || counts[char] === 0) {
-      return false;
-    }
-    counts[char] = counts[char] - 1;
-  }
-  return true;
-};`,
-    senior: `const canWrite = (note, magazine) => {
-  const counts = {};
-  for (const char of magazine) counts[char] = (counts[char] ?? 0) + 1;
-  return [...note].every((char) => counts[char]-- > 0);
-};`,
+    solution: "const canWrite = (note, magazine) => {\n  // How many of each character the magazine still has to give.\n  const counts = {};\n  for (const char of magazine) {\n    counts[char] = (counts[char] || 0) + 1;\n  }\n  for (const char of note) {\n    if (!counts[char]) return false; // missing, or all used up\n    counts[char] -= 1;\n  }\n  return true;\n};",
+    junior: "const canWrite = (note, magazine) => {\n  const counts = {};\n  for (const char of magazine) {\n    if (counts[char] === undefined) {\n      counts[char] = 0;\n    }\n    counts[char] = counts[char] + 1;\n  }\n  for (const char of note) {\n    if (counts[char] === undefined || counts[char] === 0) {\n      return false;\n    }\n    counts[char] = counts[char] - 1;\n  }\n  return true;\n};",
+    senior: "const canWrite = (note, magazine) => {\n  const counts = new Map();\n  for (const char of magazine) counts.set(char, (counts.get(char) ?? 0) + 1);\n  for (const char of note) {\n    const left = counts.get(char) ?? 0;\n    if (left === 0) return false;\n    counts.set(char, left - 1);\n  }\n  return true;\n};",
     hiddenTests: [
+      { call: "[canWrite(\"\ud83d\ude00\ud83d\ude00\",\"\ud83d\ude00\"),canWrite(\"\ud83d\ude00\ud83d\ude03\",\"\ud83d\ude03\ud83d\ude00\"),canWrite(String.fromCodePoint(0x1f600,0x1d11e),String.fromCodePoint(0x1f51e,0x1d200)),canWrite(\"\u00e9\",\"e\\u0301\"),canWrite(\"\\ud800\",\"\\ud800\")]", expected: [false, true, false, false, true] },
+      { call: "[canWrite(\" \\n\",\"\\n \"),canWrite(\"a\",\"a\"),canWrite(\"a\",\"\"),canWrite(\"\",\"\"),canWrite(\"A\",\"a\"),canWrite(\"a\",\"a\")]", expected: [true, true, false, true, false, true] },
+      { call: "[canWrite(\"a\".repeat(1000),\"a\".repeat(1000)),canWrite(\"a\".repeat(1000),\"a\".repeat(999)),canWrite(\"\ud83d\ude00\".repeat(500),\"\ud83d\ude00\".repeat(500))]", expected: [true, false, true] },
+
       { call: 'canWrite("hello world", "dlrow olleh")', expected: true },
       { call: 'canWrite("a b", "ab")', expected: false },
       { call: 'canWrite("abcabc", "aabbc")', expected: false },

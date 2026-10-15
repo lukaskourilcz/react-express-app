@@ -8,7 +8,8 @@
 // English is the source of truth; Czech copy lives in algorithms.cs.ts.
 //
 // These are practice rather than a curriculum: the track carries no Learn
-// level of its own and no tier gate, so every challenge is open from the start.
+// level of its own. Access follows shared/tiers.ts and server issuance;
+// each task retains its authored tier.
 //
 // Every prompt ends with the cost the interviewer is listening for, because
 // "it works" and "it works in linear time" are different answers.
@@ -25,7 +26,7 @@ export const ALGORITHM_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['map-set', 'objects'],
     title: 'Two sum',
-    prompt: 'Write `twoSum(numbers, target)`, returning the indices of the two values that add up to `target`, smaller index first. `twoSum([2, 7, 11, 15], 9)` gives `[0, 1]`; `twoSum([3, 2, 4], 6)` gives `[1, 2]`. An index is never paired with itself, and an array with no such pair — an empty one included — gives `[]`. Target: O(n) time and O(n) space, so one pass that remembers what it has seen rather than two nested loops.',
+    prompt: "Write `twoSum(numbers, target)`, returning the indices of the two values that add up to `target`, smaller index first. `twoSum([2, 7, 11, 15], 9)` gives `[0, 1]`; `twoSum([3, 2, 4], 6)` gives `[1, 2]`. An index is never paired with itself, and an array with no such pair \u2014 an empty one included \u2014 gives `[]`. Target: O(n) time and O(n) space, so one pass that remembers what it has seen rather than two nested loops. Selection rule: choose the pair with the smallest right index; when several left indices complete that pair, choose the smallest left index. Keep the first stored index for each value. For example, [1,2,3,4] with target 5 gives [1,2], and [1,1,2] with target 3 gives [0,2]. Domain: a dense ordinary readonly array of at most 1000 safe integers in [-1000000000,1000000000], possibly frozen, without accessors/proxies; target is an integer in [-2000000000,2000000000]. These bounds make addition/subtraction exact. Preserve input values/order and return a fresh mutable pair or empty array on every call. n is 1 + array length, with average constant Map operations; no index can be reused.",
     starter: `const twoSum = (numbers, target) => {
 
 };
@@ -44,14 +45,16 @@ console.log(twoSum([2, 7, 11, 15], 9));
 };`,
     hints: ['For each value you only need to ask one question: has the number that completes the target already gone past? A Map from value to index answers it without a second loop.'],
     approach: [
-      'Walk the array once, keeping a Map from each value you have passed to the index it sat at.',
+      'Walk the array once, keeping a Map from each value you have passed to the first index it sat at.',
       'At every value, work out what its partner would have to be — the target minus this value — and look that partner up in the Map.',
       'A hit means the partner came earlier, so its stored index is the smaller one and goes first.',
-      'Only store the current value after the lookup, or a value whose double is the target would match itself.',
+      'Only store a new value after the lookup, retaining its first index; otherwise duplicates can replace the earliest left partner or match themselves.',
     ],
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      { call: "twoSum([1, 2, 3, 4], 5)", expected: [1, 2], label: "the smallest right index completes the first pair" },
+      { call: "twoSum([1, 1, 2], 3)", expected: [0, 2], label: "keep the first left index for duplicate values" },
       { call: 'twoSum([2, 7, 11, 15], 9)', expected: [0, 1] },
       { call: 'twoSum([3, 2, 4], 6)', expected: [1, 2] },
       { call: 'twoSum([], 5)', expected: [], label: 'empty input', edge: true },
@@ -73,7 +76,7 @@ console.log(twoSum([2, 7, 11, 15], 9));
     tier: 2,
     focus: ['map-set', 'sort', 'strings'],
     title: 'Group anagrams',
-    prompt: 'Write `groupAnagrams(words)`, gathering words that are rearrangements of one another. `groupAnagrams(["eat", "tea", "tan", "ate", "nat", "bat"])` gives `[["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]`. Two words belong together when their sorted letters match, so build that key once per word and use it in a Map. Groups come out in the order their first word appeared and each group keeps its words in input order, so the answer is never ambiguous. An empty list gives `[]`. Target: O(n · k log k) time for n words of length k, and O(n · k) space.',
+    prompt: "Write `groupAnagrams(words)`, gathering words that are rearrangements of one another. `groupAnagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"])` gives `[[\"eat\", \"tea\", \"ate\"], [\"tan\", \"nat\"], [\"bat\"]]`. Two words belong together when their sorted letters match, so build that key once per word and use it in a Map. Groups come out in the order their first word appeared and each group keeps its words in input order, so the answer is never ambiguous. An empty list gives `[]`. Target: O(n \u00b7 k log k) time for n words of length k, and O(n \u00b7 k) space. Domain: a dense ordinary readonly array of at most 1000 primitive well-formed Unicode strings, each at most 100 UTF-16 units, possibly frozen, with no accessors/proxies. A letter here is one Unicode code point, not one UTF-16 unit or an entire grapheme; use Array.from(word) or [...word], not split(\"\"). Compare exact case/text without normalization. n=max(1,word count) and k=max(2,longest code-point count), so the stated comparison-sort bound includes empty and one-character words. Compute each word key once; append to an existing group without copying its accumulated contents every time. Preserve input order/values and return fresh mutable outer/group arrays across calls, including empty input. An alternative exact frequency signature is valid too.",
     starter: `const groupAnagrams = words => {
 
 };
@@ -93,7 +96,7 @@ console.log(groupAnagrams(["eat", "tea", "tan"]));
 };`,
     hints: ['Anagrams differ only in order, so anything that erases order — sorting the letters — turns every member of a group into the same key.'],
     approach: [
-      'Split a word into characters, sort them and join them back: every anagram of that word produces the same string.',
+      'Use Array.from(word) or [...word] to collect full iterated characters, sort them and join them back; do not split supplementary characters into UTF-16 halves.',
       'Keep a Map from that key to the list of words that produced it.',
       'A Map remembers insertion order, so reading its values back gives the groups in the order their first word appeared, and pushing keeps each group in input order.',
     ],
@@ -121,7 +124,7 @@ console.log(groupAnagrams(["eat", "tea", "tan"]));
     tier: 2,
     focus: ['map-set', 'strings'],
     title: 'First non-repeating character',
-    prompt: 'Write `firstUniqueChar(text)`, returning the first character that appears exactly once, or `null` when every character repeats. `firstUniqueChar("swiss")` gives `"w"`; `firstUniqueChar("aabb")` gives `null`. Count every character first, then walk the string a second time in order — the first character whose count is one is the answer, and only a second pass can know that. Characters compare exactly, so case and spaces count, and an empty string gives `null`. Target: O(n) time and O(k) space for k distinct characters.',
+    prompt: "Write `firstUniqueChar(text)`, returning the first character that appears exactly once, or `null` when every character repeats. `firstUniqueChar(\"swiss\")` gives `\"w\"`; `firstUniqueChar(\"aabb\")` gives `null`. Count each character, then find the first character whose total count is one. A second ordered scan of the string is a simple way to do that. Characters compare exactly, so case and spaces count, and an empty string gives `null`. Target: O(n) time and O(k) space for k distinct characters. text is primitive text of at most 1000 UTF-16 units. A character is one string-iterator element (a Unicode code point or unpaired surrogate), not one UTF-16 unit or an entire grapheme. Preserve exact case, spaces and combining marks without normalization; return the full first unique iterated character. A frequency Map followed by first-seen Map-entry iteration is also valid; a second traversal of the source string is not mandatory. n is 1 + iterated character count and k is 1 + distinct character count with average constant Map operations. Keep only counts/ordered distinct keys for O(k) auxiliary space, rather than copying the entire source into an array.",
     starter: `const firstUniqueChar = text => {
 
 };
