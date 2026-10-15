@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n008
+
+Reviewed both sorting lessons, their two self-reviewed reading links and the
+complete four-question check. The three activity records are retained; lessons
+now state consistent finite comparators, unit/reference cost assumptions,
+empty-input and strict-descending qualifications. Bubble writes are separated
+from insertion shifts plus final saved-element writes. Merge-level output
+writes are separated from reads/slicing, doubling includes more work at every
+old level, and peak live storage differs from cumulative allocations. Quicksort
+stack/expectation and practical algorithm recommendations are qualified.
+
+Actual authored snippets and all three traces agree. Sorted eight merge-sort
+inputs use twelve comparisons; all 40320 permutations of eight distinct values
+have a maximum of seventeen. The empty merge and insertion-versus-bubble write
+counterexample execute. These are finite content examples, not timing/heap or
+arbitrary-program proof. The copy sweep's first-pass hit refers to the actual
+selection/bubble algorithm iteration; it is hand-settled for this exact lesson
+field. Position-based answer references remain rejected.
+
+All five exact hashes have individual scores and final English model readings.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), final copy sweep and diff checks pass.
+No UI structure changed; public-catalogue probes do not establish signed-in
+lesson acceptance. Native coverage is **100/263**, **163 remaining**; coding is
+**95/725**, **630 remaining**. PR #394's exact production checks pass, shipping
+ninety coding/seventy native reviews. PR #395 freezes b013/n003–n007, with its
+privacy-test fixture correction at 61900610 pending required checks. This batch
+remains local; the full audit and owner-dependent issue work are unfinished.
+
 ## 15 October continuation — five-item native batch n007
 
 Reviewed the canonical binary-search reuse activity and all four D08 sorting

@@ -92,7 +92,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A sort rearranges a collection so that a comparison function agrees with the order it ends up in. Every sort in this module takes that function as an argument: `compare(a, b)` returns a negative number when `a` belongs before `b`, zero when the two are interchangeable, and a positive number when `a` belongs after `b`. That is the same contract `Array.prototype.sort` uses, and routing every comparison through it is what lets you sort numbers, strings and records with one routine.',
+            'A sort rearranges a collection so that a comparison function agrees with the order it ends up in. Every sort in this module takes that function as an argument: `compare(a, b)` returns a negative number when `a` belongs before `b`, zero when the two are interchangeable, and a positive number when `a` belongs after `b`. Assume the comparator consistently orders the values, returns finite results, and does not mutate them. Routing comparisons through it lets one routine sort numbers, strings or records. We count comparator calls and reference moves as unit operations on ordinary dense arrays; an expensive comparator adds its own cost.',
         },
         {
           kind: 'prose',
@@ -172,7 +172,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Count those passes for a general n and you get (n-1) + (n-2) + … + 1, which is n(n-1)/2. For eight elements that is 28. The number never changes, because neither loop bound depends on a comparator result: the inner loop always runs to the end of the array, and no comparison can cut a pass short. Selection sort spends 28 comparisons on an already-sorted array of eight, on a reversed one, and on eight copies of the same value. Moves are a separate cost, and selection sort is lopsided about the two: n(n-1)/2 comparisons but at most n-1 swaps, one per pass. When moving an element is expensive and comparing two is cheap, that trade is the reason to reach for it.',
+            'Count those passes for a general n and you get (n-1) + (n-2) + … + 1, which is n(n-1)/2. For eight elements that is 28. The number never changes, because neither loop bound depends on a comparator result: the inner loop always runs to the end of the array, and no comparison can cut a pass short. Selection sort spends 28 comparisons on an already-sorted array of eight, on a reversed one, and on eight copies of the same value. Moves are a separate cost, and selection sort is lopsided about the two: n(n-1)/2 comparisons but at most max(0, n - 1) swaps, one per pass. When moving an element is expensive and comparing two is cheap, that trade is the reason to reach for it.',
         },
         {
           kind: 'prose',
@@ -188,7 +188,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Here the comparator result does control the loop. On an already-sorted array the very first comparison of each pass fails, the shift loop never runs, and the whole sort costs n-1 comparisons — 7 for eight elements. On a reversed array every pass walks the entire prefix, giving 1 + 2 + … + (n-1) = n(n-1)/2, back to 28. Same growth class as selection sort in the worst case, linear in the best.',
+            'Here the comparator result does control the loop. On a nonempty already-sorted array the very first comparison of each pass fails, the shift loop never runs, and the whole sort costs n-1 comparisons — 7 for eight elements. On strictly descending values every pass walks the entire prefix, giving 1 + 2 + … + (n-1) = n(n-1)/2, back to 28. Same growth class as selection sort in the worst case, linear in the best.',
         },
         {
           kind: 'table',
@@ -203,7 +203,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A sort is stable when elements the comparator calls equal come out in the order they went in. Sort a list of orders by customer, then sort the result by date, and a stable second sort leaves each date grouped by customer. An unstable one scrambles that grouping, and you have to sort by a compound key instead.',
+            'A sort is stable when elements the comparator calls equal come out in the order they went in. Sort a list of orders by customer, then sort the result by date, and a stable second sort leaves each date grouped by customer. An unstable second sort can reverse equal-date rows; a compound-key comparison is another way to preserve both ordering requirements.',
         },
         {
           kind: 'code',
@@ -287,7 +287,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Bubble sort is here to be read, not written. It is stable and it works in place, but it moves data more than insertion sort does: both perform one operation per inverted pair, and bubble sort makes that operation a swap where insertion sort makes it a single shift. Nothing in this path asks you to implement it. The two you will write are selection sort and insertion sort, both O(n²) in the worst case and both using O(1) auxiliary space.',
+            'Bubble sort is here to be read, not written. The strict-greater adjacent-swap form is stable and works in place. Each inverted pair needs one swap, normally two array writes; insertion sort removes the same inversion with one right shift, then writes each saved element into its final gap. Those final placements matter: on nonempty sorted input the shown insertion sort still writes n - 1 slots, while an early-exit bubble pass makes no swaps. Bubble sort does not universally make more writes on every input. Nothing in this path asks you to implement it. The two you will write are selection sort and insertion sort, both O(n²) in the worst case and both using O(1) auxiliary space.',
         },
       ],
     },
@@ -314,7 +314,7 @@ export const DSA_D08: ModuleSource = {
           kind: 'code',
           language: 'javascript',
           code: 'const mergeSort = (values, compare) => {\n  if (values.length < 2) return values.slice();\n\n  const middle = Math.floor(values.length / 2);\n  const left = mergeSort(values.slice(0, middle), compare);\n  const right = mergeSort(values.slice(middle), compare);\n\n  return merge(left, right, compare);\n};',
-          caption: 'The divide half. `slice` copies, which is where the extra space comes from.',
+          caption: 'The divide half. slice copies the split runs; merge outputs and recursive frames also need storage.',
         },
         {
           kind: 'prose',
@@ -420,17 +420,17 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A merge of two runs holding n elements between them costs at most n-1 comparisons, because every comparison sends exactly one element to the output and the last one arrives for free. That bound is what makes the level argument work.',
+            'For a combined length n > 0, merging two runs costs at most n - 1 comparisons; two empty runs need zero. The nonempty bound holds because every comparison sends exactly one element to the output and the last one arrives for free. That bound is what makes the level argument work.',
         },
         {
           kind: 'prose',
           body:
-            'Lay the recursion out by level instead of by call. Level one merges pairs of single elements, level two merges pairs of runs of two, level three merges the two halves. Every level touches all eight elements once, so every level costs O(n). The only question left is how many levels there are.',
+            'Lay the recursion out by level instead of by call. Level one merges pairs of single elements, level two merges pairs of runs of two, level three merges the two halves. Across each level, merges write all eight elements to their outputs. Comparisons and slice copying also add linear work at that level, so its total cost is O(n) under the unit-cost model. The only question left is how many levels there are.',
         },
         {
           kind: 'table',
           caption: 'Merge sort on eight elements, counted level by level.',
-          headers: ['Level', 'Merges performed', 'Elements touched', 'Comparisons at most'],
+          headers: ['Level', 'Merges performed', 'Elements written by merges', 'Comparisons at most'],
           rows: [
             ['1', 'Four merges of 1 + 1', '8', '4'],
             ['2', 'Two merges of 2 + 2', '8', '6'],
@@ -441,7 +441,7 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Eight halves to four, four to two, two to one: three halvings, so three levels of merging. That is log₂ 8. Each level costs at most n comparisons and there are log₂ n of them, giving O(n log n). Doubling the input to sixteen adds one level, not a second copy of the whole cost, which is why merge sort keeps working on inputs where a quadratic sort stops finishing.',
+            'Eight halves to four, four to two, two to one: three halvings, so three levels of merging. That is log₂ 8. Each level costs at most n comparisons and there are log₂ n of them, giving O(n log n). Doubling to sixteen doubles the elements processed at each existing level and adds another level. The n log n model grows more slowly than n²; actual finishing time still depends on input size, constants and available resources.',
         },
         {
           kind: 'callout',
@@ -452,23 +452,23 @@ export const DSA_D08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The buffer is the bill. Each merge writes into a fresh array, so a merge sort holds O(n) elements of auxiliary space beyond the input — the version above allocates it through `slice` and `push`. The recursion also borrows O(log n) stack frames, which the linear buffer swallows. Selection sort and insertion sort need O(1) auxiliary space, and that is the trade you are making.',
+            'The buffer is the bill. Each merge writes into a fresh array, so the shown sequential merge sort has O(n) peak additional live element references beyond the input — the version above allocates it through `slice` and `push`. The O(log n) recursive frames are smaller in growth than that live buffer. Total allocations across all levels are O(n log n), a different quantity from peak live space; physical garbage-collection timing is not measured here. Selection sort and insertion sort need O(1) auxiliary space, and that is the trade you are making.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Stability lives in one character. `compare(left[i], right[j]) <= 0` takes from the left run when the comparator reports a tie, which keeps equal elements in their original relative order because everything in the left run came first. Write `< 0` instead and the right element wins ties, so equal elements come back reversed.',
+            'Stability lives in one character. `compare(left[i], right[j]) <= 0` takes from the left run when the comparator reports a tie, which keeps equal elements in their original relative order because everything in the left run came first. Write `< 0` instead and the right element wins ties, so equal items from opposite runs can change relative order.',
         },
         {
           kind: 'prose',
           body:
-            'Quicksort reaches the same average O(n log n) while sorting in place, but it partitions instead of merging, degrades to O(n²) on a bad pivot choice and is not stable in its usual form; this path traces and implements merge sort only.',
+            'Common quicksort forms partition in place, but also need a recursion or explicit stack. Random-pivot or suitable random-input analysis gives expected O(n log n) comparisons; bad pivots can give O(n²). The usual swapping form is not stable; this path traces and implements merge sort only.',
         },
         {
           kind: 'prose',
           body:
-            'Which to reach for, then. Insertion sort wins on short arrays and on arrays that are nearly sorted already, which is why production sorts switch to it for small runs. Merge sort wins when n grows and the extra array is affordable. Selection sort is mostly here to be understood: its one real advantage is the small number of writes it makes.',
+            'Which to reach for, then. Insertion sort can suit short or nearly sorted arrays; some production sorting algorithms use it for small runs. Merge sort offers a better worst-case growth class when extra storage is affordable. Selection sort trades fixed quadratic comparisons for few swaps. Choose using the actual data, comparator cost and memory budget rather than a universal timing claim.',
         },
       ],
     },
