@@ -656,7 +656,7 @@ const countLetters = text =>
     ],
   },
   "js-flatten-arrays": {
-    solution: "const flatten = arrays => arrays.reduce((result, array) => [...result, ...array], []);",
+    solution: "const flatten = arrays => arrays.reduce((result, array) => {\n  for (const item of array) result.push(item);\n  return result;\n}, []);",
     junior: `const flatten = arrays => {
   const result = [];
   for (const array of arrays) {
@@ -669,6 +669,10 @@ const countLetters = text =>
     senior: `// concat unwraps exactly one level of each argument, which is the single level the task asks for.
 const flatten = arrays => [].concat(...arrays);`,
     hiddenTests: [
+      {"call": "(() => {const item=Object.freeze({id:1}),nested=Object.freeze([2]);const a=Object.freeze([item,nested,undefined,null]),b=Object.freeze([]),input=Object.freeze([a,b]);const out=flatten(input);return out!==a&&out!==input&&out.length===4&&out[0]===item&&out[1]===nested&&out[2]===undefined&&out[3]===null&&input.length===2&&a.length===4;})()", "expected": true, "label": "frozen inputs keep opaque item identities and exactly one level"},
+      {"call": "(() => {const inner=[],input=[inner];const a=flatten(input),b=flatten(input);return a!==b&&a!==inner&&b!==inner&&a.length===0&&input.length===1;})()", "expected": true, "label": "every empty result is fresh and leaves the caller arrays alone"},
+      {"call": "(() => {const input=Array.from({length:1000},(_,i)=>Object.freeze(Array.from({length:10},(_,j)=>i*10+j)));const out=flatten(Object.freeze(input));return {length:out.length,first:out[0],last:out[9999]};})()", "expected": {"length": 10000, "first": 0, "last": 9999}, "label": "one thousand inner arrays and ten thousand slots preserve order"},
+
       { call: "flatten([[1],[2,[3]]])", expected: [1, 2, [3]] },
       { call: "flatten([[\"a\",\"b\"],[],[\"c\"]])", expected: ["a", "b", "c"] },
       { call: "flatten([[[1,2]],[[3]]])", expected: [[1, 2], [3]] },
@@ -962,9 +966,9 @@ const chunk = (items, size) =>
     ],
   },
   "js-group-by-key": {
-    solution: "const groupBy = (array, keyFn) => array.reduce((groups, item) => { const key = keyFn(item); (groups[key] ??= []).push(item); return groups; }, {});",
+    solution: "const groupBy = (items, keyFn) => items.reduce((groups, item) => {\n  const key = String(keyFn(item));\n  if (groups[key] === undefined) groups[key] = [];\n  groups[key].push(item);\n  return groups;\n}, Object.create(null));",
     junior: `const groupBy = (items, keyFn) => {
-  const groups = {};
+  const groups = Object.create(null);
   for (const item of items) {
     const key = keyFn(item);
     if (groups[key] === undefined) {
@@ -977,13 +981,19 @@ const chunk = (items, size) =>
     senior: `const groupBy = (items, keyFn) => {
   const groups = new Map();
   for (const item of items) {
-    const key = String(keyFn(item)); // an object key is a string anyway, so 1 and "1" share a group here too
+    const key = String(keyFn(item)); // numeric keys become strings under this task’s input contract
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
   }
   return Object.fromEntries(groups);
 };`,
     hiddenTests: [
+      {"call": "(() => {const keys=['__proto__','constructor','toString',''];const out=groupBy(keys,key=>key);return keys.every(key=>Object.prototype.hasOwnProperty.call(out,key)&&Array.isArray(out[key])&&out[key].length===1&&out[key][0]===key);})()", "expected": true, "label": "special and empty names are own buckets"},
+      {"call": "(() => {const items=Object.freeze([Object.freeze({id:1}),Object.freeze({id:2}),Object.freeze({id:3})]);let calls=0;const seen=[];const out=groupBy(items,item=>{calls++;seen.push(item.id);return 'all';});return calls===3&&seen.join(',')==='1,2,3'&&out.all.every((x,i)=>x===items[i]);})()", "expected": true, "label": "one callback per item in original order and original references in each group"},
+      {"call": "groupBy([1,'1',-0,0],n=>n)", "expected": {"1": [1, "1"], "0": [0, 0]}, "label": "numeric and string forms share their object-key bucket"},
+      {"call": "(() => {const a=groupBy([],()=>{throw new Error('empty callback');}),b=groupBy([],()=>0);return a!==b&&Object.keys(a).length===0;})()", "expected": true, "label": "empty input creates fresh groups without invoking the callback"},
+      {"call": "(() => {const items=Object.freeze(Array.from({length:2000},(_,i)=>i));const out=groupBy(items,n=>'K'+n);return Object.keys(out).length===2000&&items.every(n=>out['K'+n][0]===n);})()", "expected": true, "label": "two thousand distinct keys do not collide or lose items"},
+
       { call: "groupBy([3,1,2,5], n => n % 2)", expected: { "0": [2], "1": [3, 1, 5] } },
       { call: "groupBy([\"apple\",\"avocado\",\"banana\"], word => word.length)", expected: { "5": ["apple"], "6": ["banana"], "7": ["avocado"] } },
       { call: "groupBy([{t:\"x\",v:1},{t:\"y\",v:2},{t:\"x\",v:3}], item => item.t)", expected: { x: [{ t: "x", v: 1 }, { t: "x", v: 3 }], y: [{ t: "y", v: 2 }] } },

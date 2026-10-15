@@ -1,5 +1,24 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b014
+
+Individually read flattening, grouping, parameter defaults, Math.max spreading
+and first-match debugging. Replace quadratic accumulator copying and unsafe
+inherited buckets; align the junior default example with parameter destructuring.
+Clarify input sizes, ownership, signed zero, UTF-16 and short-circuit reads.
+Forty final-hash QuickJS verdicts agree, compared with29/40 before; all20valid
+reference/junior/senior/alternative forms retain25XP. Unknown estimates are not
+penalized. Five deliberately incomplete starters and fifteen wrong variants fail.
+Copy sweep reports zero findings. Focused coding contracts, API/script types,
+launch, build, both zero-vulnerability production dependency audits and diff checks
+pass. This is manual same-session model review plus bounded execution, not an
+independent/human review or an arbitrary-program complexity proof.
+
+Current coverage is100/725coding (625remain) and263/263native. Shipped coverage
+remains95coding/240native via PR #400. PR #401's first verify run failed the
+initial-download budget by182gzip bytes; it has not been merged. Route-local
+copy loading is being corrected before rerunning the required check.
+
 ## 15 October continuation — final five-item native batch n042
 
 All263native lesson/activity/question records now have current individual model
