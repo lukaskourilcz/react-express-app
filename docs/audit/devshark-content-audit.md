@@ -1,5 +1,36 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b042
+
+Read Game of Life, folder rendering, deep equality, cinema ranking and sudoku
+individually. Folder dictionaries are now null-prototype objects for every
+literal name; the unfinished starter no longer calls join on undefined. Deep
+equality compares every numeric position, treating holes as undefined, while
+ignoring unrelated array metadata; it is symmetric and checks array length.
+Sudoku rejects malformed shapes/cells and uses twenty-seven independent Sets.
+Supplied Life/seat variants now follow their authored map/offset/while/sort
+objectives, with exact finite input and complexity models.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 24/30 baseline: five old false passes plus the folder starter error.
+Twenty target/base-25-XP checks, copy sweep, focused coding including reversed
+hidden/native Run, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. All 240
+coding records match their current hashes; archived Czech is unchanged.
+Cases cover every 3x3 Life state (512, independently enumerated), 100x100 grids,
+1000 filenames/twenty segments/prototype-like names, sparse-array symmetry,
+10000 entries/depth 100, exact ragged/empty-row and half-seat ties, invalid
+sudoku values/shapes and a locally valid but unsatisfiable partial board.
+An initial authoring compile caught an escaped-template property-boundary
+replacement; it was repaired before recording any review or passing gate.
+
+Coverage is 240/725 coding, 485 remaining, and 263/263 native. Fifteen coding
+reviews are staged after verified PR #406 (225 deployed). Same-session model
+self-review and finite execution only; no full-catalogue, independent/human or
+authenticated production acceptance claim. No live learner state, schema,
+grader engine, UI or entitlement-policy change.
+
+
 ## 15 October continuation — five coding items b041
 
 Read dotted version sorting, heading trees, flood fill, JSON log lines and role

@@ -156,104 +156,13 @@ const readLog = (text, minLevel) => {
     ],
   },
   'js-mh2-folder-tree': {
-    solution: `const printTree = paths => {
-  // Build first: a folder is an object of its entries, a file is null.
-  const root = {};
-  for (const path of paths) {
-    const parts = path.split("/");
-    const file = parts.pop();
-    let folder = root;
-    for (const name of parts) folder = folder[name] ??= {};
-    folder[file] = null; // listing the same file again changes nothing
-  }
-  const lines = ["."];
-  // Print second: prefix is what every line of this folder starts with.
-  const print = (folder, prefix) => {
-    const names = Object.keys(folder);
-    const folders = names.filter(name => folder[name] !== null).sort();
-    const files = names.filter(name => folder[name] === null).sort();
-    const entries = [...folders, ...files];
-    entries.forEach((name, index) => {
-      const last = index === entries.length - 1;
-      lines.push(prefix + (last ? "└── " : "├── ") + name);
-      // Below a last entry nothing runs on down the side, so the indent is blank.
-      if (folder[name] !== null) print(folder[name], prefix + (last ? "    " : "│   "));
-    });
-  };
-  print(root, "");
-  return lines;
-};`,
-    junior: `const printTree = paths => {
-  const root = {};
-  for (const path of paths) {
-    const parts = path.split("/");
-    let current = root;
-    for (let i = 0; i < parts.length; i++) {
-      const name = parts[i];
-      const isFile = i === parts.length - 1;
-      if (isFile) {
-        current[name] = null;
-      } else {
-        if (current[name] === undefined) {
-          current[name] = {};
-        }
-        current = current[name];
-      }
-    }
-  }
-  const lines = ["."];
-  const printFolder = (folder, prefix) => {
-    const folderNames = [];
-    const fileNames = [];
-    for (const name of Object.keys(folder)) {
-      if (folder[name] === null) {
-        fileNames.push(name);
-      } else {
-        folderNames.push(name);
-      }
-    }
-    folderNames.sort();
-    fileNames.sort();
-    const names = folderNames.concat(fileNames);
-    for (let i = 0; i < names.length; i++) {
-      const name = names[i];
-      const isLast = i === names.length - 1;
-      let connector = "├── ";
-      let childPrefix = prefix + "│   ";
-      if (isLast) {
-        connector = "└── ";
-        childPrefix = prefix + "    ";
-      }
-      lines.push(prefix + connector + name);
-      if (folder[name] !== null) {
-        printFolder(folder[name], childPrefix);
-      }
-    }
-  };
-  printFolder(root, "");
-  return lines;
-};`,
-    senior: `const printTree = paths => {
-  const root = new Map(); // a folder is a Map of its entries, a file is null
-  for (const path of new Set(paths)) {
-    const parts = path.split("/");
-    const file = parts.pop();
-    const folder = parts.reduce((at, name) => at.get(name) ?? at.set(name, new Map()).get(name), root);
-    folder.set(file, null);
-  }
-  const linesOf = (folder, prefix) => {
-    const names = [...folder.keys()];
-    const entries = [...names.filter(name => folder.get(name)).sort(), ...names.filter(name => !folder.get(name)).sort()];
-    return entries.flatMap((name, i) => {
-      const last = i === entries.length - 1;
-      const line = \`\${prefix}\${last ? "└── " : "├── "}\${name}\`;
-      const inside = folder.get(name);
-      return inside ? [line, ...linesOf(inside, prefix + (last ? "    " : "│   "))] : [line];
-    });
-  };
-  return [".", ...linesOf(root, "")];
-};`,
+    solution: "const printTree = paths => {\n  // Build first: a folder is an object of its entries, a file is null.\n  const root = Object.create(null);\n  for (const path of paths) {\n    const parts = path.split(\"/\");\n    const file = parts.pop();\n    let folder = root;\n    for (const name of parts) folder = folder[name] ??= Object.create(null);\n    folder[file] = null; // listing the same file again changes nothing\n  }\n  const lines = [\".\"];\n  // Print second: prefix is what every line of this folder starts with.\n  const print = (folder, prefix) => {\n    const names = Object.keys(folder);\n    const folders = names.filter(name => folder[name] !== null).sort();\n    const files = names.filter(name => folder[name] === null).sort();\n    const entries = [...folders, ...files];\n    entries.forEach((name, index) => {\n      const last = index === entries.length - 1;\n      lines.push(prefix + (last ? \"\u2514\u2500\u2500 \" : \"\u251c\u2500\u2500 \") + name);\n      // Below a last entry nothing runs on down the side, so the indent is blank.\n      if (folder[name] !== null) print(folder[name], prefix + (last ? \"    \" : \"\u2502   \"));\n    });\n  };\n  print(root, \"\");\n  return lines;\n};",
+    junior: "const printTree = paths => {\n  const root = Object.create(null);\n  for (const path of paths) {\n    const parts = path.split(\"/\");\n    let current = root;\n    for (let i = 0; i < parts.length; i++) {\n      const name = parts[i];\n      const isFile = i === parts.length - 1;\n      if (isFile) {\n        current[name] = null;\n      } else {\n        if (current[name] === undefined) {\n          current[name] = Object.create(null);\n        }\n        current = current[name];\n      }\n    }\n  }\n  const lines = [\".\"];\n  const printFolder = (folder, prefix) => {\n    const folderNames = [];\n    const fileNames = [];\n    for (const name of Object.keys(folder)) {\n      if (folder[name] === null) {\n        fileNames.push(name);\n      } else {\n        folderNames.push(name);\n      }\n    }\n    folderNames.sort();\n    fileNames.sort();\n    const names = folderNames.concat(fileNames);\n    for (let i = 0; i < names.length; i++) {\n      const name = names[i];\n      const isLast = i === names.length - 1;\n      let connector = \"\u251c\u2500\u2500 \";\n      let childPrefix = prefix + \"\u2502   \";\n      if (isLast) {\n        connector = \"\u2514\u2500\u2500 \";\n        childPrefix = prefix + \"    \";\n      }\n      lines.push(prefix + connector + name);\n      if (folder[name] !== null) {\n        printFolder(folder[name], childPrefix);\n      }\n    }\n  };\n  printFolder(root, \"\");\n  return lines;\n};",
+    senior: "const printTree = paths => {\n  const root = Object.create(null);\n  for (const path of paths) {\n    const parts = path.split(\"/\");\n    const file = parts.pop();\n    const folder = parts.reduce((at, name) => at[name] ??= Object.create(null), root);\n    folder[file] = null;\n  }\n  const linesOf = (folder, prefix) => {\n    const names = Object.keys(folder);\n    const entries = [...names.filter(name => folder[name] !== null).sort(), ...names.filter(name => folder[name] === null).sort()];\n    return entries.flatMap((name, i) => {\n      const last = i === entries.length - 1;\n      const line = prefix + (last ? \"\u2514\u2500\u2500 \" : \"\u251c\u2500\u2500 \") + name;\n      return folder[name] === null ? [line] : [line, ...linesOf(folder[name], prefix + (last ? \"    \" : \"\u2502   \"))];\n    });\n  };\n  return [\".\", ...linesOf(root, \"\")];\n};",
     hiddenTests: [
+      { call: "printTree(Object.freeze([\"__proto__/a.js\",\"constructor/b.js\",\"toString/c.js\",\"hasOwnProperty\",\"2\",\"10\",\"\ud83d\ude00.js\"]))", expected: [".", "\u251c\u2500\u2500 __proto__", "\u2502   \u2514\u2500\u2500 a.js", "\u251c\u2500\u2500 constructor", "\u2502   \u2514\u2500\u2500 b.js", "\u251c\u2500\u2500 toString", "\u2502   \u2514\u2500\u2500 c.js", "\u251c\u2500\u2500 10", "\u251c\u2500\u2500 2", "\u251c\u2500\u2500 hasOwnProperty", "\u2514\u2500\u2500 \ud83d\ude00.js"] },
+      { call: "(() => {const paths=Object.freeze(Array.from({length:1000},(_,i)=>\"f\"+i)),out=printTree(paths),deep=Array.from({length:20},(_,i)=>\"p\"+i).join(\"/\"),a=printTree([deep]);return [out.length,out[1],out[1000],paths[0],a.length,a[20],printTree([])!==printTree([])];})()", expected: [1001, "\u251c\u2500\u2500 f0", "\u2514\u2500\u2500 f999", "f0", 21, "                                                                            \u2514\u2500\u2500 p19", true] },
+
       { call: 'printTree(["b.js", "B.js", "a.js"])', expected: ['.', '├── B.js', '├── a.js', '└── b.js'] },
       { call: 'printTree(["lib.js", "lib/a.js"])', expected: ['.', '├── lib', '│   └── a.js', '└── lib.js'] },
       { call: 'printTree(["file2.txt", "file10.txt"])', expected: ['.', '├── file10.txt', '└── file2.txt'] },
@@ -454,53 +363,12 @@ const readLog = (text, minLevel) => {
       .join("")
   );
 };`,
-    junior: `const nextGeneration = grid => {
-  const height = grid.length;
-  const result = [];
-  for (let row = 0; row < height; row++) {
-    const width = grid[row].length;
-    let newLine = "";
-    for (let column = 0; column < width; column++) {
-      let count = 0;
-      for (let r = row - 1; r <= row + 1; r++) {
-        for (let c = column - 1; c <= column + 1; c++) {
-          if (r === row && c === column) {
-            continue;
-          }
-          if (r < 0 || r >= height || c < 0 || c >= width) {
-            continue;
-          }
-          if (grid[r][c] === "#") {
-            count = count + 1;
-          }
-        }
-      }
-      const isAlive = grid[row][column] === "#";
-      if (isAlive && (count === 2 || count === 3)) {
-        newLine = newLine + "#";
-      } else if (!isAlive && count === 3) {
-        newLine = newLine + "#";
-      } else {
-        newLine = newLine + ".";
-      }
-    }
-    result.push(newLine);
-  }
-  return result;
-};`,
-    senior: `const OFFSETS = [-1, 0, 1]
-  .flatMap(dRow => [-1, 0, 1].map(dColumn => [dRow, dColumn]))
-  .filter(([dRow, dColumn]) => dRow || dColumn);
-
-const nextGeneration = grid =>
-  grid.map((line, row) =>
-    // With no groups in the pattern, replace hands the callback the match and its index.
-    line.replace(/./g, (cell, column) => {
-      const neighbours = OFFSETS.filter(([dRow, dColumn]) => grid[row + dRow]?.[column + dColumn] === "#").length;
-      return neighbours === 3 || (neighbours === 2 && cell === "#") ? "#" : ".";
-    })
-  );`,
+    junior: "const nextGeneration = grid => grid.map((line, row) => {\n  const cells = [...line].map((cell, column) => {\n    let count = 0;\n    for (let dr = -1; dr <= 1; dr++) {\n      for (let dc = -1; dc <= 1; dc++) {\n        if (dr === 0 && dc === 0) continue;\n        if (grid[row + dr]?.[column + dc] === \"#\") count++;\n      }\n    }\n    if (count === 3 || (cell === \"#\" && count === 2)) return \"#\";\n    return \".\";\n  });\n  return cells.join(\"\");\n});",
+    senior: "const nextGeneration = grid => grid.map((line, row) => [...line].map((cell, column) => {\n  let live = 0;\n  for (let dr = -1; dr <= 1; dr++) {\n    for (let dc = -1; dc <= 1; dc++) {\n      if ((dr || dc) && grid[row + dr]?.[column + dc] === \"#\") live++;\n    }\n  }\n  return live === 3 || (live === 2 && cell === \"#\") ? \"#\" : \".\";\n}).join(\"\"));",
     hiddenTests: [
+      { call: "(() => {let mismatches=0;for(let mask=0;mask<512;mask++){const live=Array.from({length:9},(_,i)=>i).filter(i=>mask&(1<<i)),grid=Object.freeze(Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>(mask&(1<<(r*3+c)))?\"#\":\".\").join(\"\")));const expected=Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>{const i=r*3+c,near=live.filter(j=>j!==i&&Math.abs(Math.floor(j/3)-r)<=1&&Math.abs(j%3-c)<=1).length;return near===3||(live.includes(i)&&near===2)?\"#\":\".\";}).join(\"\"));if(JSON.stringify(nextGeneration(grid))!==JSON.stringify(expected))mismatches++;}return mismatches;})()", expected: 0 },
+      { call: "(() => {const grid=Object.freeze(Array(100).fill(\"#\".repeat(100))),out=nextGeneration(grid),empty=Object.freeze([]),zero=Object.freeze(Array(100).fill(\"\"));return [out.length,out[0],out[1],out[99],out.join(\"\").split(\"#\").length-1,out!==grid,grid[0][0],nextGeneration(empty)!==empty,nextGeneration(zero).length];})()", expected: [100, "#..................................................................................................#", "....................................................................................................", "#..................................................................................................#", 4, true, "#", true, 100] },
+
       { call: 'nextGeneration([".#...", "..#..", "###..", ".....", "....."])', expected: ['.....', '#.#..', '.##..', '.#...', '.....'] },
       { call: 'nextGeneration(["###", "###", "###"])', expected: ['#.#', '...', '#.#'] },
       { call: 'nextGeneration(["###"])', expected: ['.#.'] },
@@ -527,50 +395,12 @@ const nextGeneration = grid =>
   blocks.sort((a, b) => rowDistance(a) - rowDistance(b) || seatDistance(a) - seatDistance(b) || a.row - b.row || a.seat - b.seat);
   return blocks[0] ?? null;
 };`,
-    junior: `const bestSeats = (rows, count) => {
-  let wanted = "";
-  for (let i = 0; i < count; i++) {
-    wanted = wanted + ".";
-  }
-  const middleRow = (rows.length - 1) / 2;
-  let best = null;
-  let bestRowDistance = Infinity;
-  let bestSeatDistance = Infinity;
-  for (let row = 0; row < rows.length; row++) {
-    const line = rows[row];
-    const middleSeat = (line.length - 1) / 2;
-    let seat = line.indexOf(wanted);
-    while (seat !== -1) {
-      const rowDistance = Math.abs(row - middleRow);
-      const seatDistance = Math.abs(seat + (count - 1) / 2 - middleSeat);
-      const closerRow = rowDistance < bestRowDistance;
-      const sameRowCloserSeat = rowDistance === bestRowDistance && seatDistance < bestSeatDistance;
-      if (closerRow || sameRowCloserSeat) {
-        best = { row: row, seat: seat };
-        bestRowDistance = rowDistance;
-        bestSeatDistance = seatDistance;
-      }
-      seat = line.indexOf(wanted, seat + 1);
-    }
-  }
-  return best;
-};`,
-    senior: `const bestSeats = (rows, count) => {
-  const wanted = ".".repeat(count);
-  const middleRow = (rows.length - 1) / 2;
-  const blocksIn = (line, row) => {
-    const found = [];
-    for (let seat = line.indexOf(wanted); seat !== -1; seat = line.indexOf(wanted, seat + 1)) {
-      found.push({ row, seat, rowDistance: Math.abs(row - middleRow), seatDistance: Math.abs(seat + (count - 1) / 2 - (line.length - 1) / 2) });
-    }
-    return found;
-  };
-  // sort is stable and the blocks arrive front row first, left seat first,
-  // so the two distances are the only rules the compare function needs.
-  const [best] = rows.flatMap(blocksIn).sort((a, b) => a.rowDistance - b.rowDistance || a.seatDistance - b.seatDistance);
-  return best ? { row: best.row, seat: best.seat } : null;
-};`,
+    junior: "const bestSeats = (rows, count) => {\n  const wanted = \".\".repeat(count);\n  const blocks = [];\n  for (let row = 0; row < rows.length; row++) {\n    let seat = rows[row].indexOf(wanted);\n    while (seat !== -1) {\n      blocks.push({ row, seat });\n      seat = rows[row].indexOf(wanted, seat + 1);\n    }\n  }\n  const middle = (rows.length - 1) / 2;\n  const distance = block => Math.abs(block.seat + (count - 1) / 2 - (rows[block.row].length - 1) / 2);\n  blocks.sort((a, b) => {\n    const byRow = Math.abs(a.row - middle) - Math.abs(b.row - middle);\n    if (byRow !== 0) return byRow;\n    const bySeat = distance(a) - distance(b);\n    if (bySeat !== 0) return bySeat;\n    return a.row - b.row || a.seat - b.seat;\n  });\n  return blocks[0] ?? null;\n};",
+    senior: "const bestSeats = (rows, count) => {\n  const wanted = \".\".repeat(count);\n  const middleRow = (rows.length - 1) / 2;\n  const blocksIn = (line, row) => {\n    const found = [];\n    let seat = line.indexOf(wanted);\n    while (seat !== -1) {\n      found.push({ row, seat, rowDistance: Math.abs(row - middleRow), seatDistance: Math.abs(seat + (count - 1) / 2 - (line.length - 1) / 2) });\n      seat = line.indexOf(wanted, seat + 1);\n    }\n    return found;\n  };\n  const [best] = rows.flatMap(blocksIn).sort((a, b) => a.rowDistance - b.rowDistance || a.seatDistance - b.seatDistance || a.row - b.row || a.seat - b.seat);\n  return best ? { row: best.row, seat: best.seat } : null;\n};",
     hiddenTests: [
+      { call: "(() => {const rows=Object.freeze([\"\",\"..\"]),a=bestSeats(rows,1),b=bestSeats(rows,1);return [a,b,a!==b,bestSeats([\".xxxx\",\".....\"],1),bestSeats([\"\",\"\"],100),rows.length];})()", expected: [{"row": 1, "seat": 0}, {"row": 1, "seat": 0}, true, {"row": 1, "seat": 2}, null, 2] },
+      { call: "(() => {const rows=Object.freeze(Array(100).fill(\".\".repeat(100)));return [bestSeats(rows,1),bestSeats(rows,100),bestSeats([\"......\"],3)];})()", expected: [{"row": 49, "seat": 49}, {"row": 49, "seat": 0}, {"row": 0, "seat": 1}] },
+
       { call: 'bestSeats(["...."], 2)', expected: { row: 0, seat: 1 } },
       { call: 'bestSeats(["x.x.", "..x.", "....", "x..x"], 2)', expected: { row: 2, seat: 1 } },
       { call: 'bestSeats(["..", "......", ".."], 2)', expected: { row: 1, seat: 2 } },

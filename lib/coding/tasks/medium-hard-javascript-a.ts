@@ -486,7 +486,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
     tier: 3,
     focus: ['nested-loops', 'map-set', 'every'],
     title: 'Is this sudoku valid so far?',
-    prompt: 'A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`.',
+    prompt: "A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`. Treat this as validation: return false for a non-array board, any shape other than nine dense array rows of nine own cells, or any cell that is not an integer Number from 0 to 9. This includes sparse rows, strings, null, NaN, infinities and fractions; -0 is an empty cell. Ignore unrelated array properties. Inputs have ordinary data properties without getters or proxies and may be frozen; never change them. Check shape with every over a dense index list, then reject an invalid cell before checking its row/column/box Sets. Target: O(1) time and space, because this task fixes the board at 9 by 9 and 27 Sets; invalid larger shapes are rejected from their lengths. Nested loops over this fixed board do not imply growth in a variable n.",
     starter: `const isValidSudoku = board => {
 
 };
@@ -503,7 +503,7 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const digit = board[r][c];
-      // skip an empty cell
+      // reject a missing/noninteger/out-of-range cell, then skip zero
       // a digit this row, column or box has seen already is a clash
       // otherwise remember it in all three
     }
@@ -515,9 +515,9 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
       'Each cell belongs to exactly one row Set, one column Set and one box Set. Check all three before adding the digit to any of them.',
     ],
     approach: [
-      'Return `false` unless the board has 9 rows and `every` row has 9 cells.',
+      'Use Array.isArray and length checks, then every over all nine indices to require nine own array rows of length nine.',
       'Make nine Sets each for the rows, the columns and the boxes.',
-      'Loop over every cell. Skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
+      'Loop over every cell. Reject missing own cells or values outside integer 0..9, then skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
       'Add the digit to all three Sets. If the loops finish, return `true`.',
     ],
     verify: 'tests',
@@ -638,7 +638,7 @@ console.log(balances([{ paidBy: "Ada", amount: 3000, split: ["Ada", "Ben", "Cy"]
     tier: 3,
     focus: ['recursion', 'objects', 'every'],
     title: 'Equal all the way down',
-    prompt: '`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `"0"` and `"1"`, and `NaN` equals `NaN`.',
+    prompt: "`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `\"0\"` and `\"1\"`, and `NaN` equals `NaN`. Arrays compare length and every numeric position only; a missing own index counts as undefined, and extra named/symbol array properties are ignored. Build a dense list of indices before every, because every on a sparse array skips holes. Records compare own enumerable string keys only: ignore nonenumerable/symbol keys and the difference between Object.prototype and null prototypes. Inputs are read-only data without getters, functions, exotic objects or cycles; arrays may be sparse/frozen, and ordinary records have a default or null prototype. Shared subtrees are allowed, but unfolding each input has at most 10000 container entries, depth at most 100 and at most 100000 string-value code units; key lengths are at most 100. Object.is means signed zeros differ while NaN matches itself. Target: O(n) time under bounded-key access and O(n) worst-case key/index/recursion storage, where n is 1 + expanded entry occurrences + string-value code units across both input trees, including repeated shared occurrences.",
     starter: `const deepEqual = (a, b) => {
 
 };
@@ -650,17 +650,17 @@ console.log(deepEqual({ a: [1, 2] }, { a: [1, 2] }));
   if (Object.is(a, b)) return true;
   // both must be objects, and not null, to be equal from here on
   // an array only equals an array
-  // arrays: the same length, and every item equal
+  // arrays: same length, then every numeric index (including holes) equal
   // objects: the same number of keys, and every key of a in b with an equal value
 };`,
     hints: [
-      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` is the only reliable way to tell an array from an object.',
+      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` reliably distinguishes arrays from ordinary records here.',
       'Comparing key counts is not enough on its own: `{ a: undefined }` and `{ b: undefined }` have one key each. Check that every key of `a` is an own key of `b` with `Object.hasOwn`.',
     ],
     approach: [
       'Return `true` when `Object.is(a, b)`. That covers numbers, strings, booleans, `null`, `undefined`, `NaN` and the same object twice.',
       'Return `false` unless both are objects and neither is `null`, and unless both are arrays or neither is.',
-      'For arrays, compare the lengths, then use `every` to call `deepEqual` on the items at each index.',
+      'For arrays, compare lengths, create every index with Array.from({ length: a.length }, (_, i) => i), then use every to compare own values at those indices; a hole reads undefined.',
       'For objects, compare the number of keys, then use `every` over the keys of `a`: each must be an own key of `b` whose value is `deepEqual` to `a`’s.',
     ],
     verify: 'tests',

@@ -230,16 +230,16 @@ const readLog = (text, minLevel) => {
     tier: 3,
     focus: ['split', 'recursion', 'sort', 'strings'],
     title: 'Print a folder tree',
-    prompt: 'Write `printTree(paths)`, taking file paths such as `"src/lib/math.js"` and returning, as an array of strings, the lines a `tree` command prints for them. The first line is `"."`. Under each folder come its folders and then its files, each group sorted by name with `sort()`’s default order. Every entry starts with `"├── "`, or with `"└── "` when it is the last one in its folder. The lines inside a folder are indented by `"│   "` when that folder has more entries after it, and by four spaces when it is the last one. Split each path on `"/"` and build nested objects first, where a folder is an object of its entries and a file is `null`. Then write a recursive function that prints the entries of one folder, given the prefix its lines start with. A path listed twice appears once.',
+    prompt: "Write `printTree(paths)`, taking file paths such as `\"src/lib/math.js\"` and returning, as an array of strings, the lines a `tree` command prints for them. The first line is `\".\"`. Under each folder come its folders and then its files, each group sorted by name with `sort()`’s default order. Every entry starts with `\"├── \"`, or with `\"└── \"` when it is the last one in its folder. The lines inside a folder are indented by `\"│   \"` when that folder has more entries after it, and by four spaces when it is the last one. Split each path on `\"/\"` and build nested objects first, where a folder is an object of its entries and a file is `null`. Then write a recursive function that prints the entries of one folder, given the prefix its lines start with. A path listed twice appears once. Treat names literally and case-sensitively, including __proto__, constructor, toString, numeric-looking names and Unicode. Use null-prototype objects for root and every folder so these names never reach inherited properties. paths is read-only, possibly frozen, with at most 1000 relative file paths, at most twenty nonempty segments per path, at most 100 UTF-16 code units per segment and at most 100000 total input code units. Segments contain no slash, NUL, CR or LF; no segment is exactly . or .., and backslash is literal text. No file path is also a folder prefix of another path. Do not normalize names or access the filesystem. Return a fresh lines array, including for no input. Target: O(n log n) time under the usual comparison-sort model and bounded segment lengths/depth, with O(n) tree/output space, where n is 2 + total input code units; native sort has no universal language-level complexity guarantee.",
     starter: `const printTree = paths => {
 
 };
 
-// Scratch pad. Change this and press Run.
-console.log(printTree(["README.md", "src/index.js", "src/lib/math.js"]).join("\\n"));
+// Scratch pad. Uncomment after your function returns an array.
+// console.log(printTree(["README.md", "src/index.js", "src/lib/math.js"]).join("\\n"));
 `,
     skeleton: `const printTree = paths => {
-  const root = {};
+  const root = Object.create(null);
   for (const path of paths) {
     // walk the parts: a folder for every part but the last, and the last is a file (null)
   }
@@ -259,11 +259,11 @@ console.log(printTree(["README.md", "src/index.js", "src/lib/math.js"]).join("\\
   return lines;
 };`,
     hints: [
-      'Build first, print second. `path.split("/")` gives the folder names and then the file name. Walk them from `root`, with `folder[name] ??= {}` for every part but the last and `folder[last] = null` for the file.',
+      'Build first, print second. `path.split("/")` gives the folder names and then the file name. Walk them from `root`, with `folder[name] ??= Object.create(null)` for every part but the last and `folder[last] = null` for the file.',
       'The prefix is what every line of one folder starts with, and each level adds four characters to it: `"│   "` when the folder above still has entries below it, so the line down its side goes on, and four spaces when it was the last one.',
     ],
     approach: [
-      'Build the nested objects: an object for each folder and `null` for each file. Setting the same file twice changes nothing.',
+      'Build the nested objects: a null-prototype object for each folder and `null` for each file. Setting the same file twice changes nothing.',
       'Write `print(folder, prefix)`. Split its names into folders and files, sort both, and put the folders first.',
       'For each entry, push `prefix + (last ? "└── " : "├── ") + name`. For a folder, call `print` on it with `prefix + (last ? "    " : "│   ")`.',
       'Start the lines with `"."` and call `print(root, "")`.',
@@ -486,7 +486,7 @@ console.log(allowed(roles, ["editor"], "posts:read"));
     tier: 3,
     focus: ['nested-loops', 'map'],
     title: 'One step of the Game of Life',
-    prompt: 'In Conway’s Game of Life, every cell of a grid is alive (`"#"`) or dead (`"."`). Write `nextGeneration(grid)`, taking the grid as an array of strings of equal length and returning the next generation in the same shape. Each cell looks at its neighbours, up to eight of them counting the diagonals. Cells outside the grid count as dead, so the grid does not wrap around. A live cell with two or three live neighbours stays alive, a dead cell with exactly three comes alive, and every other cell is dead in the next generation. Every cell changes at the same moment, so count from the old grid and build a new one: `map` over the rows and over the cells of each row, and count the neighbours with two nested loops over the offsets -1, 0 and 1, skipping the cell itself. Leave `grid` unchanged.',
+    prompt: "In Conway’s Game of Life, every cell of a grid is alive (`\"#\"`) or dead (`\".\"`). Write `nextGeneration(grid)`, taking the grid as an array of strings of equal length and returning the next generation in the same shape. Each cell looks at its neighbours, up to eight of them counting the diagonals. Cells outside the grid count as dead, so the grid does not wrap around. A live cell with two or three live neighbours stays alive, a dead cell with exactly three comes alive, and every other cell is dead in the next generation. Every cell changes at the same moment, so count from the old grid and build a new one: `map` over the rows and over the cells of each row, and count the neighbours with two nested loops over the offsets -1, 0 and 1, skipping the cell itself. Leave `grid` unchanged. grid is a read-only dense array of at most 100 rows, each containing at most 100 ASCII cells, only # and ., with equal row lengths. Frozen input, an empty grid and zero-width rows are valid. Return a fresh array of strings on every call and use only the original generation for all counts. Target: O(n) time and output/row-work space, where n is 1 + row count + total cell count; the two offset loops always make nine checks per cell, not an input-sized nested search.",
     starter: `const nextGeneration = grid => {
 
 };
@@ -538,7 +538,7 @@ console.log(nextGeneration([".....", "..#..", "..#..", "..#..", "....."]));
     tier: 3,
     focus: ['indexOf', 'while', 'sort'],
     title: 'Seats together in a cinema',
-    prompt: 'A cinema row is a string with `"."` for a free seat and `"x"` for a taken one, and `rows[0]` is the front row. Write `bestSeats(rows, count)`, finding `count` free seats side by side and returning `{ row, seat }`, the row’s index and the index of the block’s leftmost seat, or `null` when no row has room. The best block is the one nearest the middle of the room: first by how far its row is from the middle row, then by how far the middle of the block is from the middle of its row. A tie goes to the row nearer the front, then to the block further left. The middle of 3 rows is row 1, the middle of 4 rows lies halfway between rows 1 and 2, and the middle of a row of 6 seats lies between seats 2 and 3. Find the blocks of a row with `indexOf(".".repeat(count), from)` in a `while` loop, starting each search one seat after the last block found, so that overlapping blocks all count. Collect every block and `sort` them with a compare function that applies the rules in order.',
+    prompt: "A cinema row is a string with `\".\"` for a free seat and `\"x\"` for a taken one, and `rows[0]` is the front row. Write `bestSeats(rows, count)`, finding `count` free seats side by side and returning `{ row, seat }`, the row’s index and the index of the block’s leftmost seat, or `null` when no row has room. The best block is the one nearest the middle of the room: first by how far its row is from the middle row, then by how far the middle of the block is from the middle of its row. A tie goes to the row nearer the front, then to the block further left. The middle of 3 rows is row 1, the middle of 4 rows lies halfway between rows 1 and 2, and the middle of a row of 6 seats lies between seats 2 and 3. Find the blocks of a row with `indexOf(\".\".repeat(count), from)` in a `while` loop, starting each search one seat after the last block found, so that overlapping blocks all count. Collect every block and `sort` them with a compare function that applies the rules in order. rows is a read-only dense array of at most 100 strings, each at most 100 ASCII . or x cells; row lengths may differ or be zero. An empty row still counts when finding the middle row and keeps its original index. count is a positive integer from 1 to 100, so an empty needle is never used; return null when nothing fits, including an empty room. Distances use the exact half-seat/half-row values, without rounding. Return a fresh row/seat object for a successful call. Target: O(n log n) time under bounded row widths/needle length and the usual comparison-sort model, with O(n) collected-block space, where n is 2 + row count + total seats + count; JavaScript does not guarantee native sort complexity.",
     starter: `const bestSeats = (rows, count) => {
 
 };

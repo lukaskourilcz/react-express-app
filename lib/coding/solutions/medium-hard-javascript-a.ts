@@ -570,92 +570,13 @@ const paintBucket = (grid, row, col, colour) => {
     ],
   },
   'js-mh-sudoku-check': {
-    solution: `const isValidSudoku = board => {
-  if (board.length !== 9 || !board.every(row => row.length === 9)) return false;
-  // Array.from calls the function nine times: nine different Sets.
-  const rows = Array.from({ length: 9 }, () => new Set());
-  const columns = Array.from({ length: 9 }, () => new Set());
-  const boxes = Array.from({ length: 9 }, () => new Set());
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const digit = board[r][c];
-      if (digit === 0) continue; // empty cells never clash
-      const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-      if (rows[r].has(digit) || columns[c].has(digit) || boxes[box].has(digit)) return false;
-      rows[r].add(digit);
-      columns[c].add(digit);
-      boxes[box].add(digit);
-    }
-  }
-  return true;
-};`,
-    junior: `const isValidSudoku = board => {
-  if (board.length !== 9) {
-    return false;
-  }
-  const rightWidth = board.every(row => row.length === 9);
-  if (!rightWidth) {
-    return false;
-  }
-  for (let r = 0; r < 9; r++) {
-    const seen = new Set();
-    for (let c = 0; c < 9; c++) {
-      const digit = board[r][c];
-      if (digit !== 0) {
-        if (seen.has(digit)) {
-          return false;
-        }
-        seen.add(digit);
-      }
-    }
-  }
-  for (let c = 0; c < 9; c++) {
-    const seen = new Set();
-    for (let r = 0; r < 9; r++) {
-      const digit = board[r][c];
-      if (digit !== 0) {
-        if (seen.has(digit)) {
-          return false;
-        }
-        seen.add(digit);
-      }
-    }
-  }
-  for (let box = 0; box < 9; box++) {
-    const seen = new Set();
-    const firstRow = Math.floor(box / 3) * 3;
-    const firstCol = (box % 3) * 3;
-    for (let r = firstRow; r < firstRow + 3; r++) {
-      for (let c = firstCol; c < firstCol + 3; c++) {
-        const digit = board[r][c];
-        if (digit !== 0) {
-          if (seen.has(digit)) {
-            return false;
-          }
-          seen.add(digit);
-        }
-      }
-    }
-  }
-  return true;
-};`,
-    senior: `const isValidSudoku = board => {
-  if (board.length !== 9 || !board.every(row => row.length === 9)) return false;
-  const seen = new Set(); // one Set of labelled facts: "row 3 has 5", "box 4 has 5", ...
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const digit = board[r][c];
-      if (digit === 0) continue;
-      const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-      for (const fact of [\`r\${r}:\${digit}\`, \`c\${c}:\${digit}\`, \`b\${box}:\${digit}\`]) {
-        if (seen.has(fact)) return false;
-        seen.add(fact);
-      }
-    }
-  }
-  return true;
-};`,
+    solution: "const isValidSudoku = board => {\n  if (!Array.isArray(board) || board.length !== 9 || !Array.from({ length: 9 }, (_, i) => i).every(i => Object.hasOwn(board, i) && Array.isArray(board[i]) && board[i].length === 9)) return false;\n  // Array.from calls the function nine times: nine different Sets.\n  const rows = Array.from({ length: 9 }, () => new Set());\n  const columns = Array.from({ length: 9 }, () => new Set());\n  const boxes = Array.from({ length: 9 }, () => new Set());\n  for (let r = 0; r < 9; r++) {\n    for (let c = 0; c < 9; c++) {\n      const digit = board[r][c];\n      if (!Object.hasOwn(board[r], c) || !Number.isInteger(digit) || digit < 0 || digit > 9) return false;\n      if (digit === 0) continue; // empty cells never clash\n      const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);\n      if (rows[r].has(digit) || columns[c].has(digit) || boxes[box].has(digit)) return false;\n      rows[r].add(digit);\n      columns[c].add(digit);\n      boxes[box].add(digit);\n    }\n  }\n  return true;\n};",
+    junior: "const isValidSudoku = board => {\n  if (!Array.isArray(board) || board.length !== 9 || !Array.from({ length: 9 }, (_, i) => i).every(i => Object.hasOwn(board, i) && Array.isArray(board[i]) && board[i].length === 9)) return false;\n  const rowSets = Array.from({ length: 9 }, () => new Set());\n  const colSets = Array.from({ length: 9 }, () => new Set());\n  const boxSets = Array.from({ length: 9 }, () => new Set());\n  for (let r = 0; r < 9; r++) {\n    for (let c = 0; c < 9; c++) {\n      const digit = board[r][c];\n      if (!Object.hasOwn(board[r], c) || !Number.isInteger(digit) || digit < 0 || digit > 9) return false;\n      if (digit === 0) continue;\n      const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);\n      if (rowSets[r].has(digit) || colSets[c].has(digit) || boxSets[box].has(digit)) return false;\n      rowSets[r].add(digit);\n      colSets[c].add(digit);\n      boxSets[box].add(digit);\n    }\n  }\n  return true;\n};",
+    senior: "const isValidSudoku = board => {\n  if (!Array.isArray(board) || board.length !== 9 || !Array.from({ length: 9 }, (_, i) => i).every(i => Object.hasOwn(board, i) && Array.isArray(board[i]) && board[i].length === 9)) return false;\n  const seen = Array.from({ length: 3 }, () => Array.from({ length: 9 }, () => new Set()));\n  for (let r = 0; r < 9; r++) {\n    for (let c = 0; c < 9; c++) {\n      const digit = board[r][c];\n      if (!Object.hasOwn(board[r], c) || !Number.isInteger(digit) || digit < 0 || digit > 9) return false;\n      if (digit === 0) continue;\n      const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);\n      if (seen[0][r].has(digit) || seen[1][c].has(digit) || seen[2][box].has(digit)) return false;\n      seen[0][r].add(digit);\n      seen[1][c].add(digit);\n      seen[2][box].add(digit);\n    }\n  }\n  return true;\n};",
     hiddenTests: [
+      { call: "(() => {const empty=()=>Array.from({length:9},()=>Array(9).fill(0));const values=[-1,10,1.5,NaN,Infinity,-Infinity,\"1\",null,undefined,true];const results=values.map(value=>{const b=empty();b[8][8]=value;return isValidSudoku(b);});const hole=empty();delete hole[8][8];const missing=empty();delete missing[8];return [results,isValidSudoku(null),isValidSudoku(\"123456789\"),isValidSudoku(Array(9).fill(\"000000000\")),isValidSudoku(hole),isValidSudoku(missing)];})()", expected: [[false, false, false, false, false, false, false, false, false, false], false, false, false, false, false] },
+      { call: "(() => {const complete=Object.freeze(Array.from({length:9},(_,r)=>Object.freeze(Array.from({length:9},(_,c)=>(r*3+Math.floor(r/3)+c)%9+1))));const partial=Array.from({length:9},()=>Array(9).fill(0));partial[0]=[1,2,3,4,5,6,7,8,0];partial[1][8]=9;const zero=Array.from({length:9},()=>Array(9).fill(-0)),before=JSON.stringify(complete);return [isValidSudoku(complete),isValidSudoku(partial),isValidSudoku(zero),JSON.stringify(complete)===before];})()", expected: [true, true, true, true] },
+
       { call: 'isValidSudoku(["830070000", "600195000", "098000060", "800060003", "400803001", "700020006", "060000280", "000419005", "000080079"].map(row => [...row].map(Number)))', expected: false },
       { call: 'isValidSudoku(["534678912", "672195348", "198342567", "859761423", "426853791", "713924856", "961537284", "287419635", "345286179"].map(row => [...row].map(Number)))', expected: true },
       { call: 'isValidSudoku(["000000000", "000000000", "000070000", "000000000", "000000000", "000000000", "000070000", "000000000", "000000000"].map(row => [...row].map(Number)))', expected: false },
@@ -736,66 +657,13 @@ const paintBucket = (grid, row, col, colour) => {
     ],
   },
   'js-mh-deep-equal': {
-    solution: `const deepEqual = (a, b) => {
-  if (Object.is(a, b)) return true; // primitives, NaN, and the same object twice
-  // From here on both must be objects, and typeof null is "object" too.
-  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  if (Array.isArray(a)) {
-    return a.length === b.length && a.every((item, i) => deepEqual(item, b[i]));
-  }
-  const keys = Object.keys(a);
-  // Counting keys alone would let { a: undefined } equal { b: undefined }.
-  return keys.length === Object.keys(b).length &&
-    keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));
-};`,
-    junior: `const deepEqual = (a, b) => {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  const aIsObject = typeof a === "object" && a !== null;
-  const bIsObject = typeof b === "object" && b !== null;
-  if (!aIsObject || !bIsObject) {
-    return false;
-  }
-  if (Array.isArray(a) !== Array.isArray(b)) {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (a.length !== b.length) {
-      return false;
-    }
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) {
-    return false;
-  }
-  for (const key of aKeys) {
-    if (!Object.prototype.hasOwnProperty.call(b, key)) {
-      return false;
-    }
-    if (!deepEqual(a[key], b[key])) {
-      return false;
-    }
-  }
-  return true;
-};`,
-    senior: `const isObject = value => typeof value === "object" && value !== null;
-
-const deepEqual = (a, b) => {
-  if (Object.is(a, b)) return true;
-  if (!isObject(a) || !isObject(b) || Array.isArray(a) !== Array.isArray(b)) return false;
-  const keys = Object.keys(a); // an array's keys are its indexes, so one path covers both shapes
-  return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));
-};`,
+    solution: "const deepEqual = (a, b) => {\n  if (Object.is(a, b)) return true; // primitives, NaN, and the same object twice\n  // From here on both must be objects, and typeof null is \"object\" too.\n  if (typeof a !== \"object\" || typeof b !== \"object\" || a === null || b === null) return false;\n  if (Array.isArray(a) !== Array.isArray(b)) return false;\n  if (Array.isArray(a)) {\n    return a.length === b.length && Array.from({ length: a.length }, (_, i) => i).every(i => deepEqual(Object.hasOwn(a, i) ? a[i] : undefined, Object.hasOwn(b, i) ? b[i] : undefined));\n  }\n  const keys = Object.keys(a);\n  // Counting keys alone would let { a: undefined } equal { b: undefined }.\n  return keys.length === Object.keys(b).length &&\n    keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));\n};",
+    junior: "const deepEqual = (a, b) => {\n  if (Object.is(a, b)) return true;\n  if (a === null || b === null || typeof a !== \"object\" || typeof b !== \"object\") return false;\n  const arrays = Array.isArray(a);\n  if (arrays !== Array.isArray(b)) return false;\n  if (arrays) {\n    if (a.length !== b.length) return false;\n    const indices = Array.from({ length: a.length }, (_, index) => index);\n    return indices.every(index => {\n      const left = Object.hasOwn(a, index) ? a[index] : undefined;\n      const right = Object.hasOwn(b, index) ? b[index] : undefined;\n      return deepEqual(left, right);\n    });\n  }\n  const keys = Object.keys(a);\n  if (keys.length !== Object.keys(b).length) return false;\n  return keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));\n};",
+    senior: "const deepEqual = (a, b) => {\n  if (Object.is(a, b)) return true;\n  if (!a || !b || typeof a !== \"object\" || typeof b !== \"object\" || Array.isArray(a) !== Array.isArray(b)) return false;\n  if (Array.isArray(a)) {\n    return a.length === b.length && Array.from({ length: a.length }, (_, i) => i).every(i =>\n      deepEqual(Object.hasOwn(a, i) ? a[i] : undefined, Object.hasOwn(b, i) ? b[i] : undefined));\n  }\n  const keys = Object.keys(a);\n  return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));\n};",
     hiddenTests: [
+      { call: "(() => {const hole=Array(1),value=[1],undef=[undefined],extra=[1];extra.note=9;return [deepEqual(hole,value),deepEqual(value,hole),deepEqual(hole,undef),deepEqual(undef,hole),deepEqual(Array(1),Array(2)),deepEqual(extra,[1]),deepEqual(0,-0),deepEqual(-0,-0),deepEqual(NaN,NaN)];})()", expected: [false, false, true, true, false, true, false, true, true] },
+      { call: "(() => {const a=Object.assign(Object.create(null),{x:Object.freeze([NaN,undefined,-0])}),b={x:Object.freeze([NaN,undefined,-0])};Object.defineProperty(a,\"hidden\",{value:1});a[Symbol(\"skip\")]=99;Object.freeze(a);Object.freeze(b);const left=Object.freeze(Array.from({length:10000},(_,i)=>i)),right=Object.freeze(Array.from({length:10000},(_,i)=>i));let x=1,y=1;for(let i=0;i<100;i++){x=Object.freeze([x]);y=Object.freeze([y]);}return [deepEqual(a,b),deepEqual(b,a),deepEqual(left,right),deepEqual(x,y),Object.hasOwn(b,\"hidden\")];})()", expected: [true, true, true, true, false] },
+
       { call: 'deepEqual({ a: undefined }, { b: undefined })', expected: false },
       { call: 'deepEqual({ x: [{ y: [NaN] }] }, { x: [{ y: [NaN] }] })', expected: true },
       { call: 'deepEqual([1, 2, 3], [1, 2])', expected: false },
