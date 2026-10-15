@@ -1,5 +1,27 @@
 # Release acceptance matrix
 
+## Twenty-five native and five coding reviews — 2026-10-15
+
+PR #395 merged at `1c8c04341a14f6463c38dfa458a6276386ca3747` after exact
+61900610 passed required run 38661780936 (verify 30m52s, SQL 38s). The first
+run's stale grader-privacy fixture assumptions were corrected without changing
+production grading; full final checks include the deterministic phase-isolation
+regression. Production `dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM` is READY at that
+merge SHA, owns devshark.app and has no alias error.
+
+Eleven general checks and twenty selected correct/wrong submissions across
+four accessible b013 tasks pass, with guest zero XP/null progress. The fifth
+binary task returns 402; authenticated Premium/native activity acceptance is
+not inferred. No Challenge/name/owner-progress fixtures were created. B013 has
+40/40 selected worker verdicts and 20 no-false-penalty checks; n003–n007 bind
+25 individual native reviews to exact source/grading hashes and model readings.
+Ninety-five coding and ninety-five native records are now shipped. Current local
+coverage through n014 is 95/725 coding and 125/263 native, with 630 and 138
+remaining respectively. N010's five goal revisions add no duplicate coverage.
+Evidence: `/tmp/devshark-audit-2026-10-15/prod395-*.log` and committed reviews.
+Same-session model evidence is not independent/human or authenticated native
+acceptance.
+
 ## Twenty coding and ten native reviews — 2026-10-15
 
 PR #394 merged at `158cf64adad473bc50125a682af86480d3795520` after required

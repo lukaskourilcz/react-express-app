@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash} from '../../../../lib/learning-paths/audit';
+const modules=LEARNING_PATHS.find(p=>p.id==='dsa-foundations')!.modules;
+const questions=modules.find(m=>m.id==='dsa-v1-d10')!.activities.find(a=>a.kind==='check')!.questions!.slice(5);
+assert.equal(questions.length,5);assert.deepEqual(questions.map(q=>q.correct),[0,0,0,0,0]);
+const midpointReads=(n:number,target:number)=>{let low=0,high=n-1,reads=0;while(low<=high){const mid=Math.floor((low+high)/2),value=mid+1;reads++;if(value===target)return reads;if(value<target)low=mid+1;else high=mid-1;}return reads;};
+assert.equal(midpointReads(1000000,1000001),20);assert.equal(Math.floor(Math.log2(1000000))+1,20);assert.equal(midpointReads(1000000,0),19);
+// Only the individually read lesson/context snippets execute on the host.
+const d08=modules.find(m=>m.id==='dsa-v1-d08')!;const code=d08.lessons.flatMap(l=>l.sections.flatMap(s=>s.kind==='code'?[s.code]:[]));
+const insertion=code.find(s=>s.startsWith('const insertionSort'))!.replace('values[j + 1] = current;','values[j + 1] = current; frames.push([...values]);');
+const insertionFrames=new Function('const frames=[];'+insertion+';insertionSort([5,3,8,1,9,2],(a,b)=>a-b);return frames;')();assert.deepEqual(insertionFrames[3],[1,3,5,8,9,2]);
+const selection=new Function(code.find(s=>s.startsWith('const selectionSort'))+';return selectionSort;')();assert.deepEqual(selection([5,3,8,1,9,2],(a:number,b:number)=>a-b),[1,2,3,5,8,9]);
+const rows=[{name:'B',id:1},{name:'A',id:2},{name:'A',id:3}];
+const merge=code.find(s=>s.startsWith('const merge ='))!,mergeSort=code.find(s=>s.startsWith('const mergeSort'))!;
+const sort=new Function(merge+';'+mergeSort+';return mergeSort;')();
+const captures:any[]=[];const context=questions[2].context!.code.replace('const sorted = mergeSort(rows, byName);','const sorted = mergeSort(rows, byName); captures.push(sorted);').replace('const sorted = rows.sort(byName);','const sorted = rows.sort(byName); captures.push(sorted);');
+new Function('rows','mergeSort','captures',context)(rows,sort,captures);
+assert.notEqual(captures[0],rows);assert.equal(captures[1],rows);assert.deepEqual(rows.map(r=>r.id),[2,3,1]);assert.deepEqual(captures[0].map((r:any)=>r.id),[2,3,1]);
+const levels=[5,3,8,null,4,7,null];const nodes=levels.map(value=>value===null?null:{value,left:null as any,right:null as any});nodes.forEach((node,i)=>{if(node){node.left=nodes[2*i+1]??null;node.right=nodes[2*i+2]??null;}});
+const walk=(node:any,order:string):number[]=>node===null?[]:order==='pre'?[node.value,...walk(node.left,order),...walk(node.right,order)]:order==='post'?[...walk(node.left,order),...walk(node.right,order),node.value]:[...walk(node.left,order),node.value,...walk(node.right,order)];
+assert.deepEqual(walk(nodes[0],'in'),[3,4,5,7,8]);assert.deepEqual(walk(nodes[0],'pre'),[5,3,4,8,7]);assert.deepEqual(walk(nodes[0],'post'),[4,3,7,8,5]);assert.deepEqual(levels.filter(n=>n!==null),[5,3,8,4,7]);
+const find=(root:any,target:number)=>{let visits=0,node=root;while(node){visits++;if(node.value===target)break;node=target<node.value?node.left:node.right;}return visits;};
+assert.equal(find(nodes[0],6),3);assert.equal(find(nodes[0],9),2);assert.equal(walk(nodes[0],'pre').length,5);
+writeFileSync(process.argv[2],JSON.stringify({checkedRecords:5,records:questions.map(q=>({id:q.id,contentHash:nativeContentHash(q),gradingHash:null})),checks:['exact 20-read absent upper target, not an arbitrary implementation claim','actual insertion pass and taught fresh-output merge behavior','valid alternative-call-site syntax, aliasing and stable tied references','all four literal-tree traversal options','height-path versus unordered exhaustive work; universal bounds remain manually reasoned']},null,2),{mode:0o600});
+console.log('PASS five final foundation questions: counts, method boundary, sort identity and tree choices');

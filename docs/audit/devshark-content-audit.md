@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n014
+
+Reviewed the remaining five foundation-assessment questions. The literal-tree
+inorder item is retained. Exact binary-search reads now name the midpoint and
+bound convention. The sorting snapshot is restricted to completed passes of
+the taught implementations, rather than pretending to identify arbitrary source.
+Sort replacement examples use valid separate scopes, distinguish same-array
+aliasing from new output even on sorted input, and qualify worst-case comparison
+and unspecified space behavior. Tree bounds name nonempty edge-height and
+remove positional references from shuffled feedback.
+
+Authored examples verify the 20-probe maximum, actual insertion pass, valid
+sort-call syntax, stable reference order, all four tree traversal choices and
+height-path bounds. Native bindings, path contracts, API/script types, launch,
+build, both production dependency audits (zero vulnerabilities), copy sweep and
+diff checks pass. Six public DSA catalogue probes per theme pass at 360–1440;
+they do not exercise authenticated activities, physical devices, keyboard or zoom. Manual scores and final model readings are individual; these
+checks are not independent/human or authenticated activity acceptance.
+
+Coverage is **125/263 native**, **138 remaining**, and **95/725 coding**,
+**630 remaining**. PR #395 is merged at 1c8c0434, its exact production deployment
+is READY with devshark.app, and eleven general plus twenty selected correct/
+wrong submissions pass. One binary task returns guest 402. Ninety-five coding
+and ninety-five native reviews are shipped. N008–n014 add thirty unique native
+records plus five existing-record target revisions outside that release.
+
 ## 15 October continuation — five-item native batch n013
 
 Reviewed foundation-assessment questions one through five, with exact source

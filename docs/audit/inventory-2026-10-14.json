@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "15 October: PR #394 merged at 158cf64adad473bc50125a682af86480d3795520 after required verify/sql run 38658122812 passed on 70803596. Production dpl_89oFHcKJWc4rbZF5foU8hv95r7t1 is READY at the merge SHA, owns devshark.app and has no alias error. Eleven general checks and five selected signed-out correct/wrong submissions pass; nineteen tasks return guest 402, not authenticated Premium acceptance. Ninety coding reviews are shipped.",
+    "executionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used.",
     "currentModelReviewedIssuedTasks": 95,
     "issuedStillRequiringReview": 630,
-    "deployedModelReviewedIssuedTasks": 90,
-    "stagedModelReviewedIssuedTasks": 5,
-    "stagedExecutionEvidence": "Five b013 coding reviews are frozen in PR #395. Forty selected final worker verdicts and twenty authored-target/base-25 checks pass; production release is pending.",
-    "deployedExecutionEvidence": "15 October: PR #394 merged at 158cf64adad473bc50125a682af86480d3795520 after required verify/sql run 38658122812 passed on 70803596. Production dpl_89oFHcKJWc4rbZF5foU8hv95r7t1 is READY at the merge SHA, owns devshark.app and has no alias error. Eleven general checks and five selected signed-out correct/wrong submissions pass; nineteen tasks return guest 402, not authenticated Premium acceptance. Ninety coding reviews are shipped."
+    "deployedModelReviewedIssuedTasks": 95,
+    "stagedModelReviewedIssuedTasks": 0,
+    "stagedExecutionEvidence": "All 95 current coding reviews are production-verified through PR #395. The other 630 issued tasks remain outside individual editorial coverage.",
+    "deployedExecutionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used."
   },
   "nativePaths": {
     "paths": 2,
@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 50,
-    "recordsStillRequiringReview": 143,
-    "reviewEvidence": "Seventy native records shipped through PR #394: D01–D05 plus n001–n002. Exact main 158cf64a is READY with public health/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
-    "deployedModelReviewRecords": 70,
-    "currentModelReviewRecords": 120,
-    "stagedReviewEvidence": "15 October through n013: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentStagedModelReviewRecords": 30,
+    "recordsStillRequiringReview": 138,
+    "reviewEvidence": "Ninety-five native records shipped through PR #395: D01–D05, n001–n007. Exact main 1c8c0434 is READY with public general/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
+    "deployedModelReviewRecords": 95,
+    "currentModelReviewRecords": 125,
+    "stagedReviewEvidence": "15 October through n014: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
