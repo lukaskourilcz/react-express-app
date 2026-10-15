@@ -28,9 +28,8 @@
 import type { ModuleSource } from '../../types';
 
 /** The proposal, the citations and the two recording dependencies the
- * operator-session exercise is graded against. Appended after the learner's
- * code so the fixtures cannot be shadowed by a same-named declaration in the
- * submission.
+ * operator-session exercise is graded against. Immutable helpers are provided
+ * before learner declarations; deferred instrumentation initializes before calls.
  *
  * Delays run on the sandbox's virtual clock, so a 300 ms answer that arrives
  * after a 50 ms one finishes instantly and orders the same way on every run.
@@ -170,7 +169,7 @@ export const FDE_M10: ModuleSource = {
           rows: [
             [
               'What will happen?',
-              'The action and its parameters in the operator’s own words: refund, 42.00, invoice INV-2291, Northgate Dairy',
+              'The action and its parameters in the operator’s own words: refund, EUR 42.00, invoice INV-2291, Northgate Dairy',
               'A paragraph of generated prose that describes the action without committing to the numbers',
             ],
             [
@@ -205,18 +204,18 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Warnings are where a screen most often lies. The proposal came back, the customer record behind it did not, and the address on screen is from a cached copy. Two wrong answers are available: throw the whole load into `error`, which hides a proposal the operator could still have used, or drop the warning and render a clean success. Keep the status at `ready`, carry the warnings through, and let the operator decide with the same information you have.',
+            "Preserve partial-failure warnings and distinguish them from a clean success. This exercise permits approval after a load with warnings, under its stated policy. In a real refund workflow, missing required evidence or a stale amount may instead block approval. The operator should not be asked to waive a mandatory server-side rule simply because a warning was displayed.",
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A partial failure rendered as a success is worse than an outright failure. The operator approves on the assumption that everything on screen was read from the system of record, and nothing on the screen tells them otherwise. When you drop a warning you are not simplifying the interface, you are moving the risk onto somebody who cannot see it.',
+            "Do not conceal a failed dependency behind an unqualified success. Show the affected field, freshness/uncertainty and permitted next action. Whether the proposal remains usable depends on policy and the missing information; an explicit blocking error can be safer than an actionable warning.",
         },
         {
           kind: 'prose',
           body:
-            'Cancel is the control most often faked. `AbortController` gives you a signal you can pass to `fetch`, and aborting rejects the request promise with an `AbortError`, so your handler stops waiting. That is what cancel buys you: the screen stops caring about the answer. It does not reach into the ticket service and unmake a request that already arrived there.',
+            "AbortController supplies a signal accepted by APIs such as fetch. Aborting before completion can reject pending fetch/body work with the supplied reason, or AbortError by default; it can also stop client transport work. It does not guarantee the server stopped or reverse an accepted side effect. In this exercise cancellation invalidates local request ids without aborting the dependency promise. Reconcile any submitted approval through an authorized server workflow.",
         },
         {
           kind: 'trace',
@@ -248,7 +247,7 @@ export const FDE_M10: ModuleSource = {
               {
                 cells: ['idle', 'none', 'none', 'req 2', 'Cancelled. The answer to request 2 will be ignored'],
                 marks: [{ index: 1, role: 'compare' }, { index: 3, role: 'excluded' }],
-                note: 'The approval still left the browser, so the ticket service may hold it. The screen does not claim to know. Reconciliation happens on the server under the idempotency key, and the operator is told what to check.',
+                note: 'The approval still left the browser, so the ticket service may hold it. The screen does not claim to know. A production workflow needs separate authorized reconciliation under its real request/effect identity. This state-only fixture does not implement or display that reconciliation.',
               },
             ],
           },
@@ -257,23 +256,23 @@ export const FDE_M10: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Never let a cancelled request write into the state. The bug looks like this: the operator cancels, starts a different ticket, and the first answer lands two seconds later over the top of the second. Keep the id of the request whose answer you will still accept, and have every handler return early when the id it carries is not that one. RFC 9110 has the matching server-side rule: a safe retry needs an idempotency key, or the second delivery becomes a second refund.',
+            "Guard local UI updates by request identity so an abandoned response cannot overwrite a newer view. Reconciliation can still record the actual server outcome separately. Safe replay of a state-changing approval requires the operation\u2019s real idempotency/transaction contract; RFC 9110 defines method semantics but does not require every safe retry to carry a universal idempotency key. A key without server-enforced matching and atomic effect handling is insufficient.",
         },
         {
           kind: 'prose',
           body:
-            'Retry belongs to the operator, not to a loop. A failed load leaves the screen in `error` with the message the service gave, and the operator retries when they choose. A silent retry loop behind the spinner turns one slow load into three, and it hides the outage that a support engineer needs to see.',
+            "This exercise exposes retry through an explicit operator load action. Other interfaces can use bounded automatic retries for safe operations with deadlines, backoff and visible status. A silent unbounded loop can hide failure and add load, but automation does not inherently turn every slow call into three. Distinguish a failed load from an approval whose server outcome is unknown.",
         },
         {
           kind: 'prose',
           body:
-            'Now the part that is not a later pass. Every one of those transitions changes something a sighted operator sees at a glance and a screen-reader user finds out about only if you say so. MDN’s page on `aria-live` describes the two values worth knowing: `polite` waits for a pause in what the user is doing, `assertive` interrupts. A status line for loading, ready and approved is `polite`. An error the operator has to act on is the case for `assertive`, and using it for anything routine trains people to ignore it.',
+            "Expose meaningful status changes through persistent accessible status UI. aria-live polite normally waits for an opportunity to announce; assertive requests interruption and should be reserved for urgent information. Not every error needs assertive behavior. Screen-reader/browser behavior can vary, and focusable content can be discovered without a live announcement. Test the actual controls, announcement timing, focus order and wording rather than assuming a string guarantees delivery.",
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            "// The live region exists from the first render, empty. Adding the element\n// and the text at the same moment is the classic reason nothing is read out:\n// the assistive technology never saw the region appear.\n// <p id=\"workbench-status\" aria-live=\"polite\" />\n\nconst announce = message => {\n  state.statusMessage = message;\n  document.getElementById('workbench-status').textContent = message;\n};\n\n// One call per transition, from the state logic, not from the click handler.\n// A refused click announces too: an operator who pressed a button and heard\n// nothing does not know whether it worked.",
+            "// The live region exists from the first render, empty. Adding the element\n// and text together can miss an announcement in some browser/AT combinations.\n// Test actual delivery; element presence alone is not proof.\n// <p id=\"workbench-status\" aria-live=\"polite\" />\n\nconst announce = message => {\n  state.statusMessage = message;\n  document.getElementById('workbench-status').textContent = message;\n};\n\n// One call per transition, from the state logic, not from the click handler.\n// A refused click announces too: an operator who pressed a button and heard\n// nothing does not know whether it worked.",
           caption: 'The live region is a render target the state logic writes to, which is why the message belongs in the state.',
         },
         {
@@ -285,7 +284,7 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The rest of the accessibility work is the same shape: it is cheaper as part of the build than as a pass afterwards. The approve and cancel controls are real buttons, so they take focus and fire on Enter and Space. Nothing is signalled by colour alone, so a warning carries an icon and a word. The cancel target is at least 44 pixels, because an operator clearing a queue is fast rather than careful. None of that is expensive while you are writing the component, and all of it is expensive once the screen is in a customer’s hands.',
+            "Use native button elements with accessible names and appropriate disabled states; enabled buttons support keyboard activation. Do not rely on color alone. A 44-by-44 CSS-pixel target is this workbench\u2019s design goal, not a universal minimum for every WCAG conformance level. Check spacing, zoom, focus and pointer/keyboard use with the actual interface. Including accessibility in implementation reduces rework, but cost and behavior still need testing.",
         },
       ],
     },
@@ -316,12 +315,12 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A user acceptance test that cannot end in a rejection is a demo with a signature page. You know you are in one when the acceptance conditions get written the same week you run the session, from the behaviour you already know the system has. Write them earlier, with the customer, from the baseline you measured in M01, and then live with what they say.',
+            "Agree acceptance conditions, authority, representative inputs and measurement methods before evaluating the result. UAT can accept, conditionally accept under authorized policy, or reject. Conditions written in the same week are not inherently invalid; the problem is silently fitting them to a known outcome rather than documenting the intended requirement and any authorized change.",
         },
         {
           kind: 'prose',
           body:
-            'Three endings, and the middle one carries most real projects. Accept: every condition met, go live. Reject: something the project exists to do does not work, and the date moves. Accept with conditions: the parts that passed go live, the miss is recorded with the number rather than as a feeling, and both sides sign up to what happens if it has not closed by a named date. The condition is worthless without that date and that owner.',
+            "Record each observed criterion separately from the release decision. Accept when required conditions are satisfied and the authorized owner agrees. Reject or delay when a required gate fails without an authorized exception. Conditional acceptance requires explicit waiver authority, rollout scope, risks, remedy, owner, date and a response if unresolved. It is not automatically the commonest outcome or permission to deploy every passing part independently.",
         },
         {
           kind: 'table',
@@ -331,17 +330,17 @@ export const FDE_M10: ModuleSource = {
             [
               'Accept',
               'Each condition, the measured result against it, and the fixture or dataset it was measured on',
-              'The customer, from the go-live date onward',
+              'The named acceptance and operational owners under the agreed handoff',
             ],
             [
               'Accept with conditions',
               'The conditions met, the miss stated as a number against its target, the remedy, a date and a named owner',
-              'You, until the miss closes or the named date arrives',
+              'Named remedy and acceptance owners, including the response if the deadline is missed',
             ],
             [
               'Reject',
               'Which condition failed, by how much, what you now believe the cause is, and what changes before the next session',
-              'You, and the schedule moves rather than the condition',
+              'The named delivery and acceptance owners; any requirement change must be explicit',
             ],
           ],
         },
@@ -354,18 +353,18 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The demo has the same failure mode as the UAT. A run that only shows the happy path teaches the room that the system does not have a failure mode, and the first time it has one in front of a customer, it is a surprise instead of a known behaviour. Show one: a ticket the retriever has no evidence for, and the workbench declining to propose anything rather than guessing. That is thirty seconds, and it moves the abstention from an apology to a feature.',
+            "Include a relevant failure or abstention path in a demo and explain its consequence. A happy-path-only demo does not prove there are no failures. Showing a bounded no-evidence response helps set expectations, but the time required and the audience\u2019s understanding need observation. Abstention is useful under the actual quality and escalation policy.",
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Say which parts of a demo are fixtures. If the model responses in the recording are canned, the room needs to know that before somebody quotes the accuracy in a steering meeting. A demo shows that a code path works on the inputs you chose; it is not a measurement, and the evaluation from M07 is where the measurement lives.',
+            "Identify canned responses, synthetic inputs and live dependencies before presenting results. A demo can measure an observed duration or demonstrate chosen behavior, but it is not automatically a representative accuracy/reliability evaluation. Keep those measurements and their sampling limits explicit; a recording alone does not establish current live behavior.",
         },
         {
           kind: 'prose',
           body:
-            'Then the runbook, and the reader you are writing for is specific: on call, woken at three in the morning, has never opened this service, and is holding a phone. They need to find the page from the alert name, match a symptom, run one action, and know within minutes whether it worked. Prose about the architecture does not help them. A sequence does.',
+            "Write for the actual on-call audience and access context. Provide an alert-to-runbook link, symptom checks, a permitted mitigation, verification window, failure response and escalation. Commands need prerequisites, scope and safe execution instructions; do not encourage pasting unknown effects. Architecture context can help when concise, alongside an actionable sequence.",
         },
         {
           kind: 'code',
@@ -389,12 +388,12 @@ export const FDE_M10: ModuleSource = {
               {
                 cells: ['queue stuck on loading', 'ticket API 429 rate at 31%', 'not yet', 'not yet', 'not yet'],
                 marks: [{ index: 1, role: 'active' }],
-                note: 'Two signals on one dashboard. Latency is high and the ticket API is returning 429 for nearly a third of calls, so this is throttling rather than a workbench fault.',
+                note: 'Two signals on one dashboard. Latency is high and the ticket API is returning 429 for nearly a third of calls, which shows throttled responses, not their full cause. Workbench concurrency or retry behavior can contribute; inspect scope and supporting evidence.',
               },
               {
                 cells: ['queue stuck on loading', 'ticket API 429 rate at 31%', 'concurrency 6 to 2', 'not yet', 'not yet'],
                 marks: [{ index: 2, role: 'active' }],
-                note: 'The runbook gives one command: drop TICKET_API_CONCURRENCY to 2 and redeploy. The engineer runs it without needing to understand the retry design first.',
+                note: 'The runbook gives one command: drop TICKET_API_CONCURRENCY to 2 and redeploy. This assumes the engineer has the required access and the change is authorized and tested; record scope and verify the queue response.',
               },
               {
                 cells: ['queue stuck on loading', 'ticket API 429 rate at 31%', 'concurrency 6 to 2', 'still rising after 10 min', 'not yet'],
@@ -402,9 +401,9 @@ export const FDE_M10: ModuleSource = {
                 note: 'The verify step names the number and the wait: queue depth, falling, within ten minutes. It is still rising, so the action did not work and the engineer stops guessing.',
               },
               {
-                cells: ['queue stuck on loading', 'ticket API 429 rate at 31%', 'concurrency 6 to 2', 'still rising after 10 min', 'integrations rota paged 03:24'],
+                cells: ['queue stuck on loading', 'ticket API 429 rate at 31%', 'concurrency 6 to 2', 'still rising after 10 min', 'platform rota paged 03:27'],
                 marks: [{ index: 4, role: 'active' }],
-                note: 'The escalation is a rota, not a person, so it works when that person is on holiday. Twelve minutes from alert to the right team, and none of it required prior knowledge of the service.',
+                note: 'The escalation names a team rota rather than a particular person. Fifteen minutes after the 03:12 alert, the platform rota is paged under the stated rule. A rota still needs tested delivery, permissions and coverage; its name alone does not ensure help arrives.',
               },
             ],
           },
@@ -417,27 +416,27 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The last thing you leave behind goes to a product team who has never met this customer, and it is the piece forward deployed engineers are placed to write and most often skip. You watched the workflow from inside it, which is a position a product team cannot buy. The filter is two questions: can you state the need without naming the customer, and have you seen the same workaround invented somewhere else without anyone comparing notes?',
+            "Turn customer observations into evidence the product team can assess. State the underlying need, where it occurred, frequency, impact and alternatives without disclosing unnecessary identity. Repeated independent workarounds can strengthen a hypothesis, but one urgent request can also matter. Three sites of one customer do not prove demand across customers.",
         },
         {
           kind: 'table',
-          caption: 'The same rollout, four pieces of feedback, and which one generalises.',
+          caption: 'Four observations from one customer; repeated behavior strengthens a hypothesis without proving cross-customer demand.',
           headers: ['What came back', 'One customer or a pattern', 'Why'],
           rows: [
             [
               'Move the approve button left of the citation panel',
               'One customer',
-              'It encodes the layout of the tool Marlbrook is replacing, and nobody else is replacing that tool',
+              'It may reflect familiarity or a broader usability problem; investigate rather than inferring no other user needs it',
             ],
             [
               'Read our warehouse schema so proposals can include stock levels',
               'One customer',
-              'A real integration request for one system nobody else runs; it belongs in the backlog, not in the product',
+              'A specific integration request that may reveal a reusable need; prevalence and product fit have not been established',
             ],
             [
               'Operators at three sites reload before approving to see whether the ticket moved',
-              'A pattern',
-              'Three sites invented the same workaround for a need any approval workflow has: knowing whether what you are approving is still current',
+              'A within-customer pattern',
+              'Three sites of this one customer show a recurring freshness problem; cross-customer demand and solution choice remain unvalidated',
             ],
             [
               'Give us the audit export in our own CSV column order',
@@ -449,7 +448,7 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Write the pattern up so a product team can act on it without you in the room: the need in one sentence, where you saw it and how often, what the operators do instead today, what that workaround costs them, and what you would remove from the product if the need were served properly. The last item is the one that gets read, because it is the only part that says what this would replace.',
+            "Write the need, observed contexts/frequency, current workaround and measured or explicitly estimated cost. Name what remains unknown and what additional research would test broader applicability. Explain what a proposed feature could replace without treating a specific solution as already validated. Prioritization depends on user impact, cost and product strategy, not a single mandatory memo sentence.",
         },
         {
           kind: 'callout',
@@ -467,7 +466,7 @@ export const FDE_M10: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: the operator’s screen',
-      summary: 'The four questions an approval answers, the seven states, partial failure, a cancel that abandons, and the live region.',
+      summary: 'Informed approval, policy-dependent warnings, local cancellation, stale responses and accessible status feedback.',
       competencies: ['handoff'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m10-l1',
@@ -478,7 +477,7 @@ export const FDE_M10: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: acceptance, communication and what you leave behind',
-      summary: 'A UAT that can fail, a demo that shows the failure mode, the runbook for 03:00, and the feedback that generalises.',
+      summary: 'Authorized acceptance decisions, bounded demo evidence, verified runbooks and customer observations for product research.',
       competencies: ['handoff'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m10-l2',
@@ -562,7 +561,7 @@ export const FDE_M10: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'Marlbrook’s triage workbench proposes a refund and an operator approves it. This exercise is the state logic behind that screen. The grade drives it directly rather than through a rendered component: the transitions are what breaks in production, they are testable on their own, and every dependency here is an authored fixture on a virtual clock, not a live service.\n\nWrite `createOperatorSession(deps)`. It returns an object with `getState()`, `load(ticketId)`, `approve()`, `reject()`, `cancel()` and `noteRevision(revision)`.\n\n`deps` comes from the screen and holds three things. `deps.loadProposal(ticketId)` returns a promise for `{ proposal, citations, warnings }`, where `proposal` carries a `ticketId` and a `revision`. `deps.submitApproval(request)` returns a promise for `{ receiptId }`. `deps.announce(message)` writes one sentence into the live region a screen reader is watching. Either promise can reject with an `Error`.\n\n`getState()` returns the screen as it is now: `status`, `ticketId`, `proposal`, `citations`, `warnings`, `superseded`, `receiptId`, `error`, `statusMessage` and `abandoned`. It starts at `{ status: \'idle\', ticketId: null, proposal: null, citations: [], warnings: [], superseded: false, receiptId: null, error: null, statusMessage: \'\', abandoned: [] }`. Build a fresh object each call or hand back a copy; the grade reads fields, never identity.\n\nThe transitions:\n\n- `load(ticketId)` from any status except `loading` and `approving` clears the proposal, citations, warnings, `superseded`, `receiptId` and `error`, sets `ticketId`, goes to `loading` and calls `deps.loadProposal(ticketId)`. While a request is in flight it is refused, and `deps.loadProposal` is not called at all.\n- A load that resolves goes to `ready` with the proposal, its citations and its warnings. Warnings are a partial failure, not a failure: the status is still `ready`, the array is carried through unchanged, and approving stays possible. Dropping the warnings renders a clean success that is not true.\n- A load that rejects goes to `error`, keeps `ticketId`, clears the proposal and citations, and stores the rejection’s `message` in `error`.\n- `approve()` runs only from `ready` and only while `superseded` is false. It goes to `approving`, keeps the proposal and citations on screen, and calls `deps.submitApproval({ ticketId, revision })` with the loaded ticket id and the loaded proposal’s revision, and nothing else in the object. Resolving goes to `approved` with `receiptId`. Rejecting goes to `error` with the message, and the proposal stays on screen.\n- `reject()` runs only from `ready`. It goes to `rejected`, keeps the proposal and citations, and calls nothing.\n- `cancel()` runs only from `loading` or `approving`. It goes back to `idle`, clears everything, and pushes the in-flight request’s id onto `abandoned`.\n- `noteRevision(revision)` is the ticket service telling the screen the ticket has moved. From `ready`, when the number is greater than the loaded proposal’s revision, set `superseded` to true. Otherwise it changes nothing.\n\nThe part that matters most: after a cancel, or after the screen has moved on to another request, the answer to the abandoned request can still arrive. It has to change nothing at all — no status, no proposal, no receipt, no announcement. Give every request an id, remember which id you are still willing to accept an answer from, and have both handlers return early when the id they carry is not that one.\n\nAnnounce on every state change and on every refused operator action, by setting `statusMessage` and calling `deps.announce(message)` with the same string. A `noteRevision` that changes nothing announces nothing. The grade counts the announcements and checks `statusMessage` holds the last one; it proves a message exists on every transition and says nothing about whether the wording helps an operator, which stays your own review.\n\nCancelling stops the screen from acting on the answer. It does not un-send a request that already left, and one of the assertions holds you to that: the approval still reaches `deps.submitApproval`, and the screen simply refuses to claim it knows the outcome.',
+          'Marlbrook’s triage workbench proposes a refund and an operator approves it. This exercise is the state logic behind that screen. The grade drives it directly rather than through a rendered component: transition bugs are one possible production failure, they are testable on their own, and every dependency here is an authored fixture on a virtual clock, not a live service.\n\nWrite `createOperatorSession(deps)`. It returns an object with `getState()`, `load(ticketId)`, `approve()`, `reject()`, `cancel()` and `noteRevision(revision)`.\n\n`deps` comes from the screen and holds three things. `deps.loadProposal(ticketId)` returns a promise for `{ proposal, citations, warnings }`, where `proposal` carries a `ticketId` and a `revision`. `deps.submitApproval(request)` returns a promise for `{ receiptId }`. `deps.announce(message)` records the status sentence for the interface to present accessibly. Either promise can reject with an `Error`, whose message can be empty.\n\n`getState()` returns the screen as it is now: `status`, `ticketId`, `proposal`, `citations`, `warnings`, `superseded`, `receiptId`, `error`, `statusMessage` and `abandoned`. It starts at `{ status: \'idle\', ticketId: null, proposal: null, citations: [], warnings: [], superseded: false, receiptId: null, error: null, statusMessage: \'\', abandoned: [] }`. Build a fresh object each call or hand back a copy; the grade reads fields and checks that repeated snapshots are distinct.\n\nThe transitions:\n\n- `load(ticketId)` from any status except `loading` and `approving` clears the proposal, citations, warnings, `superseded`, `receiptId` and `error`, sets `ticketId`, goes to `loading` and calls `deps.loadProposal(ticketId)`. While a request is in flight it is refused, and `deps.loadProposal` is not called at all.\n- A load that resolves goes to `ready` with the proposal, its citations and its warnings. Under this exercise’s permissive warning policy, warnings are a partial failure: the status is still `ready`, the array is carried through unchanged, and approving stays possible. Dropping the warnings renders a clean success that is not true.\n- A load that rejects goes to `error`, keeps `ticketId`, clears the proposal and citations, and stores the rejection’s `message` in `error`.\n- `approve()` runs only from `ready` and only while `superseded` is false. It goes to `approving`, keeps the proposal and citations on screen, and calls `deps.submitApproval({ ticketId, revision })` with the loaded ticket id and the loaded proposal’s revision, and nothing else in the object. Resolving goes to `approved` with `receiptId`. Rejecting goes to `error` with the message, and the proposal stays on screen.\n- `reject()` runs only from `ready`. It goes to `rejected`, keeps the proposal and citations, and calls nothing.\n- `cancel()` runs only from `loading` or `approving`. It goes back to `idle`, clears everything, and pushes the in-flight request’s id onto `abandoned`.\n- `noteRevision(revision)` is the ticket service telling the screen the ticket has moved. From `ready`, when the number is greater than the loaded proposal’s revision, set `superseded` to true. If already superseded, or in any other case, it changes nothing.\n\nThe part that matters most: after a cancel, or after the screen has moved on to another request, the answer to the abandoned request can still arrive. It has to change nothing at all — no status, no proposal, no receipt, no announcement. Give every request an id, remember which id you are still willing to accept an answer from, and have both handlers return early when the id they carry is not that one.\n\nAnnounce on every state change and on every refused operator action, by setting `statusMessage` and calling `deps.announce(message)` with the same string. A `noteRevision` that changes nothing announces nothing. The selected checks count announcements and compare the last message; they establish those tested transitions, not every possible path or real assistive-technology delivery. Wording and accessibility need separate review.\n\nDomain: dependencies and results are trusted ordinary data. load/approval return settling promises without synchronous throws, announce is a nonthrowing recorder, revisions are nonnegative safe integers, ticket/receipt ids are nonempty strings and error messages are strings including empty. Each session receives at most 100 actions and arrays contain at most 100 entries. getState returns a fresh top-level snapshot; callers read nested data without mutating it. Request ids start at 1, increase for each accepted load/approval and are never reused; refused actions do not allocate ids. The immutable fixture helpers are available before declarations, with deferred instrumentation before graded calls. This stateful contract has an explicit action budget rather than a single input-size complexity target.\n\nCancelling stops the screen from acting on the answer. It does not un-send a request that already left, and one of the assertions holds you to that: the approval still reaches `deps.submitApproval`, and the screen simply refuses to claim it knows the outcome.',
         contract: [
           'Keep the name `createOperatorSession`; the grade builds sessions by name and drives them through the object you return.',
           'Use only what arrives in `deps`: `loadProposal`, `submitApproval` and `announce`. No timers of your own, no network, no globals.',
@@ -674,7 +673,7 @@ console.log(createOperatorSession(demoDeps));
             critical: false,
             weight: 2,
             detail:
-              'The check counts announcements and confirms `statusMessage` holds the last one. It establishes that a message exists on every transition. Whether the wording helps an operator working at speed is your own review, not this check.',
+              'The check counts announcements and confirms `statusMessage` holds the last one. It establishes the tested transitions and nonempty matching strings, not all possible paths or assistive-technology delivery. Wording and actual accessible behavior need separate review.',
           },
         ],
         tests: [

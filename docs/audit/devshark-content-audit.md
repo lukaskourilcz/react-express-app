@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n040
+
+Reviewed handoff lessons, reading activities and operator state exercise.
+Warnings follow explicit policy; client abort/local cancellation do not reverse
+server effects. Safe replay and actual accessible delivery require their own
+contracts/evidence. Conditional UAT acceptance needs authority, and recurring
+sites of one customer do not establish cross-customer demand. Runbook escalation
+now matches its15minute rule and platform rota. Demo measurements remain bounded.
+
+The reference now preserves empty Error messages and ignores repeated notices
+once a proposal is superseded. Cancellation/approval-error messages acknowledge
+unknown server outcomes. Six sandbox verdicts agree across old/isolated wrongs,
+late failed replies, refusal/id accounting, warning and revision boundaries.
+Both no-target analyses retain25XP. Trusted status recorder and timing arithmetic
+pass. Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff pass. Editorial/final
+readings are individual same-session judgments; no screen-reader, real payment,
+server reconciliation or operational acceptance is inferred.
+
+Coverage is **255/263 native**, **8 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 remains frozen at c550b98a with SQL/eleven exact-preview
+general checks passing; verify pending. N038–n040 are local. Production remains
+95 coding/210 native through #399. Parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n039
 
 Reviewed operations lessons, reading activities and retry/circuit exercise.
