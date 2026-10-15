@@ -26,6 +26,72 @@ const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach'
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
 const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delete', 'charAt', 'charCodeAt', 'at', 'test', 'isArray', 'isInteger', 'isFinite', 'abs', 'floor', 'ceil', 'round', 'min', 'max', 'log2', 'sqrt']);
 
+/** A factory's construction is not the workload of its returned callable.
+ * Follow locally visible value aliases, without interpreting arbitrary calls
+ * or mistaking map/Promise callbacks for functions returned to the caller.
+ * Unresolved dynamic factories still require manual review; this is not a
+ * general interprocedural type or lifetime analysis. */
+function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
+  if (!fn.body) return false;
+  const bindings = new Map<string, ts.Node[]>();
+  let visited = 0;
+  let limited = false;
+  const callable = (node: ts.Node): boolean => ts.isArrowFunction(node) || ts.isFunctionExpression(node)
+    || ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)
+    || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)
+    || ts.isClassExpression(node) || ts.isClassDeclaration(node);
+  const bind = (name: string, value: ts.Node) => bindings.set(name, [...(bindings.get(name) ?? []), value]);
+  const collect = (node: ts.Node): void => {
+    if (++visited > 12_000) { limited = true; return; }
+    if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name) bind(node.name.text, node);
+    if (callable(node)) return;
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name.text, node.initializer);
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left)) bind(node.left.text, node.right);
+    ts.forEachChild(node, collect);
+  };
+  collect(fn.body);
+  const deferred = (node: ts.Node, seen = new Set<ts.Node>()): boolean => {
+    if (++visited > 12_000) return true;
+    if (seen.has(node)) return false;
+    // Reachability has no per-path type state: visit each value node once,
+    // rather than copying a growing Set for a long chain of aliases.
+    seen.add(node);
+    const next = seen;
+    if (callable(node)) return true;
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)
+      || ts.isNonNullExpression(node) || ts.isSatisfiesExpression(node)) return deferred(node.expression, next);
+    if (ts.isIdentifier(node)) return (bindings.get(node.text) ?? []).some(value => deferred(value, next));
+    if (ts.isConditionalExpression(node)) return deferred(node.whenTrue, next) || deferred(node.whenFalse, next);
+    if (ts.isBinaryExpression(node)) {
+      if (node.operatorToken.kind === ts.SyntaxKind.CommaToken) return deferred(node.right, next);
+      if ([ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
+        return deferred(node.left, next) || deferred(node.right, next);
+      }
+    }
+    if (ts.isObjectLiteralExpression(node)) return node.properties.some(property => {
+      if (callable(property)) return true;
+      if (ts.isPropertyAssignment(property)) return deferred(property.initializer, next);
+      if (ts.isShorthandPropertyAssignment(property)) return deferred(property.name, next);
+      return ts.isSpreadAssignment(property) && deferred(property.expression, next);
+    });
+    if (ts.isArrayLiteralExpression(node)) return node.elements.some(element =>
+      deferred(ts.isSpreadElement(element) ? element.expression : element, next));
+    // An eager call's callback is not itself the returned value. Named helper
+    // calls are inspected separately by inspectFunction when they execute.
+    return false;
+  };
+  if (!ts.isBlock(fn.body)) return limited || deferred(fn.body);
+  let found = limited;
+  const returns = (node: ts.Node): void => {
+    if (++visited > 12_000) { found = true; return; }
+    if (callable(node)) return;
+    if (ts.isReturnStatement(node) && node.expression && deferred(node.expression)) found = true;
+    if (!found) ts.forEachChild(node, returns);
+  };
+  returns(fn.body);
+  return found;
+}
+
 function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
   const guidance = complexityGuidance(task);
   const assumptions = 'Static estimate, not a proof. Assumes input-sized collections, bounded callbacks, constant-time indexing and average constant-time Map/Set operations. Numeric loop bounds are treated as magnitudes, not bit lengths. Sort is modelled as n log n; actual engine behaviour can differ. Timing and extra space are not measured.';
@@ -74,6 +140,10 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   const evidence = new Set<string>();
   let visited = 0;
   const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
+    if (returnsDeferredWork(fn)) {
+      uncertainty = 'Construction and the returned callable workload need separate complexity scopes.';
+      return constant;
+    }
     const parameters = inputParameters ?? new Set(fn.parameters.flatMap((parameter) => ts.isIdentifier(parameter.name) ? [parameter.name.text] : []));
     const bounds = new Set(inherited);
     // A callback's item is not automatically a whole input-sized collection.

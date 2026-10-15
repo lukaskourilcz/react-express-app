@@ -3853,3 +3853,29 @@ B044–b045 are not yet released; frozen PR #409 separately contains b043 and
 runtime #408, with exact READY preview and eleven general guest checks. Required
 CI/production remain pending. No live-account, authenticated Premium,
 independent/human or complete-catalogue acceptance claim. Owner holds remain.
+
+## Factory workload scope correction (#410) — 15 October 2026
+
+Before correction, actual probes showed O(1) for two limiter boards, one curry
+board and all three latest-only boards, comparing cheap construction with a
+whole-sequence/per-gathering goal or deferred work. All nine actual boards now
+return null time/unknown assessment with the authored target preserved and base
+25 XP. The banner's existing null-time rule hides the entire complexity row.
+
+Bounded AST value reachability follows direct closures, local bindings and
+assignments, conditional returns, methods/accessors, callable containers and
+executed named helpers. A 500-link alias case stays unknown without copying a
+growing Set at every step. Dynamic value flow is still a manual-review limit;
+this is not general interprocedural/lifetime analysis or a benchmark. Eager map
+analysis remains O(n), a reliably quadratic eager solution still earns 15 XP,
+and an uncalled local factory does not replace its caller's eager workload.
+
+Final focused complexity contracts, API/script types, complete updated
+grading/Learn integrity, launch, build, native 263 bindings, both production
+dependency audits (zero vulnerabilities) and diff checks pass. All 1004 emitted
+HTML/JS/CSS files are byte-identical before/after this server-only correction.
+It adds no unique content review. B044–b045 separately have a ten-route
+responsive sweep in progress; no result is claimed here before completion.
+No schema/RLS, activation, access, reward ordering, handler-count or dependency
+change. Existing twelve handlers and owner holds remain. Required PR checks,
+merge and exact production are pending; #410 remains open.
