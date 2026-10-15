@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n007
+
+Reviewed the canonical binary-search reuse activity and all four D08 sorting
+questions. The reuse summary/source comment now match the actual shared coding
+reward handler, including repeat/revealed limits and no duplicate first reward,
+instead of incorrectly promising no coding XP. It binds the b013-reviewed task.
+Sorting questions now specify prior order within equal dates, peak live space
+including outputs/slices/frames, repeated original-value pairs versus fixed loop
+counts, and a variable-size level argument with an explicit linear merge.
+Option-position references and length cues are removed without changing keys.
+
+Eight canonical submissions through the native grading projection agree,
+including four valid forms whose base reward analyses return 25. This does not
+write live XP or establish authenticated enrollment acceptance. Actual authored
+sort snippets preserve or reverse the shown customer ties as stated, make 28
+selection comparisons on each eight-element input and repeat the 2/3 pair in
+the reverse-three example. Eight-element merges have sizes 2,2,2,2,4,4,8;
+space reasoning is manual and does not claim a heap measurement.
+
+All five exact-hash records have individual scores and final English model
+readings. Native bindings, path contracts, authored proof, API/script types,
+launch contracts, build, both production dependency audits (zero vulnerabilities),
+copy sweep and diff checks pass. No interface structure or permissions changed;
+previous public-catalogue probes do not establish authenticated question UI
+acceptance. Coverage is **95/263 native**, **168 remaining**, and **95/725
+coding**, **630 remaining**. Seventy coding/sixty native records are deployed;
+twenty-five coding/thirty-five native reviews await release. PR #394 is still
+frozen at 70803596 pending required verify; SQL and exact protected preview pass.
+
 ## 15 October continuation — five-item coding batch b013
 
 Reviewed canonical binary search, digit sum, inclusive multiple counting,

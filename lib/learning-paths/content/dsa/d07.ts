@@ -7,7 +7,7 @@
  *
  * The middle exercise authors no body: it reuses the ordinary JavaScript task
  * `js-binary-search`, reachable here through path enrollment rather than the
- * tier ladder, and its pass records path evidence only.
+ * tier ladder, and its pass uses the shared coding reward rules as well as path evidence.
  *
  * The two exercises that do carry a body are graded on read counts through a
  * Proxy declared in the task harness. That is a bounded contract — this
@@ -562,7 +562,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
       verification: 'machine_verified',
       title: 'Binary search: the existing coding task',
       summary:
-        'The devShark JavaScript task `js-binary-search`, opened here by your path enrollment instead of the ordinary tier 3 gate. Passing it records evidence for this module only: no coding XP, and no coding tier unlocks.',
+        'Practice the existing JavaScript binary-search task through your path enrollment. A passing submission records module evidence and uses the shared coding reward rules, including repeat and revealed-solution limits. Completing the same task through another screen does not grant a second first-completion reward.',
       competencies: ['searching', 'complexity'],
       estimatedMinutes: 15,
       reuseTaskId: 'js-binary-search',
