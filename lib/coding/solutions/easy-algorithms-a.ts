@@ -137,6 +137,10 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
   return second === -Infinity ? null : second;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[4,9,7,9,4];const copy=input.slice();const answer=secondLargest(input);return [answer,input.every((n,i)=>Object.is(n,copy[i])),secondLargest(Object.freeze([-1.5,-2.5,-1.5,-3])),secondLargest(Object.freeze([Number.MAX_VALUE,-Number.MAX_VALUE])),secondLargest(Object.freeze([Number.MIN_VALUE,0,-0]))];})()", expected: [7, true, -2.5, -1.7976931348623157e+308, 0] },
+      { call: "[secondLargest([2,1]),secondLargest([1,2]),secondLargest([-0,0]),secondLargest([3,3,3,2,2]),secondLargest([-1,-2]),secondLargest([-2,-1])]", expected: [1, 1, null, 2, -2, -2] },
+      { call: "(() => {const values=Object.freeze(Array.from({length:2000},(_,i)=>Math.floor((1999-i)/2)));return [secondLargest(values),values[0],values[1999],secondLargest(Object.freeze([]))];})()", expected: [998, 999, 0, null] },
+
       { call: 'secondLargest([1, 2, 3, 4, 5])', expected: 4 },
       { call: 'secondLargest([10])', expected: null },
       { call: 'secondLargest([3, 10, 10, 9, 1])', expected: 9 },
@@ -181,6 +185,10 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
   return best;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[5,0,4];const original=input.slice();return [bestTrade(input),input.every((v,i)=>Object.is(v,original[i])),bestTrade(Object.freeze([0,1])),bestTrade(Object.freeze([1,0])),bestTrade(Object.freeze([1.25,1.5,1])),bestTrade(Object.freeze([-0,0,2])),bestTrade([1,4,2,8])];})()", expected: [4, true, 1, 0, 0.25, 2, 7] },
+      { call: "(() => {for(let length=0;length<=5;length++){for(let code=0;code<Math.pow(4,length);code++){let digits=code;const values=[];for(let i=0;i<length;i++){values.push(digits%4);digits=Math.floor(digits/4);}let wanted=0;for(let buy=0;buy<length;buy++)for(let sell=buy+1;sell<length;sell++)wanted=Math.max(wanted,values[sell]-values[buy]);if(bestTrade(Object.freeze(values))!==wanted)return false;}}return true;})()", expected: true },
+      { call: "[bestTrade(Object.freeze(Array.from({length:2000},(_,i)=>i))),bestTrade(Object.freeze(Array.from({length:2000},(_,i)=>2000-i))),bestTrade(Object.freeze([1000000000,0,999999999])),bestTrade(Object.freeze([])),bestTrade(Object.freeze([0]))]", expected: [1999, 0, 999999999, 0, 0] },
+
       { call: 'bestTrade([3, 8, 1, 4])', expected: 5 },
       { call: 'bestTrade([1, 2, 3, 4, 5])', expected: 4 },
       { call: 'bestTrade([4, 4, 4])', expected: 0 },
@@ -232,6 +240,10 @@ const makeChange = (cents) => {
   return change;
 };`,
     hiddenTests: [
+      { call: "(() => {const first=makeChange(76),again=makeChange(76),zero=makeChange(0),zero2=makeChange(0);const initial=[first!==again,zero!==zero2,first[50]===1&&first[20]===1&&first[5]===1&&first[1]===1];first[50]=99;zero[1]=1;return [...initial,again[50]===1,Object.keys(zero2).length===0,makeChange(10000)[50]===200];})()", expected: [true, true, true, true, true, true] },
+      { call: "(() => {const coins=[1,2,5,10,20,50],best=[0];for(let amount=1;amount<=1000;amount++){let minimum=Infinity;for(const coin of coins)if(coin<=amount)minimum=Math.min(minimum,1+best[amount-coin]);best[amount]=minimum;const result=makeChange(amount);let count=0,total=0;for(const key of Object.keys(result)){const coin=Number(key),quantity=result[key];if(!coins.includes(coin)||!Number.isInteger(quantity)||quantity<1)return false;total+=coin*quantity;count+=quantity;}if(total!==amount||count!==minimum)return false;}return true;})()", expected: true },
+      { call: "[makeChange(0),makeChange(4),makeChange(6),makeChange(30),makeChange(60),makeChange(100)]", expected: [{}, {"2": 2}, {"5": 1, "1": 1}, {"20": 1, "10": 1}, {"50": 1, "10": 1}, {"50": 2}] },
+
       { call: 'makeChange(1)', expected: { 1: 1 } },
       { call: 'makeChange(99)', expected: { 50: 1, 20: 2, 5: 1, 2: 2 } },
       { call: 'makeChange(500)', expected: { 50: 10 } },

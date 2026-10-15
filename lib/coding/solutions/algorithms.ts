@@ -173,29 +173,46 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     junior: `const rotate = (numbers, k) => {
   const length = numbers.length;
-  if (length === 0) {
-    return numbers;
-  }
+  if (length === 0) return numbers;
   const steps = ((k % length) + length) % length;
-  const rotated = [];
-  for (let index = 0; index < length; index += 1) {
-    const source = (index - steps + length) % length;
-    rotated.push(numbers[source]);
-  }
-  for (let index = 0; index < length; index += 1) {
-    numbers[index] = rotated[index];
-  }
+  const reverse = (first, last) => {
+    while (first < last) {
+      const held = numbers[first];
+      numbers[first] = numbers[last];
+      numbers[last] = held;
+      first += 1;
+      last -= 1;
+    }
+  };
+  reverse(0, length - 1);
+  reverse(0, steps - 1);
+  reverse(steps, length - 1);
   return numbers;
 };`,
     senior: `const rotate = (numbers, k) => {
   const length = numbers.length;
   if (length === 0) return numbers;
   const steps = ((k % length) + length) % length;
-  // splice lifts the tail out in place; unshift puts it back at the front.
-  numbers.unshift(...numbers.splice(length - steps, steps));
+  let moved = 0;
+  for (let start = 0; moved < length; start += 1) {
+    let index = start;
+    let carried = numbers[index];
+    do {
+      const next = (index + steps) % length;
+      const held = numbers[next];
+      numbers[next] = carried;
+      carried = held;
+      index = next;
+      moved += 1;
+    } while (index !== start);
+  }
   return numbers;
 };`,
     hiddenTests: [
+      { call: "(() => {const object=Object.freeze({id:1}),symbol=Symbol(\"s\"),fn=()=>0;const a=[object,undefined,symbol,fn,-0];const result=rotate(a,-2);return [result===a,a.length,a[0]===symbol,a[1]===fn,Object.is(a[2],-0),a[3]===object,a[4]===undefined];})()", expected: [true, 5, true, true, true, true, true] },
+      { call: "(() => {for(let n=0;n<=9;n++){for(const k of [-Number.MAX_SAFE_INTEGER,-100,-12,-3,-1,-0,0,1,3,12,100,Number.MAX_SAFE_INTEGER]){const a=Array.from({length:n},(_,i)=>i),original=a.slice();const step=n?((k%n)+n)%n:0;const wanted=step?original.slice(n-step).concat(original.slice(0,n-step)):original;if(rotate(a,k)!==a||a.length!==n||!a.every((value,index)=>Object.is(value,wanted[index])))return false;}}return true;})()", expected: true },
+      { call: "(() => {const values=Array.from({length:2000},(_,i)=>i);const first=rotate(values,1000)===values&&values.every((v,i)=>v===(i+1000)%2000);const second=rotate(values,-1000)===values&&values.every((v,i)=>v===i);const empty=[];return [first,second,rotate(empty,-1)===empty];})()", expected: [true, true, true] },
+
       { call: '(() => { const values = [1, 2, 3, 4, 5, 6, 7]; rotate(values, 3); return values; })()', expected: [5, 6, 7, 1, 2, 3, 4] },
       { call: '(() => { const values = [9]; rotate(values, 5); return values; })()', expected: [9] },
       { call: '(() => { const values = [1, 2, 3]; return rotate(values, 1) === values; })()', expected: true },
@@ -224,10 +241,12 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return expected - actual;
 };`,
     senior: `const missingNumber = numbers =>
-  // Start at n (the value no index can contribute) and fold index minus value:
-  // one pass, no separate sums, nothing that can overflow before the subtraction.
   numbers.reduce((missing, value, index) => missing + index - value, numbers.length);`,
     hiddenTests: [
+      { call: "(() => {const input=[2,0];const original=input.slice();return [missingNumber(input),input.every((n,i)=>n===original[i]),missingNumber(Object.freeze([0,1,3])),missingNumber(Object.freeze([]))];})()", expected: [1, true, 2, 0] },
+      { call: "(() => {for(let n=0;n<=24;n++){for(let missing=0;missing<=n;missing++){const values=Object.freeze(Array.from({length:n+1},(_,i)=>i).filter(i=>i!==missing).reverse());if(missingNumber(values)!==missing)return false;}}return true;})()", expected: true },
+      { call: "[missingNumber(Object.freeze(Array.from({length:2000},(_,i)=>2000-i))),missingNumber(Object.freeze(Array.from({length:2000},(_,i)=>i))),missingNumber(Object.freeze(Array.from({length:2001},(_,i)=>i).filter(i=>i!==1337)))]", expected: [0, 2000, 1337] },
+
       { call: 'missingNumber([0, 2])', expected: 1 },
       { call: 'missingNumber([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])', expected: 0 },
       { call: 'missingNumber([0, 1, 2, 3, 5])', expected: 4 },

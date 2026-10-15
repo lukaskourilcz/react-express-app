@@ -465,7 +465,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
     tier: 3,
     focus: ['two-pointer', 'for'],
     title: 'Rotate an array in place',
-    prompt: 'Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in — not a copy — and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately.',
+    prompt: "Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in \u2014 not a copy \u2014 and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately. Input is a dense mutable array of at most 2000 values; treat each value as opaque and preserve object identity, duplicates, undefined and signed zero. k is any safe-integer Number; negative k rotates left, so rotate([1,2,3], -1) gives [2,3,1]. Preserve the length and return the exact input array even for an empty input or full turn. n is numbers.length. The three-reversal method is one option; a cycle-based rotation is also valid. Correct copying solutions can pass correctness, but the space goal is constant auxiliary storage.",
     starter: `const rotate = (numbers, k) => {
 
 };
@@ -486,7 +486,7 @@ console.log(values);
 };`,
     hints: ['Reversing the whole array puts the last k values at the front, but backwards. Reversing each of the two pieces separately then puts them the right way round.'],
     approach: [
-      'Take k modulo the length first, so a k past the end wraps and an empty array never divides by zero.',
+      'Return the input immediately when it is empty. Otherwise normalize with ((k % length) + length) % length, so negative and oversized steps wrap safely.',
       'Write a helper that reverses a stretch of the array in place by swapping the two ends and walking inwards.',
       'Reverse the whole array, which brings the last k values to the front in reverse order.',
       'Reverse the first k values, then reverse the rest; both pieces come out in their original order, now rotated.',
@@ -495,6 +495,7 @@ console.log(values);
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "rotate([1, 2, 3], -1)", "expected": [2, 3, 1], "label": "a negative step rotates left", "edge": true},
       { call: '(() => { const values = [1, 2, 3, 4, 5]; const returned = rotate(values, 2); return [values, returned === values]; })()', expected: [[4, 5, 1, 2, 3], true], label: 'it rotates in place and returns the same array' },
       { call: '(() => { const values = [1, 2]; rotate(values, 3); return values; })()', expected: [2, 1] },
       { call: '(() => { const values = []; rotate(values, 2); return values; })()', expected: [], label: 'empty input', edge: true },
@@ -516,7 +517,7 @@ console.log(values);
     tier: 1,
     focus: ['reduce', 'for'],
     title: 'Missing number',
-    prompt: 'Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 — the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space.',
+    prompt: "Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 \u2014 the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space. Input is a dense array of at most 2000 distinct integer Numbers, all in 0..n with exactly one absent. It may be frozen and must stay unchanged. These bounds keep the sum and 32-bit XOR alternatives exact; validation, coercion and duplicate handling are not part of this task. n is numbers.length. The sum is one approach; a correct XOR scan is also accepted.",
     starter: `const missingNumber = numbers => {
 
 };
