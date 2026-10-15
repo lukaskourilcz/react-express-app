@@ -1553,7 +1553,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["async-await", "promises"],
     title: "Retry on failure",
-    prompt: "Write `retry(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out. Resolve with the first success; when every attempt fails, reject with the last error rather than the first.",
+    prompt: "Write `retry(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out. Resolve with the first success; when every attempt fails, reject with the last error rather than the first. attempts is an integer from 0 through 1000. With a zero budget, never call fn and reject with undefined because no failure reason exists yet. fn is a supplied ordinary function called with no arguments; it returns an ordinary native Promise or throws synchronously. Await one attempt before starting another, with no overlap or extra call after success. A still-pending attempt consumes no further calls. Preserve the exact successful nonthenable value and final failure reason/reference, including functions, Symbols, undefined, NaN and -0; do not clone or wrap them. Each invocation has separate state and returns a new native Promise immediately. Use a loop rather than accumulating recursive calls. Target: O(n) time in the worst case and O(1) retained wrapper state, where n is 1 + attempts, excluding fn work, waiting and host scheduling.",
     starter: `const retry = (fn, attempts) => {
   
 };
@@ -1562,8 +1562,15 @@ console.log(flatten([[1,2],[3]]));
 // retry(async () => "ok", 3).then(result => console.log(result));
 `,
     skeleton: `const retry = async (fn, attempts) => {
-  // await the work, and decide what happens when it rejects
-  return /* resolved value */;
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      // await fn; return immediately on success
+    } catch (error) {
+      // remember the original reason before the next attempt
+    }
+  }
+  // no attempts, or no successes: reject with the last reason
 };`,
     hints: ["Loop over the attempts and return as soon as one resolves."],
     approach: [

@@ -1,3 +1,4 @@
+import { DEFERRED_BATCH_START } from './fixtures/deferred-batch-start';
 import { runtimePolicyForTask } from '../shared/coding-task-runtime';
 // Content contract for the coding catalogue.
 //   npm run test:coding
@@ -736,6 +737,7 @@ async function main() {
     if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
     else if (boards) fail(`${where}: missing the senior solution`);
     if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
+    if (where === 'js-mh-in-batches') out.push(['deferred-start', DEFERRED_BATCH_START]);
     return out;
   };
 

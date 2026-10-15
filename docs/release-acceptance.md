@@ -3902,3 +3902,59 @@ and diff checks pass. All forty b044–b045 target/base-25-XP checks pass again
 against the final inspector. All 1004 emitted UI files remain byte-identical;
 the existing 80-probe ten-task matrix therefore still applies. No new unique
 review or live user-data action. #410 awaits checked release.
+
+## Five-item continuation b046 — 15 October 2026
+
+Five async/graph tasks now define finally cleanup/exception precedence,
+initial batch membership and fail-fast current-batch rejection, latest-only
+observation timing and synchronous reentry, own-key-safe ancestor-Set JSON
+copying, and sequential retry budgets including zero. Correct spinner boards
+are retained; conflicting method variants are aligned. The latest-only target
+is per run, with factory analysis withheld under #410. Expanded graph/output
+size counts repeated shared subtrees, not only unique objects.
+
+Final evidence is 30/30 selected current-hash worker verdicts (20 valid forms,
+five starters, five wrongs), versus the original baseline's 25/30 labels. All
+twenty authored-target/base-25-XP checks pass. Cases include 1000 concurrent
+batch workers, 1000 overlapping wrapper calls, depth-100 frozen cyclic data,
+1000 shared records, lone surrogates and 1000 sequential failed attempts.
+No timer/clock is stubbed and no elapsed duration is used to infer Big O.
+
+Individual scores/final reading are in review-2026-10-15-b046.jsonl. All 260
+coding hashes match; 465 coding tasks remain and native stays 263/263.
+Curation/index generation, canonical coding with reversed hidden/native Run,
+API/script types, launch/build, native bindings, both production dependency
+audits (zero vulnerabilities), copy sweep (zero findings) and diff checks pass.
+B046 is not released. Frozen #411 contains only b044–b045 and scope #410;
+#409/runtime #408 are exact-production verified. No live-account, authenticated
+Premium, independent/human or complete-catalogue acceptance claim.
+
+## B046 batch-start fixture revision 2 — 15 October 2026
+
+The input-mutation fixture assumed the first worker registered before the
+wrapper returned. A valid async implementation captures items immediately and
+awaits one microtask before its first batch; the task does not forbid this.
+Adding that form reproduced a false failure (30/31 selected verdicts matched).
+The producer gate is now created before the wrapper is invoked, preserving the
+mutation check without that extra timing assumption. No prompt policy changed.
+
+Final evidence is 31/31 current-hash verdicts across the five items (21 valid
+forms, five starters, five wrongs), including seven for the revised batch item.
+Twenty existing target/base-25-XP checks plus the new form's check pass. The new
+form also passes every current visible/hidden check in isolated native Run and
+is a permanent canonical coding variant. Final curation/index generation,
+focused coding (reverse hidden/native Run), API/script types, launch/build,
+native 263, both production dependency audits (zero vulnerabilities) and diff
+checks pass. The original record/source commit are retained in history; one
+current record is revision 2, with zero added unique coverage. All 260 coding
+hashes match and 465 still require review. This remains unreleased.
+
+## PR #411 exact production and session checkpoint — 15 October 2026
+
+PR #411 passed required run 38722800635 at exact head 60caa1e873ac97fe8c094449be91080d5638a450 (verify 25m03s; SQL 39s), and merged at ad67b83113b06408fe68c2cba16b0160e1a3927f on 15 October 2026 at 11:18:23 UTC. READY production dpl_9aEaAboGu1kQn4xrPZW3TdJGKB4u matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four actual factory Submit checks pass on that production: valid free running-average/cancel-timer factories return null-time/unknown with authored targets preserved, and wrong implementations fail. All submissions grant zero XP and return null progress. Shipped coverage is 255/725 coding reviews and 263/263 native reviews. This does not establish authenticated Premium, physical-device, independent/human or full-catalogue acceptance.
+
+The owner requested ending this session and continuing the audit later. Current individual model review coverage is **260/725 coding** and **263/263 native**; **465 coding tasks remain** (66 JavaScript, 146 TypeScript, 183 React, 70 algorithms). Five completed b046 reviews remain in branch `codex/content-audit-b046-onward`: initial five-item commit e7888215, fixture revision 2 at 244245da, then a main merge and release-checkpoint documentation. Final b046 evidence is **31/31** selected current-hash verdicts (21 valid, five starters, five wrongs), **21** authored-target/base-25-XP checks, canonical native Run/reversed hidden order, and a permanent valid deferred-start variant. Current review hashes match all 260 records. All prescribed local types, grading/content gates, launch/build and both production dependency audits pass (zero vulnerabilities). B046 has not been merged or production-verified; its PR must pass mandatory checks before merge and exact production verification. The prior ten b044–b045 reviews have 61/61 selected verdicts, forty target checks and 80/80 responsive probes. Those visual results do not claim a separate B046 responsive matrix. Runtime #408 and factory-scope #410 are production-verified and complete.
+
+No b047 content changes or reviews were started. Suggested next five IDs, to re-read against the then-current catalogue: `js-run-tasks-in-order`, `js-mh-thread-from-list`, `js-mh-batch-loader`, `js-mh-shared-request`, `js-lru-cache`. Resume only when the owner requests it, reconcile inventory/hashes first, and continue one commit per five reviewed items. Bank/override/copy/longest-option reconciliation, hidden system-design review, authenticated/independent acceptance and all recorded owner holds remain separate. Preserve historical hides and held draft #365.
+
+The completed B046 cohort is prepared as a separate PR. Its mandatory CI, merge, and exact production verification remain pending at session end. Do not infer completed release from local checks. No schema/auth/RLS, entitlements, dependency or handler changes; twelve physical API handlers remain. No owner account state, leaderboard identity or positive score was used as a fixture.

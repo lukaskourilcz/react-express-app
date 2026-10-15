@@ -682,7 +682,7 @@ console.log(deepEqual({ a: [1, 2] }, { a: [1, 2] }));
     tier: 3,
     focus: ['async-await', 'slice', 'promises'],
     title: 'Upload in batches',
-    prompt: 'Uploading 1,000 photos at once overloads the server, and uploading them one by one is slow. Write an `async` function `inBatches(items, size, worker)` that calls `worker(item)` for every item, `size` items at a time. `worker` returns a promise. Start a whole batch together, wait with `Promise.all` until every item in it has finished, and only then start the next batch. Cut the batches with `slice`. Resolve with all the results, in the same order as `items`. If a worker rejects, `inBatches` rejects with the same error and starts no further batch.',
+    prompt: "Uploading 1,000 photos at once overloads the server, and uploading them one by one is slow. Write an `async` function `inBatches(items, size, worker)` that calls `worker(item)` for every item, `size` items at a time. `worker` returns a promise. Start a whole batch together, wait with `Promise.all` until every item in it has finished, and only then start the next batch. Cut the batches with `slice`. Resolve with all the results, in the same order as `items`. If a worker rejects, `inBatches` rejects with the same error and starts no further batch. items is a read-only dense array of at most 1000 opaque nonthenable values, possibly frozen. Capture its initial membership before invoking any worker; later caller edits must not affect this run. size is an integer from 1 through 1000. worker is an ordinary function that always returns an ordinary native Promise, without throwing synchronously; call it with exactly the item as its only argument. Invoke every worker in a batch before awaiting that batch. Preserve the exact fulfilled values and first observed rejection reason/reference, including undefined, functions, Symbols, NaN and -0. A batch rejection settles the result without waiting for other pending workers in that batch, including one that never settles; already started producers are not cancelled. Start no later batch after failure. Return a new native Promise with a fresh dense result array in original item order. Target: O(n) time and retained snapshot/result/handler space across the run, where n is 1 + the initial item count, excluding worker work, waiting and host scheduling.",
     starter: `const inBatches = async (items, size, worker) => {
 
 };
@@ -692,8 +692,9 @@ const upload = photo => new Promise(done => setTimeout(() => done(photo + " uplo
 inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
 `,
     skeleton: `const inBatches = async (items, size, worker) => {
+  const input = items.slice(); // capture before workers start
   const results = [];
-  for (let start = 0; start < items.length; start += size) {
+  for (let start = 0; start < input.length; start += size) {
     const batch = /* size items from start */;
     // start every item of the batch, then wait for all of them
     // add the batch's results
@@ -704,12 +705,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
       '`await` inside a `for` loop pauses the loop, so the next batch cannot start before the current one has finished.',
       '`Promise.all` resolves with the results in the order of the promises you gave it, whatever order they finish in, and it rejects as soon as one of them rejects.',
     ],
-    approach: [
-      'Loop over the start index of each batch, in steps of `size`.',
-      'Cut the batch with `items.slice(start, start + size)` and call `worker` on each item, which starts them all.',
-      'Await `Promise.all` of those promises and push its results onto the result list.',
-      'Return the list. An error thrown by `await` leaves the loop, so no later batch starts.',
-    ],
+    approach: ["Capture a shallow items.slice() snapshot before starting a worker.", "Loop over snapshot batch starts in steps of size and cut each batch with slice.", "Call worker once per item with only that item, await Promise.all for the batch, and append its values in order.", "Return the list. A rejection leaves the loop without starting a later batch or cancelling workers already started."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -728,7 +724,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
     tier: 3,
     focus: ['promises', 'closures', 'async-await'],
     title: 'Only the newest call answers',
-    prompt: 'A search box calls an async `search(query)` on every keystroke, and a slow answer to an old query can arrive after the answer to a newer one. Write `latestOnly(search)`, returning a function `run(...args)` that calls `search(...args)` straight away and returns a promise. If no other call of `run` has started by the time that search settles, the promise resolves to `{ stale: false, value }` with the search’s result, or rejects with its error if the search failed. If a later call has started in the meantime, the answer is stale: the promise resolves to `{ stale: true }`, whether the search succeeded or failed. Count the calls in the closure, and compare the count when each one settles. Two wrapped functions keep separate counts.',
+    prompt: "A search box calls an async `search(query)` on every keystroke, and a slow answer to an old query can arrive after the answer to a newer one. Write `latestOnly(search)`, returning a function `run(...args)` that calls `search(...args)` straight away and returns a promise. If no other call of `run` has started when the wrapper handles that search result, the promise resolves to `{ stale: false, value }` with the search\u2019s result, or rejects with its error if the search failed. If a later call has started in the meantime, the answer is stale: the promise resolves to `{ stale: true }`, whether the search succeeded or failed. Count the calls in the closure, and compare the count when handling each result or error. Two wrapped functions keep separate counts. search is a supplied ordinary function that returns an opaque nonthenable value or ordinary native Promise, or throws synchronously. It does not depend on this. Forward exactly the original arguments in order, without cloning or invoking values; each call has at most 20 arguments and each wrapper at most 10000 calls. Register the call before invoking search, including if search synchronously starts another run. Freshness is decided when the wrapper handles the result or error, not when the producer first settles: two back-to-back runs over already fulfilled promises make the first stale. A completed outcome never changes retroactively. Fresh values and rejection reasons retain exact identity, including functions, Symbols, undefined, NaN and -0. Stale outcomes have only their own stale: true property, without a value/error field. Every run returns a new native Promise, including a synchronous search throw. Separate wrappers have independent state. Creating the wrapper takes constant work. Target: O(n) time and retained argument/handler space per run, where n is 1 + that call's argument count, excluding search work, waiting and host scheduling.",
     starter: `const latestOnly = search => {
 
 };
@@ -752,7 +748,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
   };
 };`,
     hints: [
-      'Give each call a number from a counter that lives in the closure: `const mine = ++started`. When the search settles, the call is the newest one exactly when `mine === started`.',
+      'Give each call a number from a counter that lives in the closure: `const mine = ++started`. When the wrapper handles the search outcome, the call is the newest one exactly when `mine === started`.',
       'Put the `await` inside `try`. In `catch`, return `{ stale: true }` for an old call, and `throw error` again for the newest one.',
     ],
     approach: [
@@ -1148,7 +1144,7 @@ const diffSettings = (before, after) => {
     tier: 4,
     focus: ['json', 'recursion', 'map-set'],
     title: 'JSON that survives a loop',
-    prompt: '`JSON.stringify` throws on an object that contains itself, and real data does that: a tree node with a `parent` link, or a user whose friends list leads back to them. Write `safeStringify(value)`, returning the JSON text of `value` with every reference back to an object that contains it replaced by the string `"[Circular]"`. An object that appears twice without containing itself, such as one address used for billing and shipping, is not a loop and is written out both times. Walk the value recursively and build a copy. Keep the objects on the current path from the root in a `Set`: add an object before visiting its children and delete it afterwards, and put `"[Circular]"` in place of a child that is already in the set. Then pass the copy to `JSON.stringify`. The values are plain objects, arrays, strings, numbers, booleans and `null`. Leave `value` unchanged.',
+    prompt: "`JSON.stringify` throws on a circular reference reached through the properties it serializes, and real data does that: a tree node with a `parent` link, or a user whose friends list leads back to them. Write `safeStringify(value)`, returning the JSON text of `value` with every reference back to an object that contains it replaced by the string `\"[Circular]\"`. An object that appears twice without containing itself, such as one address used for billing and shipping, is not a loop and is written out both times. Walk the value recursively and build a copy. Keep the objects on the current path from the root in a `Set`: add an object before visiting its children and delete it afterwards, and put `\"[Circular]\"` in place of a child that is already in the set. Then pass the copy to `JSON.stringify`. The values are plain objects, arrays, strings, numbers, booleans and `null`. Leave `value` unchanged. Use standard own enumerable string-key order for ordinary plain or null-prototype data records. Arrays use ordinary data indices/default iteration: sparse holes serialize as null and extra named properties are ignored. Ignore non-enumerable and Symbol keys. There are no getters, proxies, custom iterators, callable toJSON hooks or BigInts. Numbers include NaN, infinities and -0 and follow standard JSON serialization; strings may contain Unicode and lone surrogates. Frozen/shared/cyclic inputs are valid and must stay unchanged. Preserve literal keys such as __proto__, constructor and toJSON as data. Each ancestor edge becomes the string \"[Circular]\"; sharing across siblings is expanded separately. Bound the expanded traversal to 5000 value occurrences, depth 100 and at most 20000 serialized UTF-16 units. Target: O(n) time and retained copy/output space, where n counts expanded value occurrences and inspected key/string units, counting a shared subtree again for each occurrence. Assume average constant-time Set operations and linear own-key enumeration/serialization. Counting only unique input objects would miss the cost of repeated shared subtrees.",
     starter: `const safeStringify = value => {
 
 };

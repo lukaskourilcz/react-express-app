@@ -1222,7 +1222,7 @@ postJson(logRequest, "/api/notes", { text: "hi" }).then(status => console.log(st
     tier: 2,
     focus: ['async-await'],
     title: 'Hide the spinner every time',
-    prompt: 'Write an `async` function `withSpinner(show, hide, task)`. Call `show()`, then `await task()` and return what it resolves to. Call `hide()` in a `finally` block, so the spinner goes away once the task has finished, whether it succeeded or failed. When `task` rejects, `withSpinner` rejects with the same error, after hiding the spinner.',
+    prompt: "Write an `async` function `withSpinner(show, hide, task)`. Call `show()`, then `await task()` and return what it resolves to. Call `hide()` in a `finally` block, so the spinner goes away once the task has finished, whether it succeeded or failed. When `task` rejects and `hide` returns normally, `withSpinner` rejects with the same error after hiding the spinner. show and hide are supplied synchronous functions with ignored nonthenable returns. Call each with no arguments. If show throws, return a rejected native Promise with that exact reason and call neither task nor hide. Otherwise task is called once with no arguments; it returns an ordinary native Promise or throws synchronously. Preserve its exact fulfilled value/rejection reason, including frozen records, functions, Symbols, undefined, NaN and -0. Call hide exactly once after task settles or throws; never while it is still pending. If hide throws, its exact reason becomes the result rejection even if task also failed. Leave input values unchanged and return a fresh native Promise immediately. Target: O(1) time and retained wrapper state, excluding callback work, waiting and host scheduling.",
     starter: `const withSpinner = async (show, hide, task) => {
 
 };
