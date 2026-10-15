@@ -34,6 +34,8 @@
       "anon",
       "authenticated"
     ],
-    "scope": "Eleven tables named in #236; no purge invoked and no grants changed."
+    "scope": "Eleven tables named in #236; no purge invoked and no grants changed.",
+    "directPrivilegeMethod": "has_table_privilege over all 88 role/table/privilege combinations, including MAINTAIN; zero true results",
+    "directPrivilegeCombinations": 88
   }
 }

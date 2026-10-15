@@ -273,36 +273,14 @@ const toProfile = (raw: ApiUser): Profile => {
   const { user_name: name, avatar_url: avatar = null } = raw;
   return { name, avatar };
 };`,
-    junior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = (raw: ApiUser): Profile => {
-  const name = raw.user_name;
-  let avatar: string | null = null;
-  if (raw.avatar_url !== undefined) {
-    avatar = raw.avatar_url;
-  }
-  return { name: name, avatar: avatar };
-};`,
-    senior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user_name, avatar: avatar_url ?? null });`,
+    junior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\n\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\n\nconst toProfile = (raw: ApiUser): Profile => {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  const profile: Profile = { name: name, avatar: avatar };\n  return profile;\n};",
+    senior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\nfunction toProfile(raw: ApiUser): Profile {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  return { name, avatar };\n}",
+    hiddenTypeTests: [{"code": "const __auditOptional: Profile = toProfile({user_name:\"a\",avatar_url:undefined});"}, {"code": "toProfile({user_name:\"a\",avatar_url:42});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const raw=Object.assign(Object.create(null),{user_name:' Ada \ud83e\udd88 ',avatar_url:' /a.png ',extra:'ignore'});Object.freeze(raw);const a=toProfile(raw),b=toProfile(raw);a.name='changed';return [a!==b,b.name,b.avatar,raw.user_name,Object.keys(b).sort().join(','),Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, " Ada \ud83e\udd88 ", " /a.png ", " Ada \ud83e\udd88 ", "avatar,name", true] },
+      { call: "[toProfile(Object.freeze({user_name:'',avatar_url:undefined})),toProfile(Object.freeze({user_name:'x',avatar_url:''})),toProfile(Object.freeze({user_name:'x'}))]", expected: [{"name": "", "avatar": null}, {"name": "x", "avatar": ""}, {"name": "x", "avatar": null}] },
+      { call: "(()=>{const name='x'.repeat(200),avatar='y'.repeat(200),out=toProfile({user_name:name,avatar_url:avatar});return [out.name===name,out.avatar===avatar];})()", expected: [true, true] },
+
       { call: 'toProfile({ user_name: "dee", avatar_url: undefined })', expected: { name: 'dee', avatar: null } },
       { call: 'Object.keys(toProfile({ user_name: "e", avatar_url: "/e.png" })).sort()', expected: ['avatar', 'name'] },
       { call: 'toProfile({ user_name: "f g", avatar_url: "https://x.dev/f.png" })', expected: { name: 'f g', avatar: 'https://x.dev/f.png' } },
@@ -336,7 +314,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
 };`,
     senior: `const routeNames = (route: string, airports: ReadonlyMap<string, string>): string[] =>
   route ? route.split("-").map((code) => airports.get(code.toUpperCase()) ?? code) : [];`,
+    hiddenTypeTests: [{"code": "routeNames(42,new Map<string,string>());", "rejects": true}],
     hiddenTests: [
+      { call: "routeNames('-prg--xyz-',new Map([['PRG','Prague'],['','Gap']]))", expected: ["Gap", "Prague", "Gap", "xyz", "Gap"] },
+      { call: "routeNames(' prg -\u00df-__proto__-x',new Map([[' PRG ','SpacePrague'],['SS','DoubleS'],['__PROTO__','ProtoAirport'],['X','']]))", expected: ["SpacePrague", "DoubleS", "ProtoAirport", ""] },
+      { call: "(()=>{const map=new Map([['P','Place']]),out=routeNames('p-'.repeat(1000),map);return [out.length,out.slice(0,1000).every(x=>x==='Place'),out[1000],map.size,map.get('P')];})()", expected: [1001, true, "", 1, "Place"] },
+      { call: "(()=>{const map=new Map([['','Empty']]),a=routeNames('',map),b=routeNames('',map);a.push('x');return [a!==b,b.length,a.length,map.get('')];})()", expected: [true, 0, 1, "Empty"] },
+
       { call: 'routeNames("JFK-PRG-JFK", new Map([["JFK", "New York JFK"], ["PRG", "Prague"]]))', expected: ['New York JFK', 'Prague', 'New York JFK'] },
       { call: 'routeNames("PrG", new Map([["PRG", "Prague"]]))', expected: ['Prague'] },
       { call: 'routeNames("LHR", new Map([["LHR", ""]]))', expected: [''] },
@@ -371,7 +355,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
   if (!next.delete(id)) next.add(id);
   return next;
 };`,
+    hiddenTypeTests: [{"code": "const __auditSource: ReadonlySet<string> = new Set([\"a\"]); toggle(__auditSource,\"b\").add(\"c\");"}],
     hiddenTests: [
+      { call: "[...toggle(new Set(['z','a']), 'm')]", expected: ["z", "a", "m"] },
+      { call: "[...toggle(new Set([' A ','a','','A']), 'a')]", expected: [" A ", "", "A"] },
+      { call: "(()=>{const input=Object.freeze(new Set(['z','a'])),a=toggle(input,'z'),b=toggle(input,'z');a.add('changed');return [a instanceof Set,a!==input,a!==b,[...input],[...b],a.size];})()", expected: [true, true, true, ["z", "a"], ["a"], 2] },
+      { call: "(()=>{const input=new Set(Array.from({length:1000},(_,i)=>String(999-i))),out=toggle(input,'1000');return [input.size,out.size,[...out][0],[...out][1000],out.has('1000'),input.has('1000')];})()", expected: [1000, 1001, "999", "1000", true, false] },
+
       { call: '(() => { const selected = new Set(["a"]); return toggle(selected, "b") !== selected; })()', expected: true },
       { call: '[...toggle(toggle(new Set(["x"]), "y"), "y")]', expected: ['x'] },
       { call: 'toggle(new Set(["a", "b", "c"]), "b").size', expected: 2 },
@@ -386,18 +376,7 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
     if (price === undefined) throw new Error(\`No price for \${product}\`);
     return total + price;
   }, 0);`,
-    junior: `const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number => {
-  let total = 0;
-  for (let i = 0; i < basket.length; i++) {
-    const product = basket[i];
-    if (!prices.has(product)) {
-      throw new Error("No price for " + product);
-    }
-    const price = prices.get(product) as number;
-    total = total + price;
-  }
-  return total;
-};`,
+    junior: "const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number =>\n  basket.reduce((total, product) => {\n    const price = prices.get(product);\n    if (price === undefined) {\n      throw new Error(\"No price for \" + product);\n    }\n    return total + price;\n  }, 0);",
     senior: `const priceOf = (prices: ReadonlyMap<string, number>, product: string): number => {
   const price = prices.get(product);
   if (price === undefined) throw new Error(\`No price for \${product}\`);
@@ -406,7 +385,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
 
 const basketTotal = (prices: ReadonlyMap<string, number>, basket: readonly string[]): number =>
   basket.reduce((total, product) => total + priceOf(prices, product), 0);`,
+    hiddenTypeTests: [{"code": "basketTotal(new Map<string,string>([[\"a\",\"1\"]]),[\"a\"]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{try{basketTotal(new Map(),['z','a']);return false;}catch(e){return e instanceof Error&&e.message==='No price for z';}})()", expected: true },
+      { call: "(()=>{const prices=new Map([['',0],[' A ',7],['a',11],['__proto__',13]]),basket=Object.freeze(['',' A ','a','__proto__',' A ']),before=JSON.stringify([...prices]),out=basketTotal(prices,basket);return [out,JSON.stringify([...prices])===before,basket.length,basket[0]];})()", expected: [38, true, 5, ""] },
+      { call: "(()=>{try{basketTotal(new Map(),['']);return false;}catch(e){return e instanceof Error&&e.message==='No price for ';}})()", expected: true },
+      { call: "basketTotal(new Map([['a',1000000000]]),Object.freeze(Array(1000).fill('a')))", expected: 1000000000000 },
+
       { call: 'basketTotal(new Map([["a", 1], ["b", 10], ["c", 100]]), ["c", "b", "a", "a"])', expected: 112 },
       { call: '(() => { try { basketTotal(new Map(), ["x"]); return "no error"; } catch (error) { return error instanceof Error; } })()', expected: true },
       { call: '(() => { try { return basketTotal(new Map([["tea", 350]]), ["cake", "tea"]); } catch (error) { return error.message; } })()', expected: 'No price for cake' },
@@ -704,24 +689,7 @@ const addTag = (note: Note, tag: string): Note => {
   // A new note and a new tag list: the caller's note is never touched.
   return { ...note, tags: [...note.tags, tag] };
 };`,
-    junior: `interface Note {
-  readonly title: string;
-  readonly tags: readonly string[];
-}
-
-const addTag = (note: Note, tag: string): Note => {
-  for (const existing of note.tags) {
-    if (existing === tag) {
-      return note;
-    }
-  }
-  const tags: string[] = [];
-  for (const existing of note.tags) {
-    tags.push(existing);
-  }
-  tags.push(tag);
-  return { title: note.title, tags: tags };
-};`,
+    junior: "interface Note {\n  readonly title: string;\n  readonly tags: readonly string[];\n}\n\nconst addTag = (note: Note, tag: string): Note => {\n  for (const existing of note.tags) {\n    if (existing === tag) return note;\n  }\n  return { ...note, tags: [...note.tags, tag] };\n};",
     senior: `interface Note {
   readonly title: string;
   readonly tags: readonly string[];
@@ -730,6 +698,10 @@ const addTag = (note: Note, tag: string): Note => {
 const addTag = (note: Note, tag: string): Note =>
   note.tags.includes(tag) ? note : { ...note, tags: [...note.tags, tag] };`,
     hiddenTests: [
+      { call: "(()=>{const extra=Object.freeze({}),sym=Symbol('meta'),note=Object.assign(Object.create(null),{title:' Ideas \ud83e\udd88 ',tags:Object.freeze(['','work','work']),extra});Object.defineProperty(note,'__proto__',{value:extra,enumerable:true});note[sym]=extra;Object.freeze(note);const out=addTag(note,'WORK');return [out!==note,out.tags!==note.tags,out.tags,addTag(note,'work')===note,out.extra===extra,out[sym]===extra,Object.hasOwn(out,'__proto__'),out.__proto__===extra,Object.getPrototypeOf(out)===Object.prototype,note.title,note.tags.length];})()", expected: [true, true, ["", "work", "work", "WORK"], true, true, true, true, true, true, " Ideas \ud83e\udd88 ", 3] },
+      { call: "(()=>{const inherited={ignored:'no'},note=Object.assign(Object.create(inherited),{title:'',tags:Object.freeze([])}),out=addTag(note,'');return [out.tags,addTag(out,'')===out,Object.hasOwn(out,'ignored'),note.tags.length];})()", expected: [[""], true, false, 0] },
+      { call: "(()=>{const note={title:'t',tags:Object.freeze(Array.from({length:1000},(_,i)=>String(i)))};for(let i=0;i<100;i++)note['extra'+i]=i;Object.freeze(note);const out=addTag(note,'new');return [out.tags.length,out.tags[1000],out.extra99,note.tags.length,Object.keys(out).length];})()", expected: [1001, "new", 99, 1000, 102] },
+
       { call: '(() => { const note = { title: "a", tags: ["x"] }; return addTag(note, "x") === note; })()', expected: true },
       { call: '(() => { const note = { title: "a", tags: ["x"] }; const next = addTag(note, "y"); return [next === note, next.tags === note.tags]; })()', expected: [false, false] },
       { call: 'addTag({ title: "t", tags: ["a", "b"] }, "c")', expected: { title: 't', tags: ['a', 'b', 'c'] } },
@@ -842,44 +814,14 @@ const RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 const byPriority = (tasks: readonly Task[]): Task[] =>
   [...tasks].sort((a, b) => RANK[a.priority] - RANK[b.priority]);`,
-    junior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const byPriority = (tasks: readonly Task[]): Task[] => {
-  const result: Task[] = [];
-  for (const task of tasks) {
-    if (task.priority === "high") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "medium") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "low") {
-      result.push(task);
-    }
-  }
-  return result;
-};`,
-    senior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const ORDER: readonly Priority[] = ["high", "medium", "low"];
-
-const byPriority = (tasks: readonly Task[]): Task[] =>
-  [...tasks].sort((a, b) => ORDER.indexOf(a.priority) - ORDER.indexOf(b.priority));`,
+    junior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };\nconst byPriority = (tasks: readonly Task[]): Task[] => {\n  const result: Task[] = [];\n  for (const task of tasks) result.push(task);\n  result.sort((left, right) => RANK[left.priority] - RANK[right.priority]);\n  return result;\n};",
+    senior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Readonly<Record<Priority, number>> = { high: 0, medium: 1, low: 2 };\nfunction byPriority(tasks: readonly Task[]): Task[] {\n  return tasks.toSorted((left, right) => RANK[left.priority] - RANK[right.priority]);\n}",
+    hiddenTypeTests: [{"code": "const __auditTasks: readonly Task[] = [{title:\"a\",priority:\"high\"}]; const __auditSorted: Task[] = byPriority(__auditTasks);"}],
     hiddenTests: [
+      { call: "(()=>{const extra=Object.freeze({}),a=Object.freeze({title:'same',priority:'low',extra}),b=Object.freeze({title:'same',priority:'high',extra}),c=Object.freeze({title:'same',priority:'high',extra}),input=Object.freeze([a,b,c,b]),out=byPriority(input),again=byPriority(input);out.push(a);return [out!==input,out!==again,again.length,again[0]===b,again[1]===c,again[2]===b,again[3]===a,again[0].extra===extra,input[0]===a];})()", expected: [true, true, 4, true, true, true, true, true, true] },
+      { call: "(()=>{const item=Object.freeze({title:'',priority:'medium'}),input=Object.freeze([item]),out=byPriority(input),empty=byPriority([]);out.push(item);return [out!==input,out[0]===item,input.length,empty!==byPriority([]),empty.length];})()", expected: [true, true, 1, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({title:String(i),priority:['low','high','medium'][i%3]}))),out=byPriority(input);const groups=['high','medium','low'];let ok=true,offset=0;for(const p of groups){for(const task of input)if(task.priority===p){ok=ok&&out[offset]===task;offset++;}}return [out.length,offset,ok,input[0].priority];})()", expected: [1000, 1000, true, "low"] },
+
       { call: 'byPriority([{ title: "a", priority: "medium" }, { title: "b", priority: "medium" }]).map((task) => task.title)', expected: ['a', 'b'] },
       { call: '(() => { const tasks = [{ title: "a", priority: "low" }, { title: "b", priority: "high" }]; byPriority(tasks); return tasks.map((task) => task.title); })()', expected: ['a', 'b'] },
       { call: 'byPriority([{ title: "1", priority: "low" }, { title: "2", priority: "medium" }, { title: "3", priority: "high" }, { title: "4", priority: "medium" }, { title: "5", priority: "low" }, { title: "6", priority: "high" }]).map((task) => task.title)', expected: ['3', '6', '2', '4', '1', '5'] },

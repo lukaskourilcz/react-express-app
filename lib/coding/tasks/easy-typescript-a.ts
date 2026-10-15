@@ -398,7 +398,7 @@ console.log(splitHeader([["name", "age"], ["Ada", "36"]]));
     tier: 2,
     focus: ['destructuring', 'optional'],
     title: 'Fields from the API',
-    prompt: 'An API sends each user as `{ user_name: string; avatar_url?: string }`, and the app wants `{ name: string; avatar: string | null }`. Declare the two shapes as `ApiUser` and `Profile`, then write `toProfile(raw: ApiUser): Profile` with one object destructuring that renames both fields and gives a missing avatar the default `null`. An empty `avatar_url` is still a value the API sent, so it stays.',
+    prompt: "An API sends each user as `{ user_name: string; avatar_url?: string }`, and the app wants `{ name: string; avatar: string | null }`. Declare the two shapes as `ApiUser` and `Profile`, then write `toProfile(raw: ApiUser): Profile` with one object destructuring that renames both fields and gives a missing avatar the default `null`. An empty `avatar_url` is still a value the API sent, so it stays. Domain: raw is a stable ordinary/null-prototype data record, possibly frozen, with own user_name and optional own avatar_url as declared. No accessors or proxies are involved. Each present string has at most 200 UTF-16 units, including empty text, whitespace and Unicode; preserve it exactly without trimming or URL validation. Missing or explicitly undefined avatar becomes null. Ignore extra fields and return a fresh plain mutable object with only name and avatar on every call, leaving raw unchanged. Target: O(1) time and output state: this renames two fields without traversing their string contents.",
     starter: `const toProfile = (raw) => {
 
 };
@@ -450,7 +450,7 @@ const toProfile = (raw: ApiUser): Profile => {
     tier: 1,
     focus: ['map-set', 'strings'],
     title: 'Airport codes to names',
-    prompt: 'A flight route is written as airport codes joined by dashes, such as `"PRG-LHR-JFK"`. Write `routeNames(route: string, airports: Map<string, string>): string[]`, splitting the route on `-` and looking each code up in the `Map`. The Map’s keys are in capitals, so `"prg"` finds `"PRG"`. A code the Map does not know stays exactly as it was written, and an empty route gives an empty list.',
+    prompt: "A flight route is written as airport codes joined by dashes, such as `\"PRG-LHR-JFK\"`. Write `routeNames(route: string, airports: Map<string, string>): string[]`, splitting the route on `-` and looking each code up in the `Map`. The Map\u2019s keys are in capitals, so `\"prg\"` finds `\"PRG\"`. A code the Map does not know stays exactly as it was written, and an empty route gives an empty list. Domain: route has at most 10000 UTF-16 units; split only on the literal hyphen and do not trim or discard tokens. Only an entirely empty route returns []; empty tokens inside any nonempty route are ordinary codes and may have a mapped name. Match keys using locale-independent toUpperCase; every key in the native Map is already in that normalized form. The stable Map has at most 1000 entries and string values up to 200 units, including empty names. Unknown codes retain their exact original text. Return a fresh mutable array every call, without changing the Map. Target: O(n) time and output space, where n is 1 + route length in UTF-16 units, accounting for splitting, case conversion and key hashing under average Map lookup costs; mapped string values are retained, not traversed.",
     starter: `const routeNames = (route: string, airports: Map<string, string>): string[] => {
 
 };
@@ -492,13 +492,13 @@ console.log(routeNames("PRG-LHR", airports));
     tier: 2,
     focus: ['map-set', 'readonly'],
     title: 'Select and deselect',
-    prompt: 'A photo grid keeps the ids of the selected photos in a `Set`. Write `toggle(selected: ReadonlySet<string>, id: string): Set<string>`, returning a new Set with `id` removed when it was selected and added when it was not. The parameter is a `ReadonlySet`, so `add` and `delete` do not exist on it: copy it into a new `Set` and change the copy.',
+    prompt: "A photo grid keeps the ids of the selected photos in a `Set`. Write `toggle(selected: ReadonlySet<string>, id: string): Set<string>`, returning a new Set with `id` removed when it was selected and added when it was not. The parameter has the ReadonlySet type, which exposes no add or delete during type checking. Copy it into a new Set and change the copy; the type alone does not freeze the runtime collection. Domain: selected is a read-only view of an ordinary native Set of at most 1000 strings, and id is a string, each at most 200 UTF-16 units. Match exact strings, including empty text, whitespace and case distinctions. Preserve native insertion order of all other entries; a newly added id goes last. Return a fresh mutable native Set every call and leave selected unchanged, including when a caller later changes the returned Set. ReadonlySet limits checked access; it does not remove runtime methods or freeze entries. Target: O(n) time and output space, where n is 1 + selected.size under average constant-time Set operations and bounded string comparison.",
     starter: `const toggle = (selected, id) => {
 
 };
 
-// Scratch pad. Change this and press Run.
-console.log([...toggle(new Set(["a"]), "b")]);
+// Scratch pad. Uncomment once your function returns a Set.
+// console.log([...toggle(new Set(["a"]), "b")]);
 `,
     skeleton: `const toggle = (selected: ReadonlySet<string>, id: string): Set<string> => {
   const next = new Set(selected);
@@ -534,7 +534,7 @@ console.log([...toggle(new Set(["a"]), "b")]);
     tier: 2,
     focus: ['map-set', 'reduce'],
     title: 'Price the basket',
-    prompt: 'A shop keeps its prices in cents in a `Map` from product name to price. Write `basketTotal(prices: ReadonlyMap<string, number>, basket: string[]): number`, adding up the price of every product in the basket with `reduce`. A product named twice is paid for twice. When a product has no price, the basket cannot be priced: throw an `Error` with the message `No price for <product>`, such as `No price for cake`.',
+    prompt: "A shop keeps its prices in cents in a `Map` from product name to price. Write `basketTotal(prices: ReadonlyMap<string, number>, basket: string[]): number`, adding up the price of every product in the basket with `reduce`. A product named twice is paid for twice. When a product has no price, the basket cannot be priced: throw an `Error` with the message `No price for <product>`, such as `No price for cake`. Domain: prices is a stable native Map viewed as ReadonlyMap, with at most 1000 product entries; each price is an integer number of cents from 0 through 1000000000. Basket is a dense array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Names match exactly, including empty text, whitespace and case. Leave the Map and basket unchanged. On multiple missing products, throw an Error naming the first missing product in basket order, with the exact message No price for <product>. Zero is a known price. Repeated names are charged repeatedly; the total stays within safe integer arithmetic. Target: O(n) time and O(1) working state, where n is 1 + basket length under bounded string hashing and average Map operations.",
     starter: `const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number => {
 
 };
@@ -881,7 +881,7 @@ const markDone = (todos: readonly Todo[], id: number): Todo[] =>
     tier: 2,
     focus: ['spread', 'readonly'],
     title: 'Add a tag to a read-only note',
-    prompt: 'Declare an interface `Note` with a `title` string and a list of `tags`, both `readonly`, and type the list as `readonly string[]`, so `note.tags.push(...)` is a compile error. Write `addTag(note: Note, tag: string): Note`, returning a new note whose tags end with `tag`, built with spread for the note and for its tags. When the note already has the tag, return the note unchanged.',
+    prompt: "Declare an interface `Note` with a `title` string and a list of `tags`, both `readonly`, and type the list as `readonly string[]`, so `note.tags.push(...)` is a compile error. Write `addTag(note: Note, tag: string): Note`, returning a new note whose tags end with `tag`, built with spread for the note and for its tags. When the note already has the tag, return the note unchanged. Domain: note is a stable ordinary or null-prototype data record, possibly frozen, with own title and a dense readonly tags array of at most 1000 strings. Title and tags contain at most 200 UTF-16 units each; match tags exactly, including case, whitespace and empty text. Preserve duplicates. Extra own enumerable string or symbol properties (at most 100, with bounded keys) hold opaque values: copy those properties shallowly when appending, without copying inherited properties. If the tag exists, return the exact original note. Otherwise return a new plain note and new tag array without changing the input. The readonly type is a checked view; runtime freezing is optional. No getters or proxies are involved. Target: O(n) time and output space, where n is 1 + tag count + copied property count, under bounded string comparisons.",
     starter: `const addTag = (note, tag) => {
 
 };
@@ -1028,7 +1028,7 @@ console.log(playlistSeconds(["3:05", "0:55"]));
     tier: 2,
     focus: ['sort', 'literal-types'],
     title: 'Most urgent first',
-    prompt: 'Declare `type Priority = "high" | "medium" | "low"` and an interface `Task` with a `title` string and a `priority`. Write `byPriority(tasks: readonly Task[]): Task[]`, returning a new list with the high tasks first, then medium, then low, each group in its original order. Sorting the words alphabetically would give high, low, medium, so rank them with a `Record<Priority, number>` and compare the ranks.',
+    prompt: "Declare `type Priority = \"high\" | \"medium\" | \"low\"` and an interface `Task` with a `title` string and a `priority`. Write `byPriority(tasks: readonly Task[]): Task[]`, returning a new list with the high tasks first, then medium, then low, each group in its original order. Sorting the words alphabetically would give high, low, medium, so rank them with a `Record<Priority, number>` and compare the ranks. Domain: a dense read-only array of at most 1000 stable Task records, possibly frozen, with title strings up to 200 UTF-16 units and exactly one of the declared priorities. Other fields are opaque and untouched. Preserve each original task reference, all duplicates and input order inside equal-priority groups. Return a fresh mutable outer array on every call, including empty or singleton input; do not change the input or task records. Target: O(n log n) time for the comparison-sort approach and O(n) output space, where n is 1 + task count and rank comparison is constant work. Sort costs use the comparison-sort model, not a language-level guarantee. A stable three-bucket traversal is also a valid faster alternative.",
     starter: `const byPriority = (tasks) => {
 
 };

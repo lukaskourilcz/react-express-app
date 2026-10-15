@@ -623,12 +623,13 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
   }
   return delays;
 };`,
-    senior: `const retryDelays = (first: number, cap: number): readonly number[] => {
-  const delays: number[] = [];
-  for (let wait = first; first > 0 && wait <= cap; wait *= 2) delays.push(wait);
-  return Object.freeze(delays);
-};`,
+    senior: "function retryDelays(first: number, cap: number): readonly number[] {\n  const delays: number[] = [];\n  if (first <= 0) return Object.freeze(delays);\n  let wait = first;\n  while (wait <= cap) {\n    delays.push(wait);\n    wait *= 2;\n  }\n  return Object.freeze(delays);\n}",
+    hiddenTypeTests: [{"code": "const __auditMutable: number[] = retryDelays(1,8);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=retryDelays(1,8),b=retryDelays(5,5),c=retryDelays(0,100);return [Array.isArray(a),a,b,c];})()", expected: [true, [1, 2, 4, 8], [5], []] },
+      { call: "(()=>{const result=retryDelays(1,1000000000);return [result.length,result[0],result[result.length-1],result.every((x,i)=>x===2**i)];})()", expected: [30, 1, 536870912, true] },
+      { call: "[retryDelays(1,-1),retryDelays(-1,-1),retryDelays(1000000000,1000000000),retryDelays(1000000000,999999999)]", expected: [[], [], [1000000000], []] },
+
       { call: 'retryDelays(1, 10)', expected: [1, 2, 4, 8] },
       { call: 'retryDelays(5, 5)', expected: [5] },
       { call: 'retryDelays(-10, 100)', expected: [] },
@@ -744,15 +745,7 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
 
   /* ── Map and Set ──────────────────────────────────────────────────── */
   'ts-easy3-squares-visited': {
-    solution: `const visited = (path: readonly [number, number][]): number => {
-  // Strings compare by value; two [x, y] arrays never do.
-  const seen = new Set<string>();
-  for (const [x, y] of path) {
-    // The comma keeps [1, 23] and [12, 3] apart.
-    seen.add(\`\${x},\${y}\`);
-  }
-  return seen.size;
-};`,
+    solution: "const visited = (path: readonly [number, number][]): number => {\n  // Strings compare by value; distinct [x, y] arrays compare by identity.\n  const seen = new Set<string>();\n  for (const [x, y] of path) {\n    // The comma keeps [1, 23] and [12, 3] apart.\n    seen.add(`${x},${y}`);\n  }\n  return seen.size;\n};",
     junior: `const visited = (path: readonly [number, number][]): number => {
   const seen = new Set<string>();
   for (let i = 0; i < path.length; i++) {
@@ -765,7 +758,12 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
 };`,
     senior: `const visited = (path: readonly (readonly [number, number])[]): number =>
   new Set(path.map(([x, y]) => \`\${x},\${y}\`)).size;`,
+    hiddenTypeTests: [{"code": "const __auditText: string = visited([[0,0]]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze([1,23]),b=Object.freeze([12,3]),path=Object.freeze([a,a,Object.freeze([1,23]),b]);return [visited(path),path.length,path[0]===a,path[3]===b];})()", expected: [2, 4, true, true] },
+      { call: "[visited(Object.freeze([Object.freeze([0,-0]),Object.freeze([-0,0])])),visited([[-1000000000,1000000000],[1000000000,-1000000000]])]", expected: [1, 2] },
+      { call: "(()=>{const path=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze([i%100,Math.floor(i/100)%2])));return [visited(path),path.length,path[999][0],path[999][1]];})()", expected: [200, 1000, 99, 1] },
+
       { call: 'visited([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, 0]])', expected: 4 },
       { call: 'visited([[0, 0], [0, 0], [0, 1], [0, 0], [0, 1]])', expected: 2 },
       { call: 'visited([[1, 23], [12, 3]])', expected: 2 },
@@ -1007,13 +1005,13 @@ const nextLight = (light: Light, steps: number): Light => {
   }
   return current;
 };`,
-    senior: `type Light = "red" | "green" | "amber";
-
-const NEXT: Readonly<Record<Light, Light>> = { red: "green", green: "amber", amber: "red" };
-
-const nextLight = (light: Light, steps: number): Light =>
-  Array.from({ length: steps }).reduce<Light>((current) => NEXT[current], light);`,
+    senior: "type Light = \"red\" | \"green\" | \"amber\";\n\n// Record<Light, Light>: a missing light or a misspelt one is a compile error.\nconst NEXT: Record<Light, Light> = {\n  red: \"green\",\n  green: \"amber\",\n  amber: \"red\",\n};\n\nfunction nextLight(light: Light, steps: number): Light {\n  let current = light;\n  let remaining = steps;\n  while (remaining > 0) {\n    current = NEXT[current];\n    remaining -= 1;\n  }\n  return current;\n}",
+    hiddenTypeTests: [{"code": "nextLight(\"red\", \"2\");", "rejects": true}],
     hiddenTests: [
+      { call: "['red','green','amber'].map(light=>nextLight(light,10000))", expected: ["green", "amber", "red"] },
+      { call: "(()=>{const out=[];for(const start of ['red','green','amber']){let current=start;for(let i=0;i<30;i++){out.push(nextLight(start,i)===current);current=NEXT[current];}}return out.every(Boolean);})()", expected: true },
+      { call: "(()=>{const before=[NEXT.red,NEXT.green,NEXT.amber];nextLight('red',9999);nextLight('green',0);return [NEXT.red===before[0],NEXT.green===before[1],NEXT.amber===before[2],nextLight('amber',0)];})()", expected: [true, true, true, "amber"] },
+
       { call: 'nextLight("green", 2)', expected: 'red' },
       { call: 'nextLight("amber", 5)', expected: 'green' },
       { call: 'nextLight("red", 7)', expected: 'green' },
