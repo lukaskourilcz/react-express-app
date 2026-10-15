@@ -509,41 +509,15 @@ const trimBlank = (lines: readonly string[]): string[] => {
     ],
   },
   'ts-easy2-where-a-value-sits': {
-    solution: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  let start = 0;
-  let end = sorted.length - 1;
-  while (start <= end && sorted[start] !== value) start++;
-  // start passed end: the value is not in the list.
-  if (start > end) return null;
-  // start found the value, so end stops at start at the latest.
-  while (sorted[end] !== value) end--;
-  return [start, end];
-};`,
-    junior: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  let first = -1;
-  for (let i = 0; i < sorted.length; i++) {
-    if (sorted[i] === value) {
-      first = i;
-      break;
-    }
-  }
-  if (first === -1) {
-    return null;
-  }
-  let last = first;
-  for (let i = sorted.length - 1; i >= first; i--) {
-    if (sorted[i] === value) {
-      last = i;
-      break;
-    }
-  }
-  return [first, last];
-};`,
-    senior: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  const start = sorted.indexOf(value);
-  return start === -1 ? null : [start, sorted.lastIndexOf(value)];
-};`,
+    solution: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  let start = 0;\n  let end = sorted.length - 1;\n  while (start <= end && sorted[start] !== value) start++;\n  // start passed end: the value is not in the list.\n  if (start > end) return null;\n  // start found the value, so end stops at start at the latest.\n  while (sorted[end] !== value) end--;\n  return [start, end];\n};",
+    junior: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  let first = -1;\n  for (let i = 0; i < sorted.length; i++) {\n    if (sorted[i] === value) {\n      first = i;\n      break;\n    }\n  }\n  if (first === -1) {\n    return null;\n  }\n  let last = first;\n  for (let i = sorted.length - 1; i >= first; i--) {\n    if (sorted[i] === value) {\n      last = i;\n      break;\n    }\n  }\n  return [first, last];\n};",
+    senior: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  const start = sorted.indexOf(value);\n  return start === -1 ? null : [start, sorted.lastIndexOf(value)];\n};",
+    hiddenTypeTests: [{"code": "const __b065Readonly:readonly number[]=[1];const __b065Pair=spanOf(__b065Readonly,1);if(__b065Pair){__b065Pair[0]=2;const __b065Index:number=__b065Pair[1];}"}],
     hiddenTests: [
+      { call: "[spanOf(Object.freeze([-2,-0,0,0.5,0.5,3]),0),spanOf(Object.freeze([-2,-0,0,0.5,0.5,3]),0.5),spanOf(Object.freeze([-1]),-1),spanOf(Object.freeze([]),2),spanOf([-2,0,1],-3)]", expected: [[1, 2], [3, 4], [0, 0], null, null] },
+      { call: "(() => { const input=[1,2,2,3];const a=spanOf(input,2);const b=spanOf(input,2);a[0]=99;return [input,a!==b,b]; })()", expected: [[1, 2, 2, 3], true, [1, 2]] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},()=>7));return [spanOf(input,7),spanOf(input,8),input.length];})()", expected: [[0, 999], null, 1000] },
+
       { call: 'spanOf([0, 0, 1], 0)', expected: [0, 1] },
       { call: 'spanOf([1, 2, 3], 1)', expected: [0, 0] },
       { call: 'spanOf([1, 2, 3], 3)', expected: [2, 2] },

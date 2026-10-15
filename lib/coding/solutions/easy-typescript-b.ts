@@ -678,42 +678,16 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
     ],
   },
   'ts-easy3-alternate-playlists': {
-    solution: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
-  const mixed: T[] = [];
-  let i = 0;
-  let j = 0;
-  // Go on until both lists are used up; each index moves only when its list gives an item.
-  while (i < a.length || j < b.length) {
-    // Test the index, not the item: "" and 0 are items too.
-    if (i < a.length) mixed.push(a[i++]);
-    if (j < b.length) mixed.push(b[j++]);
-  }
-  return mixed;
-};`,
-    junior: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
-  const mixed: T[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    mixed.push(a[i]);
-    mixed.push(b[j]);
-    i = i + 1;
-    j = j + 1;
-  }
-  while (i < a.length) {
-    mixed.push(a[i]);
-    i = i + 1;
-  }
-  while (j < b.length) {
-    mixed.push(b[j]);
-    j = j + 1;
-  }
-  return mixed;
-};`,
-    senior: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] =>
-  Array.from({ length: Math.max(a.length, b.length) }, (_, k) => k)
-    .flatMap((k) => [...a.slice(k, k + 1), ...b.slice(k, k + 1)]);`,
+    solution: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n  const mixed: T[] = [];\n  let i = 0;\n  let j = 0;\n  // Go on until both lists are used up; each index moves only when its list gives an item.\n  while (i < a.length || j < b.length) {\n    // Test the index, not the item: \"\" and 0 are items too.\n    if (i < a.length) mixed.push(a[i++]);\n    if (j < b.length) mixed.push(b[j++]);\n  }\n  return mixed;\n};",
+    junior: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n  const mixed: T[] = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length && j < b.length) {\n    mixed.push(a[i]);\n    mixed.push(b[j]);\n    i = i + 1;\n    j = j + 1;\n  }\n  while (i < a.length) {\n    mixed.push(a[i]);\n    i = i + 1;\n  }\n  while (j < b.length) {\n    mixed.push(b[j]);\n    j = j + 1;\n  }\n  return mixed;\n};",
+    senior: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] =>\n  Array.from({ length: Math.max(a.length, b.length) }, (_, k) => k)\n    .flatMap((k) => [...a.slice(k, k + 1), ...b.slice(k, k + 1)]);",
+    hiddenTypeTests: [{"code": "const __b065Mixed:(string|number)[]=alternate<string|number>(Object.freeze([\"x\"]),Object.freeze([1]));__b065Mixed.push(2);"}],
     hiddenTests: [
+      { call: "(() => { const obj=Object.freeze({x:1}),fn=()=>0,sym=Symbol(\"x\"),arr=Object.freeze([1]);const a=Object.freeze([obj,undefined,sym]),b=Object.freeze([fn,null,arr]);const out=alternate(a,b);return [out.length,out[0]===obj,out[1]===fn,out[2]===undefined,out[3]===null,out[4]===sym,out[5]===arr,a[0]===obj,b[2]===arr]; })()", expected: [6, true, true, true, true, true, true, true, true] },
+      { call: "(() => {const empty=Object.freeze([]);const a=alternate(empty,empty),b=alternate(empty,empty);const other=Object.freeze([0,1]);const one=alternate(empty,other);a.push(7);one.push(8);return [a!==b,a!==empty,b.length,one,other];})()", expected: [true, true, 0, [0, 1, 8], [0, 1]] },
+      { call: "(() => {const x={x:1};const list=Object.freeze([x,x]);const out=alternate(list,list);return [out.length,out.every(item=>item===x),out!==list,alternate([false,false],[false]).length];})()", expected: [4, true, true, 3] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>-i));const out=alternate(a,b);return [out.length,out[0],Object.is(out[1],-0),out[1998],out[1999],a.length,b.length];})()", expected: [2000, 0, true, 999, -999, 1000, 1000] },
+
       { call: 'alternate([], [])', expected: [] },
       { call: 'alternate([0, 0, 0], [7])', expected: [0, 7, 0, 0] },
       { call: 'alternate(["", "b"], ["c", ""])', expected: ['', 'c', 'b', ''] },

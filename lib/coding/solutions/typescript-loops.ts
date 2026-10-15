@@ -448,116 +448,62 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-values-of-a-type": {
-    solution: `type TypeName = "string" | "number" | "boolean";
-
-type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
-
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] =>
-  values.filter((value): value is OfType<N> => typeof value === name);`,
-    junior: `type TypeName = "string" | "number" | "boolean";
-
-type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
-
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] => {
-  const found: OfType<N>[] = [];
-  for (const value of values) {
-    if (typeof value === name) {
-      found.push(value as OfType<N>);
-    }
-  }
-  return found;
-};`,
-    senior: `type TypeName = "string" | "number" | "boolean";
-
-type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
-
-// A guard factory: hasType("number") is a reusable predicate typed for that one name.
-const hasType = <N extends TypeName>(name: N) => (value: unknown): value is OfType<N> => typeof value === name;
-
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] => values.filter(hasType(name));`,
+    solution: "type TypeName = \"string\" | \"number\" | \"boolean\";\n\ntype OfType<N extends TypeName> = N extends \"string\" ? string : N extends \"number\" ? number : boolean;\n\nconst ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] =>\n  values.filter((value): value is OfType<N> => typeof value === name);",
+    junior: "type TypeName = \"string\" | \"number\" | \"boolean\";\n\ntype OfType<N extends TypeName> = N extends \"string\" ? string : N extends \"number\" ? number : boolean;\n\nconst ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] => {\n  const found: OfType<N>[] = [];\n  for (const value of values) {\n    if (typeof value === name) {\n      found.push(value as OfType<N>);\n    }\n  }\n  return found;\n};",
+    senior: "type TypeName = \"string\" | \"number\" | \"boolean\";\n\ntype OfType<N extends TypeName> = N extends \"string\" ? string : N extends \"number\" ? number : boolean;\n\nconst hasType = <N extends TypeName>(name: N) => (value: unknown): value is OfType<N> => typeof value === name;\n\nconst ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] => values.filter(hasType(name));",
     hiddenTests: [
+      { call: "(() => { const input=[NaN,-0,Infinity,-Infinity,1,\"1\",false,new Number(2),new String(\"x\"),new Boolean(true),null,undefined,Symbol(\"x\"),1n,()=>0];const n=ofType(input,\"number\");return [n.length,Number.isNaN(n[0]),Object.is(n[1],-0),n[2]===Infinity,n[3]===-Infinity,n[4]===1,ofType(input,\"string\").join(\",\"),ofType(input,\"boolean\")[0]===false]; })()", expected: [5, true, true, true, true, true, "1", true] },
+      { call: "(() => { const input=Object.freeze([1,2]);const a=ofType(input,\"number\"),b=ofType(input,\"number\");const empty=Object.freeze([]);const e=ofType(empty,\"boolean\"),f=ofType(empty,\"boolean\");a.push(3);e.push(true);return [a!==input,a!==b,b.join(\",\"),input.join(\",\"),e!==empty,e!==f,f.length,e.length]; })()", expected: [true, true, "1,2", "1,2", true, true, 0, 1] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:1000},(_,i)=>i%2===0?i:String(i)));const result=ofType(input,\"number\");return [result.length,result[0],result[499],input.length]; })()", expected: [500, 0, 998, 1000] },
+
       { call: "ofType([1, 2, 3], \"boolean\")", expected: [] },
       { call: "ofType([\"a\", true, \"b\"], \"string\")", expected: ["a", "b"] },
     ],
     hiddenTypeTests: [
+      {"code": "const __b065Names:\"string\"|\"number\"=Math.random()>0.5?\"string\":\"number\";const __b065Union:(string|number)[]=ofType(Object.freeze([1,\"a\"]),__b065Names); const __b065Never:OfType<never>=null as never;"},
+      {"code": "const __b065WrongFlags:number[]=ofType([true],\"boolean\");", "rejects": true},
+
       { code: "const __flags: boolean[] = ofType([true], \"boolean\");" },
     ],
   },
   "ts-memoized-run": {
-    solution: `type Output<F> = F extends (arg: number) => infer R ? R : never;
-
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
-  const cache = new Map<number, Output<F>>();
-  const results: Output<F>[] = [];
-  for (const input of inputs) {
-    if (!cache.has(input)) cache.set(input, fn(input) as Output<F>);
-    results.push(cache.get(input) as Output<F>);
-  }
-  return results;
-};`,
-    junior: `type Output<F> = F extends (arg: number) => infer R ? R : never;
-
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
-  const cache: { [input: number]: Output<F> } = {};
-  const results: Output<F>[] = [];
-  for (const input of inputs) {
-    if (!(input in cache)) {
-      const output = fn(input) as Output<F>;
-      cache[input] = output;
-    }
-    results.push(cache[input]);
-  }
-  return results;
-};`,
-    senior: `type Output<F> = F extends (arg: number) => infer R ? R : never;
-
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
-  const cache = new Map<number, Output<F>>();
-  return inputs.map((input) => {
-    // has() rather than get() ?? ..., so a cached undefined or null still counts as a hit.
-    if (cache.has(input)) return cache.get(input) as Output<F>;
-    const output = fn(input) as Output<F>;
-    cache.set(input, output);
-    return output;
-  });
-};`,
+    solution: "type Output<F> = F extends (arg: number) => infer R ? R : never;\n\nconst runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {\n  const cache = new Map<number, Output<F>>();\n  const results: Output<F>[] = [];\n  for (const input of inputs) {\n    if (!cache.has(input)) cache.set(input, fn(input) as Output<F>);\n    results.push(cache.get(input) as Output<F>);\n  }\n  return results;\n};",
+    junior: "type Output<F> = F extends (arg: number) => infer R ? R : never;\nconst runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {\n  const cache = new Map<number, Output<F>>();\n  const results: Output<F>[] = [];\n  for (const input of inputs) {\n    if (!cache.has(input)) {\n      const output = fn(input) as Output<F>;\n      cache.set(input, output);\n    }\n    const cached = cache.get(input) as Output<F>;\n    results.push(cached);\n  }\n  return results;\n};",
+    senior: "type Output<F> = F extends (arg: number) => infer R ? R : never;\n\nconst runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {\n  const cache = new Map<number, Output<F>>();\n  return inputs.map((input) => {\n    if (cache.has(input)) return cache.get(input) as Output<F>;\n    const output = fn(input) as Output<F>;\n    cache.set(input, output);\n    return output;\n  });\n};",
     hiddenTests: [
+      { call: "(() => {const returned=[undefined,null,false,0];const calls=[];const out=runMemoized(n=>{calls.push(n);return returned[n];},Object.freeze([0,0,1,1,2,2,3,3]));return [calls,out.length,out[0]===undefined,out[1]===undefined,out[2]===null,out[3]===null,out[4]===false,out[5]===false,out[6]===0,out[7]===0];})()", expected: [[0, 1, 2, 3], 8, true, true, true, true, true, true, true, true] },
+      { call: "(() => {let calls=0;const out=runMemoized(n=>({n,serial:++calls}),Object.freeze([NaN,NaN,-0,0,Infinity,Infinity,-Infinity]));return [calls,out[0]===out[1],Number.isNaN(out[0].n),out[2]===out[3],Object.is(out[2].n,-0),out[4]===out[5],out[6].n===-Infinity];})()", expected: [4, true, true, true, true, true, true] },
+      { call: "(() => {const seen=[];let valid=true;const fn=function(n){valid=valid&&this===undefined&&arguments.length===1;seen.push(n);return {n};};const input=Object.freeze([3,1,3,2]);const a=runMemoized(fn,input),b=runMemoized(fn,input);a.push({n:9});const empty=runMemoized(fn,Object.freeze([])),empty2=runMemoized(fn,Object.freeze([]));return [valid,seen,a[0]===a[2],a[0]!==b[0],a!==b,b.length,empty!==empty2,input.length];})()", expected: [true, [3, 1, 2, 3, 1, 2], true, true, true, 4, true, 4] },
+      { call: "(() => {const error={stop:true},seen=[];const input=Object.freeze([1,2,1,3]);let caught=false;try{runMemoized(n=>{seen.push(n);if(n===2)throw error;return n;},input);}catch(e){caught=e===error;}return [caught,seen,input.join(\",\")];})()", expected: [true, [1, 2], "1,2,1,3"] },
+      { call: "(() => {let calls=0;const input=Object.freeze(Array.from({length:1000},(_,i)=>i%10));const out=runMemoized(n=>{calls++;return {n};},input);return [calls,out.length,out[0]===out[990],out[9]===out[999],input.length];})()", expected: [10, 1000, true, true, 1000] },
+
       { call: "runMemoized(n => n * n, [3, 3, 3])", expected: [9, 9, 9] },
       { call: "(() => { let calls = 0; runMemoized(n => { calls += 1; return n; }, [5, 6, 7]); return calls; })()", expected: 3 },
     ],
     hiddenTypeTests: [
+      {"code": "const __b065Output:{readonly n:number}[]=runMemoized(n=>Object.freeze({n}),Object.freeze([1])); const __b065Pending:Promise<number>[]=runMemoized(n=>Promise.resolve(n),[]);"},
+      {"code": "const __b065NotFunction:Output<number>=1;", "rejects": true},
+
       { code: "const __flags: boolean[] = runMemoized(n => n > 0, [1]);" },
       { code: "runMemoized((s: string) => s, [1]);", rejects: true },
     ],
   },
   "ts-tag-every-id": {
-    solution: `type Tag<P extends string> = \`\${P}-\${number}\`;
-
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
-  const tags: Tag<P>[] = [];
-  for (const id of ids) tags.push(\`\${prefix}-\${id}\`);
-  return tags;
-};`,
-    junior: `type Tag<P extends string> = \`\${P}-\${number}\`;
-
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
-  const tags: Tag<P>[] = [];
-  for (let i = 0; i < ids.length; i += 1) {
-    const id = ids[i];
-    const tag: Tag<P> = \`\${prefix}-\${id}\`;
-    tags.push(tag);
-  }
-  return tags;
-};`,
-    senior: `type Tag<P extends string> = \`\${P}-\${number}\`;
-
-// The arrow's return annotation gives the template literal its Tag<P> type instead of plain string.
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => ids.map((id): Tag<P> => \`\${prefix}-\${id}\`);`,
+    solution: "type Tag<P extends string> = `${P}-${number}`;\n\nconst tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {\n  const tags: Tag<P>[] = [];\n  for (const id of ids) tags.push(`${prefix}-${id}`);\n  return tags;\n};",
+    junior: "type Tag<P extends string> = `${P}-${number}`;\n\nconst tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {\n  const tags: Tag<P>[] = [];\n  for (let i = 0; i < ids.length; i += 1) {\n    const id = ids[i];\n    const tag: Tag<P> = `${prefix}-${id}`;\n    tags.push(tag);\n  }\n  return tags;\n};",
+    senior: "type Tag<P extends string> = `${P}-${number}`;\n\nconst tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => ids.map((id): Tag<P> => `${prefix}-${id}`);",
     hiddenTests: [
+      { call: "tagAll(\"fin\ud83e\udd88- \",Object.freeze([-1,-0,0,2,2,-1000000000,1000000000]))", expected: ["fin\ud83e\udd88- --1", "fin\ud83e\udd88- -0", "fin\ud83e\udd88- -0", "fin\ud83e\udd88- -2", "fin\ud83e\udd88- -2", "fin\ud83e\udd88- --1000000000", "fin\ud83e\udd88- -1000000000"] },
+      { call: "(() => {const ids=Object.freeze([1,1]);const a=tagAll(\"\",ids),b=tagAll(\"\",ids);const empty=Object.freeze([]);const c=tagAll(\"a\",empty),d=tagAll(\"a\",empty);a.push(\"-9\");c.push(\"a-1\");return [a!==b,b,c!==d,d.length,ids,empty.length];})()", expected: [true, ["-1", "-1"], true, 0, [1, 1], 0] },
+      { call: "(() => {const prefix=\"x\".repeat(100);const ids=Object.freeze(Array.from({length:1000},(_,i)=>i));const tags=tagAll(prefix,ids);return [tags.length,tags[0]===prefix+\"-0\",tags[999]===prefix+\"-999\",ids.length];})()", expected: [1000, true, true, 1000] },
+
       { call: "tagAll(\"item\", [1, 2, 3])", expected: ["item-1", "item-2", "item-3"] },
       { call: "tagAll(\"v\", [42])", expected: ["v-42"] },
     ],
     hiddenTypeTests: [
+      {"code": "const __b065Prefix:\"a\"|\"b\"=Math.random()>0.5?\"a\":\"b\";const __b065Tags:Tag<\"a\"|\"b\">[]=tagAll(__b065Prefix,Object.freeze([1]));__b065Tags.push(\"a-2\");"},
+      {"code": "const __b065Invalid:Tag<\"user\">=\"user-nope\";", "rejects": true},
+
       { code: "const __items: `item-${number}`[] = tagAll(\"item\", []);" },
       { code: "const __plain: string[] = tagAll(\"item\", [1]);" },
     ],

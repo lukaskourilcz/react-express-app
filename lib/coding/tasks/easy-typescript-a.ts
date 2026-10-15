@@ -672,7 +672,7 @@ console.log(freeBoth([1, 4, 9, 12], [2, 4, 12, 20]));
     tier: 2,
     focus: ['two-pointer', 'tuples'],
     title: 'Where a value starts and ends',
-    prompt: 'A sorted list keeps equal values next to each other. Write `spanOf(sorted: readonly number[], value: number): [number, number] | null`, returning the first and the last index of `value` as a tuple, or `null` when the value is not in the list. Put one index at each end and move each inward for as long as it does not point at the value.',
+    prompt: "A sorted list keeps equal values next to each other. Write `spanOf(sorted: readonly number[], value: number): [number, number] | null`, returning the first and the last index of `value` as a tuple, or `null` when the value is not in the list. Put one index at each end and move each inward for as long as it does not point at the value. Domain: a dense ordinary readonly array of at most 1000 finite Numbers in nondecreasing order, possibly frozen, without accessors/proxies; value is finite too. Fractions, negatives and signed zero are valid, and equality uses ===. Leave the input unchanged. Return a fresh mutable two-number tuple on each successful call, including repeated calls; a miss is exactly null. The inward scan is the intended practice; a binary-search implementation with the same behavior is valid too. Target: O(n) time in the worst case and O(1) extra space, where n is 1 + list length; a logarithmic solution also meets this time goal.",
     starter: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
 
 };

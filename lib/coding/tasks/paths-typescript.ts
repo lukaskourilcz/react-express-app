@@ -24,11 +24,11 @@ function groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]> 
 `,
     focus: ['generics', 'map-set'],
     prompts: [
-      en('Implement `groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]>`: a Map from each key to the items that have it, keys in first-seen order and items in input order. `groupBy(["apple", "avocado", "banana"], (word) => word[0])` gives `"a" → ["apple", "avocado"]` and `"b" → ["banana"]`. `T` is the item type and `K` the key type; TypeScript infers both from the call, so the result is typed without a cast. Do not change the input.'),
-      en('Add `countBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, number>`: how many items share each key, keys in first-seen order. `countBy([1, 2, 3], (n) => n > 1)` gives `false → 1` and `true → 2`. The key can be any type: a string, a number, a boolean.'),
-      en('Add `uniqueBy<T, K>(items: readonly T[], keyOf: (item: T) => K): T[]`: the items in input order, keeping only the first item for each key. `uniqueBy(["apple", "avocado", "banana"], (word) => word[0])` gives `["apple", "banana"]`. A `Set<K>` of the keys you have kept makes each check one `has()` call. The result has the same element type as the input.'),
-      en('Add `partition<T, S extends T>(items: readonly T[], isMatch: (item: T) => item is S): [S[], Exclude<T, S>[]]`: the items `isMatch` accepts, then the rest, both in input order. `isMatch` is a type guard, so partitioning `(number | string)[]` with `(x): x is number => typeof x === "number"` is typed `[number[], string[]]`. TypeScript does not narrow a generic `T` in the `else` branch, so the rest needs one cast: `item as Exclude<T, S>`.'),
-      en('Add `sortBy<T>(items: readonly T[], ...keys: ((item: T) => number | string)[]): T[]`: a new array sorted by the first key, then by the second where the first ties, and so on. Compare with `<` and `>`, smallest first: numbers by value, strings by character code. To sort a number from high to low, return its negative: `(actor) => -actor.runs`. Equal items keep input order, and the input is not changed.'),
+      en("Implement `groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]>`: a Map from each key to the items that have it, keys in first-seen order and items in input order. `groupBy([\"apple\", \"avocado\", \"banana\"], (word) => word[0])` gives `\"a\" \u2192 [\"apple\", \"avocado\"]` and `\"b\" \u2192 [\"banana\"]`. `T` is the item type and `K` the key type; TypeScript infers both from the call, so the result is typed without a cast. Do not change the input. Shared rules for every helper in this path: inputs are dense ordinary readonly arrays of at most 1000 stable items, possibly frozen, without array accessors/proxies. Items and keys are opaque values; do not clone them or inspect them except through the supplied callback. Each keyOf/isMatch callback is called exactly once per item, in input order, as a plain function with exactly one argument. Callbacks do not mutate the arrays/items or built-ins; propagate a callback exception immediately. Map/Set keys use SameValueZero, including NaN, one shared -0/+0 key, object identity, Symbols and undefined. Return fresh mutable outer results and fresh group arrays on every call, including empty calls; retain exact item references and leave inputs unchanged. Target: O(n) time on average and O(n) space for groupBy, where n is 1 + input length with average constant Map operations; callback work is additional and excluded."),
+      en("Add `countBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, number>`: how many items share each key, keys in first-seen order. `countBy([1, 2, 3], (n) => n > 1)` gives `false \u2192 1` and `true \u2192 2`. The key can be any type: a string, a number, a boolean. Keep the shared level-one input/callback rules. K may also be an object, Symbol, undefined or NaN; distinct object identities stay distinct, without stringification. A missing key has no Map entry and get returns undefined. Return a fresh mutable Map per call, including empty input. Target: O(n) time on average and O(n) space for countBy, where n is 1 + input length with average constant Map operations; callback work is additional and excluded."),
+      en("Add `uniqueBy<T, K>(items: readonly T[], keyOf: (item: T) => K): T[]`: the items in input order, keeping only the first item for each key. `uniqueBy([\"apple\", \"avocado\", \"banana\"], (word) => word[0])` gives `[\"apple\", \"banana\"]`. A `Set<K>` of the keys you have kept makes each check one `has()` call. The result has the same element type as the input. Keep the shared level-one input/callback rules. Every item still gets one keyOf call, even when its key was already seen. Retain the first exact item reference per SameValueZero key, including falsy/undefined items, and return a fresh mutable array even when nothing is removed. Target: O(n) time on average and O(n) space for uniqueBy, where n is 1 + input length with average constant Set/Map operations; callback work is additional and excluded."),
+      en("Add `partition<T, S extends T>(items: readonly T[], isMatch: (item: T) => item is S): [S[], Exclude<T, S>[]]`: the items `isMatch` accepts, then the rest, both in input order. `isMatch` is a type guard, so partitioning `(number | string)[]` with `(x): x is number => typeof x === \"number\"` is typed `[number[], string[]]`. TypeScript does not narrow a generic `T` in the `else` branch, so the rest needs one cast: `item as Exclude<T, S>`. Keep the shared level-one input/callback rules. A supplied type guard must honestly describe both branches: it returns true if and only if the item belongs to S; a positive-number check is not a valid guard for all numbers. The Exclude result relies on that promise and does not validate the guard. Call isMatch once per item, not in two filter passes. Return a fresh mutable tuple with two independent fresh mutable arrays, preserving exact references and order in each branch, including empty/all-match/no-match cases. Target: O(n) time and O(n) output space for partition, where n is 1 + input length; callback work is additional and excluded."),
+      en("Add `sortBy<T>(items: readonly T[], ...keys: ((item: T) => number | string)[]): T[]`: a new array sorted by the first key, then by the second where the first ties, and so on. Compare with `<` and `>`, smallest first: numbers by value, strings by character code. To sort a number from high to low, return its negative: `(actor) => -actor.runs`. Equal items keep input order, and the input is not changed. Keep the shared dense/frozen-input and opaque-item rules. There are at most five selectors. Each selector returns one stable type across all items: finite Numbers within +/-1000000000, or primitive strings of at most 100 UTF-16 units. Do not mix numbers/strings within one selector; NaN is outside this sorting domain. String order is raw case-sensitive UTF-16 code-unit order, without locale conversion. Selectors must not mutate data; their comparison call count/order is unspecified, but each invocation is a plain one-argument call. Propagate errors. With zero selectors preserve the input order in a fresh mutable array, including empty/singleton inputs. Equal full key tuples retain input order and exact references. Target: O(n log n) time and O(n) auxiliary space for sortBy under the five-selector/text bounds and the comparison-sort cost model, where n is max(2, input length); selector work is additional and excluded."),
     ],
     hints: [
       en('`if (!groups.has(key)) groups.set(key, []); groups.get(key)!.push(item);` The `!` tells the compiler what the line before made true: the key has an array now.'),
@@ -83,26 +83,66 @@ function groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]> 
     ],
     typeTests: [
       [
-        { code: 'const groups: Map<string, string[]> = groupBy(["a", "b"], (s) => s.toUpperCase());' },
-        { code: 'const wrong: Map<number, string[]> = groupBy(["a"], (s) => s);', rejects: true },
+            {
+                  "code": "const groups: Map<string, string[]> = groupBy([\"a\", \"b\"], (s) => s.toUpperCase());"
+            },
+            {
+                  "code": "const wrong: Map<number, string[]> = groupBy([\"a\"], (s) => s);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __key={id:1};const __groups:Map<typeof __key,{readonly x:number}[]>=groupBy(Object.freeze([Object.freeze({x:1})]),()=>__key);__groups.get(__key)?.push({x:2});"
+            }
       ],
       [
-        { code: 'const counts: Map<boolean, number> = countBy([1, 2], (n) => n > 1);' },
-        { code: 'const wrong: Map<boolean, string> = countBy([1], (n) => n > 0);', rejects: true },
+            {
+                  "code": "const counts: Map<boolean, number> = countBy([1, 2], (n) => n > 1);"
+            },
+            {
+                  "code": "const wrong: Map<boolean, string> = countBy([1], (n) => n > 0);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __s=Symbol(\"key\");const __counts:Map<typeof __s,number>=countBy(Object.freeze([1]),()=>__s);const __missing:number|undefined=__counts.get(__s);"
+            }
       ],
       [
-        { code: 'const kept: string[] = uniqueBy(["a"], (s) => s.length);' },
-        { code: 'const wrong: number[] = uniqueBy(["a"], (s) => s.length);', rejects: true },
+            {
+                  "code": "const kept: string[] = uniqueBy([\"a\"], (s) => s.length);"
+            },
+            {
+                  "code": "const wrong: number[] = uniqueBy([\"a\"], (s) => s.length);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __items=Object.freeze([Object.freeze({id:1})]);const __unique:{readonly id:number}[]=uniqueBy(__items,x=>x.id);__unique.push({id:2});"
+            }
       ],
       [
-        { code: 'const [numbers, words]: [number[], string[]] = partition([1, "a"] as (number | string)[], (x): x is number => typeof x === "number");' },
-        { code: 'const [wrong]: [string[], number[]] = partition([1, "a"] as (number | string)[], (x): x is number => typeof x === "number");', rejects: true },
+            {
+                  "code": "const [numbers, words]: [number[], string[]] = partition([1, \"a\"] as (number | string)[], (x): x is number => typeof x === \"number\");"
+            },
+            {
+                  "code": "const [wrong]: [string[], number[]] = partition([1, \"a\"] as (number | string)[], (x): x is number => typeof x === \"number\");",
+                  "rejects": true
+            },
+            {
+                  "code": "type __Input={kind:\"yes\";value:number}|{kind:\"no\";text:string};const __input:readonly __Input[]=[];const __out:[Extract<__Input,{kind:\"yes\"}>[],Extract<__Input,{kind:\"no\"}>[]]=partition(__input,(x):x is Extract<__Input,{kind:\"yes\"}>=>x.kind===\"yes\");__out[1].push({kind:\"no\",text:\"x\"});"
+            }
       ],
       [
-        { code: 'const sorted: { n: string }[] = sortBy([{ n: "a" }], (x) => x.n);' },
-        { code: 'sortBy([{ n: "a" }], (x) => x.missing);', rejects: true },
-      ],
-    ],
+            {
+                  "code": "const sorted: { n: string }[] = sortBy([{ n: \"a\" }], (x) => x.n);"
+            },
+            {
+                  "code": "sortBy([{ n: \"a\" }], (x) => x.missing);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __input=Object.freeze([Object.freeze({n:1,s:\"x\"})]);const __out:{readonly n:number;readonly s:string}[]=sortBy(__input,x=>x.n,x=>x.s);__out.push({n:2,s:\"y\"});"
+            }
+      ]
+],
     references: [
       [handbook('Generics', 'generics.html'), doc('Map', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map')],
       [handbook('Generic functions', 'functions.html#generic-functions'), doc('Map.prototype.get()', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/get')],

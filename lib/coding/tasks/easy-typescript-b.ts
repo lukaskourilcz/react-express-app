@@ -986,14 +986,8 @@ console.log(toRanges([1, 2, 3, 7, 8, 10]));
     tier: 2,
     focus: ['two-pointer', 'generics'],
     title: 'Alternate two playlists',
-    prompt: 'A party playlist takes turns between two guests’ lists: a song from `a`, then one from `b`, then the next from `a`, and so on. When one list runs out, the rest of the other follows in order. Write `alternate<T>(a: readonly T[], b: readonly T[]): T[]`, with one index for each list. The type parameter lets it work for song titles, ids or any other items, as long as both lists hold the same kind.',
-    starter: `const alternate = (a, b) => {
-
-};
-
-// Scratch pad. Change this and press Run.
-console.log(alternate(["Intro", "Wave"], ["Tide", "Drift", "Echo"]));
-`,
+    prompt: "A party playlist takes turns between two guests\u2019 lists: a song from `a`, then one from `b`, then the next from `a`, and so on. When one list runs out, the rest of the other follows in order. Write `alternate<T>(a: readonly T[], b: readonly T[]): T[]`, with one index for each list. The type parameter lets it work for song titles, ids or any other items, with one shared element type. Domain: dense ordinary readonly arrays of at most 1000 stable items each, possibly frozen, without accessors/proxies. Items are opaque: preserve their exact values/references without copying, coercing or reading their fields. Keep duplicates, null, undefined and falsy values in order; leave both lists unchanged. Return a fresh mutable result every call, including when either/both lists are empty or the lists are the same object. T is one shared element type, which may explicitly be a union. Target: O(n + m) time and output space, where n is 1 + a.length and m is 1 + b.length under constant item-reference operations.",
+    starter: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n\n};\n\n// Scratch pad. Change this and press Run.\nconsole.log(alternate([\"Intro\", \"Wave\"], [\"Tide\", \"Drift\", \"Echo\"]));\n",
     skeleton: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
   const mixed: T[] = [];
   let i = 0;
