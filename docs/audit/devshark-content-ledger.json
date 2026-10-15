@@ -248458,6 +248458,3314 @@
     "notes": "Read every current/inherited field, test and complete board. Result order comes from the first posting Set’s document order, never id sorting. Empty query returns a fresh empty array; any missing token yields no matches. The senior may build the index before detecting emptiness, so no unsupported early-read guarantee is claimed. Final English material and execution reread; same-session self-review only.",
     "pass": "second-reading"
    }
+  },
+  {
+   "id": "js-path-objects-1",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Count category records into safe own-property buckets without changing input.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "a9187f5a5553fee9",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "09f1548c8705d7a9",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object ownership, sorting and these JavaScript APIs remain current.",
+    "practicalUtility": "Safe category frequency tables are practical application data transformations.",
+    "transferable": "Safe dynamic keys, ownership and tie rules transfer to other record processing.",
+    "audienceFit": "Each progressive stage adds one function while retaining earlier checks.",
+    "riskOutcome": "Prototype-like names and bounded numeric/value semantics prevent unsafe or misleading examples."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "All three revealed dictionaries used inherited prototype properties as category counts.",
+    "Fresh ownership, key domain and object key-order rules were not stated."
+   ],
+   "rationale": "Use null-prototype dictionaries on every board and align the teaching hint/approach. Define bounded frozen ordinary category records, all string names and safe own buckets. Add __proto__/constructor/toString/empty categories, repeated calls, 1000 records and array-index versus non-index property order, including 4294967295 and 01. No universal insertion-order claim is made for ordinary objects.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-objects-1",
+      "contentHash": "a9187f5a5553fee9",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 5
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b022; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all source fields, starter data, visible/hidden checks and three boards. The result may have a null prototype or safely defined own data properties; prototype shape is not graded. Standard object enumeration differs from Map order for array-index names. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-objects-2",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Group exact names into fresh safe category arrays in input order.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "bc2d677916fc9605",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "61bb70d5843d4aae",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object ownership, sorting and these JavaScript APIs remain current.",
+    "practicalUtility": "Ordered grouping is useful for lists and summaries without caller mutation.",
+    "transferable": "Safe dynamic keys, ownership and tie rules transfer to other record processing.",
+    "audienceFit": "Each progressive stage adds one function while retaining earlier checks.",
+    "riskOutcome": "Prototype-like names and bounded numeric/value semantics prevent unsafe or misleading examples."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "All three grouping reveals could reuse inherited buckets and crash.",
+    "The first-seen category label was overbroad for numeric property names."
+   ],
+   "rationale": "Initialize safe null-prototype dictionaries throughout the reveals and method steps. Specify own string-name data, exact whitespace/empty/repeated values and fresh groups. Narrow the visible key-order label to non-index categories. Add frozen prototype-like keys, cross-call array identity and 1000 ordered names. All cumulative earlier checks remain active.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-objects-2",
+      "contentHash": "bc2d677916fc9605",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b022; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read inherited count material and every current field/board/test. Nullish assignment is safe only after the inherited bucket problem is removed. Returned names stay literal and each category/call owns its result array. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-objects-3",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Summarize count, exact run totals and first highest-rated name in safe own category buckets.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "a4903016877c77c8",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "11b564e621e79544",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object ownership, sorting and these JavaScript APIs remain current.",
+    "practicalUtility": "Aggregating counts/totals while retaining a stable best record is practical.",
+    "transferable": "Safe dynamic keys, ownership and tie rules transfer to other record processing.",
+    "audienceFit": "Each progressive stage adds one function while retaining earlier checks.",
+    "riskOutcome": "Prototype-like names and bounded numeric/value semantics prevent unsafe or misleading examples."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Result and best-rating dictionaries on all boards mishandled inherited names.",
+    "Numeric/rating limits, zero ratings and private tracking fields were unspecified."
+   ],
+   "rationale": "Use null-prototype objects for both output and auxiliary rating lookups on every board. Define bounded nonnegative integer runs and finite ratings 0..5, exact safe totals, first-record tie policy and exactly three public summary fields. Add zero rating/empty best name, prototype-like categories, fresh nested summaries and 1000 maximal runs. Map-based alternative keeps tracking private.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-objects-3",
+      "contentHash": "a4903016877c77c8",
+      "label": "wrong-skip-zero-rating",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 13
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b022; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited/current requirements, code and cases. A zero rating is still a record and participates in counts and ties. The first category record initializes its best name/rating; later equal ratings never replace it. The maximal total is exactly one billion. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-objects-4",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Return a stable sorted copy of original records using runs and the specified name comparator.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "42a680e45a5a6982",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "8cac7fddb0c00169",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object ownership, sorting and these JavaScript APIs remain current.",
+    "practicalUtility": "Stable multi-key ordering without losing record identity is a common application need.",
+    "transferable": "Safe dynamic keys, ownership and tie rules transfer to other record processing.",
+    "audienceFit": "Each progressive stage adds one function while retaining earlier checks.",
+    "riskOutcome": "Prototype-like names and bounded numeric/value semantics prevent unsafe or misleading examples."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The junior used UTF-16 relational name comparisons while the hint/reference/senior used localeCompare.",
+    "Stable ties, original object references, numeric bounds and cost model were implicit."
+   ],
+   "rationale": "Align the junior comparator with localeCompare and replace the vague universal A-to-Z claim with the explicit API. Define bounded records/names, stable complete ties, fresh empty copies and no cloning/mutation. Add frozen object identity, equal-key order, mixed-case/accented names checked against the stated comparator and 1000 records. O(n log n) uses a bounded-comparison model without prescribing an engine sort.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "wrong-clone",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 16,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-objects-4",
+      "contentHash": "42a680e45a5a6982",
+      "label": "wrong-cap",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 16,
+      "hidden": 18
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b022; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all cumulative requirements/checks and reveals. Only comparison sign matters, not an exact localeCompare magnitude. Its ordering can depend on locale/implementation, so no locale-independent byte or universal alphabetic order is claimed. Original records remain shared references. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-objects-5",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Select each category’s top names through one stable sort and safe bounded grouping.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "9745e42925910237",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "3541aec0b44e003c",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object ownership, sorting and these JavaScript APIs remain current.",
+    "practicalUtility": "Top-per-group rankings are useful for summaries and recommendations.",
+    "transferable": "Safe dynamic keys, ownership and tie rules transfer to other record processing.",
+    "audienceFit": "Each progressive stage adds one function while retaining earlier checks.",
+    "riskOutcome": "Prototype-like names and bounded numeric/value semantics prevent unsafe or misleading examples."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "All top-per-category reveals used unsafe inherited bucket names.",
+    "Upper k/input bounds, fresh result ownership and enumeration rules were implicit."
+   ],
+   "rationale": "Use safe null-prototype category dictionaries across boards, inheriting the now consistent sort comparator. Bound k at 1..1000, preserve exact/repeated names and fresh arrays, and state standard object enumeration. Add frozen __proto__/constructor groups, repeated calls and all 1000 names at k=1000. An independent Map/fromEntries grouping alternative passes.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 22
+     },
+     {
+      "id": "js-path-objects-5",
+      "contentHash": "9745e42925910237",
+      "label": "wrong-cap",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 22
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b022; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every current/inherited field, test and board. Sorting happens once before the linear grouping pass, so the first k names in each category are its top records. Category enumeration is ordinary object enumeration, not a promise that integer-like keys follow insertion order. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-lookups-1",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Index unique opaque ids to original record references in a fresh Map.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "1474bb18d2e7136b",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "27810dc9bbebc1bc",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map/Set, own properties and breadth-first graph techniques remain current.",
+    "practicalUtility": "Indexing typed records without copying is a common lookup pattern.",
+    "transferable": "Identity, safe keys, ownership and queue cost models transfer to other data processing.",
+    "audienceFit": "The progressive stage adds one function while retaining earlier contracts.",
+    "riskOutcome": "Reserved labels, zero values and bounded graphs prevent false correctness/performance claims."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Id equality/type/bounds, exact record identity and immutable ownership were implicit.",
+    "Cloning records and mutating the source list passed old checks."
+   ],
+   "rationale": "Define bounded ordinary records with unique SameValueZero ids, bounded strings, frozen inputs and no unrelated-field inspection. Preserve all contents/references and allocate a fresh Map. Add object/Number/string ids, exact frozen record identity and 1000 records. Distinguish one get call from a language-level constant-time guarantee; the linear build target uses expected bounded-key access.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "wrong-clone",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-lookups-1",
+      "contentHash": "1474bb18d2e7136b",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b023; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all fields, starter data and three reveals. The values are the original records, not reconstructed equals. Distinct typed/object ids remain distinct under Map semantics and each call owns its Map. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-lookups-2",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Diff immutable catalogues by opaque id and exact runs changes while preserving each required order.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "d465992555ef70f6",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "426a1f588a9d4cb9",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map/Set, own properties and breadth-first graph techniques remain current.",
+    "practicalUtility": "Comparing catalogue revisions is useful for change summaries.",
+    "transferable": "Identity, safe keys, ownership and queue cost models transfer to other data processing.",
+    "audienceFit": "The progressive stage adds one function while retaining earlier contracts.",
+    "riskOutcome": "Reserved labels, zero values and bounded graphs prevent false correctness/performance claims."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Runs/input domains and fresh result/id ownership were unspecified.",
+    "Ignoring changes to zero and cloning returned ids passed prior cases."
+   ],
+   "rationale": "Reuse unique opaque ids and bound finite integer runs. Define runs-only changes, original id references, added/changed after order, removed before order and fresh object/arrays. Add equal-looking distinct object ids, numeric/string zero, a real change to zero and two 1000-record catalogues. All cumulative forms and a forEach alternative pass under combined linear size.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "wrong-skip-zero",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-lookups-2",
+      "contentHash": "d465992555ef70f6",
+      "label": "wrong-clone-ids",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 8
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b023; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all current/inherited requirements, tests and boards. Other-field changes alone do not count, and zero is a valid new runs value. Object ids are matched by reference and emitted without cloning or string coercion. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-lookups-3",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Build safe ordered adjacency arrays with Set-based target deduplication.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "9a6d9afeb86813af",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "436374fc944bc1b7",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map/Set, own properties and breadth-first graph techniques remain current.",
+    "practicalUtility": "Adjacency construction teaches useful deduplication and safe dynamic keys.",
+    "transferable": "Identity, safe keys, ownership and queue cost models transfer to other data processing.",
+    "audienceFit": "The progressive stage adds one function while retaining earlier contracts.",
+    "riskOutcome": "Reserved labels, zero values and bounded graphs prevent false correctness/performance claims."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "All adjacency reveals reused inherited bucket names.",
+    "Growing includes/indexOf scans made a high-degree source quadratic."
+   ],
+   "rationale": "Use null-prototype own buckets and per-source target Sets, or safe Map/fromEntries conversion, on every board. Align hints/approach and define bounded frozen string-label pairs, empty/prototype-like labels, self/duplicate links, fresh arrays and normal source-key enumeration. Add reserved labels and 2000 distinct outgoing edges. Expected-linear Map/Set and append costs are explicit; no repeated output scan remains.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-lookups-3",
+      "contentHash": "9a6d9afeb86813af",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 12
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b023; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited material and each new graph implementation/test. Only sources get buckets; leaf-only targets do not. Set insertion order preserves the first link to each target and input pairs remain intact. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-lookups-4",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Traverse a bounded graph breadth first using safe adjacency and constant-cost queue reads.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "04a31ecb73cac408",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "b5f561b528ee4554",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map/Set, own properties and breadth-first graph techniques remain current.",
+    "practicalUtility": "Breadth-first exploration is a standard practical graph operation.",
+    "transferable": "Identity, safe keys, ownership and queue cost models transfer to other data processing.",
+    "audienceFit": "The progressive stage adds one function while retaining earlier contracts.",
+    "riskOutcome": "Reserved labels, zero values and bounded graphs prevent false correctness/performance claims."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Array shift in the reference/junior obscured a linear queue-cost claim.",
+    "Empty/prototype-like starts, ownership, bounds and queue order were not explicit."
+   ],
+   "rationale": "Replace shifts with an advancing queue cursor on the revealed boards, retaining visited-on-enqueue. State start inclusion, safe arbitrary string labels and combined edge/vertex input size. Update queue guidance/references. Add a reserved-label cycle rooted at an empty string, fresh empty-link outputs and a 2000-edge wide frontier. The valid live-Set alternative realizes the same breadth-first insertion order.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "wrong-empty-start",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 17,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-lookups-4",
+      "contentHash": "04a31ecb73cac408",
+      "label": "wrong-visited-prototype",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 17,
+      "hidden": 16
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b023; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all current/inherited requirements, implementations and tests. No page is queued twice; duplicates/cycles terminate. Array length may grow while the read index advances, and no front removal copies the remaining queue. Unreachable components do not enter output. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-lookups-5",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Return safe own shortest-hop depth properties under breadth-first discovery.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "edf8a08847364043",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "44a31986de161985",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map/Set, own properties and breadth-first graph techniques remain current.",
+    "practicalUtility": "Shortest-hop distances are useful graph summaries.",
+    "transferable": "Identity, safe keys, ownership and queue cost models transfer to other data processing.",
+    "audienceFit": "The progressive stage adds one function while retaining earlier contracts.",
+    "riskOutcome": "Reserved labels, zero values and bounded graphs prevent false correctness/performance claims."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Plain depth dictionaries/in checks confused inherited names with visited pages.",
+    "The unconditional visit-order property-key claim failed for array-index labels.",
+    "Shift queues lacked a linear element-moving model."
+   ],
+   "rationale": "Use null-prototype depth objects and advancing queue reads in reference/junior; retain the safe Map/fromEntries senior. Align hints/approach/Object.hasOwn and append references. Define shortest nonnegative edge counts, fresh results and standard object enumeration, with crawlOrder providing the actual visit sequence. Add empty/prototype-like cycles, numeric-label enumeration and a 2000-edge chain.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "wrong-old-prototypes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 22,
+      "hidden": 21
+     },
+     {
+      "id": "js-path-lookups-5",
+      "contentHash": "edf8a08847364043",
+      "label": "wrong-empty-start",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 22,
+      "hidden": 21
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b023; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited/current fields, boards and cases. The start depth is zero even if it has no links. First breadth-first discovery fixes the smallest depth and later cycles cannot replace it. Array-index properties enumerate numerically, so object key order is not always queue order. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-logging-1",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Use labelled logs to distinguish basket lines, units and unrounded Number totals.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "dc02a1399470eed3",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "51b6383316b7a553",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object shorthand and labelled console output remain current.",
+    "practicalUtility": "Separating line count, quantity and total is a common aggregation task.",
+    "transferable": "Reading state and preserving inputs transfers beyond shopping examples.",
+    "audienceFit": "The first repair is a bounded one-loop foundation exercise.",
+    "riskOutcome": "Fractional totals and immutable inputs expose misleading near-correct answers."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Input domains, nonmutation, result ownership and Number rounding were implicit.",
+    "Rounded totals and destructive basket operations passed old checks."
+   ],
+   "rationale": "State a bounded dense ordinary record domain and exact left-to-right Number policy without financial precision claims. Return fresh aggregates, preserve inputs and count zero-quantity lines. Add frozen fractional input and 1000 maximum-sized records. The intentionally broken starter stays broken and later functions stay untouched until their level.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+    "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+    "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "wrong-round-total",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 4
+     },
+     {
+      "id": "js-path-logging-1",
+      "contentHash": "dc02a1399470eed3",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b024; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+     "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+     "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read prompt, hint, all approach steps, tests, original starter and all three cumulative reveals. Each reveal counts entries and quantities correctly; normal Number totals may be fractional and are not rounded. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-logging-2",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Trace an index/value mix-up while preserving first-tie cheapest entry semantics.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "fba02a39ae8822c0",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "60121a0da6816aa3",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Index tracing and console.table are current debugging tools.",
+    "practicalUtility": "Minimum selection without sorting avoids unwanted input mutation.",
+    "transferable": "Distinguishing an index from its value is broadly useful.",
+    "audienceFit": "A single faulty assignment is appropriate for a second repair.",
+    "riskOutcome": "Empty names, first ties and frozen arrays make the output contract precise."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The price/name domain and caller ownership were unspecified.",
+    "Falsy-name fallback and in-place sorting passed existing examples."
+   ],
+   "rationale": "Bound ordinary read-only records, accept empty names and fractional/zero prices, retain first ties and null only for no entries. Add frozen empty-name ties and a 1000-entry fractional minimum. All supplied forms retain the original basket and satisfy the linear target. console.table is a diagnostic view, not a guarantee that every large input is fully rendered.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+    "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+    "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "wrong-empty-name",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 8
+     },
+     {
+      "id": "js-path-logging-2",
+      "contentHash": "fba02a39ae8822c0",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 8
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b024; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+     "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+     "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited first-level material and every second-level field/reveal/test. Index scans and object reductions agree on the first minimum, including an empty string name; no sort or source write is needed. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-logging-3",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Return deeply independent price snapshots without changing a frozen original basket.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "596b13a37f89553c",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "2736c7768abb67e3",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "structuredClone and reference aliasing are current JavaScript topics.",
+    "practicalUtility": "Independent snapshots are useful in local history and undo features.",
+    "transferable": "Deep versus shallow copies transfer to many state-management tasks.",
+    "audienceFit": "The stage adds one bounded nested-data repair to previous functions.",
+    "riskOutcome": "Preserving own keys and nested metadata prevents silently corrupted history."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The junior reveal copied records shallowly and shared nested data.",
+    "Duplicate names had inconsistent first/all-match behavior across reveals.",
+    "The prompt generalized browser lazy inspection to this app, whose Console formats immediately.",
+    "Zero-price changes and shallow snapshots passed old checks."
+   ],
+   "rationale": "Specify unique names, existing-name changes and bounded acyclic ordinary JSON metadata. Replace junior shallow spreads with structuredClone for the working basket and each snapshot. Explain returned-array aliasing separately from some browser DevTools behavior and the actual app Console. Test frozen inputs, own __proto__ data, nested independence, zero price and 100 by 100 histories. Own-key parity depends on the separately committed runtime fix #403; neither change is deployed yet. Define the combined quadratic upper bound and tighter output-copy cost rather than claiming a linear number of changes alone.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+    "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+    "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "wrong-shallow",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 12
+     },
+     {
+      "id": "js-path-logging-3",
+      "contentHash": "596b13a37f89553c",
+      "label": "wrong-zero-price",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 12
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b024; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+     "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+     "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every inherited check, solution and explanation. The three reveals deep-copy initial state and snapshots, preserve all fields and apply each uniquely named change. The final hash was executed using the freshly rebuilt #403 worker; no proof for unsupported cloneable classes or arbitrary graph structures is claimed. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-logging-4",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Use cumulative call counts to find and remove a duplicated account update.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8693f2a1c999123d",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "7d7a158bedd38bec",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "console.count/group/time remain available diagnostics.",
+    "practicalUtility": "Preventing duplicate mutable updates is a practical debugging skill.",
+    "transferable": "Separating observation from a side effect transfers to many domains.",
+    "audienceFit": "The stage repairs a clear duplicate call on a small local object.",
+    "riskOutcome": "Fractional aggregation and large balances distinguish incorrect reward arithmetic."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The reference comment incorrectly said the global count printed 2 under every group.",
+    "The prompt claimed tiny elapsed time without a measurable guarantee.",
+    "Flooring per line and capping the returned balance passed old examples."
+   ],
+   "rationale": "Explain counts 1,2 then 3,4 across two broken checkouts and that group does not reset the counter. Remove the universal timing claim, accurately note synchronous Submit virtual time and teach count increments as evidence. Specify mutable account points, preserved other fields, whole total flooring, frozen baskets and large exact integer bounds. Add two half-unit lines and a large balance result. These are isolated example objects and do not alter app rewards.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+    "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+    "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "wrong-floor-lines",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 16
+     },
+     {
+      "id": "js-path-logging-4",
+      "contentHash": "8693f2a1c999123d",
+      "label": "wrong-cap",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 20,
+      "hidden": 16
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b024; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+     "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+     "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited requirements, each addPoints/checkout board and all probes. Every reveal calls the update once and returns its actual balance; fractional totals are floored after aggregation. The repaired comment and prompt agree with cumulative counter behavior. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-logging-5",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Build an exact log-and-return helper and a safe stable first-seen bestseller ranking.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "886094620ab9e4cc",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "697494dfb49aa805",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Logging wrappers, Map and stable sorting remain current.",
+    "practicalUtility": "Observing intermediate aggregates without changing expression values is useful.",
+    "transferable": "Own-key safety, stable ties and reference identity are transferable.",
+    "audienceFit": "The final foundation repair combines earlier aggregation and diagnostics.",
+    "riskOutcome": "Reserved and numeric labels reveal silent errors in otherwise plausible solutions."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Reference and junior dictionaries treated inherited names as existing totals.",
+    "Object.entries reordered numeric names before stable sorting and broke first-seen ties.",
+    "Junior and senior bestSeller reveals omitted the requested debug calls.",
+    "Existing rendered-text checks accepted other console methods despite the requested console.log contract."
+   ],
+   "rationale": "Use null-prototype counts plus explicit first-seen names on reference/junior boards; use insertion-ordered Map on senior. Every nonempty ranking logs totals and ranked through debug. Specify exactly one two-argument console.log and unchanged opaque return values, plus bounded frozen order data and zero/empty/reserved names. Add a restored console spy, object/symbol/undefined/falsy identity, numeric ties, own-key safety and 1000 records. Retain earlier cumulative tests, including deep snapshots, and leave every future broken starter function intact until its level. The supplied stable-sort cost model is explicit, not inferred from finite runtime measurements.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+    "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+    "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "wrong-console-method",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "wrong-old-ranking",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 27,
+      "hidden": 25
+     },
+     {
+      "id": "js-path-logging-5",
+      "contentHash": "886094620ab9e4cc",
+      "label": "wrong-shallow-snapshot",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 27,
+      "hidden": 25
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b024; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone",
+     "https://developer.mozilla.org/en-US/docs/Web/API/console/count_static",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 36/36 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 11 wrong).",
+     "run: baseline matched 25/36 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all five final cumulative programs and all current/inherited fields. Safe keys, first appearance, descending order and both helper calls agree across all boards and the independent Map variant. Exact logging is tested separately from the retained old text-rendering probe. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-tracing-1",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Trace both range boundaries while grouping immutable daily amounts into weeks.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "2fe239ab211c2a00",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "aaf6e34a7ee8e7b7",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Bounded loop tracing remains current JavaScript practice.",
+    "practicalUtility": "Partial batches occur in reports and grouped summaries.",
+    "transferable": "Half-open ranges and ownership transfer to many iteration tasks.",
+    "audienceFit": "The two related boundary repairs suit the authored medium stage.",
+    "riskOutcome": "Frozen fractional input prevents destructive or rounded near-correct answers."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Amount bounds, floating-point order and ownership were implicit.",
+    "Rounding totals or consuming the original list passed old probes."
+   ],
+   "rationale": "Specify finite signed bounded Number amounts, read-only dense arrays and fresh results. Keep normal left-to-right weekly arithmetic without a money-precision claim. Add frozen fractional input and 1000 days with a shorter final group. The three supplied techniques are linear under fixed seven-day grouping, while each later starter defect stays unrevealed.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "wrong-round",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 5
+     },
+     {
+      "id": "js-path-tracing-1",
+      "contentHash": "2fe239ab211c2a00",
+      "label": "wrong-mutate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 5
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b025; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the full starter, all inherited/new task fields and every board. The first complete week, partial tail and empty list all agree; negative and fractional amounts are valid and never rounded. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-tracing-2",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Capture each reminder name and position independently of later caller changes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "5caf0d8bb77a2b1a",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "764c92c19f72ed6a",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Closures and per-iteration lexical bindings remain current.",
+    "practicalUtility": "Stable callbacks are useful in delayed reminders and event handlers.",
+    "transferable": "Captured values versus later mutable array reads is transferable.",
+    "audienceFit": "The medium stage extends the earlier range lesson without new APIs.",
+    "riskOutcome": "Repeated names and later mutation expose misleading closure explanations."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Reference read names from the caller array at invocation while junior/senior captured names at creation.",
+    "Duplicate names and callback identity were not covered."
+   ],
+   "rationale": "Make snapshot-at-creation semantics explicit for each string name and 1-based position. Capture const name in the reference loop; retain junior/senior captures. Clarify that closures read their bindings when invoked, rather than universally snapshotting arbitrary mutable state. Test repeated/empty names, later source truncation, repeated reverse-order calls, separate closures and 1000 frozen names. Building is linear, invocation formats one bounded string.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "wrong-live",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 9
+     },
+     {
+      "id": "js-path-tracing-2",
+      "contentHash": "5caf0d8bb77a2b1a",
+      "label": "wrong-duplicate",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b025; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited boards/checks and new closure explanations. Each iteration owns its captured name and position. Multiple equal names still produce distinct callbacks and the right numbered messages after the caller changes its array. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-tracing-3",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Sort a fresh expense array stably while returning the original immutable records.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "1c6859606843ac55",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "b45858f782a31877",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Stable sort/toSorted and shallow array copies are current.",
+    "practicalUtility": "Top-N lists should not reorder shared source state.",
+    "transferable": "Reference ownership versus deep equality transfers to other UI data flows.",
+    "audienceFit": "The stage teaches a focused in-place mutation repair.",
+    "riskOutcome": "Frozen records and large requested counts prevent hidden cloning/capping policies."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Record identity, numeric domain and requested-count limits were unspecified.",
+    "Cloning returned records and arbitrarily capping n passed old examples."
+   ],
+   "rationale": "Specify bounded finite signed amounts, n from zero to 1000 and n beyond input length. Return a fresh array of original references with stable equal amounts and no source writes. Add frozen identity/tie checks and 1000 reversed records. Explain the comparison-sort target in input size separately from the similarly named requested-count parameter; no language-level universal measured sorting bound is asserted.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "wrong-copy-records",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 13
+     },
+     {
+      "id": "js-path-tracing-3",
+      "contentHash": "1c6859606843ac55",
+      "label": "wrong-cap-n",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 15,
+      "hidden": 13
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b025; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read each cumulative stage and all own fields. Spread/slice/toSorted preserve original record references, stable order and fresh arrays, including zero count. The alternative uses an explicit shallow array build and the same comparator. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-tracing-4",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Start all receipt promises before waiting and preserve ordered values and rejection identity.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "08798d831a3ea499",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "30bffe06b77a6bf2",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Promise.all and async callbacks remain current.",
+    "practicalUtility": "Parallel request aggregation with ordered results is a common application pattern.",
+    "transferable": "Start order, completion order and error propagation transfer to other async tasks.",
+    "audienceFit": "The medium stage gives a bounded local callback exercise.",
+    "riskOutcome": "Opaque values and rejection reasons catch cloning and error swallowing."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Callback arity/count, receipt identity and rejection semantics were implicit.",
+    "Junior awaited already-started promises one by one instead of attaching aggregate rejection handling.",
+    "Copying receipts and replacing rejected values with null passed old checks.",
+    "The prompt described the broken empty result as though it were the required behavior."
+   ],
+   "rationale": "Define at most 50 opaque ids with duplicates, exact one-argument calls in input order before waiting, fresh arrays and exact resolved values. Propagate original rejection reasons. Replace junior sequential awaits with Promise.all over the already-created promises. Clarify that empty output is the starter bug, and bound bookkeeping separately from callback/waiting time. Add synchronous start observations, original object/undefined/null/zero results, duplicates, rejection identity and 50 ids. All callbacks are isolated local test promises; no live network is used.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "wrong-copy-receipts",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 19,
+      "hidden": 18
+     },
+     {
+      "id": "js-path-tracing-4",
+      "contentHash": "08798d831a3ea499",
+      "label": "wrong-swallow",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 19,
+      "hidden": 18
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b025; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all inherited code and the full async fixtures. Promise.all preserves input positions regardless of completion order and rejects with the original reason. The supplied boards start every callback synchronously before waiting, including repeated ids; no cancellation guarantee is made. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-path-tracing-5",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 25,
+   "objective": "Convert decimal form text at the boundary and apply one explicit Number tip formula.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "57c7794708a984c6",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "ce3ca88733d06f31",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Number conversion and type tracing remain current.",
+    "practicalUtility": "Avoiding accidental string concatenation is useful in form processing.",
+    "transferable": "Following bad data across several calls is transferable debugging practice.",
+    "audienceFit": "The final medium stage combines prior tracing with explicit input boundaries.",
+    "riskOutcome": "Fractional amounts, large totals and a named rounding formula avoid false financial guarantees."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The numeric-text domain, rounding policy and bounds were implicit.",
+    "The prompt overgeneralized that one field always works and two always produce NaN.",
+    "Per-field rounding and arbitrary final result caps passed old examples."
+   ],
+   "rationale": "Specify finite bounded signed decimal/exponent text, whitespace-to-zero behavior, read-only fields, bounded percent and exact Math.round formula. Make junior use Number consistently, without teaching parseFloat as a whole-string validator. Preserve parsed precision until final rounding, including floating-point behavior; this is not an exact-money representation. Add frozen 1.005/exponent/negative fractional fields, blank whitespace, 1000 fields and a two-billion result. State only the observed failing examples, not a universal one-field/two-field claim.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "wrong-round-fields",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 25,
+      "hidden": 23
+     },
+     {
+      "id": "js-path-tracing-5",
+      "contentHash": "57c7794708a984c6",
+      "label": "wrong-cap",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 25,
+      "hidden": 23
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b025; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every cumulative board, hint, approach, visible and hidden test. All supplied conversions return unrounded Numbers, totals add left-to-right and only withTip applies the explicit rounding expression. Negative and exponent inputs match the documented domain. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
   }
  ]
 }

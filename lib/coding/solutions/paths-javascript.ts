@@ -493,7 +493,7 @@ const MAP_AND_SET: Boards = {
 const OBJECTS: Boards = {
   reference: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (const record of list) {
     // The key is in a variable, so square brackets, not counts.category.
     counts[record.category] = (counts[record.category] ?? 0) + 1;
@@ -501,7 +501,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (const record of list) {
     if (!groups[record.category]) groups[record.category] = [];
     groups[record.category].push(record.name);
@@ -509,8 +509,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {}; // category -> highest rating so far
+  const out = Object.create(null);
+  const bestRating = Object.create(null); // category -> highest rating so far
   for (const record of list) {
     const key = record.category;
     if (!out[key]) {
@@ -532,7 +532,7 @@ const OBJECTS: Boards = {
   return [...list].sort((a, b) => b.runs - a.runs || a.name.localeCompare(b.name));
 }`,
     `function topPerCategory(list, k) {
-  const out = {};
+  const out = Object.create(null);
   // Sorted once, so each category fills up with its best records first.
   for (const record of sortActors(list)) {
     if (!out[record.category]) out[record.category] = [];
@@ -543,7 +543,7 @@ const OBJECTS: Boards = {
   ],
   junior: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const category = list[i].category;
     if (counts[category] === undefined) {
@@ -554,7 +554,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     if (groups[record.category] === undefined) {
@@ -565,8 +565,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {};
+  const out = Object.create(null);
+  const bestRating = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     const category = record.category;
@@ -590,19 +590,13 @@ const OBJECTS: Boards = {
     if (a.runs !== b.runs) {
       return b.runs - a.runs;
     }
-    if (a.name < b.name) {
-      return -1;
-    }
-    if (a.name > b.name) {
-      return 1;
-    }
-    return 0;
+    return a.name.localeCompare(b.name);
   });
   return copy;
 }`,
     `function topPerCategory(list, k) {
   const sorted = sortActors(list);
-  const out = {};
+  const out = Object.create(null);
   for (let i = 0; i < sorted.length; i++) {
     const record = sorted[i];
     if (out[record.category] === undefined) {
@@ -618,18 +612,18 @@ const OBJECTS: Boards = {
   ],
   senior: [
     `const countByCategory = (list) => {
-  const counts = {};
+  const counts = Object.create(null);
   for (const { category } of list) counts[category] = (counts[category] ?? 0) + 1;
   return counts;
 };`,
     `const groupByCategory = (list) => {
-  const groups = {};
+  const groups = Object.create(null);
   for (const { name, category } of list) (groups[category] ??= []).push(name);
   return groups;
 };`,
     `const summarize = (list) => {
-  const out = {};
-  const top = {};
+  const out = Object.create(null);
+  const top = Object.create(null);
   for (const { name, category, runs, rating } of list) {
     const summary = (out[category] ??= { count: 0, runs: 0, best: name });
     summary.count += 1;
@@ -644,7 +638,7 @@ const OBJECTS: Boards = {
     `const byRunsThenName = (a, b) => b.runs - a.runs || a.name.localeCompare(b.name);
 const sortActors = (list) => [...list].sort(byRunsThenName);`,
     `const topPerCategory = (list, k) => {
-  const out = {};
+  const out = Object.create(null);
   for (const { name, category } of sortActors(list)) {
     const names = (out[category] ??= []);
     if (names.length < k) names.push(name);
@@ -675,41 +669,36 @@ const LOOKUPS: Boards = {
   return { added, removed, changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const seen = new Map();
   for (const [from, to] of links) {
-    if (!graph[from]) graph[from] = [];
-    // Each target once, in link order.
-    if (!graph[from].includes(to)) graph[from].push(to);
+    if (!seen.has(from)) { seen.set(from, new Set()); graph[from] = []; }
+    if (!seen.get(from).has(to)) {
+      seen.get(from).add(to);
+      graph[from].push(to);
+    }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
-  const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  // Mark a page when it is queued, so no page is queued twice.
+  const graph = linksToGraph(links), queue = [start], order = [];
   const visited = new Set([start]);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     order.push(page);
     for (const next of graph[page] ?? []) {
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  // depths doubles as the visited set: a page with a depth has been queued.
-  const depths = { [start]: 0 };
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
+  depths[start] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     for (const next of graph[page] ?? []) {
-      if (!(next in depths)) {
+      if (!Object.hasOwn(depths, next)) {
         depths[next] = depths[page] + 1;
         queue.push(next);
       }
@@ -749,47 +738,41 @@ const LOOKUPS: Boards = {
   return { added: added, removed: removed, changed: changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const targetsBySource = new Map();
   for (let i = 0; i < links.length; i++) {
-    const from = links[i][0];
-    const to = links[i][1];
-    if (graph[from] === undefined) {
+    const from = links[i][0], to = links[i][1];
+    if (!targetsBySource.has(from)) {
+      targetsBySource.set(from, new Set());
       graph[from] = [];
     }
-    if (graph[from].indexOf(to) === -1) {
-      graph[from].push(to);
-    }
+    const seen = targetsBySource.get(from);
+    if (!seen.has(to)) { seen.add(to); graph[from].push(to); }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
   const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  const visited = new Set();
-  visited.add(start);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const queue = [start], order = [], visited = new Set([start]);
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head];
+    head++;
     order.push(page);
-    const neighbours = graph[page] || [];
+    const neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  const depths = {};
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
   depths[start] = 0;
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
-    const neighbours = graph[page] || [];
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head++], neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
       if (depths[next] === undefined) {
@@ -814,20 +797,21 @@ const LOOKUPS: Boards = {
   };
 };`,
     `const linksToGraph = (links) => {
-  const graph = {};
+  const groups = new Map();
   for (const [from, to] of links) {
-    const targets = (graph[from] ??= []);
-    if (!targets.includes(to)) targets.push(to);
+    if (!groups.has(from)) groups.set(from, new Set());
+    groups.get(from).add(to);
   }
-  return graph;
+  return Object.fromEntries([...groups].map(([from, targets]) => [from, [...targets]]));
 };`,
     `const crawlOrder = (links, start) => {
-  const graph = linksToGraph(links);
-  const visited = new Set([start]);
-  for (const page of visited) {
-    for (const next of graph[page] ?? []) visited.add(next);
+  const graph = linksToGraph(links), queue = [start], visited = new Set([start]);
+  for (let head = 0; head < queue.length; head++) {
+    for (const next of graph[queue[head]] ?? []) {
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
   }
-  return [...visited];
+  return queue;
 };`,
     `const crawlDepths = (links, start) => {
   const graph = linksToGraph(links);
@@ -1287,20 +1271,277 @@ const HIDDEN: Record<string, Hidden> = {
     ]
 ],
   'js-path-objects': [
-    [['countByCategory([{category: "b"}, {category: "a"}]).b', 1], ['Object.keys(countByCategory([{category: "z"}, {category: "a"}]))', ['z', 'a']]],
-    [['groupByCategory([{name: "A", category: "x"}, {name: "A", category: "x"}])', { x: ['A', 'A'] }], ['Object.keys(groupByCategory([{name: "A", category: "b"}, {name: "B", category: "a"}]))', ['b', 'a']]],
-    [['summarize([{name: "A", category: "x", runs: 1, rating: 1}, {name: "B", category: "x", runs: 1, rating: 2}, {name: "C", category: "x", runs: 1, rating: 2}]).x.best', 'B'], ['summarize([{name: "A", category: "x", runs: 2, rating: 1}, {name: "B", category: "y", runs: 3, rating: 1}]).y.runs', 3]],
-    [['sortActors([{name: "b", runs: 0}, {name: "a", runs: 0}]).map((a) => a.name)', ['a', 'b']], ['sortActors([{name: "A", runs: 1}, {name: "B", runs: 2}, {name: "C", runs: 3}]).map((a) => a.runs)', [3, 2, 1]]],
-    [['topPerCategory([{name: "A", category: "x", runs: 1}, {name: "B", category: "y", runs: 2}], 1)', { x: ['A'], y: ['B'] }], ['topPerCategory([{name: "A", category: "x", runs: 5}, {name: "B", category: "x", runs: 5}, {name: "C", category: "x", runs: 9}], 2).x', ['C', 'A']]],
-  ],
+    [
+        [
+            "countByCategory([{category: \"b\"}, {category: \"a\"}]).b",
+            1
+        ],
+        [
+            "Object.keys(countByCategory([{category: \"z\"}, {category: \"a\"}]))",
+            [
+                "z",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['__proto__','constructor','toString','','__proto__'].map(category=>Object.freeze({category})));const a=countByCategory(input),b=countByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__===2&&Object.hasOwn(a,'constructor')&&a.constructor===1&&a.toString===1&&a['']===1;})()",
+            true
+        ],
+        [
+            "Object.keys(countByCategory([{category:'4294967295'},{category:'01'},{category:'2'},{category:'10'},{category:'x'}]))",
+            [
+                "2",
+                "10",
+                "4294967295",
+                "01",
+                "x"
+            ]
+        ],
+        [
+            "countByCategory(Object.freeze(Array.from({length:1000},()=>Object.freeze({category:'same'}))))['same']",
+            1000
+        ]
+    ],
+    [
+        [
+            "groupByCategory([{name: \"A\", category: \"x\"}, {name: \"A\", category: \"x\"}])",
+            {
+                "x": [
+                    "A",
+                    "A"
+                ]
+            }
+        ],
+        [
+            "Object.keys(groupByCategory([{name: \"A\", category: \"b\"}, {name: \"B\", category: \"a\"}]))",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'  A  '}),Object.freeze({category:'constructor',name:''}),Object.freeze({category:'__proto__',name:'  A  '})]);const a=groupByCategory(input),b=groupByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='  A  ,  A  '&&Object.hasOwn(a,'constructor')&&a.constructor[0]===''&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const a=groupByCategory(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i}))));return a.x.length===1000&&a.x.every((name,i)=>name==='n'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 1, rating: 1}, {name: \"B\", category: \"x\", runs: 1, rating: 2}, {name: \"C\", category: \"x\", runs: 1, rating: 2}]).x.best",
+            "B"
+        ],
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 2, rating: 1}, {name: \"B\", category: \"y\", runs: 3, rating: 1}]).y.runs",
+            3
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'',runs:0,rating:0}),Object.freeze({category:'__proto__',name:'later',runs:1000000,rating:0}),Object.freeze({category:'constructor',name:'top',runs:1,rating:5})]);const a=summarize(input),b=summarize(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.count===2&&a.__proto__.runs===1000000&&a.__proto__.best===''&&a.constructor.best==='top'&&a.__proto__!==b.__proto__&&Object.keys(a.__proto__).sort().join(',')==='best,count,runs';})()",
+            true
+        ],
+        [
+            "summarize(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:1000000,rating:0})))).x",
+            {
+                "count": 1000,
+                "runs": 1000000000,
+                "best": "n0"
+            }
+        ]
+    ],
+    [
+        [
+            "sortActors([{name: \"b\", runs: 0}, {name: \"a\", runs: 0}]).map((a) => a.name)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "sortActors([{name: \"A\", runs: 1}, {name: \"B\", runs: 2}, {name: \"C\", runs: 3}]).map((a) => a.runs)",
+            [
+                3,
+                2,
+                1
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({name:'same',runs:10,id:1}),b=Object.freeze({name:'same',runs:10,id:2}),c=Object.freeze({name:'higher',runs:1000000,id:3}),input=Object.freeze([a,b,c]);const out=sortActors(input),empty=[];return out!==input&&out[0]===c&&out[1]===a&&out[2]===b&&input[0]===a&&sortActors(empty)!==empty&&sortActors(empty)!==sortActors(empty);})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(['Zebra','apple','éclair','alpha'].map(name=>Object.freeze({name,runs:1})));const out=sortActors(input);return out.every((r,i)=>input.includes(r)&&(i===0||out[i-1].name.localeCompare(r.name)<=0));})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:'x',runs:i})));const out=sortActors(input);return out.length===1000&&out.every((r,i)=>r===input[999-i]);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 1}, {name: \"B\", category: \"y\", runs: 2}], 1)",
+            {
+                "x": [
+                    "A"
+                ],
+                "y": [
+                    "B"
+                ]
+            }
+        ],
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 5}, {name: \"B\", category: \"x\", runs: 5}, {name: \"C\", category: \"x\", runs: 9}], 2).x",
+            [
+                "C",
+                "A"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'B',runs:1}),Object.freeze({category:'__proto__',name:'A',runs:2}),Object.freeze({category:'constructor',name:'C',runs:3})]);const a=topPerCategory(input,2),b=topPerCategory(input,2);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='A,B'&&a.constructor[0]==='C'&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:i})));const out=topPerCategory(input,1000);return out.x.length===1000&&out.x.every((name,i)=>name==='n'+(999-i));})()",
+            true
+        ]
+    ]
+],
   'js-path-lookups': [
-    [['indexById([{id: "a", n: 1}]).get("a").n', 1], ['indexById([{id: 1}, {id: 2}]).get(2).id', 2]],
-    // Two changed ids, listed in after order rather than before order.
-    [['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 1}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['a'] }], ['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 2}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['b', 'a'] }]],
-    [['linksToGraph([["a", "b"], ["a", "c"], ["a", "b"]]).a', ['b', 'c']], ['linksToGraph([["a", "a"]])', { a: ['a'] }]],
-    [['crawlOrder([["a", "a"]], "a")', ['a']], ['crawlOrder([["s", "b"], ["s", "a"], ["a", "c"], ["b", "c"]], "s")', ['s', 'b', 'a', 'c']]],
-    [['crawlDepths([["a", "a"]], "a")', { a: 0 }], ['crawlDepths([["s", "x"], ["x", "y"], ["y", "z"], ["s", "z"]], "s").z', 1]],
-  ],
+    [
+        [
+            "indexById([{id: \"a\", n: 1}]).get(\"a\").n",
+            1
+        ],
+        [
+            "indexById([{id: 1}, {id: 2}]).get(2).id",
+            2
+        ],
+        [
+            "(() => {const id=Object.freeze({x:1}),a=Object.freeze({id}),b=Object.freeze({id:1}),c=Object.freeze({id:'1'}),input=Object.freeze([a,b,c]);const x=indexById(input),y=indexById(input);return x!==y&&x.get(id)===a&&x.get(1)===b&&x.get('1')===c&&x.size===3;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id})));const out=indexById(input);return out.size===1000&&input.every(r=>out.get(r.id)===r);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 1}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 2}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "b",
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});const before=Object.freeze([Object.freeze({id:a,runs:1}),Object.freeze({id:0,runs:1}),Object.freeze({id:'0',runs:5})]),after=Object.freeze([Object.freeze({id:b,runs:1}),Object.freeze({id:a,runs:0}),Object.freeze({id:'0',runs:5})]);const x=diffCatalog(before,after),y=diffCatalog(before,after);return x!==y&&x.added!==y.added&&x.removed!==y.removed&&x.changed!==y.changed&&x.added[0]===b&&x.removed[0]===0&&x.changed[0]===a&&x.added.length===1&&x.removed.length===1&&x.changed.length===1;})()",
+            true
+        ],
+        [
+            "(() => {const before=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id,runs:1}))),after=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i+500,runs:0})));const x=diffCatalog(before,after);return x.added.length===500&&x.removed.length===500&&x.changed.length===500&&x.added[0]===1000&&x.removed[0]===0&&x.changed[0]===500&&x.changed[499]===999;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "linksToGraph([[\"a\", \"b\"], [\"a\", \"c\"], [\"a\", \"b\"]]).a",
+            [
+                "b",
+                "c"
+            ]
+        ],
+        [
+            "linksToGraph([[\"a\", \"a\"]])",
+            {
+                "a": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','']),Object.freeze(['constructor','toString'])]);const a=linksToGraph(links),b=linksToGraph(links);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='constructor,'&&a.constructor[0]==='toString'&&a.__proto__!==b.__proto__&&!Object.hasOwn(a,'toString');})()",
+            true
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const a=linksToGraph(links);return a.s.length===2000&&a.s.every((p,i)=>p==='p'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlOrder([[\"a\", \"a\"]], \"a\")",
+            [
+                "a"
+            ]
+        ],
+        [
+            "crawlOrder([[\"s\", \"b\"], [\"s\", \"a\"], [\"a\", \"c\"], [\"b\", \"c\"]], \"s\")",
+            [
+                "s",
+                "b",
+                "a",
+                "c"
+            ]
+        ],
+        [
+            "crawlOrder(Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]),'')",
+            [
+                "",
+                "__proto__",
+                "constructor",
+                "toString"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const out=crawlOrder(links,'s');return out.length===2001&&out[0]==='s'&&out.slice(1).every((p,i)=>p==='p'+i)&&crawlOrder([],'')!==crawlOrder([],'');})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlDepths([[\"a\", \"a\"]], \"a\")",
+            {
+                "a": 0
+            }
+        ],
+        [
+            "crawlDepths([[\"s\", \"x\"], [\"x\", \"y\"], [\"y\", \"z\"], [\"s\", \"z\"]], \"s\").z",
+            1
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]);const a=crawlDepths(links,''),b=crawlDepths(links,'');return a!==b&&Object.hasOwn(a,'')&&a['']===0&&Object.hasOwn(a,'__proto__')&&a.__proto__===1&&a.constructor===2&&a.toString===3;})()",
+            true
+        ],
+        [
+            "Object.keys(crawlDepths([['s','10'],['s','2']],'s'))",
+            [
+                "2",
+                "10",
+                "s"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['p'+i,'p'+(i+1)])));const out=crawlDepths(links,'p0');return Object.keys(out).length===2001&&out.p0===0&&out.p2000===2000;})()",
+            true
+        ]
+    ]
+],
 };
 
 export const JAVASCRIPT_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries([

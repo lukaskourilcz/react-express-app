@@ -222,7 +222,11 @@ globalThis.structuredClone = value => {
       out = isArray(item) ? new Array(item.length) : {};
       apply(mapSet, copies, [item, out]);
       const names = keys(item);
-      for (let i = 0; i < names.length; i++) out[names[i]] = copy(item[names[i]]);
+      // An own __proto__ key is data, including when its value points back
+      // to this clone. Assignment would invoke the inherited setter.
+      for (let i = 0; i < names.length; i++) defineProperty(out, names[i], {
+        value: copy(item[names[i]]), writable: true, enumerable: true, configurable: true,
+      });
       return out;
     }
     apply(mapSet, copies, [item, out]);

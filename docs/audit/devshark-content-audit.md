@@ -1,5 +1,107 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b025
+
+Read all five cumulative tracing stages, their inherited fields and every board.
+Weekly totals retain unrounded left-to-right Number arithmetic and caller
+ownership. Reminders capture fixed names as well as per-iteration positions;
+the reference now agrees with junior/senior snapshots after caller mutation.
+Top-expense results retain original immutable records, stable ties and fresh
+arrays. Receipt aggregation attaches Promise.all handlers to all started
+promises, retains exact opaque values and propagates original rejection reasons.
+Numeric form text follows one explicit bounded Number conversion/rounding policy,
+without claiming exact financial arithmetic or a universal NaN pattern.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms pass,
+five starters and ten wrongs fail. Twenty authored-target/base25XP checks pass;
+copy sweep has zero artifacts. Focused cumulative coding, API/script types,
+launch, build,263native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Finite execution is not arbitrary-program or
+asymptotic proof. Scores and final readings are manual same-session model work.
+Coverage is155/725coding,570remaining,263/263native. B022–b025 and runtime
+#403 remain staged; PR #402's exact-head required checks have passed and it is
+merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge,
+owns devshark.app and has no alias error. Eleven general guest checks pass at
+zero XP/null progress. Shipped coverage is135coding/263native;20coding
+reviews and the #403 runtime repair are local.
+
+## 15 October continuation — five coding items b024
+
+Read every field and all cumulative boards in the five logging/debugging stages.
+Bounded read-only baskets retain unrounded Number totals, first cheapest ties
+and empty names. Price histories now deep-copy nested metadata on the junior
+board too, preserve own prototype-like data and keep snapshots independent.
+The Console explanation distinguishes immediate app formatting from lazy
+inspection in some browser DevTools. Counter groups do not reset cumulative
+counts, and virtual Submit timing is not evidence of a fast program.
+
+All three final bestseller reveals now use the requested debug helper, safe
+keys and explicit first-appearance order before stable descending sorting.
+The helper's exact two-argument console.log/reference contract is separate from
+the retained broad rendered-text probe. Future broken starter functions remain
+unchanged until their repair stage. A first native contract run exposed a
+cross-realm prototype assertion in the new probe; comparing with a fresh clone
+from the same clone realm fixes that probe without weakening own-key checks.
+
+Final-hash execution agrees on36/36verdicts versus25/36before:20valid,
+five starters and11wrong variants. Twenty target/base25XP checks pass;
+uncertain complexity remains unpenalized. Copy sweep finds zero artifacts.
+Focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Own-key clone parity relies on the local #403 fix; neither b024 nor that runtime
+change has shipped. Coverage is150/725coding,575remaining,263/263native.
+These are manual same-session model reviews, not independent/human acceptance
+or a proof over arbitrary learner programs.
+
+## 15 October continuation — five coding items b023
+
+Read all five cumulative lookup/graph stages and every inherited requirement,
+check and board. Indexes retain original opaque ids/records; catalogue diffs
+retain required order and changes to zero. Graph construction uses safe own
+buckets with per-source Sets rather than repeated linear membership scans.
+Revealed breadth-first queues advance a read index instead of shifting fronts;
+depth dictionaries handle all page names safely. Standard property enumeration
+replaces the impossible universal visit-order claim for numeric labels.
+
+All 35 final-hash sandbox verdicts agree versus25/35before; twenty valid
+complexity analyses retain25XP. Five starters and ten wrong variants fail.
+Checks cover frozen original references, mixed ids, two1000-record catalogues,
+reserved/empty page-label cycles,2000-edge wide/chain graphs and array-index
+key enumeration. Copy sweep, focused cumulative coding, API/script types,
+launch, build,263native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Model scores/final readings remain manual; finite
+execution is not an independent reader or an asymptotic proof.
+
+Current coding coverage is145/725;580remain. Native coverage is263/263.
+PR #402 remains frozen at95674b5e with SQL42s passing and verify pending.
+Its exact READY preview now passes all eleven guest checks, zero XP/null progress.
+B022–b023 remain local; shipped coverage remains100coding/263native.
+
+## 15 October continuation — five coding items b022
+
+Read all five cumulative object/grouping stages and every inherited board,
+requirement and check. Safe null-prototype dictionaries now replace inherited
+buckets in all counting, grouping, summary/auxiliary-rating and top-per-category
+reveals. Integer-looking category names follow actual object enumeration rules;
+the insertion-order label is scoped to non-index names. The junior sort now uses
+the same explicit localeCompare policy as the other boards, with stable ties and
+original record references. No locale-independent universal alphabet is claimed.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+complexity analyses retain25XP; five starters and ten wrong variants fail.
+The final copy uses the precise array-index terminology and checks4294967295,
+01,2,10property names; all35cases were rerun after that refinement. Cases also
+cover frozen __proto__/constructor buckets, zero ratings/empty names, private
+tracking fields, one-billion exact run totals and1000records/k. Copy sweep,
+focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Review scores/final readings remain manual same-session model evidence.
+
+Current coding coverage is140/725;585remain. Native coverage stays263/263.
+PR #402 freezes b015–b021 (35coding reviews) at95674b5e; required SQL passes42s,
+verify remains pending and its READY preview is undergoing eleven guest checks.
+This new five-item batch stays local while that exact head is verified.
+
 ## 15 October continuation — five coding items b021 and PR #401 production
 
 Read all five cumulative Map-and-Set stages, their inherited requirements,

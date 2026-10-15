@@ -61,8 +61,8 @@ const LOGGING: Boards = {
 }
 
 function checkout(account, basket) {
-  // console.count("addPoints") printed 2 under every checkout heading: the
-  // return line called addPoints again just to read the balance.
+  // console.count("addPoints") increased twice per checkout (1, 2, then
+  // 3, 4): the return line called addPoints again to read the balance.
   const total = basketSummary(basket).total;
   const points = addPoints(account, total);
   return { total, points };
@@ -75,14 +75,19 @@ function checkout(account, basket) {
 
 function bestSeller(orders) {
   if (orders.length === 0) return null;
-  const totals = {};
+  const totals = Object.create(null);
+  const names = [];
   for (const order of orders) {
-    totals[order.name] = (totals[order.name] ?? 0) + order.qty;
+    if (!Object.hasOwn(totals, order.name)) {
+      totals[order.name] = 0;
+      names.push(order.name);
+    }
+    totals[order.name] += order.qty;
   }
-  // debug("ranked", ...) printed the smallest total first: the comparator
-  // sorted ascending. b - a puts the largest first, and sort is stable, so
-  // the name seen first still wins a tie.
-  const ranked = debug("ranked", Object.entries(debug("totals", totals)).sort((a, b) => b[1] - a[1]));
+  debug("totals", totals);
+  // Keep explicit first-appearance order even for numeric-looking names.
+  const ranked = debug("ranked", names.map((name) => [name, totals[name]])
+    .sort((a, b) => b[1] - a[1]));
   return ranked[0][0];
 }`,
   ],
@@ -114,10 +119,7 @@ function bestSeller(orders) {
   return basket[bestIndex].name;
 }`,
     `function priceHistory(basket, changes) {
-  const current = [];
-  for (let i = 0; i < basket.length; i++) {
-    current.push({ ...basket[i] });
-  }
+  const current = structuredClone(basket);
   const history = [];
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
@@ -126,10 +128,7 @@ function bestSeller(orders) {
         current[j].price = change.price;
       }
     }
-    const snapshot = [];
-    for (let j = 0; j < current.length; j++) {
-      snapshot.push({ ...current[j] });
-    }
+    const snapshot = structuredClone(current);
     history.push(snapshot);
   }
   return history;
@@ -152,26 +151,24 @@ function checkout(account, basket) {
 }
 
 function bestSeller(orders) {
-  if (orders.length === 0) {
-    return null;
-  }
-  const totals = {};
+  if (orders.length === 0) return null;
+  const totals = Object.create(null);
   const names = [];
   for (let i = 0; i < orders.length; i++) {
     const order = orders[i];
-    if (totals[order.name] === undefined) {
+    if (!Object.hasOwn(totals, order.name)) {
       totals[order.name] = 0;
       names.push(order.name);
     }
     totals[order.name] = totals[order.name] + order.qty;
   }
-  let best = names[0];
-  for (let i = 1; i < names.length; i++) {
-    if (totals[names[i]] > totals[best]) {
-      best = names[i];
-    }
+  debug("totals", totals);
+  const entries = [];
+  for (let i = 0; i < names.length; i++) {
+    entries.push([names[i], totals[names[i]]]);
   }
-  return best;
+  const ranked = debug("ranked", entries.sort((a, b) => b[1] - a[1]));
+  return ranked[0][0];
 }`,
   ],
   senior: [
@@ -202,10 +199,12 @@ function checkout(account, basket) {
     `const debug = (label, value) => (console.log(label, value), value);
 
 function bestSeller(orders) {
+  if (orders.length === 0) return null;
   const totals = new Map();
   for (const { name, qty } of orders) totals.set(name, (totals.get(name) ?? 0) + qty);
-  const [best] = [...totals].sort((a, b) => b[1] - a[1]);
-  return best ? best[0] : null;
+  debug("totals", Object.fromEntries(totals));
+  const ranked = debug("ranked", [...totals].sort((a, b) => b[1] - a[1]));
+  return ranked[0][0];
 }`,
   ],
 };
@@ -217,14 +216,19 @@ function bestSeller(orders) {
 const printedBy = (call: string) => `(() => { const printed = []; const methods = ["log", "info", "debug", "warn", "error"]; const kept = methods.map((name) => console[name]); methods.forEach((name) => { console[name] = (...args) => { printed.push(args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")); }; }); try { const back = ${call}; return { back, printed }; } finally { methods.forEach((name, index) => { console[name] = kept[index]; }); } })()`;
 
 const LOGGING_HIDDEN: Hidden = [
-  [['basketSummary([{ name: "x", price: 3, qty: 5 }, { name: "y", price: 1, qty: 2 }])', { lines: 2, units: 7, total: 17 }], ['Object.keys(basketSummary([]))', ['lines', 'units', 'total']]],
-  [['cheapest([{ name: "p", price: 1 }, { name: "q", price: 0 }])', 'q'], ['cheapest([{ name: "solo", price: 9 }])', 'solo']],
-  [['priceHistory([{ name: "a", price: 1 }, { name: "b", price: 1 }], [{ name: "a", price: 2 }, { name: "b", price: 3 }])', [[{ name: 'a', price: 2 }, { name: 'b', price: 1 }], [{ name: 'a', price: 2 }, { name: 'b', price: 3 }]]], ['(() => { const basket = [{ name: "a", price: 1 }]; return priceHistory(basket, [{ name: "a", price: 2 }])[0] !== basket; })()', true]],
-  [['checkout({ points: 1 }, [{ name: "a", price: 1.5, qty: 3 }])', { total: 4.5, points: 5 }], ['(() => { const account = { points: 0 }; checkout(account, [{ name: "a", price: 7, qty: 1 }]); checkout(account, []); return account.points; })()', 7]],
+  [['basketSummary([{ name: "x", price: 3, qty: 5 }, { name: "y", price: 1, qty: 2 }])', { lines: 2, units: 7, total: 17 }], ['Object.keys(basketSummary([]))', ['lines', 'units', 'total']], ["(() => { const b = Object.freeze([Object.freeze({name:\"\",price:0.1,qty:1})]); const a=basketSummary(b),c=basketSummary(b);return [a,a!==c,b.length]; })()", [{"lines": 1, "units": 1, "total": 0.1}, true, 1]], ["basketSummary(Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"x\",price:1000000,qty:1000}))))", {"lines": 1000, "units": 1000000, "total": 1000000000000}]],
+  [['cheapest([{ name: "p", price: 1 }, { name: "q", price: 0 }])', 'q'], ['cheapest([{ name: "solo", price: 9 }])', 'solo'], ["cheapest(Object.freeze([Object.freeze({name:\"\",price:0}),Object.freeze({name:\"next\",price:0})]))", ""], ["cheapest(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:String(i),price:1000-i+0.25}))))", "999"]],
+  [['priceHistory([{ name: "a", price: 1 }, { name: "b", price: 1 }], [{ name: "a", price: 2 }, { name: "b", price: 3 }])', [[{ name: 'a', price: 2 }, { name: 'b', price: 1 }], [{ name: 'a', price: 2 }, { name: 'b', price: 3 }]]], ['(() => { const basket = [{ name: "a", price: 1 }]; return priceHistory(basket, [{ name: "a", price: 2 }])[0] !== basket; })()', true], ["(() => { const meta=JSON.parse('{\"nested\":{\"n\":1},\"__proto__\":{\"tag\":\"data\"}}');Object.freeze(meta.nested);Object.freeze(meta.__proto__);Object.freeze(meta);const b=Object.freeze([Object.freeze({name:\"\",price:2,meta})]);const changes=Object.freeze([Object.freeze({name:\"\",price:0}),Object.freeze({name:\"\",price:3})]);const h=priceHistory(b,changes);h[0][0].meta.nested.n=9;return [h.map(x=>x[0].price),h[1][0].meta.nested.n,meta.nested.n,Object.hasOwn(h[0][0].meta,\"__proto__\"),h[0][0].meta.__proto__.tag,Object.getPrototypeOf(h[0][0].meta)===Object.getPrototypeOf(structuredClone({})),h[0][0].meta!==h[1][0].meta]; })()", [[0, 3], 1, 1, true, "data", true, true]], ["(() => { const b=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({name:String(i),price:i})));const c=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({name:String(i),price:0})));const h=priceHistory(b,c);return [h.length,h.every(x=>x.length===100),h[0][99].price,h[99].every(x=>x.price===0),b[99].price]; })()", [100, true, 99, true, 99]]],
+  [['checkout({ points: 1 }, [{ name: "a", price: 1.5, qty: 3 }])', { total: 4.5, points: 5 }], ['(() => { const account = { points: 0 }; checkout(account, [{ name: "a", price: 7, qty: 1 }]); checkout(account, []); return account.points; })()', 7], ["(() => { const a={points:7,tag:\"keep\"}; const b=Object.freeze([Object.freeze({name:\"a\",price:0.5,qty:1}),Object.freeze({name:\"b\",price:0.5,qty:1})]);return [checkout(a,b),a.points,a.tag]; })()", [{"total": 1, "points": 8}, 8, "keep"]], ["checkout({points:1000000000000},Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"\",price:1000000,qty:1000}))))", {"total": 1000000000000, "points": 2000000000000}]],
   [
+    ["(() => { const kept=console.log,calls=[];console.log=(...a)=>calls.push(a);try{const box={n:1},values=[box,undefined,0,false,\"\",null,Symbol(\"s\")];const back=values.map(v=>debug(\"label\",v));return [calls.length,calls.every((a,i)=>a.length===2&&a[0]===\"label\"&&Object.is(a[1],values[i])),back.every((v,i)=>Object.is(v,values[i]))];}finally{console.log=kept;} })()", [7, true, true]],
+    ["(() => { const kept=console.log,calls=[];console.log=(...a)=>calls.push(a);try{const b=Object.freeze([Object.freeze({name:\"10\",qty:1}),Object.freeze({name:\"2\",qty:1})]);const best=bestSeller(b);return [best,calls.map(a=>a[0]),calls.length===2&&calls[1][1][0][0]===\"10\"]; }finally{console.log=kept;} })()", ["10", ["totals", "ranked"], true]],
+    ["bestSeller(Object.freeze([Object.freeze({name:\"__proto__\",qty:3}),Object.freeze({name:\"constructor\",qty:2}),Object.freeze({name:\"__proto__\",qty:1})]))", "__proto__"],
+    ["bestSeller([{name:\"\",qty:0},{name:\"toString\",qty:0}])", ""],
+    ["bestSeller(Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"__proto__\",qty:1000}))))", "__proto__"],
     // One printed line that names the label and shows the value, and the
-    // value itself back. `console.log(label, value)` and
-    // `console.log({ [label]: value })` both pass.
+    // value itself back. The exact two-argument console.log contract is
+    // checked separately below; this older rendered-text check is retained.
     [`(() => { const { back, printed } = ${printedBy('debug("total", 42)')}; return [back, printed.length, printed.join(" ").includes("total"), printed.join(" ").includes("42")]; })()`, [42, 1, true, true]],
     ['debug("zero", 0)', 0],
     ['bestSeller([{ name: "x", qty: 1 }, { name: "y", qty: 4 }, { name: "x", qty: 4 }])', 'x'],
@@ -232,6 +236,7 @@ const LOGGING_HIDDEN: Hidden = [
     ['bestSeller([{ name: "tea", qty: 5 }, { name: "cake", qty: 1 }])', 'tea'],
   ],
 ];
+
 
 /* ── Trace the state ──────────────────────────────────────────────────── */
 
@@ -258,7 +263,8 @@ const TRACING: Boards = {
   // runs the loop has finished. let gives each pass its own i.
   const reminders = [];
   for (let i = 0; i < names.length; i++) {
-    reminders.push(() => \`\${i + 1}. \${names[i]} owes you\`);
+    const name = names[i];
+    reminders.push(() => \`\${i + 1}. \${name} owes you\`);
   }
   return reminders;
 }`,
@@ -342,19 +348,15 @@ function withTip(fields, percent) {
   for (let i = 0; i < ids.length; i++) {
     pending.push(fetchReceipt(ids[i]));
   }
-  const receipts = [];
-  for (let i = 0; i < pending.length; i++) {
-    const receipt = await pending[i];
-    receipts.push(receipt);
-  }
-  return receipts;
+  // Attach handlers to all pending promises together, including rejections.
+  return Promise.all(pending);
 }`,
     `function readAmount(field) {
   const text = field.value.trim();
   if (text === "") {
     return 0;
   }
-  return parseFloat(text);
+  return Number(text);
 }
 
 function sumAmounts(fields) {
@@ -392,15 +394,19 @@ function withTip(fields, percent) {
 };
 
 const TRACING_HIDDEN: Hidden = [
-  [['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 1])', [7, 1]], ['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3])', [7, 14, 21]], ['weeklyTotals([0, 0, 0, 0, 0, 0, 0, 5])', [0, 5]]],
-  [['makeReminders(["x", "y"]).reverse().map((remind) => remind())', ['2. y owes you', '1. x owes you']], ['(() => { const reminders = makeReminders(["p", "q"]); reminders[1](); return reminders[0](); })()', '1. p owes you']],
-  [['(() => { const expenses = [{ label: "x", amount: 2 }, { label: "y", amount: 9 }]; const top = largestExpenses(expenses, 2); return [top.map((e) => e.label), expenses.map((e) => e.label)]; })()', [['y', 'x'], ['x', 'y']]], ['(() => { const expenses = [{ label: "x", amount: 2 }]; return largestExpenses(expenses, 1) !== expenses; })()', true]],
+  [['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 1])', [7, 1]], ['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3])', [7, 14, 21]], ['weeklyTotals([0, 0, 0, 0, 0, 0, 0, 5])', [0, 5]], ["(() => { const d=Object.freeze([0.1,0.2,-0.1,0,0,0,0,0.25]); const a=weeklyTotals(d),b=weeklyTotals(d);return [a,a!==b,d.length]; })()", [[0.20000000000000004, 0.25], true, 8]], ["(() => { const out=weeklyTotals(Object.freeze(Array.from({length:1000},()=>1000000))); return [out.length,out[0],out[142]]; })()", [143, 7000000, 6000000]]],
+  [['makeReminders(["x", "y"]).reverse().map((remind) => remind())', ['2. y owes you', '1. x owes you']], ['(() => { const reminders = makeReminders(["p", "q"]); reminders[1](); return reminders[0](); })()', '1. p owes you'], ["(() => { const names=[\"same\",\"same\",\"\"];const r=makeReminders(names);names[0]=\"changed\";names.length=0;return [r.map(f=>f()),r[0]!==r[1],r[1](),r[0]()]; })()", [["1. same owes you", "2. same owes you", "3.  owes you"], true, "2. same owes you", "1. same owes you"]], ["(() => { const names=Object.freeze(Array.from({length:1000},(_,i)=>\"n\"+i));const a=makeReminders(names),b=makeReminders(names);return [a.length,a[999](),a!==b,a[0]!==b[0]]; })()", [1000, "1000. n999 owes you", true, true]]],
+  [['(() => { const expenses = [{ label: "x", amount: 2 }, { label: "y", amount: 9 }]; const top = largestExpenses(expenses, 2); return [top.map((e) => e.label), expenses.map((e) => e.label)]; })()', [['y', 'x'], ['x', 'y']]], ['(() => { const expenses = [{ label: "x", amount: 2 }]; return largestExpenses(expenses, 1) !== expenses; })()', true], ["(() => { const a=Object.freeze({label:\"a\",amount:0}),b=Object.freeze({label:\"b\",amount:0}),c=Object.freeze({label:\"c\",amount:-0.25});const input=Object.freeze([a,b,c]);const out=largestExpenses(input,1000);return [out!==input,out.length,out[0]===a,out[1]===b,out[2]===c,largestExpenses(input,0).length]; })()", [true, 3, true, true, true, 0]], ["(() => { const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({label:String(i),amount:i-500})));const out=largestExpenses(input,1000);return [out.length,out[0]===input[999],out[999]===input[0]]; })()", [1000, true, true]]],
   [
+    ["(async () => { const id={},ids=Object.freeze([id,id,0,\"0\"]),box=Object.freeze({ok:true}),values=[box,undefined,null,0],calls=[];let count=0;const pending=loadReceipts(ids,(...args)=>{calls.push(args);return Promise.resolve(values[count++]);});const started=calls.length;const out=await pending;const other=await loadReceipts(Object.freeze([]),()=>{throw Error(\"no call\");});return [started,out.length,out.every((v,i)=>Object.is(v,values[i])),calls.every((a,i)=>a.length===1&&Object.is(a[0],ids[i])),out!==other,other.length]; })()", [4, 4, true, true, true, 0]],
+    ["(async () => { const reason={code:\"local\"};try{await loadReceipts([1,2],id=>id===2?Promise.reject(reason):Promise.resolve(id));return false;}catch(error){return error===reason;} })()", true],
+    ["(async () => { const ids=Object.freeze(Array.from({length:50},(_,i)=>i));let starts=0;const out=await loadReceipts(ids,id=>{starts++;return Promise.resolve(id);});return [starts,out.length,out[49]]; })()", [50, 50, 49]],
     ['(async () => { let running = 0; let most = 0; const fetchReceipt = (id) => { running += 1; most = Math.max(most, running); return new Promise((done) => setTimeout(() => { running -= 1; done({ id }); }, 5)); }; await loadReceipts([1, 2, 3, 4], fetchReceipt); return most; })()', 4],
     ['(async () => loadReceipts([5], (id) => Promise.resolve({ id, amount: 2 })))()', [{ id: 5, amount: 2 }]],
   ],
-  [['withTip([{ label: "a", value: "10" }], 0)', 10], ['Number.isNaN(withTip([{ label: "a", value: "1.10" }, { label: "b", value: "2.20" }], 5))', false], ['readAmount({ label: "a", value: "" })', 0]],
+  [['withTip([{ label: "a", value: "10" }], 0)', 10], ['Number.isNaN(withTip([{ label: "a", value: "1.10" }, { label: "b", value: "2.20" }], 5))', false], ['readAmount({ label: "a", value: "" })', 0], ["(() => { const fields=Object.freeze([Object.freeze({label:\"x\",value:\" 1.005 \"}),Object.freeze({label:\"y\",value:\"1e2\"}),Object.freeze({label:\"z\",value:\" -.25 \"})]);return [readAmount(fields[0]),sumAmounts(fields),withTip(fields,10)]; })()", [1.005, 100.755, 110.83]], ["(() => { const f=Object.freeze(Array.from({length:1000},()=>Object.freeze({label:\"\",value:\"1000000\"})));return [sumAmounts(f),withTip(f,100),readAmount({label:\"blank\",value:\" \\t\\n \"})]; })()", [1000000000, 2000000000, 0]]],
 ];
+
 
 /* ── Edges and inputs ─────────────────────────────────────────────────── */
 

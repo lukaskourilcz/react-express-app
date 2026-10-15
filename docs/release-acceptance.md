@@ -1,5 +1,27 @@
 # Release acceptance matrix
 
+## 15 October — local structuredClone own-key correction (#403)
+
+Actual QuickJS probes reproduce loss of an own __proto__ key, changed clone
+prototype/inherited data and a circular-prototype exception for a self-referential
+own data key. The native Run realm passes these cases. The copy loop now uses
+its captured native defineProperty with ordinary writable/enumerable/configurable
+data descriptors, preserving aliases/cycles without invoking inherited setters.
+No grading-result authority, isolation, handler, reward or access policy changes.
+
+Four final focused cases pass in both the native Run realm and the freshly built
+Submit worker: ordinary keys/descriptors/shared aliases, a self-referential key,
+array prototype retention and a learner replacement of Object.defineProperty.
+Three independent native Chromium API probes also pass; they do not constitute
+an authenticated workbench flow. Existing full grading/Learn integrity suites
+pass; the final added captured-intrinsic case was verified by the focused suite.
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities) and diff checks pass. The earlier post-edit probe used the old
+worker artifact and is excluded; final evidence uses a rebuilt worker.
+
+This is a local source fix. #403 stays open until a checked merge/release.
+No production/account, XP, score, generated-name or owner-data fixture was used.
+
 ## 15 October — PR #401 exact production
 
 PR #401 is merged at a4e934948e8522a036726868da89669bca6c1316. Frozen head
@@ -3347,3 +3369,32 @@ O(n), so neither is penalized and no estimated-complexity line is shown. Initial
 bundle 242995/243000, unchanged budget. Required release CI and deployment
 verification are pending; visual checks for the final combined build are recorded
 when complete. Twelve API handlers, no migration/dependency or live user writes.
+
+## Logging-path content batch b024 — 15 October 2026
+
+Five individually read and manually scored coding records raise coverage to
+150/725, with575remaining and263/263native. Final-hash QuickJS verdicts agree
+36/36 (20valid,5starters,11wrong), compared with25/36before. Twenty authored
+complexity-target checks retain25XP; copy sweep has zero artifacts. Focused
+cumulative coding, API/script types, launch, build, native bindings, both
+production dependency audits (zero vulnerabilities) and diff checks pass.
+The first new native clone probe compared different realms' prototypes and
+failed; the final probe compares ordinary clones from the same realm while
+retaining the own-key/independence assertions. No checker policy changed.
+The content relies on local runtime fix #403; checked release/deployment and
+authenticated acceptance are pending. No owner progress or balances were used.
+
+## Tracing-path content batch b025 — 15 October 2026
+
+Five individual model reviews raise coding coverage to155/725,570remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty authored-target/base25XP
+checks and copy sweep pass. Focused cumulative coding, API/script types, launch,
+build, native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Callback/source ownership and local promises are tested
+without live accounts/network or balance changes. Release/independent and
+authenticated acceptance remain separate.
+
+## PR #402 exact production — 15 October 2026
+
+15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.

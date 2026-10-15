@@ -1243,6 +1243,14 @@ async function main() {
   assert.equal(await helper('function debug(label, value) { return value; }'), false, 'returning without logging fails');
   assert.equal(await helper('function debug(label, value) { console.log(label, value); }'), false, 'logging without returning fails');
   assert.equal(await helper('function debug(label, value) { console.log(label); console.log(value); return value; }'), false, 'two lines for one value fail');
+  // The older rendered-text probe above is deliberately broad. The actual
+  // task also requires one two-argument console.log and exact value identity.
+  const exactDebug = solutionFor('js-path-logging-5')!.hiddenTests!.find((one) => one.call.includes('values=[box'))!;
+  assert.ok(exactDebug, 'the exact debug contract remains authored');
+  const exactHelper = async (code: string) => allPassed(await runInSandbox({ code, calls: [exactDebug.call], expectations: [exactDebug.expected] }));
+  assert.equal(await exactHelper('function debug(label,value){console.log(label,value);return value;}'), true, 'the exact two-argument helper passes');
+  assert.equal(await exactHelper('function debug(label,value){console.info(label,value);return value;}'), false, 'another console method fails the exact task contract');
+  assert.equal(await exactHelper('function debug(label,value){console.log({[label]:value});return value;}'), false, 'one wrapped object fails the exact argument contract');
   // The café-orders project leaves every list and nothing else: its ten
   // stages still open, grade and keep their drafts and passes (#225).
   const retiredProject = EVOLVING_CHALLENGES.find((project) => project.id === 'js-evolving-debug')!;
