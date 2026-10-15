@@ -170,7 +170,7 @@ console.log(firstUniqueChar("swiss"));
     tier: 3,
     focus: ['map-set', 'sort'],
     title: 'Top K frequent elements',
-    prompt: 'Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort — bucketing by count reaches O(n) if you want it.',
+    prompt: "Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort \u2014 bucketing by count reaches O(n) if you want it. Domain: a dense ordinary readonly array of at most 1000 primitive Numbers, possibly frozen, with no accessors/proxies; all Number values are valid, including fractions, NaN, infinities and signed zero. Use Map/SameValueZero classes; returned Map keys canonicalize zero to +0. k is an integer from 0 through 2000. Preserve inputs and return a fresh mutable array every call, including k=0 and empty input. Equal frequencies retain the first appearance of each distinct key, without numeric-value tie sorting. n=max(2,input length), and O(n) auxiliary space is allowed; average constant Map operations and a comparison-sort model give the stated bound, while bucketing is also valid.",
     starter: `const topKFrequent = (numbers, k) => {
 
 };
@@ -215,7 +215,7 @@ console.log(topKFrequent([1, 1, 1, 2, 2, 3], 2));
     tier: 3,
     focus: ['map-set'],
     title: 'Longest consecutive sequence',
-    prompt: 'Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive whole numbers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space.',
+    prompt: "Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive integers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 safe integers in [-1000000000,1000000000], possibly frozen, without accessors/proxies. Only exact +1 adjacency counts; duplicates and -0/+0 represent one integer. Leave input values and order unchanged. These bounds make predecessor/successor arithmetic exact and advancing a run safe. n is 1 + input length under average constant Set/Map operations. The nested loops are amortized linear because only starts walk a run; an interval-endpoint Map merge with equivalent behavior is valid too.",
     starter: `const longestConsecutive = numbers => {
 
 };
@@ -266,7 +266,7 @@ console.log(longestConsecutive([100, 4, 200, 1, 3, 2]));
     tier: 1,
     focus: ['two-pointer', 'strings'],
     title: 'Valid palindrome',
-    prompt: 'Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not a letter or a digit is ignored and case is set aside. `isPalindrome("A man, a plan, a canal: Panama")` gives `true`; `isPalindrome("race a car")` gives `false`. Digits count as content, so `"0P"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy.',
+    prompt: "Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not an ASCII letter or an ASCII digit is ignored and ASCII case is set aside. `isPalindrome(\"A man, a plan, a canal: Panama\")` gives `true`; `isPalindrome(\"race a car\")` gives `false`. Digits count as content, so `\"0P\"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy. The exercise uses ASCII letters A-Z/a-z and ASCII digits 0-9 only; all other UTF-16 units, including non-ASCII letters/digits, emoji and combining marks, are ignored. Classify the original characters before converting retained ASCII letters to lowercase: Unicode characters such as the Kelvin sign must not become new ASCII content through lowercasing. No Unicode normalization or full-language case folding is intended. text is a primitive string of at most 1000 UTF-16 units; n is 1 + that length. Return an actual boolean without retaining cross-call state. The pointer solution meets O(1) auxiliary space; a cleaned-copy solution is behaviorally valid and O(n) time, but uses O(n) auxiliary space.",
     starter: `const isPalindrome = text => {
 
 };
@@ -296,6 +296,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      { call: "isPalindrome(\"\u212aa\")", expected: true, label: "filter original ASCII content before folding case", edge: true },
       { call: 'isPalindrome("A man, a plan, a canal: Panama")', expected: true },
       { call: 'isPalindrome("race a car")', expected: false },
       { call: 'isPalindrome("")', expected: true, label: 'empty input is a palindrome', edge: true },

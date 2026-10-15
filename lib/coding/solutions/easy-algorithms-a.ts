@@ -40,45 +40,14 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   'alg-easy2-majority-value': {
-    solution: `const majority = values => {
-  const counts = new Map();
-  for (const value of values) {
-    const count = (counts.get(value) ?? 0) + 1;
-    counts.set(value, count);
-    // The first value past half is the only one that can get there.
-    if (count > values.length / 2) return value;
-  }
-  return null;
-};`,
-    junior: `const majority = values => {
-  const counts = new Map();
-  for (const value of values) {
-    if (!counts.has(value)) {
-      counts.set(value, 0);
-    }
-    counts.set(value, counts.get(value) + 1);
-  }
-  for (const [value, count] of counts) {
-    if (count > values.length / 2) {
-      return value;
-    }
-  }
-  return null;
-};`,
-    // Boyer-Moore voting: a majority outlasts every other value put together,
-    // so one candidate and a lead are enough. The second pass confirms it.
-    senior: `const majority = (values) => {
-  let candidate = null;
-  let lead = 0;
-  for (const value of values) {
-    if (lead === 0) candidate = value;
-    lead += value === candidate ? 1 : -1;
-  }
-  let count = 0;
-  for (const value of values) if (value === candidate) count += 1;
-  return count > values.length / 2 ? candidate : null;
-};`,
+    solution: "const majority = values => {\n  const counts = new Map();\n  for (const value of values) {\n    const count = (counts.get(value) ?? 0) + 1;\n    counts.set(value, count);\n    // The first value past half is the only one that can get there.\n    if (count > values.length / 2) return value;\n  }\n  return null;\n};",
+    junior: "const majority = values => {\n  const counts = new Map();\n  for (const value of values) {\n    if (!counts.has(value)) {\n      counts.set(value, 0);\n    }\n    counts.set(value, counts.get(value) + 1);\n  }\n  for (const [value, count] of counts) {\n    if (count > values.length / 2) {\n      return value;\n    }\n  }\n  return null;\n};",
+    senior: "const majority = (values) => {\n  const same = (a, b) => a === b || (a !== a && b !== b);\n  let candidate = null;\n  let lead = 0;\n  for (const value of values) {\n    if (lead === 0) candidate = value;\n    lead += same(value, candidate) ? 1 : -1;\n  }\n  let count = 0;\n  for (const value of values) if (same(value, candidate)) count += 1;\n  return count > values.length / 2 ? candidate : null;\n};",
     hiddenTests: [
+      { call: "(() => {const a={},b={};const symbol=Symbol(\"s\");return [Number.isNaN(majority(Object.freeze([NaN,1,NaN]))),majority([a,b,a])===a,majority([a,b])===null,majority([symbol,symbol,Symbol(\"s\")])===symbol,majority([undefined,undefined,1])===undefined,majority([null,null,1])===null,majority([-0,0,-0])===0,majority([\"__proto__\",1,\"__proto__\"])];})()", expected: [true, true, true, true, true, true, true, "__proto__"] },
+      { call: "(() => {const item=Object.freeze({keep:1}),input=Object.freeze([item,0,item]);const out=majority(input);const mutable=[1,2,1];majority(mutable);return [out===item,item.keep,input[0]===item,mutable,majority([1,\"1\"])===null,majority([1,\"1\",\"1\"])===\"1\"];})()", expected: [true, 1, true, [1, 2, 1], true, true] },
+      { call: "[majority(Object.freeze(Array.from({length:1000},(_,i)=>i<501?7:i))),majority(Object.freeze(Array.from({length:1000},(_,i)=>i<500?7:i)))===null,majority([])===null]", expected: [7, true, true] },
+
       { call: 'majority([1, "1", 1])', expected: 1 },
       { call: 'majority([0, 0, 1])', expected: 0 },
       { call: 'majority([2, 2, 1, 1, 1, 2, 2])', expected: 2 },
@@ -86,50 +55,14 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   'alg-easy2-happy-number': {
-    solution: `const isHappy = n => {
-  const seen = new Set();
-  while (n !== 1) {
-    // A number met before means the sequence is going round a cycle.
-    if (seen.has(n)) return false;
-    seen.add(n);
-    let next = 0;
-    while (n > 0) {
-      const digit = n % 10;
-      next += digit * digit;
-      n = Math.floor(n / 10);
-    }
-    n = next;
-  }
-  return true;
-};`,
-    junior: `const isHappy = n => {
-  const seen = new Set();
-  let current = n;
-  while (current !== 1) {
-    if (seen.has(current)) {
-      return false;
-    }
-    seen.add(current);
-    const digits = String(current).split("");
-    let sum = 0;
-    for (let i = 0; i < digits.length; i++) {
-      sum = sum + Number(digits[i]) * Number(digits[i]);
-    }
-    current = sum;
-  }
-  return true;
-};`,
-    senior: `const squareDigits = (n) => [...String(n)].reduce((sum, digit) => sum + Number(digit) ** 2, 0);
-
-const isHappy = (n) => {
-  const seen = new Set();
-  while (n !== 1 && !seen.has(n)) {
-    seen.add(n);
-    n = squareDigits(n);
-  }
-  return n === 1;
-};`,
+    solution: "const isHappy = n => {\n  const seen = new Set();\n  while (n !== 1) {\n    // A number met before means the sequence is going round a cycle.\n    if (seen.has(n)) return false;\n    seen.add(n);\n    let next = 0;\n    while (n > 0) {\n      const digit = n % 10;\n      next += digit * digit;\n      n = Math.floor(n / 10);\n    }\n    n = next;\n  }\n  return true;\n};",
+    junior: "const isHappy = n => {\n  const seen = new Set();\n  let current = n;\n  while (current !== 1) {\n    if (seen.has(current)) {\n      return false;\n    }\n    seen.add(current);\n    const digits = String(current).split(\"\");\n    let sum = 0;\n    for (let i = 0; i < digits.length; i++) {\n      sum = sum + Number(digits[i]) * Number(digits[i]);\n    }\n    current = sum;\n  }\n  return true;\n};",
+    senior: "const squareDigits = (n) => [...String(n)].reduce((sum, digit) => sum + Number(digit) ** 2, 0);\n\nconst isHappy = (n) => {\n  const seen = new Set();\n  while (n !== 1 && !seen.has(n)) {\n    seen.add(n);\n    n = squareDigits(n);\n  }\n  return n === 1;\n};",
     hiddenTests: [
+      { call: "[isHappy(1000000000000000),isHappy(1111111111111),isHappy(1111111111111111),isHappy(10),isHappy(16),isHappy(19),isHappy(2)]", expected: [true, true, false, true, false, true, false] },
+      { call: "Array.from({length:16},(_,exponent)=>isHappy(10**exponent)).every(value=>value===true)", expected: true },
+      { call: "[isHappy(4),isHappy(1),isHappy(4),isHappy(1),isHappy(89),isHappy(7),typeof isHappy(19),typeof isHappy(2)]", expected: [false, true, false, true, false, true, "boolean", "boolean"] },
+
       { call: 'isHappy(100)', expected: true },
       { call: 'isHappy(20)', expected: false },
       { call: 'isHappy(1111111)', expected: true },
