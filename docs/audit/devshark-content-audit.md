@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b030
+
+Read all English fields, starters/skeletons, boards and checks for times tables,
+any/all thresholds, locate, remove-by-id and highest-reduce. The locate prompt
+now distinguishes includes SameValueZero from indexOf strict equality; both
+junior/senior forms call both methods and correctly return true/-1 for NaN.
+The junior any/all and remove-by-id and senior times-table boards now show the
+explicitly requested methods/loops. Correct maximum-reduce forms are retained
+with finite Numbers and either equal zero sign accepted.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks, zero-artifact
+copy sweep, focused coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Cases cover100×100independent fresh table rows, fractional thresholds, NaN/
+opaque membership, original strict-id removal, unrounded maxima and10000-item
+scans. The first private edit helper stopped at a nested reducer delimiter;
+the final helper uses the actual top-level boundary, followed by fresh exports
+and35/35execution. That discarded intermediate run is not release evidence.
+
+Coverage is180/725coding,545remaining,263/263native. B026–b030are local;
+PR #404 stays frozen at3e8d209d while required CI runs. Method conformance of
+supplied forms is read directly; finite tests do not prove arbitrary programs,
+asymptotic measurements or independent/human acceptance. No live user writes.
+
 ## 15 October continuation — five coding items b029
 
 Read all English fields, starters/skeletons, checks and boards for first-divisible,

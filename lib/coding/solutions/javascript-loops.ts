@@ -461,12 +461,11 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return table;
 };`,
-    senior: `const timesTable = size => {
-  const range = Array.from({ length: size }, (_, index) => index + 1);
-  // Every row is the range scaled by its own number.
-  return range.map(row => range.map(column => row * column));
-};`,
+    senior: "const timesTable = size => {\n  const table = [];\n  for (let r = 1; r <= size; r++) {\n    const row = [];\n    for (let c = 1; c <= size; c++) row.push(r * c);\n    table.push(row);\n  }\n  return table;\n};",
     hiddenTests: [
+      { call: "(() => { const a=timesTable(3),b=timesTable(3);a[0][0]=99;return [a!==b,a[0]!==a[1],b[0][0],a[1][0],timesTable(0)!==timesTable(0)]; })()", expected: [true, true, 1, 2, true] },
+      { call: "(() => { const t=timesTable(100);return [t.length,t.every(row=>row.length===100),t[99][99],t[0][99],t[99][0],new Set(t).size]; })()", expected: [100, true, 10000, 100, 100, 100] },
+
       { call: "timesTable(5)[4][4]", expected: 25 },
       { call: "timesTable(6).length", expected: 6 },
       { call: "timesTable(7)[2]", expected: [3, 6, 9, 12, 15, 18, 21] },
@@ -474,24 +473,17 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-some-and-every": {
     solution: "const passReport = (scores, passMark) => ({ anyPassed: scores.some(score => score >= passMark), allPassed: scores.every(score => score >= passMark) });",
-    junior: `const passReport = (scores, passMark) => {
-  let anyPassed = false;
-  let allPassed = true;
-  for (const score of scores) {
-    if (score >= passMark) {
-      anyPassed = true;
-    } else {
-      allPassed = false;
-    }
-  }
-  return { anyPassed: anyPassed, allPassed: allPassed };
-};`,
+    junior: "const passReport = (scores, passMark) => {\n  const anyPassed = scores.some(score => score >= passMark);\n  const allPassed = scores.every(score => score >= passMark);\n  return { anyPassed: anyPassed, allPassed: allPassed };\n};",
     senior: `const passReport = (scores, passMark) => {
   // One predicate serves both questions; some and every already give the right answers for an empty list.
   const passes = score => score >= passMark;
   return { anyPassed: scores.some(passes), allPassed: scores.every(passes) };
 };`,
     hiddenTests: [
+      { call: "passReport(Object.freeze([40.5,40.25]),40.6)", expected: {"anyPassed": false, "allPassed": false} },
+      { call: "(() => { const scores=[70,40],a=passReport(scores,50),b=passReport(scores,50);return [scores,a,a!==b]; })()", expected: [[70, 40], {"anyPassed": true, "allPassed": false}, true] },
+      { call: "passReport(Object.freeze(Array.from({length:10000},(_,i)=>i===9999?99.5:0)),99.5)", expected: {"anyPassed": true, "allPassed": false} },
+
       { call: "passReport([49,50,51], 50)", expected: { anyPassed: true, allPassed: false } },
       { call: "passReport([100,99,98,97], 97)", expected: { anyPassed: true, allPassed: true } },
       { call: "passReport([0], 1)", expected: { anyPassed: false, allPassed: false } },
@@ -499,23 +491,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-locate-item": {
     solution: "const locate = (list, item) => ({ present: list.includes(item), index: list.indexOf(item) });",
-    junior: `const locate = (list, item) => {
-  let index = -1;
-  for (let position = 0; position < list.length; position += 1) {
-    if (list[position] === item) {
-      index = position;
-      break;
-    }
-  }
-  const present = index !== -1;
-  return { present: present, index: index };
-};`,
-    senior: `const locate = (list, item) => {
-  // indexOf answers both questions in one scan; includes would walk the list a second time.
-  const index = list.indexOf(item);
-  return { present: index !== -1, index };
-};`,
+    junior: "const locate = (list, item) => {\n  const present = list.includes(item);\n  const index = list.indexOf(item);\n  return { present: present, index: index };\n};",
+    senior: "const locate = (list, item) => {\n  const index = list.indexOf(item);\n  return { present: list.includes(item), index };\n};",
     hiddenTests: [
+      { call: "locate(Object.freeze([NaN,1,NaN]),NaN)", expected: {"present": true, "index": -1} },
+      { call: "(() => { const a=Object.freeze({x:1}),b=Object.freeze({x:1}),list=Object.freeze([a,-0,undefined]);return [locate(list,a),locate(list,b),locate(list,0),locate(list,undefined),locate(list,a)!==locate(list,a)]; })()", expected: [{"present": true, "index": 0}, {"present": false, "index": -1}, {"present": true, "index": 1}, {"present": true, "index": 2}, true] },
+      { call: "locate(Object.freeze(Array.from({length:10000},(_,i)=>i)),9999)", expected: {"present": true, "index": 9999} },
+
       { call: "locate([\"x\",\"y\",\"z\",\"w\"], \"w\")", expected: { present: true, index: 3 } },
       { call: "locate([0, false, \"\"], false)", expected: { present: true, index: 1 } },
       { call: "locate([null], undefined)", expected: { present: false, index: -1 } },
@@ -523,21 +505,7 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-remove-by-id": {
     solution: "const removeById = (items, id) => { const index = items.findIndex(item => item.id === id); if (index === -1) return null; return items.splice(index, 1)[0]; };",
-    junior: `const removeById = (items, id) => {
-  let position = -1;
-  for (let index = 0; index < items.length; index += 1) {
-    if (items[index].id === id) {
-      position = index;
-      break;
-    }
-  }
-  if (position === -1) {
-    return null;
-  }
-  const removed = items[position];
-  items.splice(position, 1);
-  return removed;
-};`,
+    junior: "const removeById = (items, id) => {\n  const position = items.findIndex(item => item.id === id);\n  if (position === -1) {\n    return null;\n  }\n  const removed = items[position];\n  items.splice(position, 1);\n  return removed;\n};",
     senior: `const removeById = (items, id) => {
   const index = items.findIndex(item => item.id === id);
   // splice hands back the removed items as an array; with no match there is nothing to splice.
@@ -545,6 +513,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return removed;
 };`,
     hiddenTests: [
+      { call: "(() => { const key={},first=Object.freeze({id:key}),other=Object.freeze({id:{}}),last=Object.freeze({id:key}),items=[first,other,last];const out=removeById(items,key);return [out===first,items.length,items[0]===other,items[1]===last]; })()", expected: [true, 2, true, true] },
+      { call: "(() => { const a=Object.freeze({id:1}),b=Object.freeze({id:\"1\"}),c=Object.freeze({id:NaN}),items=[a,b,c];const out=removeById(items,\"1\");const missing=removeById(items,NaN);return [out===b,missing===null,items[0]===a,items[1]===c]; })()", expected: [true, true, true, true] },
+      { call: "(() => { const items=Array.from({length:10000},(_,id)=>Object.freeze({id})),last=items[9999];const removed=removeById(items,9999);return [removed===last,items.length,items[9998].id]; })()", expected: [true, 9999, 9998] },
+
       { call: "(() => { const items = [{id:\"a\"},{id:\"b\"},{id:\"c\"},{id:\"d\"}]; const removed = removeById(items, \"d\"); return [removed.id, items.length]; })()", expected: ["d", 3] },
       { call: "(() => { const items = [{id:1},{id:2},{id:3}]; removeById(items, 42); return items.length; })()", expected: 3 },
       { call: "(() => { const items = [{id:1}]; return removeById(items, 1) !== null && items.length === 0; })()", expected: true },
@@ -570,6 +542,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return numbers.reduce((best, number) => Math.max(best, number));
 };`,
     hiddenTests: [
+      { call: "highest(Object.freeze([1.005,0.5,-1]))", expected: 1.005 },
+      { call: "(() => { const numbers=[3,1,2];const result=highest(numbers);return [result,numbers,highest(Object.freeze([-0,0]))===0]; })()", expected: [3, [3, 1, 2], true] },
+      { call: "highest(Object.freeze(Array.from({length:10000},(_,i)=>i===9999?-0.000001:-1000000)))", expected: -1e-06 },
+
       { call: "highest([10,100,1000,999])", expected: 1000 },
       { call: "highest([0,-1])", expected: 0 },
       { call: "highest([2.5,2.75,2.6])", expected: 2.75 },

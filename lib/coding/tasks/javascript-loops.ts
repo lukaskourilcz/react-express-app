@@ -775,7 +775,7 @@ console.log(numberItems(["milk", "eggs"]));
     tier: 2,
     focus: ["nested-loops", "for"],
     title: "Times table",
-    prompt: "Write `timesTable(size)`, returning a square table as an array of rows, where the cell in row r and column c (both counted from 1) holds r times c, built with one `for` loop nested inside another. `timesTable(3)` gives `[[1, 2, 3], [2, 4, 6], [3, 6, 9]]`. `timesTable(0)` gives an empty array.",
+    prompt: "Write `timesTable(size)`, returning a square table as an array of rows, where the cell in row r and column c (both counted from 1) holds r times c, built with one `for` loop nested inside another. `timesTable(3)` gives `[[1, 2, 3], [2, 4, 6], [3, 6, 9]]`. `timesTable(0)` gives an empty array. size is an integer from 0 to 100. Return a fresh table and separate fresh row arrays on every call, so changing one result or row cannot change another. Every cell is the exact integer product; do not cap the requested size. Use nested for loops as requested. Target: O(n²) time and output space, where n is 1 + size, because there are size × size cells.",
     starter: `const timesTable = size => {
 
 };
@@ -821,7 +821,7 @@ console.log(timesTable(3));
     tier: 1,
     focus: ["some", "every"],
     title: "Any and all",
-    prompt: "Write `passReport(scores, passMark)`, returning `{ anyPassed, allPassed }`: whether at least one score reaches the pass mark, answered with `some`, and whether every score does, answered with `every`. `passReport([40, 70], 50)` gives `{ anyPassed: true, allPassed: false }`. The pass mark itself passes, and for an empty list `some` says false while `every` says true.",
+    prompt: "Write `passReport(scores, passMark)`, returning `{ anyPassed, allPassed }`: whether at least one score reaches the pass mark, answered with `some`, and whether every score does, answered with `every`. `passReport([40, 70], 50)` gives `{ anyPassed: true, allPassed: false }`. The pass mark itself passes, and for an empty list `some` says false while `every` says true. scores is a read-only dense array with at most 10000 finite Numbers from 0 to 100, and passMark is a finite Number in that range. Fractional values are allowed: compare with >= without rounding. The array may be frozen; leave it unchanged and return a fresh result object with Boolean fields. Use some and every as requested. Target: O(n) time in the worst case, where n is 1 + scores.length; each method can stop early.",
     starter: `const passReport = (scores, passMark) => {
 
 };
@@ -857,7 +857,7 @@ console.log(passReport([40, 70], 50));
     tier: 1,
     focus: ["includes", "indexOf"],
     title: "Locate an item",
-    prompt: "Write `locate(list, item)`, returning `{ present, index }`: whether the item is in the list, answered with `includes`, and the position of its first appearance, answered with `indexOf`, which is -1 when it is missing. `locate([\"a\", \"b\", \"c\"], \"b\")` gives `{ present: true, index: 1 }`. Both methods compare strictly, so the string `\"1\"` never matches the number 1.",
+    prompt: "Write `locate(list, item)`, returning `{ present, index }`: whether the item is in the list, answered with `includes`, and the position of its first appearance, answered with `indexOf`, which is -1 when it is missing. `locate([\"a\", \"b\", \"c\"], \"b\")` gives `{ present: true, index: 1 }`. Neither method coerces types, so the string `\"1\"` never matches the number 1. Their NaN behavior differs, as described below. list is a read-only dense array of at most 10000 opaque values and may be frozen. Do not inspect or clone elements. includes uses SameValueZero, so it finds NaN; indexOf uses strict equality, so it never finds NaN. Thus locate([NaN], NaN) returns { present: true, index: -1 }. Both methods match object references only by identity and treat 0 and -0 as equal. Preserve list and return a fresh result object. Use both includes and indexOf as requested. Target: O(n) time in the worst case, where n is 1 + list.length, under the usual opaque comparison model.",
     starter: `const locate = (list, item) => {
 
 };
@@ -894,7 +894,7 @@ console.log(locate(["a", "b", "c"], "b"));
     tier: 2,
     focus: ["findIndex", "splice"],
     title: "Remove by id",
-    prompt: "Write `removeById(items, id)`, removing the first object whose `id` equals the given id from the array in place and returning the removed object, or `null` when no object matches — in which case the array is left untouched. Find the position with `findIndex`, then take the object out with `splice`. With `items = [{ id: 1 }, { id: 2 }]`, `removeById(items, 2)` returns `{ id: 2 }` and leaves `items` as `[{ id: 1 }]`.",
+    prompt: "Write `removeById(items, id)`, removing the first object whose `id` equals the given id from the array in place and returning the removed object, or `null` when no object matches — in which case the array is left untouched. Find the position with `findIndex`, then take the object out with `splice`. With `items = [{ id: 1 }, { id: 2 }]`, `removeById(items, 2)` returns `{ id: 2 }` and leaves `items` as `[{ id: 1 }]`. items is an ordinary mutable dense array with at most 10000 non-null ordinary records, each with an own id field. Records may be frozen; id and the requested id are opaque values. Compare ids with ===, so numeric/string ids differ, NaN never matches and object ids match only the original reference. Duplicates are allowed: remove only the first matching record and return that exact object without cloning it. Preserve all remaining records and their order, and do not inspect other fields. Use findIndex and splice as requested. Target: O(n) time, where n is 1 + items.length before removal, including search and suffix movement.",
     starter: `const removeById = (items, id) => {
 
 };
@@ -932,7 +932,7 @@ console.log(removeById(items, 2), items);
     tier: 1,
     focus: ["reduce"],
     title: "Highest with reduce",
-    prompt: "Write `highest(numbers)`, returning the largest value using `reduce`, with the accumulator holding the best value seen so far. `highest([3, 9, 2])` gives 9. It must work when every value is negative, and an empty array gives `null` — `reduce` with no initial value throws on one, so decide that case first.",
+    prompt: "Write `highest(numbers)`, returning the largest value using `reduce`, with the accumulator holding the best value seen so far. `highest([3, 9, 2])` gives 9. It must work when every value is negative, and an empty array gives `null` — `reduce` with no initial value throws on one, so decide that case first. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Do not sort, mutate or round values. Both signs of zero compare as equal and either zero sign is accepted as the largest value. Use reduce as requested; empty input returns null before reducing. Target: O(n) time, where n is 1 + numbers.length.",
     starter: `const highest = numbers => {
 
 };
