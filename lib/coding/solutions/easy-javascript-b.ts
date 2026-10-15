@@ -641,6 +641,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const multiplyBy = factor => n => n * factor;`,
     hiddenTests: [
+      {"call": "[Object.is(multiplyBy(-1)(0),-0),Object.is(multiplyBy(0)(-1),-0),Object.is(multiplyBy(-0)(-1),+0)]", "expected": [true, true, true], "label": "signed-zero products are not replaced by positive zero"},
+      {"call": "multiplyBy(0.1)(0.2)", "expected": 0.020000000000000004, "label": "ordinary unrounded floating-point product"},
+      {"call": "(() => {const a=multiplyBy(2),b=multiplyBy(2),c=multiplyBy(-0.5);return a!==b&&a(3)===6&&c(3)===-1.5&&a(4)===8&&b(-2)===-4&&multiplyBy(1000000)(1000000)===1000000000000;})()", "expected": true, "label": "fresh independent stable functions and maximal product"},
       { call: 'multiplyBy(-1)(4)', expected: -4 },
       { call: '[10, 20].map(multiplyBy(0.5))', expected: [5, 10] },
       { call: 'multiplyBy(2)(multiplyBy(3)(1))', expected: 6 },

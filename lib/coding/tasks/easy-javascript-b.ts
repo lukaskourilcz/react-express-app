@@ -946,7 +946,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 1,
     focus: ['higher-order', 'closures'],
     title: 'A function that makes functions',
-    prompt: 'Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor.',
+    prompt: "Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor. Domain: factor and each supplied value are finite Numbers from -1,000,000 through 1,000,000, including signed zero. Use ordinary Number multiplication without rounding, coercing strings or replacing falsy products. Each factory call returns a fresh function, whose factor stays fixed across repeated/interleaved calls. Target: O(1) time and O(1) state for creating a multiplier or calling it under unit-cost Number arithmetic.",
     starter: `const multiplyBy = factor => {
 
 };

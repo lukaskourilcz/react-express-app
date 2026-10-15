@@ -501,7 +501,7 @@ repeat(n => console.log(n), 3, 10);
     tier: 1,
     focus: ['callbacks', 'for'],
     title: 'Call it n times',
-    prompt: 'Write `times(n, callback)`, calling `callback` once for each index from 0 up to `n - 1` and returning an array of what each call returned. `times(3, i => i * 10)` gives `[0, 10, 20]`. When `n` is 0 the callback is never called and the result is empty.',
+    prompt: "Write `times(n, callback)`, calling `callback` once for each index from 0 up to `n - 1` and returning an array of what each call returned. `times(3, i => i * 10)` gives `[0, 10, 20]`. When `n` is 0 the callback is never called and the result is empty. Domain: n is an integer from 0 through 1,000. Call the synchronous callback with exactly one argument, the index, once per index in ascending order. Preserve returned values/references, including undefined and falsy results, in a fresh dense output array. If the callback throws, propagate the same error and stop further calls. Target: O(n) time and O(n) result slots under bounded-cost callbacks and amortized array append; the zero case does constant work.",
     starter: `const times = (n, callback) => {
 
 };
@@ -622,7 +622,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['higher-order'],
     title: 'Flip a test',
-    prompt: 'Write `negate(test)`, a higher-order function that returns a new function giving the opposite answer: `true` where `test` returns a falsy value and `false` where it returns a truthy one. The new function passes every argument it receives on to `test`. `[1, 2, 3, 4].filter(negate(n => n % 2 === 0))` gives `[1, 3]`.',
+    prompt: "Write `negate(test)`, a higher-order function that returns a new function giving the opposite answer: `true` where `test` returns a falsy value and `false` where it returns a truthy one. The new function passes every argument it receives on to `test`. `[1, 2, 3, 4].filter(negate(n => n % 2 === 0))` gives `[1, 3]`. Call test exactly once per wrapper invocation, preserving argument count, order and value references. Return a Boolean, not a truthy/falsy surrogate. If test throws, propagate that same error. Domain: synchronous tests independent of dynamic this, at most 100 arguments per invocation and 1,000 invocations per wrapper. Target: O(n) time per invocation, where n is 1 plus the argument count for rest/spread handling, excluding the test function’s own work.",
     starter: `const negate = test => {
 
 };
@@ -695,7 +695,7 @@ console.log(sortBy(["ccc", "a", "bb"], word => word.length));
     tier: 1,
     focus: ['higher-order', 'for-of'],
     title: 'Count where a test passes',
-    prompt: 'Write `countWhere(list, test)`, returning how many items make `test(item)` truthy, with a `for…of` loop that calls the function you were given. `countWhere([3, 8, 12], n => n > 5)` gives 2. An empty list gives 0.',
+    prompt: "Write `countWhere(list, test)`, returning how many items make `test(item)` truthy, with a `for…of` loop that calls the function you were given. `countWhere([3, 8, 12], n => n > 5)` gives 2. An empty list gives 0. Domain: a dense ordinary array of at most 1,000 opaque values, possibly frozen. Call the synchronous test exactly once for each item in input order, with only that original item as its argument. Do not mutate or inspect the items yourself. Any truthy return counts, including objects; falsy values such as NaN, 0n and undefined do not. A thrown test error propagates unchanged and stops traversal. Target: O(n) time, where n is list length, under bounded-cost tests; only O(1) additional state is needed.",
     starter: `const countWhere = (list, test) => {
 
 };

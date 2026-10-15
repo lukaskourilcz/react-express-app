@@ -328,6 +328,10 @@ const schedule = (task, ms) => {
     senior: `// Array.from calls the mapper once per slot, with the index second.
 const times = (n, callback) => Array.from({ length: n }, (_, index) => callback(index));`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),seen=[];const out=times(3,function(i){seen.push([i,arguments.length]);return i===1?undefined:value;});return out.length===3&&out[0]===value&&out[1]===undefined&&out[2]===value&&seen.every((x,i)=>x[0]===i&&x[1]===1);})()", "expected": true, "label": "exact single callback argument, order and opaque results"},
+      {"call": "(() => {const a=times(0,()=>{throw Error('zero');}),b=times(0,()=>0);return a!==b&&a.length===0;})()", "expected": true, "label": "fresh empty results without callback execution"},
+      {"call": "(() => {const error={},seen=[];try{times(5,i=>{seen.push(i);if(i===1)throw error;return i;});}catch(e){return e===error&&seen.join(',')==='0,1';}return false;})()", "expected": true, "label": "same thrown error stops subsequent indices"},
+      {"call": "(() => {const out=times(1000,i=>i);return out.length===1000&&out.every((x,i)=>x===i);})()", "expected": true, "label": "thousand-index boundary"},
       { call: 'times(5, i => i % 2 === 0)', expected: [true, false, true, false, true] },
       { call: 'times(1, i => [i])', expected: [[0]] },
       { call: 'times(3, i => "#" + (i + 1))', expected: ['#1', '#2', '#3'] },
@@ -414,6 +418,10 @@ const negate = test => function (...args) {
   return !test.apply(this, args);
 };`,
     hiddenTests: [
+      {"call": "(() => {let calls=0;const item=Object.freeze({});const a=negate(function(...args){calls++;return args.length===4&&args[0]===item&&args[1]===undefined&&args[2]===3&&args[3]===4;});return a(item,undefined,3,4)===false&&calls===1;})()", "expected": true, "label": "all argument references and exact callback count"},
+      {"call": "[NaN,0n,undefined,null,'',false,{},[],Symbol('x')].map(x=>negate(()=>x)())", "expected": [true, true, true, true, true, true, false, false, false], "label": "return a Boolean for every ordinary truthiness category"},
+      {"call": "(() => {const error={};const a=negate(()=>{throw error;});try{a();}catch(e){return e===error;}return false;})()", "expected": true, "label": "the original callback error propagates"},
+      {"call": "negate((...args)=>args.length===100)(...Array(100).fill(0))", "expected": false, "label": "hundred-argument boundary"},
       { call: '["", "a", null, "b"].filter(negate(Boolean))', expected: ['', null] },
       { call: 'negate(() => undefined)()', expected: true },
       { call: 'negate((a, b, c) => a + b + c === 6)(1, 2, 3)', expected: false },
@@ -465,8 +473,16 @@ const sortBy = (list, pick) =>
   }
   return count;
 };`,
-    senior: `const countWhere = (list, test) => list.reduce((count, item) => (test(item) ? count + 1 : count), 0);`,
+    senior: `const countWhere = (list, test) => {
+  let count = 0;
+  for (const item of list) if (test(item)) count++;
+  return count;
+};`,
     hiddenTests: [
+      {"call": "(() => {const list=Object.freeze([Object.freeze({id:0}),Object.freeze({id:1}),Object.freeze({id:2})]),seen=[];const n=countWhere(list,function(x){seen.push([x,arguments.length]);return {};});return n===3&&seen.length===3&&seen.every((x,i)=>x[0]===list[i]&&x[1]===1);})()", "expected": true, "label": "one original item argument per call in frozen caller order"},
+      {"call": "countWhere(Object.freeze([NaN,0n,undefined,null,'',false,{},[],Symbol('x')]),x=>x)", "expected": 3, "label": "full truthiness includes object array and symbol"},
+      {"call": "(() => {const error={},seen=[];try{countWhere(Object.freeze([0,1,2]),x=>{seen.push(x);if(x===1)throw error;return true;});}catch(e){return e===error&&seen.join(',')==='0,1';}return false;})()", "expected": true, "label": "predicate errors propagate and stop traversal"},
+      {"call": "countWhere(Object.freeze(Array.from({length:1000},(_,i)=>i)),x=>x%2===0)", "expected": 500, "label": "thousand-element count"},
       { call: 'countWhere([1, 2, 3], () => false)', expected: 0 },
       { call: 'countWhere([1, 2, 3, 4, 5, 6], n => n % 3 === 0)', expected: 2 },
       { call: 'countWhere([{ done: true }, { done: false }, { done: true }], task => task.done)', expected: 2 },

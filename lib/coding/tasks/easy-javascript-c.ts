@@ -902,7 +902,7 @@ console.log(toBinary(6));
     tier: 2,
     focus: ['higher-order'],
     title: 'Record every call',
-    prompt: 'Write `recorded(fn, calls)`, returning a new function that does what `fn` does and also writes down each use. When the new function is called, it calls `fn` with the same arguments, pushes `{ args, result }` onto the `calls` array, and returns the result. Collect the arguments with a rest parameter, `(...args)`, so any number of them works. Nothing is written until the new function is called.',
+    prompt: "Write `recorded(fn, calls)`, returning a new function that does what `fn` does and also writes down each use. When the new function is called, it calls `fn` with the same arguments, pushes `{ args, result }` onto the `calls` array, and returns the result. Collect the arguments with a rest parameter, `(...args)`, so any number of them works. Nothing is written until the new function is called. Invoke fn exactly once per wrapper call. Append only after it returns normally, so a throwing call propagates the same error and appends nothing. Preserve existing log entries, use a fresh args array/record per completed call and keep exact argument/result references, including undefined and falsy values. Domain: calls is an ordinary mutable array; fn is synchronous, independent of dynamic this and does not itself modify calls. Each wrapper is called at most 1,000 times with at most 100 arguments. Target: O(n) time per invocation, where n is 1 plus the argument count, excluding fn’s own work and using amortized log append. Stored log space grows with completed calls and their arguments.",
     starter: `const recorded = (fn, calls) => {
 
 };

@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b017
+
+Individually read indexed callback collection, predicate counting, multiplier
+factories, predicate negation and call recording. The countWhere senior reveal
+now uses the requested for-of loop. Specify exact invocation counts/arguments,
+opaque result/reference preservation, fresh outputs, ordinary Number products,
+and same-error propagation. Recorded calls are appended after normal return;
+throwing callbacks do not fabricate completed records. Cost models distinguish
+argument handling, callback work and accumulated log space.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+revealed/alternative analyses retain 25 XP; five starters and ten wrong variants
+fail. Boundary checks include 1000 callbacks/recorded calls, 100 arguments,
+frozen opaque inputs, signed zero and complete ordinary truthiness. Copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+production dependency audits (zero vulnerabilities) and diff checks pass.
+Scoring/final readings remain manual same-session model evidence; source-style
+claims and arbitrary-program complexity are not proved by finite execution.
+
+Current coding coverage is 115/725; 610 remain. Native coverage is 263/263.
+B015–b017 are local while frozen PR #401 completes its required verification.
+
 ## 15 October continuation — five coding items b016
 
 Individually read recursive file counting/array depth and the change watcher,
