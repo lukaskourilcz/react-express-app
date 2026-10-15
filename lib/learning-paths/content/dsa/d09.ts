@@ -494,7 +494,7 @@ export const DSA_D09: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The rule applies to every descendant, not just the two nodes hanging off a parent, and 10 is a descendant of 8 on the left. A search for 10 goes left at the root and never reaches it. Having at most two children makes something a binary tree, which every example in this module already is; the search property is the extra rule on top. The parent-child check is the mistake the lesson names: 10 passes against its parent 3 and still breaks the tree. Missing children are ordinary — 12 has none either, and the tree would be a valid search tree if 10 were not there.',
+            'The rule applies to every descendant, not just the two nodes hanging off a parent, and 10 is a descendant of 8 on the left. A search for 10 goes right at 8, then left from 12 to an empty child, so it never visits the misplaced 10. Having at most two children makes something a binary tree, which every example in this module already is; the search property is the extra rule on top. The parent-child check is the mistake the lesson names: 10 passes against its parent 3 and still breaks the tree. Missing children are ordinary — 12 has none either, and the tree would be a valid search tree if 10 were not there.',
           competencies: ['trees'],
         },
         {

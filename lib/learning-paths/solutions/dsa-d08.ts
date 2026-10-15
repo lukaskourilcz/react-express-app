@@ -27,6 +27,10 @@ export const DSA_D08_SOLUTIONS: Record<string, PathCodeSolution> = {
       '  return values;\n' +
       '};',
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({key:2,tag:\"a\"}), b=Object.freeze({key:1,tag:\"b\"}), c=Object.freeze({key:2,tag:\"c\"}); const input=[a,b,c,a]; const out = selectionSort(input, (x,y) => x.key-y.key); const remaining = [a,a,b,c]; for (const item of out) { const index = remaining.indexOf(item); if (index < 0) return false; remaining.splice(index,1); } return out === input && remaining.length === 0 && out.map(item=>item.key).join() === \"1,2,2,2\"; })()", expected: true },
+      { call: "(() => { const input=[3,1,2]; const proto=Object.getPrototypeOf(input), keys=Reflect.ownKeys(input), before=keys.map(key=>Object.getOwnPropertyDescriptor(input,key)); selectionSort(input,(a,b)=>a-b); const after=Reflect.ownKeys(input); return Object.getPrototypeOf(input)===proto && after.length===keys.length && keys.every((key,i)=>{const old=before[i], now=Object.getOwnPropertyDescriptor(input,key); return after[i]===key && now && old.writable===now.writable && old.enumerable===now.enumerable && old.configurable===now.configurable;}); })()", expected: true },
+      { call: "(() => { let calls=0; selectionSort([],()=>{calls++;return 0;}); selectionSort([1],()=>{calls++;return 0;}); return calls; })()", expected: 0, criterion: "selection-method" },
+      { call: "__countCompares(__reversed(128), (values,compare)=>selectionSort(values,compare)).compares", expected: 8128, criterion: "selection-method" },
       { call: 'selectionSort([8, 7, 6, 5, 4, 3, 2, 1], function (a, b) { return a - b; })', expected: [1, 2, 3, 4, 5, 6, 7, 8] },
       {
         call: 'selectionSort([1, 5, 3], function (a, b) { return b - a; })',
@@ -76,6 +80,11 @@ export const DSA_D08_SOLUTIONS: Record<string, PathCodeSolution> = {
       '  return values;\n' +
       '};',
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({key:2,tag:\"a\"}), b=Object.freeze({key:1,tag:\"b\"}), c=Object.freeze({key:2,tag:\"c\"}); const input=[a,b,c,a]; const out = insertionSort(input, (x,y) => x.key-y.key); return out === input && out[0]===b && out[1]===a && out[2]===c && out[3]===a; })()", expected: true },
+      { call: "(() => { const input=[3,1,2]; const proto=Object.getPrototypeOf(input), keys=Reflect.ownKeys(input), before=keys.map(key=>Object.getOwnPropertyDescriptor(input,key)); insertionSort(input,(a,b)=>a-b); const after=Reflect.ownKeys(input); return Object.getPrototypeOf(input)===proto && after.length===keys.length && keys.every((key,i)=>{const old=before[i], now=Object.getOwnPropertyDescriptor(input,key); return after[i]===key && now && old.writable===now.writable && old.enumerable===now.enumerable && old.configurable===now.configurable;}); })()", expected: true },
+      { call: "(() => { let calls=0; insertionSort([],()=>{calls++;return 0;}); insertionSort([1],()=>{calls++;return 0;}); return calls; })()", expected: 0, criterion: "insertion-method" },
+      { call: "__countCompares(__range(128), (values,compare)=>insertionSort(values,compare)).compares", expected: 127, criterion: "insertion-method" },
+      { call: "__countCompares(__reversed(128), (values,compare)=>insertionSort(values,compare)).compares", expected: 8128, criterion: "insertion-method" },
       { call: 'insertionSort([8, 7, 6, 5, 4, 3, 2, 1], function (a, b) { return a - b; })', expected: [1, 2, 3, 4, 5, 6, 7, 8] },
       {
         call: 'insertionSort([1, 5, 3], function (a, b) { return b - a; })',
@@ -145,6 +154,11 @@ export const DSA_D08_SOLUTIONS: Record<string, PathCodeSolution> = {
       '  return merge(left, right, compare);\n' +
       '};',
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({key:2,tag:\"a\"}), b=Object.freeze({key:1,tag:\"b\"}), c=Object.freeze({key:2,tag:\"c\"}); const input=[a,b,c,a]; const out = mergeSort(Object.freeze(input), (x,y) => x.key-y.key); return out !== input && out[0]===b && out[1]===a && out[2]===c && out[3]===a && input[0]===a && input[1]===b && input[2]===c && input[3]===a; })()", expected: true },
+      { call: "(() => { const input=[3,1,2]; const proto=Object.getPrototypeOf(input), keys=Reflect.ownKeys(input), before=keys.map(key=>Object.getOwnPropertyDescriptor(input,key)); mergeSort(input,(a,b)=>a-b); const after=Reflect.ownKeys(input); return Object.getPrototypeOf(input)===proto && after.length===keys.length && keys.every((key,i)=>{const old=before[i], now=Object.getOwnPropertyDescriptor(input,key); return after[i]===key && now && old.writable===now.writable && old.enumerable===now.enumerable && old.configurable===now.configurable;}); })()", expected: true },
+      { call: "(() => { let calls=0; mergeSort([],()=>{calls++;return 0;}); mergeSort([1],()=>{calls++;return 0;}); return calls; })()", expected: 0, criterion: "merge-method" },
+      { call: "__countCompares(__range(128), (values,compare)=>mergeSort(values,compare)).compares", expected: 448, criterion: "merge-method" },
+      { call: "(() => { const item=Object.freeze({key:1}), input=Object.freeze([item]); const out=mergeSort(input,(a,b)=>a.key-b.key); return out!==input && out[0]===item; })()", expected: true },
       { call: 'mergeSort([8, 7, 6, 5, 4, 3, 2, 1], function (a, b) { return a - b; })', expected: [1, 2, 3, 4, 5, 6, 7, 8] },
       {
         call: '(() => { const input = []; return mergeSort(input, (a, b) => a - b) !== input; })()',

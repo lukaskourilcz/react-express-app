@@ -1,5 +1,36 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n009
+
+Reviewed three sorting code exercises and the first two tree questions. The
+single-node height item is retained. The BST explanation now correctly follows
+10 right at 8, then left at 12 into null; its misplaced descendant and correct
+key are unchanged. Sorting briefs define dense input through 128, consistent
+finite comparators, original item references/multiplicity and unrelated array
+metadata. New assertions cover frozen item references, stable repeated identities,
+metadata/descriptors, zero comparisons for empty/single input and maximum-size
+counts. Existing eight-element method budgets stay unchanged and are described
+as finite fixture contracts rather than universal algorithm detectors.
+
+Baseline expected verdicts matched **12/18**: each sort accepted added input
+fields and cloned records. Final exact-hash sandbox verdicts are **18/18**
+(six valid, three starters, nine wrong). Six authored-target/base-25 analyses
+pass, including conservative unknowns. The goal text follows the existing
+parser's immediate time form; no parser or grading rule changed. Selection and
+insertion target quadratic time; merge targets n log n with explicit unit and
+live-space models. Actual tree-context/edge-height evidence matches the keys.
+
+All five records have manual scores and final model readings. Native bindings,
+path contracts, authored proof, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy sweep and diff checks pass.
+No UI structure changed; authenticated activity acceptance remains separate.
+Coverage is **105/263 native**, **158 remaining**, and **95/725 coding**,
+**630 remaining**. Five older native code records still need the applicable
+authored-goal follow-up; that will revise five records without inflating unique
+coverage. PR #395's exact 61900610 preview passes eleven general and twenty
+selected signed-out submissions; its one Premium binary task returns 402.
+Required verify is pending, SQL passes, and n008–n009 remain local.
+
 ## 15 October continuation — five-item native batch n008
 
 Reviewed both sorting lessons, their two self-reviewed reading links and the

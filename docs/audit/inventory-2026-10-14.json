@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 30,
-    "recordsStillRequiringReview": 163,
+    "currentStagedModelReviewRecords": 35,
+    "recordsStillRequiringReview": 158,
     "reviewEvidence": "Seventy native records shipped through PR #394: D01–D05 plus n001–n002. Exact main 158cf64a is READY with public health/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
     "deployedModelReviewRecords": 70,
-    "currentModelReviewRecords": 100,
-    "stagedReviewEvidence": "15 October through n008: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentModelReviewRecords": 105,
+    "stagedReviewEvidence": "15 October through n009: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Ninety reviewed coding and seventy native records are shipped; five coding and thirty native records are staged through b013/n008. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "Ninety reviewed coding and seventy native records are shipped; five coding and thirty-five native records are staged through b013/n009. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
