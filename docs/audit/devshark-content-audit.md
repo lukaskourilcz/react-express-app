@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n006
+
+Reviewed both D07 reading activities, the complete search check, linear search
+and first occurrence. The three metadata/check records are retained; both
+coding activities get explicit dense bounded domains, equality/ownership
+rules, frozen inputs and honestly scoped read-counter evidence. New hidden
+checks cover descriptors/prototypes, reference identity, NaN, signed zero,
+actual undefined entries, fractional targets and the 10000-element boundary.
+
+The recorded baseline was **10/15**: added properties in both activities,
+Object.is matching, cached structural equality and rounded targets passed.
+The initial uncached structural mutant already exceeded a read budget; caching
+it isolated the semantic gap before the recorded baseline. Final exact-hash
+sandbox verdicts are **15/15** (four valid, two starters, nine wrong). Existing
+read budgets stay unchanged, including rejection of full scans and walking
+left after a binary match. The reused canonical binary task is outside this
+five-item batch and remains explicitly unreviewed here.
+
+Individual scores/final model readings, exact native bindings, actual reading
+links, four-question threshold/feedback, authored proof, path contracts,
+API/script types, launch contracts, build, both production dependency audits
+(zero vulnerabilities), copy sweep and diff checks pass. Public-catalogue
+responsive evidence from n005 does not establish authenticated activity
+acceptance; no interface structure changed in this batch. Native coverage is
+**90/263**, **173 remaining**; coding is **90/725**, **635 remaining**.
+Seventy coding and sixty native records are deployed; twenty coding/thirty
+native records await release. Same-session model review is not independent,
+human or an arbitrary-program complexity proof.
+
 ## 15 October continuation — five-item native batch n005
 
 Reviewed the binary-search lesson and all four search questions. The lesson

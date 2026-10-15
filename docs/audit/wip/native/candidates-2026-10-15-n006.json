@@ -1,0 +1,17 @@
+{
+  "dsa-v1-d07-linear-search": {
+    "alternative": "function linearSearch(values,target){let index=0;for(const value of values){if(value===target)return index;index++;}return -1;}",
+    "wrong-extra-property": "function linearSearch(values,target){values.visited=true;for(let i=0;i<values.length;i++)if(values[i]===target)return i;return -1;}",
+    "wrong-object-is": "function linearSearch(values,target){for(let i=0;i<values.length;i++)if(Object.is(values[i],target))return i;return -1;}",
+    "wrong-structural": "function linearSearch(values,target){for(let i=0;i<values.length;i++){const value=values[i];if(value===target||(value&&target&&typeof value==='object'&&typeof target==='object'&&JSON.stringify(value)===JSON.stringify(target)))return i;}return -1;}",
+    "wrong-never-stop": "function linearSearch(values,target){let found=-1;for(let i=0;i<values.length;i++)if(values[i]===target&&found===-1)found=i;return found;}",
+    "wrong-loose": "function linearSearch(values,target){for(let i=0;i<values.length;i++)if(values[i]==target)return i;return -1;}"
+  },
+  "dsa-v1-d07-first-occurrence": {
+    "alternative": "function firstOccurrence(sorted,target){let low=0,high=sorted.length-1,answer=-1;while(low<=high){const mid=Math.floor((low+high)/2),value=sorted[mid];if(value>=target){if(value===target)answer=mid;high=mid-1;}else low=mid+1;}return answer;}",
+    "wrong-extra-property": "function firstOccurrence(sorted,target){sorted.checked=true;let low=0,high=sorted.length;while(low<high){const mid=Math.floor((low+high)/2);if(sorted[mid]<target)low=mid+1;else high=mid;}return low<sorted.length&&sorted[low]===target?low:-1;}",
+    "wrong-round-target": "function firstOccurrence(sorted,target){target=Math.round(target);let low=0,high=sorted.length;while(low<high){const mid=Math.floor((low+high)/2);if(sorted[mid]<target)low=mid+1;else high=mid;}return low<sorted.length&&sorted[low]===target?low:-1;}",
+    "wrong-linear": "function firstOccurrence(sorted,target){return sorted.indexOf(target);}",
+    "wrong-walk-left": "function firstOccurrence(sorted,target){let low=0,high=sorted.length-1;while(low<=high){const mid=Math.floor((low+high)/2);if(sorted[mid]===target){let first=mid;while(first>0&&sorted[first-1]===target)first--;return first;}if(sorted[mid]<target)low=mid+1;else high=mid-1;}return -1;}"
+  }
+}

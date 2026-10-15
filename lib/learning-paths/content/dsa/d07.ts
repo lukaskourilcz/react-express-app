@@ -486,11 +486,11 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
       code: {
         language: 'javascript',
         prompt:
-          'Write `linearSearch(values, target)`, returning the index of the first element strictly equal to `target`, or -1 when nothing matches. The array can be in any order. `linearSearch([4, 9, 1, 9], 9)` gives 1, and an empty array gives -1.\n\nThe grade counts how many times you read an element by index. One walk from the left is the whole budget: at most one read per element, and a match at index 0 must cost a single read, so a scan that keeps going after it has found something goes over.',
+          'Write `linearSearch(values, target)`, returning the index of the first element strictly equal to `target`, or -1 when nothing matches. The input is an ordinary dense array of at most 10000 JavaScript values, in any order. Match objects by reference, do not coerce values, and do not change the array or its elements. An actual undefined entry is allowed; sparse holes are outside this exercise. `linearSearch([4, 9, 1, 9], 9)` gives 1, and an empty array gives -1.\n\nThe grade counts how many times you read an element by index. Use one left-to-right walk and stop at the first match. The bounded fixtures allow at most n indexed reads for n elements, one read for a match at index 0, and a matching-prefix budget in other early-hit cases. The counter totals reads; it does not prove that arbitrary code visits every position only once.',
         contract: [
-          'Read each element at most once — the graded budget is one read per element.',
+          'Use at most one indexed read per visited element; the fixtures enforce aggregate and early-hit budgets, not a proof over every possible input.',
           'Return as soon as an element matches; running to the end anyway breaks the budget on an early match.',
-          'Compare with strict equality, so `0` and `false` are different values.',
+          'Compare with strict equality: 0 differs from false, NaN never matches itself, both signs of zero match, and objects match only the same reference.',
           'Leave the input as you found it: no sorting, no copying, no slicing.',
         ],
         starter: `const linearSearch = (values, target) => {
@@ -530,7 +530,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
             label: 'One read per element, and a stop at the first match',
             critical: true,
             weight: 2,
-            detail: 'The read counter went over budget. A copy of the input, a second walk, or a scan that runs on after the match all show up here.',
+            detail: 'The fixture exceeded its indexed-read budget. Copying, a second walk or continuing after a match can exceed it. These sampled aggregate counts are not a universal per-position or complexity proof.',
           },
         ],
         tests: [
@@ -579,10 +579,10 @@ console.log(linearSearch([4, 9, 1, 9], 9));
       code: {
         language: 'javascript',
         prompt:
-          'Write `firstOccurrence(sorted, target)`, returning the index of the first element equal to `target` in an ascending array that may hold duplicates, or -1 when the target is absent. `firstOccurrence([1, 2, 2, 2, 3], 2)` gives 1, because index 1 is where the run of twos starts. An empty array gives -1.\n\nThis is the lower-bound variant of binary search, and the grade holds you to the method: on a sorted array of 64 elements the routine may read at most 20 elements. A linear scan reads up to 64. Finding any match first and then walking left along the run reads up to 32 more than the search itself. Neither fits.',
+          'Write `firstOccurrence(sorted, target)`, returning the index of the first element equal to `target` in a dense, nondecreasing array of finite Numbers that may hold duplicates, or -1 when the target is absent. `firstOccurrence([1, 2, 2, 2, 3], 2)` gives 1, because index 1 is where the run of twos starts. An empty array gives -1. The target is a finite Number; fractional values count without rounding. The array has at most 10000 elements and may be frozen.\n\nUse the lower-bound variant of binary search. The grader records bounded indexed-read evidence: on a sorted array of 64 elements the routine may read at most 20 elements. A linear scan reads up to 64. Finding any match first and then walking left along the run reads up to 32 more than the search itself. Those strategies exceed at least one fixture budget. Passing finite checks is not a proof of logarithmic behavior on every input.',
         contract: [
-          'The input is ascending and may hold duplicates; you may rely on that order.',
-          'Read at most 20 elements of a 64-element array — the graded budget rules out both a linear scan and a walk back along a run of equal values.',
+          'The input is dense, nondecreasing and contains at most 10000 finite Numbers; the finite Number target may be fractional. You may rely on the order.',
+          'Read at most 20 elements of a 64-element array — the sampled budget rejects the included linear-scan and walk-left counterexamples, without proving arbitrary code logarithmic.',
           'Return the index where the run of equal values starts, not an arbitrary index inside it.',
           'Leave the input as you found it: no sorting, no copying, no slicing.',
         ],
@@ -630,7 +630,7 @@ console.log(firstOccurrence([1, 2, 2, 2, 3], 2));
             critical: true,
             weight: 2,
             detail:
-              'The read counter went over 20 on a 64-element array. A linear scan reads up to 64, and finding any match then walking left along the run reads up to 32 more; both land here even when the index they return is right.',
+              'The read counter went over 20 on a 64-element array. A linear scan reads up to 64, and finding any match then walking left along the run reads up to 32 more; the included fixtures reject both even if the returned index is right. Other inputs or programs are not proven by this finite budget.',
           },
         ],
         tests: [
