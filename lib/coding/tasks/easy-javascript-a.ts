@@ -1206,7 +1206,7 @@ loadOr(() => Promise.reject(new Error("offline")), "guest").then(value => consol
     tier: 2,
     focus: ['closures'],
     title: 'Running average',
-    prompt: 'Write `makeAverager()`, returning a function that takes one number at a time and returns the average of every number it has received so far. Keep the running total and count in variables the returned function closes over, so each averager remembers only its own numbers. After `const avg = makeAverager()`, `avg(10)` gives 10 and then `avg(20)` gives 15.',
+    prompt: "Write `makeAverager()`, returning a function that takes one number at a time and returns the average of every number it has received so far. Keep the running total and count in variables the returned function closes over, so each averager remembers only its own numbers. After `const avg = makeAverager()`, `avg(10)` gives 10 and then `avg(20)` gives 15. Domain: at most 1,000 calls per averager, each receiving a finite Number from -1,000,000 through 1,000,000. Start the Number total at 0, add values in call order, and return total / count without rounding. Normal JavaScript floating-point arithmetic applies; do not promise exact decimal arithmetic. Target: O(1) time per update and O(1) stored state, independent of the number of earlier calls, under unit-cost Number arithmetic.",
     starter: `const makeAverager = () => {
 
 };

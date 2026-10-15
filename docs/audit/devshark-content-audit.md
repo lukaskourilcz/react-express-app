@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b016
+
+Individually read recursive file counting/array depth and the change watcher,
+running averager and once wrapper. Define tree/array bounds and immutable input,
+strict-comparison identity/NaN/signed-zero semantics, unrounded Number arithmetic,
+and first-call argument/result identity. The once exercise explicitly scopes
+out throwing/reentrant callbacks and dynamic-this dependence; it does not claim
+to implement a general error/retry policy. Per-update costs are distinguished
+from total history cost, and opaque values are not traversed or cloned.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. All twenty valid
+revealed/alternative complexity analyses retain 25 XP. Ten previously accepted
+wrong variants now fail, along with five incomplete starters. A positional-sounding
+phrase was rewritten as cached-value wording; its seven final cases, focused
+coding checks and build were rerun. Copy now reports zero findings. Full focused
+coding, API/script types, launch, build, all 263 native bindings, both production
+dependency audits (zero vulnerabilities) and diff checks pass. Reviews and final
+readings are manual same-session model evidence, not independent/human approval.
+
+Current coding coverage is 110/725; 615 remain. Native coverage stays 263/263.
+PR #401 remains frozen at 148c6100; its updated READY preview passes all eleven
+general guest checks, with no XP/progress or Challenge/identity fixture written.
+Required SQL passes in 41s; verify is still pending. B015–b016 remain local.
+
 ## 15 October continuation — five coding items b015
 
 Individually read factorial, recursive powers, default-bound clamping, recursive

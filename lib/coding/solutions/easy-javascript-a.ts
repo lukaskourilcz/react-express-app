@@ -878,6 +878,9 @@ const loadOr = (load, fallback) => new Promise(resolve => resolve(load())).catch
   return value => (total += value) / ++count;
 };`,
     hiddenTests: [
+      {"call": "(() => {const a=makeAverager();a(0);a(0);return a(1);})()", "expected": 0.3333333333333333, "label": "do not round repeating fractional averages"},
+      {"call": "(() => {const a=makeAverager();let out;for(let i=0;i<1000;i++)out=a(i);return out;})()", "expected": 499.5, "label": "thousand-update call history"},
+      {"call": "(() => {const a=makeAverager(),b=makeAverager();return [a(-1000000),b(1000000),a(1000000),b(-1000000),a(0.5),b(-0.5)];})()", "expected": [-1000000, 1000000, 0, 0, 0.16666666666666666, -0.16666666666666666], "label": "interleaved independent signed and fractional totals"},
       { call: '(() => { const avg = makeAverager(); avg(-5); return avg(5); })()', expected: 0 },
       { call: '(() => { const avg = makeAverager(); return [avg(1), avg(2), avg(6)]; })()', expected: [1, 1.5, 3] },
       { call: '(() => { const avg = makeAverager(); return [avg(2.5), avg(3.5)]; })()', expected: [2.5, 3] },

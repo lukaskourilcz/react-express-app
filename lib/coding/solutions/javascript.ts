@@ -705,6 +705,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1});let n=0;const a=once(()=>{n++;return value;});const x=a(),y=a();return x===value&&y===value&&n===1;})()", "expected": true, "label": "cache the exact opaque object rather than a clone"},
+      {"call": "(() => {let n=0;const value=Object.freeze({});const a=once((...args)=>{n++;return args;});const x=a(1,undefined,3,value,5,6,7,8),y=a();return x===y&&x.length===8&&x[1]===undefined&&x[3]===value&&x[7]===8&&n===1;})()", "expected": true, "label": "forward all eight first-call arguments with exact count and references"},
+      {"call": "(() => {const values=[false,null,undefined,0,'',Symbol('x'),()=>1];return values.every(value=>{let n=0;const a=once(()=>{n++;return value;});for(let i=0;i<1000;i++)if(a(i)!==value)return false;return n===1;});})()", "expected": true, "label": "all supported cached values survive a thousand calls"},
+      {"call": "(() => {const a=once((...args)=>args.length);return [a(),a(1)];})()", "expected": [0, 0], "label": "the first empty argument list stays empty"},
       { call: "once(() => { const add = once((a, b) => a + b); return [add(2, 3), add(10, 10)]; })()", expected: [5, 5] },
       { call: "once(() => { let runs = 0; const empty = once(() => { runs += 1; return \"\"; }); return [empty(), empty(), runs]; })()", expected: ["", "", 1] },
       { call: "once(() => { let runs = 0; const nothing = once(() => { runs += 1; }); nothing(); nothing(); return runs; })()", expected: 1 },

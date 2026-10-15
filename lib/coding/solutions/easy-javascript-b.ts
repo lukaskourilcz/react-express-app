@@ -538,6 +538,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const countFiles = entry =>
   Array.isArray(entry.children) ? entry.children.reduce((total, child) => total + countFiles(child), 0) : 1;`,
     hiddenTests: [
+      {"call": "countFiles(Object.freeze({name:'same',children:Object.freeze([Object.freeze({name:'same'}),Object.freeze({name:'same'}),Object.freeze({name:'empty',children:Object.freeze([])})])}))", "expected": 2, "label": "duplicate names are separate file entries in a frozen tree"},
+      {"call": "(() => {let e=Object.freeze({name:'leaf'});for(let i=0;i<99;i++)e=Object.freeze({name:'dir',children:Object.freeze([e])});return countFiles(e);})()", "expected": 1, "label": "one hundred nested entries preserve the leaf"},
+      {"call": "countFiles(Object.freeze({name:'root',children:Object.freeze(Array.from({length:999},()=>Object.freeze({name:'same'})))}))", "expected": 999, "label": "maximum thousand-entry tree counts every file"},
       { call: 'countFiles({ name: "a", children: [{ name: "b", children: [{ name: "c", children: [{ name: "deep.txt" }] }] }] })', expected: 1 },
       { call: 'countFiles({ name: "root", children: [{ name: "1" }, { name: "d", children: [{ name: "2" }, { name: "3" }, { name: "e", children: [{ name: "4" }] }] }] })', expected: 4 },
       { call: 'countFiles({ name: "mixed", children: [{ name: "empty", children: [] }, { name: "readme.md" }] })', expected: 1 },
@@ -567,6 +570,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const depth = list => 1 + Math.max(0, ...list.filter(Array.isArray).map(item => depth(item)));`,
     hiddenTests: [
+      {"call": "depth(Object.freeze([null,Object.freeze({inside:[[[1]]]}),'[[x]]',Object.freeze([])]))", "expected": 2, "label": "only arrays add depth and opaque objects stay opaque"},
+      {"call": "(() => {let a=Object.freeze([]);for(let i=1;i<100;i++)a=Object.freeze([a]);return depth(a);})()", "expected": 100, "label": "one hundred frozen nesting levels"},
+      {"call": "depth(Object.freeze(Array(999).fill(null)))", "expected": 1, "label": "maximum array-plus-slot count without inner arrays"},
       { call: 'depth([[[[]]]])', expected: 4 },
       { call: 'depth(["a", ["b"]])', expected: 2 },
       { call: 'depth([1, [2], [3, [4, [5]]]])', expected: 4 },
@@ -612,6 +618,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const c=makeChangeWatcher();return [c(NaN),c(NaN),c(0),c(-0),c(0)];})()", "expected": [true, true, true, false, false], "label": "strict equality differs from Object.is for NaN and signed zero"},
+      {"call": "(() => {const c=makeChangeWatcher(),a={x:1},b={x:1};const first=c(a);a.x=2;return [first,c(a),c(b),c(b)];})()", "expected": [true, false, true, false], "label": "object identity is independent of matching or changed contents"},
+      {"call": "(() => {const c=makeChangeWatcher(),f=()=>0,s=Symbol('x');return [c(f),c(f),c(s),c(s),c(Symbol('x')),c(1n),c(1),c(undefined)];})()", "expected": [true, false, true, false, true, true, true, true], "label": "opaque functions symbols and BigInts use strict comparison"},
+      {"call": "(() => {const c=makeChangeWatcher(),a=Object.freeze(Object.defineProperty({},'unused',{get(){throw Error('inspect');}}));let ok=c(a);for(let i=1;i<1000;i++)ok=ok&&!c(a);return ok;})()", "expected": true, "label": "a thousand repeated opaque inputs are not inspected"},
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(null), changed(undefined), changed(null)]; })()', expected: [true, true, true] },
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(3), changed(3), changed(3), changed(4)]; })()', expected: [true, false, false, true] },
       { call: '(() => { const a = makeChangeWatcher(); const b = makeChangeWatcher(); return [a(1), b(2), a(1), b(3)]; })()', expected: [true, true, false, true] },

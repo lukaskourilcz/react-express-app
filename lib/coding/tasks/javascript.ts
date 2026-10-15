@@ -1234,7 +1234,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["closures"],
     title: "Call once",
-    prompt: "Write `once(fn)`, returning a wrapped function that runs `fn` at most once. Every later call returns that first result without calling `fn` again — including when the first result is falsy — and each wrapper remembers its own.",
+    prompt: "Write `once(fn)`, returning a wrapped function that runs `fn` at most once. Every later call returns that first result without calling `fn` again — including when the first result is falsy — and each wrapper remembers its own. Forward every argument from the first call, preserving argument count and references. Cache and return the exact result value/reference, including undefined, false, null, zero or an object; do not clone it. Domain: fn is a synchronous nonthrowing bounded-cost function that does not rely on dynamic this or call its own wrapper; each wrapper receives at most 1,000 calls with at most 8 arguments. Exceptions and reentrant calls are outside this exercise. Target: O(1) time per wrapper call and O(1) stored state under this bounded argument/callback model. The wrapped callback is invoked only on the first call.",
     starter: `const once = fn => {
   
 };
@@ -1255,7 +1255,7 @@ console.log(flatten([[1,2],[3]]));
     approach: [
       "Keep two pieces of state in the closure: a flag saying whether the call has already happened, and the value it produced.",
       "Check that flag first on every call — only while it is unset do you run the wrapped function and store what came back.",
-      "Return the stored value either way, so the second and third callers get the first answer and the work never repeats.",
+      "Return the cached value on later calls, without repeating the wrapped work.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
