@@ -1,5 +1,27 @@
 # Release acceptance matrix
 
+## 15 October — local structuredClone own-key correction (#403)
+
+Actual QuickJS probes reproduce loss of an own __proto__ key, changed clone
+prototype/inherited data and a circular-prototype exception for a self-referential
+own data key. The native Run realm passes these cases. The copy loop now uses
+its captured native defineProperty with ordinary writable/enumerable/configurable
+data descriptors, preserving aliases/cycles without invoking inherited setters.
+No grading-result authority, isolation, handler, reward or access policy changes.
+
+Four final focused cases pass in both the native Run realm and the freshly built
+Submit worker: ordinary keys/descriptors/shared aliases, a self-referential key,
+array prototype retention and a learner replacement of Object.defineProperty.
+Three independent native Chromium API probes also pass; they do not constitute
+an authenticated workbench flow. Existing full grading/Learn integrity suites
+pass; the final added captured-intrinsic case was verified by the focused suite.
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities) and diff checks pass. The earlier post-edit probe used the old
+worker artifact and is excluded; final evidence uses a rebuilt worker.
+
+This is a local source fix. #403 stays open until a checked merge/release.
+No production/account, XP, score, generated-name or owner-data fixture was used.
+
 ## 15 October — PR #401 exact production
 
 PR #401 is merged at a4e934948e8522a036726868da89669bca6c1316. Frozen head

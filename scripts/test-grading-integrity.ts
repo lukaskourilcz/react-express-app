@@ -24,6 +24,7 @@ import { allPassed, evaluateCalls, hiddenGlobalMessage, LOG_LINE_CUT, LOG_OUTPUT
 import { CHECKER_GLOBALS, CHECKER_MEMBERS } from '../shared/coding-checker-globals';
 import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
 import { evaluateInRunRealm } from './run-realm-node';
+import { checkStructuredCloneOwnKeys } from './structured-clone-contracts';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
@@ -846,6 +847,7 @@ export default function App() {
     expectations: [true, 250, [true, 1, true], [true, 2], [true, true, 5, 'g', true, true], 'DataCloneError'],
   });
   assert.deepEqual(semantics.results.map((one) => one.pass), [true, true, true, true, true, true], JSON.stringify(semantics.results));
+  await checkStructuredCloneOwnKeys();
   console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
 }
 
