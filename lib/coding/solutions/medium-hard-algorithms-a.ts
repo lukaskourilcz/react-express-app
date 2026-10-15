@@ -101,6 +101,10 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   return triples;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=Object.freeze([-4294967296,0,4294967296,-4294967296,0,4294967296]);const a=threeSum(input),b=threeSum(input);const values=a.map(t=>t.slice());a[0].push(9);a.push([]);return [values,a!==b,b,b[0].length,input.length,threeSum(Object.freeze([]))];})()", expected: [[[-4294967296, 0, 4294967296]], true, [[-4294967296, 0, 4294967296]], 3, 6, []] },
+      { call: "(() => {for(let n=0;n<=4;n++){for(let code=0;code<Math.pow(5,n);code++){let digits=code;const values=[];for(let i=0;i<n;i++){values.push(digits%5-2);digits=Math.floor(digits/5);}const unique=new Map();for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)for(let k=j+1;k<n;k++)if(values[i]+values[j]+values[k]===0){const t=[values[i],values[j],values[k]].sort((a,b)=>a-b);unique.set(t.join(\",\"),t);}const wanted=[...unique.values()].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(JSON.stringify(threeSum(Object.freeze(values)))!==JSON.stringify(wanted))return false;}}return true;})()", expected: true },
+      { call: "(() => {const input=[3,0,-2,-1,1,2],before=input.slice();const out=threeSum(input),again=threeSum(input);const count=out.length;const separate=out.every((t,i)=>out.every((other,j)=>i===j||t!==other));if(count)out[0][0]=99;const empty=threeSum([1,2]),empty2=threeSum([1,2]);empty.push([]);return [input.every((v,i)=>v===before[i]),separate,again.length,again[0][0],empty2.length,threeSum([-0,0,0]).length];})()", expected: [true, true, 3, -2, 0, 1] },
+
       { call: 'threeSum([3, 0, -2, -1, 1, 2])', expected: [[-2, -1, 3], [-2, 0, 2], [-1, 0, 1]] },
       { call: 'threeSum([-1, -1, -1, 2, 2, 2])', expected: [[-1, -1, 2]] },
       { call: 'threeSum([1, -1, 0])', expected: [[-1, 0, 1]] },
@@ -351,6 +355,10 @@ export const MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> 
   }, 0);
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[1000000000,1000000000,1000000000,1000000000,294967296],copy=input.slice();const result=countStretches(input,0);return [result,input.every((v,i)=>v===copy[i]),countStretches(Object.freeze(input),4294967296),countStretches(Object.freeze([1,-1,1,-1]),0),countStretches(Object.freeze([]),0)];})()", expected: [0, true, 1, 4, 0] },
+      { call: "(() => {for(let n=0;n<=5;n++){for(let code=0;code<Math.pow(3,n);code++){let digits=code;const amounts=[];for(let i=0;i<n;i++){amounts.push(digits%3-1);digits=Math.floor(digits/3);}for(let target=-2;target<=2;target++){let wanted=0;for(let start=0;start<n;start++){let total=0;for(let end=start;end<n;end++){total+=amounts[end];if(total===target)wanted++;}}if(countStretches(Object.freeze(amounts),target)!==wanted)return false;}}}return true;})()", expected: true },
+      { call: "[countStretches(Object.freeze(Array(20000).fill(0)),0),countStretches(Object.freeze(Array(20000).fill(1000000000)),20000000000000),countStretches(Object.freeze([-1000000000,-1000000000]),-2000000000),countStretches([0,0],0),countStretches([1],0)]", expected: [200010000, 1, 1, 3, 0] },
+
       { call: 'countStretches([2, -2, 2, -2, 2], 2)', expected: 6 },
       { call: 'countStretches([-1, -1, 1], 0)', expected: 1 },
       { call: 'countStretches([1, 2, 3], 7)', expected: 0 },

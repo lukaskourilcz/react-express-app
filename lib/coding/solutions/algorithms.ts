@@ -173,29 +173,46 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     junior: `const rotate = (numbers, k) => {
   const length = numbers.length;
-  if (length === 0) {
-    return numbers;
-  }
+  if (length === 0) return numbers;
   const steps = ((k % length) + length) % length;
-  const rotated = [];
-  for (let index = 0; index < length; index += 1) {
-    const source = (index - steps + length) % length;
-    rotated.push(numbers[source]);
-  }
-  for (let index = 0; index < length; index += 1) {
-    numbers[index] = rotated[index];
-  }
+  const reverse = (first, last) => {
+    while (first < last) {
+      const held = numbers[first];
+      numbers[first] = numbers[last];
+      numbers[last] = held;
+      first += 1;
+      last -= 1;
+    }
+  };
+  reverse(0, length - 1);
+  reverse(0, steps - 1);
+  reverse(steps, length - 1);
   return numbers;
 };`,
     senior: `const rotate = (numbers, k) => {
   const length = numbers.length;
   if (length === 0) return numbers;
   const steps = ((k % length) + length) % length;
-  // splice lifts the tail out in place; unshift puts it back at the front.
-  numbers.unshift(...numbers.splice(length - steps, steps));
+  let moved = 0;
+  for (let start = 0; moved < length; start += 1) {
+    let index = start;
+    let carried = numbers[index];
+    do {
+      const next = (index + steps) % length;
+      const held = numbers[next];
+      numbers[next] = carried;
+      carried = held;
+      index = next;
+      moved += 1;
+    } while (index !== start);
+  }
   return numbers;
 };`,
     hiddenTests: [
+      { call: "(() => {const object=Object.freeze({id:1}),symbol=Symbol(\"s\"),fn=()=>0;const a=[object,undefined,symbol,fn,-0];const result=rotate(a,-2);return [result===a,a.length,a[0]===symbol,a[1]===fn,Object.is(a[2],-0),a[3]===object,a[4]===undefined];})()", expected: [true, 5, true, true, true, true, true] },
+      { call: "(() => {for(let n=0;n<=9;n++){for(const k of [-Number.MAX_SAFE_INTEGER,-100,-12,-3,-1,-0,0,1,3,12,100,Number.MAX_SAFE_INTEGER]){const a=Array.from({length:n},(_,i)=>i),original=a.slice();const step=n?((k%n)+n)%n:0;const wanted=step?original.slice(n-step).concat(original.slice(0,n-step)):original;if(rotate(a,k)!==a||a.length!==n||!a.every((value,index)=>Object.is(value,wanted[index])))return false;}}return true;})()", expected: true },
+      { call: "(() => {const values=Array.from({length:2000},(_,i)=>i);const first=rotate(values,1000)===values&&values.every((v,i)=>v===(i+1000)%2000);const second=rotate(values,-1000)===values&&values.every((v,i)=>v===i);const empty=[];return [first,second,rotate(empty,-1)===empty];})()", expected: [true, true, true] },
+
       { call: '(() => { const values = [1, 2, 3, 4, 5, 6, 7]; rotate(values, 3); return values; })()', expected: [5, 6, 7, 1, 2, 3, 4] },
       { call: '(() => { const values = [9]; rotate(values, 5); return values; })()', expected: [9] },
       { call: '(() => { const values = [1, 2, 3]; return rotate(values, 1) === values; })()', expected: true },
@@ -224,10 +241,12 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return expected - actual;
 };`,
     senior: `const missingNumber = numbers =>
-  // Start at n (the value no index can contribute) and fold index minus value:
-  // one pass, no separate sums, nothing that can overflow before the subtraction.
   numbers.reduce((missing, value, index) => missing + index - value, numbers.length);`,
     hiddenTests: [
+      { call: "(() => {const input=[2,0];const original=input.slice();return [missingNumber(input),input.every((n,i)=>n===original[i]),missingNumber(Object.freeze([0,1,3])),missingNumber(Object.freeze([]))];})()", expected: [1, true, 2, 0] },
+      { call: "(() => {for(let n=0;n<=24;n++){for(let missing=0;missing<=n;missing++){const values=Object.freeze(Array.from({length:n+1},(_,i)=>i).filter(i=>i!==missing).reverse());if(missingNumber(values)!==missing)return false;}}return true;})()", expected: true },
+      { call: "[missingNumber(Object.freeze(Array.from({length:2000},(_,i)=>2000-i))),missingNumber(Object.freeze(Array.from({length:2000},(_,i)=>i))),missingNumber(Object.freeze(Array.from({length:2001},(_,i)=>i).filter(i=>i!==1337)))]", expected: [0, 2000, 1337] },
+
       { call: 'missingNumber([0, 2])', expected: 1 },
       { call: 'missingNumber([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])', expected: 0 },
       { call: 'missingNumber([0, 1, 2, 3, 5])', expected: 4 },
@@ -239,48 +258,51 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
     solution: `const lengthOfLongestSubstring = text => {
   const lastSeen = new Map();
   let start = 0;
+  let end = 0;
   let longest = 0;
-  for (let end = 0; end < text.length; end += 1) {
-    const character = text[end];
+  for (const character of text) {
     const seenAt = lastSeen.get(character);
     if (seenAt !== undefined && seenAt >= start) start = seenAt + 1;
     lastSeen.set(character, end);
     const width = end - start + 1;
     if (width > longest) longest = width;
+    end += 1;
   }
   return longest;
 };`,
     junior: `const lengthOfLongestSubstring = text => {
   const window = new Set();
+  const leaving = text[Symbol.iterator]();
   let start = 0;
+  let end = 0;
   let longest = 0;
-  for (let end = 0; end < text.length; end += 1) {
-    const character = text[end];
+  for (const character of text) {
     while (window.has(character)) {
-      window.delete(text[start]);
-      start = start + 1;
+      window.delete(leaving.next().value);
+      start += 1;
     }
     window.add(character);
-    const width = end - start + 1;
-    if (width > longest) {
-      longest = width;
-    }
+    end += 1;
+    const width = end - start;
+    if (width > longest) longest = width;
   }
   return longest;
 };`,
     senior: `const lengthOfLongestSubstring = text => {
   const lastSeen = new Map();
-  let start = 0;
-  let longest = 0;
-  for (const [end, character] of [...text].entries()) {
-    // Math.max is the guard: the window start must never slide backwards.
+  let start = 0, end = 0, longest = 0;
+  for (const character of text) {
     start = Math.max(start, (lastSeen.get(character) ?? -1) + 1);
     lastSeen.set(character, end);
-    longest = Math.max(longest, end - start + 1);
+    longest = Math.max(longest, ++end - start);
   }
   return longest;
 };`,
     hiddenTests: [
+      { call: "[lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\"),lengthOfLongestSubstring(\"\ud83d\ude00a\ud83d\ude00b\"),lengthOfLongestSubstring(\"e\\u0301\u00e9\"),lengthOfLongestSubstring(\"Aa \"),lengthOfLongestSubstring(\"\\ud800a\\ud800b\"),lengthOfLongestSubstring(\"\ud83d\udc69\\u200d\ud83d\udcbb\"),lengthOfLongestSubstring(\"a\\u0000b\\u0000\")]", expected: [2, 3, 3, 3, 3, 3, 3] },
+      { call: "(() => {const alphabet=[\"a\",\"b\",\"\ud83d\ude00\",\"\\u0301\"];for(let n=0;n<=5;n++){for(let code=0;code<Math.pow(4,n);code++){let digits=code;const units=[];for(let i=0;i<n;i++){units.push(alphabet[digits%4]);digits=Math.floor(digits/4);}let wanted=0;for(let start=0;start<n;start++){const seen=new Set();for(let end=start;end<n&&!seen.has(units[end]);end++){seen.add(units[end]);wanted=Math.max(wanted,end-start+1);}}if(lengthOfLongestSubstring(units.join(\"\"))!==wanted)return false;}}return true;})()", expected: true },
+      { call: "[lengthOfLongestSubstring(\"\ud83d\ude00\".repeat(2000)),lengthOfLongestSubstring(Array.from({length:2000},(_,i)=>String.fromCodePoint(0x10000+i)).join(\"\")),lengthOfLongestSubstring(\"ab\".repeat(2000)),lengthOfLongestSubstring(\"abba\"),lengthOfLongestSubstring(\"\")]", expected: [1, 2000, 2, 2, 0] },
+
       { call: 'lengthOfLongestSubstring("dvdf")', expected: 3 },
       { call: 'lengthOfLongestSubstring("x")', expected: 1 },
       { call: 'lengthOfLongestSubstring("abcdefg")', expected: 7 },
@@ -301,26 +323,20 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return best;
 };`,
     junior: `const maxSumSubarray = (numbers, k) => {
-  if (Number.isInteger(k) === false || k < 1 || numbers.length < k) {
-    return null;
-  }
+  if (!Number.isInteger(k) || k < 1 || numbers.length < k) return null;
+  let total = 0;
   let best = null;
-  for (let start = 0; start + k <= numbers.length; start += 1) {
-    let total = 0;
-    for (let offset = 0; offset < k; offset += 1) {
-      total = total + numbers[start + offset];
-    }
-    if (best === null || total > best) {
-      best = total;
-    }
+  for (let end = 0; end < numbers.length; end += 1) {
+    total += numbers[end];
+    if (end >= k) total -= numbers[end - k];
+    if (end >= k - 1 && (best === null || total > best)) best = total;
   }
   return best;
 };`,
     senior: `const maxSumSubarray = (numbers, k) => {
   if (!Number.isInteger(k) || k < 1 || numbers.length < k) return null;
-  // Seed the best with the first window, never with 0 — an all-negative array
-  // has a negative answer and 0 is not one of its windows.
-  let windowSum = numbers.slice(0, k).reduce((total, value) => total + value, 0);
+  let windowSum = 0;
+  for (let index = 0; index < k; index += 1) windowSum += numbers[index];
   let best = windowSum;
   for (let end = k; end < numbers.length; end += 1) {
     windowSum += numbers[end] - numbers[end - k];
@@ -329,6 +345,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return best;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[4,-2,3],before=input.slice();const value=maxSumSubarray(input,2);return [value,input.every((v,i)=>v===before[i]),maxSumSubarray(Object.freeze([-1000000,-1000000,1000000]),2),maxSumSubarray(Object.freeze([3,2,1]),3)];})()", expected: [2, true, 0, 6] },
+      { call: "(() => {const invalid=[0,-0,-1,1.5,NaN,Infinity,-Infinity,\"2\",true,null,undefined,2n,Symbol(\"s\"),new Number(2),{valueOf(){throw Error(\"coercion\");}}];const input=[1,2,3];const trap=[];Object.defineProperty(trap,0,{get(){throw Error(\"element read\");}});return [invalid.every(k=>maxSumSubarray(input,k)===null),invalid.every(k=>maxSumSubarray(trap,k)===null),maxSumSubarray([],1),maxSumSubarray(input,Number.MAX_VALUE)];})()", expected: [true, true, null, null] },
+      { call: "(() => {for(let n=0;n<=5;n++){for(let code=0;code<Math.pow(3,n);code++){let digits=code;const values=[];for(let i=0;i<n;i++){values.push(digits%3-1);digits=Math.floor(digits/3);}for(let k=1;k<=n+1;k++){let wanted=null;for(let start=0;start+k<=n;start++){let total=0;for(let i=start;i<start+k;i++)total+=values[i];if(wanted===null||total>wanted)wanted=total;}if(maxSumSubarray(Object.freeze(values),k)!==wanted)return false;}}}return maxSumSubarray(Object.freeze(Array(2000).fill(1000000)),2000)===2000000000;})()", expected: true },
+
       { call: 'maxSumSubarray([5], 1)', expected: 5 },
       { call: 'maxSumSubarray([1, 1, 1, 1], 2)', expected: 2 },
       { call: 'maxSumSubarray([4, -1, 2, 1], 2)', expected: 3 },

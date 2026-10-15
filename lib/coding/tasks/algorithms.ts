@@ -465,7 +465,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
     tier: 3,
     focus: ['two-pointer', 'for'],
     title: 'Rotate an array in place',
-    prompt: 'Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in — not a copy — and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately.',
+    prompt: "Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in \u2014 not a copy \u2014 and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately. Input is a dense mutable array of at most 2000 values; treat each value as opaque and preserve object identity, duplicates, undefined and signed zero. k is any safe-integer Number; negative k rotates left, so rotate([1,2,3], -1) gives [2,3,1]. Preserve the length and return the exact input array even for an empty input or full turn. n is numbers.length. The three-reversal method is one option; a cycle-based rotation is also valid. Correct copying solutions can pass correctness, but the space goal is constant auxiliary storage.",
     starter: `const rotate = (numbers, k) => {
 
 };
@@ -486,7 +486,7 @@ console.log(values);
 };`,
     hints: ['Reversing the whole array puts the last k values at the front, but backwards. Reversing each of the two pieces separately then puts them the right way round.'],
     approach: [
-      'Take k modulo the length first, so a k past the end wraps and an empty array never divides by zero.',
+      'Return the input immediately when it is empty. Otherwise normalize with ((k % length) + length) % length, so negative and oversized steps wrap safely.',
       'Write a helper that reverses a stretch of the array in place by swapping the two ends and walking inwards.',
       'Reverse the whole array, which brings the last k values to the front in reverse order.',
       'Reverse the first k values, then reverse the rest; both pieces come out in their original order, now rotated.',
@@ -495,6 +495,7 @@ console.log(values);
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "rotate([1, 2, 3], -1)", "expected": [2, 3, 1], "label": "a negative step rotates left", "edge": true},
       { call: '(() => { const values = [1, 2, 3, 4, 5]; const returned = rotate(values, 2); return [values, returned === values]; })()', expected: [[4, 5, 1, 2, 3], true], label: 'it rotates in place and returns the same array' },
       { call: '(() => { const values = [1, 2]; rotate(values, 3); return values; })()', expected: [2, 1] },
       { call: '(() => { const values = []; rotate(values, 2); return values; })()', expected: [], label: 'empty input', edge: true },
@@ -516,7 +517,7 @@ console.log(values);
     tier: 1,
     focus: ['reduce', 'for'],
     title: 'Missing number',
-    prompt: 'Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 — the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space.',
+    prompt: "Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 \u2014 the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space. Input is a dense array of at most 2000 distinct integer Numbers, all in 0..n with exactly one absent. It may be frozen and must stay unchanged. These bounds keep the sum and 32-bit XOR alternatives exact; validation, coercion and duplicate handling are not part of this task. n is numbers.length. The sum is one approach; a correct XOR scan is also accepted.",
     starter: `const missingNumber = numbers => {
 
 };
@@ -562,7 +563,7 @@ console.log(missingNumber([3, 0, 1]));
     tier: 3,
     focus: ['two-pointer', 'map-set', 'strings'],
     title: 'Longest substring without repeating characters',
-    prompt: 'Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring("abcabcbb")` gives 3, for `"abc"`; `lengthOfLongestSubstring("bbbbb")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position — but never backwards, which is what `"abba"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters.',
+    prompt: "Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring(\"abcabcbb\")` gives 3, for `\"abc\"`; `lengthOfLongestSubstring(\"bbbbb\")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position \u2014 but never backwards, which is what `\"abba\"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters. A character means one value from the JavaScript string iterator (for...of): a Unicode code point, including a lone surrogate as one value. Count length in those iterator values, not UTF-16 units or displayed grapheme clusters. Do not normalize or fold case; combining marks and spaces count separately. Input has at most 4000 UTF-16 units; n is the number of iterator values and k the number of distinct values. For example, lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\") is 2. An equivalent moving Set window is also valid, and each edge advances only forward.",
     starter: `const lengthOfLongestSubstring = text => {
 
 };
@@ -570,17 +571,7 @@ console.log(missingNumber([3, 0, 1]));
 // Scratch pad — change this and press Run.
 console.log(lengthOfLongestSubstring("abcabcbb"));
 `,
-    skeleton: `const lengthOfLongestSubstring = text => {
-  const lastSeen = new Map(); // character -> the index it last sat at
-  let start = 0;
-  let longest = 0;
-
-  for (let end = 0; end < text.length; end += 1) {
-    // move start past a repeat, then measure the window
-  }
-
-  return longest;
-};`,
+    skeleton: "const lengthOfLongestSubstring = text => {\n  const lastSeen = new Map(); // iterator character -> last position\n  let start = 0, end = 0, longest = 0;\n  for (const character of text) {\n    // move start past a repeat, then measure the window\n    end += 1;\n  }\n  return longest;\n};",
     hints: ['In "abba", by the time the second "a" arrives the window has already moved past the first one. Only move the start forward — take the larger of where it is and just past the repeat.'],
     approach: [
       'Keep a Map from each character to the index it was last seen at, and an index where the current window starts.',
@@ -591,6 +582,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\")", "expected": 2, "label": "count iterator characters, not UTF-16 units", "edge": true},
       { call: 'lengthOfLongestSubstring("abcabcbb")', expected: 3 },
       { call: 'lengthOfLongestSubstring("bbbbb")', expected: 1 },
       { call: 'lengthOfLongestSubstring("")', expected: 0, label: 'empty input', edge: true },
@@ -612,7 +604,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     tier: 2,
     focus: ['two-pointer', 'for'],
     title: 'Max sum subarray of size K',
-    prompt: 'Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n · k).',
+    prompt: "Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n \u00b7 k). Input is a dense array of at most 2000 integer Numbers in [-1000000,1000000], possibly frozen, and must stay unchanged. These bounds make every window and sliding update exact; fractional values and nonfinite values are outside this task. k may be any value, but only a positive primitive Number integer not greater than numbers.length is usable; otherwise return null without coercion or reading array elements. n is numbers.length. Correctness does not require one particular loop syntax.",
     starter: `const maxSumSubarray = (numbers, k) => {
 
 };

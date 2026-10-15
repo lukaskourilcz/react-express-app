@@ -296,7 +296,7 @@ const fromRoman = numeral => {
     tier: 1,
     focus: ['for-of'],
     title: 'Second largest value',
-    prompt: 'Write `secondLargest(numbers)`, returning the largest value that is smaller than the maximum, or `null` when there is none. `secondLargest([4, 9, 7])` gives 7. `secondLargest([5, 5, 3])` gives 3, because the second 5 ties with the maximum. Do it in one `for...of` pass with two variables, the largest and the second largest so far, and leave sorting out of it. An empty array, a single value, or values that are all equal give `null`. Target: O(n) time and O(1) space.',
+    prompt: "Write `secondLargest(numbers)`, returning the largest value that is smaller than the maximum, or `null` when there is none. `secondLargest([4, 9, 7])` gives 7. `secondLargest([5, 5, 3])` gives 3, because the second 5 ties with the maximum. Aim for one pass with the largest and second largest so far, without sorting. An empty array, a single value, or values that are all equal give `null`. Target: O(n) time and O(1) space. Input is a dense array of at most 2000 finite Numbers, including fractions and signed zero; NaN and infinities are outside this task. It may be frozen and must stay unchanged. Return the second distinct numeric value, not the second position; the sign of a zero result does not matter. n is numbers.length. The one-pass scan is the suggested approach; equivalent solutions are accepted.",
     starter: `const secondLargest = numbers => {
 
 };
@@ -337,7 +337,7 @@ console.log(secondLargest([4, 9, 7]));
     tier: 2,
     focus: ['for-of'],
     title: 'Best single trade',
-    prompt: 'Each number in `prices` is a share price on one day, in order. Write `bestTrade(prices)`, returning the most you could make by buying on one day and selling on a later day. `bestTrade([7, 1, 5, 3, 6, 4])` gives 5: buy at 1, sell at 6. When prices only fall, no trade makes money and the answer is 0. Walk the prices once with `for...of`, keeping the lowest price so far and the best profit so far. Fewer than two prices also give 0. Target: O(n) time and O(1) space, where trying every pair of days would be O(n²).',
+    prompt: "Each number in `prices` is a share price on one day, in order. Write `bestTrade(prices)`, returning the most you could make by buying on one day and selling on a later day. `bestTrade([7, 1, 5, 3, 6, 4])` gives 5: buy at 1, sell at 6. When prices only fall, no trade makes money and the answer is 0. Walk the prices once, keeping the lowest price so far and the best profit so far. Fewer than two prices also give 0. Target: O(n) time and O(1) space, where trying every pair of days would be O(n\u00b2). Input is a dense array of at most 2000 finite Number prices from 0 through 1000000000, including fractional prices and signed zero. It may be frozen and must stay unchanged. Make at most one buy followed by one sale on a strictly later day, or do nothing for profit 0; do not add several profitable trades. Use ordinary Number subtraction without rounding to cents. A zero price is valid. n is prices.length; an equivalent single scan or reduction is accepted.",
     starter: `const bestTrade = prices => {
 
 };
@@ -378,7 +378,7 @@ console.log(bestTrade([7, 1, 5, 3, 6, 4]));
     tier: 1,
     focus: ['while', 'objects'],
     title: 'Change in the fewest coins',
-    prompt: 'A till gives change in coins worth 50, 20, 10, 5, 2 and 1 cents. Write `makeChange(cents)`, returning an object that says how many of each coin to hand over, using the fewest coins. `makeChange(76)` gives `{ 50: 1, 20: 1, 5: 1, 1: 1 }`. For these coins the greedy rule always works: take the largest coin `while` it still fits, then move to the next smaller one. Leave out the coins you do not use, so `makeChange(0)` gives `{}`. Target: O(c + k) time for c kinds of coin and k coins handed over.',
+    prompt: "A till gives change in coins worth 50, 20, 10, 5, 2 and 1 cents. Write `makeChange(cents)`, returning an object that says how many of each coin to hand over, using the fewest coins. `makeChange(76)` gives `{ 50: 1, 20: 1, 5: 1, 1: 1 }`. For these coins the greedy rule always works: take the largest coin `while` it still fits, then move to the next smaller one. Leave out the coins you do not use, so `makeChange(0)` gives `{}`. Target: O(c + k) time for c kinds of coin and k coins handed over. cents is an integer Number from 0 through 10000; no validation of other inputs is needed. Use only the six listed denominations, with positive integer counts and no unused keys; property order does not matter. Return a fresh mutable object each call, including zero, without changing earlier results. c is the number of denomination kinds (six here) and k is the total number of coins handed over, not the number of keys. The repeated-subtraction approach uses O(c) result space; computing each count with division is also valid and takes O(c) time for these fixed denominations.",
     starter: `const makeChange = cents => {
 
 };
@@ -423,7 +423,7 @@ const makeChange = cents => {
     tier: 2,
     focus: ['while', 'two-pointer'],
     title: 'First broken build',
-    prompt: 'Builds are numbered 1 to `n`. One of them broke the app, and every build after it is broken too. Write `firstBroken(n, isBroken)`, returning the number of the first broken build, or `null` when every build works. `isBroken(build)` checks one build, and each check is slow, so ask as few times as you can, the way `git bisect` does. Keep `low` and `high` ends of the range that can still hold the answer, check the middle build `while` the range is not empty, and move one end past it. For 1,000 builds that takes about ten checks. Target: O(log n) checks and O(1) space.',
+    prompt: "Builds are numbered 1 to `n`. A build may have broken the app; if so, every build after it is broken too. Write `firstBroken(n, isBroken)`, returning the number of the first broken build, or `null` when every build works. `isBroken(build)` checks one build, and each check is slow, so ask as few times as you can, the way `git bisect` does. Keep `low` and `high` ends of the range that can still hold the answer, check the middle build `while` the range is not empty, and move one end past it. For 1,000 builds that takes about ten checks. Target: O(log n) checks and O(1) space. n is an integer Number from 0 through Number.MAX_SAFE_INTEGER. With n=0 return null without calling isBroken. Otherwise isBroken is a synchronous monotone Boolean predicate and may be called only with one integer argument in 1..n, as a plain function without a receiver; propagate any error it throws. Use at most ceil(log2(n + 1)) + 1 checks for n>0; callback work itself is excluded from the target. n is the number of builds. Avoid 32-bit shifts and low + high when finding a midpoint: low + Math.floor((high - low) / 2) stays within the safe range.",
     starter: `const firstBroken = (n, isBroken) => {
 
 };
@@ -442,7 +442,7 @@ console.log(firstBroken(10, build => build >= 7));
   }
   return found;
 };`,
-    hints: ['`Math.floor((low + high) / 2)` is always a real build number. When the middle build is broken it might be the first one, so remember it before you move `high` to `mid - 1`.'],
+    hints: ['`low + Math.floor((high - low) / 2)` is always a real build number. When the middle build is broken it might be the first one, so remember it before you move `high` to `mid - 1`.'],
     approach: [
       'Start with `low = 1`, `high = n` and no answer yet.',
       'While `low <= high`, check the middle build. If it is broken, record it and set `high = mid - 1`; otherwise set `low = mid + 1`.',

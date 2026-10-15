@@ -1,0 +1,398 @@
+{
+  "checkedAt": "2026-10-15T18:59:42Z",
+  "project": "rvlybcjdpafwyeuojvhl",
+  "mode": "read-only Supabase advisors; no schema, policy, grant, index, Auth or user-data writes",
+  "security": {
+    "warnings": 0,
+    "errors": 0,
+    "info": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 32,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      }
+    ]
+  },
+  "performance": {
+    "warnings": [
+      {
+        "name": "auth_rls_initplan",
+        "count": 39,
+        "remediation": "https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select"
+      }
+    ],
+    "info": [
+      {
+        "name": "unused_index",
+        "count": 17,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+      },
+      {
+        "name": "auth_db_connections_absolute",
+        "count": 1,
+        "details": "Auth max10 database connections; fixed-count allocation",
+        "remediation": "https://supabase.com/docs/guides/deployment/going-into-prod"
+      }
+    ]
+  },
+  "limits": [
+    "Advisor output is not a full security or workload/performance audit.",
+    "No-policy informational findings are not a request to grant browser access to server-owned tables.",
+    "Unused-index information does not establish that an index is safe to drop.",
+    "Provider diagnostics must be reconciled with live policy metadata. All39 reported Auth policies are already wrapped in scalar SELECT subqueries; no duplicate optimization or policy grant was applied. This is structural metadata evidence, not query-plan, actual-account isolation or sustained-load acceptance."
+  ],
+  "livePolicyCrossCheck": {
+    "mode": "read-only pg_policies metadata cross-check",
+    "publicAuthPolicies": 43,
+    "authUidScalarSubqueryCalls": 45,
+    "advisorPoliciesMatched": 39,
+    "unwrappedAuthCalls": 0,
+    "note": "All39 policy names reported by the performance advisor already have auth.uid() in uncorrelated SELECT scalar subqueries in the current production catalogue. Four additional Auth policies use a cast outside the scalar subquery and are also wrapped. The advisor warning is not evidence of39 currently unfixed per-row calls; no duplicate migration is warranted.",
+    "policies": [
+      {
+        "tablename": "billing_checkout_consents",
+        "policyname": "billing_checkout_consents_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "billing_customers",
+        "policyname": "billing_customers_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_attempts",
+        "policyname": "coding_attempts_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_bookmarks",
+        "policyname": "coding_bookmarks_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_collection_items",
+        "policyname": "coding_collection_items_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM coding_collections c\n  WHERE ((c.collection_id = coding_collection_items.collection_id) AND (c.user_id = ( SELECT (auth.uid())::text AS uid)))))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_collections",
+        "policyname": "coding_collections_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_drafts",
+        "policyname": "coding_drafts_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_progress",
+        "policyname": "coding_progress_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_puzzle_results",
+        "policyname": "coding_puzzle_results_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "coding_skips",
+        "policyname": "coding_skips_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "concept_reviews",
+        "policyname": "concept_reviews_owner_select",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "cosmetic_entitlements",
+        "policyname": "cosmetic_entitlements_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "daily_attempts",
+        "policyname": "daily_select_self",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "daily_queue_completions",
+        "policyname": "daily_queue_completions_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "entitlement_grants",
+        "policyname": "entitlement_grants_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "flashcards",
+        "policyname": "flashcards_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "friendships",
+        "policyname": "friendships_select_party",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(((( SELECT (auth.uid())::text AS uid) = user_low) OR (( SELECT (auth.uid())::text AS uid) = user_high)) AND ((state <> 'blocked'::text) OR (blocked_by = ( SELECT (auth.uid())::text AS uid))))",
+        "with_check": null
+      },
+      {
+        "tablename": "github_commits",
+        "policyname": "github_commits_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "github_connections",
+        "policyname": "github_connections_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "learning_path_drafts",
+        "policyname": "learning_path_drafts_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = (( SELECT auth.uid() AS uid))::text)",
+        "with_check": null
+      },
+      {
+        "tablename": "learning_path_enrollments",
+        "policyname": "learning_path_enrollments_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = (( SELECT auth.uid() AS uid))::text)",
+        "with_check": null
+      },
+      {
+        "tablename": "learning_path_evidence",
+        "policyname": "learning_path_evidence_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = (( SELECT auth.uid() AS uid))::text)",
+        "with_check": null
+      },
+      {
+        "tablename": "learning_path_progress",
+        "policyname": "learning_path_progress_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = (( SELECT auth.uid() AS uid))::text)",
+        "with_check": null
+      },
+      {
+        "tablename": "merch_order_items",
+        "policyname": "merch_order_items_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM merch_orders o\n  WHERE ((o.order_id = merch_order_items.order_id) AND (o.user_id = ( SELECT (auth.uid())::text AS uid)))))",
+        "with_check": null
+      },
+      {
+        "tablename": "merch_orders",
+        "policyname": "merch_orders_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "path_reward_claims",
+        "policyname": "path_reward_claims_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "practice_sessions",
+        "policyname": "practice_sessions_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "referral_codes",
+        "policyname": "referral_codes_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "roadmap_progress",
+        "policyname": "roadmap_progress_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "token_balances",
+        "policyname": "token_balances_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "token_ledger",
+        "policyname": "token_ledger_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "token_xp_credits",
+        "policyname": "token_xp_credits_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_activity_days",
+        "policyname": "user_activity_days_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_badges",
+        "policyname": "user_badges_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_cards",
+        "policyname": "user_cards_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_category_stats",
+        "policyname": "category_stats_select_self",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_handles",
+        "policyname": "user_handles_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_stats",
+        "policyname": "stats_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_streak",
+        "policyname": "user_streak_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_streak_config",
+        "policyname": "streak_config_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_streak_freezes",
+        "policyname": "streak_freezes_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_xp",
+        "policyname": "user_xp_select_own",
+        "roles": "{public}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      },
+      {
+        "tablename": "user_xp_days",
+        "policyname": "user_xp_days_select_own",
+        "roles": "{authenticated}",
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT (auth.uid())::text AS uid))",
+        "with_check": null
+      }
+    ]
+  }
+}
