@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n039
+
+Reviewed operations lessons, reading activities and retry/circuit exercise.
+Corrected impossible400msmean/9secondtail arithmetic, coarse slice counts and
+an impossible156ticket error rate. Small samples can cross a threshold but
+cannot establish safety; continuation is a policy decision. Span subtraction
+needs explicit timing assumptions. The9600msretry sketch is separate from the
+8540mstrace. Safe mitigation, evidence preservation, HTTP replay and code-only
+rollback no longer imply universal guarantees or automatic reversibility.
+
+Six real sandbox verdicts agree; three previously accepted shortcuts now fail
+at exact failure-window equality, zero retries and statuses outside the fixture
+policy. Additional probes cover cooldown boundaries, primitive synchronous
+throws, frozen configuration/request identity and independent instances.
+Both no-target implementations retain25XP. Native bindings, path contracts,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Structured-log and arithmetic
+illustrations use inert host fixtures, not live incident/provider evidence.
+Manual scores and final readings remain separate from execution.
+
+Coverage is **250/263 native**, **13 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 still freezes n032–n037 with SQL/eleven exact-preview
+general checks passing and verify pending. N038–n039 are local; production
+coverage remains95 coding/210 native through #399. Parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n038
 
 Reviewed both AI-security lessons, reading activities and export-gate repair.
