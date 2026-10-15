@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item coding batch b013
+
+Reviewed canonical binary search, digit sum, inclusive multiple counting,
+word-length counting and queue service. Domains now distinguish finite sorted
+numbers, nonnegative safe integers, a positive divisor with signed endpoints,
+literal UTF-16 tokens and arbitrary queue values/references. All five have
+authored cost targets and input-size explanations. The binary read budget
+remains a bounded fixture; correct interval forms stay unknown to conservative
+analysis and receive base 25 XP. A faster closed-form multiple counter is also
+accepted without a penalty.
+
+Baseline expected verdicts matched **31/40**. New cases reject fractional-target
+rounding, added input fields, six-digit truncation, ignored negative multiples,
+empty-token/code-point/normalization mistakes, falsy fallback and cloned queue
+items. The primary word solution and skeleton now handle empty input at length
+zero; executing the old primary against the new cases fails. The senior queue
+form consistently demonstrates push then shift, including empty input.
+
+Final exact-hash sandbox verdicts are **40/40** (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25 checks. Registry/index
+freshness, all ninety existing native bindings, API/script types, launch,
+focused coding contracts, build, both production dependency audits (zero
+vulnerabilities), copy sweep and diff checks pass. The three longest rewritten
+routes pass eighteen light and eighteen dark probes at 360–1440px with no
+issues or unprobed routes. Scores and final readings are manual same-session
+model evidence; no independent/human or authenticated acceptance is inferred.
+
+Coverage is **95/725 coding**, **630 remaining**, and **90/263 native**,
+**173 remaining**. Seventy coding/sixty native records are deployed; twenty-five
+coding/thirty native records await release. PR #394 remains frozen at 70803596
+while later five-item commits accumulate locally.
+
 ## 15 October continuation — five-item native batch n006
 
 Reviewed both D07 reading activities, the complete search check, linear search

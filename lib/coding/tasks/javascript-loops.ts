@@ -13,7 +13,7 @@ export const JAVASCRIPT_LOOP_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["while"],
     title: "Digit sum",
-    prompt: "Write `digitSum(n)`, returning the sum of the decimal digits of a whole number that is zero or more, using a `while` loop and arithmetic rather than a string. `digitSum(493)` gives 16. A single digit is its own sum, and `digitSum(0)` gives 0.",
+    prompt: "Write `digitSum(n)`, returning the sum of the decimal digits of a nonnegative safe-integer Number, from 0 through Number.MAX_SAFE_INTEGER (9007199254740991). Practice a while loop and arithmetic instead of text conversion. `digitSum(493)` gives 16; a single digit is its own sum and zero gives 0. The caller guarantees this domain, so no validation is required.\n\nTarget: O(log n) time in the numeric value n, or O(d) for d decimal digits, with constant-cost Number arithmetic. Zero takes constant work. Inputs are Numbers, not strings or BigInts.",
     starter: `const digitSum = n => {
 
 };
@@ -40,6 +40,7 @@ console.log(digitSum(493));
     verify: "tests",
     estimatedMinutes: 5,
     tests: [
+      { call: "digitSum(9007199254740991)", expected: 76, label: "the largest safe integer", edge: true },
       { call: "digitSum(493)", expected: 16 },
       { call: "digitSum(1234)", expected: 10 },
       { call: "digitSum(0)", expected: 0, label: "zero has a digit sum of zero", edge: true },
@@ -55,7 +56,7 @@ console.log(digitSum(493));
     tier: 1,
     focus: ["for"],
     title: "Count multiples",
-    prompt: "Write `countMultiples(n, from, to)`, returning how many whole numbers from `from` through `to`, both included, divide by `n` with no remainder — use a `for` loop that visits each one. `countMultiples(3, 1, 10)` gives 3, for 3, 6 and 9. Zero is a multiple of every `n`, and a `from` past `to` gives 0.",
+    prompt: "Write `countMultiples(n, from, to)`, counting the integers from from through to, both included, whose remainder on division by n is zero. Practice a for loop over the range. The divisor n is an integer from 1 through 1000000; endpoints are integers from -10000 through 10000. Negative multiples and zero count. A reversed range returns 0. `countMultiples(3, 1, 10)` gives 3, for 3, 6 and 9. No input validation is required.\n\nTarget: O(n) time for the teaching scan. Here n in the complexity label means the number of visited integer positions, max(0, to - from + 1), rather than the parameter named n, which is the divisor. Faster correct counting is also accepted.",
     starter: `const countMultiples = (n, from, to) => {
 
 };
@@ -82,6 +83,7 @@ console.log(countMultiples(3, 1, 10));
     verify: "tests",
     estimatedMinutes: 5,
     tests: [
+      { call: "countMultiples(3, -6, 3)", expected: 4, label: "negative multiples and zero", edge: true },
       { call: "countMultiples(3, 1, 10)", expected: 3 },
       { call: "countMultiples(5, 1, 20)", expected: 4 },
       { call: "countMultiples(7, 1, 6)", expected: 0, label: "no multiples in the range", edge: true },
@@ -98,7 +100,7 @@ console.log(countMultiples(3, 1, 10));
     tier: 1,
     focus: ["for-of", "split"],
     title: "Words of a length",
-    prompt: "Write `countWordsOfLength(sentence, length)`, returning how many words in the sentence have exactly that many characters. Words are separated by single spaces; split the sentence and walk the words with `for…of`. `countWordsOfLength(\"the cat sat on a mat\", 3)` gives 4, and an empty sentence gives 0.",
+    prompt: "Write `countWordsOfLength(sentence, length)`, counting tokens whose JavaScript string length equals length. Tokens are nonempty substrings separated by a single ASCII space, with no leading, trailing or repeated spaces. The empty string has no tokens, even when length is 0. Tabs and punctuation inside a token are literal content, not extra separators. The sentence has at most 10000 UTF-16 code units; length is an integer from 0 through 10000. Count UTF-16 code units, not Unicode code points or visible symbols, and do not normalize the text.\n\nPractice splitting on the space and walking tokens with for-of. `countWordsOfLength(\"the cat sat on a mat\", 3)` gives 4. Target: O(n) time, where n is the sentence length in UTF-16 code units, including spaces.",
     starter: `const countWordsOfLength = (sentence, length) => {
 
 };
@@ -107,6 +109,7 @@ console.log(countMultiples(3, 1, 10));
 console.log(countWordsOfLength("the cat sat on a mat", 3));
 `,
     skeleton: `const countWordsOfLength = (sentence, length) => {
+  if (sentence === "") return 0;
   const words = /* the sentence split on spaces */;
   let count = /* none yet */;
 
@@ -116,15 +119,17 @@ console.log(countWordsOfLength("the cat sat on a mat", 3));
 
   return count;
 };`,
-    hints: ["Split the sentence on spaces first, then walk the words and compare each length with the one you were given."],
+    hints: ["What does splitting an empty string produce? Handle the no-token case before comparing the lengths of literal space-separated tokens."],
     approach: [
-      "Split the sentence on single spaces to get an array of words.",
+      "Handle the empty sentence as no tokens, then split nonempty input on the literal space.",
       "Walk that array with a for-of loop and a counter that starts at zero.",
       "Add one whenever a word has exactly the wanted length, then return the counter.",
     ],
     verify: "tests",
     estimatedMinutes: 5,
     tests: [
+      { call: "countWordsOfLength(\"\", 0)", expected: 0, label: "empty input still has no tokens", edge: true },
+      { call: "countWordsOfLength(\"🦈 a\", 2)", expected: 1, label: "length counts UTF-16 code units", edge: true },
       { call: "countWordsOfLength(\"the cat sat on a mat\", 3)", expected: 4 },
       { call: "countWordsOfLength(\"hello big world\", 5)", expected: 2 },
       { call: "countWordsOfLength(\"\", 3)", expected: 0, label: "an empty sentence has no words", edge: true },
@@ -140,7 +145,7 @@ console.log(countWordsOfLength("the cat sat on a mat", 3));
     tier: 1,
     focus: ["push", "shift"],
     title: "Serve the queue",
-    prompt: "Write `serveNext(queue, newcomer)`. The newcomer joins the back of the queue with `push`, then the person at the front is served: remove them with `shift` and return their name. The queue is changed in place. With `queue = [\"Ana\", \"Bo\"]`, `serveNext(queue, \"Cy\")` returns `\"Ana\"` and leaves `queue` as `[\"Bo\", \"Cy\"]`; an empty queue serves the newcomer at once.",
+    prompt: "Write `serveNext(queue, newcomer)`: append the newcomer with push, remove the front item with shift, and return exactly that removed value. Change the original array in place. The queue is an ordinary dense, mutable array of at most 10000 JavaScript values. Keep surviving values in order and preserve object references; do not clone or coerce items. Empty strings, zero, false, null and undefined are valid values.\n\nWith [\"Ana\", \"Bo\"] and newcomer \"Cy\", return \"Ana\" and leave [\"Bo\", \"Cy\"]. An empty queue serves the newcomer immediately and ends empty. Target: O(n) time, where n is the original queue length, under the dense-array element-moving model for shift. This is a teaching model, not a fixed engine timing guarantee.",
     starter: `const serveNext = (queue, newcomer) => {
 
 };
@@ -162,6 +167,7 @@ console.log(serveNext(line, "Cy"), line);
     verify: "tests",
     estimatedMinutes: 5,
     tests: [
+      { call: "(() => { const queue = [0, false]; const served = serveNext(queue, 9); return [served, queue]; })()", expected: [0, [false, 9]], label: "falsy values are still served values", edge: true },
       { call: "(() => { const queue = [\"Ana\",\"Bo\"]; const served = serveNext(queue, \"Cy\"); return [served, queue]; })()", expected: ["Ana", ["Bo", "Cy"]] },
       { call: "(() => { const queue = [\"Ana\"]; return [serveNext(queue, \"Bo\"), queue]; })()", expected: ["Ana", ["Bo"]] },
       { call: "(() => { const queue = []; return [serveNext(queue, \"Solo\"), queue]; })()", expected: ["Solo", []], label: "an empty queue serves the newcomer at once", edge: true },
@@ -1946,7 +1952,7 @@ console.log(pairWithSum([1, 2, 4, 7, 11], 9));
     tier: 3,
     focus: ["while", "two-pointer"],
     title: "Binary search",
-    prompt: "Write `binarySearch(sorted, target)`, returning the index of `target` in an ascending array, or -1 when it is absent, by keeping a low and a high index in a `while` loop and looking at the middle element each turn so the search range halves every step. `binarySearch([1, 3, 5, 7, 9], 7)` gives 3. An empty array gives -1, and the array holds distinct values.",
+    prompt: "Write `binarySearch(sorted, target)`, returning the index of the target in a strictly increasing array of distinct finite Numbers, or -1 when absent. Use a while loop with low/high bounds and a midpoint probe. The array is dense, has at most 10000 elements, and may be frozen; do not change or copy it. The target is a finite Number and may be fractional. Do not round values. `binarySearch([1, 3, 5, 7, 9], 7)` gives 3; an empty array gives -1. You may trust the order instead of validating it.\n\nTarget: O(log n) time, where n is the array length under constant-cost indexing/comparison. Empty input is constant work. A hidden 1000-element read budget checks a bounded example; it is not proof of every possible implementation.",
     starter: `const binarySearch = (sorted, target) => {
 
 };
@@ -1975,6 +1981,8 @@ console.log(binarySearch([1, 3, 5, 7, 9], 7));
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
+      { call: "binarySearch(Object.freeze([-2.5, 0, 0.5, 3]), 0.5)", expected: 2, label: "fractional target, read-only input", edge: true },
+      { call: "binarySearch([-2.5, 0, 0.5, 3], 0.25)", expected: -1, label: "do not round an absent target", edge: true },
       { call: "binarySearch([1,3,5,7,9], 7)", expected: 3 },
       { call: "binarySearch([2,4,6,8], 2)", expected: 0 },
       { call: "binarySearch([1,3,5], 4)", expected: -1, label: "a value that is not there", edge: true },

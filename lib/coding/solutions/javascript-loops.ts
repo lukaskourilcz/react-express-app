@@ -28,6 +28,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return total + n;
 };`,
     hiddenTests: [
+      { call: "digitSum(8999999999999999)", expected: 143 },
+      { call: "digitSum(1000000000000000)", expected: 1 },
+      { call: "digitSum(1000000000000001)", expected: 2 },
+      { call: "digitSum(101010101010101)", expected: 8 },
+      { call: "digitSum(808080808080808)", expected: 64 },
+      { call: "digitSum(1000007)", expected: 8 },
       { call: "digitSum(99999)", expected: 45 },
       { call: "digitSum(305)", expected: 8 },
       { call: "digitSum(10)", expected: 1 },
@@ -52,13 +58,19 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return count;
 };`,
     hiddenTests: [
+      { call: "countMultiples(2, -9, -1)", expected: 4 },
+      { call: "countMultiples(1, -10000, 10000)", expected: 20001 },
+      { call: "countMultiples(1000000, -1, 1)", expected: 1 },
+      { call: "countMultiples(7, 2, 2)", expected: 0 },
+      { call: "countMultiples(3, -1, -9)", expected: 0 },
+      { call: "countMultiples(1, -0, 0)", expected: 1 },
       { call: "countMultiples(6, 1, 100)", expected: 16 },
       { call: "countMultiples(1, 3, 9)", expected: 7 },
       { call: "countMultiples(10, 15, 25)", expected: 1 },
     ],
   },
   "js-words-of-length": {
-    solution: "const countWordsOfLength = (sentence, length) => { let count = 0; for (const word of sentence.split(\" \")) { if (word.length === length) count += 1; } return count; };",
+    solution: "const countWordsOfLength = (sentence, length) => { if (sentence === \"\") return 0; let count = 0; for (const word of sentence.split(\" \")) { if (word.length === length) count += 1; } return count; };",
     junior: `const countWordsOfLength = (sentence, length) => {
   if (sentence === "") {
     return 0;
@@ -82,6 +94,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return count;
 };`,
     hiddenTests: [
+      { call: "countWordsOfLength(\"ab c\", 0)", expected: 0 },
+      { call: "countWordsOfLength(\"a\\tb cd\", 3)", expected: 1 },
+      { call: "countWordsOfLength(\"é é\", 2)", expected: 1 },
+      { call: "countWordsOfLength(\"é é\", 1)", expected: 1 },
+      { call: "countWordsOfLength(\"🦈 a\", 1)", expected: 1 },
+      { call: "countWordsOfLength(\"hi! ok\", 3)", expected: 1 },
+      { call: "countWordsOfLength(\"x\".repeat(10000), 10000)", expected: 1 },
       { call: "countWordsOfLength(\"red green blue\", 4)", expected: 1 },
       { call: "countWordsOfLength(\"ab ab ab ab\", 2)", expected: 4 },
       { call: "countWordsOfLength(\"xyz\", 3)", expected: 1 },
@@ -96,12 +115,15 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return front;
 };`,
     senior: `const serveNext = (queue, newcomer) => {
-  // Nobody ahead: the newcomer is served at once and the queue stays empty.
-  if (queue.length === 0) return newcomer;
   queue.push(newcomer);
   return queue.shift();
 };`,
     hiddenTests: [
+      { call: "(() => { const queue = [undefined, false]; const result = serveNext(queue, null); return result === undefined && queue.length === 2 && queue[0] === false && queue[1] === null; })()", expected: true },
+      { call: "(() => { const queue = [\"\", \"\"]; return serveNext(queue, \"later\") === \"\" && queue[0] === \"\" && queue[1] === \"later\"; })()", expected: true },
+      { call: "(() => { const first = Object.freeze({ name: \"reef\" }), second = Object.freeze({ name: \"reef\" }), newcomer = Object.freeze({ name: \"kelp\" }); const queue = [first, second]; const alias = queue; const served = serveNext(queue, newcomer); return served === first && alias === queue && queue.length === 2 && queue[0] === second && queue[1] === newcomer; })()", expected: true },
+      { call: "(() => { const newcomer = { name: \"solo\" }, queue = []; return serveNext(queue, newcomer) === newcomer && queue.length === 0; })()", expected: true },
+      { call: "(() => { const queue = Array.from({ length: 10000 }, (_, i) => i); const served = serveNext(queue, 10000); return [served, queue.length, queue[0], queue[9999]]; })()", expected: [0, 10000, 1, 10000] },
       { call: "(() => { const queue = [\"x\",\"y\",\"z\"]; const served = serveNext(queue, \"w\"); return [served, queue.length, queue[queue.length - 1]]; })()", expected: ["x", 3, "w"] },
       { call: "(() => { const queue = [\"a\"]; serveNext(queue, \"b\"); serveNext(queue, \"c\"); return queue; })()", expected: ["c"] },
       { call: "(() => { const queue = []; serveNext(queue, \"p\"); return queue.length; })()", expected: 0 },
@@ -1215,6 +1237,12 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   return -1;
 };`,
     hiddenTests: [
+      { call: "binarySearch([-10, -0.5, 0, 0.75, 9], 0.75)", expected: 3 },
+      { call: "binarySearch([1, 3, 5], -2)", expected: -1 },
+      { call: "binarySearch([1, 3, 5], 6)", expected: -1 },
+      { call: "binarySearch([5], 4)", expected: -1 },
+      { call: "(() => { const values = [1, 3, 5]; const keys = Reflect.ownKeys(values); const before = keys.map(key => Object.getOwnPropertyDescriptor(values, key)); const proto = Object.getPrototypeOf(values); const result = binarySearch(values, 3); const after = Reflect.ownKeys(values); return result === 1 && Object.getPrototypeOf(values) === proto && after.length === keys.length && keys.every((key, i) => { const old = before[i], now = Object.getOwnPropertyDescriptor(values, key); return after[i] === key && now && now.value === old.value && now.writable === old.writable && now.enumerable === old.enumerable && now.configurable === old.configurable; }); })()", expected: true },
+      { call: "binarySearch(Object.freeze(Array.from({ length: 10000 }, (_, i) => i - 5000)), 4999)", expected: 9999 },
       { call: "(() => { let reads = 0; const big = Array.from({ length: 1000 }, (_, index) => index * 2); const watched = new __probe.Proxy(big, { get: (list, key) => { if (__probe.isIndex(key)) reads += 1; return list[key]; } }); const index = binarySearch(watched, 1998); return [index, reads < 30]; })()", expected: [999, true] },
       { call: "binarySearch([-9,-4,0,3,8,12,20], -4)", expected: 1 },
       { call: "binarySearch([10,20,30], 25)", expected: -1 },
