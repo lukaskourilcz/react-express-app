@@ -931,6 +931,11 @@ const readUser = (text: string): User | null => {
   return isUser(value) ? value : null;
 };`,
     hiddenTests: [
+      { call: "(()=>{const proto=Object.freeze({name:' inherited ',age:NaN}),value=Object.freeze(Object.create(proto)),array=Object.assign([],{name:'',age:Infinity});return [isUser(value),isUser(array),isUser({name:'x',age:-1.5}),isUser(Object.assign(()=>0,{age:1})),value.name,Number.isNaN(value.age)];})()", expected: [true, true, true, false, " inherited ", true] },
+      { call: "(()=>{const user=readUser('{\"name\":\"\",\"age\":1e400,\"extra\":{\"x\":1},\"__proto__\":{\"safe\":true}}');return [user!==null,user.name,user.age===Infinity,user.extra.x,Object.hasOwn(user,'__proto__'),Object.getPrototypeOf(user)===Object.prototype];})()", expected: [true, "", true, 1, true, true] },
+      { call: "[isUser({name:new String('x'),age:1}),isUser({name:'x',age:new Number(1)}),isUser(null),isUser([]),isUser(Object.freeze(Object.assign(Object.create(null),{name:'\ud83e\udd88',age:0})))]", expected: [false, false, false, false, true] },
+      { call: "(()=>{const text=JSON.stringify({name:'x'.repeat(200),age:0,extra:Array(1000).fill(1)}),out=readUser(text);return [out.name.length,out.extra.length,text.length<=10000];})()", expected: [200, 1000, true] },
+
       { call: 'readUser("[]")', expected: null },
       { call: 'readUser(JSON.stringify({ name: "Cy", age: 41, admin: true }))', expected: { name: 'Cy', age: 41, admin: true } },
       { call: 'readUser(JSON.stringify("Ada"))', expected: null },
@@ -967,7 +972,12 @@ type Failure = Extract<Reply, { error: string }>;
 const isFailure = (reply: Reply): reply is Failure => "error" in reply;
 
 const errorsOf = (replies: readonly Reply[]): string[] => replies.filter(isFailure).map(({ error }) => error);`,
+    hiddenTypeTests: [{"code": "const __auditRead: readonly Reply[] = [{error:\"x\"}]; const __auditOut: string[] = errorsOf(__auditRead); __auditOut.push(\"y\");"}],
     hiddenTests: [
+      { call: "errorsOf([Object.freeze({error:' x '}),Object.freeze(Object.assign(Object.create(null),{error:''})),Object.freeze({data:Object.freeze(['error'])}),Object.freeze({error:'\ud83e\udd88'}),Object.freeze({error:' x '})])", expected: [" x ", "", "\ud83e\udd88", " x "] },
+      { call: "(()=>{const data=Object.freeze(['a']),reply=Object.freeze({data}),err=Object.freeze({error:'x'}),input=Object.freeze([reply,err]),out=errorsOf(input),again=errorsOf(input);out.push('later');return [out!==again,again,input[0]===reply,reply.data===data,data.length,errorsOf([])!==errorsOf([])];})()", expected: [true, ["x"], true, true, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{error:String(i)}:{data:[]}))),out=errorsOf(input);return [out.length,out[0],out[499],input.length];})()", expected: [500, "1", "999", 1000] },
+
       { call: 'errorsOf([{ error: "A" }, { data: ["b"] }, { error: "C" }, { data: [] }, { error: "E" }])', expected: ['A', 'C', 'E'] },
       { call: 'errorsOf([{ data: ["error"] }])', expected: [] },
       { call: 'errorsOf([{ error: "x" }, { error: "x" }])', expected: ['x', 'x'] },
@@ -1030,22 +1040,7 @@ const toCelsius = (readings: readonly Reading[]): number[] =>
     const celsius = ((reading.value - 32) * 5) / 9;
     return Math.round(celsius * 10) / 10;
   });`,
-    junior: `type Reading =
-  | { unit: "C"; value: number }
-  | { unit: "F"; value: number };
-
-const toCelsius = (readings: readonly Reading[]): number[] => {
-  const result: number[] = [];
-  for (const reading of readings) {
-    if (reading.unit === "F") {
-      const celsius = (reading.value - 32) * 5 / 9;
-      result.push(Math.round(celsius * 10) / 10);
-    } else {
-      result.push(reading.value);
-    }
-  }
-  return result;
-};`,
+    junior: "type Reading =\n  | { unit: \"C\"; value: number }\n  | { unit: \"F\"; value: number };\n\nconst toCelsius = (readings: readonly Reading[]): number[] =>\n  readings.map((reading) => {\n    if (reading.unit === \"C\") return reading.value;\n    const celsius = (reading.value - 32) * 5 / 9;\n    return Math.round(celsius * 10) / 10;\n  });",
     senior: `type Reading =
   | { unit: "C"; value: number }
   | { unit: "F"; value: number };
@@ -1054,7 +1049,12 @@ const fromFahrenheit = (value: number): number => Math.round(((value - 32) * 5 /
 
 const toCelsius = (readings: readonly Reading[]): number[] =>
   readings.map(({ unit, value }) => (unit === "C" ? value : fromFahrenheit(value)));`,
+    hiddenTypeTests: [{"code": "const __auditInput: readonly Reading[] = [{unit:\"F\",value:32}]; toCelsius(__auditInput).push(1);"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([Object.freeze({unit:'F',value:50}),Object.freeze({unit:'C',value:-3.25})]),a=toCelsius(input),b=toCelsius(input);a.push(99);return [a!==b,b,input[0].value,input[1].value,input.length,toCelsius([])!==toCelsius([])];})()", expected: [true, [10, -3.25], 50, -3.25, 2, true] },
+      { call: "(()=>{const out=toCelsius([{unit:'C',value:-0},{unit:'F',value:31.99},{unit:'F',value:32}]);return [Object.is(out[0],-0),Object.is(out[1],-0),Object.is(out[2],0)];})()", expected: [true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({unit:i%2?'C':'F',value:i%2?0.123456:212}))),out=toCelsius(input);return [out.length,out.every((x,i)=>x===(i%2?0.123456:100)),input[0].value];})()", expected: [1000, true, 212] },
+
       { call: 'toCelsius([{ unit: "F", value: 32 }, { unit: "F", value: 50 }, { unit: "C", value: 0 }])', expected: [0, 10, 0] },
       { call: 'toCelsius([{ unit: "F", value: -40 }])', expected: [-40] },
       { call: 'toCelsius([{ unit: "F", value: 100 }])', expected: [37.8] },

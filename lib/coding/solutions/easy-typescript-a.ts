@@ -713,58 +713,16 @@ const addTag = (note: Note, tag: string): Note =>
 
   /* ── while, reduce, sort and strings ──────────────────────────────── */
   'ts-easy2-path-to-the-root': {
-    solution: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  const names: string[] = [];
-  // Typed Folder | null so it can hold the root's null parent.
-  let current: Folder | null = folder;
-  // Inside the loop the check has narrowed current to a Folder.
-  while (current !== null) {
-    names.unshift(current.name);
-    current = current.parent;
-  }
-  return names.join("/");
-};`,
-    junior: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  const upward: string[] = [];
-  let current: Folder | null = folder;
-  while (current !== null) {
-    upward.push(current.name);
-    current = current.parent;
-  }
-  let path = "";
-  for (let i = upward.length - 1; i >= 0; i--) {
-    if (path !== "") {
-      path = path + "/";
-    }
-    path = path + upward[i];
-  }
-  return path;
-};`,
-    senior: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  let path = folder.name;
-  let up = folder.parent;
-  while (up) {
-    path = \`\${up.name}/\${path}\`;
-    up = up.parent;
-  }
-  return path;
-};`,
+    solution: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const names: string[] = [];\n  let current: Folder | null = folder;\n  // The null check narrows current to Folder inside the loop.\n  while (current !== null) {\n    names.push(current.name);\n    current = current.parent;\n  }\n  return names.reverse().join(\"/\");\n};",
+    junior: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const upward: string[] = [];\n  let current: Folder | null = folder;\n  while (current !== null) {\n    upward.push(current.name);\n    current = current.parent;\n  }\n  const downward: string[] = [];\n  for (let i = upward.length - 1; i >= 0; i--) {\n    downward.push(upward[i]);\n  }\n  return downward.join(\"/\");\n};",
+    senior: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const names: string[] = [];\n  let current: Folder | null = folder;\n  while (current !== null) {\n    names.push(current.name);\n    current = current.parent;\n  }\n  names.reverse();\n  return names.join(\"/\");\n};",
+    hiddenTypeTests: [{"code": "pathOf(null);", "rejects": true}],
     hiddenTests: [
+      { call: "[pathOf({name:'child',parent:{name:'',parent:null}}),pathOf({name:'',parent:{name:'',parent:null}}),pathOf({name:'',parent:null})]", expected: ["/child", "/", ""] },
+      { call: "pathOf({name:'./leaf',parent:{name:' a/b ',parent:{name:'\ud83e\udd88',parent:null}}})", expected: "\ud83e\udd88/ a/b /./leaf" },
+      { call: "(()=>{const root=Object.freeze({name:'',parent:null}),leaf=Object.freeze({name:' x ',parent:root});return [pathOf(leaf),leaf.parent===root,root.name,leaf.name];})()", expected: ["/ x ", true, "", " x "] },
+      { call: "(()=>{let node=null;const names=[];for(let i=0;i<1000;i++){const name=i%2===0?'':String(i);names.push(name);node=Object.freeze({name,parent:node});}const out=pathOf(node);return [out===names.join('/'),out.split('/').length,node.name];})()", expected: [true, 1000, "999"] },
+
       { call: 'pathOf({ name: "e", parent: { name: "d", parent: { name: "c", parent: { name: "b", parent: { name: "a", parent: null } } } } })', expected: 'a/b/c/d/e' },
       { call: '(() => { const root = { name: "r", parent: null }; return [pathOf({ name: "x", parent: root }), pathOf({ name: "y", parent: root })]; })()', expected: ['r/x', 'r/y'] },
       { call: '(() => { const folder = { name: "c", parent: { name: "b", parent: { name: "a", parent: null } } }; pathOf(folder); return folder.parent.parent.name; })()', expected: 'a' },
@@ -852,7 +810,12 @@ type Accent = (typeof ACCENTS)[number];
 const ACCENT_SET: ReadonlySet<string> = new Set(ACCENTS);
 
 const isAccent = (value: string): value is Accent => ACCENT_SET.has(value);`,
+    hiddenTypeTests: [{"code": "const __auditGuard: (value:string)=>value is Accent = isAccent;"}, {"code": "ACCENTS.push(\"teal\");", "rejects": true}],
     hiddenTests: [
+      { call: "['teal ','coral\\t','gold\\n','TEAL','tealcoral','teal','coral','gold'].map(isAccent)", expected: [false, false, false, false, false, true, true, true] },
+      { call: "(()=>{const before=JSON.stringify(ACCENTS);for(let i=0;i<30;i++){isAccent('other');isAccent('coral');}return [JSON.stringify(ACCENTS)===before,isAccent('x'.repeat(200)),isAccent('__proto__'),isAccent('constructor')];})()", expected: [true, false, false, false] },
+      { call: "[' teAL ','golden','coral reef','\\u0074eal',''].map(isAccent)", expected: [false, false, false, true, false] },
+
       { call: '["teal", "coral", "gold", "red"].filter(isAccent)', expected: ['teal', 'coral', 'gold'] },
       { call: 'isAccent("coral")', expected: true },
       { call: 'isAccent(" teal")', expected: false },
@@ -869,23 +832,14 @@ const firstError = (results: Result[]): string | null => {
   }
   return null;
 };`,
-    junior: `type Result = { ok: true; value: number } | { ok: false; error: string };
-
-const firstError = (results: Result[]): string | null => {
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.ok === false) {
-      return result.error;
-    }
-  }
-  return null;
-};`,
-    senior: `type Result = { ok: true; value: number } | { ok: false; error: string };
-type Failure = Extract<Result, { ok: false }>;
-
-const firstError = (results: readonly Result[]): string | null =>
-  results.find((result): result is Failure => !result.ok)?.error ?? null;`,
+    junior: "type Result = { ok: true; value: number } | { ok: false; error: string };\n\nconst firstError = (results: Result[]): string | null => {\n  for (const result of results) {\n    if (result.ok === false) {\n      return result.error;\n    }\n  }\n  return null;\n};",
+    senior: "type Result = { ok: true; value: number } | { ok: false; error: string };\n\nconst firstError = (results: readonly Result[]): string | null => {\n  for (const result of results) {\n    if (result.ok === false) return result.error;\n  }\n  return null;\n};",
+    hiddenTypeTests: [{"code": "firstError([{ok:true,value:\"x\"}]);", "rejects": true}],
     hiddenTests: [
+      { call: "firstError(Object.freeze([Object.freeze({ok:true,value:0}),Object.freeze({ok:false,error:'  \ud83e\udd88  '}),Object.freeze({ok:false,error:'later'})]))", expected: "  \ud83e\udd88  " },
+      { call: "(()=>{const error=Object.freeze({ok:false,error:' '}),input=Object.freeze([error]);return [firstError(input),input[0]===error,error.error];})()", expected: [" ", true, " "] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i===999?{ok:false,error:''}:{ok:true,value:i})));return [firstError(input),firstError(input.slice(0,999)),input.length,input[999].error];})()", expected: ["", null, 1000, ""] },
+
       { call: 'firstError([{ ok: false, error: "a" }, { ok: true, value: 1 }, { ok: false, error: "b" }])', expected: 'a' },
       { call: 'firstError([{ ok: true, value: 0 }, { ok: true, value: -1 }, { ok: false, error: "late" }])', expected: 'late' },
       { call: 'firstError([{ ok: true, value: 5 }])', expected: null },

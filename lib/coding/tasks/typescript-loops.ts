@@ -318,7 +318,7 @@ const pathLength = (points: Point[]): number => {
     tier: 2,
     focus: ["narrowing", "unions", "for-of"],
     title: "Mixed total",
-    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0.",
+    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0. Domain: a dense array of at most 1000 primitive strings or finite numbers from -1000000000000 through 1000000000000, possibly frozen. Each string has at most 200 UTF-16 units. String length means the JavaScript length property in UTF-16 code units, including spaces, combining marks and surrogate pairs; do not parse numeric-looking text. Start at numeric zero and add contributions from left to right using Number arithmetic, without rounding or reordering. Leave the array unchanged. Target: O(n) time and O(1) working state, where n is 1 + element count: reading a string length does not traverse its text.",
     starter: `const mixedTotal = (values: (string | number)[]): number => {
 
 };
@@ -372,7 +372,7 @@ console.log(mixedTotal([1, "abc", 2]));
     tier: 2,
     focus: ["type-guards", "filter", "unions"],
     title: "Only the files",
-    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file.",
+    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file. Domain: a dense array of at most 1000 stable FileEntry or FolderEntry records, possibly frozen, with own declared data fields and no accessors/proxies. Names contain at most 200 UTF-16 units; file sizes are nonnegative finite integers through 1000000000000. Extra fields are opaque. Classify by kind, retain each original file reference and duplicate in input order, and leave every input record unchanged. Return a fresh mutable outer array on every call, including when no files match. Target: O(n) time and worst-case O(n) output space for onlyFiles, where n is 1 + entry count; isFile performs a constant-time tag check.",
     starter: `interface FileEntry {
   kind: "file";
   name: string;
