@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n032
+
+Reviewed both integration lessons, their reading activities and the connector.
+The false NBSP trimming example, digit-count precision rule, universal delivery
+and retry guarantees are corrected. Rich schemas can validate usable values;
+boundary validation does not remove authorization/current-state checks. The
+idempotency illustration now states local transaction, serialization, scoped
+key and trusted fingerprint assumptions; it does not make external provider
+effects atomic. Retry-After is optional, 429 does not prove no effects, and a
+parsed zero delay is honored. Persistent upsert differs from per-run deduplication.
+
+Six real sandbox verdicts pass, including a Map alternative and coercion/wait/
+budget counterexamples. Inputs cover1000tickets, three retries then success,
+code-unit ordering and frozen pages. Two valid authored-target analyses retain
+base25. Trusted lesson Unicode/number/partial-mapper/backoff examples pass;
+the transactional sketch is syntax-checked only, not database/payment tested.
+Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All
+manual editorial/final readings remain separate from these executions.
+
+Coverage is **215/263 native**, **48 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f, with required SQL,
+eleven exact-preview general checks and six catalogue probes per theme passing;
+verify is pending. N032 is local. Production coverage is95 coding/170 native
+through exact-production-verified #398. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n031
 
 Reviewed both discovery lessons, their reading activities and the backend
