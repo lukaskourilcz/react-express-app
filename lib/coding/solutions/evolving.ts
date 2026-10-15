@@ -1450,3 +1450,6 @@ function validateUnion(schemas:readonly Schema[],value:unknown):string[]{let bes
 for (const [id, steps] of Object.entries(checkpoints)) {
   steps.forEach((build, index) => { EVOLVING_SOLUTIONS[`${id}-${index+1}-start`] = { solution: build(index ? EVOLVING_SOLUTIONS[`${id}-${index}`].solution : '') }; });
 }
+
+// Single-number checkpoint boundaries; later milestones retain their own hidden suites.
+EVOLVING_SOLUTIONS['js-evolving-calculator-1-start'].hiddenTests = [{"call": "(() => {for(const value of [0n,1n,42n,4294967296n,9007199254740991n])for(let zeros=0;zeros<5;zeros++){const text='0'.repeat(zeros)+String(value);if(calculate(text)!==Number(value))return false;}for(let i=0;i<1000;i++){const value=BigInt(i)*9007199254740n;if(calculate(String(value))!==Number(value))return false;}return true;})()", "expected": true}, {"call": "(() => {const spaces=['\\t','\\n','\\v','\\f','\\r',' ','\\u00a0','\\u1680','\\u2000','\\u2001','\\u2002','\\u2003','\\u2004','\\u2005','\\u2006','\\u2007','\\u2008','\\u2009','\\u200a','\\u2028','\\u2029','\\u202f','\\u205f','\\u3000','\\ufeff'];return spaces.every(space=>calculate(space+'7'+space)===7);})()", "expected": true}, {"call": "[calculate(' '.repeat(9999)+'42'+' '.repeat(9999)),calculate('0'.repeat(19984)+'9007199254740991'),calculate('0'.repeat(20000))]", "expected": [42, 9007199254740991, 0]}];

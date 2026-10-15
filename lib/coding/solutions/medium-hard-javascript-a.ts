@@ -799,9 +799,10 @@ const paintBucket = (grid, row, col, colour) => {
   owes.sort(compare);
   owed.sort(compare);
   const payments = [];
-  while (owes.length > 0 && owed.length > 0) {
-    const debtor = owes[0];
-    const creditor = owed[0];
+  let d = 0, c = 0;
+  while (d < owes.length && c < owed.length) {
+    const debtor = owes[d];
+    const creditor = owed[c];
     let amount = debtor.amount;
     if (creditor.amount < amount) {
       amount = creditor.amount;
@@ -810,10 +811,10 @@ const paintBucket = (grid, row, col, colour) => {
     debtor.amount = debtor.amount - amount;
     creditor.amount = creditor.amount - amount;
     if (debtor.amount === 0) {
-      owes.shift();
+      d++;
     }
     if (creditor.amount === 0) {
-      owed.shift();
+      c++;
     }
   }
   return payments;
@@ -842,12 +843,7 @@ const settleUp = balances => {
   }
   return payments;
 };`,
-    hiddenTests: [
-      { call: 'settleUp({ A: 600, B: 500, C: -700, D: -400 })', expected: [{ from: 'C', to: 'A', amount: 600 }, { from: 'C', to: 'B', amount: 100 }, { from: 'D', to: 'B', amount: 400 }] },
-      { call: 'settleUp({ p: 700, q: -250, r: -250, s: -100, t: -100 })', expected: [{ from: 'q', to: 'p', amount: 250 }, { from: 'r', to: 'p', amount: 250 }, { from: 's', to: 'p', amount: 100 }, { from: 't', to: 'p', amount: 100 }] },
-      { call: 'settleUp({ A: 300, B: 300, C: -500, D: -100 })', expected: [{ from: 'C', to: 'A', amount: 300 }, { from: 'C', to: 'B', amount: 200 }, { from: 'D', to: 'B', amount: 100 }] },
-      { call: 'settleUp({ a: 1234, b: -1000, c: 567, d: -801 })', expected: [{ from: 'b', to: 'a', amount: 1000 }, { from: 'd', to: 'a', amount: 234 }, { from: 'd', to: 'c', amount: 567 }] },
-    ],
+    hiddenTests: [{"call": "(() => {const names=['A','b','\u00e9','\ud83d\ude00',''],values=[-2,-1,0,1,2];for(let code=0;code<5**5;code++){let digits=code;const entries=names.map(name=>{const value=values[digits%5];digits=Math.floor(digits/5);return[name,value];});if(entries.reduce((sum,[,v])=>sum+v,0)!==0)continue;const side=sign=>entries.filter(([,v])=>Math.sign(v)===sign).map(([name,v])=>({name,value:Math.abs(v)})).sort((a,b)=>b.value-a.value||(a.name<b.name?-1:a.name>b.name?1:0)),debt=side(-1),credit=side(1),expected=[];let dStart=0;for(const d of debt){let cStart=0;for(const c of credit){const left=Math.max(dStart,cStart),right=Math.min(dStart+d.value,cStart+c.value);if(right>left)expected.push({from:d.name,to:c.name,amount:right-left});cStart+=c.value;}dStart+=d.value;}const input=Object.freeze(Object.fromEntries(entries));if(JSON.stringify(settleUp(input))!==JSON.stringify(expected))return false;}return true;})()", "expected": true}, {"call": "(() => {const input=Object.assign(Object.create(null),{['__proto__']:4294967296,constructor:-4294967296,A:-0});Object.defineProperty(input,'ignored',{value:99});input[Symbol('ignored')]=1;Object.freeze(input);const a=settleUp(input),b=settleUp(input);if(a===b||a[0]===b[0]||a.length!==1||a[0].from!=='constructor'||a[0].to!=='__proto__'||a[0].amount!==4294967296)return false;a[0].amount=1;a.push({});return a[0].amount===1&&a.length===2&&b[0].amount===4294967296&&Object.is(input.A,-0)&&input.constructor===-4294967296&&settleUp({})!==settleUp({});})()", "expected": true}, {"call": "(() => {const entries=Array.from({length:2000},(_,i)=>['p'+String(i).padStart(4,'0'),i<1000?-1000000000000:1000000000000]),out=settleUp(Object.freeze(Object.fromEntries(entries)));return out.length===1000&&out.every((p,i)=>p.from==='p'+String(i).padStart(4,'0')&&p.to==='p'+String(i+1000).padStart(4,'0')&&p.amount===1000000000000);})()", "expected": true}, {"call": "settleUp({ A: 600, B: 500, C: -700, D: -400 })", "expected": [{"from": "C", "to": "A", "amount": 600}, {"from": "C", "to": "B", "amount": 100}, {"from": "D", "to": "B", "amount": 400}]}, {"call": "settleUp({ p: 700, q: -250, r: -250, s: -100, t: -100 })", "expected": [{"from": "q", "to": "p", "amount": 250}, {"from": "r", "to": "p", "amount": 250}, {"from": "s", "to": "p", "amount": 100}, {"from": "t", "to": "p", "amount": 100}]}, {"call": "settleUp({ A: 300, B: 300, C: -500, D: -100 })", "expected": [{"from": "C", "to": "A", "amount": 300}, {"from": "C", "to": "B", "amount": 200}, {"from": "D", "to": "B", "amount": 100}]}, {"call": "settleUp({ a: 1234, b: -1000, c: 567, d: -801 })", "expected": [{"from": "b", "to": "a", "amount": 1000}, {"from": "d", "to": "a", "amount": 234}, {"from": "d", "to": "c", "amount": 567}]}],
   },
   'js-mh-line-diff': {
     solution: `const diffLines = (before, after) => {
@@ -1164,12 +1160,12 @@ const findWord = (grid, word) => {
     if (lineWords.length === 1) return lineWords[0].padEnd(width);
     const gaps = lineWords.length - 1;
     const spaces = width - lineWords.reduce((sum, word) => sum + word.length, 0);
-    let out = lineWords[0];
+    const chunks = [lineWords[0]];
     for (let i = 1; i < lineWords.length; i++) {
       // Every gap gets the even share; the first (spaces % gaps) get one more.
-      out += " ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)) + lineWords[i];
+      chunks.push(" ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)), lineWords[i]);
     }
-    return out;
+    return chunks.join("");
   };
   let line = [];
   let letters = 0;
@@ -1208,10 +1204,7 @@ const findWord = (grid, word) => {
     const isLastLine = index === words.length;
     let line = "";
     if (isLastLine || lineWords.length === 1) {
-      line = lineWords.join(" ");
-      while (line.length < width) {
-        line = line + " ";
-      }
+      line = lineWords.join(" ").padEnd(width);
     } else {
       let letterCount = 0;
       for (const word of lineWords) {
@@ -1221,42 +1214,39 @@ const findWord = (grid, word) => {
       const spaceCount = width - letterCount;
       const evenShare = Math.floor(spaceCount / gapCount);
       let extra = spaceCount % gapCount;
-      line = lineWords[0];
+      const chunks = [lineWords[0]];
       for (let i = 1; i < lineWords.length; i++) {
         let gap = evenShare;
         if (extra > 0) {
           gap = gap + 1;
           extra = extra - 1;
         }
-        line = line + " ".repeat(gap) + lineWords[i];
+        chunks.push(" ".repeat(gap), lineWords[i]);
       }
+      line = chunks.join("");
     }
     lines.push(line);
   }
   return lines;
 };`,
     senior: `const justify = (text, width) => {
-  const lines = [];
+  const groups = [];
   for (const word of text.split(/\\s+/).filter(Boolean)) {
-    const line = lines.at(-1);
-    if (line && line.join(" ").length + 1 + word.length <= width) line.push(word);
-    else lines.push([word]);
+    const current = groups.at(-1);
+    if (current && current.letters + current.words.length + word.length <= width) {
+      current.words.push(word);
+      current.letters += word.length;
+    } else groups.push({ words: [word], letters: word.length });
   }
-  return lines.map((line, index) => {
-    if (index === lines.length - 1 || line.length === 1) return line.join(" ").padEnd(width);
-    const gaps = line.length - 1;
-    const spaces = width - line.join("").length;
-    return line.reduce((out, word, i) => out + " ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)) + word);
+  return groups.map(({ words, letters }, index) => {
+    if (index === groups.length - 1 || words.length === 1) return words.join(" ").padEnd(width);
+    const gaps = words.length - 1, spaces = width - letters;
+    const chunks = [words[0]];
+    for (let i = 1; i < words.length; i++) chunks.push(" ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)), words[i]);
+    return chunks.join("");
   });
 };`,
-    hiddenTests: [
-      { call: 'justify("Science is what we understand well enough to explain to a computer. Art is everything else we do", 20)', expected: ['Science  is  what we', 'understand      well', 'enough to explain to', 'a  computer.  Art is', 'everything  else  we', 'do                  '] },
-      { call: 'justify("abc def", 7)', expected: ['abc def'] },
-      { call: 'justify("one\\ntwo\\tthree", 9)', expected: ['one   two', 'three    '] },
-      { call: 'justify("a b c", 1)', expected: ['a', 'b', 'c'] },
-      { call: 'justify("ab cd ef gh", 6)', expected: ['ab  cd', 'ef gh '] },
-      { call: 'justify("   ", 4)', expected: [] },
-    ],
+    hiddenTests: [{"call": "(() => {const alphabet=['a','bb','ccc'];for(let n=0;n<=5;n++)for(let code=0;code<3**n;code++){let digits=code;const words=[];for(let i=0;i<n;i++){words.push(alphabet[digits%3]);digits=Math.floor(digits/3);}for(let width=1;width<=9;width++){const groups=[];let line=[];for(const word of words){if(line.length&&line.join(' ').length+1+word.length>width){groups.push(line);line=[];}line.push(word);}if(line.length)groups.push(line);const expected=groups.map((group,index)=>{if(index===groups.length-1||group.length===1)return group.join(' ').padEnd(width);const gaps=Array(group.length-1).fill(' ');let remaining=width-group.join('').length-gaps.length;for(let i=0;remaining>0;i++,remaining--)gaps[i%gaps.length]+=' ';return group.map((word,i)=>word+(gaps[i]||'')).join('');});if(JSON.stringify(justify(words.join(' '),width))!==JSON.stringify(expected))return false;}}return true;})()", "expected": true}, {"call": "(() => {const text='\\uFEFFe\\u0301\\u00a0\ud83d\ude00\\n\\ud83d\\tX\\uFEFF',a=justify(text,2),b=justify(text,2),expected=['e\\u0301','\ud83d\ude00','\\ud83d ','X '];if(JSON.stringify(a)!==JSON.stringify(expected)||a===b||justify('\\u200b',2)[0]!=='\\u200b ')return false;a.push('changed');return a.length===5&&b.length===4&&justify('',1)!==justify('',1);})()", "expected": true}, {"call": "(() => {const text=Array(10000).fill('a').join(' '),a=justify(text,20000),b=justify(text,1),c=justify('x'.repeat(20000),1);return a.length===1&&a[0]===text+' '&&b.length===10000&&b.every(line=>line==='a')&&c.length===1&&c[0]==='x'.repeat(20000)&&justify(' '.repeat(20000),20000).length===0;})()", "expected": true}, {"call": "justify(\"Science is what we understand well enough to explain to a computer. Art is everything else we do\", 20)", "expected": ["Science  is  what we", "understand      well", "enough to explain to", "a  computer.  Art is", "everything  else  we", "do                  "]}, {"call": "justify(\"abc def\", 7)", "expected": ["abc def"]}, {"call": "justify(\"one\\ntwo\\tthree\", 9)", "expected": ["one   two", "three    "]}, {"call": "justify(\"a b c\", 1)", "expected": ["a", "b", "c"]}, {"call": "justify(\"ab cd ef gh\", 6)", "expected": ["ab  cd", "ef gh "]}, {"call": "justify(\"   \", 4)", "expected": []}],
   },
 
   /* ── Hard: routes, settings and JSON ──────────────────────────────── */
@@ -1280,7 +1270,7 @@ const matchRoute = (routes, path) => {
     if (wildcard ? parts.length <= fixed.length : parts.length !== fixed.length) return null;
     const fits = fixed.every((segment, i) => (segment.startsWith(":") ? parts[i] !== "" : segment === parts[i]));
     if (!fits) return null;
-    const params = {};
+    const params = Object.create(null);
     fixed.forEach((segment, i) => {
       if (segment.startsWith(":")) params[segment.slice(1)] = parts[i];
     });
@@ -1344,7 +1334,7 @@ const matchRoute = (routes, path) => {
     if (!allMatch) {
       continue;
     }
-    const params = {};
+    const params = Object.create(null);
     for (let i = 0; i < fixedParts.length; i++) {
       if (fixedParts[i].startsWith(":")) {
         const name = fixedParts[i].slice(1);
@@ -1376,7 +1366,11 @@ const matchRoute = (routes, path) => {
   });
   return matches[0];
 };`,
-    senior: `const segmentsOf = text => (text.length > 1 && text.endsWith("/") ? text.slice(0, -1) : text).split("/");
+    senior: `const segmentsOf = text => {
+  const parts = text.split("/");
+  if (parts.length > 1 && parts.at(-1) === "") parts.pop();
+  return parts;
+};
 const rankOf = segment => (segment === "*" ? 2 : segment[0] === ":" ? 1 : 0);
 
 const matchRoute = (routes, path) => {
@@ -1399,20 +1393,7 @@ const matchRoute = (routes, path) => {
   const [best] = candidates;
   return best ? { route: best.route, params: best.params } : null;
 };`,
-    hiddenTests: [
-      { call: 'matchRoute(["/:section/new", "/posts/:id"], "/posts/new")', expected: { route: '/posts/:id', params: { id: 'new' } } },
-      { call: 'matchRoute(["/items/:id", "/items/:slug"], "/items/9")', expected: { route: '/items/:id', params: { id: '9' } } },
-      { call: '[matchRoute(["/docs/*"], "/docs"), matchRoute(["/docs/*"], "/docs/")]', expected: [null, null] },
-      { call: '[matchRoute(["/", "/:page"], "/"), matchRoute(["/", "/:page"], "/pricing")]', expected: [{ route: '/', params: {} }, { route: '/:page', params: { page: 'pricing' } }] },
-      { call: 'matchRoute(["/a/:b"], "/a/x/y")', expected: null },
-      { call: 'matchRoute(["/:a/:b", "/shop/:b", "/shop/cart"], "/shop/cart")', expected: { route: '/shop/cart', params: {} } },
-      { call: '(() => { const routes = ["/x/*", "/x/:id", "/x/y"]; matchRoute(routes, "/x/y"); return routes; })()', expected: ['/x/*', '/x/:id', '/x/y'] },
-      { call: 'matchRoute(["/files/:dir/*"], "/files/img/a/b.png")', expected: { route: '/files/:dir/*', params: { dir: 'img', rest: 'a/b.png' } } },
-      // A literal segment has to be equal, not just present, and the more
-      // specific route wins from either place in the list.
-      { call: '[matchRoute(["/about"], "/contact"), matchRoute(["/users/:id", "/teams/me"], "/users/me")]', expected: [null, { route: '/users/:id', params: { id: 'me' } }] },
-      { call: 'matchRoute(["/users/me", "/users/:id"], "/users/me")', expected: { route: '/users/me', params: {} } },
-    ],
+    hiddenTests: [{"call": "(() => {const routes=['/','/*','/:id','/x','/x/','/x/*','/x/:id','/:id/y','/x/y','/:id/:tail','/x/:rest/*'],paths=['/','/x','/x/','/x//','/x/y','/x/y/z','/q/y','/x/%2f','//'];const split=s=>{const a=s.split('/');if(a.length>1&&a[a.length-1]==='')a.pop();return a;};for(const path of paths)for(let code=0;code<routes.length**2;code++){const list=Object.freeze([routes[code%routes.length],routes[Math.floor(code/routes.length)]]),parts=split(path),matches=[];for(let index=0;index<list.length;index++){const route=list[index],pattern=split(route),star=pattern[pattern.length-1]==='*',fixed=star?pattern.slice(0,-1):pattern;if(star?parts.length<=fixed.length:parts.length!==fixed.length)continue;const pairs=[];let valid=true;for(let i=0;i<fixed.length;i++){if(fixed[i][0]===':'){if(parts[i]===''){valid=false;break;}pairs.push([fixed[i].slice(1),parts[i]]);}else if(fixed[i]!==parts[i]){valid=false;break;}}if(!valid)continue;if(star)pairs.push(['rest',parts.slice(fixed.length).join('/')]);matches.push({route,params:Object.fromEntries(pairs),ranks:pattern.map(s=>s==='*'?2:s[0]===':'?1:0)});}matches.sort((a,b)=>{for(let i=0;i<Math.min(a.ranks.length,b.ranks.length);i++)if(a.ranks[i]!==b.ranks[i])return a.ranks[i]-b.ranks[i];return 0;});const expected=matches.length?{route:matches[0].route,params:matches[0].params}:null;if(JSON.stringify(matchRoute(list,path))!==JSON.stringify(expected))return false;}return true;})()", "expected": true}, {"call": "(() => {const routes=Object.freeze(['/:__proto__/:constructor','/*']),a=matchRoute(routes,'/x/y'),b=matchRoute(routes,'/x/y');if(a===b||a.params===b.params||!Object.hasOwn(a.params,'__proto__')||a.params.__proto__!=='x'||a.params.constructor!=='y'||matchRoute(['/*'],'/')!==null)return false;a.params.__proto__='changed';return a.params.__proto__==='changed'&&b.params.__proto__==='x'&&matchRoute(['/x/%2f','/x/:v'],'/x/%2f').route==='/x/%2f'&&matchRoute(['/:id/:id'],'/a/b').params.id==='b'&&matchRoute(['/:rest/*'],'/a/b').params.rest==='b';})()", "expected": true}, {"call": "(() => {const routes=Object.freeze(Array.from({length:999},(_,i)=>'/page'+i).concat('/'+ 'x'.repeat(999))),a=matchRoute(routes,'/'+ 'x'.repeat(999)),b=matchRoute(routes,'/none');return a.route==='/'+ 'x'.repeat(999)&&Object.keys(a.params).length===0&&b===null&&matchRoute([], '/x')===null;})()", "expected": true}, {"call": "matchRoute([\"/:section/new\", \"/posts/:id\"], \"/posts/new\")", "expected": {"route": "/posts/:id", "params": {"id": "new"}}}, {"call": "matchRoute([\"/items/:id\", \"/items/:slug\"], \"/items/9\")", "expected": {"route": "/items/:id", "params": {"id": "9"}}}, {"call": "[matchRoute([\"/docs/*\"], \"/docs\"), matchRoute([\"/docs/*\"], \"/docs/\")]", "expected": [null, null]}, {"call": "[matchRoute([\"/\", \"/:page\"], \"/\"), matchRoute([\"/\", \"/:page\"], \"/pricing\")]", "expected": [{"route": "/", "params": {}}, {"route": "/:page", "params": {"page": "pricing"}}]}, {"call": "matchRoute([\"/a/:b\"], \"/a/x/y\")", "expected": null}, {"call": "matchRoute([\"/:a/:b\", \"/shop/:b\", \"/shop/cart\"], \"/shop/cart\")", "expected": {"route": "/shop/cart", "params": {}}}, {"call": "(() => { const routes = [\"/x/*\", \"/x/:id\", \"/x/y\"]; matchRoute(routes, \"/x/y\"); return routes; })()", "expected": ["/x/*", "/x/:id", "/x/y"]}, {"call": "matchRoute([\"/files/:dir/*\"], \"/files/img/a/b.png\")", "expected": {"route": "/files/:dir/*", "params": {"dir": "img", "rest": "a/b.png"}}}, {"call": "[matchRoute([\"/about\"], \"/contact\"), matchRoute([\"/users/:id\", \"/teams/me\"], \"/users/me\")]", "expected": [null, {"route": "/users/:id", "params": {"id": "me"}}]}, {"call": "matchRoute([\"/users/me\", \"/users/:id\"], \"/users/me\")", "expected": {"route": "/users/me", "params": {}}}],
   },
   'js-mh-settings-diff': {
     solution: `// typeof says "object" for null and arrays too; both are leaves here.
@@ -1431,10 +1412,11 @@ const diffSettings = (before, after) => {
       changes.push({ path, change });
       return;
     }
-    for (const key in value) everyLeaf(value[key], join(path, key), change);
+    for (const key in value) if (Object.hasOwn(value, key)) everyLeaf(value[key], join(path, key), change);
   };
   const walk = (a, b, prefix) => {
     for (const key in a) {
+      if (!Object.hasOwn(a, key)) continue;
       const path = join(prefix, key);
       if (!Object.hasOwn(b, key)) everyLeaf(a[key], path, "removed");
       else if (isObject(a[key]) && isObject(b[key])) walk(a[key], b[key], path);
@@ -1445,6 +1427,7 @@ const diffSettings = (before, after) => {
       } else if (!sameLeaf(a[key], b[key])) changes.push({ path, change: "changed" });
     }
     for (const key in b) {
+      if (!Object.hasOwn(b, key)) continue;
       if (!Object.hasOwn(a, key)) everyLeaf(b[key], join(prefix, key), "added");
     }
   };
@@ -1487,6 +1470,7 @@ const diffSettings = (before, after) => {
   const reportAll = (value, path, change) => {
     if (isPlainObject(value)) {
       for (const key in value) {
+      if (!Object.hasOwn(value, key)) continue;
         reportAll(value[key], pathFor(path, key), change);
       }
     } else {
@@ -1495,6 +1479,7 @@ const diffSettings = (before, after) => {
   };
   const compare = (a, b, prefix) => {
     for (const key in a) {
+      if (!Object.hasOwn(a, key)) continue;
       const path = pathFor(prefix, key);
       const inB = Object.prototype.hasOwnProperty.call(b, key);
       if (!inB) {
@@ -1513,6 +1498,7 @@ const diffSettings = (before, after) => {
       }
     }
     for (const key in b) {
+      if (!Object.hasOwn(b, key)) continue;
       const inA = Object.prototype.hasOwnProperty.call(a, key);
       if (!inA) {
         reportAll(b[key], pathFor(prefix, key), "added");
@@ -1535,6 +1521,7 @@ const diffSettings = (before, after) => {
 
 const leaves = (value, prefix = "", out = new Map()) => {
   for (const key in value) {
+      if (!Object.hasOwn(value, key)) continue;
     const path = prefix ? \`\${prefix}.\${key}\` : key;
     if (isObject(value[key])) leaves(value[key], path, out);
     else out.set(path, value[key]);
@@ -1556,14 +1543,7 @@ const diffSettings = (before, after) => {
   for (const path of next.keys()) if (!old.has(path)) changes.push({ path, change: "added" });
   return changes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 };`,
-    hiddenTests: [
-      { call: 'diffSettings({ proxy: { host: "x", port: 1 } }, { proxy: null })', expected: [{ path: 'proxy', change: 'added' }, { path: 'proxy.host', change: 'removed' }, { path: 'proxy.port', change: 'removed' }] },
-      { call: 'diffSettings({ cache: false }, { cache: { size: 10 } })', expected: [{ path: 'cache', change: 'removed' }, { path: 'cache.size', change: 'added' }] },
-      { call: 'diffSettings({ list: [1, 2], mixed: [1, "1"] }, { list: [1, 2, 3], mixed: [1, 1] })', expected: [{ path: 'list', change: 'changed' }, { path: 'mixed', change: 'changed' }] },
-      { call: 'diffSettings({ a: { b: { c: { d: 1 } } } }, { a: { b: { c: { d: 1, e: 2 } } } })', expected: [{ path: 'a.b.c.e', change: 'added' }] },
-      { call: 'diffSettings({ gone: {}, stay: 1 }, { stay: 1, fresh: {} })', expected: [] },
-      { call: 'diffSettings({ ui: { dark: true, size: "m" }, beta: false }, { ui: { dark: true, size: "l", font: null }, beta: false, lang: "en" })', expected: [{ path: 'lang', change: 'added' }, { path: 'ui.font', change: 'added' }, { path: 'ui.size', change: 'changed' }] },
-    ],
+    hiddenTests: [{"call": "(() => {const values=[0,false,null,NaN,-0,[0],[NaN],{}, {x:1},{x:{y:2}}];const flatten=(node,prefix='',out=[])=>{for(const key of Object.keys(node)){const path=prefix?prefix+'.'+key:key,value=node[key];if(value!==null&&typeof value==='object'&&!Array.isArray(value))flatten(value,path,out);else out.push([path,value]);}return out;};for(const x of values)for(const y of values){const a=flatten({a:x}),b=flatten({a:y}),old=new Map(a),next=new Map(b),expected=[];for(const[path,value]of a){if(!next.has(path))expected.push({path,change:'removed'});else{const other=next.get(path),same=Array.isArray(value)&&Array.isArray(other)?value.length===other.length&&value.every((v,i)=>v===other[i]):value===other;if(!same)expected.push({path,change:'changed'});}}for(const[path]of b)if(!old.has(path))expected.push({path,change:'added'});expected.sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);if(JSON.stringify(diffSettings({a:x},{a:y}))!==JSON.stringify(expected))return false;}return true;})()", "expected": true}, {"call": "(() => {const before=Object.assign(Object.create(null),{['__proto__']:Object.freeze([NaN,-0]),constructor:Infinity}),after=Object.assign(Object.create(null),{['__proto__']:Object.freeze([NaN,0]),constructor:Infinity});Object.defineProperty(before,'ignored',{value:1});before[Symbol('ignored')]=true;Object.freeze(before);Object.freeze(after);const a=diffSettings(before,after),b=diffSettings(before,after);if(a===b||a[0]===b[0]||JSON.stringify(a)!==JSON.stringify([{path:'__proto__',change:'changed'}]))return false;a[0].change='mutated';a.push({});return a[0].change==='mutated'&&a.length===2&&b[0].change==='changed'&&Object.is(before.__proto__[1],-0)&&after.__proto__[1]===0&&diffSettings({}, {})!==diffSettings({},{});})()", "expected": true}, {"call": "(() => {let a={leaf:1},b={leaf:2};for(let i=0;i<63;i++){a=Object.freeze({k:a});b=Object.freeze({k:b});}const deep=diffSettings(Object.freeze(a),Object.freeze(b)),wideA=Object.freeze({items:Object.freeze(Array(9998).fill(0))}),wideB=Object.freeze({items:Object.freeze(Array(9998).fill(0).concat(1))});return deep.length===1&&deep[0].path===Array(63).fill('k').concat('leaf').join('.')&&deep[0].change==='changed'&&JSON.stringify(diffSettings(wideA,wideB))===JSON.stringify([{path:'items',change:'changed'}]);})()", "expected": true}, {"call": "diffSettings({ proxy: { host: \"x\", port: 1 } }, { proxy: null })", "expected": [{"path": "proxy", "change": "added"}, {"path": "proxy.host", "change": "removed"}, {"path": "proxy.port", "change": "removed"}]}, {"call": "diffSettings({ cache: false }, { cache: { size: 10 } })", "expected": [{"path": "cache", "change": "removed"}, {"path": "cache.size", "change": "added"}]}, {"call": "diffSettings({ list: [1, 2], mixed: [1, \"1\"] }, { list: [1, 2, 3], mixed: [1, 1] })", "expected": [{"path": "list", "change": "changed"}, {"path": "mixed", "change": "changed"}]}, {"call": "diffSettings({ a: { b: { c: { d: 1 } } } }, { a: { b: { c: { d: 1, e: 2 } } } })", "expected": [{"path": "a.b.c.e", "change": "added"}]}, {"call": "diffSettings({ gone: {}, stay: 1 }, { stay: 1, fresh: {} })", "expected": []}, {"call": "diffSettings({ ui: { dark: true, size: \"m\" }, beta: false }, { ui: { dark: true, size: \"l\", font: null }, beta: false, lang: \"en\" })", "expected": [{"path": "lang", "change": "added"}, {"path": "ui.font", "change": "added"}, {"path": "ui.size", "change": "changed"}]}],
   },
   'js-mh-safe-stringify': {
     solution: `const safeStringify = value => {

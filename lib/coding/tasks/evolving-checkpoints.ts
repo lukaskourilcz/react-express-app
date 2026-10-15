@@ -13,15 +13,18 @@ import { checkpointLadder } from './evolving-checkpoint-hints';
 
 interface Checkpoint {
   prompt: Localized;
+  focus?: CodingTask['focus'];
+  references?: CodingTask['references'];
   tests?: CallTest[];
   suite?: string;
   typeTests?: TypeTest[];
 }
 const calls = (...entries: [string, unknown][]) =>
   entries.map(([call, expected]) => test(call, expected));
-const step = (en: string, cs: string, tests: CallTest[]): Checkpoint => ({
+const step = (en: string, cs: string, tests: CallTest[], metadata: Pick<Checkpoint, 'focus' | 'references'> = {}): Checkpoint => ({
   prompt: text(en, cs),
   tests,
+  ...metadata,
 });
 const ui = (en: string, cs: string, body: string): Checkpoint => ({
   prompt: text(en, cs),
@@ -30,14 +33,16 @@ const ui = (en: string, cs: string, body: string): Checkpoint => ({
 const CHECKPOINTS: Record<string, Checkpoint[]> = {
   'js-evolving-calculator': [
     step(
-      'Implement calculate(expression) for a single non-negative integer, optionally surrounded by whitespace. Return its numeric value.',
+      "Implement calculate(expression) for one non-negative integer, optionally surrounded by whitespace. expression is a primitive string with at most 20000 UTF-16 units. After ECMAScript trim whitespace is removed, it contains one or more ASCII decimal digits; leading zeros are allowed. Its numeric value is at most Number.MAX_SAFE_INTEGER. Return that exact Number; equivalent zero signs are accepted. There are no signs, operators, exponent notation, hexadecimal forms or internal spaces at this checkpoint. n is the actual raw string length. Target: O(n) time and O(n) extra space in the string-copy model. Trimming and Number conversion are allowed; do not narrow the result to 32 bits.",
       'Napiš calculate(expression) pro jedno nezáporné celé číslo s volitelnými krajními mezerami. Vrať číselnou hodnotu.',
       calls(
+        ["calculate(\"4294967296\")", 4294967296],
         ['calculate("0")', 0],
         ['calculate("42")', 42],
         ['calculate(" 7 ")', 7],
         ['calculate("1234")', 1234],
       ),
+      { focus: ['strings', 'functions'], references: [{ title: text('Number()', ''), url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/Number' }] },
     ),
     step(
       'Add subtraction to calculate, evaluated left to right alongside addition. Operands can now be non-negative decimals.',
@@ -536,6 +541,8 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
           id: `${id}-start`,
           prompt: checkpoint.prompt,
           ...checkpointLadder(`${id}-start`),
+          ...(checkpoint.focus ? { focus: checkpoint.focus } : {}),
+          ...(checkpoint.references ? { references: checkpoint.references } : {}),
           previousRequirements: [...prompts],
           estimatedMinutes: 5,
           title: stageTitle(project.title, prompts.length + 1),

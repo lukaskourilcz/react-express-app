@@ -27,11 +27,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR#436 passed required run38819522261 at frozen6bfe79183bfcd60658922b930655c9e192de00fb (verify31m33s; SQL35s), then merged at83b398ee75d5ddb5126ed7cb7882e4c5375cf87d on15October2026 at23:21:00UTC. READY production dpl_AHuTwRNMxDpmdjrXqcWd1QwfAwWW matches that merge, owns devshark.app before/after probes and has no alias error. Exact preview and production each pass eleven general guest checks and three actual pairWithSum Submits: reference/independent alternative pass,32-bit narrowing wrong fails,0XP/null progress. Nine changed tasks return402 and await dedicated authorized Premium acceptance under#190. B078\u2013B079 bring shipped current coding review coverage to425/725, with263/263 native. B080 is separately committed at55689e58; B081 is in final local gates and is not claimed deployed. Same-session model self-review/finite execution only, not independent/human, real-device or whole-catalogue acceptance. Keep#435 sequenced after the audit, owner holds and draft#365 unchanged.",
-    "currentModelReviewedIssuedTasks": 435,
-    "issuedStillRequiringReview": 290,
+    "currentModelReviewedIssuedTasks": 440,
+    "issuedStillRequiringReview": 285,
     "deployedModelReviewedIssuedTasks": 425,
-    "stagedModelReviewedIssuedTasks": 10,
-    "stagedExecutionEvidence": "Ten B080\u2013B081 coding source reviews above verified#436. B081 passes30/30 current-hash verdicts,20no-false-penalty checks,12separate exact virtual-clock probes, full local gates/80responsive probes; all70algorithms individually bound,290JS/TS/React tasks remain. Source evidence is separate from production acceptance.",
+    "stagedModelReviewedIssuedTasks": 15,
+    "stagedExecutionEvidence": "Fifteen source reviews above verified#436: ten B080\u2013B081 frozen in#437 atdcc7aa7e, five B082 separate. B082 passes28/28 final-hash verdicts,18supported-board reward checks, canonical/native/checkpoint/full local gates and80responsive probes;285coding tasks remain. #438 is a separately reproduced, still-open parser policy correction. Source evidence is separate from release acceptance.",
     "deployedExecutionEvidence": "PR#436 passed required run38819522261 at frozen6bfe79183bfcd60658922b930655c9e192de00fb (verify31m33s; SQL35s), then merged at83b398ee75d5ddb5126ed7cb7882e4c5375cf87d on15October2026 at23:21:00UTC. READY production dpl_AHuTwRNMxDpmdjrXqcWd1QwfAwWW matches that merge, owns devshark.app before/after probes and has no alias error. Exact preview and production each pass eleven general guest checks and three actual pairWithSum Submits: reference/independent alternative pass,32-bit narrowing wrong fails,0XP/null progress. Nine changed tasks return402 and await dedicated authorized Premium acceptance under#190. B078\u2013B079 bring shipped current coding review coverage to425/725, with263/263 native. B080 is separately committed at55689e58; B081 is in final local gates and is not claimed deployed. Same-session model self-review/finite execution only, not independent/human, real-device or whole-catalogue acceptance. Keep#435 sequenced after the audit, owner holds and draft#365 unchanged."
   },
   "nativePaths": {
@@ -58,7 +58,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "425 reviewed coding and263 native records are deployed through#436; B080\u2013B081 are separately staged. Production overrides were last read-only rechecked on2026-10-15; preserve dated scope.",
+    "425 reviewed coding and 263 native records are deployed; 15 coding records are staged through b082. Override data was last read-only rechecked on 2026-10-15; see its dated reconciliation evidence.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
