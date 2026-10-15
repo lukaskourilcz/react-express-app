@@ -93,39 +93,7 @@ const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string
   const hasMore = start + size < items.length;
   return { items: page, next: hasMore ? page[page.length - 1].id : null };
 };`,
-    junior: `interface Page<T> {
-  items: T[];
-  next: string | null;
-}
-
-const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T> => {
-  let start = 0;
-  if (cursor !== null) {
-    let found = -1;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].id === cursor) {
-        found = i;
-        break;
-      }
-    }
-    if (found === -1) {
-      return { items: [], next: null };
-    }
-    start = found + 1;
-  }
-
-  const page: T[] = [];
-  for (let i = start; i < items.length && page.length < size; i++) {
-    page.push(items[i]);
-  }
-
-  let next: string | null = null;
-  const lastIndex = start + page.length - 1;
-  if (page.length > 0 && lastIndex < items.length - 1) {
-    next = page[page.length - 1].id;
-  }
-  return { items: page, next: next };
-};`,
+    junior: "interface Page<T> {\n  items: T[];\n  next: string | null;\n}\n\nconst pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T> => {\n  let start = 0;\n  if (cursor !== null) {\n    const index = items.findIndex((item) => item.id === cursor);\n    if (index === -1) return { items: [], next: null };\n    start = index + 1;\n  }\n  const page = items.slice(start, start + size);\n  let next: string | null = null;\n  if (start + size < items.length) next = page[page.length - 1].id;\n  return { items: page, next };\n};",
     senior: `interface Page<T> {
   items: T[];
   next: string | null;
@@ -139,6 +107,11 @@ const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string
   return { items: page, next: end < items.length ? page.at(-1)!.id : null };
 };`,
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({id:'',meta}),b=Object.freeze({id:' x ',meta}),input=Object.freeze([a,b]),first=pageAfter(input,null,1),again=pageAfter(input,null,1);first.items.push(b);first.next='changed';return [first!==again,first.items!==again.items,again.items[0]===a,again.items[0].meta===meta,again.next,input.length,pageAfter(input,'',1).items[0]===b];})()", expected: [true, true, true, true, "", 2, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:'p'+i}))),seen=[];let cursor=null,pages=0;do{const page=pageAfter(input,cursor,137);seen.push(...page.items);cursor=page.next;pages++;}while(cursor!==null&&pages<20);return [pages,seen.length,seen.every((item,i)=>item===input[i]),cursor,input.length];})()", expected: [8, 1000, true, null, 1000] },
+      { call: "(()=>{const input=Object.freeze([{id:'__proto__'},{id:' x '},{id:'x'}]);return [pageAfter(input,'__proto__',1).next,pageAfter(input,' x ',1).items[0]===input[2],pageAfter(input,' X ',1).items.length];})()", expected: [" x ", true, 0] },
+      { call: "(()=>{const input=Object.freeze([{id:'a'}]),a=pageAfter(input,'missing',1),b=pageAfter(input,'a',1000000000),c=pageAfter(input,null,1000000000);a.items.push({id:'later'});return [a!==b,b.items.length,b.next,c.items[0]===input[0],c.next,input.length,pageAfter([],null,1)!==pageAfter([],null,1)];})()", expected: [true, 0, null, true, null, 1, true] },
+
       { call: 'pageAfter([{ id: "" }, { id: "x" }], "", 1)', expected: { items: [{ id: 'x' }], next: null } },
       { call: 'pageAfter([{ id: "" }, { id: "x" }], null, 1)', expected: { items: [{ id: '' }], next: '' } },
       { call: '(() => { const list = Array.from({ length: 23 }, (_, i) => ({ id: "u" + i })); const seen = []; let cursor = null; let pages = 0; do { const page = pageAfter(list, cursor, 5); seen.push(...page.items.map((item) => item.id)); cursor = page.next; pages += 1; } while (cursor !== null && pages < 50); return [pages, seen.join(",") === list.map((item) => item.id).join(",")]; })()', expected: [5, true] },
@@ -203,20 +176,13 @@ const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [string,
   }
   return runs;
 };`,
-    senior: `interface Message {
-  from: string;
-  text: string;
-}
-
-const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [key: string, run: T[]][] =>
-  items.reduce<[key: string, run: T[]][]>((runs, item) => {
-    const key = keyOf(item);
-    const last = runs.at(-1);
-    if (last?.[0] === key) last[1].push(item);
-    else runs.push([key, [item]]);
-    return runs;
-  }, []);`,
+    senior: "interface Message {\n  from: string;\n  text: string;\n}\n\nconst groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [key: string, run: T[]][] => {\n  const runs: [key: string, run: T[]][] = [];\n  for (const item of items) {\n    const key = keyOf(item);\n    const last = runs.at(-1);\n    if (last !== undefined && last[0] === key) last[1].push(item);\n    else runs.push([key, [item]]);\n  }\n  return runs;\n};",
     hiddenTests: [
+      { call: "(()=>{const objects=[Object.freeze({}),Object.freeze({}),Object.freeze({}),Object.freeze({})],input=Object.freeze(objects.slice()),seen=[],keys=['','','x',''];let calls=0;const out=groupRuns(input,function(value){seen.push([value,arguments.length]);return keys[calls++];});return [calls,seen.every((row,i)=>row[0]===objects[i]&&row[1]===1),out.map(([key,run])=>[key,run.length]),out[0][1][0]===objects[0],out[2][1][0]===objects[3],input.length];})()", expected: [4, true, [["", 2], ["x", 1], ["", 1]], true, true, 4] },
+      { call: "(()=>{const input=Object.freeze([1,2,1]),a=groupRuns(input,String),b=groupRuns(input,String);a[0][1].push(99);a.push(['later',[]]);return [a!==b,a[0]!==b[0],a[0][1]!==b[0][1],b[0][1]!==b[2][1],b[0][1],input.length,groupRuns([],String)!==groupRuns([],String)];})()", expected: [true, true, true, true, [1], 3, true] },
+      { call: "(()=>{const marker={},seen=[];try{groupRuns([1,2,3],value=>{seen.push(value);if(value===2)throw marker;return 'x';});return false;}catch(error){return error===marker&&seen.join(',')==='1,2';}})()", expected: true },
+      { call: "(()=>{let calls=0;const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=groupRuns(input,()=>{calls++;return '__proto__';});return [out.length,out[0][0],out[0][1].length,out[0][1][999],calls];})()", expected: [1, "__proto__", 1000, 999, 1000] },
+
       { call: 'groupRuns(["a", "b", "c"], (s) => (s === "c" ? "x" : ""))', expected: [['', ['a', 'b']], ['x', ['c']]] },
       { call: 'groupRuns([..."aabbbaacc"], (c) => c).map(([key, run]) => key + run.length).join(" ")', expected: 'a2 b3 a2 c2' },
       { call: '(() => { const list = [1, 2]; const runs = groupRuns(list, () => "k"); runs[0][1].push(3); return list; })()', expected: [1, 2] },

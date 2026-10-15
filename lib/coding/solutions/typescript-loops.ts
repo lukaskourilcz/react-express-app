@@ -335,35 +335,17 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-group-by-key": {
-    solution: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
-  const groups = {} as Record<K, T[]>;
-  for (const item of items) {
-    const key = keyOf(item);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(item);
-  }
-  return groups;
-};`,
-    junior: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
-  const groups = {} as Record<K, T[]>;
-  for (const item of items) {
-    const key = keyOf(item);
-    if (key in groups) {
-      groups[key].push(item);
-    } else {
-      groups[key] = [item];
-    }
-  }
-  return groups;
-};`,
-    senior: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> =>
-  items.reduce((groups, item) => {
-    const key = keyOf(item);
-    // ??= creates the group on first sight and reuses it after, in one expression.
-    (groups[key] ??= []).push(item);
-    return groups;
-  }, {} as Record<K, T[]>);`,
+    solution: "const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {\n  // Only observed groups exist; no prototype members can masquerade as groups.\n  const groups = Object.create(null) as Partial<Record<K, T[]>>;\n  for (const item of items) {\n    const key = keyOf(item);\n    const group = groups[key];\n    if (group === undefined) groups[key] = [item];\n    else group.push(item);\n  }\n  return groups;\n};",
+    junior: "const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {\n  const groups = Object.create(null) as Partial<Record<K, T[]>>;\n  for (const item of items) {\n    const key = keyOf(item);\n    const previous = groups[key];\n    if (previous !== undefined) {\n      previous.push(item);\n    } else {\n      groups[key] = [item];\n    }\n  }\n  return groups;\n};",
+    senior: "const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {\n  const groups = Object.create(null) as Partial<Record<K, T[]>>;\n  for (const item of items) {\n    const key = keyOf(item);\n    (groups[key] ??= []).push(item);\n  }\n  return groups;\n};",
+    hiddenTypeTests: [{"code": "const __auditKey = Symbol(); const __auditGroups = groupBy([{payload:1}],()=>__auditKey); const __auditMaybe: {payload:number}[] | undefined = __auditGroups[__auditKey];"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['constructor','__proto__','toString']),out=groupBy(input,x=>x),empty=groupBy([],()=> 'constructor');return [Object.keys(out).sort(),input.every(key=>Object.hasOwn(out,key)&&out[key][0]===key),empty.constructor===undefined,empty.toString===undefined,empty.__proto__===undefined,Reflect.ownKeys(empty).length];})()", expected: [["__proto__", "constructor", "toString"], true, true, true, true, 0] },
+      { call: "(()=>{const a=Symbol('same'),b=Symbol('same'),keys=[1,'1',-0,0,a,b],out=groupBy([0,1,2,3,4,5],item=>keys[item]);return [out['1'],out['0'],out[a],out[b],out[a]!==out[b],Object.getOwnPropertySymbols(out).length];})()", expected: [[0, 1], [2, 3], [4], [5], true, 2] },
+      { call: "(()=>{const input=Object.freeze([Object.freeze({}),Object.freeze({}),Object.freeze({})]),seen=[],keys=['a','b','a'];let calls=0;const out=groupBy(input,function(item){seen.push([item,arguments.length]);return keys[calls++];}),again=groupBy(input,item=>item===input[1]?'b':'a');out.a.push(input[0]);return [calls,seen.every((row,i)=>row[0]===input[i]&&row[1]===1),out!==again,out.a!==again.a,again.a.length,again.a[0]===input[0],again.a[1]===input[2],input.length];})()", expected: [3, true, true, true, 2, true, true, 3] },
+      { call: "(()=>{const marker={},seen=[];let thrown=false;try{groupBy([1,2,3],item=>{seen.push(item);if(item===2)throw marker;return 'x';});}catch(error){thrown=error===marker;}let emptyCalls=0;const empty=groupBy([],()=>{emptyCalls++;return 'x';});return [thrown,seen,emptyCalls,Reflect.ownKeys(empty).length];})()", expected: [true, [1, 2], 0, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=groupBy(input,item=>item%2);return [out[0].length,out[1].length,out[0][499],out[1][499],input.length,out[0]!==out[1]];})()", expected: [500, 500, 998, 999, 1000, true] },
+
       { call: "groupBy([\"aa\", \"b\", \"cc\"], w => w.length)", expected: { 1: ["b"], 2: ["aa", "cc"] } },
       { call: "groupBy([1, 2, 3], () => \"all\")", expected: { all: [1, 2, 3] } },
     ],
@@ -374,21 +356,15 @@ const countStatus = (items: Status[], wanted: Status): number =>
   for (let i = 0; i < items.length; i += 1) acc = step(acc, items[i]);
   return acc;
 };`,
-    junior: `const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {
-  let result = initial;
-  for (const item of items) {
-    const next = step(result, item);
-    result = next;
-  }
-  return result;
-};`,
-    senior: `const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {
-  if (items.length === 0) return initial;
-  // A fold is recursive by nature: combine the head, then fold the rest with the new accumulator.
-  const [head, ...rest] = items;
-  return myReduce(rest, step, step(initial, head));
-};`,
+    junior: "const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {\n  let result = initial;\n  for (let i = 0; i < items.length; i += 1) {\n    const next = step(result, items[i]);\n    result = next;\n  }\n  return result;\n};",
+    senior: "const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {\n  let acc = initial;\n  for (let i = 0; i < items.length; i += 1) acc = step(acc, items[i]);\n  return acc;\n};",
+    hiddenTypeTests: [{"code": "const __auditFn = (n:number) => n; const __auditOut: typeof __auditFn = myReduce([1], (acc,n)=>acc, __auditFn);"}],
     hiddenTests: [
+      { call: "(()=>{const initial={sum:0},seen=[];let current=initial,ok=true,calls=0;const out=myReduce(Object.freeze([1,2,3]),function(acc,item){ok=ok&&arguments.length===2&&acc===current;seen.push(item);calls++;current={sum:acc.sum+item};return current;},initial);return [ok,calls,seen,out===current,out.sum,initial.sum];})()", expected: [true, 3, [1, 2, 3], true, 6, 0] },
+      { call: "(()=>{const fn=()=>{throw Error('called');},symbol=Symbol('initial');let calls=0;const never=()=>{calls++;throw Error('step called');};return [myReduce([],never,fn)===fn,myReduce([],never,symbol)===symbol,myReduce([],never,undefined)===undefined,calls];})()", expected: [true, true, true, 0] },
+      { call: "(()=>{const marker={},seen=[];try{myReduce([1,2,3],(acc,item)=>{seen.push(item);if(item===2)throw marker;return acc+item;},0);return false;}catch(error){return error===marker&&seen.join(',')==='1,2';}})()", expected: true },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),initial=[0];initial.length=0;const out=myReduce(input,(acc,item)=>{acc.push(item);return acc;},initial);return [out===initial,out.length,out.every((item,i)=>item===i),input.length,input[0]];})()", expected: [true, 1000, true, 1000, 0] },
+
       { call: "myReduce([1, 2, 3, 4], (acc, n) => Math.max(acc, n), 0)", expected: 4 },
       { call: "myReduce([\"x\", \"y\"], (acc, s) => acc + s.length, 0)", expected: 2 },
     ],

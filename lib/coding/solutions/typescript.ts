@@ -349,7 +349,12 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
 };`,
     senior: `// at(0) is typed T | undefined, so an empty list needs no separate branch.
 const first = <T>(items: T[]): T | undefined => items.at(0);`,
+    hiddenTypeTests: [{"code": "const __auditInput: (null | undefined)[] = [null,undefined]; const __auditOut: null | undefined = first(__auditInput);"}],
     hiddenTests: [
+      { call: "(()=>{const value=Object.freeze({id:7}),input=Object.freeze([value,{id:8}]);return [first(input)===value,input.length,input[0]===value];})()", expected: [true, 2, true] },
+      { call: "(()=>{const fn=()=>{throw Error('called');},symbol=Symbol('x');return [first([fn])===fn,first([symbol])===symbol,first([undefined,1])===undefined,first(Array(3))===undefined,first([])===undefined];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i));return [first(input),input.length,input[999]];})()", expected: [0, 1000, 999] },
+
       { call: "first([false,true])", expected: false },
       { call: "first([\"only\"])", expected: "only" },
       { call: "first([{id:7},{id:8}])", expected: { id: 7 } },

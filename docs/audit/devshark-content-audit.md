@@ -1,14 +1,14 @@
 # devShark content audit — the question bank
 
-## Current individual source checkpoint — B056, 15 October 2026
+## Current individual source checkpoint — B057, 15 October 2026
 
-310/725 coding reviews match current hashes;415 remain. B055–B056 each pass30/30 selected verdicts,20 no-false-penalty checks,canonical coding/type contracts,release gates and80 responsive probes. Their final-tree grading/Learn integrity passes. PR #415 is verified in production (290 coding plus263 native). Twenty later reviews are separate: ten frozen in #416 and ten in this continuation. Same-session model/finite execution; no whole-catalogue or authenticated Premium claim.
+315/725 coding reviews match current hashes;410 remain. B057 passes30/30 selected verdicts,20 no-false-penalty checks,canonical coding/type contracts,release gates and80 responsive probes. #416 is verified in production (300 coding plus263 native). Fifteen later reviews remain separate: ten frozen in #417 and five in this continuation. Same-session model/finite execution; no whole-catalogue or authenticated Premium claim.
 
-## Current release checkpoint — 15 October 2026, PR #415
+## Current release checkpoint — 15 October 2026, PR #417
 
-PR #415 passed required run 38747201800 at exact head cd003932eeaab7c8c42957cfe45278ba2864e0a5 (verify 27m34s; SQL 44s), then merged at 40344faaac1cd8bdf997964b721b63673a02f2fd on 15 October 2026 at 14:28:11 UTC. READY production dpl_J6oZAGKoGaaNcB3T6hqjK5XEjjHm matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks plus three actual changed-task Submit verdicts: reference, valid alternative and meaningful wrong for the available Set-toggle task. Nine changed tasks return 402 and remain explicitly unverified through dedicated Premium acceptance. All guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 290/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
+PR #417 passed required run 38753165919 at exact head 86a5b1ebadcc67d42d27f18213d21d35dcd24e43 (verify 24m58s; SQL 43s), then merged at 901fc0533ab5e09e8f44f76a56ccb2e852f85510 on 15 October 2026 at 15:16:50 UTC. READY production dpl_CDHb5FE8ZG6pfRrJzpGVAnWhsDKY matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts, and remain explicitly unverified through dedicated Premium acceptance. All actual general guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 310/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
 
-Historical entries below retain their original checkpoints. Twenty later B053–B056 source reviews remain separate from this verified release.
+Historical entries below retain their original checkpoints. Ten later B057–B058 source reviews remain separate from this verified release.
 
 ## 15 October continuation — five coding items b043
 
