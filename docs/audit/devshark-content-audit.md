@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n041
+
+Reviewed the optional operator reducer, discovery/handoff artifacts, case-list
+adapter and guarded proposal. Valid caller-allocated ids and immutable no-ops
+replace misleading React repaint/null claims. Written work now requests explicit
+unknowns/measurement plans rather than invented interviews, baselines or UAT.
+Incident logs do not prove the rebuild caused the fault. Structural artifact
+checks accept nonsubstantive text; they do not certify portfolio quality.
+
+Restricted CSV dialect, stable replay, bounded fields, trusted metadata and
+score-policy limits are explicit. A null-prototype fixture throttle budget handles
+prototype-like cursors; Set membership meets the proposal sorting target.
+Eighteen real sandbox verdicts pass, including seven newly exposed shortcuts,
+1000row/ticket/citation inputs, exact.6threshold, zero waits, null errors and frozen
+state. Six valid analyses retain25XP, with targets only where applicable.
+Artifact required/blank/exact/over-cap and optional https shape checks pass.
+Native bindings, paths, API/script types, launch, build, both production dependency
+audits (zero vulnerabilities), copy and diff pass. Six public catalogue probes
+per theme pass at360–1440; authenticated activity, keyboard, zoom and physical
+acceptance remain separate. Editorial/final readings are individual model judgments.
+
+Coverage is **260/263 native**, **3 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 merged at9a7b1ab9 after verify24m31s/SQL54s and eleven
+exact-preview checks. READY exact production dpl_ANq6kFzBzDrpmFNVH21DcNDRGz6t
+owns devshark.app with no alias error and passes eleven general guest checks
+(zeroXP/null progress). Shipped coverage is95 coding/240 native; n038–n041 are
+local. The diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n040
 
 Reviewed handoff lessons, reading activities and operator state exercise.

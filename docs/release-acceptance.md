@@ -1,5 +1,19 @@
 # Release acceptance matrix
 
+## 15 October — PR #400 exact production
+
+PR #400 merges thirty individually reviewed FDE records (n032–n037) at
+9a7b1ab982d147b1709475338070ed40fb133972. Frozen head c550b98a passes required
+run38675872924: verify24m31s, SQL54s. READY preview dpl_GhKsXaErxgxjmmSXwpC82aihRLuq
+passes eleven general checks. READY production dpl_ANq6kFzBzDrpmFNVH21DcNDRGz6t
+matches the merge SHA, owns devshark.app and reports no alias error. Eleven
+general production checks pass with guest grading at zero XP/null progress.
+No owner progression, Challenge score or generated-name fixture was written.
+Shipped review coverage is95 coding/240 native. This is bounded source and
+same-session model evidence, not authenticated native/Premium, keyboard/zoom,
+physical-device, independent/human or full-catalogue acceptance. N038–n041
+remain local; diagnostic runtime follow-up #397 is not included in #400.
+
 ## Forty native FDE reviews — 2026-10-15
 
 PR #399 merged at `cabbaac4f9cf6378dcce5661b4178c5cb03bf549` after exact

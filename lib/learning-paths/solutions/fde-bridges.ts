@@ -183,6 +183,11 @@ const operatorReducer = (state, action) => {
   }
 };`,
     hiddenTests: [
+      {"call": "(function(){return [null,undefined,{}, {type:4},{type:'unknown'}].every(function(a){return operatorReducer(initialOperatorState,a)===initialOperatorState;});})()", "expected": true, "label": "missing nonstring and unknown actions are exact no-ops"},
+      {"call": "(function(){return __view(__run([{type:'load',requestId:1},{type:'failed',requestId:1,message:''}])).error;})()", "expected": "", "label": "empty failure messages survive unchanged"},
+      {"call": "(function(){var s=Object.freeze({status:'approving',requestId:1,proposal:Object.freeze({id:'P'}),error:null,abandoned:Object.freeze([8,9])});var action=Object.freeze({type:'cancel'});var n=operatorReducer(s,action);return {old:s.abandoned,new:n.abandoned,status:n.status,fresh:n!==s};})()", "expected": {"old": [8, 9], "new": [8, 9, 1], "status": "idle", "fresh": true}, "label": "cancel preserves frozen previous state and appends to a fresh abandoned list"},
+      {"call": "(function(){var s=initialOperatorState;for(var i=1;i<=50;i++){s=operatorReducer(s,{type:'load',requestId:i});s=operatorReducer(s,{type:'cancel'});}return {count:s.abandoned.length,first:s.abandoned[0],last:s.abandoned[49],initial:initialOperatorState.abandoned.length};})()", "expected": {"count": 50, "first": 1, "last": 50, "initial": 0}, "label": "one hundred actions preserve serial abandoned ids and immutable initial state"},
+
       {
         call: "(function () { var state = __run([]); return operatorReducer(state, { type: 'approve', requestId: 9 }) === state; })()",
         expected: true,

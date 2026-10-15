@@ -84,6 +84,12 @@ export const FDE_C01_SOLUTIONS: Record<string, PathCodeSolution> = {
   return { cases, skipped, duplicates };
 };`,
     hiddenTests: [
+      {"call": "(async function(){var calls=0;var c={listTickets:function(){calls++;return Promise.reject(null);}};var result=await buildCaseList(c,'customer_id,tenant_id,company').then(function(){return false;},function(e){return e===null;});return {same:result,calls:calls};})()", "expected": {"same": true, "calls": 1}, "label": "a null rejection propagates unchanged without retry", "async": true},
+      {"call": "(async function(){var c=__makeClient([{cursor:null,nextCursor:null,tickets:[]}],{throttleCursor:null,retryAfterMs:0});await buildCaseList(c,'customer_id,tenant_id,company');return {calls:c.requests.length,gap:c.requests[1].at-c.requests[0].at};})()", "expected": {"calls": 2, "gap": 0}, "label": "a zero retryAfterMs remains zero", "async": true},
+      {"call": "(async function(){var ticket=Object.freeze({id:' 2 ',customerId:' C ',subject:'  keep this spacing  '});var c={listTickets:function(cursor){if(cursor!==null)throw new Error('bad cursor');return Promise.resolve(Object.freeze({tickets:Object.freeze([ticket]),nextCursor:null}));}};return await buildCaseList(c,'customer_id,tenant_id,company\\r\\nC,T,\"comma, company\"\\r\\n');})()", "expected": {"cases": [{"id": "2", "tenantId": "T", "customerId": "C", "subject": "  keep this spacing  "}], "skipped": [], "duplicates": 0}, "label": "CRLF restricted CSV and frozen ticket preserve original subject", "async": true},
+      {"call": "(async function(){var c=__makeClient([{cursor:null,nextCursor:'__proto__',tickets:[]},{cursor:'__proto__',nextCursor:null,tickets:[{id:'I',customerId:'__proto__',subject:'S'}]}],{throttleCursor:'__proto__',retryAfterMs:0});var out=await buildCaseList(c,'customer_id,tenant_id,company\\n__proto__,T,Company');return {cases:out.cases,tries:__attempts(c,'__proto__').length};})()", "expected": {"cases": [{"id": "I", "tenantId": "T", "customerId": "__proto__", "subject": "S"}], "tries": 2}, "label": "prototype-like cursor and customer ids are ordinary data under the fixture contract", "async": true},
+      {"call": "(async function(){var rows=['customer_id,tenant_id,company'];var tickets=[];for(var i=999;i>=0;i--){rows.push('C'+i+',T,Company');tickets.push({id:String(i).padStart(4,'0'),customerId:'C'+i,subject:'S'});}var c=__makeClient([{cursor:null,nextCursor:null,tickets:tickets}],{throttleCursor:'none'});var out=await buildCaseList(c,rows.join('\\n'));return {count:out.cases.length,first:out.cases[0].id,last:out.cases[999].id,skipped:out.skipped.length};})()", "expected": {"count": 1000, "first": "0000", "last": "0999", "skipped": 0}, "label": "one thousand rows and reverse-ordered tickets sort by text id", "async": true},
+
       {
         call:
           "(function () { var pages = [{ cursor: null, nextCursor: null, tickets: [{ id: 'TCK-9001', customerId: 'CUS-99', subject: 'Unknown account' }] }]; return buildCaseList(__makeClient(pages, { throttleCursor: '__none' }), __csv()).then(function (out) { return out.skipped; }); })()",
@@ -174,24 +180,29 @@ const proposeAction = (viewer, results, modelOutput) => {
   if (ALLOWED_ACTIONS.indexOf(parsed.action) === -1) return refuse('unknown-action');
 
   const byId = new Map(permitted.map(article => [article.id, article]));
-  const cited = [];
+  const cited = new Set();
   for (const id of parsed.articleIds) {
     if (typeof id !== 'string' || !byId.has(id)) return refuse('uncited-article');
-    if (cited.indexOf(id) === -1) cited.push(id);
+    cited.add(id);
   }
-  if (cited.length === 0) return refuse('uncited-article');
+  if (cited.size === 0) return refuse('uncited-article');
 
-  const best = cited.reduce((top, id) => Math.max(top, byId.get(id).score), 0);
+  const best = Array.from(cited).reduce((top, id) => Math.max(top, byId.get(id).score), 0);
   if (best < SUPPORT_THRESHOLD) return refuse('weak-support');
 
   return {
     status: 'proposed',
     action: parsed.action,
-    articleIds: permitted.filter(article => cited.indexOf(article.id) !== -1).map(article => article.id),
+    articleIds: permitted.filter(article => cited.has(article.id)).map(article => article.id),
     reason: '',
   };
 };`,
     hiddenTests: [
+      {"call": "(function(){var r=Object.freeze({id:'I',tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.6,get text(){throw new Error('untrusted text read');}});return proposeAction(Object.freeze({tenantId:'T',clearances:Object.freeze([])}),Object.freeze([r]),'{\"action\":\"route_billing\",\"articleIds\":[\"I\"]}');})()", "expected": {"status": "proposed", "action": "route_billing", "articleIds": ["I"], "reason": ""}, "label": "exact support threshold permits a frozen article without reading text"},
+      {"call": "(function(){var r=[{id:'__proto__',tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.7}];return proposeAction({tenantId:'T',clearances:[]},r,'{\"action\":\"route_billing\",\"articleIds\":[\"__proto__\",\"__proto__\"]}');})()", "expected": {"status": "proposed", "action": "route_billing", "articleIds": ["__proto__"], "reason": ""}, "label": "prototype-like ids deduplicate as ordinary strings"},
+      {"call": "(function(){var r=[];var ids=[];for(var i=999;i>=0;i--){var id=String(i).padStart(4,'0');r.push(Object.freeze({id:id,tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.8}));ids.push(id);}var out=proposeAction({tenantId:'T',clearances:[]},Object.freeze(r),JSON.stringify({action:'route_access',articleIds:ids}));return {status:out.status,count:out.articleIds.length,first:out.articleIds[0],last:out.articleIds[999],original:r[0].id};})()", "expected": {"status": "proposed", "count": 1000, "first": "0000", "last": "0999", "original": "0999"}, "label": "one thousand tied citations rank safely without mutating results"},
+      {"call": "proposeAction(__viewer('dunfold'),__set('plain'),'{\"action\":\"unknown\",\"articleIds\":[false]}')", "expected": {"status": "refused", "action": "needs_human", "articleIds": [], "reason": "unknown-action"}, "label": "unknown action refuses before malformed citation contents"},
+
       {
         call: "proposeAction(__viewer('dunfold'), __set('superseded'), __model('good'))",
         expected: { status: 'refused', action: 'needs_human', articleIds: [], reason: 'uncited-article' },

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {solutionFor} from '../../../../lib/learning-paths/solutions';
+import {assessComplexity} from '../../../../lib/coding/complexity';
+import {codingPassXp} from '../../../../shared/coding-complexity';
+import {gradeArtifact} from '../../../../lib/learning-paths/grade';
+const path=LEARNING_PATHS.find(p=>p.id==='fde')!;
+const ids=['fde-v1-bridge-operator-state','fde-v1-c01-discovery','fde-v1-c01-triage-adapter','fde-v1-c01-guarded-retrieval','fde-v1-c01-handoff'];
+const activities=ids.map(id=>{const a=path.modules.flatMap(m=>m.activities).find(a=>a.id===id);assert(a);return a;});
+const worker=JSON.parse(readFileSync(process.argv[2],'utf8'));assert.equal(worker.length,18);const manual=JSON.parse(readFileSync(process.argv[3],'utf8'));
+for(const a of activities.filter(a=>a.kind==='code')){const results=worker.filter((r:{id:string;activityId?:string})=>(r.activityId??r.id)===a.id);assert.equal(results.length,6);for(const r of results){assert.equal(r.state,r.expected);assert.equal(r.contentHash,nativeContentHash(a));assert.equal(r.gradingHash,nativeGradingHash(a));}for(const source of [solutionFor(a.id)!.solution,manual[a.id].alternative]){const report=assessComplexity({track:a.code!.language,prompt:a.code!.prompt,tests:a.code!.tests},source);assert.equal(report.guidance.targetTime,a.id.includes('bridge')?null:'O(n log n)');assert.notEqual(report.assessment,'above-target');assert.equal(codingPassXp(report),25);}}
+for(const a of activities.filter(a=>a.kind==='artifact')){assert.equal(a.verification,'self_reviewed');const fields=a.artifact!.fields;const values=Object.fromEntries(fields.filter(f=>f.required).map(f=>[f.id,'x']));assert.equal(gradeArtifact(a,values).state,'self_reviewed');assert.equal(gradeArtifact(a,{}).state,'needs_revision');for(const f of fields.filter(f=>f.required)){assert.equal(gradeArtifact(a,{...values,[f.id]:' '.repeat(4)}).state,'needs_revision');assert.equal(gradeArtifact(a,{...values,[f.id]:'x'.repeat(f.maxLength+1)}).state,'needs_revision');assert.equal(gradeArtifact(a,{...values,[f.id]:'x'.repeat(f.maxLength)}).state,'self_reviewed');}const url=fields.find(f=>f.kind==='url');if(url){assert.equal(gradeArtifact(a,{...values,[url.id]:'http://example.test'}).state,'needs_revision');assert.equal(gradeArtifact(a,{...values,[url.id]:'https://example.test/repo'}).state,'self_reviewed');}}
+// Structural acceptance of "x" deliberately demonstrates that content quality is NOT machine-verified.
+writeFileSync(process.argv[4],JSON.stringify({checkedRecords:5,records:activities.map(a=>({id:a.id,contentHash:nativeContentHash(a),gradingHash:nativeGradingHash(a)})),checks:['eighteen real sandbox verdicts across reducer, restricted CSV adapter and guarded proposal','six valid base25 analyses; only applicable authored sorting targets are shown','artifact required/whitespace/exact/over-cap and optional https shape checks; x also passes structurally','no real operator, CSV authority, semantic grounding, server effects, baseline measurement, UAT or independent review']},null,2),{mode:0o600});
+console.log('PASS five bridge/capstone records, eighteen sandbox verdicts and bounded structural artifact checks');
