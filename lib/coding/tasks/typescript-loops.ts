@@ -372,7 +372,7 @@ console.log(mixedTotal([1, "abc", 2]));
     tier: 2,
     focus: ["type-guards", "filter", "unions"],
     title: "Only the files",
-    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file.",
+    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file. Domain: a dense array of at most 1000 stable FileEntry or FolderEntry records, possibly frozen, with own declared data fields and no accessors/proxies. Names contain at most 200 UTF-16 units; file sizes are nonnegative finite integers through 1000000000000. Extra fields are opaque. Classify by kind, retain each original file reference and duplicate in input order, and leave every input record unchanged. Return a fresh mutable outer array on every call, including when no files match. Target: O(n) time and worst-case O(n) output space for onlyFiles, where n is 1 + entry count; isFile performs a constant-time tag check.",
     starter: `interface FileEntry {
   kind: "file";
   name: string;

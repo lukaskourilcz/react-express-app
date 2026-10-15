@@ -1079,7 +1079,7 @@ const byPriority = (tasks: readonly Task[]): Task[] => {
     tier: 2,
     focus: ['type-guards', 'literal-types'],
     title: 'Is it a theme colour?',
-    prompt: 'A theme offers three accent colours, listed once as `const ACCENTS = ["teal", "coral", "gold"] as const`. `as const` keeps the exact words, and `type Accent = (typeof ACCENTS)[number]` turns them into the union `"teal" | "coral" | "gold"`. Write `isAccent(value: string): value is Accent`, returning `true` for exactly those three words. A user setting that passes the check can then be stored as an `Accent` with no cast.',
+    prompt: "A theme offers three accent colours, listed once as `const ACCENTS = [\"teal\", \"coral\", \"gold\"] as const`. `as const` keeps the exact words, and `type Accent = (typeof ACCENTS)[number]` turns them into the union `\"teal\" | \"coral\" | \"gold\"`. Write `isAccent(value: string): value is Accent`, returning `true` for exactly those three words. A user setting that passes the check can then be stored as an `Accent` with no cast. Domain: value is primitive text of at most 200 UTF-16 units. Match exactly the three fixed lowercase words, without trimming, normalization, substring matches or case folding. Repeated calls must not change ACCENTS or which words are accepted. as const is a static readonly/literal view, not runtime freezing. Target: O(1) time and working state under this fixed three-word, bounded-text model; the list is not an input-sized palette.",
     starter: `const ACCENTS = ["teal", "coral", "gold"] as const;
 type Accent = (typeof ACCENTS)[number];
 

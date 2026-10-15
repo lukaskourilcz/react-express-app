@@ -327,7 +327,12 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
       return "something else";
   }
 };`,
+    hiddenTypeTests: [{"code": "const __auditBoolean: boolean = describeValue(null);", "rejects": true}],
     hiddenTests: [
+      { call: "[NaN,Infinity,-Infinity,-0,1n,Symbol('x'),()=>0,false].map(describeValue)", expected: ["a number", "a number", "a number", "a number", "something else", "something else", "something else", "something else"] },
+      { call: "[new String('x'),new Number(3),new Map(),new Set(),Object.create(null),Object.create(Array.prototype)].map(describeValue)", expected: ["something else", "something else", "something else", "something else", "something else", "something else"] },
+      { call: "(()=>{const a=[];a[2]=a;Object.freeze(a);const object=Object.freeze({valueOf(){throw Error('coerced');},toString(){throw Error('coerced');}});return [describeValue(a),a.length,a[2]===a,describeValue(object),describeValue('x'.repeat(10000))];})()", expected: ["a list", 3, true, "something else", "text"] },
+
       { call: "describeValue(0)", expected: "a number" },
       { call: "describeValue(\"\")", expected: "text" },
       { call: "describeValue([])", expected: "a list" },

@@ -261,6 +261,10 @@ const isFile = (entry: Entry): entry is FileEntry => entry.kind === "file";
 // flatMap acts as a typed filter: the guard narrows entry, and an empty array drops a folder.
 const onlyFiles = (entries: Entry[]): FileEntry[] => entries.flatMap((entry) => (isFile(entry) ? [entry] : []));`,
     hiddenTests: [
+      { call: "(()=>{const meta={},file=Object.freeze({kind:'file',name:'same',size:0,meta}),other=Object.freeze({kind:'file',name:'same',size:0}),folder=Object.freeze({kind:'folder',name:'same'}),input=Object.freeze([file,folder,other,file]),a=onlyFiles(input),b=onlyFiles(input);a.push(file);return [a!==input,a!==b,b.length,b[0]===file,b[1]===other,b[2]===file,b[0].meta===meta,input[1]===folder];})()", expected: [true, true, 3, true, true, true, true, true] },
+      { call: "(()=>{const a=onlyFiles([]),b=onlyFiles([{kind:'folder',name:''}]);a.push({kind:'file',name:'',size:0});return [a.length,b.length,b!==onlyFiles([]),isFile({kind:'file',name:'',size:0}),isFile({kind:'folder',name:''})];})()", expected: [1, 0, true, true, false] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{kind:'file',name:String(i),size:1000000000000}:{kind:'folder',name:String(i)}))),out=onlyFiles(input);return [out.length,out.every((x,i)=>x===input[i*2+1]),input.length];})()", expected: [500, true, 1000] },
+
       {
         call: "onlyFiles([{ kind: \"file\", name: \"a\", size: 1 }, { kind: \"file\", name: \"b\", size: 2 }])",
         expected: [{ kind: "file", name: "a", size: 1 }, { kind: "file", name: "b", size: 2 }],

@@ -810,7 +810,12 @@ type Accent = (typeof ACCENTS)[number];
 const ACCENT_SET: ReadonlySet<string> = new Set(ACCENTS);
 
 const isAccent = (value: string): value is Accent => ACCENT_SET.has(value);`,
+    hiddenTypeTests: [{"code": "const __auditGuard: (value:string)=>value is Accent = isAccent;"}, {"code": "ACCENTS.push(\"teal\");", "rejects": true}],
     hiddenTests: [
+      { call: "['teal ','coral\\t','gold\\n','TEAL','tealcoral','teal','coral','gold'].map(isAccent)", expected: [false, false, false, false, false, true, true, true] },
+      { call: "(()=>{const before=JSON.stringify(ACCENTS);for(let i=0;i<30;i++){isAccent('other');isAccent('coral');}return [JSON.stringify(ACCENTS)===before,isAccent('x'.repeat(200)),isAccent('__proto__'),isAccent('constructor')];})()", expected: [true, false, false, false] },
+      { call: "[' teAL ','golden','coral reef','\\u0074eal',''].map(isAccent)", expected: [false, false, false, true, false] },
+
       { call: '["teal", "coral", "gold", "red"].filter(isAccent)', expected: ['teal', 'coral', 'gold'] },
       { call: 'isAccent("coral")', expected: true },
       { call: 'isAccent(" teal")', expected: false },

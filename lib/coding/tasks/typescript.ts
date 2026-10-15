@@ -702,7 +702,7 @@ console.log(rotate(["a","b","c"]));
     tier: 2,
     focus: ["narrowing", "unions"],
     title: "Describe a value",
-    prompt: "Write `describeValue(value: unknown): string`, returning `nothing` for null or undefined, `a list` for an array, `text` for a string, `a number` for a number, and `something else` for anything left over.",
+    prompt: "Write `describeValue(value: unknown): string`, returning `nothing` for null or undefined, `a list` for an array, `text` for a string, `a number` for a number, and `something else` for anything left over. Domain: JavaScript values without proxies or accessors, including sparse/cyclic arrays, boxed primitives, functions, symbols, bigints, NaN and infinities. Use runtime categories: all primitive numbers, including NaN and infinities, are a number; boxed strings/numbers and non-array objects are something else. Do not inspect collection contents, call user methods or coerce the input to text/number. Leave inputs unchanged. Target: O(1) time and working state for a fixed sequence of type/category checks, independent of collection or string size.",
     starter: `const describeValue = (value) => {
   
 };
@@ -717,7 +717,7 @@ console.log(describeValue("hi"));
       "typeof reports null as an object, so ruling out the empty cases first is what stops them taking the wrong branch.",
     ],
     approach: [
-      "unknown is the safe opposite of any: anything can be assigned to it, and nothing can be done with it until it is narrowed.",
+      "Any value can be assigned to unknown. Unlike any, unknown requires a type check before you read a property or call a method.",
       "Rule out null and undefined first, because typeof reports one of them as an object and would send it down the wrong branch.",
       "Arrays are objects too, so ask whether it is an array before you fall back to the catch-all answer.",
     ],
