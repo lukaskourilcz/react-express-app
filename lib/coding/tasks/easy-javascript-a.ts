@@ -1123,7 +1123,7 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
     tier: 2,
     focus: ['async-await'],
     title: 'Await two values',
-    prompt: 'Write an `async` function `addBoth(first, second)`, where both arguments are promises of numbers. `await` each one and return their sum, so the caller gets a promise of the total. `addBoth(Promise.resolve(2), Promise.resolve(3))` resolves to 5. If either promise rejects, the promise `addBoth` returns rejects with the same error.',
+    prompt: "Write an `async` function `addBoth(first, second)`, where both arguments are promises of numbers. `await` each one and return their sum, so the caller gets a promise of the total. `addBoth(Promise.resolve(2), Promise.resolve(3))` resolves to 5. If either promise rejects, the promise `addBoth` returns rejects with the same error. Both inputs are ordinary native Promises with standard methods, fulfilling with finite Numbers of absolute value at most 10000000000000000, including -0. Await first before awaiting second: if both reject, the first rejection wins even if the second rejects sooner. A rejection of second cannot settle the result while first is still pending. This ordered exercise differs from fail-fast Promise.all aggregation. Forward the exact original rejection reason/reference, which need not be an Error. Use ordinary Number addition without rounding and leave user-visible input properties unchanged. Return a new native Promise immediately. Producers may already be running; ordered awaits do not serialize their start. The caller/checks handle any early rejection of second until it is awaited. Target: O(1) time and retained wrapper state, excluding waiting, producer work and host scheduling.",
     starter: `const addBoth = async (first, second) => {
 
 };

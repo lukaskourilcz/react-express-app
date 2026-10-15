@@ -3801,3 +3801,31 @@ with requests intercepted locally; it creates no real account/progress/name.
 Final CI-fixture browser suite passes 23/23 checks; responsive validation passes all 264 probes (320–1440 px), with zero issues and zero unprobed routes. Authenticated
 production Premium acceptance and physical devices remain unverified. This is
 local evidence until the new PR's required checks, merge and exact release.
+
+## Five-item continuation b044 — 15 October 2026
+
+Five Promise tasks now cover exact timeout values/reasons, a stable fallback,
+zero-delay scheduling, ordered prefix rendering, callback-throw rejection,
+sparse/dense aggregation snapshots and first-then-second await semantics.
+Clone Promise.all uses the runtime restriction committed separately under #408;
+its reference boards now fill holes and use captured membership. The clone's
+filled-skeleton fixture was updated too: the initial canonical test caught its
+old algorithm and then an omitted inline scaffold comment. Final checks below
+use the corrected fixture, not those failed attempts. A partial authoring pass
+stopped before completing every source file and is excluded from final evidence.
+
+Final five-item worker evidence is 31/31 selected verdicts (20 valid forms,
+five starters, six wrongs), versus 25/31 labels matched by the original baseline.
+All twenty target/base-25-XP checks pass; unknown complexity is unpenalized.
+Per-item model scores, original-hash comparisons and separate final reading are
+recorded in review-2026-10-15-b044.jsonl. All 250 current coding hashes match;
+475/725 coding still require review, and native coverage remains 263/263.
+
+Curation/index generation, final canonical coding (including reverse hidden
+order, native Run and the filled skeleton), API/script types, launch, build,
+263 native bindings, both production dependency audits (zero vulnerabilities),
+copy sweep (zero findings) and diff checks pass. Existing IDs/history and archived
+Czech are unchanged. PR #409 is frozen separately with b043/runtime #408; b044 is
+not yet released. No live-account, authenticated Premium, independent/human or
+complete-catalogue acceptance claim. Stateful factory complexity scope remains
+open under #391.

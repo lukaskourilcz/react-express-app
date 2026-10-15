@@ -591,7 +591,7 @@ console.log(bestSeats(["....", "....", "...."], 2));
     tier: 3,
     focus: ['promises', 'callbacks', 'forEach', 'while'],
     title: 'Show results in order as they arrive',
-    prompt: 'A page asks for several sections at once and must show them from top to bottom: section 3 may not appear before section 2, but it should not wait for the slowest section either. Write `showInOrder(promises, show)`. Call `show(result, index)` once for each promise, in index order, as soon as that promise and every one before it have settled. `result` is `{ ok: true, value }` for a promise that fulfilled and `{ ok: false, error }` for one that rejected, where `error` is the rejection reason; a rejection does not hold up the results after it. `showInOrder` returns a promise that resolves to the number of results shown, once all of them have been. Attach a handler to every promise with `forEach`, keep each settled result in its slot, and after each one, `while` the next slot to show is filled, show it and move on.',
+    prompt: "A page asks for several sections at once and must show them from top to bottom: section 3 may not appear before section 2, but it should not wait for the slowest section either. Write `showInOrder(promises, show)`. Call `show(result, index)` once for each promise, in index order, as soon as that promise and every one before it have settled. `result` is `{ ok: true, value }` for a promise that fulfilled and `{ ok: false, error }` for one that rejected, where `error` is the rejection reason; a rejection does not hold up the results after it. `showInOrder` returns a promise that resolves to the number of results shown, once all of them have been. Attach a handler to every promise with `forEach`, keep each settled result in its slot, and after each one, `while` the next slot to show is filled, show it and move on. promises is a read-only dense array of at most 1000 ordinary native Promises with standard methods; it may be frozen. Capture initial membership and count during the call; subsequent caller edits must not change this run. Each outcome preserves the exact fulfilled value or rejection reason/reference, including undefined. show is synchronous: pass exactly the outcome and original index as its two arguments, ignore its nonthenable return, and never mutate an input promise. If show throws, stop showing, reject the returned native Promise with that exact thrown value, and keep handlers attached to all inputs. Otherwise resolve to the original count; empty input resolves to 0. Each call has independent state. Target: O(n) time and retained outcome/handler space across the whole run, where n is 1 + promises.length; each slot is flushed once. Exclude producer work, waiting, host scheduling and the work inside show.",
     starter: `const showInOrder = (promises, show) => {
 
 };
@@ -601,11 +601,13 @@ console.log(bestSeats(["....", "....", "...."], 2));
 // showInOrder([later(30, "a"), later(10, "b")], (result, index) => console.log(index, result)).then(console.log);
 `,
     skeleton: `const showInOrder = (promises, show) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
+    const total = promises.length; // keep the original count
     const results = []; // results[i] once promise i has settled
     let next = 0; // the index of the next result to show
     const flush = () => {
       // while results[next] is filled: show it and move next on
+      // catch a thrown show value, stop flushing and reject with it
       // once every result has been shown, resolve with the count
     };
     // no promises: nothing to wait for
@@ -618,10 +620,10 @@ console.log(bestSeats(["....", "....", "...."], 2));
       '`promise.then(value => ..., error => ...)` sends both outcomes to one place. Store each outcome as an object: then even a result whose value is `undefined` is a filled slot.',
     ],
     approach: [
-      'Return a new promise. When there are no promises, resolve it with 0 straight away.',
+      'Capture the original input count and return a new promise. With no inputs, resolve it with 0 straight away.',
       'For each promise, attach `then` with one handler per outcome. Each stores `{ ok: true, value }` or `{ ok: false, error }` at its index and calls `flush`.',
-      '`flush` loops `while (next < promises.length && results[next])`: it calls `show(results[next], next)` and adds one to `next`.',
-      'When `next` reaches the length, resolve with the count.',
+      '`flush` loops `while (next < total && results[next])`: it calls `show(results[next], next)` and adds one to `next`.',
+      'Catch a thrown show value inside flush, stop showing and reject with that value. Otherwise, when next reaches the captured total, resolve with the count.',
     ],
     verify: 'tests',
     estimatedMinutes: 20,

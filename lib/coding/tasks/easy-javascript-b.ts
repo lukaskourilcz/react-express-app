@@ -1094,7 +1094,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['timers', 'promises'],
     title: 'Give up after a while',
-    prompt: 'Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection.',
+    prompt: "Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection. promise is an ordinary native Promise with standard methods. ms is an integer from 0 through 1000. fallback is any opaque nonthenable value, including a function, Symbol or frozen record; do not invoke or clone it. Preserve exact fulfilled values and rejection reasons, including object identity, NaN and -0. Return a new native Promise immediately. First observed settlement wins: an already settled input beats a zero-delay timer; a zero timeout is still deferred. A timeout does not cancel the original producer, and its later settlement must not replace the fallback. Timers may run later than requested; no exact elapsed-time deadline is promised. Target: O(1) time and retained wrapper/timer state, excluding waiting, input producer work and host scheduling.",
     starter: `const withTimeout = (promise, ms, fallback) => {
 
 };

@@ -754,6 +754,11 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const withTimeout = (promise, ms, fallback) =>
   Promise.race([promise, new Promise(resolve => setTimeout(resolve, ms, fallback))]);`,
     hiddenTests: [
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x');const kept=[];for(const value of [obj,fn,sym,NaN,-0])kept.push(Object.is(await withTimeout(Promise.resolve(value),20,'unused'),value));const reason=Object.freeze({code:1}),bad=Promise.reject(reason);bad.catch(()=>{});return [kept,await withTimeout(bad,20,0).then(()=>false,error=>error===reason)];})()", expected: [[true, true, true, true, true], true], async: true },
+      { call: "(async()=>{let calls=0;const fn=()=>{calls++;},sym=Symbol('fallback'),obj=Object.freeze({});const out=[];for(const fallback of [fn,sym,obj,undefined,-0])out.push(Object.is(await withTimeout(new Promise(()=>{}),0,fallback),fallback));return [out,calls];})()", expected: [[true, true, true, true, true], 0], async: true },
+      { call: "(async()=>{const input=Promise.resolve('ready'),output=withTimeout(input,0,'late');let settled=false;output.then(()=>{settled=true;});const immediate=settled;return [output instanceof Promise,output!==input,immediate,await output];})()", expected: [true, true, false, "ready"], async: true },
+      { call: "(async()=>{let complete=false;const input=new Promise(done=>setTimeout(()=>{complete=true;done('late');},30));const output=withTimeout(input,0,'fallback');const first=await output;await new Promise(done=>setTimeout(done,50));return [first,await output,complete];})()", expected: ["fallback", "fallback", true], async: true },
+
       { call: 'withTimeout(new Promise(() => {}), 10, 0)', expected: 0, async: true },
       { call: 'withTimeout(Promise.resolve(0), 20, 99)', expected: 0, async: true },
       { call: '(() => { const late = new Promise((resolve, reject) => setTimeout(() => reject(new Error("late")), 50)); late.catch(() => {}); return withTimeout(late, 10, "fallback"); })()', expected: 'fallback', async: true },

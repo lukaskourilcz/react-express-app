@@ -878,6 +878,10 @@ const sleep = async (ms = 0) => {
   await new Promise(resolve => setTimeout(resolve, ms));
 };`,
     hiddenTests: [
+      { call: "(async()=>{const a=sleep(0),b=sleep(0);let timerDone=false;a.then(()=>{timerDone=true;});const microtask=await Promise.resolve().then(()=>timerDone);const first=await a,second=await b;return [a instanceof Promise,a!==b,microtask,first===undefined,second===undefined];})()", expected: [true, true, false, true, true], async: true },
+      { call: "Promise.race([sleep(100).then(()=>'slept'),new Promise(done=>setTimeout(()=>done('other timer'),70))])", expected: "other timer", async: true },
+      { call: "(async()=>{const waits=Array.from({length:100},()=>sleep(0));for(const wait of waits)if(await wait!==undefined)return false;return new Set(waits).size===100;})()", expected: true, async: true },
+
       { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 20))])", expected: "timer first", async: true },
       { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 60))])", expected: "slept", async: true },
       { call: "(() => { const start = Date.now(); return sleep(45).then(() => Date.now() - start >= 40); })()", expected: true, async: true },
@@ -917,47 +921,17 @@ const sleep = async (ms = 0) => {
     ],
   },
   "js-clone-promise-all": {
-    solution: "const promiseAll = promises => new Promise((resolve, reject) => { const results = []; let settled = 0; if (!promises.length) resolve(results); promises.forEach((promise, index) => Promise.resolve(promise).then(value => { results[index] = value; settled += 1; if (settled === promises.length) resolve(results); }, reject)); });",
-    junior: `const promiseAll = promises => {
-  return new Promise((resolve, reject) => {
-    const results = [];
-    let finishedCount = 0;
-    if (promises.length === 0) {
-      resolve(results);
-      return;
-    }
-    for (let index = 0; index < promises.length; index += 1) {
-      Promise.resolve(promises[index])
-        .then(value => {
-          results[index] = value;
-          finishedCount = finishedCount + 1;
-          if (finishedCount === promises.length) {
-            resolve(results);
-          }
-        })
-        .catch(error => {
-          reject(error);
-        });
-    }
-  });
-};`,
-    senior: `const promiseAll = promises =>
-  new Promise((resolve, reject) => {
-    const results = [];
-    let remaining = promises.length;
-    if (remaining === 0) resolve(results);
-    // Each callback settles on its own; the shared countdown says when the last one has landed.
-    promises.forEach(async (item, index) => {
-      try {
-        results[index] = await item; // await takes plain values as well as promises
-        remaining -= 1;
-        if (remaining === 0) resolve(results);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });`,
+    solution: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let remaining = inputs.length;\n    if (remaining === 0) { resolve(results); return; }\n    inputs.forEach((item, index) => {\n      Promise.resolve(item).then(value => {\n        results[index] = value;\n        if (--remaining === 0) resolve(results);\n      }, reject);\n    });\n  });\n};",
+    junior: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let left = inputs.length;\n    if (left === 0) { resolve(results); return; }\n    inputs.forEach((item, index) => {\n      Promise.resolve(item).then(value => {\n        results[index] = value;\n        left = left - 1;\n        if (left === 0) resolve(results);\n      }, reject);\n    });\n  });\n};",
+    senior: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let remaining = inputs.length;\n    if (remaining === 0) resolve(results);\n    inputs.forEach(async (item, index) => {\n      try {\n        results[index] = await item;\n        if (--remaining === 0) resolve(results);\n      } catch (reason) {\n        reject(reason);\n      }\n    });\n  });\n};",
     hiddenTests: [
+      { call: "(async()=>{const input=Object.freeze([,Promise.resolve(2),,]);const output=promiseAll(input);return Promise.race([output.then(values=>[output instanceof Promise,values.length,Object.hasOwn(values,0),values[0]===undefined,values[1],Object.hasOwn(values,2),values[2]===undefined]),new Promise(done=>setTimeout(()=>done('pending'),100))]);})()", expected: [true, 3, true, true, 2, true, true], async: true },
+      { call: "(async()=>{let release;const inputs=[new Promise(done=>{release=done;}),2];const output=promiseAll(inputs);inputs.length=0;release(1);return Promise.race([output,new Promise(done=>setTimeout(()=>done('pending'),100))]);})()", expected: [1, 2], async: true },
+      { call: "(async()=>{const object=Object.freeze({}),fn=()=>1,symbol=Symbol('x'),values=[object,fn,symbol,NaN,-0,undefined];const out=await promiseAll(Object.freeze(values));return [out!==values,...out.map((value,index)=>Object.is(value,values[index]))];})()", expected: [true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{const value=Object.freeze({}),thenable={then(resolve,reject){resolve(value);resolve('twice');reject('ignored');throw 'also ignored';}};const result=await promiseAll([thenable,3]);return [result.length,result[0]===value,result[1]];})()", expected: [2, true, 3], async: true },
+      { call: "(async()=>{const reason=Symbol('failure'),bad=Promise.reject(reason);bad.catch(()=>{});return Promise.race([promiseAll([new Promise(()=>{}),bad]).then(()=>false,error=>error===reason),new Promise(done=>setTimeout(()=>done(false),100))]);})()", expected: true, async: true },
+      { call: "(async()=>{const value=Object.freeze({}),input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?Promise.resolve(value):i));const result=await promiseAll(input);const emptyA=await promiseAll([]),emptyB=await promiseAll([]);return [result.length,result[0],result[998],result[999]===value,emptyA!==emptyB,emptyA.length,emptyB.length];})()", expected: [1000, 0, 998, true, true, 0, 0], async: true },
+
       { call: "promiseAll([new Promise(done => setTimeout(() => done(\"a\"), 30)), new Promise(done => setTimeout(() => done(\"b\"), 10)), \"c\"])", expected: ["a", "b", "c"], async: true },
       { call: "Promise.race([promiseAll([new Promise(done => setTimeout(() => done(\"slow\"), 100)), new Promise((_, fail) => setTimeout(() => fail(new Error(\"early\")), 10))]).catch(error => \"rejected: \" + error.message), new Promise(done => setTimeout(() => done(\"waited for the slow one\"), 50))])", expected: "rejected: early", async: true },
     ],
