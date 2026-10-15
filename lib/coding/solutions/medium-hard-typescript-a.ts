@@ -476,119 +476,16 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
   'ts-mh-print-table': {
-    solution: `interface Column<T> {
-  key: keyof T;
-  header: string;
-  align?: "left" | "right";
-}
-
-type Formats<T> = { [K in keyof T]?: (value: T[K]) => string };
-
-const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {
-  // With key typed as K, formats[key] is a function of T[K] (or undefined),
-  // and row[key] is a T[K], so the call below type-checks.
-  const cellText = <K extends keyof T>(row: T, key: K): string => {
-    const format = formats[key];
-    return format ? format(row[key]) : String(row[key]);
-  };
-  // Every cell's text first: a formatted value can be wider than the raw one.
-  const body = rows.map((row) => columns.map((column) => cellText(row, column.key)));
-  const widths = columns.map((column, index) =>
-    Math.max(column.header.length, ...body.map((cells) => cells[index].length)));
-  const pad = (text: string, index: number): string =>
-    columns[index].align === "right" ? text.padStart(widths[index]) : text.padEnd(widths[index]);
-  // Padding the last column on the left side leaves spaces at the end: trim them.
-  const line = (cells: readonly string[]): string => cells.map(pad).join(" | ").trimEnd();
-  const rule = widths.map((width) => "-".repeat(width)).join("-+-");
-  return [line(columns.map((column) => column.header)), rule, ...body.map(line)].join("\\n");
-};`,
-    junior: `interface Column<T> {
-  key: keyof T;
-  header: string;
-  align?: "left" | "right";
-}
-
-type Formats<T> = { [K in keyof T]?: (value: T[K]) => string };
-
-const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {
-  const cellText = <K extends keyof T>(row: T, key: K): string => {
-    const format = formats[key];
-    if (format === undefined) {
-      return String(row[key]);
-    }
-    return format(row[key]);
-  };
-
-  const body: string[][] = [];
-  for (const row of rows) {
-    const cells: string[] = [];
-    for (const column of columns) {
-      cells.push(cellText(row, column.key));
-    }
-    body.push(cells);
-  }
-
-  const widths: number[] = [];
-  for (let i = 0; i < columns.length; i++) {
-    let width = columns[i].header.length;
-    for (const cells of body) {
-      if (cells[i].length > width) {
-        width = cells[i].length;
-      }
-    }
-    widths.push(width);
-  }
-
-  const makeLine = (cells: string[]): string => {
-    const padded: string[] = [];
-    for (let i = 0; i < cells.length; i++) {
-      if (columns[i].align === "right") {
-        padded.push(cells[i].padStart(widths[i]));
-      } else {
-        padded.push(cells[i].padEnd(widths[i]));
-      }
-    }
-    return padded.join(" | ").trimEnd();
-  };
-
-  const headers: string[] = [];
-  for (const column of columns) {
-    headers.push(column.header);
-  }
-  const dashes: string[] = [];
-  for (const width of widths) {
-    dashes.push("-".repeat(width));
-  }
-
-  const lines: string[] = [makeLine(headers), dashes.join("-+-")];
-  for (const cells of body) {
-    lines.push(makeLine(cells));
-  }
-  return lines.join("\\n");
-};`,
-    senior: `interface Column<T> {
-  key: keyof T;
-  header: string;
-  align?: "left" | "right";
-}
-
-type Formats<T> = { [K in keyof T]?: (value: T[K]) => string };
-
-const PAD = {
-  left: (text: string, width: number) => text.padEnd(width),
-  right: (text: string, width: number) => text.padStart(width),
-} satisfies Record<NonNullable<Column<unknown>["align"]>, (text: string, width: number) => string>;
-
-const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {
-  const text = <K extends keyof T>(row: T, key: K): string => formats[key]?.(row[key]) ?? String(row[key]);
-  const grid = [columns.map(({ header }) => header), ...rows.map((row) => columns.map(({ key }) => text(row, key)))];
-  const widths = columns.map((_, i) => Math.max(...grid.map((cells) => cells[i].length)));
-  const line = (cells: readonly string[]) =>
-    cells.map((cell, i) => PAD[columns[i].align ?? "left"](cell, widths[i])).join(" | ").trimEnd();
-  const [header, ...body] = grid.map(line);
-  return [header, widths.map((width) => "-".repeat(width)).join("-+-"), ...body].join("\\n");
-};`,
+    solution: "interface Column<T> {\n  key: keyof T;\n  header: string;\n  align?: \"left\" | \"right\";\n}\n\ntype Formats<T> = { [K in keyof T]?: (value: T[K]) => string };\n\nconst printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {\n  // With key typed as K, formats[key] is a function of T[K] (or undefined),\n  // and row[key] is a T[K], so the call below type-checks.\n  const cellText = <K extends keyof T>(row: T, key: K): string => {\n    const format = Object.hasOwn(formats, key) ? formats[key] : undefined;\n    return format ? format(row[key]) : String(row[key]);\n  };\n  // Every cell's text first: a formatted value can be wider than the raw one.\n  const body = rows.map((row) => columns.map((column) => cellText(row, column.key)));\n  const widths = columns.map((column, index) =>\n    Math.max(column.header.length, ...body.map((cells) => cells[index].length)));\n  const pad = (text: string, index: number): string =>\n    columns[index].align === \"right\" ? text.padStart(widths[index]) : text.padEnd(widths[index]);\n  // Padding the last column on the left side leaves spaces at the end: trim them.\n  const line = (cells: readonly string[]): string => cells.map(pad).join(\" | \").trimEnd();\n  const rule = widths.map((width) => \"-\".repeat(width)).join(\"-+-\");\n  return [line(columns.map((column) => column.header)), rule, ...body.map(line)].join(\"\\n\");\n};",
+    junior: "interface Column<T> {\n  key: keyof T;\n  header: string;\n  align?: \"left\" | \"right\";\n}\n\ntype Formats<T> = { [K in keyof T]?: (value: T[K]) => string };\n\nconst printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {\n  const cellText = <K extends keyof T>(row: T, key: K): string => {\n    const format = Object.hasOwn(formats, key) ? formats[key] : undefined;\n    if (format === undefined) {\n      return String(row[key]);\n    }\n    return format(row[key]);\n  };\n\n  const body: string[][] = [];\n  for (const row of rows) {\n    const cells: string[] = [];\n    for (const column of columns) {\n      cells.push(cellText(row, column.key));\n    }\n    body.push(cells);\n  }\n\n  const widths: number[] = [];\n  for (let i = 0; i < columns.length; i++) {\n    let width = columns[i].header.length;\n    for (const cells of body) {\n      if (cells[i].length > width) {\n        width = cells[i].length;\n      }\n    }\n    widths.push(width);\n  }\n\n  const makeLine = (cells: string[]): string => {\n    const padded: string[] = [];\n    for (let i = 0; i < cells.length; i++) {\n      if (columns[i].align === \"right\") {\n        padded.push(cells[i].padStart(widths[i]));\n      } else {\n        padded.push(cells[i].padEnd(widths[i]));\n      }\n    }\n    return padded.join(\" | \").trimEnd();\n  };\n\n  const headers: string[] = [];\n  for (const column of columns) {\n    headers.push(column.header);\n  }\n  const dashes: string[] = [];\n  for (const width of widths) {\n    dashes.push(\"-\".repeat(width));\n  }\n\n  const lines: string[] = [makeLine(headers), dashes.join(\"-+-\")];\n  for (const cells of body) {\n    lines.push(makeLine(cells));\n  }\n  return lines.join(\"\\n\");\n};",
+    senior: "interface Column<T> {\n  key: keyof T;\n  header: string;\n  align?: \"left\" | \"right\";\n}\n\ntype Formats<T> = { [K in keyof T]?: (value: T[K]) => string };\n\nconst PAD = {\n  left: (text: string, width: number) => text.padEnd(width),\n  right: (text: string, width: number) => text.padStart(width),\n} satisfies Record<NonNullable<Column<unknown>[\"align\"]>, (text: string, width: number) => string>;\n\nconst printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {\n  const text = <K extends keyof T>(row: T, key: K): string => {\n    const format = Object.hasOwn(formats, key) ? formats[key] : undefined;\n    return format === undefined ? String(row[key]) : format(row[key]);\n  };\n  const grid = [columns.map(({ header }) => header), ...rows.map((row) => columns.map(({ key }) => text(row, key)))];\n  const widths = columns.map((_, i) => Math.max(...grid.map((cells) => cells[i].length)));\n  const line = (cells: readonly string[]) =>\n    cells.map((cell, i) => PAD[columns[i].align ?? \"left\"](cell, widths[i])).join(\" | \").trimEnd();\n  const [header, ...body] = grid.map(line);\n  return [header, widths.map((width) => \"-\".repeat(width)).join(\"-+-\"), ...body].join(\"\\n\");\n};",
     hiddenTests: [
+      { call: "(()=>{let calls=0;const seen=[],rows=Object.freeze([Object.freeze({a:1}),Object.freeze({a:2})]),columns=Object.freeze([Object.freeze({key:'a',header:'A'}),Object.freeze({key:'a',header:'B',align:'right'})]),formats=Object.freeze({a:function(value){seen.push([value,arguments.length]);return String(++calls)}});return [printTable(rows,columns,formats),calls,seen,rows.length,columns.length];})()", expected: ["A | B\n--+--\n1 | 2\n3 | 4", 4, [[1, 1], [1, 1], [2, 1], [2, 1]], 2, 2] },
+      { call: "(()=>{const sym=Symbol('key'),row=Object.freeze({constructor:'x',toString:'yy',['__proto__']:'z',[sym]:'s'}),columns=Object.freeze([{key:'constructor',header:'C'},{key:'toString',header:'T'},{key:'__proto__',header:'P'},{key:sym,header:'S'}]),inherited=Object.create({[sym]:()=>{throw 'inherited'}});return [printTable([row],columns),printTable([row],columns,inherited)];})()", expected: ["C | T  | P | S\n--+----+---+--\nx | yy | z | s", "C | T  | P | S\n--+----+---+--\nx | yy | z | s"] },
+      { call: "(()=>{return [printTable([],[]),printTable([{a:1},{a:2}],[]),printTable([{a:'a'}],[{key:'a',header:'\ud83d\ude00',align:'right'}]),printTable([{a:' x '}],[{key:'a',header:'H'}]),printTable([{a:9}],[{key:'a',header:'N'}],{a:()=>''})];})()", expected: ["\n", "\n\n\n", "\ud83d\ude00\n--\n a", "H\n---\n x", "N\n-\n"] },
+      { call: "(()=>{const marker={},seen=[];let calls=0;try{printTable([{a:1},{a:2}],[{key:'a',header:'A'},{key:'a',header:'B'}],{a:function(value){seen.push([value,arguments.length]);if(++calls===2)throw marker;return String(value)}})}catch(error){return [error===marker,calls,seen]}return false;})()", expected: [true, 2, [[1, 1], [1, 1]]] },
+      { call: "(()=>{let calls=0;const rows=Object.freeze(Array.from({length:100},()=>Object.freeze({a:1}))),columns=Object.freeze(Array.from({length:20},()=>Object.freeze({key:'a',header:'H'}))),text=printTable(rows,columns,{a:()=>{calls++;return '1'}}),lines=text.split('\\n');return [calls,lines.length,lines.every(line=>line.length===77),rows.length,columns.length];})()", expected: [2000, 102, true, 100, 20] },
+
       { call: 'printTable([{ n: 0, ok: false, note: null }], [{ key: "n", header: "N" }, { key: "ok", header: "OK" }, { key: "note", header: "Note" }])', expected: 'N | OK    | Note\n--+-------+-----\n0 | false | null' },
       { call: 'printTable([{ n: 0 }, { n: 12 }], [{ key: "n", header: "N", align: "right" }], { n: (v) => (v === 0 ? "none" : String(v)) })', expected: '   N\n----\nnone\n  12' },
       { call: 'printTable([{ name: "Tea", price: 350 }], [{ key: "name", header: "Item" }], { price: () => "unused" })', expected: 'Item\n----\nTea' },
@@ -597,6 +494,8 @@ const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], format
       { call: '(() => { const columns = [{ key: "a", header: "A" }]; printTable([{ a: 1 }], columns); return columns; })()', expected: [{ key: 'a', header: 'A' }] },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditKey=Symbol(); const __auditRows: readonly {[__auditKey]:number}[]=[{[__auditKey]:3}]; const __auditColumns: readonly Column<{[__auditKey]:number}>[]=[{key:__auditKey,header:\"N\"}]; const __auditText:string=printTable(__auditRows,__auditColumns,{[__auditKey]:value=>value.toFixed(1)});"},
+
       { code: 'printTable([{ name: "Tea" }], [{ key: "name" }]);', rejects: true },
       { code: 'printTable([{ name: "Tea" }], [{ key: "name", header: "Name" }], { name: (value) => value.length });', rejects: true },
     ],

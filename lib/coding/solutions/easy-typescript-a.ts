@@ -47,7 +47,12 @@ const missingFields = (draft: Partial<Post>): string[] => {
 
 const missingFields = (draft: Partial<Post>): (keyof Post)[] =>
   (["title", "body", "tags"] as const).filter((field) => draft[field] === undefined);`,
+    hiddenTypeTests: [{"code": "missingFields({tags:null});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const tags=Object.freeze([]),draft=Object.freeze({title:undefined,body:'',tags}),a=missingFields(draft),b=missingFields(draft);a.push('body');return [b,Reflect.ownKeys(draft),draft.title===undefined,draft.tags===tags,tags.length,a!==b];})()", expected: [["title"], ["title", "body", "tags"], true, true, 0, true] },
+      { call: "(()=>{const inherited=Object.freeze(Object.create({title:'',body:'b',tags:[]})),empty=Object.freeze(Object.create(null)),a=missingFields(inherited),b=missingFields(inherited);a.push('title');return [b,missingFields(empty),a!==b,Reflect.ownKeys(empty).length,Reflect.ownKeys(inherited).length];})()", expected: [[], ["title", "body", "tags"], true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},draft={};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);return [missingFields(draft),Reflect.ownKeys(draft).length,draft.x99===meta];})()", expected: [["title", "body", "tags"], 100, true] },
+
       { call: 'missingFields({ tags: [] })', expected: ['title', 'body'] },
       { call: 'missingFields({ body: "" })', expected: ['title', 'tags'] },
       { call: 'missingFields({ title: "T", body: "B" })', expected: ['tags'] },
@@ -130,11 +135,15 @@ const WEEKEND: ReadonlySet<Day> = new Set<Day>(["sat", "sun"]);
 
 const isWeekday = (day: Day): day is Weekday => !WEEKEND.has(day);`,
     hiddenTests: [
+      { call: "(()=>{const days=Object.freeze(['mon','tue','wed','thu','fri','sat','sun']);return [days.map(day=>isWeekday(day)),days.map(day=>isWeekday(day)),days.every(day=>typeof isWeekday(day)==='boolean'),days.length];})()", expected: [[true, true, true, true, true, false, false], [true, true, true, true, true, false, false], true, 7] },
+
       { call: '["mon", "tue", "wed", "thu", "fri", "sat", "sun"].filter(isWeekday)', expected: ['mon', 'tue', 'wed', 'thu', 'fri'] },
       { call: 'isWeekday("tue")', expected: true },
       { call: 'isWeekday("thu")', expected: true },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditDays:Weekday[]=[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]; const __auditNarrow=(day:Day)=>{if(isWeekday(day)){const yes:Weekday=day;return yes;}const no:\"sat\"|\"sun\"=day;return no;};"},
+
       { code: 'const __sat: Weekday = "sat";', label: 'Saturday is not a Weekday', rejects: true },
       { code: 'const __mon: Weekday = "mon";', label: 'Monday is a Weekday' },
     ],
@@ -545,20 +554,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
 
   /* ── keyof ────────────────────────────────────────────────────────── */
   'ts-easy2-sort-by-a-column': {
-    solution: `interface Player {
-  name: string;
-  score: number;
-  country: string;
-}
-
-const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
-  // A readonly array has no sort, so sort a copy. < and > compare numbers by
-  // value and strings by character code, and sort keeps ties in order.
-  [...rows].sort((a, b) => {
-    if (a[column] < b[column]) return -1;
-    if (a[column] > b[column]) return 1;
-    return 0;
-  });`,
+    solution: "interface Player {\n  name: string;\n  score: number;\n  country: string;\n}\n\nconst sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>\n  // The readonly type omits mutating sort, so sort a copy. < and > compare numbers by\n  // value and strings by character code, and sort keeps ties in order.\n  [...rows].sort((a, b) => {\n    if (a[column] < b[column]) return -1;\n    if (a[column] > b[column]) return 1;\n    return 0;\n  });",
     junior: `interface Player {
   name: string;
   score: number;
@@ -591,7 +587,12 @@ const sortRows = (rows: readonly Player[], column: keyof Player): Player[] => {
 
 const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
   [...rows].sort((a, b) => (a[column] < b[column] ? -1 : a[column] > b[column] ? 1 : 0));`,
+    hiddenTypeTests: [{"code": "const __auditRows: readonly Player[] = [{name:\"a\",score:1,country:\"X\"}]; const __auditOut: Player[] = sortRows(__auditRows,\"name\"); __auditOut.push({name:\"b\",score:2,country:\"Y\"});"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['a','Z',' A','\u00e9','A'].map((text,i)=>Object.freeze({name:text,country:text,score:i})));return ['name','country'].map(key=>sortRows(input,key).map(row=>row[key]));})()", expected: [[" A", "A", "Z", "a", "\u00e9"], [" A", "A", "Z", "a", "\u00e9"]] },
+      { call: "(()=>{const meta={},input=Object.freeze([-0,0,-0.5,1.5,-1000000000,1000000000].map((score,i)=>Object.freeze({name:'same',country:'',score,meta,id:i}))),out=sortRows(input,'score'),again=sortRows(input,'score');out.pop();return [again.map(row=>row.id),again.every(row=>row===input[row.id]),Object.is(again[2].score,-0),again[0].meta===meta,input[0].id,input.length,out!==again,again.length];})()", expected: [[4, 2, 0, 1, 3, 5], true, true, true, 0, 6, true, 6] },
+      { call: "(()=>{const empty=Object.freeze([]),a=sortRows(empty,'name'),b=sortRows(empty,'score'),input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:'same',score:0,country:'X',id:i}))),out=sortRows(input,'country');a.push(input[0]);return [a!==empty,a!==b,b.length,out.length,out.every((row,i)=>row===input[i]),input.length];})()", expected: [true, true, 0, 1000, true, 1000] },
+
       { call: '(() => { const rows = [{ name: "B", score: 1, country: "X" }, { name: "A", score: 2, country: "Y" }]; sortRows(rows, "name"); return rows.map((row) => row.name); })()', expected: ['B', 'A'] },
       { call: 'sortRows([{ name: "a", score: 0, country: "SE" }, { name: "b", score: 0, country: "CZ" }, { name: "c", score: 0, country: "GB" }], "country").map((row) => row.country)', expected: ['CZ', 'GB', 'SE'] },
       { call: 'sortRows([{ name: "a", score: -1, country: "X" }, { name: "b", score: 0, country: "X" }, { name: "c", score: -5, country: "X" }], "score").map((row) => row.score)', expected: [-5, -1, 0] },

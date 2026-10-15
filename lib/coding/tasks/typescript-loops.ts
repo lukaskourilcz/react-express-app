@@ -721,7 +721,7 @@ console.log(myReduce([1, 2, 3], (acc, n) => acc + n, 0));
     tier: 3,
     focus: ["keyof", "map"],
     title: "Pluck all the keys",
-    prompt: "Write `pluckAll<T, K extends keyof T>(items: T[], keys: K[]): T[K][][]`, returning one row per item with the values of the requested keys in the order asked, built with `map` inside `map`. The indexed access type `T[K]` is whatever those properties hold. `pluckAll([{ id: 1, name: \"a\" }], [\"id\", \"name\"])` gives `[[1, \"a\"]]`.",
+    prompt: "Write `pluckAll<T, K extends keyof T>(items: T[], keys: K[]): T[K][][]`, returning one row per item with the values of the requested keys in the order asked, built with `map` inside `map`. The indexed access type `T[K]` is whatever those properties hold. `pluckAll([{ id: 1, name: \"a\" }], [\"id\", \"name\"])` gives `[[1, \"a\"]]`. Domain: dense ordinary arrays of at most 100 stable data items and 20 primitive string/number/Symbol keys, possibly frozen, with no accessors/proxies and bounded data-property lookup. Repeated keys and items are allowed; own or inherited values are read in item order, then requested key order. Missing optional fields contribute undefined. Preserve exact opaque values/references without cloning, calling or coercion. Return a fresh mutable outer array and a fresh mutable row for every item, independent across items and calls, including when there are no keys. Leave both inputs and their records unchanged. Target: O(n*m) time and output space, where n is 1 + item count and m is 1 + key count; these offsets include the work of allocating empty rows.",
     starter: `const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] => {
 
 };

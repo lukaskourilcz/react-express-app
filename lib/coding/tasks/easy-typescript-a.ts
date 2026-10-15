@@ -33,7 +33,7 @@ export const EASY_TYPESCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['utility-types', 'filter'],
     title: 'What the draft still needs',
-    prompt: 'A blog editor saves drafts before every field is filled in. `Post` has a `title`, a `body` and a list of `tags`. Write `missingFields(draft: Partial<Post>): string[]`, returning the names of the fields the draft does not have yet, in the order `title`, `body`, `tags`. `Partial<Post>` is `Post` with every property optional, so `{ title: "Hi" }` is a valid draft. A field counts as missing only when it is `undefined`: an empty title is still a title.',
+    prompt: "A blog editor saves drafts before every field is filled in. `Post` has a `title`, a `body` and a list of `tags`. Write `missingFields(draft: Partial<Post>): string[]`, returning the names of the fields the draft does not have yet, in the order `title`, `body`, `tags`. `Partial<Post>` is `Post` with every property optional, so `{ title: \"Hi\" }` is a valid draft. A field counts as missing only when it is `undefined`: an empty title is still a title. Domain: a stable ordinary or null-prototype draft, possibly frozen, with optional own or inherited data fields on a bounded prototype chain and no accessors/proxies. Title/body are text, tags is a string array and may be empty/frozen, and undefined or absence is missing; null is outside Partial<Post>. Unrelated fields carry opaque values and must be ignored. Return a fresh mutable array every call, including a complete draft, without adding fields, changing values or mutating tags. Target: O(1) time and working/output space: inspect only the three fixed fields, regardless of text, tag or unrelated metadata size.",
     starter: `interface Post {
   title: string;
   body: string;
@@ -144,7 +144,7 @@ const toPreviews = (articles: Article[]): Preview[] => {
     tier: 2,
     focus: ['utility-types', 'type-guards'],
     title: 'Only on weekdays',
-    prompt: '`Day` is a union of seven short day names, `"mon"` to `"sun"`. Declare `type Weekday = Exclude<Day, "sat" | "sun">`, which leaves the five working days. Then write `isWeekday(day: Day): day is Weekday`, returning `true` from Monday to Friday and `false` at the weekend. The return type tells the compiler that a day which passes the check is a `Weekday`.',
+    prompt: "`Day` is a union of seven short day names, `\"mon\"` to `\"sun\"`. Declare `type Weekday = Exclude<Day, \"sat\" | \"sun\">`, which leaves the five working days. Then write `isWeekday(day: Day): day is Weekday`, returning `true` from Monday to Friday and `false` at the weekend. The return type tells the compiler that a day which passes the check is a `Weekday`. Domain: exactly the seven primitive lowercase Day literals. Weekday contains all five literals mon, tue, wed, thu and fri, and neither weekend literal. Return an actual boolean, without state changing later calls. This fixed teaching calendar does not model holidays, locales or working schedules. The explicit predicate illustrates narrowing; equivalent inferred predicates are accepted by the current TypeScript checker. Target: O(1) time and working space because the domain and weekend membership set have fixed size.",
     starter: `type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 const isWeekday = (day) => {
@@ -718,7 +718,7 @@ console.log(spanOf([1, 2, 2, 2, 5], 2));
     tier: 2,
     focus: ['keyof', 'sort'],
     title: 'Sort by a column',
-    prompt: 'A table shows `Player` rows with a `name`, a `score` and a `country`. Write `sortRows(rows: readonly Player[], column: keyof Player): Player[]`, returning a new array sorted from low to high by the chosen column: numbers by value, text in character order. `keyof Player` is the union `"name" | "score" | "country"`, so a column that does not exist will not compile. Rows with equal values keep their order.',
+    prompt: "A table shows `Player` rows with a `name`, a `score` and a `country`. Write `sortRows(rows: readonly Player[], column: keyof Player): Player[]`, returning a new array sorted from low to high by the chosen column: numbers by value, text in character order. `keyof Player` is the union `\"name\" | \"score\" | \"country\"`, so a column that does not exist will not compile. Rows with equal values keep their order. Domain: a dense readonly ordinary array of at most 1000 stable Player records, possibly frozen, with own name/country strings of at most 200 UTF-16 units and finite Number scores from -1000000000 through 1000000000, including fractions and signed zero. No accessors/proxies are involved. Text uses case-sensitive UTF-16 code-unit order with no trimming, normalization or locale collation; scores use numeric order. Return a fresh mutable outer array every call, including empty input, with exact original row references and opaque metadata. Preserve stable ties, duplicates and the unchanged input. Target: O(n log n) time in the comparison-sort model and O(n) output space, where n is 1 + row count with bounded comparison costs. The language specification does not promise a particular built-in sorting algorithm.",
     starter: `interface Player {
   name: string;
   score: number;

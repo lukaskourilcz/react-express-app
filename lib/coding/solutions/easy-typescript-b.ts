@@ -8,63 +8,22 @@ import type { CodingSolution } from '../types';
 export const EASY_TYPESCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── utility types ────────────────────────────────────────────────── */
   'ts-easy3-save-a-new-todo': {
-    solution: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-// The caller cannot pick an id: Omit takes it out of the type.
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  // Starting from 0 means an empty list hands out id 1.
-  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;
-  // A new array, so the list passed in keeps its length.
-  return [...todos, { id, ...draft }];
-};`,
-    junior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  let highest = 0;
-  for (const todo of todos) {
-    if (todo.id > highest) {
-      highest = todo.id;
-    }
-  }
-  const todo: Todo = { id: highest + 1, title: draft.title, done: draft.done };
-  const next: Todo[] = [...todos];
-  next.push(todo);
-  return next;
-};`,
-    senior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const nextId = (todos: readonly Todo[]): number =>
-  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [
-  ...todos,
-  { id: nextId(todos), ...draft },
-];`,
+    solution: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\n// Omit removes id from the view; it does not strip wider objects at runtime.\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  // Starting from 0 means an empty list hands out id 1.\n  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;\n  // A new array, so the list passed in keeps its length.\n  return [...todos, { ...draft, id }];\n};",
+    junior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  let highest = 0;\n  for (const todo of todos) {\n    if (todo.id > highest) {\n      highest = todo.id;\n    }\n  }\n  const todo: Todo = { ...draft, id: highest + 1 };\n  const next: Todo[] = [...todos];\n  next.push(todo);\n  return next;\n};",
+    senior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst nextId = (todos: readonly Todo[]): number =>\n  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [\n  ...todos,\n  { ...draft, id: nextId(todos) },\n];",
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},draft=Object.freeze({id:999,title:'',done:false,extra:meta,[sym]:meta,['__proto__']:meta}),old=Object.freeze({id:7,title:'old',done:true}),input=Object.freeze([old]),a=addTodo(input,draft),b=addTodo(input,draft);a[1].title='later';a.push(old);return [a!==input,a!==b,a[0]===old,b[0]===old,b[1]!==draft,b[1]!==a[1],b[1].id,b[1].extra===meta,b[1][sym]===meta,Object.hasOwn(b[1],'__proto__'),b[1].__proto__===meta,Object.getPrototypeOf(b[1])===Object.prototype,b[1].title,draft.id,input.length];})()", expected: [true, true, true, true, true, true, 8, true, true, true, true, true, "", 999, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i%2?1:1000000000,title:String(i),done:false}))),draft=Object.freeze(Object.assign(Object.create(null),{title:'new',done:true})),out=addTodo(input,draft);return [out.length,out.slice(0,1000).every((todo,i)=>todo===input[i]),out[1000].id,input[0].id,Reflect.ownKeys(draft)];})()", expected: [1001, true, 1000000001, 1000000000, ["title", "done"]] },
+      { call: "(()=>{const meta={},draft={title:'new',done:false};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);const a=addTodo([],draft),b=addTodo([],draft);return [a!==b,a[0]!==b[0],a[0].id,Reflect.ownKeys(a[0]).length,Array.from({length:100},(_,i)=>a[0]['x'+i]===meta).every(Boolean),!Object.hasOwn(draft,'id')];})()", expected: [true, true, 1, 103, true, true] },
+
       { call: 'addTodo(Object.freeze([{ id: 2, title: "x", done: false }]), { title: "y", done: true })', expected: [{ id: 2, title: 'x', done: false }, { id: 3, title: 'y', done: true }] },
       { call: 'addTodo([{ id: 10, title: "a", done: false }, { id: 11, title: "b", done: false }, { id: 4, title: "c", done: false }], { title: "d", done: false })[3]', expected: { id: 12, title: 'd', done: false } },
       { call: '(() => { const draft = { title: "z", done: false }; addTodo([], draft); return draft; })()', expected: { title: 'z', done: false } },
       { call: 'addTodo([{ id: 1, title: "a", done: false }], { title: "a", done: false }).length', expected: 2 },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditWide={id:999,title:\"x\",done:false}; const __auditDraft:NewTodo=__auditWide; const __auditSource:readonly Todo[]=[]; const __auditOut:Todo[]=addTodo(__auditSource,__auditDraft); __auditOut.push({id:1,title:\"y\",done:true});"},
+
       { code: 'const __n: NewTodo = { title: "a", done: false, id: 1 };', label: 'NewTodo has no id', rejects: true },
     ],
   },
@@ -354,7 +313,12 @@ const DEFAULTS: Readonly<Settings> = { theme: "light", fontSize: 16, sounds: tru
 function settingOr<K extends keyof Settings>(saved: Readonly<Partial<Settings>>, key: K): Settings[K] {
   return saved[key] ?? DEFAULTS[key];
 }`,
+    hiddenTypeTests: [{"code": "settingOr({fontSize:null},\"fontSize\");", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const saved=Object.freeze({fontSize:undefined,theme:'dark',sounds:false}),before=Reflect.ownKeys(saved);const values=[settingOr(saved,'fontSize'),settingOr(saved,'theme'),settingOr(saved,'sounds')];return [values,Reflect.ownKeys(saved),before,saved.fontSize===undefined,DEFAULTS.theme,DEFAULTS.fontSize,DEFAULTS.sounds];})()", expected: [[16, "dark", false], ["fontSize", "theme", "sounds"], ["fontSize", "theme", "sounds"], true, "light", 16, true] },
+      { call: "(()=>{const saved=Object.freeze(Object.create({fontSize:-0,sounds:false})),empty=Object.freeze(Object.create(null));return [Object.is(settingOr(saved,'fontSize'),-0),settingOr(saved,'sounds'),settingOr(empty,'theme'),settingOr(empty,'fontSize'),settingOr(empty,'sounds'),Reflect.ownKeys(saved).length,Reflect.ownKeys(empty).length];})()", expected: [true, false, "light", 16, true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},saved={fontSize:-0.5};for(let i=0;i<100;i++)saved['x'+i]=meta;Object.freeze(saved);const values=[settingOr(saved,'sounds'),settingOr(saved,'fontSize'),settingOr(saved,'theme')];return [values,Reflect.ownKeys(saved).length,saved.x99===meta,!Object.hasOwn(saved,'sounds'),!Object.hasOwn(saved,'theme')];})()", expected: [[true, -0.5, "light"], 101, true, true, true] },
+
       { call: 'settingOr({ theme: "dark", fontSize: 12 }, "theme")', expected: 'dark' },
       { call: 'settingOr({ theme: "dark" }, "fontSize")', expected: 16 },
       { call: 'settingOr({ fontSize: undefined }, "fontSize")', expected: 16 },
@@ -383,22 +347,20 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
   copy[key] = value;
   return copy;
 };`,
-    senior: `interface Product {
-  name: string;
-  price: number;
-  inStock: boolean;
-}
-
-function setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {
-  return Object.assign({}, product, { [key]: value });
-}`,
+    senior: "interface Product {\n  name: string;\n  price: number;\n  inStock: boolean;\n}\n\nfunction setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {\n  return { ...product, [key]: value };\n}",
     hiddenTests: [
+      { call: "(()=>{const s=Symbol('meta'),meta={},proto={inherited:9},p=Object.create(proto);Object.assign(p,{name:'Mug',price:-0,inStock:false});Object.defineProperty(p,'__proto__',{value:meta,enumerable:true});p[s]=meta;p.extra=meta;Object.freeze(p);const out=setField(p,'price',-0);return [out!==p,Object.getPrototypeOf(out)===Object.prototype,Object.hasOwn(out,'__proto__'),out.__proto__===meta,out[s]===meta,out.extra===meta,!Object.hasOwn(out,'inherited'),Object.is(out.price,-0),Object.is(p.price,-0)];})()", expected: [true, true, true, true, true, true, true, true, true] },
+      { call: "(()=>{const p=Object.freeze(Object.assign(Object.create(null),{name:'',price:-0.5,inStock:false})),a=setField(p,'name',''),b=setField(p,'inStock',true);a.name='later';return [a!==b,b.name,p.name,b.price,b.inStock,p.inStock,Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, "", "", -0.5, true, false, true] },
+      { call: "(()=>{const meta={},p={name:'x',price:1,inStock:true};for(let i=0;i<100;i++)p['x'+i]=meta;Object.freeze(p);const out=setField(p,'price',1000000000);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),p.price,out.price];})()", expected: [103, true, 1, 1000000000] },
+
       { call: '(() => { const p = { name: "a", price: 1, inStock: true }; return setField(p, "name", "b") !== p; })()', expected: true },
       { call: 'Object.keys(setField({ name: "a", price: 1, inStock: true }, "name", "z"))', expected: ['name', 'price', 'inStock'] },
       { call: 'setField(setField({ name: "a", price: 1, inStock: true }, "price", 5), "name", "z")', expected: { name: 'z', price: 5, inStock: true } },
       { call: 'setField({ name: "a", price: 1, inStock: true }, "price", 0)', expected: { name: 'a', price: 0, inStock: true } },
     ],
     hiddenTypeTests: [
+      {"code": "setField({name:\"x\",price:1,inStock:true},\"inStock\",\"false\");", "rejects": true},
+
       { code: 'setField({ name: "a", price: 1, inStock: true }, "name", 3);', label: 'the name takes text', rejects: true },
     ],
   },

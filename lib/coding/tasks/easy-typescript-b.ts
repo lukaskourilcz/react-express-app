@@ -28,7 +28,7 @@ export const EASY_TYPESCRIPT_B_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['utility-types', 'spread'],
     title: 'Save a new todo',
-    prompt: 'A todo app hands out ids itself, so a new todo arrives without one. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, "id">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is.',
+    prompt: "A todo app chooses the id for a new todo. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, \"id\">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with a new shallow copy of the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is. Domain: a dense readonly ordinary list of at most 1000 stable Todo records, possibly frozen, with own integer ids from 1 through 1000000000, text titles and boolean done flags; duplicate ids are allowed. The stable ordinary/null-prototype draft has own title/done data fields and up to 100 extra own enumerable string/Symbol fields with opaque values; no accessors/proxies are involved. Preserve shallow draft metadata, including a literal own __proto__ field, but always set the calculated id after spreading the draft. Omit is a compile-time view, not a runtime sanitizer: a wider compatible variable can still contain an id, and that value must not win. Return a fresh mutable array with unchanged original Todo references followed by a fresh plain mutable todo; leave source order, records and draft unchanged. Target: O(n) time and output space, where n is 1 + existing todo count + copied draft-field count under bounded property-key operations, excluding opaque metadata contents.",
     starter: `interface Todo {
   id: number;
   title: string;
@@ -52,13 +52,13 @@ type NewTodo = Omit<Todo, "id">;
 
 const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
   // the next id: the highest id plus one, or 1 for an empty list
-  // a new array: every todo, then { id, ...draft }
+  // a new array: every todo, then { ...draft, id }
 };`,
-    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a caller cannot pick one. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
+    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a fresh object literal cannot include one. Wider variables can still carry extra fields; set the calculated id last. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
     approach: [
       'Declare `NewTodo` with `Omit`. The second type argument names the key to leave out.',
-      'Work out the next id: the highest id in the list plus one. Start from 0, so an empty list gives 1.',
-      'Return `[...todos, { id, ...draft }]`: a new array that ends with the new todo.',
+      'Work out the next id: the highest id in the list plus one. Start from 0; existing ids are positive, and an empty list then gives 1.',
+      'Return `[...todos, { ...draft, id }]`: a new array that ends with the new todo.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -71,7 +71,7 @@ const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
     typeTests: [
       { code: 'const __d: NewTodo = { title: "Plan", done: false };', label: 'a new todo has a title and a done flag' },
       { code: 'const __list: Todo[] = addTodo([], { title: "Plan", done: false });', label: 'gives back todos' },
-      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a new todo cannot bring its own id', rejects: true },
+      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a fresh todo literal leaves out id', rejects: true },
       { code: 'const __e: NewTodo = { title: "Plan" };', label: 'a new todo still needs its done flag', rejects: true },
     ],
   },
@@ -415,7 +415,7 @@ console.log(everyNth(["f1", "f2", "f3", "f4", "f5", "f6"], 3));
     tier: 2,
     focus: ['keyof'],
     title: 'A setting or its default',
-    prompt: 'An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, "sounds")` is a `boolean` and `settingOr(saved, "fontSize")` is a `number`. A saved `false` or `0` is a real choice: keep it.',
+    prompt: "An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, \"sounds\")` is a `boolean` and `settingOr(saved, \"fontSize\")` is a `number`. A saved `false` or `0` is a real choice: keep it. Domain: a stable ordinary or null-prototype saved record, possibly frozen, with optional own or inherited data properties on a bounded prototype chain and no accessors/proxies. Missing or undefined values use the default; null is outside Partial<Settings>. Theme is light or dark, sounds is boolean, and fontSize is a finite Number from -1000000000 through 1000000000, including fractions, negatives and signed zero. Preserve false, 0 and -0 exactly. Do not add defaults to saved, change saved values, inspect unrelated opaque metadata or modify DEFAULTS. Target: O(1) time and working state: read one of the three fixed setting keys and at most its default, regardless of unrelated saved fields.",
     starter: `interface Settings {
   theme: "light" | "dark";
   fontSize: number;
@@ -442,7 +442,7 @@ const DEFAULTS: Settings = { theme: "light", fontSize: 16, sounds: true };
 const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K] => {
   // the saved value when there is one, otherwise the default
 };`,
-    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`. `||` would also replace a saved `false`, and switch the sounds back on.'],
+    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`; this task’s typed inputs allow undefined, but not null. `||` would also replace a saved `false`, and switch the sounds back on.'],
     approach: [
       'Give the function a type parameter `K extends keyof Settings` and the return type `Settings[K]`.',
       'Read `saved[key]`.',
@@ -472,7 +472,7 @@ const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): 
     tier: 2,
     focus: ['keyof', 'spread'],
     title: 'Change one field',
-    prompt: 'A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, "price", 5)` compiles and `setField(mug, "price", "5")` does not. Build the new product with spread, and leave the original as it is.',
+    prompt: "A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, \"price\", 5)` compiles and `setField(mug, \"price\", \"5\")` does not. Build the new product with spread, and leave the original as it is. Domain: stable ordinary or null-prototype product records, possibly frozen, with own name text of at most 200 UTF-16 units, a finite Number price from -1000000000 through 1000000000, and a boolean inStock. Up to 100 extra own enumerable string/Symbol data fields may carry opaque values; no accessors/proxies are involved. Copy those fields shallowly, including a literal own __proto__ field, without copying inherited fields. Return a fresh plain mutable product even when the chosen value is unchanged; preserve exact metadata references and leave the source unchanged. The allowed key is one of the three Product fields with its matching value type. Target: O(n) time and output space, where n is 1 + the number of copied own enumerable fields under bounded property-key operations; do not traverse opaque values.",
     starter: `interface Product {
   name: string;
   price: number;
