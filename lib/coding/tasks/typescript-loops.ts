@@ -461,7 +461,7 @@ const onlyFiles = (entries: Entry[]): FileEntry[] => {
     tier: 2,
     focus: ["literal-types", "reduce"],
     title: "Count a status",
-    prompt: "Declare a string enum `Status` with `Todo = \"todo\"`, `Doing = \"doing\"` and `Done = \"done\"`, then write `countStatus(items: Status[], wanted: Status): number` counting with `reduce` how many items equal the wanted member. `countStatus([Status.Done, Status.Todo, Status.Done], Status.Done)` gives 2, and an empty list gives 0.",
+    prompt: "Declare a string enum `Status` with `Todo = \"todo\"`, `Doing = \"doing\"` and `Done = \"done\"`, then write `countStatus(items: Status[], wanted: Status): number` counting with `reduce` how many items equal the wanted member. `countStatus([Status.Done, Status.Todo, Status.Done], Status.Done)` gives 2, and an empty list gives 0. Domain: a dense array of at most 1000 Status members, possibly frozen; wanted is one of the three Status members too. Count exact equal enum values without changing array order, members or the enum object. Calls are independent. Target: O(n) time and O(1) working state for a numeric reduce accumulator, where n is 1 + item count; no filtering or sorting is needed.",
     starter: `enum Status {
   Todo = "todo",
   Doing = "doing",
@@ -522,7 +522,7 @@ const countStatus = (items: Status[], wanted: Status): number =>
     tier: 2,
     focus: ["generics", "for", "slice"],
     title: "Chunk a list",
-    prompt: "Write `chunk<T>(items: T[], size: number): T[][]`, splitting a list into groups of `size` items with a `for` loop that steps by `size` and slices out each group; the last group holds whatever is left. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`, and an empty list gives an empty list. The size is always at least 1.",
+    prompt: "Write `chunk<T>(items: T[], size: number): T[][]`, splitting a list into groups of `size` items with a `for` loop that steps by `size` and slices out each group; the last group holds whatever is left. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`, and an empty list gives an empty list. The size is always at least 1. Domain: a dense array of at most 1000 opaque values, possibly frozen, with integer size from 1 through 1000000000. Preserve every exact element reference/value, including null, undefined, symbols and functions; do not inspect, clone, call or coerce elements. Leave the input unchanged. Return a fresh mutable outer array and distinct fresh mutable nonempty groups on every call; groups must not alias the input or a result from another call. Target: O(n) time and output space, where n is 1 + item count: the disjoint slices copy each element once in total.",
     starter: `const chunk = <T>(items: T[], size: number): T[][] => {
 
 };
@@ -571,7 +571,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ["generics", "tuples", "for"],
     title: "Zip two lists",
-    prompt: "Write `zip<A, B>(left: A[], right: B[]): [A, B][]`, pairing the items at the same index into tuples with a `for` loop and stopping at the shorter list. `zip([1, 2], [\"a\", \"b\"])` gives `[[1, \"a\"], [2, \"b\"]]`, and when either list is empty the result is empty.",
+    prompt: "Write `zip<A, B>(left: A[], right: B[]): [A, B][]`, pairing the items at the same index into tuples with a `for` loop and stopping at the shorter list. `zip([1, 2], [\"a\", \"b\"])` gives `[[1, \"a\"], [2, \"b\"]]`, and when either list is empty the result is empty. Domain: two dense arrays of at most 1000 opaque values each, possibly frozen. Keep exact values/references without inspecting, cloning, calling or coercing elements. Stop at the shorter length, without padding missing positions; null and undefined are real values. Leave both arrays unchanged. Return a fresh mutable outer array and fresh mutable pairs for each position on every call, with no pair alias across positions or calls. Target: O(n) time and output space, where n is 1 + the shorter input length; no traversal of the longer unused tail is needed.",
     starter: `const zip = <A, B>(left: A[], right: B[]): [A, B][] => {
 
 };
