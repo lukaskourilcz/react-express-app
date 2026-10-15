@@ -271,7 +271,7 @@ const totalExpenses = (expenses: Expenses): number => {
     tier: 2,
     focus: ["annotations", "for", "objects"],
     title: "Path length",
-    prompt: "Declare a type alias named `Point` for an object with numeric `x` and `y`, then write `pathLength(points: Point[]): number` adding up the straight-line distance between each point and the next with a `for` loop. `pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])` gives 5, and fewer than two points gives 0.",
+    prompt: "Declare a type alias named `Point` for an object with numeric `x` and `y`, then write `pathLength(points: Point[]): number` adding up the straight-line distance between each point and the next with a `for` loop. `pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])` gives 5, and fewer than two points gives 0. Domain: a dense array of at most 1000 stable Point data records with own finite coordinates from -1000000 through 1000000. The array and points may be frozen; leave them unchanged. Sum adjacent Euclidean distances only, without adding a closing edge. Return exactly 0 for fewer than two points. For other paths, return a finite number within 1e-7 + 1e-9 * abs(expected) of the mathematical length; do not round each segment. No accessors or proxies are involved. Target: O(n) time and O(1) working state, where n is 1 + point count under bounded Number arithmetic. Equivalent numerical distance formulas are accepted.",
     starter: `type Point = { x: number; y: number };
 
 const pathLength = (points: Point[]): number => {
@@ -302,14 +302,7 @@ const pathLength = (points: Point[]): number => {
     ],
     verify: "tests",
     estimatedMinutes: 8,
-    tests: [
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])", expected: 5 },
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }, { x: 3, y: 10 }])", expected: 11 },
-      { call: "pathLength([{ x: 2, y: 2 }])", expected: 0, label: "a single point", edge: true },
-      { call: "pathLength([])", expected: 0, label: "empty input", edge: true },
-      { call: "pathLength([{ x: 1, y: 1 }, { x: 1, y: 1 }])", expected: 0, label: "the same point twice", edge: true },
-      { call: "pathLength([{ x: -3, y: -4 }, { x: 0, y: 0 }])", expected: 5, label: "negative coordinates", edge: true },
-    ],
+    tests: [{"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }]);return Number.isFinite(actual)&&Math.abs(actual-(5))<=1e-7+1e-9*Math.abs(5);})()", "expected": true}, {"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }, { x: 3, y: 10 }]);return Number.isFinite(actual)&&Math.abs(actual-(11))<=1e-7+1e-9*Math.abs(11);})()", "expected": true}, {"call": "pathLength([{ x: 2, y: 2 }])", "expected": 0, "label": "a single point", "edge": true}, {"call": "pathLength([])", "expected": 0, "label": "empty input", "edge": true}, {"call": "(()=>{const actual=pathLength([{ x: 1, y: 1 }, { x: 1, y: 1 }]);return Number.isFinite(actual)&&Math.abs(actual-(0))<=1e-7+1e-9*Math.abs(0);})()", "expected": true, "label": "the same point twice", "edge": true}, {"call": "(()=>{const actual=pathLength([{ x: -3, y: -4 }, { x: 0, y: 0 }]);return Number.isFinite(actual)&&Math.abs(actual-(5))<=1e-7+1e-9*Math.abs(5);})()", "expected": true, "label": "negative coordinates", "edge": true}],
     typeTests: [
       { code: "const __point: Point = { x: 1, y: 2 };", label: "Point is a type you can name" },
       { code: "const __length: number = pathLength([{ x: 0, y: 0 }]);", label: "gives back a number" },

@@ -745,15 +745,7 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
 
   /* ── Map and Set ──────────────────────────────────────────────────── */
   'ts-easy3-squares-visited': {
-    solution: `const visited = (path: readonly [number, number][]): number => {
-  // Strings compare by value; two [x, y] arrays never do.
-  const seen = new Set<string>();
-  for (const [x, y] of path) {
-    // The comma keeps [1, 23] and [12, 3] apart.
-    seen.add(\`\${x},\${y}\`);
-  }
-  return seen.size;
-};`,
+    solution: "const visited = (path: readonly [number, number][]): number => {\n  // Strings compare by value; distinct [x, y] arrays compare by identity.\n  const seen = new Set<string>();\n  for (const [x, y] of path) {\n    // The comma keeps [1, 23] and [12, 3] apart.\n    seen.add(`${x},${y}`);\n  }\n  return seen.size;\n};",
     junior: `const visited = (path: readonly [number, number][]): number => {
   const seen = new Set<string>();
   for (let i = 0; i < path.length; i++) {
@@ -766,7 +758,12 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
 };`,
     senior: `const visited = (path: readonly (readonly [number, number])[]): number =>
   new Set(path.map(([x, y]) => \`\${x},\${y}\`)).size;`,
+    hiddenTypeTests: [{"code": "const __auditText: string = visited([[0,0]]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze([1,23]),b=Object.freeze([12,3]),path=Object.freeze([a,a,Object.freeze([1,23]),b]);return [visited(path),path.length,path[0]===a,path[3]===b];})()", expected: [2, 4, true, true] },
+      { call: "[visited(Object.freeze([Object.freeze([0,-0]),Object.freeze([-0,0])])),visited([[-1000000000,1000000000],[1000000000,-1000000000]])]", expected: [1, 2] },
+      { call: "(()=>{const path=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze([i%100,Math.floor(i/100)%2])));return [visited(path),path.length,path[999][0],path[999][1]];})()", expected: [200, 1000, 99, 1] },
+
       { call: 'visited([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, 0]])', expected: 4 },
       { call: 'visited([[0, 0], [0, 0], [0, 1], [0, 0], [0, 1]])', expected: 2 },
       { call: 'visited([[1, 23], [12, 3]])', expected: 2 },

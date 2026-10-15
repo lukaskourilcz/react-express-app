@@ -159,14 +159,14 @@ const pathLength = (points: Point[]): number => {
   }
   return total;
 };`,
-    senior: `type Point = { x: number; y: number };
-
-// slice(1) shifts every index by one, so points[index] is the previous point of each step.
-const pathLength = (points: Point[]): number =>
-  points.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0);`,
+    senior: "type Point = { x: number; y: number };\n\nconst pathLength = (points: Point[]): number => {\n  let total = 0;\n  for (let i = 1; i < points.length; i += 1) {\n    total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);\n  }\n  return total;\n};",
+    hiddenTypeTests: [{"code": "const __auditText: string = pathLength([{x:0,y:0}]);", "rejects": true}],
     hiddenTests: [
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 6, y: 8 }, { x: 6, y: 8 }])", expected: 10 },
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 0, y: 5 }, { x: 0, y: 0 }])", expected: 10 },
+      { call: "(()=>{const points=Object.freeze([Object.freeze({x:0,y:0}),Object.freeze({x:1,y:1}),Object.freeze({x:2,y:1})]),actual=pathLength(points),expected=Math.SQRT2+1;return [Number.isFinite(actual)&&Math.abs(actual-expected)<=1e-7+1e-9*Math.abs(expected),points.length,points[1].x];})()", expected: [true, 3, 1] },
+      { call: "(()=>{const meta={},points=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({x:3*i,y:4*i,meta}))),actual=pathLength(points);return [Number.isFinite(actual)&&Math.abs(actual-4995)<=1e-7+1e-9*4995,points.length,points[0].meta===meta,points[999].x];})()", expected: [true, 1000, true, 2997] },
+      { call: "(()=>{const a=Object.freeze(Object.assign(Object.create(null),{x:-1.5,y:2.25})),b=Object.freeze({x:1.5,y:6.25}),points=Object.freeze([a,b]),actual=pathLength(points);return [Number.isFinite(actual)&&Math.abs(actual-5)<=1e-7+1e-9*5,points[0]===a,a.x,b.y];})()", expected: [true, true, -1.5, 6.25] },
+      {"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 6, y: 8 }, { x: 6, y: 8 }]);return Number.isFinite(actual)&&Math.abs(actual-(10))<=1e-7+1e-9*Math.abs(10);})()", "expected": true},
+      {"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 0, y: 5 }, { x: 0, y: 0 }]);return Number.isFinite(actual)&&Math.abs(actual-(10))<=1e-7+1e-9*Math.abs(10);})()", "expected": true},
     ],
   },
   "ts-mixed-total": {

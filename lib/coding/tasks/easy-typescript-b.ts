@@ -902,7 +902,7 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
     tier: 2,
     focus: ['map-set', 'tuples'],
     title: 'Squares visited',
-    prompt: 'A robot on a grid logs each position it passes as an `[x, y]` pair, and it can cross the same square more than once. Write `visited(path: readonly [number, number][]): number`, returning how many different squares it visited. `new Set(path)` does not work here: two arrays holding the same numbers are still two different objects, so the Set keeps both. Turn each pair into a text key such as `"2,3"` and count the keys in a `Set<string>`.',
+    prompt: "A robot on a grid logs each position it passes as an `[x, y]` pair, and it can cross the same square more than once. Write `visited(path: readonly [number, number][]): number`, returning how many different squares it visited. `new Set(path)` does not work here: two arrays holding the same numbers are still two different objects, so the Set keeps both. Turn each pair into a text key such as `\"2,3\"` and count the keys in a `Set<string>`. Domain: a dense path of at most 1000 coordinate pairs, each exactly two finite integers from -1000000000 through 1000000000. The path and pairs may be frozen and must remain unchanged. Count coordinate values, not array identities: repeated references and different pairs holding the same values name the same square. Positive and negative zero name the same coordinate. Comma-separated number keys are unambiguous within this integer domain. Target: O(n) time and worst-case O(n) storage, where n is 1 + pair count under bounded number-to-string conversion and average Set operations.",
     starter: `const visited = (path) => {
 
 };

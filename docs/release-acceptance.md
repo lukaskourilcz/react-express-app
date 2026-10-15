@@ -4113,3 +4113,41 @@ RLS, dependencies, entitlements, real-account state or reward rules changed; twe
 physical handlers remain. Direct production has_table_privilege checks additionally
 confirm zero excess grants over all 88 combinations, including MAINTAIN; this is
 stronger than relying only on information_schema table_privileges.
+
+## PR #414 exact production — 15 October 2026
+
+PR #414 passed required run 38740773379 at exact head c01f700c8c34e612235141cdca265e20fe5f4e63 (verify 30m43s; SQL 42s), then merged at 1240d724b94b44282df486a278325e5b57b455d3 on 15 October 2026 at 13:49:00 UTC. READY production dpl_76YkFQ5v4AxdEaizSWA3DaiqZywJ matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks plus six actual changed-task Submit verdicts: reference, valid alternative and meaningful wrong for two available TypeScript tasks. Eight tasks return 402 and remain explicitly unverified through the dedicated Premium path. All guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 final-hash selected verdicts, forty authored-target/base-25-XP checks and160 light/dark responsive probes. Shipped model-review coverage is 280/725 coding and263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
+
+## Five-item continuation B052 — 15 October 2026
+
+Individually read and repaired note tags, airport route names, path length,
+basket pricing and visited grid squares. Note updates preserve own enumerable
+string/Symbol metadata, opaque references and exact no-op identity. Route tokens
+retain empty/space/Unicode cases. All nontrivial path comparisons now accept a
+stated absolute/relative tolerance while rejecting non-finite results; the
+actual exp/log alternative previously failed strict equality and now passes.
+Basket errors name the first missing product in input order. Grid equality is
+by bounded integer coordinate value, including signed zero, without mutation.
+Targets state their input sizes and average Map/Set or bounded Number models.
+
+All 30 selected final-hash verdicts agree (20 valid, five starters, five wrongs),
+versus 24/30 baseline: five false passes and one correct rounding variant rejected.
+Twenty authored-target/base-25-XP checks pass; unknown complexity stays hidden
+and unpenalized. Seventeen added runtime and four added static assertions cover
+frozen/null-prototype data, metadata/aliasing, 1000-element limits, empty tokens,
+first missing errors and floating results; original Note static checks remain.
+Canonical focused coding passes actual TypeScript checks, native Run and reversed
+hidden cases. All 290 current review hashes match, 435 coding reviews remain.
+Native remains 263/263. API/script types, launch, build, registry/index generation,
+full grading/Learn integrity on the B051–B052 tree, native bindings, both production
+dependency audits (zero vulnerabilities), copy sweep (zero findings) and diff pass.
+All 80 fixture-backed light/dark probes across these five routes at 320–1440px
+pass with zero issues/unprobed. Same-session model self-review and finite
+execution; no independent/human, physical-device or authenticated Premium claim.
+
+B051–B052 add ten reviews above production-verified #414 (280 deployed). They
+await their own required PR checks, merge and exact-production acceptance. No
+schema/RLS, handler, dependency, UI or entitlement/reward-policy change; no real
+account state is a test fixture. Nine existing issues remain open for actual
+residuals/owner holds; none is closed merely because its implementation subset
+has passed. Marketing draft #365 stays held.
