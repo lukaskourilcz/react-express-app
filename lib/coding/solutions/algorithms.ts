@@ -768,42 +768,48 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
 
   'alg-bfs-shortest-path': {
     solution: `const shortestPath = (graph, start, goal) => {
-  const visited = new Set([start]);
-  const queue = [[start]];
-  while (queue.length > 0) {
-    const route = queue.shift();
-    const node = route[route.length - 1];
-    if (node === goal) return route;
-    for (const neighbour of graph[node] ?? []) {
-      if (visited.has(neighbour)) continue;
-      visited.add(neighbour);
-      queue.push([...route, neighbour]);
+  const previous = new Map([[start, null]]);
+  const queue = [start];
+  for (let head = 0; head < queue.length; head += 1) {
+    const node = queue[head];
+    if (node === goal) {
+      const route = [];
+      for (let at = goal; at !== null; at = previous.get(at)) route.push(at);
+      return route.reverse();
+    }
+    const neighbours = Object.hasOwn(graph, node) ? graph[node] : [];
+    for (const neighbour of neighbours) {
+      if (previous.has(neighbour)) continue;
+      previous.set(neighbour, node);
+      queue.push(neighbour);
     }
   }
   return null;
 };`,
     junior: `const shortestPath = (graph, start, goal) => {
-  const visited = new Set();
-  visited.add(start);
-  const queue = [[start]];
+  const parent = new Map();
+  parent.set(start, null);
+  const queue = [start];
   let head = 0;
   while (head < queue.length) {
-    const route = queue[head];
-    head = head + 1;
-    const node = route[route.length - 1];
-    if (node === goal) {
+    const current = queue[head];
+    head += 1;
+    if (current === goal) {
+      const route = [];
+      let at = goal;
+      while (at !== null) {
+        route.push(at);
+        at = parent.get(at);
+      }
+      route.reverse();
       return route;
     }
-    const neighbours = graph[node];
-    if (neighbours !== undefined) {
-      for (let index = 0; index < neighbours.length; index += 1) {
-        const neighbour = neighbours[index];
-        if (visited.has(neighbour) === false) {
-          visited.add(neighbour);
-          const longer = route.slice();
-          longer.push(neighbour);
-          queue.push(longer);
-        }
+    const neighbours = Object.hasOwn(graph, current) ? graph[current] : [];
+    for (let index = 0; index < neighbours.length; index += 1) {
+      const next = neighbours[index];
+      if (!parent.has(next)) {
+        parent.set(next, current);
+        queue.push(next);
       }
     }
   }
@@ -811,18 +817,16 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
 };`,
     senior: `const shortestPath = (graph, start, goal) => {
   if (start === goal) return [start];
-  // One parent per node instead of a whole route on the queue: O(V) memory
-  // rather than O(V) routes. Marking on the way in is what keeps a cycle finite.
   const cameFrom = new Map([[start, null]]);
   const queue = [start];
   for (let head = 0; head < queue.length; head += 1) {
-    for (const neighbour of graph[queue[head]] ?? []) {
+    for (const neighbour of (Object.hasOwn(graph, queue[head]) ? graph[queue[head]] : [])) {
       if (cameFrom.has(neighbour)) continue;
       cameFrom.set(neighbour, queue[head]);
       if (neighbour === goal) {
         const route = [];
-        for (let step = goal; step !== null && step !== undefined; step = cameFrom.get(step)) route.unshift(step);
-        return route;
+        for (let step = goal; step !== null && step !== undefined; step = cameFrom.get(step)) route.push(step);
+        return route.reverse();
       }
       queue.push(neighbour);
     }
@@ -830,6 +834,10 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   return null;
 };`,
     hiddenTests: [
+      { call: "(() => {const names=[\"\",\"__proto__\",\"x\"];for(let mask=0;mask<512;mask++){const graph=Object.create(null),dist=names.map((_,i)=>names.map((_,j)=>i===j?0:Infinity));for(let i=0;i<3;i++){const list=[];for(let j=0;j<3;j++)if(mask&(1<<(i*3+j))){list.push(names[j]);dist[i][j]=Math.min(dist[i][j],1);}graph[names[i]]=Object.freeze(list);}Object.freeze(graph);for(let k=0;k<3;k++)for(let i=0;i<3;i++)for(let j=0;j<3;j++)dist[i][j]=Math.min(dist[i][j],dist[i][k]+dist[k][j]);for(let s=0;s<3;s++)for(let g=0;g<3;g++){const route=shortestPath(graph,names[s],names[g]),wanted=dist[s][g];if(wanted===Infinity){if(route!==null)return false;}else if(!Array.isArray(route)||route.length!==wanted+1||route[0]!==names[s]||route[route.length-1]!==names[g]||!route.slice(1).every((name,i)=>graph[route[i]].includes(name)))return false;}}return true;})()", expected: true },
+      { call: "(() => {const graph=Object.freeze(Object.assign(Object.create({constructor:[\"goal\"]}),{\"\":Object.freeze([\"constructor\"])}));if(shortestPath(graph,\"\",\"goal\")!==null)return false;const own=Object.freeze(Object.assign(Object.create(null),{\"\":Object.freeze([\"__proto__\",\"__proto__\"]),[\"__proto__\"]:Object.freeze([\"goal\"])}));const a=shortestPath(own,\"\",\"goal\"),b=shortestPath(own,\"\",\"goal\");if(!a||a.join(\"|\")!==\"|__proto__|goal\"||a===b)return false;a[0]=\"changed\";return b[0]===\"\"&&own[\"\"][0]===\"__proto__\"&&shortestPath({},\"\",\" \")===null&&shortestPath({},\"\",\"\")[0]===\"\";})()", expected: true },
+      { call: "(() => {const graph=Object.create(null);for(let i=0;i<2000;i++)graph[\"n\"+i]=Object.freeze(i<1999?[\"n\"+(i+1)]:[]);Object.freeze(graph);const out=shortestPath(graph,\"n0\",\"n1999\"),wide=Object.freeze({s:Object.freeze(Array(10000).fill(\"t\")),t:Object.freeze([])});return [out.length,out.every((v,i)=>v===\"n\"+i),shortestPath(wide,\"s\",\"t\")];})()", expected: [2000, true, ["s", "t"]] },
+
       { call: 'shortestPath({ a: ["a"] }, "a", "a")', expected: ['a'] },
       { call: 'shortestPath({ x: ["y"], y: ["z"], z: ["x"] }, "x", "z")', expected: ['x', 'y', 'z'] },
       { call: 'shortestPath({ a: ["b"] }, "b", "a")', expected: null },
@@ -842,11 +850,12 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   if (!root) return [];
   const levels = [];
   const queue = [root];
-  while (queue.length > 0) {
-    const width = queue.length;
+  let head = 0;
+  while (head < queue.length) {
+    const width = queue.length - head;
     const values = [];
     for (let taken = 0; taken < width; taken += 1) {
-      const node = queue.shift();
+      const node = queue[head++];
       values.push(node.value);
       if (node.left) queue.push(node.left);
       if (node.right) queue.push(node.right);
@@ -895,6 +904,10 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   return levels;
 };`,
     hiddenTests: [
+      { call: "(() => {const memo=[[null]],shapes=n=>{if(memo[n])return memo[n];const out=[];for(let k=0;k<n;k++)for(const a of shapes(k))for(const b of shapes(n-k-1))out.push([a,b]);return memo[n]=out;};for(let n=0;n<=5;n++)for(const shape of shapes(n)){const expected=[],make=(s,depth,path)=>{if(s===null)return null;const value=Object.freeze({path});(expected[depth]??=[]).push(value);return Object.freeze(Object.assign(Object.create(null),{value,left:make(s[0],depth+1,path+\"L\"),right:make(s[1],depth+1,path+\"R\")}));},root=make(shape,0,\"\"),actual=levelOrder(root);if(actual.length!==expected.length||!actual.every((row,d)=>row.length===expected[d].length&&row.every((v,i)=>v===expected[d][i])))return false;}return true;})()", expected: true },
+      { call: "(() => {let calls=0;const fn=()=>{calls++;},cycle={};cycle.self=cycle;const values=[fn,Symbol(\"payload\"),3n,undefined,-0,cycle];let root=null;for(let i=511;i>=0;i--)root=Object.freeze({value:values[i%6],left:root,right:null});const a=levelOrder(root),b=levelOrder(root);if(a===b||a.length!==512||!a.every((row,i)=>row!==b[i]&&row.length===1&&Object.is(row[0],values[i%6])))return false;a[0][0]=99;a.push([]);return calls===0&&b.length===512&&b[0][0]===fn&&levelOrder(null)!==levelOrder(undefined);})()", expected: true },
+      { call: "(() => {const nodes=Array.from({length:20000},(_,i)=>({value:i,left:null,right:null}));for(let i=nodes.length-1;i>=0;i--){nodes[i].left=nodes[2*i+1]??null;nodes[i].right=nodes[2*i+2]??null;Object.freeze(nodes[i]);}const out=levelOrder(nodes[0]);let offset=0;for(let depth=0;offset<20000;depth++){const width=Math.min(2**depth,20000-offset);if(out[depth].length!==width||!out[depth].every((v,i)=>v===offset+i))return false;offset+=width;}return out.length===15&&nodes[0].left===nodes[1];})()", expected: true },
+
       { call: 'levelOrder(undefined)', expected: [] },
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(1, node(2, node(4), node(5)), node(3, null, node(6)))); })()', expected: [[1], [2, 3], [4, 5, 6]] },
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(0, node(-1), node(-2))); })()', expected: [[0], [-1, -2]] },
