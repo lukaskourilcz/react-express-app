@@ -1123,7 +1123,7 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
     tier: 2,
     focus: ['async-await'],
     title: 'Await two values',
-    prompt: 'Write an `async` function `addBoth(first, second)`, where both arguments are promises of numbers. `await` each one and return their sum, so the caller gets a promise of the total. `addBoth(Promise.resolve(2), Promise.resolve(3))` resolves to 5. If either promise rejects, the promise `addBoth` returns rejects with the same error.',
+    prompt: "Write an `async` function `addBoth(first, second)`, where both arguments are promises of numbers. `await` each one and return their sum, so the caller gets a promise of the total. `addBoth(Promise.resolve(2), Promise.resolve(3))` resolves to 5. If either promise rejects, the promise `addBoth` returns rejects with the same error. Both inputs are ordinary native Promises with standard methods, fulfilling with finite Numbers of absolute value at most 10000000000000000, including -0. Await first before awaiting second: if both reject, the first rejection wins even if the second rejects sooner. A rejection of second cannot settle the result while first is still pending. This ordered exercise differs from fail-fast Promise.all aggregation. Forward the exact original rejection reason/reference, which need not be an Error. Use ordinary Number addition without rounding and leave user-visible input properties unchanged. Return a new native Promise immediately. Producers may already be running; ordered awaits do not serialize their start. The caller/checks handle any early rejection of second until it is awaited. Target: O(1) time and retained wrapper state, excluding waiting, producer work and host scheduling.",
     starter: `const addBoth = async (first, second) => {
 
 };
@@ -1159,7 +1159,7 @@ addBoth(Promise.resolve(2), Promise.resolve(3)).then(total => console.log(total)
     tier: 2,
     focus: ['async-await'],
     title: 'Try, await, fall back',
-    prompt: 'Write an `async` function `loadOr(load, fallback)`. Call `load()`, which returns a promise, and `await` it inside `try`. Return what it resolves to, or return `fallback` from the `catch` when it rejects. `load` may also throw before it returns a promise, and that counts as a failure too. A resolved `0` or `null` is a success and is kept.',
+    prompt: "Write an `async` function `loadOr(load, fallback)`. Call `load()`, which returns a promise, and `await` it inside `try`. Return what it resolves to, or return `fallback` from the `catch` when it rejects. `load` may also throw before it returns a promise, and that counts as a failure too. A resolved `0` or `null` is a success and is kept. Call the supplied ordinary function exactly once with no arguments; it returns an ordinary native Promise or throws synchronously. Preserve exact successful nonthenable values/references, including undefined, false, empty text, functions, Symbols, NaN and -0. fallback is an opaque nonthenable value; return that exact value after any throw/rejection, without invoking it or cloning it. Return a fresh native Promise immediately, on success or failure. Target: O(1) time and wrapper state, excluding load work, waiting and host scheduling.",
     starter: `const loadOr = async (load, fallback) => {
 
 };

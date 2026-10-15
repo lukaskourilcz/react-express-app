@@ -754,6 +754,11 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const withTimeout = (promise, ms, fallback) =>
   Promise.race([promise, new Promise(resolve => setTimeout(resolve, ms, fallback))]);`,
     hiddenTests: [
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x');const kept=[];for(const value of [obj,fn,sym,NaN,-0])kept.push(Object.is(await withTimeout(Promise.resolve(value),20,'unused'),value));const reason=Object.freeze({code:1}),bad=Promise.reject(reason);bad.catch(()=>{});return [kept,await withTimeout(bad,20,0).then(()=>false,error=>error===reason)];})()", expected: [[true, true, true, true, true], true], async: true },
+      { call: "(async()=>{let calls=0;const fn=()=>{calls++;},sym=Symbol('fallback'),obj=Object.freeze({});const out=[];for(const fallback of [fn,sym,obj,undefined,-0])out.push(Object.is(await withTimeout(new Promise(()=>{}),0,fallback),fallback));return [out,calls];})()", expected: [[true, true, true, true, true], 0], async: true },
+      { call: "(async()=>{const input=Promise.resolve('ready'),output=withTimeout(input,0,'late');let settled=false;output.then(()=>{settled=true;});const immediate=settled;return [output instanceof Promise,output!==input,immediate,await output];})()", expected: [true, true, false, "ready"], async: true },
+      { call: "(async()=>{let complete=false;const input=new Promise(done=>setTimeout(()=>{complete=true;done('late');},30));const output=withTimeout(input,0,'fallback');const first=await output;await new Promise(done=>setTimeout(done,50));return [first,await output,complete];})()", expected: ["fallback", "fallback", true], async: true },
+
       { call: 'withTimeout(new Promise(() => {}), 10, 0)', expected: 0, async: true },
       { call: 'withTimeout(Promise.resolve(0), 20, 99)', expected: 0, async: true },
       { call: '(() => { const late = new Promise((resolve, reject) => setTimeout(() => reject(new Error("late")), 50)); late.catch(() => {}); return withTimeout(late, 10, "fallback"); })()', expected: 'fallback', async: true },
@@ -762,28 +767,16 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 
   /* ── async/await ──────────────────────────────────────────────────── */
   'js-easy3-cache-or-load': {
-    solution: `const getValue = async (cache, key, load) => {
-  // async wraps this plain value in a promise as well.
-  if (key in cache) return cache[key];
-  const value = await load(key);
-  cache[key] = value;
-  return value;
-};`,
-    junior: `const getValue = async (cache, key, load) => {
-  const isCached = key in cache;
-  if (isCached) {
-    const cached = cache[key];
-    return cached;
-  }
-  const loaded = await load(key);
-  cache[key] = loaded;
-  return loaded;
-};`,
-    senior: `const getValue = async (cache, key, load) => {
-  if (Object.hasOwn(cache, key)) return cache[key];
-  return (cache[key] = await load(key));
-};`,
+    solution: "const getValue = async (cache, key, load) => {\n  if (Object.hasOwn(cache, key)) return cache[key];\n  const value = await load(key);\n  // Defining a data property also handles a literal __proto__ key safely.\n  Object.defineProperty(cache, key, { value, writable: true, enumerable: true, configurable: true });\n  return value;\n};",
+    junior: "const getValue = async (cache, key, load) => {\n  const isCached = Object.hasOwn(cache, key);\n  if (isCached) return cache[key];\n  const loaded = await load(key);\n  const descriptor = { value: loaded, writable: true, enumerable: true, configurable: true };\n  Object.defineProperty(cache, key, descriptor);\n  return loaded;\n};",
+    senior: "const getValue = async (cache, key, load) => {\n  if (Object.hasOwn(cache, key)) return cache[key];\n  const value = await load(key);\n  Object.defineProperty(cache, key, { value, writable: true, enumerable: true, configurable: true });\n  return value;\n};",
     hiddenTests: [
+      { call: "(async()=>{const key='x'.repeat(1000),cache=Object.create(null),value=Symbol('loaded');const result=await getValue(cache,key,actual=>Promise.resolve(actual===key?value:null));return [result===value,cache[key]===value,Object.keys(cache).length];})()", expected: [true, true, 1], async: true },
+
+      { call: "(async()=>{const out=[];for(const key of ['__proto__','constructor','toString','']){const cache={},prototype=Object.getPrototypeOf(cache),value=Object.freeze({key});let calls=0;const result=await getValue(cache,key,function(actual){calls++;return Promise.resolve(actual===key&&arguments.length===1?value:null);});const descriptor=Object.getOwnPropertyDescriptor(cache,key);out.push(result===value&&calls===1&&Object.getPrototypeOf(cache)===prototype&&descriptor.value===value&&descriptor.writable&&descriptor.enumerable&&descriptor.configurable);}return out;})()", expected: [true, true, true, true], async: true },
+      { call: "(async()=>{const cache=Object.create(null),fn=()=>1,sym=Symbol('x');const out=[];for(const [index,value] of [undefined,false,'',NaN,-0,fn,sym].entries()){const key='k'+index;cache[key]=value;out.push(Object.is(await getValue(cache,key,()=>{throw 'must not load';}),value));}return out;})()", expected: [true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),cache={kept:1};const a=getValue(cache,'failed',()=>{throw reason;});const b=getValue(cache,'rejected',()=>Promise.reject(reason));return [a instanceof Promise,await a.then(()=>false,error=>error===reason),await b.then(()=>false,error=>error===reason),Object.keys(cache).join(',')];})()", expected: [true, true, true, "kept"], async: true },
+
       { call: '(() => { const cache = {}; return getValue(cache, "k", () => Promise.reject(new Error("offline"))).catch(error => [error.message, "k" in cache]); })()', expected: ['offline', false], async: true },
       { call: 'getValue({}, "n", () => Promise.resolve(null))', expected: null, async: true },
       { call: 'getValue({ a: "cached" }, "a", () => Promise.resolve("loaded"))', expected: 'cached', async: true },
@@ -809,6 +802,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return { name, postCount };
 };`,
     hiddenTests: [
+      { call: "(async()=>{const user=Object.freeze({id:0,name:'\u00e9\ud83e\udd88'}),posts=Object.freeze(new Array(1000));let userCalls=0,postsCalls=0,argsOk=true,release;const result=loadProfile(function(){userCalls++;argsOk=argsOk&&arguments.length===0;return new Promise(done=>{release=done;});},function(id){postsCalls++;argsOk=argsOk&&arguments.length===1&&id===0;return Promise.resolve(posts);});const early=postsCalls;release(user);const a=await result,b=await loadProfile(()=>Promise.resolve(user),()=>Promise.resolve([]));return [result instanceof Promise,early,userCalls,postsCalls,argsOk,a.name,a.postCount,a!==b,Object.keys(a).sort().join(',')];})()", expected: [true, 0, 1, 1, true, "\u00e9\ud83e\udd88", 1000, true, "name,postCount"], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),out=[];let posts=0;out.push(await loadProfile(()=>{throw reason;},()=>{posts++;return Promise.resolve([]);}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.reject(reason),()=>{posts++;return Promise.resolve([]);}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.resolve({id:1,name:''}),()=>{throw reason;}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.resolve({id:1,name:''}),()=>Promise.reject(reason)).then(()=>false,error=>error===reason));return [out,posts];})()", expected: [[true, true, true, true], 0], async: true },
+
       { call: 'loadProfile(() => Promise.resolve({ id: 2, name: "Bo" }), () => Promise.reject(new Error("posts down"))).catch(error => error.message)', expected: 'posts down', async: true },
       { call: '(() => { let asked = 0; return loadProfile(() => Promise.reject(new Error("x")), () => { asked += 1; return Promise.resolve([]); }).catch(() => asked); })()', expected: 0, async: true },
       { call: 'loadProfile(() => Promise.resolve({ id: 9, name: "Nia" }), id => Promise.resolve(Array(id).fill("post")))', expected: { name: 'Nia', postCount: 9 }, async: true },

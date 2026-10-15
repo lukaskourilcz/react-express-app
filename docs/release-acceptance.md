@@ -3801,3 +3801,104 @@ with requests intercepted locally; it creates no real account/progress/name.
 Final CI-fixture browser suite passes 23/23 checks; responsive validation passes all 264 probes (320–1440 px), with zero issues and zero unprobed routes. Authenticated
 production Premium acceptance and physical devices remain unverified. This is
 local evidence until the new PR's required checks, merge and exact release.
+
+## Five-item continuation b044 — 15 October 2026
+
+Five Promise tasks now cover exact timeout values/reasons, a stable fallback,
+zero-delay scheduling, ordered prefix rendering, callback-throw rejection,
+sparse/dense aggregation snapshots and first-then-second await semantics.
+Clone Promise.all uses the runtime restriction committed separately under #408;
+its reference boards now fill holes and use captured membership. The clone's
+filled-skeleton fixture was updated too: the initial canonical test caught its
+old algorithm and then an omitted inline scaffold comment. Final checks below
+use the corrected fixture, not those failed attempts. A partial authoring pass
+stopped before completing every source file and is excluded from final evidence.
+
+Final five-item worker evidence is 31/31 selected verdicts (20 valid forms,
+five starters, six wrongs), versus 25/31 labels matched by the original baseline.
+All twenty target/base-25-XP checks pass; unknown complexity is unpenalized.
+Per-item model scores, original-hash comparisons and separate final reading are
+recorded in review-2026-10-15-b044.jsonl. All 250 current coding hashes match;
+475/725 coding still require review, and native coverage remains 263/263.
+
+Curation/index generation, final canonical coding (including reverse hidden
+order, native Run and the filled skeleton), API/script types, launch, build,
+263 native bindings, both production dependency audits (zero vulnerabilities),
+copy sweep (zero findings) and diff checks pass. Existing IDs/history and archived
+Czech are unchanged. PR #409 is frozen separately with b043/runtime #408; b044 is
+not yet released. No live-account, authenticated Premium, independent/human or
+complete-catalogue acceptance claim. Stateful factory complexity scope remains
+open under #391.
+
+## Five-item continuation b045 — 15 October 2026
+
+Five cache/request/await tasks now define own-key cache semantics and safe
+literal __proto__ storage, exact opaque values/reasons, correct request/json
+arity and receiver, HTTP status versus parsing errors, dependency ordering and
+fresh POST options/headers. All boards align with the authored async/await
+lessons. The null JSON mock uses HTTP 200; a separate 204-like parsing failure
+is forwarded. Bounds exercised include a 1000-unit cache key, a frozen sparse
+1000-slot posts array and a 10000-unit serialized body. No real network is used.
+
+Final evidence is 30/30 selected current-hash worker verdicts (20 valid forms,
+five starters, five wrongs), versus the original baseline's 25/30 labels. All
+twenty authored-target/base-25-XP checks pass, with unknown estimates unpenalized.
+Individual scores and final reading are in review-2026-10-15-b045.jsonl. All 255
+current coding hashes match; 470 coding items remain, and native is 263/263.
+Curation/index generation, canonical coding including reverse hidden/native Run,
+API/script types, launch, build, native bindings, both production dependency
+audits (zero vulnerabilities), copy sweep (zero findings) and diff checks pass.
+
+B044–b045 are not yet released; frozen PR #409 separately contains b043 and
+runtime #408, with exact READY preview and eleven general guest checks. Required
+CI/production remain pending. No live-account, authenticated Premium,
+independent/human or complete-catalogue acceptance claim. Owner holds remain.
+
+## Factory workload scope correction (#410) — 15 October 2026
+
+Before correction, actual probes showed O(1) for two limiter boards, one curry
+board and all three latest-only boards, comparing cheap construction with a
+whole-sequence/per-gathering goal or deferred work. All nine actual boards now
+return null time/unknown assessment with the authored target preserved and base
+25 XP. The banner's existing null-time rule hides the entire complexity row.
+
+Bounded AST value reachability follows direct closures, local bindings and
+assignments, conditional returns, methods/accessors, callable containers and
+executed named helpers. A 500-link alias case stays unknown without copying a
+growing Set at every step. Dynamic value flow is still a manual-review limit;
+this is not general interprocedural/lifetime analysis or a benchmark. Eager map
+analysis remains O(n), a reliably quadratic eager solution still earns 15 XP,
+and an uncalled local factory does not replace its caller's eager workload.
+
+Final focused complexity contracts, API/script types, complete updated
+grading/Learn integrity, launch, build, native 263 bindings, both production
+dependency audits (zero vulnerabilities) and diff checks pass. All 1004 emitted
+HTML/JS/CSS files are byte-identical before/after this server-only correction.
+It adds no unique content review. B044–b045 separately pass all 80 probes on their ten actual task routes
+at 320–1440 px, with zero issues and zero unprobed routes.
+No schema/RLS, activation, access, reward ordering, handler-count or dependency
+change. Existing twelve handlers and owner holds remain. Required PR checks,
+merge and exact production are pending; #410 remains open.
+
+## PR #409 exact production — 15 October 2026
+
+PR #409 passed required run 38717316234 at exact 57dff6387d0a3f6b521afe1c9483bcfe3148d604 (verify 30m05s; SQL 41s), merged at da47f1957a6a012b70a085e59e42f8ef5ab51168. READY production dpl_BAbKFtd8CPMbsnunkdDXyS7WtQ3J matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. Three actual served Run-worker contracts block a captured native Promise.all alias, accept manual aggregation under the restriction and retain native aggregation for another task. Those worker checks make no server submission. Shipped coverage is 245/725 coding and 263/263 native. This does not establish authenticated server-side Premium, physical-device, independent/human or complete-catalogue acceptance.
+
+The runtime #408 implementation is complete; its separate issue can close with this evidence. B044–b045 and scope correction #410 remain in the follow-up branch. The ten-task responsive sweep passes 80/80 probes, zero issues/unprobed, and the 410 server-only change keeps all 1004 emitted UI files byte-identical.
+
+## Scope correction: containers filled later — 15 October 2026
+
+A further regression reproduced O(1) when a factory first created an empty
+object and then assigned its callable member. Bounded possible-alias/container
+tracking now covers property/element writes and common container mutators too.
+Fourteen generic deferred source shapes, a 500-link alias chain and all nine
+actual limiter/curry/latest-only boards report unknown/25 XP; eager linear and
+reliably quadratic checks retain their 25/15 XP behavior. Dynamic flow still
+needs manual review and no universal interprocedural-analysis claim is made.
+
+Final focused contracts, API/script types, complete grading/Learn integrity,
+launch/build, native 263, both production dependency audits (zero vulnerabilities)
+and diff checks pass. All forty b044–b045 target/base-25-XP checks pass again
+against the final inspector. All 1004 emitted UI files remain byte-identical;
+the existing 80-probe ten-task matrix therefore still applies. No new unique
+review or live user-data action. #410 awaits checked release.

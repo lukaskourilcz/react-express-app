@@ -826,8 +826,13 @@ const toPublicJson = user => JSON.stringify(user, PUBLIC_FIELDS);`,
   return response.json();
 };`,
     hiddenTests: [
+      { call: "(async()=>{const body=Object.freeze({a:1}),response={ok:true,status:200,json:function(){return Promise.resolve(this===response&&arguments.length===0?body:null);}};let calls=0;const result=await getJson(function(url){calls++;return Promise.resolve(arguments.length===1&&url==='/a?b=1'?response:null);},'/a?b=1');return [result===body,calls];})()", expected: [true, 1], async: true },
+      { call: "(async()=>{const reasons=[Object.freeze({}),Symbol('failure')],out=[];for(const reason of reasons){out.push(await getJson(()=>{throw reason;},'/x').then(()=>false,error=>error===reason));out.push(await getJson(()=>Promise.reject(reason),'/x').then(()=>false,error=>error===reason));out.push(await getJson(()=>Promise.resolve({ok:true,status:200,json(){throw reason;}}),'/x').then(()=>false,error=>error===reason));out.push(await getJson(()=>Promise.resolve({ok:true,status:200,json(){return Promise.reject(reason);}}),'/x').then(()=>false,error=>error===reason));}return out;})()", expected: [true, true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{const error=new SyntaxError('empty body');return getJson(()=>Promise.resolve({ok:true,status:204,json:()=>Promise.reject(error)}),'/empty').then(()=>false,reason=>reason===error);})()", expected: true, async: true },
+      { call: "(async()=>{const out=[];for(const value of [null,false,0,''])out.push(Object.is(await getJson(()=>Promise.resolve({ok:true,status:200,json:()=>Promise.resolve(value)}),'/v'),value));let parsed=0;const error=await getJson(()=>Promise.resolve({ok:false,status:503,json(){parsed++;throw 'wrong';}}),'/bad').catch(error=>error);return [out,parsed,error instanceof Error,error.message];})()", expected: [[true, true, true, true], 0, true, "Request failed: 503"], async: true },
+
       { call: 'getJson(() => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: "no" }) }), "/me").catch(error => error.message)', expected: 'Request failed: 401', async: true },
-      { call: 'getJson(() => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve(null) }), "/empty")', expected: null, async: true },
+      { call: 'getJson(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(null) }), "/empty")', expected: null, async: true },
       { call: 'getJson(() => Promise.resolve({ ok: true, status: 200, json: () => new Promise(resolve => setTimeout(() => resolve([1, 2]), 20)) }), "/slow")', expected: [1, 2], async: true },
       { call: '(() => { let parsed = false; return getJson(() => Promise.resolve({ ok: false, status: 404, json: () => { parsed = true; return Promise.resolve({}); } }), "/x").catch(() => parsed); })()', expected: false, async: true },
     ],
@@ -849,13 +854,14 @@ const toPublicJson = user => JSON.stringify(user, PUBLIC_FIELDS);`,
   const response = await request(url, options);
   return response.status;
 }`,
-    senior: `const JSON_HEADERS = { "Content-Type": "application/json" };
-
-const postJson = async (request, url, data) => {
-  const { status } = await request(url, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(data) });
-  return status;
-};`,
+    senior: "const postJson = async (request, url, data) => {\n  const headers = { \"Content-Type\": \"application/json\" };\n  const { status } = await request(url, { method: \"POST\", headers, body: JSON.stringify(data) });\n  return status;\n};",
     hiddenTests: [
+      { call: "(async()=>{let length;const status=await postJson((url,options)=>{length=options.body.length;return Promise.resolve({status:299});},'/max','a'.repeat(9998));return [length,status];})()", expected: [10000, 299], async: true },
+
+      { call: "(async()=>{const seen=[];const request=(url,options)=>{seen.push(options);options.headers['Content-Type']='changed';return Promise.resolve({status:201});};await postJson(request,'/x',{});await postJson((url,options)=>{seen.push(options);return Promise.resolve({status:202});},'/x',{});return [seen[0]!==seen[1],seen[0].headers!==seen[1].headers,seen[1].headers['Content-Type']];})()", expected: [true, true, "application/json"], async: true },
+      { call: "(async()=>{const data=Object.freeze({x:Object.freeze([1,null,'\u00e9\ud83e\udd88']),z:false}),expected=JSON.stringify(data);let ok=false;const result=postJson(function(url,options){ok=arguments.length===2&&url==='/a?b=1'&&Object.getPrototypeOf(options)===Object.prototype&&Object.keys(options).sort().join(',')==='body,headers,method'&&Object.keys(options.headers).join(',')==='Content-Type'&&options.headers['Content-Type']==='application/json'&&options.body===expected;return Promise.resolve({status:599,get ok(){throw 'do not inspect';},json(){throw 'do not parse';}});},'/a?b=1',data);return [result instanceof Promise,await result,ok,JSON.stringify(data)===expected];})()", expected: [true, 599, true, true], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),out=[];out.push(await postJson(()=>{throw reason;},'/x',null).then(()=>false,error=>error===reason));out.push(await postJson(()=>Promise.reject(reason),'/x',null).then(()=>false,error=>error===reason));const data=Object.create(null);data.__proto__='literal';let body;await postJson((url,options)=>{body=options.body;return Promise.resolve({status:200});},'/x',data);return [out,body];})()", expected: [[true, true], "{\"__proto__\":\"literal\"}"], async: true },
+
       { call: '(() => { let body = null; return postJson((url, options) => { body = options.body; return Promise.resolve({ status: 202 }); }, "/q", { a: [1, 2], b: null }).then(status => [status, body]); })()', expected: [202, '{"a":[1,2],"b":null}'], async: true },
       { call: '(() => { let headers = null; return postJson((url, options) => { headers = options.headers; return Promise.resolve({ status: 200 }); }, "/h", {}).then(() => headers); })()', expected: { 'Content-Type': 'application/json' }, async: true },
       { call: 'postJson(() => new Promise(resolve => setTimeout(() => resolve({ status: 503 }), 20)), "/slow", {})', expected: 503, async: true },

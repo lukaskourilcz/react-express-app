@@ -412,79 +412,17 @@ const readLog = (text, minLevel) => {
   },
   /* ── async ────────────────────────────────────────────────────────── */
   'js-mh2-in-order': {
-    solution: `const showInOrder = (promises, show) =>
-  new Promise(resolve => {
-    const results = []; // results[i] is filled once promise i has settled
-    let next = 0; // the lowest index not shown yet
-    const flush = () => {
-      // One arrival can release several results that were waiting behind it.
-      while (next < promises.length && results[next]) {
-        show(results[next], next);
-        next++;
-      }
-      if (next === promises.length) resolve(next);
-    };
-    if (promises.length === 0) resolve(0);
-    promises.forEach((promise, index) => {
-      // Stored as an object, even a value of undefined fills its slot.
-      Promise.resolve(promise).then(
-        value => {
-          results[index] = { ok: true, value };
-          flush();
-        },
-        error => {
-          results[index] = { ok: false, error };
-          flush();
-        },
-      );
-    });
-  });`,
-    junior: `const showInOrder = (promises, show) => {
-  return new Promise(resolve => {
-    const total = promises.length;
-    const settled = [];
-    for (let i = 0; i < total; i++) {
-      settled.push(null);
-    }
-    if (total === 0) {
-      resolve(0);
-      return;
-    }
-    let nextToShow = 0;
-    const showReady = () => {
-      while (nextToShow < total && settled[nextToShow] !== null) {
-        show(settled[nextToShow], nextToShow);
-        nextToShow = nextToShow + 1;
-      }
-      if (nextToShow === total) {
-        resolve(total);
-      }
-    };
-    promises.forEach((promise, index) => {
-      promise
-        .then(value => {
-          settled[index] = { ok: true, value: value };
-        })
-        .catch(error => {
-          settled[index] = { ok: false, error: error };
-        })
-        .then(() => {
-          showReady();
-        });
-    });
-  });
-};`,
-    senior: `const showInOrder = async (promises, show) => {
-  // Handlers go on every promise first, so no rejection sits unhandled
-  // while an earlier promise is still being awaited.
-  const outcomes = promises.map(promise =>
-    Promise.resolve(promise).then(value => ({ ok: true, value }), error => ({ ok: false, error })),
-  );
-  // Awaiting in index order shows each result once it and every earlier one are in.
-  for (const [index, outcome] of outcomes.entries()) show(await outcome, index);
-  return outcomes.length;
-};`,
+    solution: "const showInOrder = (promises, show) => {\n  const total = promises.length;\n  return new Promise((resolve, reject) => {\n    const results = new Array(total);\n    let next = 0;\n    let failed = false;\n    const flush = () => {\n      if (failed) return;\n      try {\n        while (next < total && results[next]) {\n          const index = next++;\n          show(results[index], index);\n        }\n        if (next === total) resolve(total);\n      } catch (error) {\n        failed = true;\n        reject(error);\n      }\n    };\n    promises.forEach((promise, index) => {\n      promise.then(value => {\n        results[index] = { ok: true, value };\n        flush();\n      }, error => {\n        results[index] = { ok: false, error };\n        flush();\n      });\n    });\n    if (total === 0) resolve(0);\n  });\n};",
+    junior: "const showInOrder = (promises, show) => {\n  const total = promises.length;\n  return new Promise((resolve, reject) => {\n    const settled = new Array(total);\n    let nextToShow = 0;\n    let failed = false;\n    const flush = () => {\n      if (failed) return;\n      try {\n        while (nextToShow < total && settled[nextToShow]) {\n          const index = nextToShow++;\n          show(settled[index], index);\n        }\n        if (nextToShow === total) resolve(total);\n      } catch (error) {\n        failed = true;\n        reject(error);\n      }\n    };\n    promises.forEach((promise, index) => {\n      promise.then(value => {\n        settled[index] = { ok: true, value };\n        flush();\n      }, error => {\n        settled[index] = { ok: false, error };\n        flush();\n      });\n    });\n    if (total === 0) resolve(0);\n  });\n};",
+    senior: "const showInOrder = (promises, show) => {\n  const total = promises.length;\n  return new Promise((resolve, reject) => {\n    const results = [];\n    let next = 0;\n    let failed = false;\n    const flush = () => {\n      if (failed) return;\n      try {\n        while (next < total && results[next]) {\n          const index = next++;\n          show(results[index], index);\n        }\n        if (next === total) resolve(total);\n      } catch (error) {\n        failed = true;\n        reject(error);\n      }\n    };\n    promises.forEach((promise, index) => {\n      promise.then(value => {\n        results[index] = { ok: true, value };\n        flush();\n      }, error => {\n        results[index] = { ok: false, error };\n        flush();\n      });\n    });\n    if (total === 0) resolve(0);\n  });\n};",
     hiddenTests: [
+      { call: "(async()=>{const seen=[],nested=[];let inner;const first=showInOrder([Promise.resolve(1),Promise.resolve(2)],(result,index)=>{seen.push(result.value);if(index===0)inner=showInOrder([Promise.resolve(3)],value=>nested.push(value.value));});const second=showInOrder([],()=>{throw 'empty';});const counts=[await first,await second,await inner];return [counts,seen,nested];})()", expected: [[2, 0, 1], [1, 2], [3]], async: true },
+
+      { call: "(async()=>{let release;const inputs=[new Promise(done=>{release=done;}),Promise.resolve(2)],seen=[];const output=showInOrder(inputs,(result,index)=>seen.push([index,result.value]));inputs.length=0;release(1);return Promise.race([output.then(count=>[count,seen]),new Promise(done=>setTimeout(()=>done('pending'),100))]);})()", expected: [2, [[0, 1], [1, 2]]], async: true },
+      { call: "(async()=>{const value=Object.freeze({}),reason=Symbol('reason'),bad=Promise.reject(reason);bad.catch(()=>{});const seen=[];const output=showInOrder(Object.freeze([Promise.resolve(value),bad,Promise.resolve(undefined)]),function(result,index){seen.push([arguments.length,index,result.ok,result.ok?result.value===value||index===2&&result.value===undefined:result.error===reason,Object.keys(result).sort().join(',')]);return 'ignored';});return [output instanceof Promise,await output,seen];})()", expected: [true, 3, [[2, 0, true, true, "ok,value"], [2, 1, false, true, "error,ok"], [2, 2, true, true, "ok,value"]]], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),seen=[];const output=showInOrder([Promise.resolve(1),Promise.resolve(2),new Promise(()=>{})],(result,index)=>{seen.push(index);throw reason;});const rejected=await Promise.race([output.then(()=>false,error=>error===reason),new Promise(done=>setTimeout(()=>done(false),100))]);await Promise.resolve();return [rejected,seen];})()", expected: [true, [0]], async: true },
+      { call: "(async()=>{let count=0,ordered=true;const total=await showInOrder(Object.freeze(Array.from({length:1000},(_,i)=>Promise.resolve(i))),(result,index)=>{ordered=ordered&&index===count&&result.value===count;count++;});return [total,count,ordered];})()", expected: [1000, 1000, true], async: true },
+
       {
         call: `(async () => { ${LATER} const seen = []; await showInOrder([later(20, 0), later(60, 1), later(10, 2), later(40, 3), later(5, 4), later(30, 5)], (result, index) => seen.push([index, result.value])); return seen; })()`,
         expected: [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]],

@@ -1142,7 +1142,7 @@ console.log(toPublicJson({ id: 7, name: "Ada", email: "ada@example.com", avatar:
     tier: 2,
     focus: ['fetch'],
     title: 'A 404 is still a response',
-    prompt: '`fetch` rejects only when the request cannot be made at all. A 404 or a 500 still resolves to a response, with `ok` set to `false`. Write an `async` function `getJson(request, url)`, where `request` works like `fetch`: call it with the URL and await the response. When `response.ok` is `false`, throw an `Error` whose message is `"Request failed: "` followed by `response.status`. Otherwise return the body from `await response.json()`.',
+    prompt: "`fetch` resolves for HTTP error statuses such as 404 or 500, with `ok` set to `false`. Network failures, aborts and malformed requests can reject instead. Write an `async` function `getJson(request, url)`, where `request` works like `fetch`: call it with the URL and await the response. When `response.ok` is `false`, throw an `Error` whose message is `\"Request failed: \"` followed by `response.status`. Otherwise return the body from `await response.json()`. request is supplied to the function; do not use the global fetch or perform a real network request. url is an unchanged string up to 2000 UTF-16 units. Call request exactly once with only that URL. Its ordinary native Promise fulfills with a stable response-like record: ok is a boolean and status is an integer from 100 through 599. Call response.json exactly once with no arguments and with response as its receiver, only when ok is true. Preserve the exact JSON body value/reference, including null, false, 0 and empty text. Forward the exact reason of a synchronous request/json throw or rejected request/json Promise; do not wrap it. A successful HTTP status does not guarantee valid JSON: an empty 204 body may fail parsing. Leave the response and returned body unchanged and return a new native Promise immediately. Target: O(1) time and wrapper state, excluding request work, JSON parsing, waiting and host scheduling.",
     starter: `const getJson = async (request, url) => {
 
 };
@@ -1182,7 +1182,7 @@ getJson(notFound, "/missing").then(data => console.log("data", data), error => c
     tier: 2,
     focus: ['fetch', 'json'],
     title: 'Send JSON with a POST',
-    prompt: 'Write an `async` function `postJson(request, url, data)`, where `request` works like `fetch`. Call it with the URL and an options object with these three properties and no others: `method: "POST"`, `headers: { "Content-Type": "application/json" }`, and `body`, which is `data` turned into JSON text with `JSON.stringify`. Await the response and return its `status`, whatever it is.',
+    prompt: "Write an `async` function `postJson(request, url, data)`, where `request` works like `fetch`. Call it with the URL and an options object with these three properties and no others: `method: \"POST\"`, `headers: { \"Content-Type\": \"application/json\" }`, and `body`, which is `data` turned into JSON text with `JSON.stringify`. Await the response and return its `status`, whatever it is. request is supplied; do not use global fetch or make a real network request. url is an unchanged string up to 2000 UTF-16 units. data is a read-only JSON-compatible primitive, dense array or plain/null-prototype record of ordinary data properties, without cycles, accessors, custom toJSON or non-finite Numbers; at most 10000 serialized UTF-16 units and nesting depth 20. Serialize with standard JSON.stringify without changing data. Call request exactly once with exactly two arguments. Each invocation gets fresh plain options and headers objects, containing only the specified own properties; a request may retain or modify them without affecting another call. Its ordinary native Promise fulfills with status, an integer from 100 through 599: return it without checking ok or reading/parsing a body. Forward the exact original reason of synchronous request throws or request rejections. Return a new native Promise immediately. Target: O(n) time and retained body/options space, where n is 1 + the serialized JSON text length, excluding request work, waiting and host scheduling.",
     starter: `const postJson = async (request, url, data) => {
 
 };
@@ -1199,7 +1199,7 @@ postJson(logRequest, "/api/notes", { text: "hi" }).then(status => console.log(st
   });
   return response.status;
 };`,
-    hints: ['A request body travels as text, so an object has to go through `JSON.stringify` first. The `Content-Type` header tells the server how to read that text.'],
+    hints: ['For this JSON request, `JSON.stringify` produces the body text. The `Content-Type` header tells the server how to read it.'],
     approach: [
       'Build the options: `method`, `headers` and `body`.',
       'Set `body` to `JSON.stringify(data)`.',

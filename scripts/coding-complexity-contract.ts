@@ -81,6 +81,46 @@ export function complexityContracts() {
   assert.equal(check('const solve = value => value.name;').time, 'O(1)', 'field access has no output construction');
   assert.equal(check('const solve = value => "a" + "b";').time, 'O(1)', 'fixed literals remain bounded');
   assert.equal(check('const solve = value => `prefix${"fixed"}`;').time, 'O(1)', 'fixed template interpolation is bounded');
+  // The tested factory's setup cost cannot stand in for later calls. These
+  // pairs construct just as cheaply but their returned workloads differ.
+  const factoryTask = { ...task, tests: [{ call: '(() => { const run = solve(); return run([1,2,3]); })()', expected: 6 }] };
+  for (const code of [
+    'const solve = () => xs => xs.map(x => x);',
+    'const solve = () => xs => xs.map(x => xs.map(y => x+y));',
+    'function solve() { const work = xs => xs.map(x => x); const alias = work; return alias; }',
+    'function solve() { function work(xs) { return xs.map(x => x); } return { work }; }',
+    'function solve() { let work; work = xs => xs.map(x => x); return work; }',
+    'const solve = () => ({ work(xs) { return xs.map(x => x); } });',
+    'const solve = () => ({ get work() { return [1,2,3].map(x => x); } });',
+    'const solve = () => [xs => xs.map(x => x)];',
+    'const solve = () => true ? (xs => xs.map(x => x)) : (xs => xs);',
+    'const solve = () => { const work = xs => xs; return ({ work } as const); };',
+    'function helper() { return xs => xs.map(x => x); } const solve = () => helper();',
+    'function solve() { const box = {}; box.work = xs => xs.map(x => x); return box; }',
+    'function solve() { const box = {}; const alias = box; alias.work = xs => xs.map(x => xs.map(y => x+y)); return box; }',
+    'function solve() { const list = []; list.push(xs => xs.map(x => x)); return list; }',
+
+  ]) {
+    const scoped = assessComplexity(factoryTask, code);
+    assert.equal(scoped.time, null, code);
+    assert.equal(scoped.assessment, 'unknown', code);
+    assert.equal(codingPassXp(scoped), 25, code);
+    assert.equal(scoped.guidance.targetTime, 'O(n)', 'an unavailable estimate keeps the authored target');
+  }
+  const aliases = 'const a0 = xs => xs.map(x => x);' + Array.from({ length: 500 }, (_, i) => `const a${i + 1} = a${i};`).join('');
+  assert.equal(assessComplexity(factoryTask, `function solve() { ${aliases} return a500; }`).assessment, 'unknown', 'a bounded long alias chain stays unavailable');
+  assert.equal(check('function solve(xs) { function unused() { return () => xs.length; } return xs.length; }').time, 'O(1)', 'an uncalled local factory does not replace the eager entry workload');
+  assert.equal(check('const solve = xs => xs.map(x => x * 2);').time, 'O(n)', 'an eager callback is not an escaping function');
+  assert.equal(codingPassXp(nested), 15, 'reliably quadratic eager work still earns 15 XP');
+  for (const id of ['js-mh-rate-limit', 'js-mh-curry', 'js-mh-latest-only']) {
+    const authored = codingTaskForHistory(id)!;
+    for (const variant of ['solution', 'junior', 'senior'] as const) {
+      const scoped = assessComplexity(authored, solutionFor(id)![variant]!);
+      assert.equal(scoped.time, null, id + '/' + variant);
+      assert.equal(scoped.assessment, 'unknown', id + '/' + variant);
+      assert.equal(codingPassXp(scoped), 25, id + '/' + variant);
+    }
+  }
   const palindrome = codingTaskForHistory('alg-valid-palindrome')!;
   const report = assessComplexity(palindrome, solutionFor(palindrome.id)!.solution);
   assert.equal(report.guidance.targetTime, 'O(n)');
@@ -88,5 +128,5 @@ export function complexityContracts() {
   assert.equal(report.time, 'O(n)', JSON.stringify(report));
   assert.equal(report.assessment, 'within-target');
   assert.equal(assessComplexity({ ...task, track: 'react' }, 'const App = () => null').assessment, 'unknown');
-  console.log('Complexity contracts passed: scans, nesting, fixed bounds, sorting, logarithmic loops, recursion, unresolved calls and palindrome.');
+  console.log('Complexity contracts passed: scans, nesting, fixed bounds, sorting, logarithmic loops, recursion, unresolved calls, deferred workloads and palindrome.');
 }

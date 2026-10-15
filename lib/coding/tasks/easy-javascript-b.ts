@@ -1094,7 +1094,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['timers', 'promises'],
     title: 'Give up after a while',
-    prompt: 'Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection.',
+    prompt: "Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection. promise is an ordinary native Promise with standard methods. ms is an integer from 0 through 1000. fallback is any opaque nonthenable value, including a function, Symbol or frozen record; do not invoke or clone it. Preserve exact fulfilled values and rejection reasons, including object identity, NaN and -0. Return a new native Promise immediately. First observed settlement wins: an already settled input beats a zero-delay timer; a zero timeout is still deferred. A timeout does not cancel the original producer, and its later settlement must not replace the fallback. Timers may run later than requested; no exact elapsed-time deadline is promised. Target: O(1) time and retained wrapper/timer state, excluding waiting, input producer work and host scheduling.",
     starter: `const withTimeout = (promise, ms, fallback) => {
 
 };
@@ -1134,7 +1134,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['async-await'],
     title: 'Always a promise',
-    prompt: 'Write an `async` function `getValue(cache, key, load)`. When `cache` already holds `key`, return the cached value. Otherwise `await load(key)`, store the result in `cache[key]`, and return it. Because the function is `async`, the caller gets a promise both times, even when the value came straight from the cache. A cached `0` is a real value and is used.',
+    prompt: "Write an `async` function `getValue(cache, key, load)`. When `cache` already holds `key`, return the cached value. Otherwise `await load(key)`, store the result in `cache[key]`, and return it. Because the function is `async`, the caller gets a promise both times, even when the value came straight from the cache. A cached `0` is a real value and is used. cache is an extensible ordinary object or null-prototype record with ordinary writable data properties. Only own keys count: inherited toString, constructor or __proto__ are not cache hits. key is a string up to 1000 UTF-16 units, including empty text. Cached/loaded values are opaque nonthenable values, including undefined, functions, Symbols, NaN and -0; preserve their exact identities. On a miss call load once with exactly key; it returns an ordinary native Promise or throws synchronously. Store only a fulfilled result as an own writable/enumerable/configurable data property, without changing the cache prototype or other entries. Rejection/throw forwards the original reason and must not store a failed entry. Return a new native Promise immediately on both paths. This exercise does not coalesce concurrent misses. Target: O(1) time and wrapper state assuming average constant-time own-property access/definition, excluding load work, waiting and host scheduling.",
     starter: `const getValue = (cache, key, load) => {
 
 };
@@ -1149,11 +1149,11 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
   // store value in the cache
   return value;
 };`,
-    hints: ['An `async` function wraps whatever it returns in a promise, so a plain `return cache[key]` still reaches the caller as a promise. Test for the key with `key in cache` rather than by its value, so a cached `0` counts.'],
+    hints: ['An `async` function wraps whatever it returns in a promise, so a plain `return cache[key]` still reaches the caller as a promise. Use `Object.hasOwn(cache, key)`: a cached `0` or `undefined` counts, but an inherited property does not.'],
     approach: [
       'Mark the function `async`.',
-      'If the key is in the cache, return its value. The `async` keyword makes that a promise.',
-      'Otherwise `await load(key)`, save the result under the key, and return it. The next call for that key finds it in the cache.',
+      'If the cache owns the key, return its value. The `async` keyword makes that a promise.',
+      'Otherwise `await load(key)`, define the result as an own data property under the key, and return it. Use Object.defineProperty so a literal __proto__ key does not invoke an inherited setter. The next call for that key finds it in the cache.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -1173,7 +1173,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['async-await'],
     title: 'First the user, then the posts',
-    prompt: 'Write an `async` function `loadProfile(loadUser, loadPosts)`. `loadUser()` resolves to `{ id, name }`, and `loadPosts(id)` resolves to that user’s posts as an array. The second call needs the id from the first, so `await` the user before asking for the posts. Return `{ name, postCount }`. If either call rejects, the promise `loadProfile` returns rejects with the same error.',
+    prompt: "Write an `async` function `loadProfile(loadUser, loadPosts)`. `loadUser()` resolves to `{ id, name }`, and `loadPosts(id)` resolves to that user\u2019s posts as an array. The second call needs the id from the first, so `await` the user before asking for the posts. Return `{ name, postCount }`. If either call rejects, the promise `loadProfile` returns rejects with the same error. Both callbacks are supplied ordinary functions returning ordinary native Promises, or throwing synchronously. Call loadUser once with no arguments. Its fulfillment is a stable read-only record with integer id from 0 through 1000000000 and string name up to 200 UTF-16 units, including empty/Unicode text. Only after it fulfills, call loadPosts exactly once with that id as its only argument; do not call it after a user failure. It fulfills with a read-only array of at most 1000 posts, possibly sparse/frozen; postCount is its length, not the count of truthy/present entries. Leave both inputs unchanged and return a fresh plain { name, postCount } record in a new native Promise. Forward the exact original throw/rejection reason from either callback, including non-Error values. Target: O(1) time and wrapper/result state: reading array.length does not scan posts. Exclude callback work, waiting and host scheduling.",
     starter: `const loadProfile = async (loadUser, loadPosts) => {
 
 };

@@ -487,6 +487,13 @@ the grader lacks (`shared/coding-checker-globals.ts`, `Intl`, `crypto`,
 `fetch` and some two hundred more), and using one reads "`Intl` isn't
 available in the checker. Submit runs without it." React tasks keep the full
 browser and Node built-ins, in both of their runners.
+Complexity inspection withholds estimates for statically visible returned
+closures, callable aliases, methods/accessors and callable containers: factory
+construction is not a substitute for later invocation work. Such reports keep
+the authored target and base reward but have null time/unknown assessment, so
+the completion banner renders no complexity row. Dynamic value flow still
+needs manual review; this bounded check is not a general lifetime/type analysis.
+Eager callback analysis and supported above-target reductions remain separate.
 Task-specific built-in restrictions live in `shared/coding-task-runtime.ts`.
 The server derives them from the canonical task ID, and reused Learn code
 carries the same policy. Clone Promise.all replaces the original native

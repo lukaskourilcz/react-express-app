@@ -45,19 +45,21 @@ export const SKELETON_FILLS: Record<string, string> = {
   return total / numbers.length;
 };
 `,
-  'js-clone-promise-all': `const promiseAll = promises => new Promise((resolve, reject) => {
-  const results = [];
-  let arrived = 0;
-  if (promises.length === 0) resolve(results);
-
-  promises.forEach((promise, index) => {
-    Promise.resolve(promise).then(value => {
-      results[index] = value;
-      arrived += 1;
-      if (arrived === promises.length) resolve(results);
-    }, reject);
+  'js-clone-promise-all': `const promiseAll = promises => {
+  const inputs = Array.from(promises); // captures length and fills holes
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let arrived = 0;
+    if (inputs.length === 0) resolve(results);
+    inputs.forEach((item, index) => {
+      Promise.resolve(item).then(value => {
+        results[index] = value;
+        arrived += 1;
+        if (arrived === inputs.length) resolve(results);
+      }, reject);
+    });
   });
-});
+};
 `,
   'js-count-vowels': `const countVowels = text => {
   let count = 0;

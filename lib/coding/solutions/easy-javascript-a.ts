@@ -819,12 +819,13 @@ const reverseVowels = text => {
   const total = firstValue + secondValue;
   return total;
 };`,
-    senior: `// Promise.all waits for both at once and handles a rejection from either.
-const addBoth = async (first, second) => {
-  const [a, b] = await Promise.all([first, second]);
-  return a + b;
-};`,
+    senior: "const addBoth = async (first, second) => (await first) + (await second);",
     hiddenTests: [
+      { call: "(async()=>{const firstReason=Object.freeze({}),secondReason=Symbol('second'),first=new Promise((_,reject)=>setTimeout(()=>reject(firstReason),30)),second=Promise.reject(secondReason);first.catch(()=>{});second.catch(()=>{});return addBoth(first,second).then(()=>false,error=>error===firstReason);})()", expected: true, async: true },
+      { call: "(async()=>{const bad=Promise.reject('second');bad.catch(()=>{});return Promise.race([addBoth(new Promise(()=>{}),bad).then(()=>'settled',()=>'settled'),new Promise(done=>setTimeout(()=>done('pending'),80))]);})()", expected: "pending", async: true },
+      { call: "(async()=>{const values=[];for(const [a,b] of [[-0,-0],[0.5,0.25],[10000000000000000,-10000000000000000]])values.push(Object.is(await addBoth(Promise.resolve(a),Promise.resolve(b)),a+b));const first=Object.freeze(Promise.resolve(2)),out=addBoth(first,Promise.resolve(3));return [values,out instanceof Promise,out!==first,await out];})()", expected: [[true, true, true], true, true, 5], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),bad=Promise.reject(reason);bad.catch(()=>{});return addBoth(Promise.resolve(1),bad).then(()=>false,error=>error===reason);})()", expected: true, async: true },
+
       { call: 'addBoth(Promise.resolve(0.5), Promise.resolve(0.25))', expected: 0.75, async: true },
       { call: 'addBoth(new Promise(resolve => setTimeout(() => resolve(1), 15)), new Promise(resolve => setTimeout(() => resolve(2), 5)))', expected: 3, async: true },
       { call: '(() => { const failing = Promise.reject(new Error("first failed")); failing.catch(() => {}); return addBoth(failing, Promise.resolve(2)).then(() => "resolved", error => error.message); })()', expected: 'first failed', async: true },
@@ -849,9 +850,12 @@ const addBoth = async (first, second) => {
   }
   return result;
 };`,
-    senior: `// Calling load inside the executor turns a synchronous throw into a rejection.
-const loadOr = (load, fallback) => new Promise(resolve => resolve(load())).catch(() => fallback);`,
+    senior: "const loadOr = async (load, fallback) => {\n  try { return await load(); }\n  catch { return fallback; }\n};",
     hiddenTests: [
+      { call: "(async()=>{const fn=()=>1,sym=Symbol('x'),obj=Object.freeze({}),out=[];for(const value of [undefined,false,'',NaN,-0,fn,sym,obj])out.push(Object.is(await loadOr(()=>Promise.resolve(value),'unused'),value));return out;})()", expected: [true, true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{let calls=0;const fn=()=>{calls++;},sym=Symbol('x'),obj=Object.freeze({}),out=[];for(const fallback of [fn,sym,obj,undefined,-0]){out.push(Object.is(await loadOr(()=>{throw null;},fallback),fallback));out.push(Object.is(await loadOr(()=>Promise.reject(false),fallback),fallback));}return [out,calls];})()", expected: [[true, true, true, true, true, true, true, true, true, true], 0], async: true },
+      { call: "(async()=>{let calls=0,args=-1;const out=loadOr(function(){calls++;args=arguments.length;return Promise.resolve(0);},1);return [out instanceof Promise,await out,calls,args];})()", expected: [true, 0, 1, 0], async: true },
+
       { call: 'loadOr(() => new Promise(resolve => setTimeout(() => resolve([1, 2]), 10)), [])', expected: [1, 2], async: true },
       { call: 'loadOr(() => new Promise((resolve, reject) => setTimeout(() => reject(new Error("late failure")), 10)), "fallback")', expected: 'fallback', async: true },
       { call: 'loadOr(() => Promise.resolve(null), "default")', expected: null, async: true },

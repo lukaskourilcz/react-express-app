@@ -1497,7 +1497,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["promises", "timers"],
     title: "Sleep",
-    prompt: "Write `sleep(ms)`, returning a promise that resolves after `ms` milliseconds with no value. A zero wait still resolves.",
+    prompt: "Write `sleep(ms)`, returning a promise that resolves after `ms` milliseconds with no value. A zero wait still resolves. ms is an integer from 0 through 1000. Return a fresh native Promise immediately; independent calls must not share a promise. It fulfills with undefined, never with a timer identifier. Even sleep(0) waits for a timer turn, after already queued promise reactions; do not busy-wait or block other timers. The delay is a minimum scheduling request, not an exact wall-clock guarantee. Target: O(1) time and retained wrapper/timer state, excluding waiting and host scheduling. A larger ms increases the wait, not the amount of JavaScript computation.",
     starter: `const sleep = ms => {
   
 };
@@ -1505,10 +1505,9 @@ console.log(flatten([[1,2],[3]]));
 // Scratch pad — uncomment once your function returns something.
 // sleep(50).then(() => console.log("done waiting"));
 `,
-    skeleton: `const sleep = async ms => {
-  // await the work, and decide what happens when it rejects
-  return /* resolved value */;
-};`,
+    skeleton: `const sleep = ms => new Promise(resolve => {
+  // schedule a timer; resolve it without a value
+});`,
     hints: ["Wrap setTimeout in a promise and resolve it from the callback."],
     approach: [
       "Return the promise straight away and hand its resolve function to a timer, so the promise settles when the timer fires.",
@@ -1611,7 +1610,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["promises"],
     title: "Clone Promise.all",
-    prompt: "Write `promiseAll(promises)`, resolving with every value in input order, or rejecting as soon as one input rejects. Plain non-promise values are allowed, an empty array resolves to an empty array, and you may not call `Promise.all`.",
+    prompt: "Write `promiseAll(promises)`, resolving with every value in input order, or rejecting as soon as one input rejects. Plain non-promise values are allowed, an empty array resolves to an empty array, and you may not call `Promise.all`. promises is an ordinary read-only array of at most 1000 entries with default iteration and ordinary data indices, possibly sparse or frozen. Capture its initial membership and length synchronously; holes become explicit undefined values in a fresh dense output array. Ignore extra named properties. Entries may be opaque nonthenable values, ordinary native Promises or simple thenables; normalize each with Promise.resolve so only its first settlement counts. Preserve exact values and rejection reasons/references, including functions, Symbols, NaN and -0. Return a new native Promise immediately, even for empty input. Reject on the first observed rejection without waiting for any pending input, including one that never settles; this does not cancel other producers. The original native Promise.all is unavailable before your code initializes, including through saved aliases; build the aggregation yourself. This exercise accepts arrays, not arbitrary iterables. Target: O(n) time and retained result/handler space, where n is 1 + promises.length, excluding waiting, producer/thenable work and host scheduling.",
     starter: `const promiseAll = promises => {
   
 };
@@ -1619,20 +1618,21 @@ console.log(flatten([[1,2],[3]]));
 // Scratch pad — uncomment once your function returns something.
 // promiseAll([Promise.resolve(1), Promise.resolve(2)]).then(values => console.log(values));
 `,
-    skeleton: `const promiseAll = promises => new Promise((resolve, reject) => {
-  const results = [];
-  let arrived = 0;
-  if (/* there is nothing to wait for */) resolve(results);
-
-  promises.forEach((promise, index) => {
-    Promise.resolve(promise).then(value => {
-      // store value at index, count it, and resolve once every input has arrived
-    }, /* what a rejection does */);
+    skeleton: `const promiseAll = promises => {
+  const inputs = Array.from(promises); // captures length and fills holes
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let arrived = 0;
+    // handle empty input before subscribing
+    inputs.forEach((item, index) => {
+      // normalize item; store at index and count the first fulfillment
+      // reject with the original reason on failure
+    });
   });
-});`,
-    hints: ["Store each value by its index and resolve once they have all arrived."],
+};`,
+    hints: ["Capture an Array.from snapshot before subscribing, so holes become undefined and later caller edits cannot change the count. Store each fulfilled value at its original index."],
     approach: [
-      "Return a new promise, and inside it keep an array for the results plus a count of how many have arrived.",
+      "Capture Array.from(promises), then return a new promise with a fresh result array and an arrival count based on that snapshot.",
       "Subscribe to each input in turn and write its value into the results at the index it came in at, so the output order matches the input order.",
       "Resolve only once the arrival count reaches the input length, and forward any rejection straight on so the first failure settles everything.",
       "Watch the empty input: with nothing to wait for, the count never moves, so resolve before you start subscribing.",
