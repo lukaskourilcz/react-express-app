@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n021
+
+Reviewed discovery questions two through four, the complete check and the scope
+brief. The baseline choice now includes an observed value and is explicitly
+hypothetical. A prescribed mechanism is recognized as a design choice that can
+become an agreed requirement; unsupported substitute/cost claims are removed.
+The missing stakeholder question has an explicit company-policy launch gate
+instead of speculative veto certainty. Shuffled feedback no longer points at
+first/last options, and the parent summary matches the corrected objectives.
+
+The seven-field artifact distinguishes its single observed ticket from the
+hypothetical question note. Broader measurements can be marked unmeasured with
+a collection plan, and acceptance goals proposed pending agreement. False line-
+count claims are corrected to actual nonempty/length checks. Structural cases
+confirm missing/over-cap/blank failure and that even content-free complete boxes
+remain self-reviewed, never semantic verification. Rubric ids and exercise
+feedback/thresholds agree. No baseline or stakeholder approval is fabricated.
+
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from these executions.
+Coverage is **160/263 native**, **103 remaining**, and **95/725 coding**,
+**630 remaining**. #397 still blocks the FDE diagnostic parent. PR #396 remains
+frozen at 758d1bbb with SQL/exact-preview checks passing and browser verification
+in progress; n015–n021 are local. Shipped coverage remains 95 coding/95 native.
+
 ## 15 October continuation — five-item native batch n020
 
 Reviewed both remaining Python questions, the complete Python/incident bridge
