@@ -18,10 +18,12 @@ interface Checkpoint {
   tests?: CallTest[];
   suite?: string;
   typeTests?: TypeTest[];
+  /** Checks for this checkpoint in addition to its inherited signatures. */
+  additionalTypeTests?: TypeTest[];
 }
 const calls = (...entries: [string, unknown][]) =>
   entries.map(([call, expected]) => test(call, expected));
-const step = (en: string, cs: string, tests: CallTest[], metadata: Pick<Checkpoint, 'focus' | 'references'> = {}): Checkpoint => ({
+const step = (en: string, cs: string, tests: CallTest[], metadata: Pick<Checkpoint, 'focus' | 'references' | 'additionalTypeTests'> = {}): Checkpoint => ({
   prompt: text(en, cs),
   tests,
   ...metadata,
@@ -271,9 +273,10 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
   ],
   'ts-evolving-result': [
     step(
-      'Implement generic mapResult<T,U> for successful Result<T> values. Apply fn once and wrap its value as {ok:true,value}. Keep the Result union and precise return types; callbacks do not throw yet.',
+      'Implement generic mapResult<T,U> for successful Result<T> values. Apply fn once and wrap its value as {ok:true,value}. Keep the Result union and precise return types; callbacks do not throw yet. Only successful inputs are required at this checkpoint; failure handling is the next milestone. Inputs may be frozen. Call fn synchronously exactly once with the exact opaque value and wrap its exact result in a fresh mutable success record; do not inspect, clone, await or coerce payloads. A Promise returned by fn stays the value. Keep mapResult<T,U>(result:Result<T>,fn:(value:T)=>U):Result<U>. Target: O(1) time and O(1) extra space, excluding callback work and payload storage, per runtime call; compiler work is separate.',
       'Napiš generickou mapResult<T,U> pro úspěšné hodnoty Result<T>. Jednou zavolej fn a výsledek obal do {ok:true,value}. Zachovej unii Result a přesné návratové typy; callbacky zatím nevyhazují výjimky.',
       calls(
+        ["(()=>{let count=0;const value=[];const out=mapResult({ok:true,value},x=>{count++;return x;});return out.ok===true&&out.value===value&&count===1;})()", true],
         ['mapResult({ok:true,value:2},n=>n*3)', { ok: true, value: 6 }],
         ['mapResult({ok:true,value:0},String)', { ok: true, value: '0' }],
         [
@@ -284,9 +287,10 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ),
     ),
     step(
-      'Add flatMapResult<T,U>(result,fn), where fn returns Result<U>. Forward failures unchanged and return callback results without nesting. Callbacks in this step do not throw.',
+      "Add flatMapResult<T,U>(result,fn), where fn returns Result<U>. Forward failures unchanged and return callback results without nesting. Callbacks in this step do not throw. Result inputs are readonly ordinary data records and may be frozen. On success call fn synchronously once with the exact original value and return its exact Result object, including a frozen or reused callback result, without cloning, inspecting or awaiting its payload. On input failure do not call fn; preserve the exact error string, allowing the original or an equivalent fresh failure wrapper. Preserve earlier mapResult requirements. Target: O(1) time and O(1) extra space for flatMapResult itself, excluding callback work and opaque payload storage; TypeScript compiler work is separate.",
       'Přidej flatMapResult<T,U>(result,fn), kde fn vrací Result<U>. Chyby předej beze změny a výsledky callbacku neobaluj další vrstvou. V této etapě callbacky nevyhazují výjimky.',
       calls(
+        ["(()=>{const next={ok:true,value:[]};return flatMapResult({ok:true,value:1},()=>next)===next;})()",true],
         [
           'flatMapResult({ok:true,value:2},n=>({ok:true,value:n+1}))',
           { ok: true, value: 3 },
@@ -296,28 +300,33 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
           { ok: false, error: 'bad' },
         ],
       ),
+      { additionalTypeTests: [{"code": "{const fn:<T,U>(r:Result<T>,cb:(v:T)=>Result<U>)=>Result<U>=flatMapResult;const r:Result<string>=flatMapResult({ok:true,value:1},(n:number)=>({ok:true,value:String(n)}));}"}, {"code": "{const bad:Result<string>=flatMapResult({ok:true,value:1},(n:number)=>({ok:true,value:n}));}", "rejects": true}] },
     ),
     step(
-      'Add collectResults<T>(results:readonly Result<T>[]):Result<T[]>. Collect successful values in order; stop at the first failure. Empty inputs succeed with [].',
+      "Add collectResults<T>(results:readonly Result<T>[]):Result<T[]>. Collect successful values in order; stop at the first failure. Empty inputs succeed with []. results is a dense readonly array of at most 10000 valid ordinary Result records, possibly frozen. Copy successful payload references, not their contents, into a fresh mutable success array and fresh mutable success wrapper, preserving duplicates and exact order. On the first failure return its exact error string without processing later results; original or equivalent fresh failure wrapper is allowed. Never change inputs. Empty calls each own a fresh array. Target: O(n) time and O(n) extra space, where n is one plus results.length; opaque payload size is excluded.",
       'Přidej collectResults<T>(results:readonly Result<T>[]):Result<T[]>. Sbírej úspěšné hodnoty v pořadí a skonči při první chybě. Prázdný vstup uspěje s [].',
       calls(
+        ["(()=>{const value=[];const out=collectResults([{ok:true,value},{ok:true,value}]);return out.ok===true&&out.value.length===2&&out.value[0]===value&&out.value[1]===value;})()",true],
         [
           'collectResults([{ok:true,value:1},{ok:true,value:2}])',
           { ok: true, value: [1, 2] },
         ],
         ['collectResults([])', { ok: true, value: [] }],
       ),
+      { additionalTypeTests: [{"code": "{const fn:<T>(r:readonly Result<T>[])=>Result<T[]>=collectResults;const r:Result<number[]>=collectResults([{ok:true,value:1}] as const);}"}, {"code": "{const bad:Result<string[]>=collectResults([{ok:true,value:1}]);}", "rejects": true}] },
     ),
     step(
-      'Add partitionResults<T>(results:readonly Result<T>[]), returning {values:T[],errors:string[]}. Preserve relative order within each group. Start with all-success and empty inputs.',
+      "Add partitionResults<T>(results:readonly Result<T>[]), returning {values:T[],errors:string[]}. Preserve relative order within each group. Start with all-success and empty inputs. Only all-success and empty inputs are required at this checkpoint; mixed failures come next. results is a dense readonly array of at most 10000 valid ordinary success records, possibly frozen. Keep original opaque values, duplicates and order without inspecting, cloning or awaiting them. Each call returns a fresh mutable outer record and two distinct fresh mutable arrays; errors starts empty and remains usable by the caller. Empty calls do not share storage. Preserve input state. Target: O(n) time and O(n) extra space, where n is one plus results.length; payload size is excluded.",
       'Přidej partitionResults<T>(results:readonly Result<T>[]), vracející {values:T[],errors:string[]}. Zachovej pořadí uvnitř skupin. Začni prázdnými a pouze úspěšnými vstupy.',
       calls(
+        ["(()=>{const out=partitionResults([]);out.errors.push('mutable');return out.values.length===0&&out.errors[0]==='mutable';})()",true],
         [
           'partitionResults([{ok:true,value:1},{ok:true,value:2}])',
           { values: [1, 2], errors: [] },
         ],
         ['partitionResults([])', { values: [], errors: [] }],
       ),
+      { additionalTypeTests: [{"code": "{const fn:<T>(r:readonly Result<T>[])=>{values:T[];errors:string[]}=partitionResults;}"}, {"code": "{const bad:{values:string[];errors:string[]}=partitionResults([{ok:true,value:1}]);}", "rejects": true}] },
     ),
     step(
       'Add recoverResult<T>(result,fn) to recover a failure using fn(error):Result<T>. A success passes through without calling fn. Convert callback throws using the earlier error convention.',
@@ -600,10 +609,11 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
             : {}),
           ...(base.track === 'typescript'
             ? {
-                typeTests:
-                  checkpoint.typeTests ??
-                  (index === 0 ? base.typeTests : previous?.typeTests) ??
-                  [],
+                typeTests: [
+                  ...(checkpoint.typeTests ??
+                    (index === 0 ? base.typeTests : previous?.typeTests) ?? []),
+                  ...(checkpoint.additionalTypeTests ?? []),
+                ],
               }
             : {}),
           ...(base.suite
