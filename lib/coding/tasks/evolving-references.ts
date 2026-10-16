@@ -24,7 +24,7 @@ const links:Record<string,Link[]> = {
   ['Closures and private state','Uzávěry a soukromý stav',mdn+'Guide/Closures'],
   ['Function identity in Set','Identita funkcí v Set',mdn+'Reference/Global_Objects/Set'],
   ['Isolating exceptions','Izolace výjimek',mdn+'Reference/Statements/try...catch'],
-  ['FIFO queue removal','Odebírání z FIFO fronty',mdn+'Reference/Global_Objects/Array/shift'],
+  ['Appending to a queue','Odebírání z FIFO fronty',mdn+'Reference/Global_Objects/Array/push'],
   ['Per-event history with Map','Historie událostí s Map',mdn+'Reference/Global_Objects/Map'],
  ],
  'js-evolving-graph': [
