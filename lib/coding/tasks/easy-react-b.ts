@@ -448,7 +448,7 @@ test('Resume carries on from the paused count', async () => {
     tier: 2,
     focus: ['abort', 'timers'],
     title: 'Give up on a slow request',
-    prompt: '"Load" fetches `/api/users/1` and greets the user by name. When the server takes longer than 300 milliseconds, give up. Create an `AbortController` for each load, pass its `signal` to `fetch`, and start a `setTimeout` that calls `abort()` after 300 milliseconds. The aborted request rejects with an `AbortError`: show "The server is taking too long" for it, and keep "Could not load the user" for any other error. Clear the timeout once the request has finished, so a load that answered in time is never aborted afterwards.',
+    prompt: "\"Load\" fetches `/api/users/1` and greets the user by name. When the server takes longer than 300 milliseconds, give up. Create an `AbortController` for each load, pass its `signal` to `fetch`, and start a `setTimeout` that calls `abort()` after 300 milliseconds. The aborted request rejects with an `AbortError`: show \"The server is taking too long\" for it, and keep \"Could not load the user\" for any other error. Clear the timeout once the request has finished, so a load that answered in time is never aborted afterwards. Start with an empty status paragraph. Each checked Load begins after the previous load has settled, targets exactly /api/users/1, and owns its own controller and timeout. Keep Loading… through 299 ms, then abort at the full 300 ms boundary if the response or JSON body is still pending. A successful ordinary user record has a plain name up to 2000 UTF-16 code units, including empty or literal markup text; greet exactly Hello, followed by a space and that name. Success, a network/JSON failure or timeout leaves no pending timer for that load. Parent re-renders do not restart the deadline or make another request. The fixture uses successful HTTP replies or Error/DOMException rejections. A controlled clock verifies boundaries; real browser scheduling may run later.",
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -521,6 +521,77 @@ test('a slow request gives up after the wait', () => withFetch(async calls => {
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('The server is taking too long');
 }));
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+test('a pending request keeps Loading through299ms and times out at300ms',()=>withStepClock(async clock=>withFetch(async calls=>{const root=render(<App/>);load();expect(calls[0].url).toBe('/api/users/1');await clock.tick(299);expect(calls[0].signal.aborted).toBe(false);expect(status(root.container)).toBe('Loading…');await clock.tick(1);expect(calls[0].signal.aborted).toBe(true);expect(status(root.container)).toBe('The server is taking too long');expect(clock.pending()).toBe(0);root.unmount();})));
+
 `,
   },
   {
@@ -531,8 +602,8 @@ test('a slow request gives up after the wait', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'fetch'],
     title: 'One Stop for two requests',
-    prompt: '"Load" asks for a user and their posts at once, `/api/users/1` and `/api/posts?userId=1`, and shows "Leanne Graham, 3 posts" when both arrive. "Stop" should cancel both. Create one `AbortController` for each load, keep it in a ref, pass the same `signal` to both `fetch` calls, and call `abort()` from Stop: one signal cancels every request that carries it. Show "Stopped" when the error is an `AbortError`, and keep "Could not load" for anything else.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: "\"Load\" asks for a user and their posts at once, `/api/users/1` and `/api/posts?userId=1`, and shows \"Leanne Graham, 3 posts\" when both arrive. \"Stop\" should cancel both. Create one `AbortController` for each load, keep it in a ref, pass the same `signal` to both `fetch` calls, and call `abort()` from Stop: one signal cancels every request that carries it. Show \"Stopped\" when the error is an `AbortError`, and keep \"Could not load\" for anything else. Keep one status paragraph, initially empty. Every Load starts both requests together and waits for both full JSON bodies. The user has a plain string name up to 2000 UTF-16 code units, and posts is a dense read-only array of at most 100 records; count every record, including zero. Render the exact literal format name + ', ' + count + ' posts'. Check response.ok before parsing; HTTP, network or JSON failure shows Could not load and aborts any unfinished request in the pair. Each new Load aborts and supersedes the previous pair; only its current controller may update the status, even if older parsed work is already queued. Stop with no pending work does not change the terminal status. Keep both buttons available. Ordinary parent re-renders do not request again. Unmount aborts and invalidates its pair; independent or fresh instances start empty with their own controller. Development Strict Mode may repeat cleanup/setup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
@@ -564,22 +635,27 @@ const App = () => {
 export default App;
 `,
     skeleton: `const controllerRef = useRef(null);
+useEffect(() => () => {
+  const previous = controllerRef.current;
+  controllerRef.current = null;
+  previous?.abort();
+}, []);
 
 const load = async () => {
+  // Abort the old pair before replacing its controller.
   const controller = new AbortController();
   controllerRef.current = controller;
-  // pass { signal: controller.signal } to both fetch calls
+  // Start both requests with this signal. Check response.ok and await JSON.
+  // Only this current controller may commit the status.
 };
-
-const stop = () => {
-  // abort the latest controller, if there is one
-};`,
-    hints: ['A signal belongs to its controller, not to one request. Every `fetch` given the same signal rejects when that controller aborts, and `Promise.all` rejects as soon as the first of them does.'],
+const stop = () => { controllerRef.current?.abort(); };`,
+    hints: ["Share one signal between both fetches. Only the current controller may commit; abort the remaining pair on failure and invalidate ownership during cleanup."],
     approach: [
-      'Create `const controllerRef = useRef(null)`, and at the start of `load` store a new `AbortController` in it.',
-      'Pass `{ signal: controller.signal }` as the second argument to both `fetch` calls.',
-      'In `stop`, call `controllerRef.current?.abort()`. In the `catch`, show "Stopped" when `error.name` is "AbortError".',
-    ],
+      "Keep the current pair controller in a ref and abort it before starting another Load.",
+      "Start both fetches with its shared signal, check response.ok, and parse both JSON bodies with Promise.all.",
+      "Commit the exact name/count only if this controller is still current; classify cancellation and abort the unfinished pair on failure.",
+      "Cleanup clears current ownership before aborting; Stop simply aborts the current pair."
+],
     verify: 'tests',
     estimatedMinutes: 8,
     suite: `${header()}${FAKE_FETCH}
@@ -613,6 +689,14 @@ test('Stop cancels both and shows Stopped', () => withFetch(async calls => {
   expect(calls[1].signal.aborted).toBe(true);
   expect(status(container)).toBe('Stopped');
 }));
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+test('zero returned posts are counted with the actual user name',()=>withFetch(async calls=>{const root=render(<App/>);press('Load');await act(async()=>{forUrl(calls,'/api/users/1').respond({name:'Grace'});forUrl(calls,'/api/posts?userId=1').respond([]);});expect(status(root.container)).toBe('Grace, 0 posts');}));
+
 `,
   },
   {

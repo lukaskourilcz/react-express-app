@@ -996,27 +996,40 @@ test('an answer after the give-up changes nothing', () => withFetch(async calls 
   await wait(350);
   await act(async () => { calls[0].respond({ name: 'Ada' }); });
   expect(status(container)).toBe('The server is taking too long');
-}));`,
+}));` + `
+test('the deadline covers pending JSON and a body completed at299ms clears it',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);load();await phaseHeaders(calls[0]);await clock.tick(299);expect(status(root.container)).toBe('Loading…');await clock.tick(1);expect(status(root.container)).toBe('The server is taking too long');expect(clock.pending()).toBe(0);load();await phaseHeaders(calls[1]);await clock.tick(299);await phaseBody(calls[1],{name:'<b>Literal user</b>'});expect(status(root.container)).toBe('Hello, <b>Literal user</b>');expect(root.container.querySelector('p b')).toBeNull();expect(clock.pending()).toBe(0);await clock.tick(1000);expect(calls[1].signal.aborted).toBe(false);expect(status(root.container)).toBe('Hello, <b>Literal user</b>');root.unmount();})));
+test('network and JSON failures finish their deadline without a later abort',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);for(const failure of['network','json']){const n=calls.length;load();if(failure==='network')await act(async()=>calls[n].fail(new TypeError('Offline')));else{await phaseHeaders(calls[n]);await act(async()=>calls[n].badJSON());}expect(status(root.container)).toBe('Could not load the user');expect(clock.pending()).toBe(0);await clock.tick(350);expect(calls[n].signal.aborted).toBe(false);expect(status(root.container)).toBe('Could not load the user');}root.unmount();})));
+test('sixteen sequential loads own fresh controllers and parent renders keep the deadline',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);for(let n=0;n<16;n++){load();expect(calls).toHaveLength(n+1);expect(calls[n].url).toBe('/api/users/1');expect(calls[n].signal.aborted).toBe(false);await clock.tick(150);for(let i=0;i<4;i++)root.rerender(<App/>);await clock.tick(149);expect(status(root.container)).toBe('Loading…');if(n%3===0){await phaseDone(calls[n],{name:n===0?'':'Name '+n});expect(status(root.container)).toBe('Hello, '+(n===0?'':'Name '+n));await clock.tick(1);expect(calls[n].signal.aborted).toBe(false);}else if(n%3===1){await clock.tick(1);expect(status(root.container)).toBe('The server is taking too long');}else{await act(async()=>calls[n].fail(new TypeError('Offline')));expect(status(root.container)).toBe('Could not load the user');}expect(clock.pending()).toBe(0);}expect(new Set(calls.map(c=>c.signal)).size).toBe(16);root.unmount();})));
+`,
   },
   'react-easy3-one-stop-two-requests': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     // One controller for this load; its signal goes to both requests.
     const controller = new AbortController();
     controllerRef.current = controller;
     setStatus('Loading…');
     try {
       const [user, posts] = await Promise.all([
-        fetch('/api/users/1', { signal: controller.signal }).then((response) => response.json()),
-        fetch('/api/posts?userId=1', { signal: controller.signal }).then((response) => response.json()),
+        fetch('/api/users/1', { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); }),
+        fetch('/api/posts?userId=1', { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); }),
       ]);
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current === controller) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current === controller)) return;
+      controller.abort();
       setStatus(error.name === 'AbortError' ? 'Stopped' : 'Could not load');
     }
   };
@@ -1035,26 +1048,35 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
     const signal = controller.signal;
     setStatus('Loading…');
 
     try {
-      const userRequest = fetch('/api/users/1', { signal: signal }).then((response) => response.json());
-      const postsRequest = fetch('/api/posts?userId=1', { signal: signal }).then((response) => response.json());
+      const userRequest = fetch('/api/users/1', { signal: signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
+      const postsRequest = fetch('/api/posts?userId=1', { signal: signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
       const results = await Promise.all([userRequest, postsRequest]);
       const user = results[0];
       const posts = results[1];
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current === controller) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current === controller)) return;
+      controller.abort();
       if (error.name === 'AbortError') {
         setStatus('Stopped');
       } else {
@@ -1080,22 +1102,31 @@ const App = () => {
 };
 
 export default App;`,
-    senior: `import React, { useRef, useState } from 'react';
+    senior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     controllerRef.current = new AbortController();
     const { signal } = controllerRef.current;
-    const getJson = (url) => fetch(url, { signal }).then((response) => response.json());
+    const getJson = (url) => fetch(url, { signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
 
     setStatus('Loading…');
     try {
       const [user, posts] = await Promise.all([getJson('/api/users/1'), getJson('/api/posts?userId=1')]);
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current?.signal === signal) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current?.signal === signal)) return;
+      controllerRef.current.abort();
       setStatus(error.name === 'AbortError' ? 'Stopped' : 'Could not load');
     }
   };
@@ -1141,7 +1172,12 @@ test('each load gets a signal of its own', () => withFetch(async calls => {
     forUrl(later, '/api/posts?userId=1').respond([{ id: 4 }, { id: 5 }]);
   });
   expect(status(container)).toBe('Grace, 2 posts');
-}));`,
+}));` + `
+const pairIn=calls=>({user:calls.find(c=>c.url==='/api/users/1'),posts:calls.find(c=>c.url==='/api/posts?userId=1')});
+test('sixteen loads start both requests together with a fresh shared signal and await both parsed bodies',()=>withPhaseResponses(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(0);for(let n=0;n<16;n++){press('Load');expect(calls).toHaveLength(2*(n+1));const pair=calls.slice(2*n),{user,posts}=pairIn(pair);expect(Boolean(user&&posts)).toBe(true);expect(user.signal).toBe(posts.signal);expect(user.signal.aborted).toBe(false);if(n)expect(user.signal).not.toBe(calls[2*n-2].signal);await phaseHeaders(user);await phaseHeaders(posts);const name=n===4?'':'<b>User '+n+'</b>',data=Array.from({length:n===5?100:n%7},()=>({opaque:true}));if(n%2){await phaseBody(posts,data);expect(status(root.container)).toBe('Loading…');await phaseBody(user,{name});}else{await phaseBody(user,{name});expect(status(root.container)).toBe('Loading…');await phaseBody(posts,data);}expect(status(root.container)).toBe(name+', '+data.length+' posts');expect(root.container.querySelector('p b')).toBeNull();root.rerender(<App/>);expect(calls).toHaveLength(2*(n+1));await act(async()=>press('Stop'));expect(status(root.container)).toBe(name+', '+data.length+' posts');}}));
+test('failure or Stop aborts the unfinished pair and a fresh Load can recover',()=>withPhaseResponses(async calls=>{const root=render(<App/>);for(const failure of['http','network','json','stop']){const index=calls.length;press('Load');const {user,posts}=pairIn(calls.slice(index));if(failure==='http')await phaseDone(user,{name:'Failed body'},500);else if(failure==='network')await act(async()=>posts.fail(new TypeError('Offline')));else if(failure==='json'){await phaseHeaders(user);await act(async()=>user.badJSON());}else{await phaseDone(user,{name:'Partial'});await phaseHeaders(posts);await act(async()=>press('Stop'));}expect(status(root.container)).toBe(failure==='stop'?'Stopped':'Could not load');expect(user.signal.aborted).toBe(true);expect(posts.signal.aborted).toBe(true);const next=calls.length;press('Load');const recovery=pairIn(calls.slice(next));await phaseDone(recovery.user,{name:'Recovered'});await phaseDone(recovery.posts,[{}]);expect(status(root.container)).toBe('Recovered, 1 posts');}}));
+test('older completed work cannot replace a new load and unmount aborts only its own pair',()=>withPhaseResponses(async calls=>{const root=render(<App/>);press('Load');await phaseHeaders(calls[0]);await phaseHeaders(calls[1]);await act(async()=>{calls[0].body({name:'Old'});calls[1].body([{},{}]);press('Load');});expect(calls).toHaveLength(4);expect(status(root.container)).toBe('Loading…');expect(calls[0].signal.aborted).toBe(true);root.unmount();expect(calls[2].signal.aborted).toBe(true);expect(calls[3].signal.aborted).toBe(true);const fresh=render(<App/>);expect(status(fresh.container)).toBe('');expect(calls).toHaveLength(4);fireEvent.click(within(fresh.container).getByRole('button',{name:'Load'}));const pair=pairIn(calls.slice(4));expect(pair.user.signal.aborted).toBe(false);await phaseDone(pair.posts,[]);await phaseDone(pair.user,{name:'Fresh'});expect(status(fresh.container)).toBe('Fresh, 0 posts');}));
+`,
   },
   'react-easy3-listeners-one-abort': {
     solution: `import React, { useEffect, useState } from 'react';

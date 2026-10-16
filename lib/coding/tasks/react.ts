@@ -1652,7 +1652,7 @@ test('returning to user one makes a new request and uses its new body',()=>withP
     tier: 3,
     focus: ["effect-cleanup", "timers"],
     title: "Debounced search",
-    prompt: "Render an input and show the settled query beneath it. That displayed value updates only 500ms after typing stops, so a quick burst of keystrokes produces one update rather than one per key.",
+    prompt: "Render a controlled input named Search and a paragraph showing Search: followed by a space and the settled query, initially empty. The raw input may contain up to 2000 UTF-16 code units. Preserve its exact case, spaces and literal text without trimming or transforming it. Every changed value starts a 500 ms debounce: keep the previous settled value through 499 ms after that change, then show only the latest raw value at 500 ms. A new change cancels the previous pending update; clearing the input also settles after 500 ms. An optional (typing…) marker after the settled value is fine. No request is made: this task only displays the settled query. Ordinary parent re-renders do not restart the remaining delay. Removed instances clear their pending timer; independent or fresh mounts own their empty query and timer. Use an effect, a debounced-value hook or equivalent local timer state. A controlled clock checks the boundary; real browser timers may run later.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1665,27 +1665,29 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [query, setQuery] = useState('');
+const [settledQuery, setSettledQuery] = useState('');
 
 useEffect(() => {
-  // run the side effect here
+  const timer = setTimeout(() => {
+    // Copy the exact current query into the settled state.
+  }, 500);
+  return () => clearTimeout(timer);
+}, [query]);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Create a timeout when query changes and clear the previous timeout in cleanup."],
+// Render a Search-labelled input and the settled query in a paragraph.`,
+    hints: ["Keep raw query and settled query separately. Cancel the old 500 ms timeout on each change or unmount; copy the exact query without normalization."],
     approach: [
       "Use two state values: the immediate query bound to the input and a settled query that the display reads.",
       "In a useEffect that depends on the query, start a 500 ms setTimeout which copies the query into the settled state.",
       "Return a cleanup function that clears that timeout, so each new keystroke cancels the previous pending update.",
-      "Render from the settled value only, which is what makes the display lag behind the typing.",
-    ],
+      "Render from the settled value only, which is what makes the display lag behind the typing."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('only shows the settled value after typing stops', async () => {
@@ -1693,6 +1695,74 @@ test('only shows the settled value after typing stops', async () => {
   fireEvent.change(container.querySelector('input'), { target: { value: 'chair' } });
   await waitFor(() => expect(container.textContent).toContain('chair'), { timeout: 4000 });
 });
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const typed=scope=>within(scope).getByLabelText('Search');
+const expectSettled=(scope,value)=>{const p=scope.querySelector('p');expect(['Search: '+value,'Search: '+value+' (typing…)'].includes(p.textContent)).toBe(true);expect(p.querySelector('b')).toBeNull();};
+test('raw mixed-case text settles only after the full500ms delay',()=>withStepClock(async clock=>{const root=render(<App/>);fireEvent.change(typed(root.container),{target:{value:'  Mixed Case  '}});expect(typed(root.container).value).toBe('  Mixed Case  ');await clock.tick(499);expectSettled(root.container,'');await clock.tick(1);expectSettled(root.container,'  Mixed Case  ');root.unmount();expect(clock.pending()).toBe(0);}));
+
 `,
   },
   {
@@ -1704,7 +1774,7 @@ test('only shows the settled value after typing stops', async () => {
     tier: 3,
     focus: ["abort", "effect-cleanup"],
     title: "Abort a request",
-    prompt: "Fetch the posts in an effect, and abort the request if the component unmounts before it resolves so no state update happens afterwards.",
+    prompt: "GET https://jsonplaceholder.typicode.com/posts once per ordinary mounted instance, using a controller created inside its effect and passing its signal to fetch. Cleanup invalidates that effect and aborts its request. Initially render either a paragraph 0 posts or an empty UL. After the full successful JSON body, render either a paragraph with the exact returned count followed by posts, or one LI per exact literal returned title in response order. Both presentations are valid. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain titles up to 2000 UTF-16 code units; titles can be duplicated or empty. Check response.ok before parsing. HTTP, network or JSON failure shows Could not load posts. as an alert and no failed response data; a zero count or empty list may remain. Ignore AbortError and all work after cleanup. Ordinary parent re-renders do not refetch; independent or fresh instances own their request and empty initial data. This exercise does not require retries or loading text. Development Strict Mode may repeat effect setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1723,12 +1793,13 @@ const [error, setError] = useState('');
 
 useEffect(() => {
   const controller = new AbortController();
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL, { signal: controller.signal });
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
       // an AbortError is the cancel you asked for: no state update after it
       // anything else goes into error
@@ -1737,22 +1808,22 @@ useEffect(() => {
 
   loadItems();
 
-  return () => /* abort the controller */;
+  return () => { active = false; /* abort the controller */ };
 }, []);
 
 <p>{items.length} posts</p>`,
-    hints: ["Create the controller inside the effect and call controller.abort() in cleanup."],
+    hints: ["Abort the controller and invalidate the effect during cleanup. Only an active effect may store parsed posts or show its fixed failure alert."],
     approach: [
-      "Create a new AbortController inside the effect body, not outside it, so each run owns its own controller.",
-      "Pass the controller signal in the fetch options object so the browser can cancel the in-flight request.",
-      "Return a cleanup function that aborts the controller when the component unmounts or the effect re-runs.",
-      "Catch the rejection and ignore it when the error name is AbortError, since a deliberate cancel is not a failure.",
-    ],
+      "Create one controller and active flag inside the mount effect, and fetch the posts with its signal.",
+      "Check response.ok and await the JSON body; store it only while active.",
+      "Show a fixed alert for active non-abort failures. Render either the exact count or literal ordered titles.",
+      "Cleanup first invalidates the effect and then aborts the request."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('aborts the in-flight request when unmounted', async () => {
@@ -1772,6 +1843,15 @@ test('aborts the in-flight request when unmounted', async () => {
     globalThis.fetch = working;
   }
 });
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+const expectPosts=(scope,data)=>{const ul=scope.querySelector('ul');if(ul)expect(Array.from(ul.querySelectorAll('li')).map(li=>li.textContent)).toEqual(data.map(p=>p.title));else expect(within(scope).getByText(data.length+' posts',{exact:true})).toBeTruthy();};
+test('successful response may render an exact count or the literal titles',()=>withPhaseResponses(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await phaseDone(calls[0],[{id:1,title:'<b>Actual</b>'},{id:2,title:'Again'}]);expectPosts(root.container,[{id:1,title:'<b>Actual</b>'},{id:2,title:'Again'}]);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
     api: {
       method: "GET",
