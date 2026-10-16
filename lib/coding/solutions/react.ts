@@ -1400,7 +1400,7 @@ test('a request that throws shows a message and no items', () => withRequests(as
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [selected, setSelected] = useState(null);
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <p>{selected.email}</p>}</>;
+  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <section><p>{selected.name}</p><p>{selected.email}</p></section>}</>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
@@ -1451,7 +1451,6 @@ const UserDetails = ({ user }) => (
 
 const App = () => {
   const [users, setUsers] = useState([]);
-  // Only the id lives in state, so the details can never drift from the list
   const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
@@ -1477,6 +1476,19 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('all twenty-four fetched choices stay exact through repeated selection and parents',()=>withUsers(async calls=>{
+ const users=Array.from({length:24},(_,i)=>({id:'opaque-'+(31+i*17),name:i<2?'Same display name':'  Reef <b> 🦈 '+i+'  ',email:'unique'+i+'@reef.test'}));const view=render(<App/>);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));users.forEach(user=>expect(userOutput(view.container)).not.toContain(user.email));for(let turn=0;turn<48;turn++){const index=(turn*7)%24;fireEvent.click(buttons[index]);const out=userOutput(view.container);expect(out).toContain(users[index].name);expect(out).toContain(users[index].email);users.forEach((user,i)=>{if(i!==index)expect(out).not.toContain(user.email);});view.rerender(<App data-parent={turn}/>);expect(userOutput(view.container)).toContain(users[index].email);expect([...view.container.querySelectorAll('button')]).toEqual(buttons);expect(calls).toHaveLength(1);}
+}));
+test('empty and single-user results are data rather than a built-in fixture',()=>withUsers(async calls=>{
+ const empty=render(<App/>);await act(async()=>calls[0].respond([]));expect(empty.container.querySelectorAll('button')).toHaveLength(0);expect(userOutput(empty.container)).not.toContain('@');empty.unmount();const one=render(<App/>),user={id:777,name:'u'.repeat(2000),email:'one@reef.test'};await act(async()=>calls[1].respond([user]));expect(one.container.querySelectorAll('button')).toHaveLength(1);fireEvent.click(one.container.querySelector('button'));expect(userOutput(one.container)).toContain(user.name);expect(userOutput(one.container)).toContain(user.email);one.unmount();
+}));
+test('independent user requests and selections do not leak into another or a fresh mount',()=>withUsers(async calls=>{
+ const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);calls.forEach(userRequest);await act(async()=>{calls[1].respond([{id:1,name:'Beta',email:'beta@reef.test'}]);calls[0].respond([{id:1,name:'Alpha',email:'alpha@reef.test'}]);});fireEvent.click(a.container.querySelector('button'));expect(userOutput(a.container)).toContain('alpha@reef.test');expect(userOutput(b.container)).not.toContain('beta@reef.test');fireEvent.click(b.container.querySelector('button'));expect(userOutput(b.container)).toContain('beta@reef.test');expect(userOutput(a.container)).not.toContain('beta@reef.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelectorAll('button')).toHaveLength(0);await act(async()=>calls[2].respond([{id:1,name:'Fresh',email:'fresh@reef.test'}]));expect(userOutput(fresh.container)).not.toContain('fresh@reef.test');fresh.unmount();
+}));
+`,
   },
   "react-filter-fetched-users": {
     solution: `const App = () => {
@@ -1728,7 +1740,7 @@ test('newest refresh owns the result and fresh mounts ignore old pending request
     solution: `const App = () => {
   const [title, setTitle] = useState(''); const [created, setCreated] = useState(null);
   const submit = async event => { event.preventDefault(); const response = await fetch('https://jsonplaceholder.typicode.com/posts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})}); setCreated(await response.json()); };
-  return <><form onSubmit={submit}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
+  return <><form onSubmit={submit}><label>Title <input value={title} onChange={event => setTitle(event.target.value)} /></label><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
 };`,
     junior: `const App = () => {
   const [title, setTitle] = useState('');
@@ -1757,7 +1769,7 @@ test('newest refresh owns the result and fresh mounts ignore old pending request
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={title} onChange={handleChange} />
+        <label>Title <input type="text" value={title} onChange={handleChange} /></label>
         <button type="submit">Create</button>
       </form>
       {result}
@@ -1784,7 +1796,7 @@ const App = () => {
     setSaving(true);
     setError('');
     try {
-      setCreated(await postJson(POSTS_URL, { title: title.trim() }));
+      setCreated(await postJson(POSTS_URL, { title }));
       setTitle('');
     } catch (failure) {
       setError(failure.message);
@@ -1804,6 +1816,21 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('sixteen sequential posts use fresh exact snapshots and await each JSON body',()=>withPosts(async calls=>{
+ const view=render(<App/>),raw=['literal <b>reef</b>','  keep these spaces  ','quotes " and slash \\\\','🦈漢字café','x'.repeat(2000)];let previous=null;
+ expect(calls).toHaveLength(0);
+ for(let i=0;i<16;i++){const value=i%raw.length===4?raw[4]:raw[i%raw.length]+'-'+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value}});postEvent(view.container);expect(calls).toHaveLength(i+1);checkPost(calls[i],value);const serverTitle='Server reef 🦈 '+i,id=9000+i;expect(view.container.textContent).not.toContain(serverTitle);if(previous)expect(view.container.textContent).toContain(previous);await act(async()=>calls[i].response());expect(view.container.textContent).not.toContain(serverTitle);await act(async()=>calls[i].json({id,title:serverTitle}));expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).toContain(String(id));if(previous)expect(view.container.textContent).not.toContain(previous);previous=serverTitle;const pending='not submitted '+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value:pending}});view.rerender(<App data-parent={i}/>);expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).not.toContain(pending);expect(calls).toHaveLength(i+1);}
+}));
+test('editing a draft while its request is pending cannot rewrite the returned object',()=>withPosts(async calls=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Submitted reef'}});postEvent(view.container);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Unsent reef'}});checkPost(calls[0],'Submitted reef');await act(async()=>calls[0].response());await act(async()=>calls[0].json({id:427,title:'Server snapshot'}));expect(view.container.textContent).toContain('Server snapshot');expect(view.container.textContent).not.toContain('Unsent reef');
+}));
+test('two post forms and a fresh mount own separate drafts and created objects',()=>withPosts(async calls=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Title'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Title'),{target:{value:'Beta'}});postEvent(a.container);postEvent(b.container);checkPost(calls[0],'Alpha');checkPost(calls[1],'Beta');await act(async()=>{calls[1].response();calls[0].response();});await act(async()=>{calls[1].json({id:42,title:'Beta server'});calls[0].json({id:41,title:'Alpha server'});});expect(a.container.textContent).toContain('Alpha server');expect(a.container.textContent).not.toContain('Beta server');expect(b.container.textContent).toContain('Beta server');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Title').value).toBe('');expect(fresh.container.textContent).not.toContain('server');expect(calls).toHaveLength(2);fresh.unmount();
+}));
+`,
   },
   "react-create-and-append": {
     solution: `const App = () => {

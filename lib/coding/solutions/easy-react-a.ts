@@ -419,7 +419,6 @@ export default App;`,
 
 export const ThemeContext = createContext('light');
 
-// One place to read the theme, so every consumer reads it the same way.
 const useTheme = () => useContext(ThemeContext);
 
 export const Badge = () => {
@@ -457,7 +456,20 @@ test('a new provider value reaches the badge', () => {
   const { container, rerender } = render(<ThemeContext.Provider value="dark"><Badge /></ThemeContext.Provider>);
   rerender(<ThemeContext.Provider value="sepia"><Badge /></ThemeContext.Provider>);
   expect(container.textContent).toContain('Theme: sepia');
-});`,
+});
+
+
+const assertTheme=(root,value)=>{expect(root.textContent).toBe('Theme: '+value);const classes=root.querySelector('span').className.split(' ');expect(classes).toContain('badge');expect(classes).toContain('badge--'+value);};
+test('text and class follow twenty-five provider changes even with the same child element',()=>{
+ const child=<Badge theme="ignored"/>,view=render(<ThemeContext.Provider value="dark">{child}</ThemeContext.Provider>);for(const value of ['light','sepia','','reef-1',...Array.from({length:21},(_,i)=>'palette-'+i)]){view.rerender(<ThemeContext.Provider value={value}>{child}</ThemeContext.Provider>);assertTheme(view.container,value);}
+});
+test('the nearest provider controls each sibling without prop drilling',()=>{
+ const a=render(<ThemeContext.Provider value="outer"><div><ThemeContext.Provider value="inner"><Badge theme="other"/></ThemeContext.Provider></div></ThemeContext.Provider>),b=render(<ThemeContext.Provider value="elsewhere"><Badge/></ThemeContext.Provider>);assertTheme(a.container,'inner');assertTheme(b.container,'elsewhere');a.rerender(<ThemeContext.Provider value="changed-outer"><ThemeContext.Provider value=""><Badge/></ThemeContext.Provider></ThemeContext.Provider>);assertTheme(a.container,'');assertTheme(b.container,'elsewhere');a.unmount();b.unmount();
+});
+test('provider removal restores the default on a fresh badge',()=>{
+ const view=render(<ThemeContext.Provider value="not-default"><Badge/></ThemeContext.Provider>);assertTheme(view.container,'not-default');view.rerender(<Badge theme="dark"/>);assertTheme(view.container,'light');view.unmount();const fresh=render(<Badge/>);assertTheme(fresh.container,'light');fresh.unmount();
+});
+`,
   },
   'react-easy2-nearest-provider': {
     solution: `import React, { createContext, useContext } from 'react';
@@ -525,7 +537,6 @@ export const SizeContext = createContext('medium');
 
 export const Label = ({ text }) => <span>{text} ({useContext(SizeContext)})</span>;
 
-// A small wrapper keeps each size next to the part of the page it applies to.
 const Sized = ({ size, children }) => <SizeContext.Provider value={size}>{children}</SizeContext.Provider>;
 
 const App = () => (
@@ -563,7 +574,19 @@ test('the closer of two providers wins', () => {
     </SizeContext.Provider>,
   );
   expect(container.textContent).toBe('Inner (tiny)');
-});`,
+});
+
+
+test('twenty-four current provider changes reach an unchanged Label element',()=>{
+ const child=<Label text="  Reef <b>🦈  "/>,view=render(<SizeContext.Provider value="first">{child}</SizeContext.Provider>);const values=['','tiny','huge',...Array.from({length:21},(_,i)=>'size-'+i)];for(const value of values){view.rerender(<SizeContext.Provider value={value}>{child}</SizeContext.Provider>);expect(view.container.textContent).toBe('  Reef <b>🦈   ('+value+')');}
+});
+test('nested and sibling providers retain exact local values and raw labels',()=>{
+ const a=render(<SizeContext.Provider value="outer"><section><Label text="Outer"/><SizeContext.Provider value="inner"><aside><Label text="Inner"/></aside></SizeContext.Provider></section></SizeContext.Provider>),b=render(<SizeContext.Provider value="separate"><Label text="Side"/></SizeContext.Provider>);expect(a.container.querySelector('aside').textContent).toBe('Inner (inner)');expect(a.container.textContent).toBe('Outer (outer)Inner (inner)');expect(b.container.textContent).toBe('Side (separate)');a.rerender(<SizeContext.Provider value="new"><Label text="x"/></SizeContext.Provider>);expect(a.container.textContent).toBe('x (new)');expect(b.container.textContent).toBe('Side (separate)');a.unmount();b.unmount();
+});
+test('default and long labels return when no provider is present',()=>{
+ const value='r'.repeat(2000),view=render(<Label text={value}/>);expect(view.container.textContent).toBe(value+' (medium)');view.rerender(<SizeContext.Provider value="override"><Label text="Changed"/></SizeContext.Provider>);expect(view.container.textContent).toBe('Changed (override)');view.rerender(<Label text="Back"/>);expect(view.container.textContent).toBe('Back (medium)');view.unmount();const fresh=render(<Label text="Fresh"/>);expect(fresh.container.textContent).toBe('Fresh (medium)');fresh.unmount();
+});
+`,
   },
   'react-easy2-shared-basket': {
     solution: `import React, { createContext, useContext, useState } from 'react';

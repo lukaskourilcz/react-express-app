@@ -503,7 +503,7 @@ test('the first tick waits one full100ms',()=>withStepClock(async clock=>{const 
     tier: 1,
     focus: ['useContext'],
     title: 'Read the theme',
-    prompt: '`Badge` expects a `theme` prop, but `Toolbar` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through `ThemeContext`. Make `Badge` read the theme with `useContext(ThemeContext)` instead of taking a prop, for both its text and its class name. Leave `Toolbar` as it is: with context, the components in between pass nothing along.',
+    prompt: `\`Badge\` expects a \`theme\` prop, but \`Toolbar\` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through \`ThemeContext\`. Make \`Badge\` read the theme with \`useContext(ThemeContext)\` instead of taking a prop, for both its text and its class name. Leave \`Toolbar\` as it is: with context, the components in between pass nothing along. Provider values are strings, including an explicitly empty string; an empty value is not the no-provider default. Use the latest value for both the exact text Theme: <value> and the badge--<value> class. Repeated provider changes must reach the same child element, and nested or separate providers must remain independent. Without a provider, use light. Keep the supplied Toolbar unchanged.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 export const ThemeContext = createContext('light');
@@ -556,6 +556,11 @@ test('outside any provider it shows the default', () => {
   const { container } = render(<Badge />);
   expect(container.textContent).toContain('Theme: light');
 });
+
+
+test('an explicitly empty theme does not use the no-provider default',()=>{
+ const view=render(<ThemeContext.Provider value=""><Badge theme="ignored"/></ThemeContext.Provider>);expect(view.container.textContent).toBe('Theme: ');expect(view.container.querySelector('span').className.split(' ')).toContain('badge--');
+});
 `,
   },
   {
@@ -566,7 +571,7 @@ test('outside any provider it shows the default', () => {
     tier: 2,
     focus: ['useContext'],
     title: 'Nearest provider wins',
-    prompt: 'Create and export `SizeContext` with `createContext("medium")`. `Label` shows its text and then, in brackets, the size it reads from `SizeContext`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it.',
+    prompt: `Create and export \`SizeContext\` with \`createContext("medium")\`. \`Label\` shows its text and then, in brackets, the size it reads from \`SizeContext\`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it. Size values are strings, including an explicitly empty string; that displays an empty pair of brackets rather than the default. Follow the current nearest provider through repeated updates to the same child, and keep sibling providers independent. Preserve the raw label text, including spaces, Unicode and literal markup up to 2000 UTF-16 units. medium is used only when there is no provider.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 // Create and export SizeContext here, with "medium" as its default.
@@ -622,6 +627,11 @@ test('the label in the section reads large', () => {
 test('the inner provider wins for the note', () => {
   const { container } = render(<App />);
   expect(container.querySelector('aside').textContent).toBe('Note (small)');
+});
+
+
+test('an empty nearest size is a provided value rather than the default',()=>{
+ const view=render(<SizeContext.Provider value="outer"><SizeContext.Provider value=""><Label text="Raw label"/></SizeContext.Provider></SizeContext.Provider>);expect(view.container.textContent).toBe('Raw label ()');
 });
 `,
   },

@@ -1158,7 +1158,7 @@ test('renders the users when the request succeeds', async () => {
     tier: 2,
     focus: ["fetch", "useState"],
     title: "Select fetched user",
-    prompt: "Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first.",
+    prompt: `Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first. Use https://jsonplaceholder.typicode.com/users with GET on mount, and render the returned array in order. Each user has a unique string or positive integer id and a name/email; the array can be empty or contain up to 24 users. Display names may repeat and may contain spaces, Unicode or literal markup, up to 2000 UTF-16 units. After each choice, display only that user’s name and email outside the buttons; another choice replaces the previous details. Keep button identity and selection through parent renders. Independent and fresh instances own their requests and selection. This exercise covers successful responses, not loading/error UI.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1215,7 +1215,7 @@ const visibleItems = items;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows details only after a user is selected', async () => {
@@ -1226,6 +1226,14 @@ test('shows details only after a user is selected', async () => {
   fireEvent.click(target);
   await waitFor(() => expect(container.textContent).toContain('ervin@example.com'));
 });
+
+
+const withUsers=async body=>{const calls=[],real=globalThis.fetch;globalThis.fetch=(url,options={})=>new Promise(resolve=>calls.push({url:String(url),options,respond:users=>resolve({ok:true,status:200,json:()=>Promise.resolve(users)})}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const userOutput=root=>{const copy=root.cloneNode(true);copy.querySelectorAll('button').forEach(node=>node.remove());return copy.textContent;};
+const userRequest=call=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/users');expect(String(call.options.method||'GET').toUpperCase()).toBe('GET');};
+test('each fetched button reveals that user name and email outside the button list',()=>withUsers(async calls=>{
+ const view=render(<App/>),users=[{id:91,name:'Ada Reef',email:'ada@reef.test'},{id:203,name:'Bo Bay',email:'bo@bay.test'}];expect(view.container.querySelectorAll('button')).toHaveLength(0);userRequest(calls[0]);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));expect(userOutput(view.container)).not.toContain(users[0].email);fireEvent.click(buttons[0]);expect(userOutput(view.container)).toContain(users[0].name);expect(userOutput(view.container)).toContain(users[0].email);expect(userOutput(view.container)).not.toContain(users[1].email);
+}));
 `,
     api: {
       method: "GET",
@@ -1432,7 +1440,7 @@ test('Refresh renders the actual new response title',()=>withPhasedRequests(asyn
     tier: 3,
     focus: ["fetch", "forms"],
     title: "POST a new post",
-    prompt: "Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it.",
+    prompt: `Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it. Label the controlled input Title. Use https://jsonplaceholder.typicode.com/posts, method POST, a JSON content-type header and JSON.stringify({ title }). For nonblank single-line titles up to 2000 UTF-16 code units, preserve the exact text, including leading/trailing spaces, Unicode and literal markup. Prevent navigation. Display the latest returned title and id, not values invented from the draft. Wait for both the response and its JSON body; until then retain any previous result. Editing the draft does not alter a submitted or displayed snapshot. Submissions in this exercise are sequential and successful; response ordering, failures and blank-title behavior are outside its scope. Keep parent state and separate forms independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1469,7 +1477,7 @@ const createItem = async newItem => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('sends the title and renders what comes back', async () => {
@@ -1479,6 +1487,18 @@ test('sends the title and renders what comes back', async () => {
   await waitFor(() => expect(container.textContent).toContain('My new post'));
   expect(container.textContent).toContain('101');
 });
+
+
+const withPosts = async body => {
+ const calls=[],real=globalThis.fetch;
+ globalThis.fetch=(url,options={})=>new Promise(resolve=>{let jsonResolve;const json=new Promise(done=>{jsonResolve=done;});calls.push({url:String(url),options,response:()=>resolve({ok:true,status:201,json:()=>json}),json:jsonResolve});});
+ try{await body(calls);}finally{globalThis.fetch=real;}
+};
+const postEvent=container=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+const checkPost=(call,title)=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/posts');expect(String(call.options.method||'GET').toUpperCase()).toBe('POST');const headers=call.options.headers||{},entry=typeof headers.get==='function'?headers.get('content-type'):Object.entries(headers).find(([key])=>key.toLowerCase()==='content-type')?.[1];expect(/^application\\/json(?:;|$)/i.test(entry||'')).toBe(true);expect(typeof call.options.body).toBe('string');expect(JSON.parse(call.options.body)).toEqual({title});};
+test('the request preserves its title and the result comes from the response body',()=>withPosts(async calls=>{
+ const view=render(<App/>);const title='  A raw title 🦈  ';fireEvent.change(screen.getByLabelText('Title'),{target:{value:title}});postEvent(view.container);expect(calls).toHaveLength(1);checkPost(calls[0],title);expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].response());expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].json({id:785,title:'Assigned by server'}));expect(view.container.textContent).toContain('785');expect(view.container.textContent).toContain('Assigned by server');
+}));
 `,
     api: {
       method: "POST",

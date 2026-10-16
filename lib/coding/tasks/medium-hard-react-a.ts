@@ -1486,8 +1486,8 @@ test('two comboboxes have their own labelled input,list and option ids',()=>{con
     tier: 4,
     focus: ['forms', 'derived-state', 'accessibility', 'useRef'],
     title: 'A sign-up form that says what is wrong',
-    prompt: 'The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its `blur`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a `p` with an id of its own, and the field gets `aria-invalid="true"` and `aria-describedby` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match \`/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/\` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its \`blur\`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a \`p\` with an id of its own, and the field gets \`aria-invalid="true"\` and \`aria-describedby\` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email. Password length means JavaScript UTF-16 code units (\`password.length\`); the required digit is an ASCII digit 0–9. Compare both password fields exactly, without trimming them. Email uses the stated simple pattern, not complete mailbox validation. Validate the current native email value after trimming it. Field values can contain up to 2000 units of single-line text. Give every instance stable unique field/error ids so labels and error descriptions remain local. Parent renders retain input nodes and touched state; separate and fresh forms remain independent.`,
+    starter: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
@@ -1519,6 +1519,7 @@ export default App;
     skeleton: `const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
 const [tried, setTried] = useState(false);
 const [welcome, setWelcome] = useState('');
+const prefix = useId();
 const refs = { email: useRef(null), password: useRef(null), repeat: useRef(null) };
 
 const errors = {
@@ -1537,11 +1538,13 @@ const submit = (event) => {
 
 // <input ... onBlur={() => setTouched({ ...touched, email: true })}
 //        aria-invalid={shown('email') ? 'true' : undefined}
-//        aria-describedby={shown('email') ? 'email-error' : undefined} />
-// {shown('email') && <p id="email-error">{errors.email}</p>}`,
+//        aria-describedby={shown('email') ? prefix + 'email-error' : undefined} />
+// {shown('email') && <p id={prefix + 'email-error'}>{errors.email}</p>}
+
+// Derive each input id from prefix too, and use that same id in its label htmlFor.`,
     hints: [
-      'The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.',
-      '`aria-describedby` makes a screen reader read the error with the field, and `aria-invalid` says the field needs attention. React drops an attribute whose value is `undefined`, which is how a field with no shown error has neither.',
+      `The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.`,
+      `\`aria-describedby\` makes a screen reader read the error with the field, and \`aria-invalid\` says the field needs attention. React drops an attribute whose value is \`undefined\`, which is how a field with no shown error has neither. Use useId to derive stable field and error ids unique to each mounted form.`,
     ],
     approach: [
       'Work out each field’s message from the values: the email pattern on the trimmed email, the length and a digit for the password, equality for the repeat.',
@@ -1613,6 +1616,11 @@ test('a valid submit welcomes the new user', () => {
   type('Repeat password', 'correct1horse');
   submit();
   expect(screen.getByText('Welcome, ada@example.com')).toBeTruthy();
+});
+
+
+test('seven UTF-16 units are too short even with a digit',()=>{
+ render(<App/>);type('Password','abcdef1');leave('Password');expect(describedBy('Password')).toBe('Use 8 or more characters with a number');type('Password','abcdefg1');expect(describedBy('Password')).toBeNull();
 });
 `,
   },

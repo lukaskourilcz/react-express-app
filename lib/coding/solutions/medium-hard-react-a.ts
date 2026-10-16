@@ -3242,7 +3242,7 @@ test('independent selections,cancellation,option clicks and fresh empty state',(
 `,
   },
   'react-mh-signup-form': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useId, useRef, useState } from 'react';
 
 const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 const FIELDS = ['email', 'password', 'repeat'];
@@ -3255,6 +3255,7 @@ const errorsFor = (values) => ({
 });
 
 const App = () => {
+  const prefix = useId();
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
   // Only whether to show an error is state: a field was left, or a submit was tried.
   const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
@@ -3287,9 +3288,9 @@ const App = () => {
   // A function, not a component: the inputs keep their identity between renders.
   const field = (name, label, type) => (
     <div>
-      <label htmlFor={name}>{label}</label>
+      <label htmlFor={prefix + name}>{label}</label>
       <input
-        id={name}
+        id={prefix + name}
         name={name}
         type={type}
         ref={refs[name]}
@@ -3298,9 +3299,9 @@ const App = () => {
         onBlur={leave}
         // undefined leaves the attribute out while the error is hidden.
         aria-invalid={shown(name) ? 'true' : undefined}
-        aria-describedby={shown(name) ? name + '-error' : undefined}
+        aria-describedby={shown(name) ? prefix + name + '-error' : undefined}
       />
-      {shown(name) && <p id={name + '-error'}>{errors[name]}</p>}
+      {shown(name) && <p id={prefix + name + '-error'}>{errors[name]}</p>}
     </div>
   );
 
@@ -3316,9 +3317,10 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
+  const prefix = useId();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -3379,43 +3381,43 @@ const App = () => {
     <main>
       <h2>Create an account</h2>
       <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="email">Email</label>
+        <label htmlFor={prefix + 'email'}>Email</label>
         <input
-          id="email"
+          id={prefix + 'email'}
           ref={emailRef}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           onBlur={() => setEmailLeft(true)}
           aria-invalid={showEmailError ? 'true' : undefined}
-          aria-describedby={showEmailError ? 'email-error' : undefined}
+          aria-describedby={showEmailError ? prefix + 'email-error' : undefined}
         />
-        {showEmailError && <p id="email-error">{emailError}</p>}
+        {showEmailError && <p id={prefix + 'email-error'}>{emailError}</p>}
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor={prefix + 'password'}>Password</label>
         <input
-          id="password"
+          id={prefix + 'password'}
           type="password"
           ref={passwordRef}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           onBlur={() => setPasswordLeft(true)}
           aria-invalid={showPasswordError ? 'true' : undefined}
-          aria-describedby={showPasswordError ? 'password-error' : undefined}
+          aria-describedby={showPasswordError ? prefix + 'password-error' : undefined}
         />
-        {showPasswordError && <p id="password-error">{passwordError}</p>}
+        {showPasswordError && <p id={prefix + 'password-error'}>{passwordError}</p>}
 
-        <label htmlFor="repeat">Repeat password</label>
+        <label htmlFor={prefix + 'repeat'}>Repeat password</label>
         <input
-          id="repeat"
+          id={prefix + 'repeat'}
           type="password"
           ref={repeatRef}
           value={repeat}
           onChange={(event) => setRepeat(event.target.value)}
           onBlur={() => setRepeatLeft(true)}
           aria-invalid={showRepeatError ? 'true' : undefined}
-          aria-describedby={showRepeatError ? 'repeat-error' : undefined}
+          aria-describedby={showRepeatError ? prefix + 'repeat-error' : undefined}
         />
-        {showRepeatError && <p id="repeat-error">{repeatError}</p>}
+        {showRepeatError && <p id={prefix + 'repeat-error'}>{repeatError}</p>}
 
         <button type="submit">Create account</button>
       </form>
@@ -3435,12 +3437,13 @@ const RULES = [
 ];
 
 const Field = ({ rule, value, error, inputRef, onChange, onBlur }) => {
-  const errorId = useId();
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   return (
     <div>
-      <label htmlFor={rule.name}>{rule.label}</label>
+      <label htmlFor={fieldId}>{rule.label}</label>
       <input
-        id={rule.name}
+        id={fieldId}
         name={rule.name}
         type={rule.type}
         ref={inputRef}
@@ -3551,7 +3554,31 @@ test('a form with errors is not sent', () => {
   submit();
   expect(screen.queryByText(/^Welcome/)).toBeNull();
   expect(document.activeElement).toBe(field('Repeat password'));
-});`,
+});
+
+
+const signMessages=['Enter an email like name@example.com','Use 8 or more characters with a number','The passwords do not match'];
+const signLabels=['Email','Password','Repeat password'];
+const signInput=(root,index)=>within(root).getByLabelText(signLabels[index]);
+const signType=(root,index,value)=>fireEvent.change(signInput(root,index),{target:{value}});
+const signCheck=(root,index,message)=>{const input=signInput(root,index),id=input.getAttribute('aria-describedby');if(message){expect(input.getAttribute('aria-invalid')).toBe('true');const error=document.getElementById(id);expect(root.contains(error)).toBe(true);expect(error.tagName).toBe('P');expect(error.textContent).toBe(message);}else{expect(input.getAttribute('aria-invalid')).toBeNull();expect(id).toBeNull();}};
+const signSubmit=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('password boundaries,exact repeats and every first-invalid position follow current values',()=>{
+ const matrix=[['bad','abcdefg1','abcdefg1'],['ok@example.test','abcdef1','abcdef1'],['ok@example.test','abcdefg1','abcdefg1 '],['ok@example.test',' abcdef1','abcdef1'],['ok@example.test','🦈🦈🦈1','🦈🦈🦈1'],['ok@example.test','abcdefgh','abcdefgh'],['ok@example.test','abcdefg١','abcdefg١'],['bad','short','different'],['ok@example.test','abcdefg1','different'],['ok@example.test','x'.repeat(1999)+'1','different']];
+ for(const values of matrix){const view=render(<App/>),root=view.container;values.forEach((value,i)=>signType(root,i,value));const actual=signLabels.map((_,i)=>signInput(root,i).value),invalid=[!(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(actual[0].trim())),actual[1].length<8||!/[0-9]/.test(actual[1]),actual[2]!==actual[1]];signSubmit(root);expect(document.activeElement).toBe(signInput(root,invalid.indexOf(true)));invalid.forEach((bad,i)=>signCheck(root,i,bad?signMessages[i]:null));expect(root.textContent).not.toContain('Welcome,');view.unmount();}
+ for(const email of ['','@reef.test','reef@','a@@b.test','a@b','a b@c.test','a@b c.test','  bad  ','a@b..c','café+reef@example.test','🦈@reef.test','x'.repeat(1987)+'@reef.test']){const view=render(<App/>),root=view.container;signType(root,0,email);fireEvent.blur(signInput(root,0));const expected=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(signInput(root,0).value.trim());signCheck(root,0,expected?null:signMessages[0]);view.unmount();}
+ for(const values of [['  café+reef@example.test  ','🦈🦈🦈🦈1'],['reef@example.test','  abcde1'],['reef@example.test','x'.repeat(1999)+'1']]){const view=render(<App/>),root=view.container;signType(root,0,values[0]);signType(root,1,values[1]);signType(root,2,values[1]);const email=signInput(root,0).value.trim();signSubmit(root);expect(root.querySelector('form')).toBeNull();expect(root.textContent).toContain('Welcome, '+email);view.unmount();}
+});
+test('twenty field corrections keep touch state,live dependencies and input identity',()=>{
+ const view=render(<App/>),root=view.container;const nodes=signLabels.map((_,i)=>signInput(root,i));
+ for(let i=0;i<20;i++){const password=i%2?'abcdefg1':'abcdefgh';signType(root,1,password);signType(root,2,'abcdefg1');if(i===0){signLabels.forEach((_,j)=>signCheck(root,j,null));fireEvent.blur(nodes[1]);fireEvent.blur(nodes[2]);}signCheck(root,1,i%2?null:signMessages[1]);signCheck(root,2,i%2?null:signMessages[2]);signCheck(root,0,null);view.rerender(<App data-parent={i}/>);signLabels.forEach((_,j)=>expect(signInput(root,j)).toBe(nodes[j]));}
+ signSubmit(root);signCheck(root,0,signMessages[0]);signType(root,0,'current@example.test');signCheck(root,0,null);signType(root,0,'bad');signCheck(root,0,signMessages[0]);
+});
+test('labels and error ids belong to their own form and fresh state is untouched',()=>{
+ const a=render(<App/>),b=render(<App/>);for(const root of [a.container,b.container]){signType(root,2,'different');signSubmit(root);signLabels.forEach((_,i)=>{const input=signInput(root,i),label=[...root.querySelectorAll('label')].find(label=>label.textContent===signLabels[i]);expect(label.control).toBe(input);signCheck(root,i,signMessages[i]);});}
+ const nodes=[...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')];expect(new Set(nodes.map(node=>node.id)).size).toBe(nodes.length);const ids=nodes.map(node=>node.id);a.rerender(<App/>);b.rerender(<App/>);expect([...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')].map(node=>node.id)).toEqual(ids);signType(a.container,0,'alpha@example.test');signCheck(a.container,0,null);signCheck(b.container,0,signMessages[0]);a.unmount();b.unmount();const fresh=render(<App/>);signLabels.forEach((_,i)=>{expect(signInput(fresh.container,i).value).toBe('');signCheck(fresh.container,i,null);});fresh.unmount();
+});
+`,
   },
   'react-mh-carousel': {
     solution: `import React, { useEffect, useState } from 'react';
