@@ -1413,9 +1413,11 @@ export default App;
 
 const cities = ['Athens', 'Bergen', 'Cork', 'Dresden', 'Evora', 'Faro', 'Ghent'];
 
-const usePagination = (items, pageSize) => {
-  const [index, setIndex] = useState(0);
+export const usePagination = (items, pageSize) => {
+  const [requestedIndex, setIndex] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const index = Math.min(requestedIndex, pageCount - 1);
+  if (requestedIndex !== index) setIndex(index);
   const start = index * pageSize;
   const pageItems = items.slice(start, start + pageSize);
   const next = () => setIndex(current => Math.min(current + 1, pageCount - 1));
@@ -1423,8 +1425,8 @@ const usePagination = (items, pageSize) => {
   return { pageItems, page: index + 1, pageCount, next, previous };
 };
 
-const App = () => {
-  const { pageItems, page, pageCount, next, previous } = usePagination(cities, 3);
+const App = ({ items = cities, pageSize = 3 } = {}) => {
+  const { pageItems, page, pageCount, next, previous } = usePagination(items, pageSize);
 
   return (
     <main>
@@ -1446,30 +1448,28 @@ export default App;
 
 const cities = ['Athens', 'Bergen', 'Cork', 'Dresden', 'Evora', 'Faro', 'Ghent'];
 
-function usePagination(items, pageSize) {
-  const [page, setPage] = useState(1);
-  const pageCount = Math.ceil(items.length / pageSize);
+export function usePagination(items, pageSize) {
+  const [requestedPage, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const page = Math.min(requestedPage, pageCount);
+  if (requestedPage !== page) setPage(page);
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const pageItems = items.slice(start, end);
 
   function next() {
-    if (page < pageCount) {
-      setPage(page + 1);
-    }
+    setPage(current => Math.min(current + 1, pageCount));
   }
 
   function previous() {
-    if (page > 1) {
-      setPage(page - 1);
-    }
+    setPage(current => Math.max(current - 1, 1));
   }
 
   return { pageItems: pageItems, page: page, pageCount: pageCount, next: next, previous: previous };
 }
 
-const App = () => {
-  const pagination = usePagination(cities, 3);
+const App = ({ items = cities, pageSize = 3 } = {}) => {
+  const pagination = usePagination(items, pageSize);
   const isFirst = pagination.page === 1;
   const isLast = pagination.page === pagination.pageCount;
 
@@ -1494,10 +1494,11 @@ export default App;
 
 const cities = ['Athens', 'Bergen', 'Cork', 'Dresden', 'Evora', 'Faro', 'Ghent'];
 
-const usePagination = (items, pageSize) => {
-  const [index, setIndex] = useState(0);
+export const usePagination = (items, pageSize) => {
+  const [requestedIndex, setIndex] = useState(0);
   const lastIndex = Math.max(0, Math.ceil(items.length / pageSize) - 1);
-  // One clamped step serves both directions and can never leave the valid range.
+  const index = Math.min(requestedIndex, lastIndex);
+  if (requestedIndex !== index) setIndex(index);
   const step = delta => setIndex(current => Math.min(Math.max(current + delta, 0), lastIndex));
   return {
     pageItems: items.slice(index * pageSize, (index + 1) * pageSize),
@@ -1510,8 +1511,8 @@ const usePagination = (items, pageSize) => {
   };
 };
 
-const App = () => {
-  const { pageItems, page, pageCount, hasPrevious, hasNext, next, previous } = usePagination(cities, 3);
+const App = ({ items = cities, pageSize = 3 } = {}) => {
+  const { pageItems, page, pageCount, hasPrevious, hasNext, next, previous } = usePagination(items, pageSize);
 
   return (
     <main>
@@ -1529,6 +1530,7 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\nconst pageProbe=()=>{\n let current;\n const Probe=({items,size})=>{\n  const page=usePagination(items,size);current=page;\n  return <main><p>{'Page '+page.page+' of '+page.pageCount}</p><button onClick={page.previous}>Back</button><button onClick={page.next}>Forward</button><button onClick={()=>{page.next();page.next();}}>Forward twice</button></main>;\n };\n return {Probe,read:()=>current};\n};\n\ntest('the named hook handles generic read-only values,empty input,bounds and batched calls',()=>{\n const token=()=>1,symbol=Symbol('token'),record=Object.freeze({id:1});\n const cases=[{items:Object.freeze([]),size:3},{items:Object.freeze(['one']),size:1},{items:Object.freeze(['A','B','C','D','E','F','G']),size:3},{items:Object.freeze([record,token,symbol,null,undefined,0,false]),size:2},{items:Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i}))),size:100}];\n for(const data of cases){\n  const driver=pageProbe(),view=render(<driver.Probe items={data.items} size={data.size}/>),count=Math.max(1,Math.ceil(data.items.length/data.size));let expected=1;\n  const check=()=>{const page=driver.read();expect(page.page).toBe(expected);expect(page.pageCount).toBe(count);const items=Array.from(page.pageItems),start=(expected-1)*data.size;expect(items.length).toBe(Math.min(data.size,Math.max(0,data.items.length-start)));items.forEach((item,i)=>expect(item).toBe(data.items[start+i]));};\n  check();fireEvent.click(button(view.container,'Forward twice'));expected=Math.min(3,count);check();\n  while(expected<count){fireEvent.click(button(view.container,'Forward'));expected++;check();}\n  fireEvent.click(button(view.container,'Forward'));check();\n  while(expected>1){fireEvent.click(button(view.container,'Back'));expected--;check();}\n  fireEvent.click(button(view.container,'Back'));check();view.unmount();\n }\n});\ntest('App follows changed items and page sizes and persists a page clamp',()=>{\n const original=Object.freeze(['A','B','C','D','E','F','G']);const view=render(<App items={original} pageSize={3}/>);\n const check=(names,page,count)=>{expect([...view.container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(names);expect(view.container.querySelector('p').textContent).toBe('Page '+page+' of '+count);expect(button(view.container,'Previous').disabled).toBe(page===1);expect(button(view.container,'Next').disabled).toBe(page===count);};\n check(['A','B','C'],1,3);fireEvent.click(button(view.container,'Next'));fireEvent.click(button(view.container,'Next'));check(['G'],3,3);\n view.rerender(<App items={Object.freeze(['<b>New</b>'])} pageSize={3}/>);check(['<b>New</b>'],1,1);\n const larger=Object.freeze(Array.from({length:10},(_,i)=>'City '+i));view.rerender(<App items={larger} pageSize={2}/>);check(['City 0','City 1'],1,5);\n fireEvent.click(button(view.container,'Next'));check(['City 2','City 3'],2,5);view.rerender(<App items={larger} pageSize={1}/>);check(['City 1'],2,10);\n view.rerender(<App items={Object.freeze([])} pageSize={1}/>);check([],1,1);view.rerender(<App items={Object.freeze(['Restored','More'])} pageSize={1}/>);check(['Restored'],1,2);\n expect([...original]).toEqual(['A','B','C','D','E','F','G']);\n});\ntest('the hook clamps its own state on input changes and keeps mounted instances independent',()=>{\n const first=pageProbe(),second=pageProbe(),items=Object.freeze(['a','b','c','d','e','f','g','h']);\n const a=render(<first.Probe items={items} size={2}/>),b=render(<second.Probe items={items} size={2}/>);\n fireEvent.click(button(a.container,'Forward twice'));expect(first.read().page).toBe(3);expect(second.read().page).toBe(1);\n a.rerender(<first.Probe items={Object.freeze(['one'])} size={1}/>);expect(first.read().page).toBe(1);expect(first.read().pageCount).toBe(1);\n a.rerender(<first.Probe items={Object.freeze(['x','y','z','w'])} size={2}/>);expect(first.read().page).toBe(1);fireEvent.click(button(a.container,'Forward twice'));expect(first.read().page).toBe(2);\n fireEvent.click(button(b.container,'Forward'));expect(second.read().page).toBe(2);expect(first.read().page).toBe(2);\n a.unmount();const third=pageProbe(),c=render(<third.Probe items={items} size={2}/>);expect(third.read().page).toBe(1);expect(Array.from(third.read().pageItems)).toEqual(['a','b']);\n});\n",
   },
   "react-reorder-with-stable-keys": {
     solution: `import React, { useState } from 'react';
@@ -1637,7 +1639,6 @@ const initialSteps = [
   { id: 'd', label: 'Ship' },
 ];
 
-// toSpliced is the copying splice: take the item out at one index, put it back at the other.
 const moveItem = (list, from, to) =>
   to < 0 || to >= list.length ? list : list.toSpliced(from, 1).toSpliced(to, 0, list[from]);
 
@@ -1672,5 +1673,6 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\ntest('edge disabled flags follow current positions after moves',()=>{\n const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Down'));expect(labels(view.container)).toEqual(['Build','Plan','Test','Ship']);\n const check=()=>{const rows=[...view.container.querySelectorAll('li')];rows.forEach((li,i)=>{expect(control(li,'Up').disabled).toBe(i===0);expect(control(li,'Down').disabled).toBe(i===rows.length-1);});};\n check();fireEvent.click(control(view.container.querySelectorAll('li')[3],'Up'));expect(labels(view.container)).toEqual(['Build','Plan','Ship','Test']);check();\n fireEvent.click(control(view.container.querySelectorAll('li')[1],'Up'));expect(labels(view.container)).toEqual(['Plan','Build','Ship','Test']);check();\n});\ntest('matches repeated neighbour moves while retaining every row node',()=>{\n const view=render(<App/>);let expected=['Plan','Build','Test','Ship'];const nodes=new Map([...view.container.querySelectorAll('li')].map(li=>[li.querySelector('span').textContent,li]));\n for(let step=0;step<36;step++){\n  const index=(step*5+Math.floor(step/3))%4,delta=step%2===0?1:-1,target=index+delta;fireEvent.click(control(view.container.querySelectorAll('li')[index],delta===1?'Down':'Up'));\n  if(target>=0&&target<4){const next=[...expected];[next[index],next[target]]=[next[target],next[index]];expected=next;}\n  expect(labels(view.container)).toEqual(expected);[...view.container.querySelectorAll('li')].forEach((li,i)=>{expect(li).toBe(nodes.get(expected[i]));expect(control(li,'Up').disabled).toBe(i===0);expect(control(li,'Down').disabled).toBe(i===3);});\n }\n});\ntest('keeps concurrent and fresh ordered lists independent',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.click(control(first.container.querySelectorAll('li')[1],'Down'));fireEvent.click(control(first.container.querySelectorAll('li')[3],'Up'));expect(labels(second.container)).toEqual(['Plan','Build','Test','Ship']);\n fireEvent.click(control(second.container.querySelectorAll('li')[0],'Down'));expect(labels(first.container)).toEqual(['Plan','Test','Ship','Build']);expect(labels(second.container)).toEqual(['Build','Plan','Test','Ship']);first.unmount();const third=render(<App/>);expect(labels(third.container)).toEqual(['Plan','Build','Test','Ship']);\n});\n",
   },
 };

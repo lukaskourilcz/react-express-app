@@ -7,6 +7,7 @@ import { approachesFor } from '../../../../lib/coding/approaches';
 import { taskHash, taskTranslationHash } from '../../../../lib/curation';
 import { levelCodingTasks } from '../../../../lib/coding/active';
 import { complexityGuidance } from '../../../../shared/coding-complexity';
+import { SKELETON_FILLS } from '../../../../scripts/fixtures/skeleton-fills';
 
 import { JAVASCRIPT_TASKS } from '../../../../lib/coding/tasks/javascript';
 import { JAVASCRIPT_LOOP_TASKS } from '../../../../lib/coding/tasks/javascript-loops';
@@ -48,6 +49,9 @@ for (const task of CODING_TASKS) {
     previousRequirements: task.previousRequirements ?? null,
     references: task.references ?? null,
     skeleton: task.skeleton ?? null,
+    // Existing complete hint examples are separate QA answers, not shipped
+    // solutions. Include them in the private audit reading inventory too.
+    filledSkeleton: SKELETON_FILLS[task.id] ?? null,
     hints: task.hints,
     approach: task.approach ?? null,
     tests: task.tests ?? null,

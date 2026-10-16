@@ -16,7 +16,7 @@ export const REACT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["useState", "forms"],
     title: "Color selector",
-    prompt: "Render a select over the colours declared in the starter — Red, Blue and Green — plus a line reading “You have selected: <colour>”. It starts on the first one, and choosing another updates the line immediately.",
+    prompt: "Render a single-selection dropdown with accessible name `Color`, containing Red, Blue and Green options in that order with those exact values. Render a line `You have selected: <color>`. Both the native select value and the line start on Red. Every choice, including Green, returning to Red and repeated selections, updates both immediately and keeps them consistent. Ordinary parent re-renders preserve the current selection. Independent and fresh mounts each start on Red. Use the starter colors array, keep the select controlled and label it visibly or with an equivalent accessible name.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const colors = ['Red', 'Blue', 'Green'];
@@ -33,13 +33,13 @@ export default App;
 `,
     skeleton: `const [color, setColor] = useState(/* the first colour */);
 
-<select value={color} onChange={event => setColor(/* the chosen option */)}>
+<select aria-label="Color" value={color} onChange={event => setColor(/* the chosen option */)}>
   {colors.map(one => (
     <option key={one}>{one}</option>
   ))}
 </select>
 <p>You have selected: {/* the colour in state */}</p>`,
-    hints: ["Keep the selected color in state. Bind value and onChange to the select."],
+    hints: ["Keep the selected color in state. Bind value/onChange to the select and give it the accessible name Color."],
     approach: [
       "Keep the chosen colour in a state value that starts as Red.",
       "Make the select controlled: its value comes from state, and its change handler writes the new selection back to state.",
@@ -62,6 +62,7 @@ test('shows the colour the user picks', () => {
   fireEvent.change(container.querySelector('select'), { target: { value: 'Blue' } });
   expect(container.textContent).toContain('You have selected: Blue');
 });
+test('selects Green and returns to Red in both the native control and status',()=>{const {container}=render(<App/>);const select=container.querySelector('select');for(const color of ['Green','Red']){fireEvent.change(select,{target:{value:color}});expect(select.value).toBe(color);expect(container.textContent).toContain('You have selected: '+color);}});
 `,
   },
   {
@@ -73,7 +74,7 @@ test('shows the colour the user picks', () => {
     tier: 1,
     focus: ["useState", "events"],
     title: "Counter",
-    prompt: "Show a number that starts at 0 and a button that adds one to it. Every click counts: three clicks must show 3, not 1.",
+    prompt: "Render one number outside one native button, starting at exactly 0. Give the button a nonempty accessible name of your choice. Each click adds exactly one, including repeated clicks beyond three. Ordinary parent re-renders preserve the count. Simultaneous mounted counters are independent and every fresh mount starts at 0. Display just the current count as the only number outside the button; no particular wrapper element or button text is required. Use local state or an equivalent reducer rather than a module-shared counter. Each discrete click is a separate event; no extra public hook API is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -100,14 +101,14 @@ return (
     hints: ["Start at 0. Update from the previous count inside the click handler."],
     approach: [
       "Hold the count in a useState value initialised to zero so the first render already shows a starting number.",
-      "In the button click handler, call the setter with an updater function so the next count is derived from the previous one.",
+      "In the button click handler, derive the next count from the current local state, using an updater or equivalent reducer.",
       "Render the count straight from state rather than tracking it in a separate variable.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts at zero', () => {
@@ -124,6 +125,9 @@ test('counts up on every click', () => {
   fireEvent.click(button);
   expect(container.textContent).toContain('3');
 });
+
+test('five clicks show exactly five',()=>{const {container}=render(<App/>);for(let i=0;i<5;i++)fireEvent.click(container.querySelector('button'));const copy=container.cloneNode(true);copy.querySelectorAll('button').forEach(b=>b.remove());expect((copy.textContent.match(/-?[0-9]+/g)||[]).join(' ')).toBe('5');});
+
 `,
   },
   {
@@ -135,7 +139,7 @@ test('counts up on every click', () => {
     tier: 1,
     focus: ["useState", "events"],
     title: "Toggle button",
-    prompt: "Render one button whose own label reads OFF to start with, flips to ON when clicked, and back to OFF when clicked again. The word lives inside the button, not beside it.",
+    prompt: "Render exactly one native button whose entire text is OFF initially. Every click alternates the entire text between ON and OFF, including repeated clicks beyond the first pair. Keep that exact text inside the button, with no prefix or other words. Ordinary parent re-renders preserve state; independent and fresh mounts start OFF. Store local boolean state or use an equivalent reducer. This exercise uses a changing action label; aria-pressed is not required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -162,14 +166,14 @@ return (
     hints: ["Store a boolean and replace it with its opposite on click."],
     approach: [
       "Store a single boolean in useState that records whether the button is currently on.",
-      "On click, pass an updater function to the setter that returns the negation of the previous boolean.",
+      "On each click, negate the local boolean, using an updater or equivalent reducer. A changing ON/OFF label does not need aria-pressed.",
       "Pick the label with a ternary on that boolean so one button element renders either word.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts OFF and flips on each click', () => {
@@ -181,6 +185,9 @@ test('starts OFF and flips on each click', () => {
   fireEvent.click(button);
   expect(button.textContent).toContain('OFF');
 });
+
+test('label is exactly OFF,then ON,and keeps alternating',()=>{const {container}=render(<App/>);const b=container.querySelector('button');expect(b.textContent).toBe('OFF');for(let i=1;i<=5;i++){fireEvent.click(b);expect(b.textContent).toBe(i%2?'ON':'OFF');}});
+
 `,
   },
   {
@@ -240,15 +247,15 @@ test('mirrors what is typed', () => {
     tier: 1,
     focus: ["lists-keys", "map"],
     title: "Data list",
-    prompt: "Render the people already declared in the starter as a UL with one LI each, showing the name and the age. Give every LI a key that identifies the person rather than its position in the array.",
+    prompt: "App receives people, defaulting to the starter initialPeople. Render one UL with one LI per person in input order, reading exactly the name, one space and the age, for example `Daniel 25` and `John 24`. people is a dense read-only array of at most 100 ordinary records with unique positive integer ids, plain string names up to 2000 UTF16 units and integer ages from 0 through 150. Names may repeat or be empty; preserve exact whitespace, Unicode and markup-like text literally rather than parsing HTML. Arrays/records may be frozen; do not mutate them. Key rows by id so surviving LI nodes follow each person through reorder, renaming and age changes. New props update all values; an empty array keeps an empty UL. Separate mounted lists are independent. Render directly from props without extra state or effects.",
     starter: `import React, { useEffect, useState } from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => {
+const App = ({ people = initialPeople } = {}) => {
 
 
   return <main>
@@ -263,9 +270,9 @@ export default App;
     <li key={/* the person's stable id */}>{/* name and age */}</li>
   ))}
 </ul>`,
-    hints: ["Map over people. Return one LI for each person and use its id as the key."],
+    hints: ["Map current people to list items, showing name plus one space plus age. Use the stable id as the key."],
     approach: [
-      "Start from the supplied people array; no state is needed because nothing on the screen ever changes.",
+      "Start from the supplied people array; render the current people prop directly without state or an effect.",
       "Map over that array inside the list element and return one list item per person.",
       "Give each list item a key taken from the stable id field, never from the array index.",
     ],
@@ -287,6 +294,7 @@ test('renders the people inside a UL', () => {
   const { container } = render(<App />);
   expect(container.querySelector('ul')).toBeTruthy();
 });
+test('shows each age alongside the name',()=>{const {container}=render(<App/>);expect([...container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(['Daniel 25','John 24']);});
 `,
   },
   {
@@ -298,7 +306,7 @@ test('renders the people inside a UL', () => {
     tier: 1,
     focus: ["conditional", "useState"],
     title: "Show and hide",
-    prompt: "Render a button and a paragraph. The paragraph must not be in the DOM at first; clicking adds it, clicking again removes it. Render it conditionally rather than hiding it with CSS.",
+    prompt: "Render one native button with a nonempty accessible name of your choice and a nonempty paragraph of your choice. The paragraph must be absent from the DOM at first. Every click alternates between adding one paragraph and removing it, for as many clicks as the user makes. Render it conditionally rather than keeping a CSS-hidden node. The button text may stay fixed or change with visibility. Ordinary parent re-renders preserve the current visible/hidden state. Simultaneously mounted components and fresh mounts start independently with no paragraph. No exact button or paragraph wording is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -343,6 +351,7 @@ test('hides the paragraph until the button is pressed', () => {
   fireEvent.click(container.querySelector('button'));
   expect(container.querySelector('p')).toBeNull();
 });
+test('still toggles after the first two clicks',()=>{const view=render(<App/>);for(let i=0;i<5;i++)fireEvent.click(view.container.querySelector('button'));expect(view.container.querySelectorAll('p')).toHaveLength(1);});
 `,
   },
   {
@@ -2212,8 +2221,8 @@ test('writes the count into localStorage', () => {
     tier: 3,
     focus: ["accessibility", "useState", "events"],
     title: "Tabs",
-    prompt: "Render the three tabs declared in the starter, each a button with role=\"tab\", and exactly one element with role=\"tabpanel\" holding the selected tab’s content. The selected tab carries aria-selected=\"true\" and the others \"false\".",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: "Build a horizontal, automatically activated tab interface from the three starter tabs. Render an Account-named tablist containing exactly three native buttons of type button with role tab and exact Profile, Billing and Alerts labels in that order. Profile starts selected. Exactly one tab has aria-selected=true and tabIndex=0; others have aria-selected=false and tabIndex=-1. Show exactly one tabpanel with the selected tab's exact panel text and tabIndex=0. Use a useId prefix to give each tab and its corresponding panel distinct, stable ids, unique across mounted instances. Each tab's aria-controls names its own panel id, and the displayed panel's aria-labelledby names its selected tab. Inactive panels need not exist in the DOM. Clicking or focusing a tab selects it. With focus on a tab, ArrowRight/ArrowLeft move focus and selection one step with wraparound; Home/End move to the first/last. Prevent default for those four handled keys. Leave other keys, including Tab and vertical arrows, to the browser. Keep focus movement within the current tablist. Normal parent renders preserve selection and ids; independent/fresh instances start on Profile. No CSS theme or extra data prop is required.",
+    starter: `import React, { useId, useState } from 'react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
@@ -2232,28 +2241,37 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [activeId, setActiveId] = useState(/* the first tab's id */);
+const idPrefix = useId();
 const active = tabs.find(tab => /* the tab whose id is activeId */);
 
-<div role="tablist">
+const onKeyDown = event => {
+  // For ArrowLeft/ArrowRight/Home/End, prevent default, select and focus the target tab.
+};
+
+<div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
   {tabs.map(tab => (
-    <button key={tab.id} role="tab" aria-selected={/* is this the active tab */} onClick={() => setActiveId(tab.id)}>
+    <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+      aria-controls={idPrefix + '-panel-' + tab.id}
+      aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+      onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
       {tab.label}
     </button>
   ))}
 </div>
-<div role="tabpanel">{/* the active tab's panel */}</div>`,
-    hints: ["Store the active tab id, and give the tabs role tab with aria-selected."],
+<div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+  aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>`,
+    hints: ["Store the active id, derive the selected panel and use useId for stable relationships. Keep one tab stop; handled navigation keys select and focus their target."],
     approach: [
       "Describe the three tabs as an array of objects, each carrying an id, a visible label and the content of its panel.",
       "Track the id of the active tab in a single state value that starts as the id of the first tab in that array.",
-      "Render every tab as a button with the tab role, an aria-selected flag comparing its id to the active id, and a handler that stores its id.",
-      "Render one element with the tabpanel role and fill it with the content of whichever tab is currently active.",
+      "Render every tab as a button with the tab role, an aria-selected flag comparing its id to the active id, a tabIndex of 0 only when active, and click/focus handlers that select it.",
+      "Give each tab/panel stable useId-prefixed ids linked by aria-controls/aria-labelledby. Render one focusable panel with its exact content. Handle horizontal arrows/Home/End by preventing default, updating selection and focusing the target button; leave other keys alone.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders three tabs and a single panel', () => {
@@ -2280,6 +2298,9 @@ test('shows the panel belonging to the chosen tab', () => {
   expect(panel()).toContain('Alert');
   expect(panel()).not.toContain('Profile');
 });
+
+test('ArrowLeft wraps focus and selection to Alerts',()=>{const {container}=render(<App/>);const all=Array.from(container.querySelectorAll('[role="tab"]'));act(()=>all[0].focus());fireEvent.keyDown(all[0],{key:'ArrowLeft'});expect(document.activeElement).toBe(all[2]);expect(all[2].getAttribute('aria-selected')).toBe('true');expect(container.querySelector('[role="tabpanel"]').textContent).toBe('Alert settings');});
+
 `,
   },
   {

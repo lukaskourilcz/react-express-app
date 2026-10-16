@@ -281,7 +281,7 @@ const App = () => {
   return (
     <main>
       <h2>Color selector</h2>
-      <select value={color} onChange={event => setColor(event.target.value)}>
+      <select aria-label="Color" value={color} onChange={event => setColor(event.target.value)}>
         {colors.map(one => (
           <option key={one}>{one}</option>
         ))}
@@ -295,12 +295,12 @@ export default App;
 `,
   'react-data-list': `import React from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => (
+const App = ({ people = initialPeople } = {}) => (
   <main>
     <h2>Data list</h2>
     <ul>
@@ -820,7 +820,7 @@ const App = () => {
 
 export default App;
 `,
-  'react-tabs': `import React, { useState } from 'react';
+  'react-tabs': `import React, { useId, useState } from 'react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
@@ -830,25 +830,44 @@ const tabs = [
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId);
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
 
   return (
     <main>
-      <h2>Tabs</h2>
-      <div role="tablist">
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
         {tabs.map(tab => (
-          <button key={tab.id} role="tab" aria-selected={tab.id === activeId} onClick={() => setActiveId(tab.id)}>
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
             {tab.label}
           </button>
         ))}
       </div>
-      <div role="tabpanel">{active.panel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
 };
 
-export default App;
-`,
+export default App;`,
+
   'react-theme-context': `import React, { useEffect, useState } from 'react';
 
 const ThemeContext = React.createContext(null);

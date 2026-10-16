@@ -1870,7 +1870,12 @@ test('two disclosures on one page use different ids', () => {
   render(<><App /><App /></>);
   const [first, second] = screen.getAllByRole('button', { name: 'Shipping details' });
   expect(first.getAttribute('aria-controls') === second.getAttribute('aria-controls')).toBe(false);
-});`,
+});
+
+test('stable relationship survives repeated actions and ordinary parent renders',()=>{const {container,rerender}=render(<App/>);const t=toggle(),id=t.getAttribute('aria-controls');expect(typeof id==='string'&&id.length>0).toBe(true);expect(container.querySelector('p')).toBeNull();t.focus();for(let i=1;i<=24;i++){fireEvent.click(t);expect(t.getAttribute('type')).toBe('button');expect(t.getAttribute('aria-expanded')).toBe(String(i%2===1));expect(t.getAttribute('aria-controls')).toBe(id);if(i%2){expect(container.querySelectorAll('p')).toHaveLength(1);expect(document.getElementById(id)).toBe(container.querySelector('p'));expect(container.querySelector('p').textContent).toBe('Orders ship within two working days.');}else expect(container.querySelector('p')).toBeNull();expect(document.activeElement).toBe(t);rerender(<App/>);expect(t.getAttribute('aria-controls')).toBe(id);}});
+test('eight disclosures have distinct stable ids and independent panels',()=>{const {container}=render(<>{Array.from({length:8},(_,i)=><section key={i} data-scope={i}><App/></section>)}</>);const scopes=Array.from(container.querySelectorAll('[data-scope]')),toggles=scopes.map(s=>s.querySelector('button')),ids=toggles.map(t=>t.getAttribute('aria-controls'));expect(new Set(ids).size).toBe(8);toggles.forEach((t,i)=>{fireEvent.click(t);expect(t.getAttribute('aria-controls')).toBe(ids[i]);expect(document.getElementById(ids[i])).toBe(scopes[i].querySelector('p'));expect(t.getAttribute('aria-expanded')).toBe('true');});fireEvent.click(toggles[3]);expect(scopes[3].querySelector('p')).toBeNull();expect(scopes[2].querySelector('p').id).toBe(ids[2]);});
+test('a fresh disclosure starts closed with a working target',()=>{const a=render(<App/>);fireEvent.click(toggle());a.unmount();const b=render(<App/>);expect(toggle().getAttribute('aria-expanded')).toBe('false');expect(b.container.querySelector('p')).toBeNull();fireEvent.click(toggle());expect(document.getElementById(toggle().getAttribute('aria-controls'))).toBe(b.container.querySelector('p'));});
+`,
   },
   'react-easy2-labelled-field': {
     solution: `import React, { useState } from 'react';

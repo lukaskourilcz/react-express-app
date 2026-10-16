@@ -3817,7 +3817,14 @@ async function main() {
   const sortGuestResult = readGuestResult(sortGuest.stdout, sortGuest.nonce, sortSuite);
   assert.equal(sortGuestResult.failed, 0, JSON.stringify(sortGuestResult));
   assert.equal(sortGuestResult.passed, 1, JSON.stringify(sortGuestResult));
-  assert.equal(splitHiddenCases(honestResult.cases).hidden.length, 3, 'the hidden cases ran');
+  assert.deepEqual(splitHiddenCases(honestResult.cases).hidden.map(one => one.name), [
+    '[hidden] closing again hides the details',
+    '[hidden] the button never submits a form',
+    '[hidden] two disclosures on one page use different ids',
+    '[hidden] stable relationship survives repeated actions and ordinary parent renders',
+    '[hidden] eight disclosures have distinct stable ids and independent panels',
+    '[hidden] a fresh disclosure starts closed with a working target',
+  ], 'the original and B107 disclosure cases all ran in the actual guest');
   assert.throws(() => readGuestResult(honest.stdout, randomBytes(24).toString('hex'), guestSuite), /no result/, 'a line without this run\'s nonce is not a result');
   assert.throws(() => readGuestResult(`${honest.stdout}${honest.stdout}`, honest.nonce, guestSuite), /no result/, 'two result lines are refused');
   assert.throws(() => readGuestResult(honest.stdout, honest.nonce, guestTask.suite!), /wrong number of cases/, 'a run reporting other cases than the suite declares is refused');
