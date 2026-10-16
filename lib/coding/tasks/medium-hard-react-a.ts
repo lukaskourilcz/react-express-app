@@ -1346,7 +1346,7 @@ test('a mousedown outside closes the menu', () => {
 });
 
 test('Tab can leave the menu without its default action being blocked',()=>{
- const view=render(<><App/><button type="button">After menu</button></>);fireEvent.click(trigger());const event=new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(false);const outside=screen.getByRole('button',{name:'After menu'});act(()=>outside.focus());expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(outside);
+ const view=render(<><App/><button type="button">After menu</button></>);fireEvent.click(trigger());const event=new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(false);const outside=screen.getByRole('button',{name:'After menu'});act(()=>fireEvent.blur(document.activeElement,{relatedTarget:outside}));act(()=>outside.focus());expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(outside);
 });`,
   },
   {
