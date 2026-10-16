@@ -321890,10 +321890,10 @@
    "level": 14,
    "objective": "Keep action-menu focus,selection and outside dismissal consistent with the scoped ARIA menu-button keyboard contract.",
    "intendedLevel": "intermediate",
-   "revision": 1,
-   "contentHash": "9972403f5f1c6b75",
+   "revision": 2,
+   "contentHash": "e299da97569e6fe9",
    "hashSchema": "task-hash:v2",
-   "previousHash": "9ff613f0915d40af",
+   "previousHash": "9972403f5f1c6b75",
    "previousHashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -321931,24 +321931,28 @@
     "Original already checked wrapping,Home/End,ArrowDown opening,Enter/click choices,Escape,inside/outside mousedown and listener lifetime.",
     "All original boards kept the menu open when focus left via Tab;the brief claimed APG behavior without this required close.",
     "Junior lacked a menu name,reference used one static controls id,and senior wrote its latest callback ref during rendering.",
-    "Preventing default for Tab and treating a nested LI descendant as outside both passed originals;the existing ArrowUp QA control was already covered."
+    "Preventing default for Tab and treating a nested LI descendant as outside both passed originals;the existing ArrowUp QA control was already covered.",
+    "Before publication,full native-browser harness CI exposed a false failure:an inactive opaque-origin frame changes activeElement on focus()without dispatching focusout;the visible Tab case omitted the explicit blur transition."
    ],
-   "rationale": "Preserve all three strategies:reference active index,junior explicit branches and senior move table/signal hook. Add menu onBlur closing only when relatedTarget leaves,without preventDefault or focus return;give junior an Actions menu name,useId for reference optional controls,and update senior latest callback in an effect. Starter imports useId as an available option. One visible native Tab-default/focus-leave case plus three hidden cases exercise48keyboard moves,roles/name/tabIndex,parent focus preservation,eighteen exact choices through nested empty child nodes,instance-owned optional ids and no outside-focus theft. Empty nested spans preserve the authored item labels. The independent alternative passes. Both isolated wrong controls include correct naming/id/blur behavior and pass frozen originals. Existing ArrowUp-always-last variant still materializes and fails;it is not counted as a new discovery. Closed-button Enter/Space rely on native button activation;optional typeahead/ArrowUp opening are not required or claimed.",
+   "rationale": "Preserve all three strategies:reference active index,junior explicit branches and senior move table/signal hook. Add menu onBlur closing only when relatedTarget leaves,without preventDefault or focus return;give junior an Actions menu name,useId for reference optional controls,and update senior latest callback in an effect. Starter imports useId as an available option. One visible native Tab-default/focus-leave case plus three hidden cases exercise48keyboard moves,roles/name/tabIndex,parent focus preservation,eighteen exact choices through nested empty child nodes,instance-owned optional ids and no outside-focus theft. Empty nested spans preserve the authored item labels. The independent alternative passes. Both isolated wrong controls include correct naming/id/blur behavior and pass frozen originals. Existing ArrowUp-always-last variant still materializes and fails;it is not counted as a new discovery. Closed-button Enter/Space rely on native button activation;optional typeahead/ArrowUp opening are not required or claimed. Staged revision2atPR457changes only the visible Tab test to dispatch Testing Library blur with relatedTarget before focusing the outside button. All Tab default-prevention,menu-closed and actual-focus assertions remain. Native Chromium diagnostics show hasFocus:false,activeElement changing Rename to After menu and zero focusout events before the fix;the complete simulated transition closes the menu. All seven answer/starter/control programs remain byte-identical. Fresh7/7current-hash results pass. An additional control that removes only the focus-leave handler still fails the Tab assertion in both the server worker and actual browser,so the requirement is retained. Full built browser harness passes206assertions after the change. No reviewed item is counted twice.",
    "evidence": [
     "https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/",
     "https://www.w3.org/WAI/ARIA/apg/patterns/menubar/",
     "https://react.dev/reference/react/useId",
     "https://react.dev/reference/react/useRef",
     "https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/relatedTarget",
-    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
-    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "git:89f5038bbb04d93ca3280d98d975183faa89fe56preserves staged B115revision19972403f5f1c6b75;original pre-audit hash9ff613f0915d40af.",
+    "run:PR457required38968786126failed one of206built browser harness assertions;all source programs were unchanged. SQLpassed;later checks are not claimed.",
+    "run:native Chromium A/B probe24assertions confirms hasFocus:false/no natural focusout;explicit blur preserves outside focus and closes the menu.",
+    "run:fresh7/7revision2server-worker outcomes;four valid programs,one starter,two original semantic wrong controls;all seven source programs unchanged.",
+    "run:additional missing-onBlur control fails retained Tab/focus requirements in server and native browser;native expected-negative probe24assertions passes.",
+    "run:complete built browser harness206assertions passes;current combined B115–B117matrix remains105/105after replacing seven old-hash Menu rows,not adding another item."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -321957,7 +321961,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -321966,7 +321970,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -321975,7 +321979,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -321984,7 +321988,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -321993,7 +321997,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "wrong-traps-tab-default",
       "expected": "failed",
       "verdict": "failed",
@@ -322002,7 +322006,7 @@
      },
      {
       "id": "react-mh-menu-button",
-      "contentHash": "9972403f5f1c6b75",
+      "contentHash": "e299da97569e6fe9",
       "label": "wrong-nested-mousedown-is-outside",
       "expected": "failed",
       "verdict": "failed",
@@ -322010,7 +322014,7 @@
       "hidden": 9
      }
     ],
-    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+    "notes": "Seven fresh staged revision2cases. Old Menu revision1worker outcomes remain historical in Git/private evidence. All other B115–B117current hashes/rows are unchanged. Finite worker/native browser evidence,not physical-keyboard certification."
    },
    "cs": {
     "hash": null,
@@ -322022,9 +322026,10 @@
     "passes": [
      "individual-item-review",
      "executable-recheck",
-     "self-review-of-final-English"
+     "self-review-of-final-English",
+     "native-browser-focus-transition-reread"
     ],
-    "run": "Codex session 2026-10-16, sequential five-item batch b115; no independent/human reader claim"
+    "run": "Codex session2026-10-16UTC,PR457staged B115revision2;no independent/human reader claim"
    },
    "reviewedAt": "2026-10-16",
    "verification": {
@@ -322037,11 +322042,14 @@
      "https://react.dev/reference/react/useId",
      "https://react.dev/reference/react/useRef",
      "https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/relatedTarget",
-     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
-     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "git:89f5038bbb04d93ca3280d98d975183faa89fe56preserves staged B115revision19972403f5f1c6b75;original pre-audit hash9ff613f0915d40af.",
+     "run:PR457required38968786126failed one of206built browser harness assertions;all source programs were unchanged. SQLpassed;later checks are not claimed.",
+     "run:native Chromium A/B probe24assertions confirms hasFocus:false/no natural focusout;explicit blur preserves outside focus and closes the menu.",
+     "run:fresh7/7revision2server-worker outcomes;four valid programs,one starter,two original semantic wrong controls;all seven source programs unchanged.",
+     "run:additional missing-onBlur control fails retained Tab/focus requirements in server and native browser;native expected-negative probe24assertions passes.",
+     "run:complete built browser harness206assertions passes;current combined B115–B117matrix remains105/105after replacing seven old-hash Menu rows,not adding another item."
     ],
-    "notes": "Read all old/final fields,all original and new suite/model blocks,the existing fully materialized ArrowUp control and all three complete modules. The real Tab key event is observed for defaultPrevented,then focus is moved to an outside button to model browser navigation;this is finite jsdom/worker evidence,not a physical-keyboard certification. Moving focus among items stays inside and does not close. The optional aria-controls remains optional for junior/other valid programs,but present relationships must belong to their instance. Senior no longer writes a ref during render. No full hint exists. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read all old/final fields,all original and new suite/model blocks,the existing fully materialized ArrowUp control and all three complete modules. The real Tab key event is observed for defaultPrevented,then focus is moved to an outside button to model browser navigation;this is finite jsdom/worker evidence,not a physical-keyboard certification. Moving focus among items stays inside and does not close. The optional aria-controls remains optional for junior/other valid programs,but present relationships must belong to their instance. Senior no longer writes a ref during render. No full hint exists. Final English material and execution reread; same-session self-review only. Revision2rereading checked React Testing Librarys focusout mapping,all original assertions and stable learner answer programs. The missing-handler negative still fails. Prior staged revision is preserved at89f5038b;no second item is counted.",
     "pass": "second-reading"
    }
   },
