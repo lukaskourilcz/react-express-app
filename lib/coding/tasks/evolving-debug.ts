@@ -99,11 +99,11 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
         'Ověř logiku na okrajích. `applyDiscount(total, threshold, percent)` má odečíst `percent` (celé číslo: `10` znamená deset procent), když je `total` na prahu `threshold` nebo nad ním, zaokrouhlit na dvě desetinná místa, a pod prahem vrátit `total` beze změny: `applyDiscount(50, 50, 10)` je `45`, `applyDiscount(49.99, 50, 10)` je `49.99`. Špatně jsou dvě věci. Zaloguj vstupy a výsledek pro částku přesně na prahu, pak pro částku o cent nižší, a nakonec zaloguj samotné `total * percent`.',
       ),
       text(
-        'Now write code — in pieces, with a log between them. First, `trace(label, value)` is meant to be a pass-through: log the label and the value, then return the value unchanged, so it can sit inside any expression. Right now it swallows the value. Then write `report(lines, threshold, percent)`: summarize the lines and, for each item sorted by name, return `{item, total, discounted}` where `discounted` is `applyDiscount(total, threshold, percent)`. Get the totals right and logged before you write the rows.',
+        "Now write code \u2014 in pieces, with a log between them. First, `trace(label, value)` is meant to be a pass-through: log the label and the value, then return the value unchanged, so it can sit inside any expression. Right now it swallows the value. Then write `report(lines, threshold, percent)`: summarize the lines and, for each item sorted by name, return `{item, total, discounted}` where `discounted` is `applyDiscount(total, threshold, percent)`. Get the totals right and logged before you write the rows. Keep the previous trace argument/identity rules; its O(1) target excludes console formatting. Keep the earlier valid parsing/exact item names, safe own totals and Number arithmetic. lines is a dense readonly array of at most 2000 primitive strings with at most 20000 total UTF-16 units. Per-item totals passed to applyDiscount are in its earlier 0..1e9 domain by input guarantee; do not add new sign checks to numeric fields themselves. threshold/percent keep the earlier domain. Return one fresh mutable {item,total,discounted} row per exact item, including zero totals, in a fresh mutable array. Sort names by literal UTF-16 code-unit order, like default Array.sort; do not lowercase, normalize or use language collation. Keep input arrays unchanged and results independent across calls. Let n=1+line count+total UTF-16units, u=1+distinct item count and w=1+maximum item-name length. Target: O(n+u*w*log(u)) time and O(n+u*w) extra space, using ordinary comparison sorting with O(w) string comparisons.",
         'Teď piš kód — po kouscích, s logem mezi nimi. Nejdřív `trace(label, value)`: má být průchozí, tedy zalogovat popisek i hodnotu a hodnotu beze změny vrátit, aby šla vložit do libovolného výrazu. Teď ji polyká. Potom napiš `report(lines, threshold, percent)`: sečti řádky přes summarize a pro každou položku seřazenou podle názvu vrať `{item, total, discounted}`, kde `discounted` je `applyDiscount(total, threshold, percent)`. Než napíšeš řádky výstupu, měj součty správně a zalogované.',
       ),
       text(
-        'Stay calm with the bug you did not plant. Real data has bad lines. Add `safeReport(lines, threshold, percent)` that checks each line in this order — trimmed empty is `"empty"`, not exactly three comma-separated fields is `"fields"`, a blank or non-finite quantity or unitPrice is `"number"` — collects `{line, reason}` in input order, runs `report` on the good lines only, and returns `{rows, problems}`. When your first attempt throws, that is not an emergency: read the message, log the line that caused it, and handle that one case.',
+        "Stay calm with the bug you did not plant. Real data has bad lines. Add `safeReport(lines, threshold, percent)` that checks each line in this order \u2014 trimmed empty is `\"empty\"`, not exactly three comma-separated fields is `\"fields\"`, a blank or non-finite quantity or unitPrice is `\"number\"` \u2014 collects `{line, reason}` in input order, runs `report` on the good lines only, and returns `{rows, problems}`. When your first attempt throws, that is not an emergency: read the message, log the line that caused it, and handle that one case. lines is a dense readonly array of at most 2000 primitive strings and at most 20000 total UTF-16 units, possibly frozen. Use ECMAScript trim for emptiness, exactly two ASCII commas for three fields, and whole-field Number() for both numeric strings after rejecting blank fields. Finite signed/exponent/prefixed values are valid; do not use prefix parsing or reject negative fields by themselves. Item names may be empty. Each good-line group total is in report's earlier 0..1e9 domain by input guarantee. Preserve each exact raw line in problems, including duplicate bad-line occurrences; never trim or deduplicate that list. Each returned outer record, rows/problems array, row and problem record is fresh and mutable, independent across calls. Keep earlier report sorting/Number/ownership and threshold/percent rules. Let n count all raw lines+UTF16units+1; u/w describe the retained good-line item set as before. Target: O(n+u*w*log(u)) time and O(n+u*w) extra space. Only the stated empty/fields/number reasons exist, with that precedence.",
         'Zachovej klid u chyby, kterou jsi nenastražil ty. Skutečná data mají špatné řádky. Přidej `safeReport(lines, threshold, percent)`, která každý řádek zkontroluje v tomto pořadí — po oříznutí prázdný je `"empty"`, jiný počet než přesně tři pole oddělená čárkou je `"fields"`, prázdné nebo nekonečné množství či cena je `"number"` — sbírá `{line, reason}` v pořadí vstupu, `report` spustí jen na dobrých řádcích a vrátí `{rows, problems}`. Když první pokus vyhodí chybu, není to pohotovost: přečti si zprávu, zaloguj řádek, který ji způsobil, a ošetři právě ten případ.',
       ),
     ],
@@ -111,8 +111,8 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
       text("Log the split fields and their types. Convert each complete numeric field with Number(), preserving exact trimmed item names and fresh records.", 'Než cokoli opravíš, zaloguj `parts` hned po rozdělení a přečti si Konzoli. Ta chyba jsou uvozovky kolem čísel.'),
       text("Trace per-item totals in input order. Store safe own entries even for __proto__/constructor, and keep every item including zero totals.", 'Jedna proměnná dělá dvě práce. Zeptej se nahlas: sleduje se `running` pro každou položku, nebo napříč všemi?'),
       text("Log both sides of the threshold. Subtract total*(percent/100) before rounding that branch; leave the below-threshold total unchanged.", 'Zaloguj vstupy a výsledek pro částku přesně na prahu, pak pro částku o cent nižší. Potom zaloguj samotné `total * percent`.'),
-      text('A pass-through helper logs and then returns. Once trace hands the value back, build report one piece at a time with a trace() between the pieces.', 'Průchozí pomocník zaloguje a pak vrátí. Jakmile trace hodnotu vrací, stav report po kouscích a mezi kousky dej trace().'),
-      text('When a bad line throws, read the error, log the line that caused it, and add one check for that case. Check for empty first, then the field count, then the numbers.', 'Když špatný řádek vyhodí chybu, přečti si ji, zaloguj řádek, který ji způsobil, a přidej jednu kontrolu pro ten případ. Nejdřív prázdný řádek, pak počet polí, pak čísla.'),
+      text("Keep the exact trace value/arguments, then build fresh report rows from safe totals in literal UTF-16 item-name order, without changing inputs.", 'Průchozí pomocník zaloguje a pak vrátí. Jakmile trace hodnotu vrací, stav report po kouscích a mezi kousky dej trace().'),
+      text("Log the exact failing raw line. Check empty, then field count, then whole-field finite numbers; keep each bad-line occurrence in order and return fresh mutable output.", 'Když špatný řádek vyhodí chybu, přečti si ji, zaloguj řádek, který ji způsobil, a přidej jednu kontrolu pro ten případ. Nejdřív prázdný řádek, pak počet polí, pak čísla.'),
     ],
     approaches: [
       [
@@ -133,12 +133,12 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
       [
         text('Fix trace first: log the label and the value, then return the value. Prove it with trace("x", 5) in the scratch pad.', 'Nejdřív oprav trace: zaloguj popisek a hodnotu, pak hodnotu vrať. Ověř to v zápisníku přes trace("x", 5).'),
         text('In report, get the totals from summarize and log them. Do not write the next step until that log looks right.', 'V report si vezmi součty ze summarize a zaloguj je. Další krok nepiš, dokud ten log nevypadá správně.'),
-        text('Turn the totals into rows: sort the item names, then map each to {item, total, discounted} using applyDiscount.', 'Ze součtů udělej řádky: seřaď názvy položek a každý převeď na {item, total, discounted} pomocí applyDiscount.'),
+        text("Sort exact item names in default UTF-16 order, then build fresh {item,total,discounted} rows using applyDiscount, including zero totals.", 'Ze součtů udělej řádky: seřaď názvy položek a každý převeď na {item, total, discounted} pomocí applyDiscount.'),
       ],
       [
         text('Run report on the messy example and let it throw. The error message tells you which line to look at; log that line.', 'Spusť report na rozbitém příkladu a nech ho spadnout. Chybová zpráva ti řekne, na který řádek se podívat; zaloguj ho.'),
         text('Validate each line in order: trimmed empty is "empty"; not exactly three comma-separated fields is "fields"; a blank or non-finite quantity or unitPrice is "number".', 'Každý řádek ověř v pořadí: po oříznutí prázdný je "empty"; jiný počet než tři pole oddělená čárkou je "fields"; prázdné nebo nekonečné množství či cena je "number".'),
-        text('Collect the problems in input order, hand only the good lines to report, and return {rows, problems}.', 'Problémy sbírej v pořadí vstupu, do report pošli jen dobré řádky a vrať {rows, problems}.'),
+        text("Keep every raw bad-line occurrence in input order, pass only good lines to report and return fresh mutable {rows,problems} arrays/records.", 'Problémy sbírej v pořadí vstupu, do report pošli jen dobré řádky a vrať {rows, problems}.'),
       ],
     ],
     tests: [
@@ -167,6 +167,7 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
         check('applyDiscount(10, 10, 0)', 10),
       ],
       [
+        check("report(['a,1,1','A,1,1'],10,50).map(row=>row.item)", ["A", "a"]),
         check('trace("order", {item: "tea"})', { item: 'tea' }, ['trace hands the value back', 'trace hodnotu vrátí']),
         check('report(["latte,2,4","tea,1,1"], 5, 10)', [{ item: 'latte', total: 8, discounted: 7.2 }, { item: 'tea', total: 1, discounted: 1 }]),
         check('report(["b,1,1","a,1,1"], 100, 50).map(row => row.item)', ['a', 'b'], ['rows are sorted by item', 'řádky jsou seřazené podle položky']),
@@ -174,6 +175,7 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
         check('report([], 1, 1)', [], ['no lines, no rows', 'žádné řádky, žádné výsledky'], true),
       ],
       [
+        check("safeReport(['bad','bad','a,1,2'],1,50).problems", [{"line": "bad", "reason": "fields"}, {"line": "bad", "reason": "fields"}]),
         check('safeReport(["latte,1,4","","tea,x,1","cake,1"], 100, 10)', { rows: [{ item: 'latte', total: 4, discounted: 4 }], problems: [{ line: '', reason: 'empty' }, { line: 'tea,x,1', reason: 'number' }, { line: 'cake,1', reason: 'fields' }] }, ['bad lines are reported, good lines are still counted', 'špatné řádky se nahlásí, dobré se dál počítají']),
         check('safeReport(["   "], 1, 1).problems', [{ line: '   ', reason: 'empty' }], ['whitespace only is empty', 'jen mezery znamená prázdný']),
         check('safeReport(["a,1,1,1"], 1, 1).problems[0].reason', 'fields'),
@@ -237,10 +239,11 @@ export const DEBUG_CHECKPOINTS: Record<string, DebugCheckpoint[]> = {
     },
     {
       prompt: text(
-        'A pass-through logs and then returns. Make `trace(label, value)` return `value` unchanged, and prove it with `trace("x", 5)` in the scratch pad before you go on.',
+        "A pass-through logs and then returns. Make `trace(label, value)` return `value` unchanged, and prove it with `trace(\"x\", 5)` in the scratch pad before you go on. label and value may be any opaque JavaScript values, including undefined, symbols, functions or cyclic/getter objects. Call console.log exactly once synchronously with exactly [label,value] as its two arguments, without cloning, coercing or inspecting either, then return the exact value. Ignore the logger return value. The test logger does not throw; no console-replacement/binding behavior beyond those arguments is required. Target: O(1) time and O(1) extra space per trace, excluding the console provider's formatting/transport work. Use Run to verify the console emission; automated Submit assertions check the returned value and its identity.",
         'Průchozí pomocník zaloguje a pak vrátí. Uprav `trace(label, value)`, aby vracela `value` beze změny, a než půjdeš dál, ověř to v zápisníku přes `trace("x", 5)`.',
       ),
       tests: [
+        check("(()=>{const value=[];return trace('x',value)===value;})()", true),
         check('trace("x", 5)', 5, ['the value comes back', 'hodnota se vrátí']),
         check('trace("list", [1, 2])', [1, 2]),
         check('(() => { const seen = trace("seen", "ok"); return seen; })()', 'ok', ['so it can sit inside an expression', 'takže může stát uvnitř výrazu'], true),
@@ -248,10 +251,11 @@ export const DEBUG_CHECKPOINTS: Record<string, DebugCheckpoint[]> = {
     },
     {
       prompt: text(
-        'Add `safeReport(lines, threshold, percent)` for input that is all good: return `{rows, problems}` where `rows` is `report(lines, threshold, percent)` and `problems` is an empty array. The bad lines come next.',
+        "Add `safeReport(lines, threshold, percent)` for input that is all good: return `{rows, problems}` where `rows` is `report(lines, threshold, percent)` and `problems` is an empty array. The bad lines come next. Keep report's earlier valid-input, exact sorting, readonly/fresh-output and n/u/w rules. The outer {rows,problems} record and empty problems array must also be fresh and mutable on every call. Target: O(n+u*w*log(u)) time and O(n+u*w) extra space. Do not freeze or reuse the result; validation is introduced next.",
         'Přidej `safeReport(lines, threshold, percent)` pro vstup, který je celý v pořádku: vrať `{rows, problems}`, kde `rows` je `report(lines, threshold, percent)` a `problems` je prázdné pole. Špatné řádky přijdou v dalším kroku.',
       ),
       tests: [
+        check("safeReport(['a,0,1'],1,50)", {"rows": [{"item": "a", "total": 0, "discounted": 0}], "problems": []}),
         check('safeReport(["a,2,2"], 4, 50)', { rows: [{ item: 'a', total: 4, discounted: 2 }], problems: [] }),
         check('safeReport([], 1, 1)', { rows: [], problems: [] }, ['nothing in, nothing wrong', 'nic na vstupu, nic špatně'], true),
       ],

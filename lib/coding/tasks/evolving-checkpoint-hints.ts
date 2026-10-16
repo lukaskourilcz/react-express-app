@@ -47,22 +47,8 @@ const LADDERS: Record<string, CheckpointLadder> = {
   },
   'js-evolving-debug-2-start': {"hints": ["Trace the two distinct items, then assign each own order total into a safe record. Keep exact item names, including prototype-like/Unicode names; repetition is the next step."], "approach": ["Parse each valid line and calculate that order product.", "Assign a safe own data entry for its distinct exact item name without reading inherited values.", "Return a fresh mutable totals record; repeated-item addition comes next."]},
   'js-evolving-debug-3-start': {"hints": ["Log total*(percent/100), then subtract it from total. At this checkpoint keep strict > and no rounding; the next milestone changes those."], "approach": ["Log the removal amount separately: percent/100 is the fraction to remove.", "When total > threshold, subtract total*(percent/100) with ordinary Number arithmetic.", "Return that unrounded value; leave at/below-threshold inputs unchanged until the next milestone."]},
-  'js-evolving-debug-4-start': {
-    hints: ['Log what `trace("x", 5)` gives back: undefined. A pass-through logs the label and the value, then returns the value unchanged.'],
-    approach: [
-      'In the scratch pad, log what trace returns: console.log(trace("x", 5)).',
-      'It prints the label and the value, then gives back undefined, because nothing is returned.',
-      'Return value after the log, and run trace("x", 5) again to see 5 come back.',
-    ],
-  },
-  'js-evolving-debug-5-start': {
-    hints: ['With good input there is nothing to reject yet: the rows are what report already returns, and problems is an empty array.'],
-    approach: [
-      'Log report(["a,2,2"], 4, 50) in the scratch pad first, so you know what the rows look like.',
-      'safeReport returns { rows, problems }: rows from report(lines, threshold, percent), problems as [].',
-      'Check an empty list too: no lines gives no rows and no problems.',
-    ],
-  },
+  'js-evolving-debug-4-start': {"hints": ["Log the original label and value as two arguments once, then return that same value. Do not clone objects/arrays or inspect opaque payloads."], "approach": ["Call console.log synchronously with the original label and value.", "Ignore the logger return and return the exact original value.", "Use the scratch pad to verify identity as well as visible primitive output."]},
+  'js-evolving-debug-5-start': {"hints": ["For valid input, return fresh report rows and a new mutable empty problems array. The result record also belongs to this call."], "approach": ["Run report on the valid input using its earlier exact sorting and fresh-row rules.", "Return those rows in a new {rows,problems} record with a new mutable empty array.", "Check independent empty/nonempty calls; bad-line validation comes next."]},
 
   'ts-evolving-result-1-start': { hints: ['Type it as mapResult<T, U>(result: Result<T>, fn: (value: T) => U): Result<U>, and check `result.ok` before you read `result.value`: inside that branch TypeScript knows the value is there.'] },
   'ts-evolving-result-2-start': { hints: ['A failure goes back as it is. A success returns fn(result.value) directly: it is already a Result<U>, so wrapping it again would nest one result in another.'] },
