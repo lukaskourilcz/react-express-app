@@ -197,10 +197,11 @@ export const DEBUG_CHECKPOINTS: Record<string, DebugCheckpoint[]> = {
   [DEBUG_CHALLENGE_ID]: [
     {
       prompt: text(
-        'Verify the setup first. Press Run and read the Console: the scratch pad logs one parsed order. Then make the smallest change so that `parseOrder` trims the spaces around the item name — nothing else yet.',
+        "Verify the setup first. Press Run and read the Console: the scratch pad logs one parsed order. Then make the smallest change so that `parseOrder` trims the spaces around the item name \u2014 nothing else yet. Implement parseOrder(line) returning {item,quantity,unitPrice}. line is a primitive string with exactly two ASCII commas and at most 20000 UTF-16 units. Only item is trimmed using ECMAScript whitespace/line-terminator rules; preserve its interior characters/case/Unicode exactly. quantity and unitPrice remain their original untrimmed string fields, including empty or whitespace fields; do not convert numbers yet. Return a fresh mutable ordinary record with these own enumerable fields on every call. Other functions are later work. Target: O(n) time and O(n) extra space, where n=1+the raw line length.",
         'Nejdřív si ověř prostředí. Stiskni Spustit a přečti si Konzoli: zápisník loguje jednu naparsovanou objednávku. Pak udělej nejmenší možnou změnu, aby `parseOrder` ořízla mezery kolem názvu položky — zatím nic víc.',
       ),
       tests: [
+        check("parseOrder('\\u2003latte\\ufeff,3,4.50').item","latte"),
         check('parseOrder(" latte ,3,4.50").item', 'latte'),
         check('parseOrder("tea,2,1").item', 'tea'),
         check('parseOrder(" flat white ,1,3").item', 'flat white', ['only the outer spaces go', 'odejdou jen krajní mezery'], true),

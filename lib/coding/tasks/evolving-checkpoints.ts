@@ -246,9 +246,11 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ]),
     ),
     step(
-      'Add criticalPath(graph,durations) for a valid graph with supplied finite non-negative durations. Return {duration,path} for its longest dependency chain, counting every node on the chain.',
+      "Add criticalPath(graph,durations) for valid acyclic graphs where every task has a supplied own finite non-negative Number duration. Count each node on the selected dependency chain, not unrelated branches. Defaults and invalid-input rejection come next. Keep the earlier bounded graph/ID/readonly/n/m rules. durations is a non-null non-array record with any prototype, possibly frozen, with at most 20000 own properties. Only own data values at declared task IDs supply durations, including non-enumerable values; inherited/unknown/symbol entries are ignored without reading them. Accessors at used duration fields and proxies are outside scope. Use ordinary Number addition without rounding or integer narrowing; equivalent zero signs are accepted. Inputs guarantee every chain sum is finite. Choose a node's first dependency-array entry among equal-duration chains and the first node in plan order among equal overall totals, including zero totals; longest means greatest total duration, not most nodes. Return a fresh mutable {duration,path} record and path array, independent of graph/durations/other calls. Empty graph returns {duration:0,path:[]}. Let d=1+maximum chain node count. Target: O(n*d+m) time and O(n*d+m) extra space, allowing copied per-node paths; predecessor links may be faster.",
       'Přidej criticalPath(graph,durations) pro platný graf se zadanými konečnými nezápornými délkami. Vrať {duration,path} nejdelšího řetězce závislostí včetně délky každého uzlu.',
       calls(
+        ["criticalPath({a:[],b:[\"a\"]},{a:0.25,b:0.5})", {"duration": 0.75, "path": ["a", "b"]}],
+
         [
           'criticalPath({a:[],b:["a"],c:[]},{a:2,b:3,c:4})',
           { duration: 5, path: ['a', 'b'] },
@@ -260,9 +262,11 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ),
     ),
     step(
-      'Add impactedNodes(graph,changed) for valid graphs and known changed IDs. Return changed nodes and all transitive dependents once each in plan order; do not include unaffected dependencies.',
+      "Add impactedNodes(graph,changed) for valid acyclic graphs and known declared changed task IDs. Keep the prior bounded graph, exact IDs, readonly ownership and deterministic DFS plan order. changed is a dense readonly array of at most 20000 exact string task IDs, possibly frozen, with duplicates allowed. Propagate to dependents transitively, never to an otherwise unaffected dependency; emit every affected declared task once in plan order regardless of changed order. Return a fresh mutable array without changing changed/graph/dependencies or reusing another call's result. Let k=1+changed.length and retain n/m from plan. Target: O(n+m+k) time and O(n+m+k) extra space. A forward scan or reverse-edge traversal is valid; avoid shifting a large queue. Unknown IDs and invalid graphs are rejected in the next milestone.",
       'Přidej impactedNodes(graph,changed) pro platné grafy a známá změněná ID. Vrať změněné uzly a všechny přímé i nepřímé odběratele jednou v pořadí plan; neovlivněné závislosti vynech.',
-      calls(['impactedNodes({a:[],b:["a"],c:["b"],d:[]},["b"])', ['b', 'c']]),
+      calls(
+        ["impactedNodes({'\u00e9':[],'e\\u0301':[],root:['e\\u0301']},['e\\u0301'])", ["e\u0301", "root"]],
+        ['impactedNodes({a:[],b:["a"],c:["b"],d:[]},["b"])', ['b', 'c']]),
     ),
   ],
   'ts-evolving-result': [

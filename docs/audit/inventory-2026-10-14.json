@@ -27,11 +27,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR #440 passed required run38833627674 at frozene257fe3c5a40136f307afedbdd017c577b1bb8d4 (verify31m56s; SQL43s), then merged at4e941628055eda96e3eaf8b8d522c7a79f17d346 on16October2026 at01:45:09UTC. READY production dpl_BKpvT45mtMXrqDET27ubAnENVA5t matches that merge, owns devshark.app before/after probes and has no alias error. Exact READY preview dpl_8Sbw5tXqAvN3WHPWPuZQXx5vmiRg and production each pass eleven general guest checks and three actual initial Query-checkpoint Submits: reference/independent identity-preserving array copy pass, per-record cloning wrong fails,0XP/null progress. Seven other changed tasks require Premium and two later free evolving stages issue no session before prerequisites; these remain dedicated acceptance under#190, with no lock bypass or authenticated Premium claim. B084\u2013B085 bring deployed coding review coverage to455/725, native263/263. B086e787b3a2 is a separate five-item source commit:460current/265remaining (JS36,TS46,React183). B087 is in progress and not yet approved. #438 remains closed with its own #439production acceptance; #435 stays explicitly after the whole content audit. Same-session model self-review/finite execution only, not independent/human, physical-device or whole-catalogue acceptance. Preserve owner holds and draft#365.",
-    "currentModelReviewedIssuedTasks": 475,
-    "issuedStillRequiringReview": 250,
+    "currentModelReviewedIssuedTasks": 480,
+    "issuedStillRequiringReview": 245,
     "deployedModelReviewedIssuedTasks": 455,
-    "stagedModelReviewedIssuedTasks": 20,
-    "stagedExecutionEvidence": "Twenty source records above verified#440: ten B086\u2013B087 frozen in#441 at0625791d with exact11general/3Submit preview and7Premium/2stage locks; ten B088\u2013B089 separate. B089passes26/26verdicts,16reward checks, all40chapter stages/full local gates/80responsive probes;250coding remain.",
+    "stagedModelReviewedIssuedTasks": 25,
+    "stagedExecutionEvidence": "Twenty-five source records above verified#440: ten in#441 corrected9da171bb with exact11general/3Submit preview, CI38842822782pending after initial browser-test failure; ten B088\u2013B089frozen69a23986 also exact11general/3Submit preview accepted; five B090separate. Both cohorts retain7Premium/2stage locks. B090passes24/24verdicts,14reward checks, all50chapter stages/full local gates/80responsive probes;245codingremain.",
     "deployedExecutionEvidence": "PR #440 passed required run38833627674 at frozene257fe3c5a40136f307afedbdd017c577b1bb8d4 (verify31m56s; SQL43s), then merged at4e941628055eda96e3eaf8b8d522c7a79f17d346 on16October2026 at01:45:09UTC. READY production dpl_BKpvT45mtMXrqDET27ubAnENVA5t matches that merge, owns devshark.app before/after probes and has no alias error. Exact READY preview dpl_8Sbw5tXqAvN3WHPWPuZQXx5vmiRg and production each pass eleven general guest checks and three actual initial Query-checkpoint Submits: reference/independent identity-preserving array copy pass, per-record cloning wrong fails,0XP/null progress. Seven other changed tasks require Premium and two later free evolving stages issue no session before prerequisites; these remain dedicated acceptance under#190, with no lock bypass or authenticated Premium claim. B084\u2013B085 bring deployed coding review coverage to455/725, native263/263. B086e787b3a2 is a separate five-item source commit:460current/265remaining (JS36,TS46,React183). B087 is in progress and not yet approved. #438 remains closed with its own #439production acceptance; #435 stays explicitly after the whole content audit. Same-session model self-review/finite execution only, not independent/human, physical-device or whole-catalogue acceptance. Preserve owner holds and draft#365."
   },
   "nativePaths": {
@@ -58,7 +58,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "455 reviewed coding and 263 native records are deployed; 20 coding records are staged through b089. Override data was last read-only rechecked on 2026-10-15; see its dated reconciliation evidence.",
+    "455 reviewed coding and 263 native records are deployed; 25 coding records are staged through b090. Override data was last read-only rechecked on 2026-10-15; see its dated reconciliation evidence.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
