@@ -2141,7 +2141,7 @@ test('rolls the todo back when the request fails', async () => {
     tier: 3,
     focus: ["custom-hook", "fetch"],
     title: "Reusable useFetch hook",
-    prompt: "Write useFetch(url) returning data, loading and error, and use it in App: “Loading…” while the request is in flight, one LI per user on success, and no list items plus a message when it fails.",
+    prompt: `Write and export \`useFetch(url)\`, returning \`{ data, loading, error }\`. Each committed URL change starts a request, resets data to null and error to an empty string, and sets loading to true. A successful JSON result becomes data and finishes loading; a non-OK HTTP response, rejected JSON body or request failure produces a nonempty error message, null data and loading false. Only the latest active request may publish a result: a late success or failure from an old URL, including an earlier visit to the same URL, must be ignored. Cleanup must invalidate that request even when a mock or pending JSON operation ignores abort; AbortController is optional. Unmounting and independent hook calls must not share state. This client-only exercise uses valid URL strings and arbitrary JSON values, with no cache or retries. Use the hook in App to fetch https://jsonplaceholder.typicode.com/users: show "Loading…" while loading, one li per returned user in order on success, and no items plus an error message on failure. App receives zero to 24 users with unique ids and literal names. Do not use bundled fixture names instead of the response.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2154,30 +2154,36 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useFetch = url => {
+    skeleton: `export const useFetch = url => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // fetch url, update data/error, then finish loading
+    // reset data/error/loading and fetch url
+    // publish only while this effect is active
+    return () => {
+      // mark this request inactive; optionally abort it
+    };
   }, [url]);
 
   return {data, loading, error};
 };`,
-    hints: ["Move the three state values and request effect into a function whose name starts with use."],
+    hints: [
+      `Give each effect an active flag. Its cleanup invalidates the request before a later URL can publish data or an error. Aborting is useful, but the active flag also guards work that resolves after cancellation.`,
+    ],
     approach: [
-      "Move the data, loading and error state plus the request effect into a function whose name begins with use and which takes the URL as its argument.",
-      "Reset to a loading state at the top of the effect and depend on the URL, so a new address starts a fresh request.",
-      "Check response.ok, parse the JSON, and write either the data or the error message before loading is turned off.",
-      "Return the three values from the hook, then let the component destructure them and branch on loading and error.",
+      `Export a hook with data, loading and error, and reset all three when its URL effect begins.`,
+      `Check response.ok before reading JSON. Publish success or failure only while this effect still owns the request.`,
+      `Invalidate the effect in cleanup, optionally aborting its transport too; do not let a previous URL finish the current loading state.`,
+      `Render loading, the actual returned users or a failure message in App. Separate hook calls keep separate request state.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useFetch } from './App';
 
 test('reports loading, then the fetched data', async () => {
   const { container } = render(<App />);
@@ -2196,6 +2202,10 @@ test('surfaces an error instead of the list', async () => {
     globalThis.fetch = working;
   }
 });
+
+
+const withAuditRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const json=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>json}),body:value=>resolveJSON(value),badBody:error=>rejectJSON(error),fail:reject});});const flush=()=>act(async()=>{for(let i=0;i<12;i++)await Promise.resolve();});try{await body(calls,flush);}finally{globalThis.fetch=real;}};
+test('the reusable hook loads again for a changed url',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/first"/>);expect(state).toEqual({data:null,loading:true,error:''});calls[0].headers();calls[0].body({name:'first'});await flush();expect(state.data).toEqual({name:'first'});view.rerender(<Probe url="/second"/>);expect(calls.map(x=>x.url)).toEqual(['/first','/second']);expect(state).toEqual({data:null,loading:true,error:''});calls[1].headers();calls[1].body(['second']);await flush();expect(state).toEqual({data:['second'],loading:false,error:''});view.unmount();}));
 `,
     api: {
       method: "GET",
@@ -2446,8 +2456,8 @@ test('a stopped stopwatch resumes after a fresh full second',()=>withTestClock(a
     tier: 3,
     focus: ["custom-hook", "useState"],
     title: "useLocalStorage hook",
-    prompt: "Write useLocalStorage(key, initial), which behaves like useState but persists. Use it for a counter rendered as “Count: n” with an Increment button: it starts from initial when storage is empty, writes every change to localStorage, and reads the count back after a remount.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `Write and export \`useLocalStorage(key, initial)\`, returning a state value and setter that accepts either a next value or a pure updater function, like useState. Read JSON lazily at mount; only a missing entry, invalid JSON or storage read failure uses initial. Stored 0, false, an empty string and null are valid values. Persist the current value as JSON under key after committed changes in an effect; never write during rendering or inside a state updater. If storage is blocked or full, keep the in-memory state usable. Values and initial are JSON-serializable data: null, booleans, finite numbers, strings, arrays and plain objects; function values, undefined and cycles are outside scope. Each hook has a fixed key for its mounted lifetime; remounting reads that key again. Leave unrelated keys alone. Cross-tab synchronization and changing a mounted hook’s key are outside scope. Use the hook in App with key "count" and initial 0: render "Count: n" and an Increment button, preserve the count through parent renders, and read it back after remounting.`,
+    starter: `import React, { useCallback, useEffect, useState } from 'react';
 
 const App = () => {
 
@@ -2459,13 +2469,13 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useLocalStorage = (key, initial) => {
+    skeleton: `export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => {
-    // read key from localStorage: nothing stored gives initial, otherwise JSON.parse what is there
+    // try reading and parsing key; on a missing entry or failure return initial
   });
 
   useEffect(() => {
-    // write JSON.stringify(value) under key
+    // try writing JSON.stringify(value) under key; storage failure must not break state
   }, [key, value]);
 
   return [value, setValue];
@@ -2473,19 +2483,21 @@ export default App;
 
 // In App, call it exactly as you would call useState:
 const [count, setCount] = useLocalStorage('count', 0);`,
-    hints: ["Read the stored value when state is first created and write it back whenever it changes."],
+    hints: [
+      `Use a lazy state initializer with guarded JSON reading. Return a normal state setter, and move storage writes to a guarded effect so updater functions stay pure.`,
+    ],
     approach: [
-      "Write a function whose name starts with use, taking a key and an initial value and returning the current value with its setter.",
-      "Initialise its state with a lazy initialiser that reads the key from storage once and falls back to the initial value when nothing is stored.",
-      "Add an effect depending on the key and the value that serialises the value and writes it back to storage after every change.",
-      "Call the hook in the counter exactly as you would call useState, so a remount reads the number back instead of restarting at zero.",
+      `Export the hook and lazily read and parse its fixed key, falling back only for missing or unreadable data.`,
+      `Return the state setter so direct values and queued pure updater functions follow React state semantics.`,
+      `Serialize the committed value in an effect depending on key and value; catch storage failures and keep state usable.`,
+      `Use count and initial zero in App; remount to verify persistence, and preserve valid stored falsy values.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useLocalStorage } from './App';
 
 test('uses the initial value when storage is empty', () => {
   localStorage.clear();
@@ -2512,6 +2524,9 @@ test('writes the count into localStorage', () => {
   for (let i = 0; i < localStorage.length; i += 1) stored.push(String(localStorage.getItem(localStorage.key(i))));
   expect(stored.join('|')).toContain('1');
 });
+
+
+test('stored zero,false,empty string and null are values rather than missing entries',()=>{for(const value of [0,false,'',null]){localStorage.clear();localStorage.setItem('preference',JSON.stringify(value));let result;const Probe=()=>{[result]=useLocalStorage('preference',17);return null;};const view=render(<Probe/>);expect(result).toBe(value);view.unmount();}});
 `,
   },
   {
@@ -2879,7 +2894,7 @@ test('ordinary keys leave the dialog open',()=>{
     tier: 3,
     focus: ["useContext"],
     title: "Theme context",
-    prompt: "Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click.",
+    prompt: `Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click. Start at light and keep switching on every ordinary click, with the button text Theme: light or Theme: dark. Parent renders retain the current theme and button node. Each mounted App owns its provider state; toggling or unmounting one must not alter another, and a fresh App starts at light. This task concerns state ownership and context rather than a particular provider object shape.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2917,7 +2932,7 @@ const toggleTheme = () => setTheme(/* the other theme */);
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('the nested child reads the theme from context', () => {
@@ -2935,6 +2950,11 @@ test('the nested child toggles the theme for everyone', () => {
   fireEvent.click(toggle);
   expect(container.textContent).toContain('light');
 });
+
+
+test('six ordinary clicks keep toggling the nested button',()=>{
+ const view=render(<App/>),button=view.container.querySelector('button');for(let i=0;i<6;i++){fireEvent.click(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));}
+});
 `,
   },
   {
@@ -2946,8 +2966,8 @@ test('the nested child toggles the theme for everyone', () => {
     tier: 3,
     focus: ["custom-hook", "timers", "effect-cleanup"],
     title: "useDebounce hook",
-    prompt: "Write useDebounce(value, delay), returning the value only once it has stopped changing for delay. Use it to filter the fruits declared in the starter into a UL: all three show at first, and typing narrows the list only after typing settles.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `Write and export \`useDebounce(value, delay)\` for string values and integer delays from 1 to 10000 milliseconds. Return the initial string immediately. A new value starts a wait; publish it only after a full delay without a value or delay change. A delay change restarts a pending wait even if the pending value is unchanged. Cancel obsolete timers and clean up on unmount. Parent renders with the same value and delay preserve the pending deadline. Separate hook calls own independent state. Use it in App with a 300ms delay to filter Apple, Banana and Cherry into list items: all three show initially. Label the controlled input "Filter fruit". Match a literal case-insensitive substring using toLowerCase; preserve spaces and punctuation rather than trimming them. An empty query matches all fruits and no match gives zero list items; an empty-state message is optional. This exercise checks scheduling with virtual time rather than physical clock precision.`,
+    starter: `import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const fruits = ['Apple', 'Banana', 'Cherry'];
 
@@ -2961,7 +2981,7 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useDebounce = (value, delay) => {
+    skeleton: `export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
 
   useEffect(() => {
@@ -2977,19 +2997,21 @@ export default App;
 
 // In App, filter fruits with what the hook returns, not with what was typed:
 const settledQuery = useDebounce(query, 300);`,
-    hints: ["Every new value schedules a timeout, and the cleanup cancels the previous one."],
+    hints: [
+      `Keep the settled string in state. An effect depending on both value and delay schedules a replacement; cleanup cancels that schedule. Do not trim the string used for literal substring matching.`,
+    ],
     approach: [
-      "Write a hook taking a value and a delay that keeps its own state holding the most recently settled copy of that value.",
-      "In an effect depending on the value and the delay, schedule a timeout which copies the incoming value into that state.",
-      "Return a cleanup that cancels the pending timeout, so a value arriving mid-wait replaces the schedule rather than adding to it.",
-      "Feed the input state through the hook and filter the list with what it returns, so the list only changes once typing pauses.",
+      `Write a hook taking a value and a delay that keeps its own state holding the most recently settled copy of that value.`,
+      `In an effect depending on the value and the delay, schedule a timeout which copies the incoming value into that state.`,
+      `Return a cleanup that cancels the pending timeout, so a value arriving mid-wait replaces the schedule rather than adding to it.`,
+      `Feed the input state through the hook and filter the list with what it returns, so the list only changes once typing pauses.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useDebounce } from './App';
 
 test('shows every item before anything is typed', () => {
   const { container } = render(<App />);
@@ -3013,6 +3035,70 @@ test('only the last value typed reaches the list', async () => {
   expect(container.textContent).toContain('Cherry');
   expect(container.textContent).not.toContain('Banana');
 });
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    now: () => now,
+    active: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('the fruit filter waits the complete 300ms and keeps literal spaces',()=>withAuditClock(async clock=>{const view=render(<App/>),input=within(view.container).getByLabelText('Filter fruit');fireEvent.change(input,{target:{value:'BAN'}});await clock.tick(299);expect(view.container.querySelectorAll('li')).toHaveLength(3);await clock.tick(1);expect([...view.container.querySelectorAll('li')].map(x=>x.textContent)).toEqual(['Banana']);fireEvent.change(input,{target:{value:' ban '}});await clock.tick(300);expect(view.container.querySelectorAll('li')).toHaveLength(0);view.unmount();expect(clock.active()).toBe(0);}));
 `,
   },
   {

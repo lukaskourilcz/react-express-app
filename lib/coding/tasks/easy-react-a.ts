@@ -643,7 +643,7 @@ test('an empty nearest size is a provided value rather than the default',()=>{
     tier: 2,
     focus: ['useContext', 'useState'],
     title: 'Share a count through context',
-    prompt: 'The basket count lives in App\'s state. Provide `{ count, add }` through `BasketContext`, where `add` adds one to the count. `AddButton` calls `add` when clicked, and `BasketCount` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with `useContext`. The count starts at 0.',
+    prompt: `The basket count lives in App's state. Provide \`{ count, add }\` through \`BasketContext\`, where \`add\` adds one to the count. \`AddButton\` calls \`add\` when clicked, and \`BasketCount\` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with \`useContext\`. The count starts at 0. Every invocation of add adds one, including several updates queued before the next render. Use the current nearest provider’s count and callback, even when the same consumer element is retained and the provider value changes. Names are raw plain text up to 2000 UTF-16 units. Keep the count and existing button nodes through parent renders, and keep separate and fresh baskets independent. Consumers are always placed under a provider; behavior outside one is not part of this exercise.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const BasketContext = createContext(null);
@@ -707,6 +707,11 @@ test('BasketCount shows whatever the provider holds', () => {
   const { container } = render(<BasketContext.Provider value={{ count: 7, add: () => {} }}><BasketCount /></BasketContext.Provider>);
   expect(container.textContent).toBe('Items in basket: 7');
 });
+
+
+test('two add calls queued before the next render both count',()=>{
+ const view=render(<App/>),button=screen.getByRole('button',{name:'Add Apples'});act(()=>{fireEvent.click(button);fireEvent.click(button);});expect(view.container.querySelector('header').textContent).toBe('Items in basket: 2');
+});
 `,
   },
 
@@ -719,7 +724,7 @@ test('BasketCount shows whatever the provider holds', () => {
     tier: 1,
     focus: ['custom-hook', 'useState'],
     title: 'A useToggle hook',
-    prompt: 'Write and export `useToggle(initial = false)`, a hook that keeps a boolean in state and returns `[on, toggle]`, where `toggle` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state.',
+    prompt: `Write and export \`useToggle(initial = false)\`, a hook that keeps a boolean in state and returns \`[on, toggle]\`, where \`toggle\` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state. initial is a boolean used only on the first render, with false as the default; later prop changes must not reset the state. Every call to toggle flips the current boolean, including several calls in one handler or a retained earlier toggle function. The returned function does not need to keep the same identity between renders. Preserve independent queues for separate hook calls and component instances, state through parent renders, and fresh initial state after unmounting.`,
     starter: `import React, { useState } from 'react';
 
 // Write and export useToggle here.
@@ -773,6 +778,11 @@ test('a click turns it off and a second click back on', () => {
   fireEvent.click(button('Wi-Fi'));
   expect(button('Wi-Fi').textContent).toBe('Wi-Fi: on');
 });
+
+
+test('two toggle calls in one handler apply two flips',()=>{
+ const Twice=()=>{const[on,toggle]=useToggle(true);return <button onClick={()=>{toggle();toggle();}}>{on?'yes':'no'}</button>;};render(<Twice/>);const button=screen.getByRole('button');fireEvent.click(button);expect(button.textContent).toBe('yes');
+});
 `,
   },
   {
@@ -783,7 +793,7 @@ test('a click turns it off and a second click back on', () => {
     tier: 2,
     focus: ['custom-hook', 'effect-cleanup'],
     title: 'A useWindowWidth hook',
-    prompt: 'Write and export `useWindowWidth()`. It starts from `window.innerWidth` and returns the current width. In an effect that runs once, add a `resize` listener on `window` that stores the new width, and in the effect\'s cleanup remove that same listener: `removeEventListener` only removes a listener it is given the very same function for. App shows "Width: <n>px".',
+    prompt: `Write and export \`useWindowWidth()\`. It starts from window.innerWidth and returns the current numeric width. Subscribe to resize on window, update from window.innerWidth, and remove the subscription when it is no longer used. An effect with a named listener or an equivalent useSyncExternalStore subscription is valid. Cleanup must match the function and capture phase used to add the listener, or abort its signal. App shows "Width: <n>px". This is a client-only exercise with integer widths from 0 to 10000; do not clamp or debounce them. Parent renders and resize updates must not repeatedly register listeners. Separate consumers follow the same window, removing one leaves the others active, and the final unmount removes every owned listener. Sharing one native listener between consumers is allowed when its ownership is tracked correctly.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // Write and export useWindowWidth here.
@@ -808,7 +818,9 @@ export default App;
   }, []);
   return width;
 };`,
-    hints: ['Name the listener once inside the effect, then pass that one function to both `addEventListener` and `removeEventListener`. An inline arrow in the cleanup is a new function, so nothing would be removed.'],
+    hints: [
+      `Name the listener once inside the effect, then pass that one function to both \`addEventListener\` and \`removeEventListener\`. An inline arrow in the cleanup is a new function, so nothing would be removed. Capture must match too: adding with capture: true and removing without it leaves the listener active. A stable useSyncExternalStore subscription is also valid.`,
+    ],
     approach: [
       'Keep the width in `useState(window.innerWidth)` inside the hook.',
       'In `useEffect(..., [])`, declare `onResize`, which calls `setWidth(window.innerWidth)`, and add it as the `resize` listener.',
@@ -864,6 +876,13 @@ test('removes the same listener it added when it leaves the page', () => {
     seen.restore();
   }
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('an initial width below 320 remains its actual numeric width',()=>{
+ window.innerWidth=127;const view=render(<App/>);expect(view.container.querySelector('p').textContent).toBe('Width: 127px');
+});
 `,
   },
   {
@@ -874,7 +893,7 @@ test('removes the same listener it added when it leaves the page', () => {
     tier: 2,
     focus: ['custom-hook', 'derived-state'],
     title: 'Totals from a hook',
-    prompt: 'Write and export `useBasketTotals(items)`. It returns `{ count, total }`: `count` adds up every item\'s `quantity`, and `total` adds up `price * quantity`. Work both out from `items` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends `{ name: "Pen", price: 2, quantity: 1 }`.',
+    prompt: `Write and export \`useBasketTotals(items)\`. It returns \`{ count, total }\`: \`count\` adds up every item's \`quantity\`, and \`total\` adds up \`price * quantity\`. Work both out from \`items\` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends \`{ name: "Pen", price: 2, quantity: 1 }\`. Inputs are immutable snapshots: changed arrays or records arrive through a new array reference. There can be up to 1000 items; quantity is an integer from 0 to 1000, and price is a finite nonnegative Number up to 10000. Names do not affect totals. Use input-order JavaScript Number arithmetic without rounding the result. New same-length arrays can change prices or quantities. The returned totals must be correct on the first render of each snapshot; useMemo is optional. Each ordinary Add a pen click appends one pen. Preserve parent state and independent/fresh hook calls.`,
     starter: `import React, { useState } from 'react';
 
 const startingItems = [
@@ -933,6 +952,11 @@ test('an empty basket is zero', () => {
   };
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('0/0');
+});
+
+
+test('derived totals preserve fractional prices without rounding',()=>{
+ const Probe=()=>{const{count,total}=useBasketTotals([{name:'Fraction',price:0.125,quantity:3}]);return <output>{count}/{total}</output>;};const view=render(<Probe/>);expect(view.container.textContent).toBe('3/0.375');
 });
 `,
   },
@@ -1575,7 +1599,7 @@ test('Unicode whitespace is empty for this custom blankness rule',()=>{
     tier: 1,
     focus: ['splice', 'useState'],
     title: 'Draw a card',
-    prompt: 'Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". Copy the deck, call `splice(index, 1)` on the copy, and read the drawn card from the array `splice` returns. Never splice the array that is in state, or the `cards` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes.',
+    prompt: `Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". For a splice-based solution, copy the deck, call \`splice(index, 1)\` on the copy, and read the drawn card from the array \`splice\` returns. Never splice the array that is in state, or the \`cards\` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes. Grading accepts equivalent immutable removal. cards is the initial deck snapshot for a mount; parent renders do not reset it. It can be empty or contain up to 100 cards, with unique string ids or unique integer ids and nonblank single-line names up to 500 characters. Show each complete literal name without trimming, truncating or interpreting markup. Remove by the current position, retain the order of every other card and show only the latest draw. Separate Apps and fresh mounts keep independent decks.`,
     starter: `import React, { useState } from 'react';
 
 const startingDeck = [
@@ -1642,6 +1666,9 @@ test('the last card empties the deck', () => {
   expect(deck(container)).toEqual([]);
   expect(container.textContent).toContain('You drew Joker');
 });
+
+
+test('cards beyond the fifth position can be drawn with their whole name',()=>{const cards=Array.from({length:12},(_,i)=>({id:'id-'+i,name:'Long card '+i+' 🦈'}));const view=render(<App cards={cards}/>);fireEvent.click(view.container.querySelectorAll('button')[9]);expect(deck(view.container)).toEqual(cards.filter((_,i)=>i!==9).map(card=>card.name));expect(view.container.querySelector('p').textContent).toBe('You drew '+cards[9].name);});
 `,
   },
   {
@@ -1652,7 +1679,7 @@ test('the last card empties the deck', () => {
     tier: 2,
     focus: ['splice', 'forms'],
     title: 'Insert at a position',
-    prompt: 'The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call `splice(position - 1, 0, name)` on the copy. A position past the end adds the name at the end, which `splice` does by itself. A position below 1 puts the name at the top: a negative start would make `splice` count from the end.',
+    prompt: `The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call \`splice(position - 1, 0, name)\` on the copy. A position past the end adds the name at the end, which \`splice\` does by itself. A position below 1 puts the name at the top: a negative start would make \`splice\` count from the end. The Position input contains an integer from-10000 to 10000, or is empty (use the top). Name is a nonblank single-line string up to 500 characters; preserve its literal spaces, punctuation and case. Repeated ordinary submissions use the current growing queue and must prevent form navigation. The controlled fields start empty and at 1 respectively. Parent renders retain each queue; separate Apps and fresh mounts are independent. This lesson demonstrates splice on a copy; equivalent immutable insertion is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingQueue = ['Ana', 'Ben', 'Cleo'];
@@ -1721,6 +1748,9 @@ test('a position past the end adds at the end', () => {
   add('Dan', '9');
   expect(queue(container)).toEqual(['Ana', 'Ben', 'Cleo', 'Dan']);
 });
+
+
+test('names retain literal spaces and positions use the growing queue',()=>{const view=render(<App/>);for(let i=0;i<8;i++)add('  Person '+i+'  ','10000');expect(queue(view.container)).toEqual(['Ana','Ben','Cleo',...Array.from({length:8},(_,i)=>'  Person '+i+'  ')]);});
 `,
   },
   {
@@ -1731,7 +1761,7 @@ test('a position past the end adds at the end', () => {
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Take a seat',
-    prompt: 'A row of four seats holds a name or `null` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call `splice(index, 1, "You")` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled.',
+    prompt: `A row of four seats holds a name or \`null\` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call \`splice(index, 1, "You")\` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled. Start with [null,"Ana", null,"Ben"]. Both initial free seats are enabled; after either is chosen, exactly one seat contains "You" and all other people keep their original positions. Disabled buttons must stay disabled across parent renders and cannot change the selection when clicked. Use type="button" so taking a seat never submits an ancestor form. Separate mounted rows are independent and a fresh App starts from the original row. This lesson demonstrates splice on a copy; equivalent immutable replacement is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingRow = [null, 'Ana', null, 'Ben'];
@@ -1796,6 +1826,9 @@ test('once seated, the other free seat is disabled', () => {
   fireEvent.click(seat(3));
   expect(seat(1).disabled).toBe(true);
 });
+
+
+test('taking a seat never submits a containing form',()=>{let submits=0;const view=render(<form onSubmit={event=>{event.preventDefault();submits++;}}><App/></form>);fireEvent.click(within(view.container).getByRole('button',{name:'Take seat 1'}));expect(submits).toBe(0);expect(row(view.container)).toEqual(['Seat 1: You','Seat 2: Ana','Take seat 3','Seat 4: Ben']);});
 `,
   },
 ];

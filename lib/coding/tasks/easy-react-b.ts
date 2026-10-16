@@ -274,7 +274,7 @@ test('Save keeps spaces and literal text in the name',()=>{
     tier: 2,
     focus: ['custom-hook', 'useRef'],
     title: 'A useOutsideClick hook',
-    prompt: '"Filters" opens a panel of options, and a press anywhere outside should close it. Write and export `useOutsideClick(ref, onOutside)`. In an effect, listen for `mousedown` on `document` and call `onOutside` when `ref.current` does not contain the event\'s `target`; remove the same listener in the effect\'s cleanup. In App, put a ref on the `div` that holds both the button and the panel. A press on Filters then counts as inside, and the button can still close the panel itself.',
+    prompt: `"Filters" opens a panel of options, and a press anywhere outside should close it. Write and export \`useOutsideClick(ref, onOutside)\`. In an effect, listen for \`mousedown\` on \`document\` and call \`onOutside\` when \`ref.current\` does not contain the event's \`target\`; remove the same listener in the effect's cleanup. In App, put a ref on the \`div\` that holds both the button and the panel. A press on Filters then counts as inside, and the button can still close the panel itself. Read the current ref.current and latest onOutside callback after each committed render. If ref.current is null, ignore the event. The element itself and all nested nodes count as inside; a different referenced element after a ref update becomes the new inside area. Normal mousedown targets in this exercise are DOM nodes. Match both callback and capture phase when removing a listener, or abort its signal. Repeated parent/callback/ref updates must not leave extra active listeners. Separate hooks may share a native listener if callbacks and ownership remain correct; the final unmount must remove it. Keep aria-expanded and panel state consistent through repeated ordinary open/close cycles, and start a fresh App closed.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 // Write and export useOutsideClick here.
@@ -344,6 +344,13 @@ test('a press inside leaves it open', () => {
   fireEvent.mouseDown(screen.getByLabelText('On sale'));
   expect(isOpen()).toBe(true);
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('replacing onOutside uses the new callback without calling it during render',()=>{
+ const seen=[],ref=React.createRef();const Probe=({callback})=>{useOutsideClick(ref,callback);return <section ref={ref}><span>inside</span></section>;};const view=render(<Probe callback={()=>seen.push('old')}/>);view.rerender(<Probe callback={()=>seen.push('new')}/>);expect(seen).toEqual([]);fireEvent.mouseDown(document.body);expect(seen).toEqual(['new']);
+});
 `,
   },
   {
@@ -354,7 +361,7 @@ test('a press inside leaves it open', () => {
     tier: 2,
     focus: ['custom-hook', 'useContext'],
     title: 'A useTheme hook with a guard',
-    prompt: '`Badge` reads the theme with `useContext(ThemeContext)`. Rendered outside `ThemeProvider`, it gets `null` and shows "Theme: " with nothing after it, and nothing says why. Write and export `useTheme()`. It reads `ThemeContext`, throws `new Error("useTheme must be used inside ThemeProvider")` when the value is `null`, and returns the value otherwise. Use it in `Badge` in place of `useContext`.',
+    prompt: `\`Badge\` reads the theme with \`useContext(ThemeContext)\`. Rendered outside \`ThemeProvider\`, it gets \`null\` and shows "Theme: " with nothing after it, and nothing says why. Write and export \`useTheme()\`. It reads \`ThemeContext\`, throws \`new Error("useTheme must be used inside ThemeProvider")\` when the value is \`null\`, and returns the value otherwise. Use it in \`Badge\` in place of \`useContext\`. Return the actual current provider value rather than cloning it: two calls within one provider render see the same object, including its toggle function. The supplied provider starts at dark and keeps switching on every ordinary click. Nested providers and separate roots own independent state; parent renders retain that state and fresh providers start at dark. Both useTheme and a rendered Badge outside ThemeProvider must throw the authored Error so a React Error boundary can handle it. This exercise uses the supplied nonnull object provider value and null missing-provider default.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 const ThemeContext = createContext(null);
@@ -429,6 +436,11 @@ test('useTheme outside the provider throws a clear error', () => {
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('useTheme must be used inside ThemeProvider');
 });
+
+
+test('the same provider returns the same current value to both hook calls',()=>{
+ let same=false;const Probe=()=>{const first=useTheme(),second=useTheme();same=first===second;return <output>{first.theme}</output>;};render(<ThemeProvider><Probe/></ThemeProvider>);expect(same).toBe(true);
+});
 `,
   },
   {
@@ -439,7 +451,7 @@ test('useTheme outside the provider throws a clear error', () => {
     tier: 2,
     focus: ['custom-hook', 'timers'],
     title: 'A useInterval hook',
-    prompt: 'Write and export `useInterval(callback, delay)`. It calls `callback` every `delay` milliseconds, and a `delay` of `null` runs no interval, which is how a caller pauses it. Start the interval in an effect that depends on `delay` alone, and clear it in the cleanup. Keep the latest `callback` in a ref, updated in an effect of its own, and call `ref.current()` on each tick: a new callback on every render then never restarts the timer. App counts up every 100 milliseconds, and Pause stops the count.',
+    prompt: `Write and export \`useInterval(callback, delay)\`. It calls \`callback\` every \`delay\` milliseconds, and a \`delay\` of \`null\` runs no interval, which is how a caller pauses it. Start the interval in an effect that depends on \`delay\` alone, and clear it in the cleanup. Keep the latest \`callback\` in a ref, updated in an effect of its own, and call \`ref.current()\` on each tick: a new callback on every render then never restarts the timer. App counts up every 100 milliseconds, and Pause stops the count. A valid delay is null or an integer from 1 to 10000 milliseconds. A positive delay change clears the previous interval and starts a fresh period; keeping the same delay or changing only the callback preserves its next deadline. Both normal and layout effects may remember the latest committed callback. A null delay owns no interval, including on the first render. Each hook owns its timer lifecycle; unmounting clears it without affecting another hook. App starts at zero and advances once per 100ms while running; Resume starts a fresh period and retains the count. This browser-only exercise tests timer scheduling and cleanup, not physical clock precision.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 // Write and export useInterval here.
@@ -505,6 +517,72 @@ test('Resume carries on from the paused count', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
   await waitFor(() => expect(count(container) > paused).toBe(true), { timeout: 1000 });
 });
+
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    now: () => now,
+    active: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('the hook honors a supplied 37ms delay exactly',()=>withClock(async clock=>{
+ const seen=[],Probe=()=>{useInterval(()=>seen.push(clock.now()),37);return null;};const view=render(<Probe/>);await clock.tick(36);expect(seen).toEqual([]);await clock.tick(1);expect(seen).toEqual([37]);view.unmount();expect(clock.active()).toBe(0);
+}));
 `,
   },
 
@@ -1298,7 +1376,7 @@ test('Italic releases without changing Bold',()=>{const {container}=render(<App/
     tier: 1,
     focus: ['accessibility', 'splice'],
     title: 'Name the remove buttons',
-    prompt: 'Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an `aria-label` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call `splice(index, 1)` on the copy. Remove by position, because the same song can be on the list twice.',
+    prompt: `Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an \`aria-label\` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call \`splice(index, 1)\` on the copy. Remove by position, because the same song can be on the list twice. songs is the initial snapshot for each mount; later parent renders retain the edited playlist. Accept zero to 100 songs with unique string ids or unique integer ids and nonblank single-line titles up to 500 characters. Preserve every literal title in its span and in the aria-label string ("Remove " plus title), including spaces and punctuation. Do not interpret title text as markup or trim it. Every remaining song must have its own visible × button, even after repeated removals at changing positions. Separate Apps and fresh mounts own their playlists. Equivalent immutable positional removal is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingSongs = [
@@ -1363,6 +1441,9 @@ test('every song has a named button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: /^Remove / }).length).toBe(5);
 });
+
+
+test('literal titles name every remove button without silently trimming',()=>{const title='  <b>Long 🦈 title</b>  ',view=render(<App songs={[{id:'one',title}]}/>),button=view.container.querySelector('button');expect(button.getAttribute('aria-label')).toBe('Remove '+title);expect(button.textContent).toBe('×');expect(titles(view.container)).toEqual([title]);expect(view.container.querySelector('b')).toBeNull();fireEvent.click(button);expect(titles(view.container)).toEqual([]);});
 `,
   },
 
@@ -1551,7 +1632,7 @@ test('Undo brings the last task back to the end', () => {
     tier: 2,
     focus: ['splice', 'split'],
     title: 'Split a line in place',
-    prompt: 'Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". Get the parts with `split(" and ")`, copy the list, and call `splice(index, 1, ...parts)` on the copy. That one call removes the line and inserts every part where it stood.',
+    prompt: `Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". You can get the parts with \`split(" and ")\`, copy the list, and call \`splice(index, 1, ...parts)\` on the copy. That one call removes the line and inserts every part where it stood. A sequence of ordered splice insertions on a copy, or equivalent immutable replacement, is also valid. Match only the exact case-sensitive delimiter " and "; do not trim or otherwise normalize the parts. Keep empty pieces as individual list lines. items is an initial snapshot of zero to 100 single-line strings up to 500 characters; duplicates and literal markup text are allowed. Any line without the exact delimiter has no Split button. Parent renders retain edits, while separate and fresh Apps keep independent lists. Never change the supplied array.`,
     starter: `import React, { useState } from 'react';
 
 const startingList = ['Eggs and milk', 'Bread', 'Rice and beans', 'Tea'];
@@ -1614,6 +1695,9 @@ test('only lines with " and " have a Split button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: 'Split' }).length).toBe(2);
 });
+
+
+test('splitting preserves literal spaces and every part beyond the third',()=>{const parts=['  first','second  ','<b>🦈</b>','fourth','fifth  '],text=parts.join(' and '),view=render(<App items={['before',text,'after']}/>);fireEvent.click(view.container.querySelector('button'));expect(lines(view.container)).toEqual(['before',...parts,'after']);expect(view.container.querySelector('b')).toBeNull();});
 `,
   },
 
@@ -1626,7 +1710,7 @@ test('only lines with " and " have a Split button', () => {
     tier: 2,
     focus: ['useContext', 'useReducer'],
     title: 'Dispatch through context',
-    prompt: 'App keeps the tasks in a reducer and hands `dispatch` to `AddTask` and, through `TaskList`, to every `TaskItem` as an `onDispatch` prop. `TaskList` never uses it; it only passes it on. Provide `dispatch` through `TasksDispatchContext` around the page instead, have `AddTask` and `TaskItem` read it with `useContext`, and remove the `onDispatch` props.',
+    prompt: `App keeps the tasks in a reducer and hands \`dispatch\` to \`AddTask\` and, through \`TaskList\`, to every \`TaskItem\` as an \`onDispatch\` prop. \`TaskList\` never uses it; it only passes it on. Provide \`dispatch\` through \`TasksDispatchContext\` around the page instead, have \`AddTask\` and \`TaskItem\` read it with \`useContext\`, and remove the \`onDispatch\` props. Preserve exact raw single-line task text, including empty text, spaces, Unicode and literal markup up to 2000 UTF-16 units; this exercise does not add title validation. Each submit prevents navigation, dispatches one { type: "added", text } action and clears only that field. Each checkbox dispatches { type: "toggled", id: task.id } using the current task and nearest current callback. Supplied ids can be unique strings or positive integers. Retain draft state and existing list rows through provider/parent updates, and keep separate and fresh instances independent. Obsolete onDispatch props must not decide where an action goes.`,
     starter: `import React, { createContext, useContext, useReducer, useState } from 'react';
 
 export const TasksDispatchContext = createContext(null);
@@ -1724,6 +1808,11 @@ test('TaskItem dispatches through the context', () => {
   fireEvent.click(boxes()[0]);
   expect(seen).toEqual([{ type: 'toggled', id: 7 }]);
 });
+
+
+test('adding through context preserves the exact draft text',()=>{
+ const seen=[],view=render(<TasksDispatchContext.Provider value={action=>seen.push(action)}><AddTask/></TasksDispatchContext.Provider>);fireEvent.change(screen.getByLabelText('New task'),{target:{value:'  Reef <b>🦈  '}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(seen).toEqual([{type:'added',text:'  Reef <b>🦈  '}]);expect(screen.getByLabelText('New task').value).toBe('');
+});
 `,
   },
   {
@@ -1734,7 +1823,7 @@ test('TaskItem dispatches through the context', () => {
     tier: 2,
     focus: ['useContext', 'forms'],
     title: 'A radio group through context',
-    prompt: '`RadioGroup` takes a `name`, the chosen `value` and an `onChange`, and every `Radio` inside it needs all three. Have `RadioGroup` provide `{ name, value, onChange }` through `RadioContext`, and have `Radio` read it with `useContext`. Each Radio\'s input takes the group\'s `name`, is `checked` when its own `value` equals the group\'s, and calls `onChange` with its own value when picked. App passes each Radio only its value and its label.',
+    prompt: `\`RadioGroup\` takes a \`name\`, the chosen \`value\` and an \`onChange\`, and every \`Radio\` inside it needs all three. Have \`RadioGroup\` provide \`{ name, value, onChange }\` through \`RadioContext\`, and have \`Radio\` read it with \`useContext\`. Each Radio's input takes the group's \`name\`, is \`checked\` when its own \`value\` equals the group's, and calls \`onChange\` with its own value when picked. App passes each Radio only its value and its label. Compare values strictly: numeric 0 and string "0" are different, and callbacks receive the original value rather than its DOM string form or an event. Values are strings or finite numbers. Follow changes to the group name, chosen value and callback, including an empty string value, without resetting the children. Keep the fieldset/legend and each label’s input association. Give different logical groups different names so the browser keeps their native radio selection separate. A fresh App starts with Medium selected; parent renders preserve the current choice.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const RadioContext = createContext(null);
@@ -1805,6 +1894,11 @@ test('picking Large updates the page', () => {
 test('every radio carries the group name', () => {
   render(<App />);
   expect(screen.getAllByRole('radio').map(radio => radio.name)).toEqual(['size', 'size', 'size']);
+});
+
+
+test('numeric and string values compare strictly and callbacks preserve their type',()=>{
+ const seen=[],view=render(<RadioGroup name="mixed" value={0} onChange={value=>seen.push(value)} legend="Mixed"><Radio value={0}>Number zero</Radio><Radio value="0">Text zero</Radio></RadioGroup>);const radios=[...view.container.querySelectorAll('input')];expect(radios.map(node=>node.checked)).toEqual([true,false]);fireEvent.click(radios[1]);expect(seen).toEqual(['0']);
 });
 `,
   },

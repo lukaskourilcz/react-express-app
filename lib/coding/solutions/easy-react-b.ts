@@ -457,7 +457,6 @@ export default App;`,
     senior: `import React, { useEffect, useRef, useState } from 'react';
 
 export const useOutsideClick = (ref, onOutside) => {
-  // The newest handler lives in a ref, so an inline arrow does not re-subscribe on every render.
   const handlerRef = useRef(onOutside);
   useEffect(() => {
     handlerRef.current = onOutside;
@@ -556,7 +555,19 @@ test('leaving the page removes the listener it added', () => {
       target.removeEventListener = real[index][1];
     });
   }
-});`,
+});
+
+
+test('twenty current callbacks and changing ref targets distinguish every contained node',()=>{
+ const seen=[],ref=React.createRef();const Probe=({source,target})=>{useOutsideClick(ref,()=>seen.push(source));return <main><section ref={target==='one'?ref:null}><span><b>first deep</b></span></section><section ref={target==='two'?ref:null}><span><i>second deep</i></span></section><p>outside</p></main>;};const view=render(<Probe source={-1} target="one"/>);for(let i=0;i<20;i++){const target=i%3===0?'none':i%2?'two':'one';view.rerender(<Probe source={i} target={target}/>);const sections=[...view.container.querySelectorAll('section')],before=seen.length;for(const node of target==='none'?[]:[ref.current,ref.current.querySelector('span'),ref.current.querySelector('span').firstChild]){fireEvent.mouseDown(node);expect(seen).toHaveLength(before);}fireEvent.mouseDown(view.container.querySelector('p'));if(target==='none')expect(seen).toHaveLength(before);else{expect(seen).toHaveLength(before+1);expect(seen[before]).toBe(i);fireEvent.mouseDown(sections[target==='one'?1:0]);expect(seen[before+1]).toBe(i);}}
+});
+test('subscriptions use matching capture options,track ref-object replacements and remove on unmount',()=>{
+ const watch=watchLiveListeners(document,'mousedown'),first=React.createRef(),second=React.createRef(),seen=[];try{const Probe=({refObject,source})=>{useOutsideClick(refObject,()=>seen.push(source));return <p ref={refObject}>inside</p>;};const view=render(<Probe refObject={first} source={0}/>);expect(watch.active()).toBe(1);for(let i=1;i<=12;i++){const refObject=i%2?second:first;view.rerender(<Probe refObject={refObject} source={i}/>);expect(watch.active()).toBe(1);fireEvent.mouseDown(refObject.current);expect(seen).toHaveLength(i-1);fireEvent.mouseDown(document.body);expect(seen[i-1]).toBe(i);}view.unmount();expect(watch.active()).toBe(0);const before=seen.length;fireEvent.mouseDown(document.body);expect(seen).toHaveLength(before);}finally{watch.restore();}
+});
+test('independent hooks and repeated App panels clean up their own listeners',()=>{
+ const watch=watchLiveListeners(document,'mousedown');try{const a=render(<App/>),b=render(<App/>);expect([1,2].includes(watch.active())).toBe(true);const one=within(a.container),two=within(b.container);for(let i=0;i<12;i++){fireEvent.click(one.getByRole('button',{name:'Filters'}));expect(one.getByRole('button',{name:'Filters'}).getAttribute('aria-expanded')).toBe('true');fireEvent.mouseDown(one.getByLabelText('On sale'));expect(one.queryByLabelText('On sale')).not.toBeNull();fireEvent.mouseDown(a.container.querySelector('p'));expect(one.queryByLabelText('On sale')).toBeNull();expect(two.queryByLabelText('On sale')).toBeNull();a.rerender(<App data-parent={i}/>);expect([1,2].includes(watch.active())).toBe(true);}a.unmount();expect(watch.active()).toBe(1);fireEvent.click(two.getByRole('button',{name:'Filters'}));fireEvent.mouseDown(two.getByRole('button',{name:'Filters'}));fireEvent.click(two.getByRole('button',{name:'Filters'}));expect(two.queryByLabelText('On sale')).toBeNull();b.unmount();expect(watch.active()).toBe(0);const fresh=render(<App/>);expect(isOpen()).toBe(false);fresh.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}
+});
+`,
   },
   'react-easy3-use-theme-guard': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -657,7 +668,6 @@ const ThemeContext = createContext(null);
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('dark');
   const toggle = useCallback(() => setTheme((previous) => (previous === 'dark' ? 'light' : 'dark')), []);
-  // A new object on every render would re-render every consumer; this one changes with the theme only.
   const value = useMemo(() => ({ theme, toggle }), [theme, toggle]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -716,7 +726,20 @@ test('the value carries toggle as well', () => {
   render(<ThemeProvider><Probe /></ThemeProvider>);
   fireEvent.click(screen.getByRole('button'));
   expect(screen.getByRole('button').textContent).toBe('light');
-});`,
+});
+
+
+test('twenty-four switches return the actual shared current provider value and callback',()=>{
+ const seen=[];const Probe=()=>{const a=useTheme(),b=useTheme();seen.push([a,b]);return <button onClick={a.toggle}>{a.theme}</button>;};const view=render(<ThemeProvider><Probe/></ThemeProvider>),button=view.container.querySelector('button');for(let i=0;i<24;i++){const pair=seen[seen.length-1];expect(pair[0]).toBe(pair[1]);expect(typeof pair[0].toggle).toBe('function');expect(button.textContent).toBe(i%2?'light':'dark');fireEvent.click(button);view.rerender(<ThemeProvider><Probe/></ThemeProvider>);}expect(button.textContent).toBe('dark');
+});
+test('nearest nested providers,two independent roots and fresh mounting own their theme',()=>{
+ const Probe=({label})=>{const{theme,toggle}=useTheme();return <button onClick={toggle}>{label}:{theme}</button>;};const a=render(<ThemeProvider><Probe label="outer"/><ThemeProvider><Probe label="inner"/></ThemeProvider></ThemeProvider>),b=render(<ThemeProvider><Probe label="separate"/></ThemeProvider>);const one=within(a.container),two=within(b.container);for(let i=0;i<18;i++){fireEvent.click(one.getByRole('button',{name:/^inner:/}));expect(one.getByRole('button',{name:/^inner:/}).textContent).toBe('inner:'+(i%2?'dark':'light'));expect(one.getByRole('button',{name:/^outer:/}).textContent).toBe('outer:dark');expect(two.getByRole('button').textContent).toBe('separate:dark');}fireEvent.click(one.getByRole('button',{name:/^outer:/}));expect(one.getByRole('button',{name:/^inner:/}).textContent).toBe('inner:dark');a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('Theme: dark');fresh.unmount();
+});
+test('both the public hook and Badge render under an Error boundary with the authored missing-provider error',()=>{
+ class Boundary extends React.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return{error};}render(){return this.state.error?<output>{this.state.error instanceof Error?this.state.error.message:'not an Error'}</output>:this.props.children;}}
+ const Probe=()=> <p>{useTheme().theme}</p>;for(const child of [<Probe/>,<Badge/>]){const view=render(<Boundary>{child}</Boundary>);expect(view.container.textContent).toBe('useTheme must be used inside ThemeProvider');view.unmount();}
+});
+`,
   },
   'react-easy3-use-interval': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -817,7 +840,6 @@ const TICK_MS = 100;
 export const useInterval = (callback, delay) => {
   const savedCallback = useRef(callback);
 
-  // A layout effect puts the newest callback in place before any timer can fire.
   useLayoutEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
@@ -895,7 +917,19 @@ test('leaving the page stops the ticks', async () => {
   unmount();
   await wait(250);
   expect(ticks).toBe(0);
-});`,
+});
+
+
+test('twenty-four positive-delay,same-delay and pause changes follow their current timer model',()=>withClock(async clock=>{
+ const seen=[],expected=[],Probe=({delay,label})=>{useInterval(()=>seen.push([label,clock.now()]),delay);return null;};const view=render(<Probe delay={null} label="initial"/>);let prior=null,next=null,now=0;const delays=[null,37,37,83,null,1,1,250,11,null,1000,43];for(let i=0;i<24;i++){const delay=delays[i%delays.length],label='callback-'+i,advance=delay===null?75:i%2?Math.max(1,delay-1):delay+3;if(delay!==prior)next=delay===null?null:now+delay;prior=delay;view.rerender(<Probe delay={delay} label={label}/>);expect(clock.active()).toBe(delay===null?0:1);const end=now+advance;while(next!==null&&next<=end){expected.push([label,next]);next+=delay;}await clock.tick(advance);now=end;expect(seen).toEqual(expected);}view.unmount();expect(clock.active()).toBe(0);await clock.tick(1000);expect(seen).toEqual(expected);
+}));
+test('frequent callback changes keep the original deadline and call the latest committed callback',()=>withClock(async clock=>{
+ const seen=[],expected=[],Probe=({label})=>{useInterval(()=>seen.push([label,clock.now()]),100);return null;};const view=render(<Probe label="first"/>);let now=0,next=100;for(let i=0;i<32;i++){view.rerender(<Probe label={'latest-'+i}/>);const end=now+17;while(next<=end){expected.push(['latest-'+i,next]);next+=100;}await clock.tick(17);now=end;expect(seen).toEqual(expected);expect(clock.active()).toBe(1);}view.unmount();expect(clock.active()).toBe(0);
+}));
+test('independent intervals,fresh hooks and App pause/resume own their timers',()=>withClock(async clock=>{
+ const seenA=[],seenB=[],Probe=({label})=>{useInterval(()=>{(label==='A'?seenA:seenB).push(clock.now());},label==='A'?37:53);return null;};const a=render(<Probe label="A"/>),b=render(<Probe label="B"/>);expect(clock.active()).toBe(2);await clock.tick(200);expect(seenA).toHaveLength(5);expect(seenB).toHaveLength(3);a.unmount();expect(clock.active()).toBe(1);await clock.tick(53);expect(seenA).toHaveLength(5);expect(seenB).toHaveLength(4);b.unmount();expect(clock.active()).toBe(0);const app=render(<App/>);expect(count(app.container)).toBe(0);let total=0;for(let i=0;i<12;i++){await clock.tick(99);expect(count(app.container)).toBe(total);await clock.tick(1);total++;expect(count(app.container)).toBe(total);fireEvent.click(screen.getByRole('button',{name:'Pause'}));expect(clock.active()).toBe(0);await clock.tick(137);expect(count(app.container)).toBe(total);app.rerender(<App data-parent={i}/>);fireEvent.click(screen.getByRole('button',{name:'Resume'}));expect(clock.active()).toBe(1);}app.unmount();expect(clock.active()).toBe(0);const fresh=render(<App/>);expect(count(fresh.container)).toBe(0);await clock.tick(100);expect(count(fresh.container)).toBe(1);fresh.unmount();expect(clock.active()).toBe(0);
+}));
+`,
   },
 
   /* ── abort ────────────────────────────────────────────────────────── */
@@ -2269,7 +2303,13 @@ test('the last song can go', () => {
   const { container } = render(<App songs={[{ id: 7, title: 'Ebb' }]} />);
   fireEvent.click(screen.getByRole('button', { name: 'Remove Ebb' }));
   expect(titles(container)).toEqual([]);
-});`,
+});
+
+
+test('twenty-four positional removals keep raw titles and labels aligned without mutating frozen songs',()=>{const songs=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'song-'+i,title:i%4?' Track '+i+' 🦈 ':'Duplicate'}))),before=JSON.stringify(songs),expected=songs.map(song=>song.title),view=render(<App songs={songs}/>);for(let step=0;expected.length;step++){const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(expected.map(title=>'Remove '+title));expect(buttons.every(button=>button.textContent==='×')).toBe(true);const index=(step*5+9)%expected.length;expected.splice(index,1);fireEvent.click(buttons[index]);expect(titles(view.container)).toEqual(expected);expect(JSON.stringify(songs)).toBe(before);}});
+test('empty,single,long and duplicate playlists preserve the requested snapshot through parents',()=>{for(const names of [[],['x'.repeat(500)],['same','middle','same'],['"quoted"','<i>raw</i>']]){const songs=names.map((title,i)=>({id:i,title})),view=render(<App songs={songs}/>);expect(titles(view.container)).toEqual(names);if(names.length){fireEvent.click(view.container.querySelectorAll('button')[names.length-1]);expect(titles(view.container)).toEqual(names.slice(0,-1));}view.rerender(<App songs={[{id:'replacement',title:'new prop'}]}/>);expect(titles(view.container)).toEqual(names.slice(0,-1));expect(view.container.querySelector('i')).toBeNull();view.unmount();}});
+test('separate playlists and a fresh mount own their removals',()=>{const songs=[{id:1,title:'one'},{id:2,title:'two'}],a=render(<App songs={songs}/>),b=render(<App songs={songs}/>);fireEvent.click(a.container.querySelector('button'));expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one','two']);fireEvent.click(b.container.querySelectorAll('button')[1]);expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one']);a.unmount();b.unmount();const fresh=render(<App songs={songs}/>);expect(titles(fresh.container)).toEqual(['one','two']);});
+`,
   },
 
   /* ── derived state ────────────────────────────────────────────────── */
@@ -2736,7 +2776,13 @@ test('the items prop is left alone', () => {
   render(<App items={items} />);
   splitLine('Oil and vinegar');
   expect(items).toEqual(['Oil and vinegar']);
-});`,
+});
+
+
+test('all matching lines split in their current places without changing frozen input',()=>{const items=Object.freeze(Array.from({length:24},(_,i)=>i%3?'fixed-'+i:'left-'+i+' and middle-'+i+' and right-'+i+' and end-'+i)),before=JSON.stringify(items),expected=[...items],view=render(<App items={items}/>);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and ')),parts=expected[index].split(' and '),row=view.container.querySelectorAll('li')[index];fireEvent.click(within(row).getByRole('button',{name:'Split'}));expected.splice(index,1,...parts);expect(lines(view.container)).toEqual(expected);expect(JSON.stringify(items)).toBe(before);}expect(view.container.querySelectorAll('button')).toHaveLength(0);});
+test('only the exact delimiter splits and empty pieces are retained as separate lines',()=>{for(const items of [[],['candy','a AND b','one and two'],[' and ',' and end','start and '],[' a  and  b ','a and b and c and d and e and f']]){const expected=[...items],view=render(<App items={items}/>);expect(view.container.querySelectorAll('button')).toHaveLength(items.filter(item=>item.includes(' and ')).length);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and '));fireEvent.click(view.container.querySelectorAll('li')[index].querySelector('button'));expected.splice(index,1,...expected[index].split(' and '));expect(lines(view.container)).toEqual(expected);}view.unmount();}});
+test('parent renders,separate lists and fresh snapshots do not share edits',()=>{const items=['one and two','three'],a=render(<App items={items}/>),b=render(<App items={items}/>);fireEvent.click(a.container.querySelector('button'));a.rerender(<App items={['replacement']}/>);expect(lines(a.container)).toEqual(['one','two','three']);expect(lines(b.container)).toEqual(items);a.unmount();b.unmount();const fresh=render(<App items={items}/>);expect(lines(fresh.container)).toEqual(items);});
+`,
   },
 
   /* ── useContext ───────────────────────────────────────────────────── */
@@ -2988,7 +3034,21 @@ test('a ticked task can be unticked', () => {
   render(<App />);
   fireEvent.click(boxes()[1]);
   expect(boxes()[1].checked).toBe(false);
-});`,
+});
+
+
+const submitTask=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('current provider callbacks receive exact actions from stable AddTask and TaskItem consumers',()=>{
+ const seen=[],obsolete=()=>{throw new Error('onDispatch prop is obsolete');},child=<AddTask onDispatch={obsolete}/>;const view=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}>{child}</TasksDispatchContext.Provider>);const field=within(view.container).getByLabelText('New task'),raw=['',' ','  raw <b>  ','🦈漢字','0','r'.repeat(2000)];for(let i=0;i<20;i++){const value=raw[i%raw.length];fireEvent.change(field,{target:{value}});view.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}>{child}</TasksDispatchContext.Provider>);expect(within(view.container).getByLabelText('New task')).toBe(field);expect(field.value).toBe(value);submitTask(view.container);expect(seen[i]).toEqual({source:i,action:{type:'added',text:value}});expect(field.value).toBe('');}view.unmount();
+ const item=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}><ul><TaskItem task={{id:1,text:'first',done:false}} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);for(let i=0;i<18;i++){const task=Object.freeze({id:i%2?'id-'+i:901+i,text:'  Item <b> 🦈 '+i+'  ',done:i%2===0});item.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}><ul><TaskItem task={task} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);const checkbox=item.container.querySelector('input');expect(checkbox.checked).toBe(task.done);expect(item.container.querySelector('li').textContent).toBe(task.text);fireEvent.click(checkbox);expect(seen[20+i]).toEqual({source:i,action:{type:'toggled',id:task.id}});expect(task.done).toBe(i%2===0);}item.unmount();
+});
+test('twenty-four additions and toggles retain raw task order,state and prior rows',()=>{
+ const view=render(<App/>),expected=[{text:'Rinse the regulator',done:false},{text:'Log the dive',done:true}],raw=['',' ','  exact <b>  ','🦈漢字','duplicate','x'.repeat(2000)];for(let i=0;i<24;i++){const rows=[...view.container.querySelectorAll('li')],value=raw[i%raw.length];fireEvent.change(screen.getByLabelText('New task'),{target:{value}});submitTask(view.container);expected.push({text:value,done:false});const next=[...view.container.querySelectorAll('li')];rows.forEach((node,index)=>expect(next[index]).toBe(node));const index=(i*5)%expected.length;fireEvent.click(next[index].querySelector('input'));expected[index].done=!expected[index].done;expect(next.map(node=>node.textContent)).toEqual(expected.map(row=>row.text));expect(next.map(node=>node.querySelector('input').checked)).toEqual(expected.map(row=>row.done));view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('New task').value).toBe('');}
+});
+test('two task apps and a fresh mount own separate reducers and drafts',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('New task'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('New task'),{target:{value:'Beta'}});submitTask(a.container);expect(a.container.textContent).toContain('Alpha');expect(b.container.querySelectorAll('li')).toHaveLength(2);expect(within(b.container).getByLabelText('New task').value).toBe('Beta');submitTask(b.container);fireEvent.click(a.container.querySelector('input[type=checkbox]'));expect(a.container.querySelector('input[type=checkbox]').checked).toBe(true);expect(b.container.querySelector('input[type=checkbox]').checked).toBe(false);a.unmount();b.unmount();const fresh=render(<App/>);expect([...fresh.container.querySelectorAll('li')].map(node=>node.textContent)).toEqual(['Rinse the regulator','Log the dive']);expect(screen.getByLabelText('New task').value).toBe('');fresh.unmount();
+});
+`,
   },
   'react-easy3-radio-group': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -3094,7 +3154,6 @@ export default App;`,
 export const RadioContext = createContext(null);
 
 export const RadioGroup = ({ name, value, onChange, legend, children }) => {
-  // A new object on every render would re-render every Radio; this one changes with its fields.
   const group = useMemo(() => ({ name, value, onChange }), [name, value, onChange]);
   return (
     <RadioContext.Provider value={group}>
@@ -3192,6 +3251,18 @@ test('a value set from outside checks the matching radio', () => {
   rerender(group('L'));
   expect(screen.getByLabelText('Large').checked).toBe(true);
   expect(screen.getByLabelText('Small').checked).toBe(false);
-});`,
+});
+
+
+test('twenty controlled name,value and callback changes reach the same children',()=>{
+ const values=['',0,'0',-1,'reef-🦈',42],seen=[],children=values.map((value,i)=><Radio key={i} value={value}>{'Option '+i+' <b> 🦈'}</Radio>);const view=render(<RadioGroup name="initial" value={values[0]} onChange={value=>seen.push({source:-1,value})} legend="Initial">{children}</RadioGroup>);const first=[...view.container.querySelectorAll('input')];for(let i=0;i<20;i++){const chosen=i%values.length,name='group-'+i;view.rerender(<RadioGroup name={name} value={values[chosen]} onChange={value=>seen.push({source:i,value})} legend={'Legend '+i}>{children}</RadioGroup>);const inputs=[...view.container.querySelectorAll('input')];expect(inputs).toEqual(first);expect(inputs.map(node=>node.name)).toEqual(values.map(()=>name));expect(inputs.map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));expect(view.container.querySelector('legend').textContent).toBe('Legend '+i);expect([...view.container.querySelectorAll('label')].map(node=>node.control)).toEqual(inputs);const next=(chosen+1)%values.length;fireEvent.click(inputs[next]);expect(seen[i]).toEqual({source:i,value:values[next]});}
+});
+test('the nearest and sibling groups keep names,chosen values and callbacks local',()=>{
+ const seen=[],view=render(<RadioContext.Provider value={{name:'outer',value:'a',onChange:value=>seen.push(['outer',value])}}><Radio value="b">Outer B</Radio><RadioGroup name="inner" value="a" onChange={value=>seen.push(['inner',value])} legend="Inner"><Radio value="a">Inner A</Radio><Radio value="b">Inner B</Radio></RadioGroup><RadioGroup name="side" value="b" onChange={value=>seen.push(['side',value])} legend="Side"><Radio value="a">Side A</Radio><Radio value="b">Side B</Radio></RadioGroup></RadioContext.Provider>);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual([false,true,false,false,true]);fireEvent.click(within(view.container).getByLabelText('Outer B'));fireEvent.click(within(view.container).getByLabelText('Inner B'));fireEvent.click(within(view.container).getByLabelText('Side A'));expect(seen).toEqual([['outer','b'],['inner','b'],['side','a']]);
+});
+test('forty-eight App choices and fresh mounting retain controlled state',()=>{
+ const view=render(<App/>),labels=['Small','Medium','Large'],values=['S','M','L'];for(let i=0;i<48;i++){const chosen=(i*2)%3;fireEvent.click(screen.getByLabelText(labels[chosen]));expect(view.container.querySelector('p').textContent).toBe('Chosen size: '+values[chosen]);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));view.rerender(<App data-parent={i}/>);}view.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Medium').checked).toBe(true);expect(fresh.container.querySelector('p').textContent).toBe('Chosen size: M');fresh.unmount();
+});
+`,
   },
 };
