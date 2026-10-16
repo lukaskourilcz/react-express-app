@@ -329,19 +329,22 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const fn:<T>(r:readonly Result<T>[])=>{values:T[];errors:string[]}=partitionResults;}"}, {"code": "{const bad:{values:string[];errors:string[]}=partitionResults([{ok:true,value:1}]);}", "rejects": true}] },
     ),
     step(
-      'Add recoverResult<T>(result,fn) to recover a failure using fn(error):Result<T>. A success passes through without calling fn. Convert callback throws using the earlier error convention.',
+      "Add recoverResult<T>(result,fn) to recover a failure using fn(error):Result<T>. A success passes through without calling fn. Convert callback throws using the earlier error convention. On success return the original Result record without invoking fn. On failure call fn once synchronously with the exact original error string and return its exact Result record without cloning or awaiting it. Result records may be frozen and payloads are opaque. Use the earlier exact Error.message/String(nonError) policy for synchronous throws: messages/conversions are strings of at most 20000 units and conversion does not throw. A newly caught failure owns a mutable record. Do not mutate inputs. Target: O(1) time and O(1) additional wrapper space for recoverResult itself; callback work, opaque payloads and throwable text conversion are excluded.",
       'Přidej recoverResult<T>(result,fn), které opraví chybu pomocí fn(error):Result<T>. Úspěch předej bez volání fn. Výjimky callbacku převáděj podle dřívějšího pravidla.',
-      calls([
+      calls(
+        ["(()=>{const next={ok:true,value:[]};return recoverResult({ok:false,error:'x'},()=>next)===next;})()",true],[
         'recoverResult({ok:false,error:"x"},e=>({ok:true,value:e.length}))',
         { ok: true, value: 1 },
       ]),
+      { additionalTypeTests: [{"code": "{const fn:<T>(r:Result<T>,cb:(e:string)=>Result<T>)=>Result<T>=recoverResult;}"}, {"code": "{const bad:Result<string>=recoverResult<number>({ok:false,error:\"x\"},()=>({ok:true,value:1}));}", "rejects": true}] },
     ),
   ],
   'ts-evolving-store': [
     step(
-      'Implement generic createStore<T>(initial) with get():T and set(value:T):void. Store and replace ordinary numeric or string values in a closure.',
+      "Implement generic createStore<T>(initial) with get():T and set(value:T):void. Store and replace ordinary numeric or string values in a closure. At this checkpoint the runtime inputs are finite Number values from -1000000000 to 1000000000 or primitive strings of at most 20000 UTF16 units. Preserve exact values, including signed zero and text case/whitespace/Unicode representation; do not trim, normalize or coerce them. Each factory call owns an independent state binding. Both methods must work when detached from the returned object; set has a void return type. Keep the generic get/set types even though this checkpoint exercises only numbers and strings. Target: O(1) time and O(1) additional storage per createStore/get/set call, excluding storage of the original value.",
       'Napiš generické createStore<T>(initial) s get():T a set(value:T):void. Běžné číselné či řetězcové hodnoty ukládej a nahrazuj v uzávěru.',
       calls(
+        ["(()=>{const store=createStore('e\\u0301');store.set(' \u00e9 ');return store.get();})()"," \u00e9 "],
         ['createStore(1).get()', 1],
         ['createStore("a").get()', 'a'],
         ['(()=>{const s=createStore(1);s.set(2);return s.get()})()', 2],
@@ -349,28 +352,34 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ),
     ),
     step(
-      'Add update(fn:(value:T)=>T):void. Apply fn to the current state and pass its result through set.',
+      "Add update(fn:(value:T)=>T):void. Apply fn to the current state and pass its result through set. Keep the earlier exact opaque state and detached get/set rules. update also works detached: call fn synchronously exactly once with the original current value, then store its exact return reference/value through set without cloning, coercion or awaiting. Callbacks do not throw, change this store themselves or depend on this. No subscriptions or history are required yet. Preserve update(fn:(value:T)=>T):void. Target: O(1) time and O(1) extra storage for update itself, excluding callback work and opaque state storage.",
       'Přidej update(fn:(value:T)=>T):void. Zavolej fn s aktuálním stavem a výsledek předej do set.',
-      calls([
+      calls(
+        ["(()=>{let count=0;const s=createStore(1);s.update(v=>{count++;return v+1;});return [s.get(),count];})()",[2, 1]],[
         '(()=>{const s=createStore(1);s.update(n=>n+2);return s.get()})()',
         3,
       ]),
+      { additionalTypeTests: [{"code": "{const s=createStore(1);const update:(fn:(v:number)=>number)=>void=s.update;const empty:void=update((n:number)=>n+1);}"}, {"code": "{createStore(1).update((n:number)=>String(n));}", "rejects": true}] },
     ),
     step(
-      'Add undo():boolean. Each actual set/update records the prior value; undo restores it and notifies subscribers once. Return false without notifying when history is empty.',
+      "Add undo():boolean. Each actual set/update records the prior value; undo restores it and notifies subscribers once. Return false without notifying when history is empty. Keep all earlier opaque-state, Object.is, independent snapshot subscription and nonthrowing/nonreentrant callback rules. Save original state references without cloning; undo restores that exact prior value and notifies once, or returns false without notification/history changes when unavailable. Equal set/update creates no undo entry. No redo is required here. Methods work detached. Do not impose a fixed history cap; this task uses at most 10000 state-changing calls and 256 live subscriptions. Target: O(n) time per state operation, amortized in the usual array append/pop model, and O(h+n) space for retained history and registrations, where n is one plus live subscriptions and h is one plus retained past states; get is O(1). Callback work and opaque state contents are excluded.",
       'Přidej undo():boolean. Každá skutečná změna set/update uloží původní hodnotu; undo ji obnoví a jednou informuje odběratele. Bez historie vrať false bez oznámení.',
-      calls([
+      calls(
+        ["(()=>{const first=[],s=createStore(first);s.set([1]);s.undo();return s.get()===first;})()",true],[
         '(()=>{const s=createStore(0);s.set(1);return [s.undo(),s.get(),s.undo()]})()',
         [true, 0, false],
       ]),
+      { additionalTypeTests: [{"code": "{const flag:boolean=createStore(1).undo();}"}, {"code": "{const bad:string=createStore(1).undo();}", "rejects": true}] },
     ),
     step(
-      'Add selectStore<T,U>(store,select:(value:T)=>U) with get():U. Subscribe to the source and keep the selected value current after source changes.',
+      "Add selectStore<T,U>(store,select:(value:T)=>U) with get():U. Subscribe to the source and keep the selected value current after source changes. Accept any source with get():T and subscribe(fn:(value:T)=>void):()=>void; do not require other createStore methods. A source does not emit on subscribe and sends its current original value synchronously on each change. Compute select once from source.get() during creation and once per notification from its supplied value. get returns the same cached opaque U until a notification, without rereading the source, recomputing, cloning or awaiting it. Selectors do not throw, change the source or depend on this. This checkpoint needs only get; derived subscribers/dispose come next. Target: O(1) time and O(1) extra space for own work per creation, notification or get, excluding selector execution, source get/subscribe/notification work and opaque payload storage.",
       'Přidej selectStore<T,U>(store,select:(value:T)=>U) s get():U. Přihlas se ke zdroji a po jeho změnách udržuj vybranou hodnotu aktuální.',
-      calls([
+      calls(
+        ["(()=>{let count=0;const s=createStore(1),d=selectStore(s,v=>{count++;return [v];}),first=d.get();return d.get()===first&&count===1;})()",true],[
         '(()=>{const s=createStore({n:1}),d=selectStore(s,x=>x.n);s.set({n:2});return d.get()})()',
         2,
       ]),
+      { additionalTypeTests: [{"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const value:string=d.get();}"}, {"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const bad:number=d.get();}", "rejects": true}] },
     ),
     step(
       'Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw.',
