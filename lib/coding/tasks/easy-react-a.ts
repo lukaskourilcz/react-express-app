@@ -793,7 +793,7 @@ test('two toggle calls in one handler apply two flips',()=>{
     tier: 2,
     focus: ['custom-hook', 'effect-cleanup'],
     title: 'A useWindowWidth hook',
-    prompt: 'Write and export `useWindowWidth()`. It starts from `window.innerWidth` and returns the current width. In an effect that runs once, add a `resize` listener on `window` that stores the new width, and in the effect\'s cleanup remove that same listener: `removeEventListener` only removes a listener it is given the very same function for. App shows "Width: <n>px".',
+    prompt: `Write and export \`useWindowWidth()\`. It starts from window.innerWidth and returns the current numeric width. Subscribe to resize on window, update from window.innerWidth, and remove the subscription when it is no longer used. An effect with a named listener or an equivalent useSyncExternalStore subscription is valid. Cleanup must match the function and capture phase used to add the listener, or abort its signal. App shows "Width: <n>px". This is a client-only exercise with integer widths from 0 to 10000; do not clamp or debounce them. Parent renders and resize updates must not repeatedly register listeners. Separate consumers follow the same window, removing one leaves the others active, and the final unmount removes every owned listener. Sharing one native listener between consumers is allowed when its ownership is tracked correctly.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // Write and export useWindowWidth here.
@@ -818,7 +818,9 @@ export default App;
   }, []);
   return width;
 };`,
-    hints: ['Name the listener once inside the effect, then pass that one function to both `addEventListener` and `removeEventListener`. An inline arrow in the cleanup is a new function, so nothing would be removed.'],
+    hints: [
+      `Name the listener once inside the effect, then pass that one function to both \`addEventListener\` and \`removeEventListener\`. An inline arrow in the cleanup is a new function, so nothing would be removed. Capture must match too: adding with capture: true and removing without it leaves the listener active. A stable useSyncExternalStore subscription is also valid.`,
+    ],
     approach: [
       'Keep the width in `useState(window.innerWidth)` inside the hook.',
       'In `useEffect(..., [])`, declare `onResize`, which calls `setWidth(window.innerWidth)`, and add it as the `resize` listener.',
@@ -874,6 +876,13 @@ test('removes the same listener it added when it leaves the page', () => {
     seen.restore();
   }
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('an initial width below 320 remains its actual numeric width',()=>{
+ window.innerWidth=127;const view=render(<App/>);expect(view.container.querySelector('p').textContent).toBe('Width: 127px');
+});
 `,
   },
   {
@@ -884,7 +893,7 @@ test('removes the same listener it added when it leaves the page', () => {
     tier: 2,
     focus: ['custom-hook', 'derived-state'],
     title: 'Totals from a hook',
-    prompt: 'Write and export `useBasketTotals(items)`. It returns `{ count, total }`: `count` adds up every item\'s `quantity`, and `total` adds up `price * quantity`. Work both out from `items` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends `{ name: "Pen", price: 2, quantity: 1 }`.',
+    prompt: `Write and export \`useBasketTotals(items)\`. It returns \`{ count, total }\`: \`count\` adds up every item's \`quantity\`, and \`total\` adds up \`price * quantity\`. Work both out from \`items\` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends \`{ name: "Pen", price: 2, quantity: 1 }\`. Inputs are immutable snapshots: changed arrays or records arrive through a new array reference. There can be up to 1000 items; quantity is an integer from 0 to 1000, and price is a finite nonnegative Number up to 10000. Names do not affect totals. Use input-order JavaScript Number arithmetic without rounding the result. New same-length arrays can change prices or quantities. The returned totals must be correct on the first render of each snapshot; useMemo is optional. Each ordinary Add a pen click appends one pen. Preserve parent state and independent/fresh hook calls.`,
     starter: `import React, { useState } from 'react';
 
 const startingItems = [
@@ -943,6 +952,11 @@ test('an empty basket is zero', () => {
   };
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('0/0');
+});
+
+
+test('derived totals preserve fractional prices without rounding',()=>{
+ const Probe=()=>{const{count,total}=useBasketTotals([{name:'Fraction',price:0.125,quantity:3}]);return <output>{count}/{total}</output>;};const view=render(<Probe/>);expect(view.container.textContent).toBe('3/0.375');
 });
 `,
   },

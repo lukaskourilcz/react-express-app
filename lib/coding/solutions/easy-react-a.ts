@@ -924,9 +924,6 @@ const App = () => {
 export default App;`,
     senior: `import React, { useSyncExternalStore } from 'react';
 
-// The window is a store React does not own. useSyncExternalStore subscribes once
-// per component, re-reads the width after every resize, and calls the function
-// subscribe returns when the component leaves, with the same listener.
 const subscribe = (onChange) => {
   window.addEventListener('resize', onChange);
   return () => window.removeEventListener('resize', onChange);
@@ -970,7 +967,19 @@ test('the hook gives back the width as a number', () => {
   window.innerWidth = 375;
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('number');
-});`,
+});
+
+
+test('twenty-four current widths including zero and large values reach the same mounted hook',()=>{
+ window.innerWidth=0;const seen=[];const Probe=()=>{const width=useWindowWidth();seen.push(width);return <output>{width}</output>;};const view=render(<Probe/>);expect(seen[0]).toBe(0);const widths=[0,1,127,319,320,375,768,1440,3840,10000];for(let i=0;i<24;i++){const width=widths[i%widths.length];resizeTo(width);expect(seen[seen.length-1]).toBe(width);expect(typeof seen[seen.length-1]).toBe('number');expect(view.container.textContent).toBe(String(width));view.rerender(<Probe data-parent={i}/>);expect(view.container.textContent).toBe(String(width));}
+});
+test('each mounted subscription is removed with its exact listener and capture phase',()=>{
+ const watch=watchLiveListeners(window,'resize');try{window.innerWidth=811;const a=render(<App/>),b=render(<App/>);expect([1,2].includes(watch.active())).toBe(true);const registrations=watch.registered();for(let i=0;i<12;i++){resizeTo(200+i);a.rerender(<App data-parent={i}/>);b.rerender(<App data-parent={i}/>);expect([1,2].includes(watch.active())).toBe(true);expect(watch.registered()).toBe(registrations);}a.unmount();expect(watch.active()).toBe(1);resizeTo(91);expect(b.container.querySelector('p').textContent).toBe('Width: 91px');b.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}
+});
+test('a later consumer reads the current width and removal leaves surviving consumers current',()=>{
+ const watch=watchLiveListeners(window,'resize');try{const Probe=({label})=><output>{label}:{useWindowWidth()}</output>;window.innerWidth=4096;const a=render(<Probe label="A"/>);expect(a.container.textContent).toBe('A:4096');window.innerWidth=63;const b=render(<Probe label="B"/>);expect(b.container.textContent).toBe('B:63');resizeTo(17);expect(a.container.textContent).toBe('A:17');expect(b.container.textContent).toBe('B:17');a.unmount();resizeTo(3001);expect(b.container.textContent).toBe('B:3001');b.unmount();expect(watch.active()).toBe(0);window.innerWidth=5;const fresh=render(<Probe label="fresh"/>);expect(fresh.container.textContent).toBe('fresh:5');fresh.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}
+});
+`,
   },
   'react-easy2-use-basket-totals': {
     solution: `import React, { useState } from 'react';
@@ -1047,7 +1056,6 @@ const startingItems = [
 ];
 const PEN = { name: 'Pen', price: 2, quantity: 1 };
 
-// Still derived during render; useMemo only skips the loop when items is the same array.
 export const useBasketTotals = (items) =>
   useMemo(
     () => items.reduce(
@@ -1102,7 +1110,21 @@ test('a quantity above one counts in full', () => {
   };
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('4/10');
-});`,
+});
+
+
+const expectedTotals=items=>items.reduce((sum,item)=>({count:sum.count+item.quantity,total:sum.total+item.price*item.quantity}),{count:0,total:0});
+const freezeBasket=items=>Object.freeze(items.map(item=>Object.freeze(item)));
+test('twenty immutable same-length replacements compute the correct values on their first render',()=>{
+ const seen=[];const Probe=({items})=>{const value=useBasketTotals(items);seen.push({count:value.count,total:value.total});return <output>{value.count}/{value.total}</output>;};const view=render(<Probe items={[]}/>);for(let i=0;i<20;i++){const items=freezeBasket([{name:'same',price:i%2?0.1:1.125,quantity:i%5},{name:'same',price:2.25+i/8,quantity:i%4},{name:'  <b>🦈  ',price:0,quantity:3}]);const before=seen.length,expected=expectedTotals(items);view.rerender(<Probe items={items}/>);expect(seen[before]).toEqual(expected);expect(view.container.textContent).toBe(expected.count+'/'+expected.total);view.rerender(<Probe items={items}/>);expect(seen[seen.length-1]).toEqual(expected);}
+});
+test('empty,single and thousand-item immutable inputs retain input-order Number totals',()=>{
+ const Probe=({items})=>{const{count,total}=useBasketTotals(items);return <output>{count}/{total}</output>;};const view=render(<Probe items={[]}/>);for(const items of [[],[{name:'zero',price:999,quantity:0}],[{name:'Fraction',price:0.1,quantity:3}],Array.from({length:1000},(_,i)=>({name:i%2?'duplicate':'x'.repeat(30),price:(i%19)/8,quantity:i%7}))]){const frozen=freezeBasket(items),expected=expectedTotals(frozen),before=JSON.stringify(frozen);view.rerender(<Probe items={frozen}/>);expect(view.container.textContent).toBe(expected.count+'/'+expected.total);expect(JSON.stringify(frozen)).toBe(before);}
+});
+test('forty ordinary App additions,parents and separate/fresh hooks preserve their own derived values',()=>{
+ const a=render(<App/>),b=render(<App/>),button=within(a.container).getByRole('button',{name:'Add a pen'});for(let i=0;i<40;i++){fireEvent.click(button);expect(lines(a.container)).toEqual(['Items: '+(4+i),'Total: '+(16+2*i)]);a.rerender(<App data-parent={i}/>);expect(within(a.container).getByRole('button',{name:'Add a pen'})).toBe(button);expect(lines(b.container)).toEqual(['Items: 3','Total: 14']);}a.unmount();b.unmount();const fresh=render(<App/>);expect(lines(fresh.container)).toEqual(['Items: 3','Total: 14']);fresh.unmount();
+});
+`,
   },
 
   /* ── pagination ───────────────────────────────────────────────────── */
