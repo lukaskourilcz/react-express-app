@@ -66,26 +66,24 @@ function toPlainDigits(value) {
 }
 
 function calculateWithVariables(expression, variables) {
-  let source = '';
+  const chunks = [];
   let index = 0;
   while (index < expression.length) {
     const char = expression[index];
     if (!isNameStart(char)) {
-      source = source + char;
+      chunks.push(char);
       index = index + 1;
       continue;
     }
-    let name = '';
-    while (index < expression.length && isNamePart(expression[index])) {
-      name = name + expression[index];
-      index = index + 1;
-    }
+    const start = index;
+    while (index < expression.length && isNamePart(expression[index])) index++;
+    const name = expression.slice(start, index);
     if (!Object.prototype.hasOwnProperty.call(variables, name)) return null;
     const value = variables[name];
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-    source = source + '(' + toPlainDigits(value) + ')';
+    chunks.push('(' + toPlainDigits(value) + ')');
   }
-  return calculate(source);
+  return calculate(chunks.join(''));
 }`,
  `function runProgram(lines) {
   const variables = Object.create(null);
@@ -463,25 +461,24 @@ const plainDigits = (value) => {
 };
 
 function calculateWithVariables(expression, variables) {
-  const known = new Map(Object.entries(variables).filter(([, value]) => Number.isFinite(value)));
   const names = expression.match(IDENTIFIER) ?? [];
-  if (!names.every(name => known.has(name))) return null;
+  if (!names.every(name => Object.hasOwn(variables, name) && Number.isFinite(variables[name]))) return null;
   // Parentheses keep a substituted negative from fusing with the operator before it.
-  return calculate(expression.replace(IDENTIFIER, name => '(' + plainDigits(known.get(name)) + ')'));
+  return calculate(expression.replace(IDENTIFIER, name => '(' + plainDigits(variables[name]) + ')'));
 }`,
  `const ASSIGNMENT = /^\\s*(?<name>[A-Za-z_]\\w*)\\s*=(?<source>[^=]*)$/;
 
 function runProgram(lines) {
-  const environment = new Map();
+  const environment = Object.create(null);
   const results = [];
   for (const line of lines) {
     const { name, source = line } = line.match(ASSIGNMENT)?.groups ?? {};
-    const value = calculateWithVariables(source, Object.fromEntries(environment));
+    const value = calculateWithVariables(source, environment);
     if (value === null) return null;
-    if (name !== undefined) environment.set(name, value);
+    if (name !== undefined) environment[name] = value;
     results.push(value);
   }
-  return { variables: Object.fromEntries(environment), results };
+  return { variables: environment, results };
 }`,
  ],
  'js-evolving-query': [

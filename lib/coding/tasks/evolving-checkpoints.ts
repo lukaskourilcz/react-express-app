@@ -65,33 +65,39 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { focus: ["strings", "recursion", "while"] },
     ),
     step(
-      'Add calculateWithVariables(expression, variables). Resolve identifiers [A-Za-z_][A-Za-z0-9_]* from own finite-number properties and evaluate the expression. This step uses valid expressions and defined variables.',
+      "Add calculateWithVariables(expression, variables), resolving identifiers as numeric operands. At this checkpoint all expressions are valid, every referenced name exists as an own finite-number data property and evaluation is finite without division by zero. Unknown/invalid names and malformed-input checks come in the next milestone. Identifiers are case-sensitive ASCII names [A-Za-z_][A-Za-z0-9_]* of at most 64 characters. variables is a non-null non-array record with at most 2000 own string-keyed data properties, possibly frozen or with any prototype. Own non-enumerable data properties count; inherited properties and symbols never supply variables. Accessors and proxies are outside this task. Read only referenced names and never mutate the record. Each raw expression has at most 20000 UTF-16 units and retains the earlier decimal/operator/whitespace grammar and 64-level parenthesis/unary bounds. Every finite Number is a valid variable value, including subnormal numbers and values normally printed with an exponent. Equivalent zero signs are accepted. Substitution, if used, must write plain digits and parenthesize negatives; direct token lookup is also valid. Native eval/Function compilers remain unavailable. Target: O(n) time and O(n) extra space, where n is the raw expression length; Number values have a fixed bounded decimal width and property lookup uses the usual constant-time model.",
       'Přidej calculateWithVariables(expression, variables). Identifikátory [A-Za-z_][A-Za-z0-9_]* nahraď vlastními konečnými číselnými hodnotami a vyhodnoť výraz. Tato etapa používá platné výrazy a definované proměnné.',
       calls(
+        ["(()=>{const variables=Object.defineProperty({},'Hidden',{value:2});return calculateWithVariables('Hidden+1',variables);})()", 3],
         ['calculateWithVariables("a+2",{a:3})', 5],
         ['calculateWithVariables("a*(b+2)",{a:-3,b:4})', -18],
         ['calculateWithVariables("x",{x:1e-7})', 1e-7],
       ),
+      { focus: ["objects", "strings", "while"] },
     ),
     step(
-      'Add runProgram(lines), evaluating valid assignments NAME = expression and expressions in order. Return {variables, results}; assignments update the environment and every line adds its value to results. Start with an empty environment.',
+      "Add runProgram(lines). Evaluate valid assignments NAME = expression and expression-only lines in order; every line appends its numeric value to results. Assignments update variables only after evaluating the right side against the current environment. Reassignment is allowed. At this checkpoint all lines are valid, names are defined before use and each result is finite; malformed programs come next. Empty programs return {variables:{},results:[]}. Names follow the earlier case-sensitive identifier grammar, including __proto__, constructor and toString. lines is a dense array of at most 2000 primitive strings, with at most 20000 total UTF-16 units; frozen arrays are valid. Retain earlier expression/variable rules. Each call starts a fresh environment. Return fresh mutable results and a fresh mutable variables record with own enumerable data entries; ordinary or null-prototype records are valid. Do not mutate lines or reuse another call's state. Target: O(n) time and O(n) extra space, where n counts lines plus their total UTF-16units; property lookup uses the usual constant-time model. Do not copy the whole environment before every line.",
       'Přidej runProgram(lines), které postupně vyhodnotí platná přiřazení NAME = výraz a výrazy. Vrať {variables, results}; přiřazení mění prostředí a každý řádek přidá hodnotu do results. Začni prázdným prostředím.',
       calls(
+        ["runProgram([\"Upper=2\",\"upper=3\",\"Upper+upper\"])", {"variables": {"Upper": 2, "upper": 3}, "results": [2, 3, 5]}],
         ['runProgram(["x=2","x+3"])', { variables: { x: 2 }, results: [2, 5] }],
         ['runProgram([])', { variables: {}, results: [] }],
       ),
+      { focus: ["objects", "strings", "for-of"] },
     ),
   ],
   'js-evolving-query': [
     step(
-      'Implement query(rows, options={}) for calls without filters. Return a new array containing the original records in order. Do not mutate the input.',
+      "Implement query(rows, options={}) before filters are introduced. rows is a dense array of at most 20000 non-null record objects; repeated references, frozen records/arrays and arbitrary record fields/prototypes are valid. options is omitted or an empty record at this checkpoint. Return a fresh mutable array containing the exact original record references in order, including duplicates. Treat records as opaque: do not read, copy or change their properties, and do not mutate rows. Separate calls return separate arrays. Target: O(n) time and O(n) extra space, where n is rows.length; field count and field values are not traversed.",
       'Napiš query(rows, options={}) pro volání bez filtrů. Vrať nové pole původních záznamů ve stejném pořadí. Neměň vstup.',
       calls(
+        ["(()=>{const row={x:1};return query([row])[0]===row;})()", true],
         ['query([])', []],
         ['query([{x:1}])', [{ x: 1 }]],
         ['query([{x:2},{x:1}])', [{ x: 2 }, { x: 1 }]],
         ['(()=>{const rows=[{x:1}];return query(rows)!==rows})()', true],
       ),
+      { focus: ["filter", "functions"] },
     ),
     step(
       'Add options.orderBy and desc (default false). After filtering, stably sort numeric or string field values. Copy before sorting; equal values retain input order.',
