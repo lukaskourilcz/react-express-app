@@ -1806,7 +1806,7 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useEffect, useRef, useState } from 'react';
+    junior: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1815,6 +1815,7 @@ const FILES = [
 ];
 
 const App = () => {
+  const fieldPrefix = useId();
   const [files, setFiles] = useState(FILES);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -1893,9 +1894,9 @@ const App = () => {
             return (
               <li key={file.id}>
                 <form onSubmit={handleSubmit}>
-                  <label htmlFor={'rename-' + file.id}>{'New name for ' + file.name}</label>
+                  <label htmlFor={fieldPrefix + '-rename-' + file.id}>{'New name for ' + file.name}</label>
                   <input
-                    id={'rename-' + file.id}
+                    id={fieldPrefix + '-rename-' + file.id}
                     ref={inputRef}
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -2078,7 +2079,20 @@ test('a key other than Escape leaves the form open', () => {
   fireEvent.click(renameButton('notes.txt'));
   fireEvent.keyDown(input('notes.txt'), { key: 'a' });
   expect(input('notes.txt')).toBeTruthy();
-});`,
+});
+
+
+test('current renamed names are reserved and old names can be reused by another file',()=>{
+ render(<App/>);fireEvent.click(renameButton('report.pdf'));type('report.pdf','new-report.pdf');submit('report.pdf');fireEvent.click(renameButton('notes.txt'));type('notes.txt','new-report.pdf');submit('notes.txt');expect(screen.getByRole('alert').textContent).toBe('That name is taken');expect(input('notes.txt')).toBeTruthy();type('notes.txt','report.pdf');submit('notes.txt');expect(names()).toEqual(['new-report.pdf','report.pdf','photo.jpg']);expect(document.activeElement).toBe(renameButton('report.pdf'));
+});
+test('twenty-four raw rename cycles keep stable rows, trimmed values and local draft state',()=>{
+ const view=render(<App/>);const model=['report.pdf','notes.txt','photo.jpg'];const rows=screen.getAllByRole('listitem');
+ for(let i=0;i<24;i++){const index=i%3,old=model[index],raw=['  reef-'+i+'.txt  ','<b>literal-'+i+'</b>','🦈-'+i,'x'.repeat(1990)+i][i%4];fireEvent.click(renameButton(old));expect(input(old).value).toBe(old);type(old,raw);view.rerender(<App data-parent={i}/>);expect(input(old).value).toBe(raw);expect(document.activeElement).toBe(input(old));if(i%5===0){fireEvent.keyDown(input(old),{key:'Escape'});}else{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>input(old).closest('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);model[index]=raw.trim();}expect(names()).toEqual(model);expect(document.activeElement).toBe(renameButton(model[index]));rows.forEach((row,n)=>expect(screen.getAllByRole('listitem')[n]).toBe(row));}
+});
+test('edit labels and focus remain local to each instance, with fresh mounts restoring initial files',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Rename notes.txt'}));fireEvent.click(two.getByRole('button',{name:'Rename notes.txt'}));const fa=a.container.querySelector('input'),fb=b.container.querySelector('input');expect(one.getByLabelText('New name for notes.txt')).toBe(fa);expect(two.getByLabelText('New name for notes.txt')).toBe(fb);fireEvent.change(fb,{target:{value:'beta.txt'}});fireEvent.submit(fb.closest('form'));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename beta.txt'}));expect(fa.value).toBe('notes.txt');fireEvent.keyDown(fa,{key:'Escape'});expect(document.activeElement).toBe(one.getByRole('button',{name:'Rename notes.txt'}));a.unmount();b.unmount();const fresh=render(<App/>);expect(names()).toEqual(['report.pdf','notes.txt','photo.jpg']);expect(screen.queryAllByRole('textbox')).toHaveLength(0);fresh.unmount();
+});
+`,
   },
   'react-mh-wait-for-export': {
     solution: `import React, { useEffect, useState } from 'react';

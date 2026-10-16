@@ -225,7 +225,7 @@ test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEv
   "react-live-paragraph": {
     solution: `const App = () => {
   const [text, setText] = useState('');
-  return <><input value={text} onChange={event => setText(event.target.value)} /><p>{text}</p></>;
+  return <><label>Your text <input value={text} onChange={event => setText(event.target.value)} /></label><p>{text}</p></>;
 };`,
     junior: `const App = () => {
   const [text, setText] = useState('');
@@ -236,7 +236,7 @@ test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEv
 
   return (
     <main>
-      <input type="text" value={text} onChange={handleChange} />
+      <label>Your text <input type="text" value={text} onChange={handleChange} /></label>
       <p>{text}</p>
     </main>
   );
@@ -279,7 +279,20 @@ test('the input is controlled from the first render: its value comes from state'
   expect(reactProps(input).value).toBe('');
   fireEvent.change(input, { target: { value: 'kept in state' } });
   expect(reactProps(input).value).toBe('kept in state');
-});`,
+});
+
+
+test('twenty-four raw updates remain exact and controlled through parent renders',()=>{
+ const view=render(<App/>);const values=['',' ','  raw  ','<b>literal</b>','0','false','🦈漢字','café','x'.repeat(2000)];
+ for(let i=0;i<24;i++){const value=values[i%values.length],field=screen.getByLabelText('Your text');fireEvent.change(field,{target:{value}});expect(field.value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);expect(reactProps(field).value).toBe(value);view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Your text').value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);}
+});
+test('long-to-short-to-empty changes do not leave text from a previous value',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');for(const value of ['long '.repeat(100),'short','s','','<i>','  ']){fireEvent.change(field,{target:{value}});expect(view.container.querySelector('p').textContent).toBe(value);expect(field.value).toBe(value);}
+});
+test('independent mirrors and a fresh mount never share text state',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Your text'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Your text'),{target:{value:'Beta'}});expect(a.container.querySelector('p').textContent).toBe('Alpha');expect(b.container.querySelector('p').textContent).toBe('Beta');a.unmount();expect(b.container.querySelector('p').textContent).toBe('Beta');b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Your text').value).toBe('');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   "react-data-list": {
     solution: `const initialPeople = [
@@ -580,7 +593,7 @@ test('independent search text and fresh full list',()=>{const root=render(<><sec
   const [submitted, setSubmitted] = useState(null);
   const updateField = event => setForm(value => ({...value, [event.target.name]: event.target.value}));
   const submit = event => { event.preventDefault(); setSubmitted(form); };
-  return <><form onSubmit={submit}><input name="name" value={form.name} onChange={updateField} /><input name="email" value={form.email} onChange={updateField} /><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
+  return <><form onSubmit={submit}><label>Name <input name="name" value={form.name} onChange={updateField} /></label><label>Email <input name="email" value={form.email} onChange={updateField} /></label><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
 };`,
     junior: `const App = () => {
   const [name, setName] = useState('');
@@ -612,8 +625,8 @@ test('independent search text and fresh full list',()=>{const root=render(<><sec
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={name} onChange={handleNameChange} />
-        <input type="email" value={email} onChange={handleEmailChange} />
+        <label>Name <input type="text" value={name} onChange={handleNameChange} /></label>
+        <label>Email <input type="email" value={email} onChange={handleEmailChange} /></label>
         <button type="submit">Submit</button>
       </form>
       {result}
@@ -651,6 +664,22 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+const submitSnapshot=(container)=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('twenty raw submissions preserve the last snapshot while the live fields change',()=>{
+ const view=render(<App/>);const names=['',' ','  Reef <b>  ','0','🦈漢字','n'.repeat(2000)];
+ for(let i=0;i<20;i++){const name=names[i%names.length],email='person'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:name}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:email}});if(i===0)expect(view.container.textContent).not.toContain(email);submitSnapshot(view.container);expect(view.container.textContent).toContain(name);expect(view.container.textContent).toContain(email);const pendingName='unsent-name-'+i,pendingEmail='unsent'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:pendingName}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:pendingEmail}});view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Name').value).toBe(pendingName);expect(screen.getByLabelText('Email').value).toBe(pendingEmail);expect(view.container.textContent).toContain(email);expect(view.container.textContent).not.toContain(pendingEmail);expect(view.container.textContent).not.toContain(pendingName);}
+ fireEvent.change(screen.getByLabelText('Name'),{target:{value:''}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:''}});submitSnapshot(view.container);expect(view.container.textContent).not.toContain('person19@example.test');expect(view.container.textContent).not.toContain('unsent19@example.test');
+});
+test('both inputs carry controlled value props from the first render',()=>{
+ const view=render(<App/>);const props=node=>node[Object.keys(node).find(key=>key.startsWith('__reactProps$'))]||{};const name=screen.getByLabelText('Name'),email=screen.getByLabelText('Email');expect(props(name).value).toBe('');expect(props(email).value).toBe('');fireEvent.change(name,{target:{value:'controlled name'}});fireEvent.change(email,{target:{value:'controlled@example.test'}});expect(props(name).value).toBe('controlled name');expect(props(email).value).toBe('controlled@example.test');expect(view.container.textContent).not.toContain('controlled@example.test');
+});
+test('separate forms keep their own drafts and submitted snapshots',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.change(one.getByLabelText('Name'),{target:{value:'Alpha'}});fireEvent.change(one.getByLabelText('Email'),{target:{value:'alpha@example.test'}});submitSnapshot(a.container);fireEvent.change(two.getByLabelText('Name'),{target:{value:'Beta'}});fireEvent.change(two.getByLabelText('Email'),{target:{value:'beta@example.test'}});submitSnapshot(b.container);expect(a.container.textContent).toContain('alpha@example.test');expect(a.container.textContent).not.toContain('beta@example.test');expect(b.container.textContent).toContain('beta@example.test');expect(b.container.textContent).not.toContain('alpha@example.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Name').value).toBe('');expect(screen.getByLabelText('Email').value).toBe('');expect(fresh.container.textContent).not.toContain('alpha@example.test');fresh.unmount();
+});
+`,
   },
   "react-effect-on-mount": {
     solution: `const App = () => {

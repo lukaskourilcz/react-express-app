@@ -1375,7 +1375,7 @@ test('every song has a named button', () => {
     tier: 1,
     focus: ['derived-state', 'forms'],
     title: 'Characters left',
-    prompt: 'A post holds at most 80 characters. Under the text box, show "Characters left: <n>", or "Too long by <n>" once the text runs over. Disable Post while the text is empty or too long. Work all of it out from `text` while rendering: a count kept in a state of its own needs an update on every change, and one missed update leaves it wrong.',
+    prompt: `A post holds at most 80 UTF-16 code units (\`text.length\`). Under the text box, show "Characters left: <n>", or "Too long by <n>" once the text runs over. Disable Post while the text is empty or too long. Work all of it out from \`text\` while rendering: a count kept in a state of its own needs an update on every change, and one missed update leaves it wrong. For example, 🦈 uses two units. Text may contain line breaks and up to 2000 units; do not truncate or normalize it. Guard the submit handler too: an empty or over-limit draft must not add a post or clear the draft, even when the form is submitted directly. Valid submissions append the exact raw text in order, keep earlier rows and clear the draft. Whitespace-only text is allowed. Keep separate instances independent.`,
     starter: `import React, { useState } from 'react';
 
 const LIMIT = 80;
@@ -1408,7 +1408,9 @@ export default App;
     skeleton: `const left = LIMIT - text.length;
 
 // <p>{left >= 0 ? 'Characters left: ' + left : 'Too long by ' + -left}</p>
-// <button type="submit" disabled={/* empty or too long */}>Post</button>`,
+// <button type="submit" disabled={/* empty or too long */}>Post</button>
+
+// In post, after preventDefault: ignore an empty or over-limit draft before appending or clearing it.`,
     hints: ['Anything you can work out from state during render is not state itself. `LIMIT - text.length` is right for whatever text is on screen, so there is nothing to keep in step.'],
     approach: [
       'Work out `left` as `LIMIT - text.length` in the body of App.',
@@ -1439,7 +1441,10 @@ test('an empty post cannot be sent', () => {
   render(<App />);
   expect(postButton().disabled).toBe(true);
 });
-`,
+
+test('an emoji uses two UTF-16 units in the counter',()=>{
+ const view=render(<App/>);type('🦈');expect(line(view.container)).toBe('Characters left: 78');expect(postButton().disabled).toBe(false);
+});`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

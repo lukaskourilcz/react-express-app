@@ -1483,8 +1483,8 @@ test('reopening keeps the same controlled paragraph id',()=>{render(<App/>);cons
     tier: 2,
     focus: ['accessibility', 'forms'],
     title: 'A field that explains its error',
-    prompt: 'The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a `<label>` whose `htmlFor` matches the input\'s `id`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set `aria-invalid="true"` on the input, and point the input\'s `aria-describedby` at the error. While there is no error, the input carries neither attribute.',
-    starter: `import React, { useState } from 'react';
+    prompt: `The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a \`<label>\` whose \`htmlFor\` matches the input's \`id\`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set \`aria-invalid="true"\` on the input, and point the input's \`aria-describedby\` at the error. While there is no error, the input carries neither attribute. Use stable unique field and error ids for each instance. This exercise validates blankness only: test the current native field value with trim(), and use noValidate on the form so native email-format validation does not block that custom check. On each Save, blank or whitespace-only text sets the error and any nonblank text clears it; do not normalize the stored field value yourself. Values are single-line strings up to 2000 UTF-16 code units. Parent renders preserve ids and state, and each label/error must refer to its own instance.`,
+    starter: `import React, { useId, useState } from 'react';
 
 const App = () => {
   const [email, setEmail] = useState('');
@@ -1508,19 +1508,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `<label htmlFor="email">Email</label>
+    skeleton: `const fieldId = useId();
+const errorId = fieldId + '-error';
+
+<label htmlFor={fieldId}>Email</label>
 <input
-  id="email"
+  id={fieldId}
   aria-invalid={error ? true : undefined}
-  aria-describedby={error ? 'email-error' : undefined}
+  aria-describedby={error ? errorId : undefined}
   ...
 />
-{error && <p id="email-error" className="error">{error}</p>}`,
-    hints: ['`htmlFor` is how JSX writes the `for` attribute. An attribute whose value is `undefined` is left out, so `error ? "email-error" : undefined` adds `aria-describedby` only while the error shows.'],
+{error && <p id={errorId} className="error">{error}</p>}
+
+// <form noValidate onSubmit={save}>`,
+    hints: [`useId supplies a stable id for this instance. Derive an error id from it and use the same values in htmlFor, id and aria-describedby. An undefined attribute is left out, so add the error attributes only while an error exists.`],
     approach: [
-      'Swap the span for `<label htmlFor="email">Email</label>` and give the input `id="email"`.',
-      'Give the error paragraph an id, such as `email-error`.',
-      'On the input, set `aria-invalid` and `aria-describedby` only while there is an error, and `undefined` otherwise.',
+      `Create a field id with useId and derive an error id from it; tie the label to that field id.`,
+      `On Save, prevent navigation and check email.trim(); use noValidate on the form because this lesson checks blankness, not email syntax.`,
+      `Give the error its own id and add aria-invalid plus aria-describedby only while the error exists.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1545,7 +1550,10 @@ test('the field points at its error', () => {
   const message = document.getElementById(field().getAttribute('aria-describedby'));
   expect(message.textContent).toBe('Enter your email');
 });
-`,
+
+test('Unicode whitespace is empty for this custom blankness rule',()=>{
+ render(<App/>);fireEvent.change(field(),{target:{value:' '}});save();expect(field().getAttribute('aria-invalid')).toBe('true');expect(document.getElementById(field().getAttribute('aria-describedby')).textContent).toBe('Enter your email');
+});`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

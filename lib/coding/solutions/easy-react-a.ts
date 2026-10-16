@@ -1961,9 +1961,11 @@ test('a fresh disclosure starts closed with a working target',()=>{const a=rende
 `,
   },
   'react-easy2-labelled-field': {
-    solution: `import React, { useState } from 'react';
+    solution: `import React, { useId, useState } from 'react';
 
 const App = () => {
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
@@ -1974,27 +1976,29 @@ const App = () => {
 
   return <main>
     <h2>A field that explains its error</h2>
-    <form onSubmit={save}>
-      <label htmlFor="email">Email</label>
+    <form onSubmit={save} noValidate>
+      <label htmlFor={fieldId}>Email</label>
       {/* undefined leaves each attribute out while there is no error. */}
       <input
-        id="email"
+        id={fieldId}
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? 'email-error' : undefined}
+        aria-describedby={error ? errorId : undefined}
       />
-      {error && <p id="email-error" className="error">{error}</p>}
+      {error && <p id={errorId} className="error">{error}</p>}
       <button type="submit">Save</button>
     </form>
   </main>;
 };
 
 export default App;`,
-    junior: `import React, { useState } from 'react';
+    junior: `import React, { useId, useState } from 'react';
 
 const App = () => {
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
@@ -2011,23 +2015,23 @@ const App = () => {
   let describedBy = undefined;
   if (error !== '') {
     invalid = 'true';
-    describedBy = 'email-error';
+    describedBy = errorId;
   }
 
   return (
     <main>
       <h2>A field that explains its error</h2>
-      <form onSubmit={save}>
-        <label htmlFor="email">Email</label>
+      <form onSubmit={save} noValidate>
+        <label htmlFor={fieldId}>Email</label>
         <input
-          id="email"
+          id={fieldId}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={invalid}
           aria-describedby={describedBy}
         />
-        {error !== '' ? <p id="email-error" className="error">{error}</p> : null}
+        {error !== '' ? <p id={errorId} className="error">{error}</p> : null}
         <button type="submit">Save</button>
       </form>
     </main>
@@ -2048,7 +2052,6 @@ const App = () => {
     setError(email.trim() ? '' : 'Enter your email');
   };
 
-  // Spread only when there is something to say, so the valid field stays bare.
   const errorProps = error ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
 
   return (
@@ -2087,7 +2090,20 @@ test('the label is a label element tied to the input', () => {
   const label = screen.getByText('Email');
   expect(label.tagName).toBe('LABEL');
   expect(label.getAttribute('for')).toBe(field().id);
-});`,
+});
+
+
+test('eighteen custom validation cycles keep raw native field values and error attributes consistent',()=>{
+ const view=render(<App/>);const values=['',' ',' ','ana@example.com','not-an-email','0','z'.repeat(2000),' ','reef@example.test'];
+ for(let i=0;i<18;i++){fireEvent.change(field(),{target:{value:values[i%values.length]}});const nativeValue=field().value;save();view.rerender(<App data-parent={i}/>);expect(field().value).toBe(nativeValue);if(nativeValue.trim()===''){expect(field().getAttribute('aria-invalid')).toBe('true');const id=field().getAttribute('aria-describedby'),message=document.getElementById(id);expect(message.textContent).toBe('Enter your email');expect(view.container.contains(message)).toBe(true);}else{expect(field().getAttribute('aria-invalid')).toBeNull();expect(field().getAttribute('aria-describedby')).toBeNull();expect(screen.queryByText('Enter your email')).toBeNull();}}
+});
+test('each label and error points to its own instance with stable unique ids',()=>{
+ const a=render(<App/>),b=render(<App/>),fa=a.container.querySelector('input'),fb=b.container.querySelector('input');const la=a.container.querySelector('label'),lb=b.container.querySelector('label');expect(la.control).toBe(fa);expect(lb.control).toBe(fb);expect(fa.id===fb.id).toBe(false);fireEvent.click(within(a.container).getByRole('button',{name:'Save'}));fireEvent.click(within(b.container).getByRole('button',{name:'Save'}));const ea=fa.getAttribute('aria-describedby'),eb=fb.getAttribute('aria-describedby');expect(ea===eb).toBe(false);expect(a.container.contains(document.getElementById(ea))).toBe(true);expect(b.container.contains(document.getElementById(eb))).toBe(true);const oldId=fb.id;b.rerender(<App data-parent="same"/>);expect(fb.id).toBe(oldId);fireEvent.change(fa,{target:{value:'ok@example.test'}});fireEvent.click(within(a.container).getByRole('button',{name:'Save'}));expect(fa.getAttribute('aria-invalid')).toBeNull();expect(fb.getAttribute('aria-invalid')).toBe('true');a.unmount();b.unmount();
+});
+test('a fresh field starts without old errors and every form submit prevents navigation',()=>{
+ const view=render(<App/>);const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(field().getAttribute('aria-invalid')).toBe('true');view.unmount();const fresh=render(<App/>);expect(field().value).toBe('');expect(field().getAttribute('aria-invalid')).toBeNull();expect(field().getAttribute('aria-describedby')).toBeNull();expect(screen.queryByText('Enter your email')).toBeNull();fresh.unmount();
+});
+`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

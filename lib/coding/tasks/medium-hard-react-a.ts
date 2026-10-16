@@ -975,8 +975,8 @@ test('/ is prevented, so no slash is typed anywhere', () => {
     tier: 3,
     focus: ['forms', 'useRef', 'events', 'lists-keys'],
     title: 'Rename in place',
-    prompt: 'Each file in the list shows its name in a `span` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with `role="alert"`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a `Map` in a ref, keyed by file id, and focus the right one in an effect once the form has gone.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `Each file in the list shows its name in a \`span\` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with \`role="alert"\`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a \`Map\` in a ref, keyed by file id, and focus the right one in an effect once the form has gone. Compare trimmed names exactly and case-sensitively, without Unicode normalization. They are plain single-line strings up to 2000 UTF-16 code units; this exercise does not validate filesystem paths. Duplicate checks use the current file names, so an old name becomes available after its file is renamed. Preserve file order and the existing list rows, parent draft state and each instance’s own labels, data and focus. If you use DOM ids, make them unique to the instance.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1082,7 +1082,10 @@ test('blank text keeps the old name', () => {
   submit('photo.jpg');
   expect(names()).toEqual(['report.pdf', 'notes.txt', 'photo.jpg']);
 });
-`,
+
+test('duplicate comparisons are case-sensitive',()=>{
+ render(<App/>);fireEvent.click(renameButton('notes.txt'));type('notes.txt','REPORT.PDF');submit('notes.txt');expect(names()).toEqual(['report.pdf','REPORT.PDF','photo.jpg']);expect(screen.queryByRole('alert')).toBeNull();expect(document.activeElement).toBe(renameButton('REPORT.PDF'));
+});`,
   },
   {
     id: 'react-mh-wait-for-export',

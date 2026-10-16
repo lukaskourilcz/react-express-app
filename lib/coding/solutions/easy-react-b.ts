@@ -2286,6 +2286,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (text.length === 0 || left < 0) return;
     setPosts((previous) => [...previous, text]);
     setText('');
   };
@@ -2333,6 +2334,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (!canPost) return;
     setPosts([...posts, text]);
     setText('');
   };
@@ -2372,6 +2374,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (!sendable) return;
     setPosts((previous) => [...previous, text]);
     setText('');
   };
@@ -2420,7 +2423,21 @@ test('deleting text gives the characters back', () => {
   type('x'.repeat(10));
   expect(line(container)).toBe('Characters left: 70');
   expect(postButton().disabled).toBe(false);
-});`,
+});
+
+
+const directPost=container=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('direct empty or over-limit submissions keep the draft and add no post',()=>{
+ const view=render(<App/>);for(const value of ['', 'x'.repeat(81),'🦈'.repeat(41),'x'.repeat(2000)]){type(value);expect(postButton().disabled).toBe(true);directPost(view.container);expect(screen.getByLabelText('Post').value).toBe(value);expect(screen.queryAllByRole('listitem')).toHaveLength(0);expect(line(view.container)).toBe(value.length>80?'Too long by '+(value.length-80):'Characters left: 80');}
+});
+test('twenty-four count and post cycles preserve raw text, UTF-16 boundaries and prior rows',()=>{
+ const view=render(<App/>);const values=['',' ','  raw  ','<b>literal</b>','first\\nsecond','🦈'.repeat(40),'🦈'.repeat(40)+'a','x'.repeat(79),'x'.repeat(80),'x'.repeat(81),'x'.repeat(2000)];const posts=[];
+ for(let i=0;i<24;i++){const value=values[i%values.length];type(value);view.rerender(<App data-parent={i}/>);const left=80-value.length;expect(line(view.container)).toBe(left<0?'Too long by '+(-left):'Characters left: '+left);expect(postButton().disabled).toBe(value.length===0||left<0);const oldRows=screen.queryAllByRole('listitem');directPost(view.container);if(value.length>0&&left>=0){posts.push(value);expect(screen.getByLabelText('Post').value).toBe('');expect(line(view.container)).toBe('Characters left: 80');}else expect(screen.getByLabelText('Post').value).toBe(value);expect(screen.queryAllByRole('listitem').map(li=>li.textContent)).toEqual(posts);oldRows.forEach((node,index)=>expect(screen.queryAllByRole('listitem')[index]).toBe(node));}
+});
+test('separate post forms and fresh mounts do not share posts or draft text',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.change(one.getByLabelText('Post'),{target:{value:'Alpha'}});directPost(a.container);fireEvent.change(two.getByLabelText('Post'),{target:{value:'Beta'}});directPost(b.container);expect(one.getAllByRole('listitem').map(li=>li.textContent)).toEqual(['Alpha']);expect(two.getAllByRole('listitem').map(li=>li.textContent)).toEqual(['Beta']);a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Post').value).toBe('');expect(screen.queryAllByRole('listitem')).toHaveLength(0);fresh.unmount();
+});
+`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

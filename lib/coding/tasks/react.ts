@@ -199,7 +199,7 @@ test('label is exactly OFF,then ON,and keeps alternating',()=>{const {container}
     tier: 1,
     focus: ["useState", "forms"],
     title: "Live paragraph",
-    prompt: "Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state.",
+    prompt: `Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state. Give the input the accessible name Your text. Start with an empty input and empty paragraph. Preserve raw single-line text, including spaces, literal markup and Unicode, up to 2000 UTF-16 code units. The paragraph contains only that value, with no prefix or normalization. Parent renders and separate instances must preserve their own state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -214,7 +214,9 @@ export default App;
 `,
     skeleton: `const [text, setText] = useState('');
 
+<label>Your text
 <input value={text} onChange={event => setText(/* what the input holds now */)} />
+</label>
 <p>{/* the same text */}</p>`,
     hints: ["Use one state value for both the input value and paragraph text."],
     approach: [
@@ -226,7 +228,7 @@ export default App;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('mirrors what is typed', () => {
@@ -236,7 +238,10 @@ test('mirrors what is typed', () => {
   expect(input.value).toBe('hello there');
   expect(container.querySelector('p').textContent).toContain('hello there');
 });
-`,
+
+test('the initially empty paragraph mirrors spaces exactly',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');expect(view.container.querySelector('p').textContent).toBe('');fireEvent.change(field,{target:{value:'  reef  '}});expect(view.container.querySelector('p').textContent).toBe('  reef  ');
+});`,
   },
   {
     id: "react-data-list",
@@ -571,7 +576,7 @@ test('substring matching restores the full list after clearing',()=>{const {cont
     tier: 1,
     focus: ["forms", "events"],
     title: "Controlled form",
-    prompt: "Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit.",
+    prompt: `Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit. Label the inputs Name and Email and keep both controlled from the first render. Show a snapshot of the last submitted values; editing the draft must not change that result until the next submit. Empty values are allowed. Preserve raw names up to 2000 UTF-16 code units of single-line text; email examples use ordinary valid addresses and the current native field value. The result wording is up to you. Parent renders and separate forms keep their own drafts and results.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -606,7 +611,7 @@ const submit = event => {
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the submitted values and does not reload', () => {
@@ -623,7 +628,10 @@ test('shows nothing before the form is submitted', () => {
   const { container } = render(<App />);
   expect(container.textContent).not.toContain('sam@example.com');
 });
-`,
+
+test('a real submit event is prevented before showing the submitted values',()=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Name'),{target:{value:'Visible User'}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:'visible@example.test'}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(view.container.textContent).toContain('Visible User');expect(view.container.textContent).toContain('visible@example.test');
+});`,
   },
   {
     id: "react-effect-on-mount",

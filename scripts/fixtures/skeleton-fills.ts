@@ -502,7 +502,9 @@ const App = () => {
   return (
     <main>
       <h2>Live paragraph</h2>
+      <label>Your text
       <input value={text} onChange={event => setText(event.target.value)} />
+      </label>
       <p>{text}</p>
     </main>
   );
