@@ -433,12 +433,14 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const fn:(schema:Schema,value:unknown)=>string[]=validateRecord;const out:string[]=fn({optional:\"number\"},{});}"}, {"code": "{const bad:number=validateRecord(\"number\",{});}", "rejects": true}, {"code": "{validateRecord(\"date\",{});}", "rejects": true}] },
     ),
     step(
-      'Add validateUnion(schemas:readonly Schema[],value:unknown):string[]. Succeed if any branch validates; otherwise return the shortest error list, breaking ties by schema order. Empty schemas returns ["$: no alternatives"].',
+      "Add validateUnion(schemas:readonly Schema[],value:unknown):string[]. Succeed if any branch validates; otherwise return the shortest error list, breaking ties by schema order. Empty schemas returns [\"$: no alternatives\"]. Retain all earlier schema and record contracts. schemas is a dense readonly/frozen array of at most 1000 valid acyclic schemas; do not sort/mutate it. A zero-error branch succeeds; if none succeeds, choose the first branch among those with minimum error count, not minimum text length. Returning after a successful branch or checking other valid branches is allowed; no observable getter/callback behavior is part of a schema. Empty, success and failure results are fresh mutable string[]. Preserve validateUnion(schemas:readonly Schema[], value:unknown):string[]. Target: O(n*d+p) time and O(n*d+p) extra space for this checkpoint, where n is one plus the summed schema/value-pair counts across all branches plus array length, d is maximum schema depth+1, and p is total generated branch-error text. This bounds the permitted full scan even on success. Retain depth 32, <=20000 aggregate pairs and prior key/array bounds.",
       'Přidej validateUnion(schemas:readonly Schema[],value:unknown):string[]. Uspěj při shodě kterékoli větve; jinak vrať nejkratší seznam chyb, při shodě podle pořadí schémat. Prázdná schémata vrací ["$: no alternatives"].',
       calls(
+        ["validateUnion(['string','boolean'],2)",["$: expected string"]],
         ['validateUnion(["string","number"],2)', []],
         ['validateUnion([],1)', ['$: no alternatives']],
       ),
+      { additionalTypeTests: [{"code": "{const rules:readonly Schema[]=[\"number\"];const errors:string[]=validateUnion(rules,undefined);}"}, {"code": "{const bad:number=validateUnion([\"string\"],1);}", "rejects": true}, {"code": "{validateUnion([\"date\"],1);}", "rejects": true}] },
     ),
   ],
   'react-evolving-board': [
@@ -533,11 +535,12 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
   return {
     '2': {
       ...step(
-        `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}.`,
+        `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}. Keep the earlier exact name and integer rules: preserve case, Unicode representation and interior spaces; use ECMAScript trim and UTF16 lengths, and accept signed zero as zero. Ordinary inherited data fields are allowed, extra getters are ignored, and required-field accessors/proxies are outside this exercise. Raw names have at most 20000 code units. Return a fresh mutable Draft without changing or retaining caller state. Item.id and Item.version must be number fields even though this checkpoint has no update/API behavior yet. Target: O(n) time and O(n) space for normalization, where n is one plus raw name UTF16 length; type declarations themselves have no runtime cost.`,
         `Převeď normalizeInput do TypeScriptu: vstup unknown, návrat Draft|null, kde Draft={name:string;${amount}:number}. Zachovej předchozí validaci. Definuj Item=Draft & {id:number;version:number}.`,
         // The earlier validation, checked where the stage-1 checks leave gaps:
         // a positive amount, a negative one, and both upper limits exactly.
         calls(
+          [`normalizeInput({name:'e\\u0301',${amount}:0})`, {name:'e\u0301',[amount]:0}],
           [`normalizeInput({name:'Plan',${amount}:5})`, { name: 'Plan', [amount]: 5 }],
           [`normalizeInput({name:'A',${amount}:-1})`, null],
           [`normalizeInput({name:'x'.repeat(80),${amount}:1})`, { name: 'x'.repeat(80), [amount]: 1 }],
@@ -545,6 +548,9 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
         ),
       ),
       typeTests: [
+        {code: `{const item:Item={id:1,name:"A",${amount}:0,version:1};const id:number=item.id;const version:number=item.version;}`},
+        {code: `{const item:Item={id:1,name:"A",${amount}:0,version:"bad"};}`, rejects: true},
+        {code: `{const item:Item={id:"bad",name:"A",${amount}:0,version:1};}`, rejects: true},
         { code: '{const d:Draft|null=normalizeInput({});}' },
         { code: '{const bad:string=normalizeInput({});}', rejects: true },
       ],
