@@ -177,7 +177,7 @@ test('a send waits the complete 300 ms before reading the latest text',()=>withA
     tier: 2,
     focus: ['useRef', 'accessibility'],
     title: 'Give the focus back',
-    prompt: '"Rename" opens a small form, and its field takes the keyboard focus. When the form closes, by Save, by Cancel or by the Escape key, the field leaves the page and the focus drops to the page body, so a keyboard user has to find their place again. Put a ref on the Rename button and call `focus()` on it whenever the form closes. Escape anywhere in the form closes it without saving.',
+    prompt: `"Rename" opens a small form, and its field takes the keyboard focus. When the form closes, by Save, by Cancel or by the Escape key, the field leaves the page and the focus drops to the page body, so a keyboard user has to find their place again. Put a ref on the Rename button and call \`focus()\` on it whenever the form closes. Escape anywhere in the form closes it without saving. Save keeps the raw name exactly, including empty text, spaces, Unicode and literal markup, up to 2000 UTF-16 code units of single-line text. Cancel and Escape discard only the draft; opening again starts from the saved name. Prevent normal form navigation on submit. Parent renders must preserve an open draft, and each instance must return focus to its own Rename button.`,
     starter: `import React, { useRef, useState } from 'react';
 
 const App = () => {
@@ -259,7 +259,10 @@ test('Save renames and gives the focus back', () => {
   expect(container.querySelector('p').textContent).toBe('Project: Kelp count');
   expect(document.activeElement).toBe(rename());
 });
-`,
+
+test('Save keeps spaces and literal text in the name',()=>{
+ const view=render(<App/>);fireEvent.click(rename());const value='  Reef <b> 🦈  ';fireEvent.change(field(),{target:{value}});fireEvent.click(screen.getByRole('button',{name:'Save'}));expect(view.container.querySelector('p').textContent).toBe('Project: '+value);expect(document.activeElement).toBe(rename());
+});`,
   },
 
   /* ── custom hooks ─────────────────────────────────────────────────── */

@@ -741,7 +741,7 @@ test('Enter is prevented, so a form around the field is not sent', () => {
     tier: 3,
     focus: ['derived-state', 'forms', 'useRef', 'useEffect'],
     title: 'Select all, or some',
-    prompt: 'An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its `indeterminate` property. `indeterminate` has no HTML attribute and no React prop, so put a ref on the box and set `ref.current.indeterminate` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled.',
+    prompt: `An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its \`indeterminate\` property. \`indeterminate\` has no HTML attribute and no React prop, so put a ref on the box and set \`ref.current.indeterminate\` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled. Unchecking any one selected message leaves the other selections alone, including after Select all. Preserve each surviving list row when deleting, update the count from the remaining messages and keep separate inbox instances independent. Parent renders must preserve the selection and indeterminate state.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const MESSAGES = [
@@ -860,7 +860,10 @@ test('Delete selected removes the chosen messages', () => {
   expect(all().checked).toBe(false);
   expect(all().indeterminate).toBe(false);
 });
-`,
+
+test('unchecking one item after Select all keeps the other three selected',()=>{
+ render(<App/>);fireEvent.click(all());fireEvent.click(box('Invoice 1042'));expect(deleteButton().textContent).toBe('Delete selected (3)');expect(all().indeterminate).toBe(true);expect(box('Lunch on Friday').checked).toBe(true);expect(box('Your parcel is on its way').checked).toBe(true);expect(box('Team photos').checked).toBe(true);
+});`,
   },
   {
     id: 'react-mh-use-shortcut',
@@ -1220,8 +1223,8 @@ test('starting an export uses POST', () => withFetch(async calls => {
     tier: 4,
     focus: ['accessibility', 'useRef', 'events', 'effect-cleanup'],
     title: 'A menu button',
-    prompt: 'A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has `aria-haspopup="menu"` and `aria-expanded`, `"true"` or `"false"`. The open menu is a `ul` with `role="menu"`, each item an `li` with `role="menuitem"` and `tabIndex={-1}`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A `mousedown` anywhere outside the button and the menu closes it without moving the focus: add that listener to `document` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call `focus()` on them.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has \`aria-haspopup="menu"\` and \`aria-expanded\`, \`"true"\` or \`"false"\`. The open menu is a \`ul\` with \`role="menu"\`, each item an \`li\` with \`role="menuitem"\` and \`tabIndex={-1}\`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A \`mousedown\` anywhere outside the button and the menu closes it without moving the focus: add that listener to \`document\` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call \`focus()\` on them. Give the menu the accessible name Actions. Tab and Shift+Tab keep their normal browser action: once keyboard focus leaves the menu, close it without returning focus to the Actions button. Moving focus between menu items keeps it open. An outside mousedown or focus change must not steal focus. If you provide aria-controls, use an id belonging only to that instance. Nested content inside a menu item or the trigger still counts as inside. Parent renders and repeated choices must preserve the active item and the chosen result.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
@@ -1338,7 +1341,10 @@ test('a mousedown outside closes the menu', () => {
   fireEvent.mouseDown(screen.getByRole('heading'));
   expect(screen.queryByRole('menu')).toBeNull();
 });
-`,
+
+test('Tab can leave the menu without its default action being blocked',()=>{
+ const view=render(<><App/><button type="button">After menu</button></>);fireEvent.click(trigger());const event=new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(false);const outside=screen.getByRole('button',{name:'After menu'});act(()=>outside.focus());expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(outside);
+});`,
   },
   {
     id: 'react-mh-city-combobox',

@@ -104,12 +104,14 @@ test('a fresh instance does not keep an old input ref or value',()=>{
 `,
   },
   'react-easy2-cancel-the-reminder': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
   // The id only matters to the handlers, so it lives in a ref: storing it causes no render.
   const timeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   const remind = () => {
     // A second press starts the wait over instead of queueing a second message.
@@ -130,11 +132,13 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
   const timeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   const remind = () => {
     if (timeoutRef.current !== null) {
@@ -179,7 +183,6 @@ const App = () => {
     timeoutRef.current = setTimeout(() => setMessage('Time to stretch'), DELAY_MS);
   };
 
-  // A reminder still waiting when the page closes goes with it.
   useEffect(() => cancel, []);
 
   return (
@@ -214,7 +217,21 @@ test('a reminder can be set again after a cancel', async () => {
   press('Cancel');
   press('Remind me');
   await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
-});`,
+});
+
+
+test('a repeated action model owns one reminder and preserves an already shown message',()=>withTestClock(async clock=>{
+ const view=render(<App/>);let now=0,due=null,message='';const steps=['remind',299,'remind',299,1,'cancel','remind',150,'cancel',500,'cancel','remind',300,'remind',299,'cancel',1];
+ for(let i=0;i<51;i++){const op=steps[i%steps.length];if(typeof op==='number'){now+=op;await clock.tick(op);if(due!==null&&due<=now){message='Time to stretch';due=null;}}else if(op==='remind'){press('Remind me');due=now+300;}else{press('Cancel');due=null;}view.rerender(<App data-parent={i}/>);expect(view.container.querySelector('p').textContent).toBe(message);expect(clock.pending()).toBe(due===null?0:1);}
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('Cancel at 299 ms cancels the pending callback but never erases a completed reminder',()=>withTestClock(async clock=>{
+ const view=render(<App/>);press('Remind me');await clock.tick(299);press('Cancel');await clock.tick(1000);expect(view.container.querySelector('p').textContent).toBe('');press('Remind me');await clock.tick(300);for(let i=0;i<20;i++)press('Cancel');expect(view.container.querySelector('p').textContent).toBe('Time to stretch');expect(clock.pending()).toBe(0);
+}));
+test('separate instances keep separate timers and removal clears only its owner',()=>withTestClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Remind me'}));await clock.tick(100);fireEvent.click(two.getByRole('button',{name:'Remind me'}));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(299);expect(b.container.querySelector('p').textContent).toBe('');await clock.tick(1);expect(b.container.querySelector('p').textContent).toBe('Time to stretch');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+}));
+`,
   },
 
   /* ── timers ───────────────────────────────────────────────────────── */

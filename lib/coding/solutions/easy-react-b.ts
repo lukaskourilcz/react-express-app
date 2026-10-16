@@ -286,7 +286,6 @@ const App = () => {
   const renameRef = useRef(null);
   const editing = draft !== null;
 
-  // One way out of the form, whichever control the user leaves by.
   const close = () => {
     setDraft(null);
     renameRef.current?.focus();
@@ -344,7 +343,20 @@ test('Escape on the Cancel button closes the form too', () => {
   fireEvent.keyDown(screen.getByRole('button', { name: 'Cancel' }), { key: 'Escape' });
   expect(field()).toBe(null);
   expect(document.activeElement).toBe(rename());
-});`,
+});
+
+
+test('twenty-four edit cycles preserve raw saved names and discard Cancel or Escape drafts',()=>{
+ const view=render(<App/>);const values=['',' ','  unchanged spacing  ','0','<b>plain text</b>','🦈漢字','x'.repeat(2000),'Name'];let saved='Reef survey';
+ for(let i=0;i<24;i++){fireEvent.click(rename());expect(field().value).toBe(saved);expect(document.activeElement).toBe(field());const value=values[i%values.length];fireEvent.change(field(),{target:{value}});view.rerender(<App data-parent={i}/>);expect(field().value).toBe(value);expect(document.activeElement).toBe(field());fireEvent.keyDown(field(),{key:'ArrowLeft'});expect(field()).toBeTruthy();if(i%3===0){fireEvent.click(screen.getByRole('button',{name:'Save'}));saved=value;}else if(i%3===1)fireEvent.click(screen.getByRole('button',{name:'Cancel'}));else fireEvent.keyDown(i%2===0?field():screen.getByRole('button',{name:'Save'}),{key:'Escape'});expect(field()).toBeNull();expect(view.container.querySelector('p').textContent).toBe('Project: '+saved);expect(document.activeElement).toBe(rename());}
+});
+test('each editor returns focus to its own Rename button and keeps the other saved name',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Rename'}));fireEvent.change(one.getByLabelText('New name'),{target:{value:'Alpha'}});fireEvent.click(one.getByRole('button',{name:'Save'}));fireEvent.click(two.getByRole('button',{name:'Rename'}));fireEvent.change(two.getByLabelText('New name'),{target:{value:'Beta'}});fireEvent.click(two.getByRole('button',{name:'Cancel'}));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename'}));expect(a.container.querySelector('p').textContent).toBe('Project: Alpha');expect(b.container.querySelector('p').textContent).toBe('Project: Reef survey');a.unmount();fireEvent.click(two.getByRole('button',{name:'Rename'}));fireEvent.click(two.getByRole('button',{name:'Cancel'}));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename'}));b.unmount();
+});
+test('a real submit event prevents navigation and a fresh editor does not keep old state',()=>{
+ const view=render(<App/>);fireEvent.click(rename());fireEvent.change(field(),{target:{value:' submitted '}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(view.container.querySelector('p').textContent).toBe('Project:  submitted ');expect(document.activeElement).toBe(rename());view.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('Project: Reef survey');expect(field()).toBeNull();fresh.unmount();
+});
+`,
   },
 
   /* ── custom hooks ─────────────────────────────────────────────────── */

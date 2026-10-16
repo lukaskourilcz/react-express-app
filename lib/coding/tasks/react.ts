@@ -2269,7 +2269,7 @@ test('creates, edits, and deletes', async () => {
     tier: 3,
     focus: ["useRef", "timers"],
     title: "Stopwatch",
-    prompt: "Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running.",
+    prompt: `Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running. Reset also stops the stopwatch. After Stop, Start resumes the saved count with a fresh full second before the next tick. Start while running may be ignored or restart the one interval, but must not create another. Parent renders preserve elapsed state and the pending interval. Clear it on unmount and keep separate instances independent. Either a number alone or a number with a seconds label is accepted.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2344,7 +2344,70 @@ test('Stop freezes the count and Reset clears it', () => withClock(async clock =
   expect(elapsed(container)).toContain('0');
   expect(container.textContent).not.toContain('1');
 }));
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('a stopped stopwatch resumes after a fresh full second',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(1500);fireEvent.click(control(view.container,'stop'));await clock.tick(3000);fireEvent.click(control(view.container,'start'));await clock.tick(999);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('1');await clock.tick(1);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('2');
+}));`,
   },
   {
     id: "react-uselocalstorage-hook",

@@ -2902,7 +2902,6 @@ test('Delete removes only the post whose button was clicked', async () => {
 const App = () => {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
-  // A null delay pauses the interval; the hook owns setup and teardown, so Start cannot double up
   useInterval(() => setSeconds(current => current + 1), running ? 1000 : null);
 
   const reset = () => {
@@ -2919,10 +2918,12 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, which the visible suite declares,
-    // so each second is exact and a second interval shows as a count that
-    // runs ahead.
-    hiddenSuite: `${NUMBERS_SHOWN}
+    hiddenSuite: `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+
 const secondsShown = container => numbersShown(container.querySelector('p'));
 
 test('Start counts exactly one per second from 0', () => withClock(async clock => {
@@ -2964,7 +2965,21 @@ test('Stop freezes the count, Reset returns exactly 0, and nothing ticks afterwa
   expect(secondsShown(container)).toBe('0');
   await clock.tick(2000);
   expect(secondsShown(container)).toBe('0');
-}));`,
+}));
+
+
+test('long runs keep counting beyond three and Reset stops the timer',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(31000);expect(secondsShown(view.container)).toBe('31');expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));await clock.tick(6000);expect(secondsShown(view.container)).toBe('31');fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe('31');await clock.tick(1);expect(secondsShown(view.container)).toBe('32');fireEvent.click(control(view.container,'reset'));expect(secondsShown(view.container)).toBe('0');expect(clock.pending()).toBe(0);await clock.tick(3000);expect(secondsShown(view.container)).toBe('0');view.unmount();
+}));
+test('twelve stop, resume and reset cycles preserve elapsed state under parent renders',()=>withTestClock(async clock=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){fireEvent.click(control(view.container,'start'));fireEvent.click(control(view.container,'start'));await clock.tick(1000*(i%4+1)+i*7);const expected=i%4+1;view.rerender(<App data-parent={i}/>);expect(secondsShown(view.container)).toBe(String(expected));expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));expect(clock.pending()).toBe(0);await clock.tick(1777);expect(secondsShown(view.container)).toBe(String(expected));fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe(String(expected));await clock.tick(1);expect(secondsShown(view.container)).toBe(String(expected+1));fireEvent.click(control(view.container,'reset'));expect(clock.pending()).toBe(0);expect(secondsShown(view.container)).toBe('0');}
+ view.unmount();
+}));
+test('independent stopwatches own their interval and a removed one cannot clear another',()=>withTestClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.click(control(a.container,'start'));await clock.tick(500);fireEvent.click(control(b.container,'start'));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(999);expect(secondsShown(b.container)).toBe('0');await clock.tick(1);expect(secondsShown(b.container)).toBe('1');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(secondsShown(fresh.container)).toBe('0');fresh.unmount();
+}));
+`,
   },
   "react-uselocalstorage-hook": {
     solution: `const useLocalStorage = (key, initial) => {

@@ -1484,7 +1484,24 @@ test('Select all after a delete selects only what is left', () => {
   fireEvent.click(all());
   expect(deleteButton().textContent).toBe('Delete selected (3)');
   expect(all().checked).toBe(true);
-});`,
+});
+
+
+const subjectsForModel=['Lunch on Friday','Invoice 1042','Your parcel is on its way','Team photos'];
+const expectSelection=(subjects,selected)=>{
+ expect(deleteButton().textContent).toBe('Delete selected ('+selected.size+')');expect(deleteButton().disabled).toBe(selected.size===0);expect(all().checked).toBe(subjects.length>0&&selected.size===subjects.length);expect(all().indeterminate).toBe(selected.size>0&&selected.size<subjects.length);expect(all().disabled).toBe(subjects.length===0);for(const subject of subjects)expect(box(subject).checked).toBe(selected.has(subject));
+};
+test('all sixteen selection states support independent individual unchecks',()=>{
+ const view=render(<App/>);
+ for(let mask=0;mask<16;mask++){fireEvent.click(all());fireEvent.click(all());const selected=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){fireEvent.click(box(subjectsForModel[i]));selected.add(subjectsForModel[i]);}expectSelection(subjectsForModel,selected);view.rerender(<App data-parent={mask}/>);expectSelection(subjectsForModel,selected);for(let i=3;i>=0;i--)if(selected.has(subjectsForModel[i])){fireEvent.click(box(subjectsForModel[i]));selected.delete(subjectsForModel[i]);expectSelection(subjectsForModel,selected);}}
+});
+test('every nonempty deletion subset removes only selected rows and retains surviving node identity',()=>{
+ for(let mask=1;mask<16;mask++){const view=render(<App/>);const oldRows=new Map(subjectsForModel.map(subject=>[subject,box(subject).closest('li')]));const removed=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){removed.add(subjectsForModel[i]);fireEvent.click(box(subjectsForModel[i]));}fireEvent.click(deleteButton());const kept=subjectsForModel.filter(subject=>!removed.has(subject));expect(screen.queryAllByRole('listitem').map(li=>li.textContent.trim())).toEqual(kept);expectSelection(kept,new Set());for(const subject of kept)expect(box(subject).closest('li')).toBe(oldRows.get(subject));if(kept.length){fireEvent.click(all());expectSelection(kept,new Set(kept));fireEvent.click(deleteButton());expectSelection([],new Set());}view.unmount();}
+});
+test('one inbox selection or deletion never changes another inbox or the next mount',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('checkbox',{name:'Lunch on Friday'}));fireEvent.click(two.getByRole('checkbox',{name:'Team photos'}));fireEvent.click(two.getByRole('button',{name:'Delete selected (1)'}));expect(one.getByRole('checkbox',{name:'Team photos'})).toBeTruthy();expect(one.getByRole('checkbox',{name:'Lunch on Friday'}).checked).toBe(true);expect(two.queryByRole('checkbox',{name:'Team photos'})).toBeNull();expect(one.getAllByRole('listitem')).toHaveLength(4);expect(two.getAllByRole('listitem')).toHaveLength(3);a.unmount();b.unmount();const fresh=render(<App/>);expectSelection(subjectsForModel,new Set());expect(screen.getAllByRole('listitem')).toHaveLength(4);fresh.unmount();
+});
+`,
   },
   'react-mh-use-shortcut': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -2404,11 +2421,12 @@ test('removal during an answer body cannot schedule another poll',()=>withExport
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
   'react-mh-menu-button': {
-    solution: `import React, { useEffect, useRef, useState } from 'react';
+    solution: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
 const App = () => {
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   // The item with the focus, by index.
   const [active, setActive] = useState(0);
@@ -2490,12 +2508,12 @@ const App = () => {
       ref={buttonRef}
       aria-haspopup="menu"
       aria-expanded={open ? 'true' : 'false'}
-      aria-controls={open ? 'actions-menu' : undefined}
+      aria-controls={open ? menuId : undefined}
       onClick={() => (open ? setOpen(false) : openAt(0))}
       onKeyDown={onButtonKeyDown}
     >Actions</button>
     {open && (
-      <ul id="actions-menu" role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+      <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
         {ITEMS.map((item, index) => (
           <li
             key={item}
@@ -2629,7 +2647,7 @@ const App = () => {
         Actions
       </button>
       {open && (
-        <ul role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown}>
+        <ul aria-label="Actions" role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
           {ITEMS.map((item, index) => (
             <li
               key={item}
@@ -2664,7 +2682,7 @@ const MOVES = {
 
 const useOutsideMouseDown = (active, refs, onOutside) => {
   const latest = useRef(onOutside);
-  latest.current = onOutside;
+  useEffect(() => { latest.current = onOutside; }, [onOutside]);
   useEffect(() => {
     if (!active) return undefined;
     const controller = new AbortController();
@@ -2724,7 +2742,7 @@ const App = () => {
         }}
       >Actions</button>
       {open && (
-        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setActive(null); }}>
           {ITEMS.map((item, index) => (
             <li key={item} role="menuitem" tabIndex={-1} ref={(node) => { itemRefs.current[index] = node; }} onClick={() => choose(item)}>
               {item}
@@ -2813,7 +2831,22 @@ test('ArrowUp from the third item moves the focus to the second', () => {
   expect(focused()).toBe('Delete');
   key('ArrowUp');
   expect(focused()).toBe('Duplicate');
-});`,
+});
+
+
+test('forty-eight keyboard moves preserve roles, focus and each wrapping direction',()=>{
+ const view=render(<App/>);fireEvent.click(trigger());expect(screen.getByRole('menu',{name:'Actions'})).toBeTruthy();items().forEach(item=>expect(item.tabIndex).toBe(-1));let index=0;const moves=['ArrowDown','ArrowDown','ArrowUp','End','ArrowUp','Home','ArrowUp','ArrowDown'];
+ for(let i=0;i<48;i++){const move=moves[i%moves.length];index=move==='Home'?0:move==='End'?2:(index+(move==='ArrowDown'?1:2))%3;const event=new KeyboardEvent('keydown',{key:move,bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(document.activeElement).toBe(items()[index]);view.rerender(<App data-parent={i}/>);expect(document.activeElement).toBe(items()[index]);}
+ key('Escape');expect(document.activeElement).toBe(trigger());
+});
+test('eighteen choices accept nested inside targets and keep the exact chosen item',()=>{
+ const view=render(<App/>);const labels=['Rename','Duplicate','Delete'];
+ for(let i=0;i<18;i++){fireEvent.click(trigger());const panel=screen.getByRole('menu');const target=items()[i%3];const nested=document.createElement('span');nested.textContent='';target.appendChild(nested);fireEvent.mouseDown(nested);expect(screen.queryByRole('menu')).toBe(panel);if(i%2===0)fireEvent.click(nested);else{key('Home');for(let n=0;n<i%3;n++)key('ArrowDown');key('Enter');}expect(screen.getByText('Chose '+labels[i%3])).toBeTruthy();expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(trigger());}
+});
+test('optional menu ids belong to their own instance and outside focus is never stolen',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);const ta=one.getByRole('button',{name:'Actions'}),tb=two.getByRole('button',{name:'Actions'});fireEvent.click(ta);const firstId=ta.getAttribute('aria-controls');if(firstId)expect(one.getByRole('menu').id).toBe(firstId);act(()=>tb.focus());expect(one.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(tb);fireEvent.click(tb);const secondId=tb.getAttribute('aria-controls');if(secondId){expect(two.getByRole('menu').id).toBe(secondId);if(firstId)expect(firstId===secondId).toBe(false);}key('End');key('Enter');expect(two.getByText('Chose Delete')).toBeTruthy();expect(one.queryByText('Chose Delete')).toBeNull();a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.queryByRole('menu')).toBeNull();expect(trigger().getAttribute('aria-expanded')).toBe('false');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   'react-mh-city-combobox': {
     solution: `import React, { useId, useState } from 'react';

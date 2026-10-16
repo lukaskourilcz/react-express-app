@@ -207,8 +207,8 @@ test('a long search survives a jump unchanged',()=>{
     tier: 2,
     focus: ['useRef', 'timers'],
     title: 'Cancel the reminder',
-    prompt: 'Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that `setTimeout` returns in a ref rather than in state, and pass it to `clearTimeout` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that \`setTimeout\` returns in a ref rather than in state, and pass it to \`clearTimeout\` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing. The wait lasts the full 300 ms; a real browser callback may run later. A new reminder and Cancel do not erase an already displayed message. Parent renders must not restart a pending wait. Clear the pending timeout on unmount, and keep each instance independent.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
@@ -238,7 +238,9 @@ const remind = () => {
 
 const cancel = () => {
   // clear the waiting timeout
-};`,
+};
+
+// Clear timeoutRef.current from an effect cleanup on unmount.`,
     hints: ['`setTimeout` returns an id, and `clearTimeout(id)` stops that timeout if it has not fired yet. A ref keeps the id between renders without causing a render of its own; `clearTimeout(null)` is allowed and does nothing.'],
     approach: [
       'Create `const timeoutRef = useRef(null)` in App.',
@@ -271,7 +273,70 @@ test('Cancel with nothing waiting does no harm', async () => {
   press('Remind me');
   await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('the first reminder waits the full 300 ms',()=>withTestClock(async clock=>{
+ const view=render(<App/>);press('Remind me');await clock.tick(299);expect(view.container.querySelector('p').textContent).toBe('');await clock.tick(1);expect(view.container.querySelector('p').textContent).toBe('Time to stretch');
+}));`,
   },
 
   /* ── timers ───────────────────────────────────────────────────────── */
