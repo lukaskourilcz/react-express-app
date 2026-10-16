@@ -1089,7 +1089,7 @@ test('blank text keeps the old name', () => {
     tier: 3,
     focus: ['fetch', 'timers', 'effect-cleanup', 'conditional'],
     title: 'Wait for the export',
-    prompt: 'Exporting a large report takes the server a while, so the page starts a job and keeps asking how it is going. "Export" posts to `/api/exports`, and the answer is `{ id }`. Then ask `/api/exports/<id>` about the job: once straight away, then again 200 milliseconds after each answer, never while an answer is still on its way. An answer `{ status: "running", progress }` shows "Preparing… <progress>%". `{ status: "done", url }` shows a link "Download the export" to that url, and `{ status: "failed" }` shows "The export failed" in an element with `role="alert"`; either one ends the asking. The Export button is disabled while a job runs. Do the asking in an effect that depends on the job id, and clear the waiting timeout in its cleanup, so a page that closes stops asking.',
+    prompt: `Exporting a large report takes the server a while, so the page starts a job and keeps asking how it is going. "Export" posts to \`/api/exports\`, and the answer is \`{ id }\`. Then ask \`/api/exports/<id>\` about the job: once straight away, then again 200 milliseconds after each answer, never while an answer is still on its way. An answer \`{ status: "running", progress }\` shows "Preparing… <progress>%". \`{ status: "done", url }\` shows a link "Download the export" to that url, and \`{ status: "failed" }\` shows "The export failed" in an element with \`role="alert"\`; either one ends the asking. The Export button is disabled while a job runs. Do the asking in an effect that depends on the job id, and clear the waiting timeout in its cleanup, so a page that closes stops asking. Each poll uses GET and waits for the complete JSON body before starting its 200 ms delay. Job ids are distinct URL-safe strings of 1–80 characters; progress is an integer from 0 to 100 and download URLs are same-origin paths. Responses in this exercise are successful HTTP/JSON responses; failure is reported by the job status. Export must stay disabled from the first status request until done or failed; disabling it while the initial POST is pending is also allowed. Repeated jobs, parent renders and a late answer after removal must not leave another poll running.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1201,7 +1201,14 @@ test('Export is disabled while a job runs', () => withFetch(async calls => {
   await begin(calls);
   expect(exportButton().disabled).toBe(true);
 }));
-`,
+
+test('starting an export uses POST', () => withFetch(async calls => {
+  const real = globalThis.fetch;
+  let method;
+  globalThis.fetch = (url, options = {}) => { method = options.method; return real(url, options); };
+  try { render(<App />); fireEvent.click(exportButton()); expect(method).toBe('POST'); }
+  finally { globalThis.fetch = real; }
+}));`,
   },
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
@@ -1608,7 +1615,7 @@ test('a valid submit welcomes the new user', () => {
     tier: 4,
     focus: ['timers', 'effect-cleanup', 'accessibility', 'events'],
     title: 'A carousel that plays itself',
-    prompt: 'A carousel shows one of four slides and moves on by itself every 200 milliseconds; a real one would wait several seconds, and the short wait keeps the checks quick. The slides sit in a `section` with `aria-roledescription="carousel"` and `aria-label="Featured"`, and in it a `p` reads "Slide 2 of 4: <title>". Previous and Next buttons, inside the section, move one slide, wrapping at the ends, and start the 200 ms wait over, so the slide never changes straight after a click. A "Pause" button stops the autoplay and becomes "Play", which starts it again. The autoplay also stops while the pointer is over the section or the keyboard focus is inside it, and goes on when both have left; the Pause button still wins, so a paused carousel stays paused when the pointer leaves. The slide’s `p` has `aria-live="off"` while the carousel plays, so a screen reader is not interrupted by every change, and `aria-live="polite"` while it does not. Run the timer in an effect that depends on whether the carousel plays and on the current slide, and clear it in the cleanup.',
+    prompt: `A carousel shows one of four slides and moves on by itself every 200 milliseconds; a real one would wait several seconds, and the short wait keeps the checks quick. The slides sit in a \`section\` with \`aria-roledescription="carousel"\` and \`aria-label="Featured"\`, and in it a \`p\` reads "Slide 2 of 4: <title>". Previous and Next buttons, inside the section, move one slide, wrapping at the ends, and start the 200 ms wait over, so the slide never changes straight after a click. A "Pause" button stops the autoplay and becomes "Play", which starts it again. The autoplay also stops while the pointer is over the section or the keyboard focus is inside it, and goes on when both have left; the Pause button still wins, so a paused carousel stays paused when the pointer leaves. The slide’s \`p\` has \`aria-live="off"\` while the carousel plays, so a screen reader is not interrupted by every change, and \`aria-live="polite"\` while it does not. Run the timer in an effect that depends on whether the carousel plays and on the current slide, and clear it in the cleanup. Manual navigation must keep the Pause choice. Each restarted wait lasts the full 200 ms; actual browser callbacks can run later. Pointer and focus holds combine: autoplay resumes only when both have left and Pause is off. Keep each instance independent and clear its pending timer when removed.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const SLIDES = ['Spring sale', 'New arrivals', 'Free delivery', 'Gift cards'];
@@ -1712,7 +1719,10 @@ test('aria-live is off while it plays and polite while it does not', () => {
   press('Pause');
   expect(slide().getAttribute('aria-live')).toBe('polite');
 });
-`,
+
+test('autoplay waits the full 200 ms',()=>withClock(async clock=>{
+ render(<App/>);await clock.tick(199);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');await clock.tick(1);expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
+}));`,
   },
   {
     id: 'react-mh-search-as-you-type',

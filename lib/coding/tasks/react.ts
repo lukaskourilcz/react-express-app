@@ -2697,7 +2697,7 @@ test('the fifth star previews five without changing committed zero',()=>{const {
     tier: 4,
     focus: ["events", "effect-cleanup"],
     title: "Modal",
-    prompt: "An Open button shows an element with role=\"dialog\" inside a backdrop. It closes on the Close button, on the Escape key, and on a click on the backdrop — but a click inside the dialog itself must leave it open.",
+    prompt: `An Open button shows an element with role="dialog" inside a backdrop. It closes on the Close button, on the Escape key, and on a click on the backdrop — but a click inside the dialog itself must leave it open. Handle Escape from anywhere in the document while this dialog is open; other keys leave it open. Remove any global key listener on close or unmount. Nested content clicks also stay inside. Repeated opens and separate instances must keep independent open state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2741,7 +2741,7 @@ useEffect(() => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 const dialog = container => container.querySelector('[role="dialog"]');
@@ -2774,7 +2774,10 @@ test('closes on a backdrop click but survives a click inside', () => {
   fireEvent.click(backdrop);
   expect(dialog(container)).toBeNull();
 });
-`,
+
+test('ordinary keys leave the dialog open',()=>{
+ const view=render(<App/>);openModal(view.container);fireEvent.keyDown(dialog(view.container),{key:'Enter'});expect(dialog(view.container)).toBeTruthy();
+});`,
   },
   {
     id: "react-theme-context",
