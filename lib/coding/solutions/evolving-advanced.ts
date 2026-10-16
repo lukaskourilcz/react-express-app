@@ -52,7 +52,7 @@ function calculateWithVariables(expression,variables){let valid=true;const sourc
  function sequenceResults<T>(steps:readonly (()=>Result<T>)[]):Result<T[]>{return traverseResults(steps,step=>step())}`,
  ],
  'ts-evolving-store': [
- `function selectStore<T,U>(store:{get():T;subscribe(fn:(v:T)=>void):()=>void},select:(v:T)=>U){let value=select(store.get()),disposed=false;const listeners=new Set<(v:U)=>void>();const off=store.subscribe(v=>{const next=select(v);if(Object.is(value,next))return;value=next;for(const fn of [...listeners])fn(value)});return {get:():U=>value,subscribe(fn:(v:U)=>void):()=>void{const listener=(v:U)=>fn(v);if(!disposed)listeners.add(listener);return ()=>{listeners.delete(listener)}},dispose():void{if(disposed)return;disposed=true;off();listeners.clear()}}}`,
+ `function selectStore<T,U>(store:{get():T;subscribe(fn:(v:T)=>void):()=>void},select:(v:T)=>U){let value=select(store.get()),disposed=false;const listeners=new Set<(v:U)=>void>();const off=store.subscribe(v=>{if(disposed)return;const next=select(v);if(Object.is(value,next))return;value=next;for(const fn of [...listeners])fn(value)});return {get:():U=>value,subscribe(fn:(v:U)=>void):()=>void{const listener=(v:U)=>fn(v);if(!disposed)listeners.add(listener);return ()=>{listeners.delete(listener)}},dispose():void{if(disposed)return;disposed=true;off();listeners.clear()}}}`,
  `function transactStore<T>(store:{get():T;set(v:T):void},steps:readonly ((value:T)=>T)[]):boolean{let value=store.get();try{for(const step of steps)value=step(value)}catch{return false}store.set(value);return true}`,
  ],
  'ts-evolving-schema': [
@@ -350,6 +350,7 @@ function sequenceResults<T>(steps: readonly (() => Result<T>)[]): Result<T[]> {
   }
 
   const unsubscribeFromSource = store.subscribe(function (value: T): void {
+    if (disposed) return;
     const next = select(value);
     if (Object.is(selected, next)) {
       return;
@@ -633,6 +634,7 @@ const sequenceResults = <T>(steps: readonly (() => Result<T>)[]): Result<T[]> =>
   let disposed = false;
   const listeners = createListeners<U>();
   const disconnect = store.subscribe(value => {
+    if (disposed) return;
     const next = select(value);
     if (Object.is(selected, next)) return;
     selected = next;

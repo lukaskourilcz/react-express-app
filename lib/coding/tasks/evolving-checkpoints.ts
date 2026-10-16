@@ -382,24 +382,28 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const value:string=d.get();}"}, {"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const bad:number=d.get();}", "rejects": true}] },
     ),
     step(
-      'Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw.',
+      "Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw. Keep the earlier full createStore/selectStore contracts. Also accept any minimal source with get():T and set(value:T):void. steps is a dense readonly/frozen array of at most 10000 synchronous pure functions with stable membership and no this dependence; each receives the exact previous opaque result once in order. Read source.get once, stage only local references without clone/freeze/coercion/await, then call source.set exactly once with the final value, including empty/no-op transactions. Do not expose intermediate values or extra undo entries. Callbacks and source methods do not throw or mutate the source; pure steps do not mutate their inputs. Preserve boolean return and generic readonly step types. Target: O(n) time and O(1) extra space for transaction work, where n is one plus steps.length, excluding callback/source work and opaque payload storage. Earlier source/derived history and subscription bounds remain separate.",
       'Přidej transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Čisté kroky vypočti soukromě a proveď jedno set s konečným výsledkem. Vrať true; callbacky této etapy nevyhazují výjimky.',
-      calls([
+      calls(
+        ["(()=>{let sets=0;const source={get:()=>1,set:()=>{sets++;}};return [transactStore(source,[]),sets];})()",[true, 1]],[
         '(()=>{const s=createStore(1);return [transactStore(s,[x=>x+1,x=>x*3]),s.get()]})()',
         [true, 6],
       ]),
+      { additionalTypeTests: [{"code": "{const source={get:()=>1,set:(v:number):void=>{}};const steps:readonly ((n:number)=>number)[]=[n=>n+1];const ok:boolean=transactStore(source,steps);}"}, {"code": "{const bad:string=transactStore(createStore(1),[]);}", "rejects": true}, {"code": "{transactStore(createStore(1),[(n:number)=>String(n)]);}", "rejects": true}] },
     ),
   ],
   'ts-evolving-schema': [
     step(
-      'Implement validate(schema,value:unknown):string[] for the string schema. Return [] for strings and ["$: expected string"] otherwise. Keep the supplied Schema union.',
+      "Implement validate(schema,value:unknown):string[] for the string schema. Return [] for strings and [\"$: expected string\"] otherwise. Keep the supplied Schema union. The runtime schema in this checkpoint is only \"string\"; keep the supplied union unchanged for the next milestone. Test primitive typeof string without coercion: empty, whitespace and exact Unicode strings up to 20000 UTF16 units are valid; boxed String values and all other opaque values are invalid. Do not inspect, convert, clone or mutate the value. Each call returns a fresh mutable string[] with exactly the stated error, or a fresh empty array. Preserve validate(schema:Schema,value:unknown):string[]. Target: O(1) time and O(1) extra space per call, excluding input storage; string contents are not traversed.",
       'Napiš validate(schema,value:unknown):string[] pro schéma string. Pro řetězce vrať [] a jinak ["$: expected string"]. Zachovej dodanou unii Schema.',
       calls(
+        ["validate('string',new String('x'))",["$: expected string"]],
         ['validate("string","a")', []],
         ['validate("string","")', []],
         ['validate("string",2)', ['$: expected string']],
         ['validate("string",null)', ['$: expected string']],
       ),
+      { additionalTypeTests: [{"code": "{const fn:(schema:Schema,value:unknown)=>string[]=validate;const errors:string[]=fn(\"string\",undefined);}"}, {"code": "{const bad:number=validate(\"string\",1);}", "rejects": true}] },
     ),
     step(
       'Extend Schema with {object:Record<string,Schema>} and validate flat records. Check declared fields in schema order, allow extras, and use $.FIELD paths. Missing fields are undefined.',
