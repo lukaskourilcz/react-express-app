@@ -1,6 +1,37 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { closeBrowserProcess } from './responsive-browser-process.mjs';
 import { chromium } from '@playwright/test';
 import { CLEARANCE } from './responsive-clearance.mjs';
+
+// A surviving helper holds the inherited stderr open after its parent dies.
+// Closing our browser must release both pipes without killing that helper.
+const fixture = spawn(process.execPath, ['-e', `
+  const {spawn} = require('node:child_process');
+  const helper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 15000)'],
+    {stdio:['ignore','ignore','inherit']});
+  console.log(helper.pid);
+  setTimeout(() => {}, 15000);
+`], {stdio:['ignore','pipe','pipe']});
+let helperPid;
+let deadline;
+try {
+  const [output] = await once(fixture.stdout, 'data');
+  helperPid = Number(String(output).trim());
+  assert(Number.isSafeInteger(helperPid) && helperPid > 0);
+  const stopped = Promise.all([once(fixture.stdout, 'close'), once(fixture.stderr, 'close')]);
+  closeBrowserProcess(fixture);
+  await Promise.race([stopped, new Promise((_, reject) => {
+    deadline = setTimeout(() => reject(new Error('Inherited Chrome pipes did not close')), 1000);
+  })]);
+  process.kill(helperPid, 0);
+  console.log('PASS browser cleanup: inherited output pipes close while the helper survives');
+} finally {
+  clearTimeout(deadline);
+  closeBrowserProcess(fixture);
+  if (helperPid) { try { process.kill(helperPid, 'SIGKILL'); } catch { /* stopped */ } }
+}
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN });
 try {
