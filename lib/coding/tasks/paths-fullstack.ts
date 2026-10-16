@@ -151,9 +151,10 @@ export function buildFullStackPathTasks(): CodingTask[] {
     return {
       id, track, topic: track, level: 25, tier: 2, verify: 'tests',
       title: en(`${project.title.en} · ${index + 1}`),
-      prompt: prompts[index],
+      prompt: index === 0 ? en("A link shortener turns a long URL into a short slug. Start with the check every later level relies on. Write `normalizeLink(value)`: accept a non-null object that is not an array, with a string `url` and a string `slug`. Trim both. The url must start with `https://` and have something after it, 200 characters at most. The slug is lower-cased and must be 3 to 20 characters of `a`\u2013`z`, `0`\u2013`9` and `-`. Return a new `{ url, slug }`, or `null` when anything is wrong. Ignore extra fields and never change the input. Use ECMAScript trim and toLowerCase, then measure UTF16 code units. Only the literal https prefix and length are checked; spaces or line breaks inside the remaining text are not URL validation errors. Hyphens may appear anywhere in a valid slug. Required fields may be inherited data fields; ignore extra fields without reading them. Inputs contain ordinary data fields, no proxies or required-field accessors, with at most 20000 code units per raw string. Return a fresh mutable record on each success, without retaining caller state. Target: O(n) time and O(n) space, where n is one plus the combined UTF16 lengths of the raw url and slug, including trimming and lowercase conversion. Non-string shape checks take constant time.") : prompts[index],
       previousRequirements: prompts.slice(0, index),
-      references: references[index],
+      references: index === 0 ? [...references[0], doc('String trimming', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim'), doc('Lowercase conversion', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase')] : references[index],
+
       hints: { en: [hints[index].en], cs: [hints[index].cs] },
       approach: { en: approaches[index].map((step) => step.en), cs: approaches[index].map((step) => step.cs) },
       focus: index === 0 ? ['objects', 'strings'] : react ? ['useEffect', 'fetch', 'forms'] : ['narrowing', 'unions'],
@@ -162,7 +163,7 @@ export function buildFullStackPathTasks(): CodingTask[] {
       ...(react
         ? { suite: PRELUDE + suites.slice(0, index - 2).join('\n') }
         : {
-          tests: tests.slice(0, index + 1).flat(),
+          tests: [...tests.slice(0, index + 1).flat(), ...(index === 0 ? [{"call": "normalizeLink({url:'https://a b',slug:' A-B '})", "expected": {"url": "https://a b", "slug": "a-b"}, "label": {"en": "prefix and length only; this is not URL parsing", "cs": ""}}] : [])],
           ...(index > 0 ? { typeTests: typeTests.slice(0, index + 1).flat() } : {}),
         }),
     };

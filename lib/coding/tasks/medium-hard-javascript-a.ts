@@ -887,7 +887,8 @@ console.log(diffLines(["a", "b", "c"], ["a", "c", "d"]));
     tier: 4,
     focus: ['recursion', 'nested-loops', 'some'],
     title: 'Find a word in a letter grid',
-    prompt: 'In a word search, a word is traced through a grid of letters by stepping from each letter to the next one up, down, left or right, never diagonally, and without using any cell twice. Write `findWord(grid, word)`, where `grid` is an array of equal-length strings, one per row. Return the `[row, column]` cells that spell the word, in order, or `null` if it cannot be traced. Try every cell as a start with two nested loops, row by row from the top left. From each start, follow the word with a recursive function that marks its cell as used, tries the neighbours in the order up, right, down, left with `some`, and unmarks the cell again if no path from it works, so that another path can use it. Return the first path found in that order. An empty word gives `[]`.',
+    prompt: 'In a word search, a word is traced through a grid of letters by stepping from each letter to the next one up, down, left or right, never diagonally, and without using any cell twice. Write `findWord(grid, word)`, where `grid` is an array of equal-length strings, one per row. Return the `[row, column]` cells that spell the word, in order, or `null` if it cannot be traced. Try every cell as a start with two nested loops, row by row from the top left. From each start, follow the word with a recursive function that marks its cell as used, tries the neighbours in the order up, right, down, left with `some`, and unmarks the cell again if no path from it works, so that another path can use it. Return the first path found in that order. An empty word gives `[]`. Inputs are a dense, possibly readonly array of at most 8 rows and 8 columns, with equal row lengths, and a primitive word of at most 8 UTF16 code units. Empty grids or zero columns have no nonempty path. A cell is one UTF16 code unit (including a surrogate half); comparisons are literal and case-sensitive, without Unicode normalization. Do not modify grid. Return a fresh mutable outer array and distinct mutable coordinate pairs on each successful call, including a fresh [] for an empty word. The recursive/some approach is a teaching suggestion; equivalent code that returns the same first path is accepted. Target: O(r*c*4^L*L) time and O(r*c+L^2) space, where r and c are row and column counts plus one and L is word length plus one. This conservative bound includes four-way search and path copying/scanning in the senior board. Marked-cell implementations can avoid the L time factor and use O(r*c+L) space.',
+
     starter: `const findWord = (grid, word) => {
 
 };
@@ -923,6 +924,7 @@ const findWord = (grid, word) => {
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "findWord(['AB','BA'],'ABA')", "expected": [[0, 0], [0, 1], [1, 1]], "label": "choose right before down when both paths work"},
       { call: 'findWord(["ABCE", "SFCS", "ADEE"], "ABCCED")', expected: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1]] },
       { call: 'findWord(["ABCE", "SFCS", "ADEE"], "SEE")', expected: [[1, 3], [2, 3], [2, 2]], label: 'a dead end on the way' },
       { call: 'findWord(["XY", "ZX"], "X")', expected: [[0, 0]], label: 'starts are tried from the top left' },
