@@ -687,7 +687,7 @@ test('first committed status is Waiting before the mounted Ready update',async()
     tier: 1,
     focus: ["useEffect", "useState"],
     title: "Document title",
-    prompt: "Render a count starting at 0 and a button that increments it, and keep document.title in step: it holds 0 on first render, and 1 after one click.",
+    prompt: "Render a counter starting at 0 and one button that increments it by one on every click. Show the current count as the only number in the page, either in the button or in a separate paragraph. Use an effect to keep document.title in sync after every update: it contains exactly that integer, with optional words or punctuation around it. For example, Count: 0, Count: 1, then Count: 2. Repeated clicks continue counting; ordinary parent re-renders preserve the count without adding to it. A fresh mounted counter starts at 0 and updates an unrelated previous page title. Restoring the old title on unmount is optional. This single-page exercise does not require multiple components to own document.title simultaneously.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -700,26 +700,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [count, setCount] = useState(0);
 
 useEffect(() => {
-  // run the side effect here
+  // Keep document.title in step with count.
+}, [count]);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Put count in the effect dependency array."],
+// Render count and an increment button; no cleanup resource is needed here.`,
+    hints: ["Put count in the effect dependency array and increment from the previous value. The visible number and title must keep matching after every click."],
     approach: [
       "Keep the counter in useState and update it from the previous value inside the button handler.",
       "Add a useEffect that assigns to document.title, composing the string from the current count.",
-      "List count in the effect dependency array so the title is rewritten after every change, not only on mount.",
-    ],
+      "List count in the effect dependency array so the title is rewritten after every change, not only on mount."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('writes the count into the document title', () => {
@@ -728,6 +726,12 @@ test('writes the count into the document title', () => {
   fireEvent.click(container.querySelector('button'));
   expect(document.title).toContain('1');
 });
+
+const titleNumbers=()=>document.title.match(/[0-9]+/g)||[];
+const pageNumbers=scope=>scope.textContent.match(/[0-9]+/g)||[];
+const withTitle=async body=>{const previous=document.title;try{await body();}finally{document.title=previous;}};
+test('visible count and title both reach two',()=>withTitle(async()=>{const root=render(<App/>);const button=within(root.container).getByRole('button');expect(titleNumbers()).toEqual(['0']);expect(pageNumbers(root.container)).toEqual(['0']);fireEvent.click(button);fireEvent.click(button);expect(titleNumbers()).toEqual(['2']);expect(pageNumbers(root.container)).toEqual(['2']);root.unmount();}));
+
 `,
   },
   {
@@ -739,7 +743,7 @@ test('writes the count into the document title', () => {
     tier: 1,
     focus: ["effect-cleanup", "timers"],
     title: "Delayed message",
-    prompt: "Show “Waiting…” immediately and “Done!” one second later, using a timeout. Clear that timeout when the component unmounts so it can never fire against a component that is gone.",
+    prompt: "Show exactly Waiting… immediately and Done! after a one-second timeout. Keep Waiting… until the full 1000 ms delay has elapsed, and keep Done! afterward. Normal browser timer scheduling can run later; the exercise uses a controlled clock to check the boundary. Clear the timeout when the component unmounts before it fires. Ordinary parent re-renders must not restart the countdown or change a completed message. Each independent or fresh mounted instance starts its own waiting state and delay. Other headings or wrappers are fine. Use an effect with cleanup; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -752,26 +756,25 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [message, setMessage] = useState('Waiting…');
 
 useEffect(() => {
-  // run the side effect here
-
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Return a cleanup function that calls clearTimeout."],
+  const timer = setTimeout(() => {
+    // Replace the message after one full second.
+  }, 1000);
+  return () => clearTimeout(timer);
+}, []);`,
+    hints: ["Use one 1000 ms timeout in a mount effect and clear its id during cleanup. Parent renders should not start another timer."],
     approach: [
       "Store the message in useState, starting with the placeholder text shown before the delay elapses.",
       "In a useEffect with an empty dependency array, start a one second setTimeout that sets the final message.",
-      "Return a cleanup function from that effect which clears the stored timeout id, so an unmount cannot set state late.",
-    ],
+      "Return a cleanup function from that effect which clears the stored timeout id, so an unmount cannot set state late."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the message once the timeout fires', async () => {
@@ -779,6 +782,7 @@ test('shows the message once the timeout fires', async () => {
   expect(container.textContent).toContain('Waiting');
   await waitFor(() => expect(container.textContent).toContain('Done!'), { timeout: 4000 });
 });
+
 `,
   },
   {
@@ -1321,7 +1325,7 @@ test('typing filters the actual response without another request',async()=>withU
     tier: 2,
     focus: ["fetch", "useEffect", "events"],
     title: "Refresh data",
-    prompt: "Fetch one todo when the component mounts and render its title, and fetch another when a Refresh button is clicked. Put the request in a single function that both the effect and the click handler call.",
+    prompt: "Fetch one todo on mount and fetch again on every click of a button named Refresh. Share the request function between the effect and button handler. Each request is a GET to https://jsonplaceholder.typicode.com/todos/{id}, with an integer id from 1 to 20; choosing a random id is optional and repeated ids are allowed. Render the successful response's exact title as literal text in a paragraph, including an empty title. Titles are plain strings up to 2000 UTF-16 code units. Await the JSON body and check response.ok first. Clear previous data and errors when starting a request. On HTTP, network or JSON failure, show Could not load todo. as an alert and no todo data. Refresh remains available so the next request can recover. If requests overlap, only the newest started request may update the page. Ordinary parent renders do not fetch again; unmounting invalidates pending results and a fresh instance starts its own request. Loading text is optional. The fixture is local, and no retry library or real backend is needed. One mount request means a normal mounted lifetime; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1334,32 +1338,42 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos/1';
-const [item, setItem] = useState(null);
+    skeleton: `const [todo, setTodo] = useState(null);
+const [error, setError] = useState('');
+const serial = React.useRef(0);
 
-const loadItem = async () => {
-  const response = await fetch(API_URL);
-  if (!response.ok) throw new Error('Request failed');
-  setItem(await response.json());
+const loadTodo = async () => {
+  const current = ++serial.current;
+  setTodo(null);
+  setError('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/1');
+    if (!response.ok) throw new Error('Request failed');
+    const data = await response.json();
+    // Only the newest request may store data.
+  } catch {
+    // Only the newest request may show Could not load todo.
+  }
 };
 
 useEffect(() => {
-  loadItem();
+  loadTodo();
+  return () => { serial.current += 1; };
 }, []);
 
-<button onClick={loadItem}>Refresh</button>`,
-    hints: ["Put the request in a function that both useEffect and onClick can call."],
+// Keep the Refresh button available and render the result or alert.`,
+    hints: ["Keep a request number in a ref. Both mount and Refresh call the same function; only the latest number may store its parsed response or error."],
     approach: [
-      "Extract the request into one named async function that fetches a random todo and writes it into state.",
-      "Call that same function from a useEffect with an empty dependency array to load data on mount.",
-      "Pass the same function as the click handler of the Refresh button so both paths share one code path.",
-      "Render the todo conditionally, since the state is null until the first request resolves.",
-    ],
+      "Store the current todo and error in local state; use a ref to identify the newest request.",
+      "Use one request function from both the mount effect and Refresh. Any id from 1 through 20 is valid, including a fixed id.",
+      "Clear old data, check response.ok, await JSON, and only accept data or errors for the newest request.",
+      "Invalidate pending results during cleanup and leave Refresh available after success or failure."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 const TODO_TITLES = ['Todo one', 'Todo two', 'Todo three'];
@@ -1378,6 +1392,22 @@ test('loads again when Refresh is clicked', async () => {
   fireEvent.click(refresh);
   await waitFor(() => expect(showsATodo(container.textContent)).toBe(true));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const refreshIn=scope=>within(scope).getByRole('button',{name:'Refresh'});
+const expectTodo=(scope,title)=>{expect(Array.from(scope.querySelectorAll('p')).some(node=>node.textContent===title)).toBe(true);expect(scope.querySelector('p b')).toBeNull();};
+const todoRequest=call=>{getOnly(call);const url=new URL(call.url);expect(url.origin+url.pathname.replace(/[/][0-9]+$/,'')).toBe('https://jsonplaceholder.typicode.com/todos');const match=url.pathname.match(/[/]todos[/]([0-9]+)$/);expect(Boolean(match)).toBe(true);expect(Number(match[1])>=1&&Number(match[1])<=20).toBe(true);expect(url.search).toBe('');};
+test('Refresh renders the actual new response title',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await finishRequest(calls[0],{id:1,title:'Initial custom todo'});expectTodo(root.container,'Initial custom todo');fireEvent.click(refreshIn(root.container));await waitFor(()=>expect(calls).toHaveLength(2));await finishRequest(calls[1],{id:1,title:'<b>Another todo</b>'});expectTodo(root.container,'<b>Another todo</b>');expect(root.container.textContent).not.toContain('Initial custom todo');}));
+
 `,
     api: {
       method: "GET",
@@ -1535,7 +1565,7 @@ test('uses the returned title and can append a repeated server id',async()=>with
     tier: 3,
     focus: ["useEffect", "fetch"],
     title: "User by id",
-    prompt: "Render a select whose option values are user ids — 1 and 2 are enough — and fetch that user whenever the selection changes, showing the fetched name. Changing the selection must fetch again rather than keep showing the first user.",
+    prompt: "Render a controlled select named User with option values 1 and 2, initially 1. GET https://jsonplaceholder.typicode.com/users/{selectedId} on mount and every changed selection, including returning to a previously selected id. Do not reuse a cached response instead of refetching. Display the successful response's exact name as literal text in a paragraph. It is an ordinary record with the selected id and a plain string name up to 2000 UTF-16 code units, including an empty name. Clear old user data and errors when starting the request, and wait for the JSON body. Check response.ok first. HTTP, network or JSON failure shows Could not load user. as an alert with no user data. A changed selection can recover, and only the latest selection may update the page. Ordinary parent re-renders do not refetch. Removed instances ignore late responses; fresh mounts start at user 1 and fetch their own data. A loading indicator is optional. The fixture is local; no real backend is needed. One request per mount means an ordinary mounted lifetime, not a guarantee that development Strict Mode runs setup only once.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1548,31 +1578,41 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_BASE = 'https://jsonplaceholder.typicode.com/users';
-const [selectedId, setSelectedId] = useState(1);
+    skeleton: `const [selectedId, setSelectedId] = useState(1);
 const [user, setUser] = useState(null);
+const [error, setError] = useState('');
 
 useEffect(() => {
-  const loadUser = async () => {
-    const response = await fetch(\`\${API_BASE}/\${selectedId}\`);
-    if (!response.ok) throw new Error('Request failed');
-    setUser(await response.json());
+  let active = true;
+  setUser(null);
+  setError('');
+  const load = async () => {
+    try {
+      const response = await fetch(\`https://jsonplaceholder.typicode.com/users/\${selectedId}\`);
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      if (active) setUser(data);
+    } catch {
+      if (active) setError('Could not load user.');
+    }
   };
+  load();
+  return () => { active = false; };
+}, [selectedId]);
 
-  loadUser();
-}, [selectedId]);`,
-    hints: ["Put selectedId in the dependency array and build the URL from it."],
+// Render a labelled select, the exact returned data, and any alert.`,
+    hints: ["Build the URL from the selected id and refetch on every change. Clear old details and ignore results from cleaned-up effects."],
     approach: [
-      "Keep the selected id in useState and drive it from a controlled select, converting the chosen value to a number.",
-      "Build the request URL inside the effect from a shared base plus the currently selected id.",
-      "List the selected id in the dependency array so the effect re-runs and refetches on every change.",
-      "Render the user conditionally, because the state is null between the selection and the response.",
-    ],
+      "Drive a controlled User select from state, initially 1.",
+      "An effect depending on the id clears stale details and requests that user every time, without a response cache.",
+      "Check response.ok and await JSON before rendering the exact returned name; catch errors with the fixed alert.",
+      "Return cleanup that invalidates the old effect so out-of-order responses cannot replace the latest selection."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('fetches a different user when the selection changes', async () => {
@@ -1581,6 +1621,21 @@ test('fetches a different user when the selection changes', async () => {
   fireEvent.change(container.querySelector('select'), { target: { value: '2' } });
   await waitFor(() => expect(container.textContent).toContain('Ervin Howell'));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const chooseUser=(scope,id)=>fireEvent.change(within(scope).getByRole('combobox',{name:'User'}),{target:{value:String(id)}});
+const expectUser=(scope,name)=>{expect(Array.from(scope.querySelectorAll('p')).some(node=>node.textContent===name)).toBe(true);expect(scope.querySelector('p b')).toBeNull();};
+test('returning to user one makes a new request and uses its new body',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await finishRequest(calls[0],{id:1,name:'First revision'});chooseUser(root.container,2);await finishRequest(calls[1],{id:2,name:'Second user'});chooseUser(root.container,1);await waitFor(()=>expect(calls).toHaveLength(3));await finishRequest(calls[2],{id:1,name:'Updated first revision'});expectUser(root.container,'Updated first revision');}));
+
 `,
     api: {
       method: "GET",
@@ -1815,7 +1870,7 @@ test('moves between pages', async () => {
     tier: 3,
     focus: ["useEffect", "fetch"],
     title: "Dependent fetch",
-    prompt: "Render a select whose option values are user ids — 1 and 2 are enough. Choosing one fetches that user’s posts and renders them as LI items, and changing the selection fetches again; the two users do not have the same number of posts.",
+    prompt: "Render a controlled select named Author with option values 1 and 2, initially 1. GET https://jsonplaceholder.typicode.com/posts?userId={selectedId} on mount and whenever the selected value changes. Always keep one UL and render one LI per successful response record in response order, with its exact title as literal text. Responses are dense read-only arrays of at most 100 ordinary records with unique positive integer ids and plain string titles up to 2000 UTF-16 code units; titles may be duplicated or empty. Key rows by id and keep surviving nodes stable across ordinary parent renders. Clear the previous list and error when starting a new selection request, including while the JSON body is pending. Check response.ok before parsing. HTTP, network or JSON failure leaves an empty UL and shows Could not load posts. as an alert. Changing selection can recover. An earlier request must never overwrite a later selection. Ordinary parent re-renders do not refetch; removed instances ignore late results and fresh mounts start at user 1 with an empty list. A loading indicator is optional. Use local effect state, a custom hook or equivalent reducer; no real service or data cache is required. Development Strict Mode may repeat effect setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1828,50 +1883,41 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
+    skeleton: `const [selectedId, setSelectedId] = useState(1);
 const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [selectedId, setSelectedId] = useState(1);
 
 useEffect(() => {
-  const loadItems = async () => {
+  let active = true;
+  setItems([]);
+  setError('');
+  const load = async () => {
     try {
-      const response = await fetch(\`\${API_URL}?userId=\${selectedId}\`);
+      const response = await fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${selectedId}\`);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
+      if (active) setItems(data);
+    } catch {
+      if (active) setError('Could not load posts.');
     }
   };
-
-  loadItems();
+  load();
+  return () => { active = false; };
 }, [selectedId]);
-const visibleItems = items;
 
-<select value={selectedId} onChange={event => setSelectedId(/* the chosen value, as a number */)}>
-  {/* an option with the value 1, and one with the value 2 */}
-</select>
-<ul>
-  {visibleItems.map(item => (
-    <li key={item.id}>{/* the post's title */}</li>
-  ))}
-</ul>`,
-    hints: ["Run the posts effect whenever selectedId changes."],
+// Render a labelled select, the exact returned data, and any alert.`,
+    hints: ["Depend on the selected id. Clear old rows at the start, check response.ok, and ignore results after that effect has cleaned up."],
     approach: [
-      "Hold the selected user id in state and change it from a controlled select of users.",
-      "Write one effect that fetches posts filtered by that id through a query-string parameter on the URL.",
-      "Put the selected id in that effect dependency array so choosing a different user refetches their posts.",
-      "Map the posts into a keyed list that simply re-renders whenever the state array is replaced.",
-    ],
+      "Keep the selected id in a controlled Author select, starting at 1.",
+      "In an effect depending on that id, clear old rows/errors and GET posts filtered by userId.",
+      "Check the response, parse the body, and store it only while that effect is active; catch failures with the fixed alert.",
+      "Cleanup invalidates old results. Map all exact returned titles with id keys, including duplicates and empty names."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('loads the posts belonging to the selected user', async () => {
@@ -1880,6 +1926,21 @@ test('loads the posts belonging to the selected user', async () => {
   fireEvent.change(container.querySelector('select'), { target: { value: '2' } });
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(4));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const chooseAuthor=(scope,id)=>fireEvent.change(within(scope).getByRole('combobox',{name:'Author'}),{target:{value:String(id)}});
+const postsRequest=(call,id)=>{getOnly(call);const u=new URL(call.url);expect(u.origin+u.pathname).toBe('https://jsonplaceholder.typicode.com/posts');expect(u.searchParams.get('userId')).toBe(String(id));};
+test('maps returned titles rather than synthesizing records from count',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await finishRequest(calls[0],[{id:7,title:'Same'},{id:8,title:'Same'},{id:9,title:'<b>Actual</b>'}]);expect(phasedNames(root.container)).toEqual(['Same','Same','<b>Actual</b>']);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
     api: {
       method: "GET",

@@ -319,42 +319,38 @@ export default App;
   'react-dependent-fetch': `import React, { useEffect, useState } from 'react';
 
 const App = () => {
-  const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(1);
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadItems = async () => {
+    let active = true;
+    setItems([]);
+    setError('');
+    const load = async () => {
       try {
-        const response = await fetch(\`\${API_URL}?userId=\${selectedId}\`);
+        const response = await fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${selectedId}\`);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
-      } catch (requestError) {
-        setError(requestError.message);
-      } finally {
-        setLoading(false);
+        if (active) setItems(data);
+      } catch {
+        if (active) setError('Could not load posts.');
       }
     };
-
-    loadItems();
+    load();
+    return () => { active = false; };
   }, [selectedId]);
-  const visibleItems = items;
 
   return (
     <main>
       <h2>Dependent fetch</h2>
-      <select value={selectedId} onChange={event => setSelectedId(Number(event.target.value))}>
+      <select aria-label="Author" value={selectedId} onChange={event => setSelectedId(Number(event.target.value))}>
         <option value="1">User 1</option>
         <option value="2">User 2</option>
       </select>
       {error && <p role="alert">{error}</p>}
       <ul>
-        {visibleItems.map(item => (
-          <li key={item.id}>{item.title}</li>
-        ))}
+        {items.map(item => <li key={item.id}>{item.title}</li>)}
       </ul>
     </main>
   );
