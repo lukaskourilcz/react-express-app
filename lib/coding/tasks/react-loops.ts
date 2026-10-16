@@ -562,7 +562,7 @@ test('toggling the first task twice restores its original flag',()=>{const view=
     tier: 1,
     focus: ["forms", "unshift", "useState"],
     title: "Newest-first todos",
-    prompt: "Render a form with a text input and an Add button, and a UL that starts empty. Submitting adds the trimmed text as a new LI at the top of the list, above everything added earlier, and clears the input; a blank submission adds nothing. Adding “First” and then “Second” must list Second before First.",
+    prompt: "Render a form with a text input named `Todo text`, an Add submit button and a UL that starts empty. Submitting prevents page navigation, trims the input with JavaScript trim, prepends one new LI and clears the input. A blank or whitespace-only submission changes neither list nor input. Duplicate text is allowed as distinct todos. Keep exact internal spaces, Unicode and markup-like text as literal text; inputs are plain strings up to 2000 UTF16 units. Newest-first means insertion order, not alphabetical sorting. Use stable unique row ids so existing LI nodes survive later prepends. Build new arrays without mutating prior state, support repeated submissions, and keep simultaneous/fresh mounts independent. Adding First then Second lists Second before First.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -586,7 +586,7 @@ const submit = event => {
 };
 
 <form onSubmit={submit}>
-  <input value={text} onChange={event => setText(event.target.value)} />
+  <input aria-label="Todo text" value={text} onChange={event => setText(event.target.value)} />
   <button>Add</button>
 </form>`,
     hints: ["Put the new item first and spread the previous array after it, which is the immutable form of unshift."],
@@ -625,6 +625,7 @@ test('ignores a blank submission', () => {
   add(container, '   ');
   expect(container.querySelectorAll('li')).toHaveLength(0);
 });
+test('keeps duplicate texts as separate newest-first rows',()=>{const view=render(<App/>);add(view.container,' zzz ');add(view.container,'aaa');add(view.container,'zzz');expect([...view.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(['zzz','aaa','zzz']);});
 `,
   },
   {
@@ -635,7 +636,7 @@ test('ignores a blank submission', () => {
     tier: 2,
     focus: ["useMemo", "filter", "reduce"],
     title: "Memoised total",
-    prompt: "Render a search input, a UL of the `orders` declared in the starter whose name contains the query ignoring case, and a paragraph reading “Total: <sum of the matching prices>”, so an empty query shows all six with “Total: 585” and “dive” shows two with “Total: 180”. Add a button labelled “Nudge” that increments a counter shown as “Nudges: <n>”. Compute the filtered list and its total inside one `useMemo` that depends only on the query, so a re-render caused by Nudge skips that work.",
+    prompt: "Practice memoizing derived work with useMemo. Export `summarizeOrders(query)`: trim the plain string query, compare it case-insensitively with each starter order name using substring matching, and return `{matching, total}` in original order with the sum of matching prices. Query length is at most 2000 UTF16 units; an empty/whitespace query matches all six (total 585), DIVE matches two (total 180), and no match totals 0. Treat source orders and returned records as read-only. App receives optional `calculate`, defaulting to summarizeOrders, and passes it the current raw query. A supplied synchronous pure calculator has the same result shape, with at most 100 uniquely identified ordinary order records, literal string names and a numeric total; render its returned result. Render a controlled input named `Search orders`, a UL of matching names, `Total: <total>`, a Nudge button and `Nudges: <n>` starting at 0. Memoize the calculation using every reactive input it reads: query and calculate. Ordinary Nudge/parent re-renders with those inputs unchanged skip the calculation; a changed query or calculator function recomputes. Observations in this exercise use ordinary mounted updates without Strict Mode, Suspense or hot reload. Memoization is a performance tool, not persistent storage; this small list is for practice, and real performance should be measured before optimizing. Keep mounted apps independent.",
     starter: `${STARTER_IMPORT}
 
 const orders = [
@@ -647,7 +648,9 @@ const orders = [
   { id: 6, name: 'Dive knife', price: 60 },
 ];
 
-const App = () => {
+export const summarizeOrders = query => ({ matching: [], total: 0 });
+
+const App = ({ calculate = summarizeOrders } = {}) => {
 
 
   return <main>
@@ -657,23 +660,28 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [query, setQuery] = useState('');
-const [nudges, setNudges] = useState(0);
-
-const { matching, total } = useMemo(() => {
-  const matching = orders.filter(order => /* the name contains the query, ignoring case */);
+    skeleton: `export function summarizeOrders(query) {
+  const needle = query.trim().toLowerCase();
+  const matching = orders.filter(order => /* name contains needle */);
   const total = matching.reduce((sum, order) => /* add the price */, 0);
   return { matching, total };
-}, [/* only what the calculation reads */]);`,
-    hints: ["useMemo takes a function that returns the filtered list with its total, and a dependency array holding the query alone."],
+}
+
+const App = ({ calculate = summarizeOrders } = {}) => {
+  const [query, setQuery] = useState('');
+  const [nudges, setNudges] = useState(0);
+  const result = useMemo(() => /* call calculate with query */, [/* both reactive inputs */]);
+  return <main>{/* controlled search, result list/total, Nudge and its count */}</main>;
+};`,
+    hints: ["Keep a pure named summarizer outside App. The memo callback calls calculate(query), and both values belong in its dependency list."],
     approach: [
-      "Keep the query and the nudge counter in two useState values, and bind the input to the query.",
-      "Wrap the filter and the reduce in useMemo with the query as its only dependency, returning both the matching orders and their total.",
-      "Render the list, the total and the counter from those values; clicking Nudge changes only its own state.",
+      "In summarizeOrders, trim/lowercase the query, filter the fixed orders and sum matching prices without changing them.",
+      "Keep query and nudges in state. useMemo(() => calculate(query), [query, calculate]) caches only the derived work.",
+      "Render matching names and total from that result; Nudge changes only its own state. Label the input Search orders.",
     ],
     verify: "tests",
     estimatedMinutes: 12,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { summarizeOrders } from './App';")}
 const button = (root, label) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === label);
 
 test('shows every order and the full total before typing', () => {
@@ -701,6 +709,7 @@ test('counts nudges without touching the total', () => {
   expect(container.textContent).toContain('Total: 40');
   expect(container.querySelectorAll('li')).toHaveLength(1);
 });
+test('uses a supplied calculator and skips nudge-only work',()=>{let calls=0;const calculate=query=>{calls++;return {matching:[{id:9,name:query||'Custom',price:7}],total:7};};const view=render(<App calculate={calculate}/>);expect(calls).toBe(1);fireEvent.click(button(view.container,'Nudge'));expect(calls).toBe(1);fireEvent.change(view.container.querySelector('input'),{target:{value:'Other'}});expect(calls).toBe(2);expect(view.container.querySelector('li').textContent).toBe('Other');});
 `,
   },
   {
@@ -711,12 +720,16 @@ test('counts nudges without touching the total', () => {
     tier: 2,
     focus: ["events", "useState", "map"],
     title: "Stable pick handler",
-    prompt: "Render a paragraph reading “Picked: none” and one button per flavour declared in the starter, each rendered by a `FlavourButton` child wrapped in `React.memo` that receives `label` and `onPick` props. Clicking a button passes its label to `onPick` and the paragraph shows it, so clicking Mint gives “Picked: Mint”. Create `onPick` with `useCallback` and an empty dependency array, so the memoised children receive the same function on every render.",
+    prompt: "Render `Picked: none` and one button for each starter flavour, in order. The starter supplies a memoized FlavourButton outside App, receiving label and onPick. App also accepts an optional `Button` component prop, defaulting to FlavourButton; render that component for each flavour with its label and one shared onPick callback. A supplied component follows the same label/onPick interface and may be memoized. Clicking calls onPick(label) and updates the paragraph, for example `Picked: Mint`. Use useCallback with an empty dependency array: the callback only uses the stable state updater. Its function identity stays the same during ordinary parent/selection re-renders of one mounted App, allowing memoized children with unchanged props to skip work. Give mapped children stable flavour keys, keep their type outside App, and keep separate mounts independent. This is a focused identity exercise; memoization should serve an observed performance need rather than being added to every callback.",
     starter: `${STARTER_IMPORT}
 
 const flavours = ['Vanilla', 'Chocolate', 'Mint'];
 
-const App = () => {
+const FlavourButton = React.memo(({ label, onPick }) => (
+  <button onClick={() => onPick(label)}>{label}</button>
+));
+
+const App = ({ Button = FlavourButton } = {}) => {
 
 
   return <main>
@@ -726,19 +739,20 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const FlavourButton = React.memo(({ label, onPick }) => (
-  <button onClick={() => onPick(label)}>{label}</button>
-));
-
-const [picked, setPicked] = useState('none');
+    skeleton: `const [picked, setPicked] = useState('none');
 const onPick = useCallback(label => {
-  /* store the label */
-}, []);`,
+  /* store the supplied label */
+}, []);
+
+return <main>
+  <p>Picked: {picked}</p>
+  {flavours.map(label => <Button key={label} label={label} onPick={onPick} />)}
+</main>;`,
     hints: ["A function created in the component body is new on every render, while useCallback with no dependencies hands back the same one each time."],
     approach: [
       "Keep the picked label in useState starting as none, and render the paragraph from it.",
       "Wrap the handler in useCallback with an empty dependency array; it only calls the setter with the label it receives.",
-      "Declare FlavourButton outside App, wrap it in React.memo, and map the flavours to it, passing the label and the shared handler.",
+      "Keep the supplied FlavourButton outside App. Map flavours to the Button prop with stable keys, labels and the shared handler.",
     ],
     verify: "tests",
     estimatedMinutes: 12,
@@ -759,6 +773,7 @@ test('shows the label of the clicked flavour', () => {
   expect(container.textContent).toContain('Picked: Vanilla');
   expect(container.textContent).not.toContain('Picked: Mint');
 });
+test('keeps the supplied child callback stable across a selection',()=>{let latest;const Probe=({label,onPick})=>{latest=onPick;return <button onClick={()=>onPick(label)}>{label}</button>;};const view=render(<App Button={Probe}/>);const first=latest;fireEvent.click(button(view.container,'Mint'));expect(view.container.textContent).toContain('Picked: Mint');expect(latest).toBe(first);});
 `,
   },
   {
@@ -769,7 +784,7 @@ test('shows the label of the clicked flavour', () => {
     tier: 2,
     focus: ["useReducer", "push", "pop"],
     title: "Undo stack",
-    prompt: "Render a Push button, an Undo button, a paragraph reading “Depth: <n>” and a UL listing the stack from bottom to top. Manage the stack with `useReducer`: a `push` action adds “Step <n>” where n is the new depth, and a `pop` action removes the last entry. Undo is disabled while the stack is empty, so two pushes and one undo leave only “Step 1” with “Depth: 1”.",
+    prompt: "Render Push and Undo buttons, a paragraph `Depth: <n>` and a UL listing the stack from bottom to top. Manage immutable state with useReducer: push appends `Step <n>`, where n is the new current depth, and pop removes only the last entry. Undo is disabled when empty and an empty Undo click does nothing. Number by depth, not total lifetime pushes: after two pushes, Undo and another push, the list is Step 1, Step 2 again. Support repeated mixed actions beyond three steps without mutating prior state. Derive depth/disabled status from the current stack, preserve order, and keep simultaneous/fresh mounts independent. Two pushes and one Undo leave Step 1 with `Depth: 1`.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -838,6 +853,7 @@ test('undo removes the last step only', () => {
   expect(container.querySelectorAll('li')).toHaveLength(0);
   expect(button(container, 'Undo').disabled).toBe(true);
 });
+test('a push after Undo uses the new depth, not a lifetime counter',()=>{const view=render(<App/>);fireEvent.click(button(view.container,'Push'));fireEvent.click(button(view.container,'Push'));fireEvent.click(button(view.container,'Undo'));fireEvent.click(button(view.container,'Push'));expect(steps(view.container)).toEqual(['Step 1','Step 2']);});
 `,
   },
   {
@@ -848,7 +864,7 @@ test('undo removes the last step only', () => {
     tier: 2,
     focus: ["useReducer", "shift", "spread"],
     title: "Ticket queue",
-    prompt: "Render a “Take a ticket” button, a “Call next” button, a paragraph reading “Next up: <first ticket or none>”, a paragraph reading “Waiting: <n>” and a UL of the waiting tickets in order. Keep the queue in `useReducer`: an `enqueue` action appends “Ticket <n>” with n counting up from 1 for the whole session, and a `dequeue` action removes the first ticket. Call next is disabled when nobody waits, so three takes and one call leave Ticket 2 and Ticket 3 with “Next up: Ticket 2”.",
+    prompt: "Render Take a ticket and Call next buttons, paragraphs `Next up: <first ticket or none>` and `Waiting: <n>`, and a UL of waiting tickets in FIFO order. Manage immutable queue state with useReducer. Enqueue appends `Ticket <n>`, counting issued tickets from 1 for the lifetime of this mounted App, independently of how many still wait. Dequeue removes only the first ticket and never resets the issued counter. Call next is disabled when empty and does nothing there. After issuing and calling tickets 1 through 3, the next issued ticket must be Ticket 4. Support repeated interleaved actions beyond three tickets without mutating prior state; both status paragraphs and disabled state always reflect the current queue. Separate mounted apps and fresh mounts have their own numbering starting at 1; this exercise has no persistence across unmounts.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -920,6 +936,7 @@ test('calling next removes the first ticket and keeps the numbering', () => {
   expect(container.textContent).toContain('Waiting: 0');
   expect(button(container, 'Call next').disabled).toBe(true);
 });
+test('a new ticket after an empty queue continues numbering',()=>{const view=render(<App/>);fireEvent.click(button(view.container,'Take a ticket'));fireEvent.click(button(view.container,'Call next'));fireEvent.click(button(view.container,'Take a ticket'));expect(tickets(view.container)).toEqual(['Ticket 2']);});
 `,
   },
   {
