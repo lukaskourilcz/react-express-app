@@ -947,12 +947,16 @@ test('a new ticket after an empty queue continues numbering',()=>{const view=ren
     tier: 3,
     focus: ["custom-hook", "pagination", "slice"],
     title: "usePagination hook",
-    prompt: "Write `usePagination(items, pageSize)`, a hook that keeps the current page in state and returns that page's items, the page number, the page count and functions that move forward and back. Use it in App with the `cities` declared in the starter and a page size of 3: render the page items as a UL, a paragraph reading “Page 1 of 3”, and Previous and Next buttons that are disabled on the first and the last page. Cut each page out of the array with `slice`.",
+    prompt: "Export `usePagination(items, pageSize)`, a stateful hook returning `{pageItems, page, pageCount, next, previous}`. items is a dense read-only array of up to 1000 arbitrary values; preserve each selected value/reference and do not mutate input. pageSize is a positive integer from 1 through 100. Start on page 1. pageCount is at least 1, even for empty input; an empty page contains no items. Derive each page using slice or an equivalent immutable operation. next/previous move one page and clamp at both ends, even if callers do not disable their own controls. Repeated calls in one event batch apply each step. When items or pageSize change, retain the page number when valid and otherwise clamp the stored page to the nearest valid page; later growth must not resurrect an out-of-range page. Keep hook instances independent. App receives optional items and pageSize, defaulting to the starter cities and 3, and uses the hook. App items are unique plain strings up to 2000 UTF16 units, possibly frozen or empty. Render one UL of exact literal page strings, `Page <page> of <pageCount>` and Previous/Next buttons disabled at the current ends. Defaults show Athens, Bergen, Cork and `Page 1 of 3`; empty input shows `Page 1 of 1` with both controls disabled.",
     starter: `${STARTER_IMPORT}
 
 const cities = ['Athens', 'Bergen', 'Cork', 'Dresden', 'Evora', 'Faro', 'Ghent'];
 
-const App = () => {
+export const usePagination = (items, pageSize) => ({
+  pageItems: [], page: 1, pageCount: 1, next: () => {}, previous: () => {}
+});
+
+const App = ({ items = cities, pageSize = 3 } = {}) => {
 
 
   return <main>
@@ -962,24 +966,26 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const usePagination = (items, pageSize) => {
-  const [index, setIndex] = useState(0);
-  const pageCount = Math.ceil(items.length / pageSize);
+    skeleton: `export const usePagination = (items, pageSize) => {
+  const [requested, setIndex] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const index = Math.min(requested, pageCount - 1);
+  if (requested !== index) setIndex(index);
   const pageItems = items.slice(/* start */, /* end */);
-  const next = () => setIndex(current => /* one further, never past the last page */);
-  const previous = () => setIndex(current => /* one back, never below zero */);
+  const next = () => setIndex(current => /* one further, clamped */);
+  const previous = () => setIndex(current => /* one back, clamped */);
   return { pageItems, page: index + 1, pageCount, next, previous };
 };`,
     hints: ["Multiply the zero-based page index by the page size to find where a page starts, then slice one page length from there."],
     approach: [
       "Declare usePagination outside App; inside it, hold the zero-based page index in useState.",
       "Derive the page count from the item count and the page size, and the visible items from a slice that starts at the index times the page size.",
-      "Return the visible items, the one-based page number, the page count, and next and previous functions that stay within the bounds.",
-      "Call the hook in App with the cities and 3, then render the list, the status line and the two buttons with their disabled flags.",
+      "Return visible items and numeric page/pageCount with bounded next/previous functional updates. Guard a stored-page clamp when changed inputs reduce the range, without an unconditional render update.",
+      "Call the hook with App items/pageSize, which default to cities and 3. Render exact items, the page status and current disabled flags.",
     ],
     verify: "tests",
     estimatedMinutes: 15,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { usePagination } from './App';")}
 const button = (root, label) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === label);
 const shown = root => [...root.querySelectorAll('li')].map(li => li.textContent.trim());
 
@@ -1009,6 +1015,7 @@ test('the last page holds the remainder and disables Next', () => {
   expect(shown(container)).toEqual(['Dresden', 'Evora', 'Faro']);
   expect(button(container, 'Previous').disabled).toBe(false);
 });
+test('handles empty items and a different page size',()=>{const view=render(<App items={[]} pageSize={2}/>);expect(view.container.textContent).toContain('Page 1 of 1');expect(button(view.container,'Previous').disabled).toBe(true);expect(button(view.container,'Next').disabled).toBe(true);view.rerender(<App items={['A','B','C']} pageSize={2}/>);expect(shown(view.container)).toEqual(['A','B']);fireEvent.click(button(view.container,'Next'));expect(shown(view.container)).toEqual(['C']);});
 `,
   },
   {
@@ -1019,7 +1026,7 @@ test('the last page holds the remainder and disables Next', () => {
     tier: 3,
     focus: ["lists-keys", "splice", "useState"],
     title: "Reorder with stable keys",
-    prompt: "Render `initialSteps` as an OL. Each LI shows the label plus Up and Down buttons; disable Up on the first item and Down on the last. For a move, copy the array, remove the item with `splice`, insert it one position over with another `splice`, and store the copy. Key each LI by the step’s `id`. Moving Build down should produce Plan, Test, Build, Ship while preserving the same LI element.",
+    prompt: "Render initialSteps as an OL. Each LI shows the exact label in a span plus Up and Down buttons. Disable Up on the current first row and Down on the current last row; the flags follow positions after every move. A move swaps one item with its neighbour, leaves every other relative position unchanged and does nothing past an edge. Keep stable step ids as keys so the same LI nodes follow their steps, including repeated mixed moves beyond two actions. Never mutate prior state or initialSteps. Copying then using splice, non-mutating toSpliced or an equivalent immutable operation is fine. Keep simultaneous and fresh mounts independent. Initially Plan, Build, Test, Ship; moving Build down gives Plan, Test, Build, Ship while preserving its LI node.",
     starter: `${STARTER_IMPORT}
 
 const initialSteps = [
@@ -1100,6 +1107,7 @@ test('leaves the seed array untouched for the next mount', () => {
   const second = render(<App />);
   expect(labels(second.container)).toEqual(['Plan', 'Build', 'Test', 'Ship']);
 });
+test('disabled Up follows the new first item',()=>{const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Down'));const rows=view.container.querySelectorAll('li');expect(labels(view.container)).toEqual(['Build','Plan','Test','Ship']);expect(control(rows[0],'Up').disabled).toBe(true);expect(control(rows[1],'Up').disabled).toBe(false);});
 `,
   },
 ];

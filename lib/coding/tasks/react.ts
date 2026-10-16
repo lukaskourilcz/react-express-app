@@ -16,7 +16,7 @@ export const REACT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["useState", "forms"],
     title: "Color selector",
-    prompt: "Render a select over the colours declared in the starter — Red, Blue and Green — plus a line reading “You have selected: <colour>”. It starts on the first one, and choosing another updates the line immediately.",
+    prompt: "Render a single-selection dropdown with accessible name `Color`, containing Red, Blue and Green options in that order with those exact values. Render a line `You have selected: <color>`. Both the native select value and the line start on Red. Every choice, including Green, returning to Red and repeated selections, updates both immediately and keeps them consistent. Ordinary parent re-renders preserve the current selection. Independent and fresh mounts each start on Red. Use the starter colors array, keep the select controlled and label it visibly or with an equivalent accessible name.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const colors = ['Red', 'Blue', 'Green'];
@@ -33,13 +33,13 @@ export default App;
 `,
     skeleton: `const [color, setColor] = useState(/* the first colour */);
 
-<select value={color} onChange={event => setColor(/* the chosen option */)}>
+<select aria-label="Color" value={color} onChange={event => setColor(/* the chosen option */)}>
   {colors.map(one => (
     <option key={one}>{one}</option>
   ))}
 </select>
 <p>You have selected: {/* the colour in state */}</p>`,
-    hints: ["Keep the selected color in state. Bind value and onChange to the select."],
+    hints: ["Keep the selected color in state. Bind value/onChange to the select and give it the accessible name Color."],
     approach: [
       "Keep the chosen colour in a state value that starts as Red.",
       "Make the select controlled: its value comes from state, and its change handler writes the new selection back to state.",
@@ -62,6 +62,7 @@ test('shows the colour the user picks', () => {
   fireEvent.change(container.querySelector('select'), { target: { value: 'Blue' } });
   expect(container.textContent).toContain('You have selected: Blue');
 });
+test('selects Green and returns to Red in both the native control and status',()=>{const {container}=render(<App/>);const select=container.querySelector('select');for(const color of ['Green','Red']){fireEvent.change(select,{target:{value:color}});expect(select.value).toBe(color);expect(container.textContent).toContain('You have selected: '+color);}});
 `,
   },
   {
@@ -240,15 +241,15 @@ test('mirrors what is typed', () => {
     tier: 1,
     focus: ["lists-keys", "map"],
     title: "Data list",
-    prompt: "Render the people already declared in the starter as a UL with one LI each, showing the name and the age. Give every LI a key that identifies the person rather than its position in the array.",
+    prompt: "App receives people, defaulting to the starter initialPeople. Render one UL with one LI per person in input order, reading exactly the name, one space and the age, for example `Daniel 25` and `John 24`. people is a dense read-only array of at most 100 ordinary records with unique positive integer ids, plain string names up to 2000 UTF16 units and integer ages from 0 through 150. Names may repeat or be empty; preserve exact whitespace, Unicode and markup-like text literally rather than parsing HTML. Arrays/records may be frozen; do not mutate them. Key rows by id so surviving LI nodes follow each person through reorder, renaming and age changes. New props update all values; an empty array keeps an empty UL. Separate mounted lists are independent. Render directly from props without extra state or effects.",
     starter: `import React, { useEffect, useState } from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => {
+const App = ({ people = initialPeople } = {}) => {
 
 
   return <main>
@@ -263,9 +264,9 @@ export default App;
     <li key={/* the person's stable id */}>{/* name and age */}</li>
   ))}
 </ul>`,
-    hints: ["Map over people. Return one LI for each person and use its id as the key."],
+    hints: ["Map current people to list items, showing name plus one space plus age. Use the stable id as the key."],
     approach: [
-      "Start from the supplied people array; no state is needed because nothing on the screen ever changes.",
+      "Start from the supplied people array; render the current people prop directly without state or an effect.",
       "Map over that array inside the list element and return one list item per person.",
       "Give each list item a key taken from the stable id field, never from the array index.",
     ],
@@ -287,6 +288,7 @@ test('renders the people inside a UL', () => {
   const { container } = render(<App />);
   expect(container.querySelector('ul')).toBeTruthy();
 });
+test('shows each age alongside the name',()=>{const {container}=render(<App/>);expect([...container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(['Daniel 25','John 24']);});
 `,
   },
   {
@@ -298,7 +300,7 @@ test('renders the people inside a UL', () => {
     tier: 1,
     focus: ["conditional", "useState"],
     title: "Show and hide",
-    prompt: "Render a button and a paragraph. The paragraph must not be in the DOM at first; clicking adds it, clicking again removes it. Render it conditionally rather than hiding it with CSS.",
+    prompt: "Render one native button with a nonempty accessible name of your choice and a nonempty paragraph of your choice. The paragraph must be absent from the DOM at first. Every click alternates between adding one paragraph and removing it, for as many clicks as the user makes. Render it conditionally rather than keeping a CSS-hidden node. The button text may stay fixed or change with visibility. Ordinary parent re-renders preserve the current visible/hidden state. Simultaneously mounted components and fresh mounts start independently with no paragraph. No exact button or paragraph wording is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -343,6 +345,7 @@ test('hides the paragraph until the button is pressed', () => {
   fireEvent.click(container.querySelector('button'));
   expect(container.querySelector('p')).toBeNull();
 });
+test('still toggles after the first two clicks',()=>{const view=render(<App/>);for(let i=0;i<5;i++)fireEvent.click(view.container.querySelector('button'));expect(view.container.querySelectorAll('p')).toHaveLength(1);});
 `,
   },
   {

@@ -281,7 +281,7 @@ const App = () => {
   return (
     <main>
       <h2>Color selector</h2>
-      <select value={color} onChange={event => setColor(event.target.value)}>
+      <select aria-label="Color" value={color} onChange={event => setColor(event.target.value)}>
         {colors.map(one => (
           <option key={one}>{one}</option>
         ))}
@@ -295,12 +295,12 @@ export default App;
 `,
   'react-data-list': `import React from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => (
+const App = ({ people = initialPeople } = {}) => (
   <main>
     <h2>Data list</h2>
     <ul>

@@ -68,7 +68,7 @@ export const REACT_SOLUTIONS: Record<string, CodingSolution> = {
 
 const App = () => {
   const [color, setColor] = useState(colors[0]);
-  return <><select value={color} onChange={event => setColor(event.target.value)}>{colors.map(one => <option key={one}>{one}</option>)}</select><p>You have selected: {color}</p></>;
+  return <><select aria-label="Color" value={color} onChange={event => setColor(event.target.value)}>{colors.map(one => <option key={one}>{one}</option>)}</select><p>You have selected: {color}</p></>;
 };`,
     junior: `const colors = ['Red', 'Blue', 'Green'];
 
@@ -86,7 +86,7 @@ const App = () => {
 
   return (
     <main>
-      <select value={selectedColor} onChange={handleChange}>
+      <select aria-label="Color" value={selectedColor} onChange={handleChange}>
         {options}
       </select>
       <p>You have selected: {selectedColor}</p>
@@ -96,7 +96,7 @@ const App = () => {
     senior: `const colors = ['Red', 'Blue', 'Green'];
 
 const ColorSelect = ({ value, options, onChange }) => (
-  <select value={value} onChange={event => onChange(event.target.value)}>
+  <select aria-label="Color" value={value} onChange={event => onChange(event.target.value)}>
     {options.map(option => <option key={option} value={option}>{option}</option>)}
   </select>
 );
@@ -110,6 +110,7 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: "\ntest('has an accessible dropdown with the three exact options and native initial value',()=>{\n const view=render(<App/>),select=screen.getByRole('combobox',{name:'Color'});expect(select).toBe(view.container.querySelector('select'));expect(select.multiple).toBe(false);expect([...select.options].map(option=>[option.textContent,option.value])).toEqual([['Red','Red'],['Blue','Blue'],['Green','Green']]);expect(select.value).toBe('Red');expect(view.container.textContent).toContain('You have selected: Red');\n});\ntest('keeps actual selection and status aligned for every repeated choice',()=>{\n const view=render(<App/>),select=view.container.querySelector('select');\n for(let step=0;step<24;step++){const color=['Green','Red','Blue','Green'][step%4];fireEvent.change(select,{target:{value:color}});expect(select.value).toBe(color);expect(view.container.textContent).toContain('You have selected: '+color);view.rerender(<App/>);expect(select.value).toBe(color);expect(view.container.textContent).toContain('You have selected: '+color);}\n});\ntest('keeps selections independent across simultaneous and fresh mounts',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.change(first.container.querySelector('select'),{target:{value:'Green'}});expect(second.container.querySelector('select').value).toBe('Red');fireEvent.change(second.container.querySelector('select'),{target:{value:'Blue'}});expect(first.container.querySelector('select').value).toBe('Green');expect(first.container.textContent).toContain('You have selected: Green');expect(second.container.textContent).toContain('You have selected: Blue');first.unmount();const third=render(<App/>);expect(third.container.querySelector('select').value).toBe('Red');\n});\n",
   },
   "react-counter": {
     solution: `const App = () => {
@@ -265,18 +266,18 @@ test('the input is controlled from the first render: its value comes from state'
 });`,
   },
   "react-data-list": {
-    solution: `const people = [
+    solution: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => <ul>{people.map(person => <li key={person.id}><span>{person.name}</span>{' '}<span>{person.age}</span></li>)}</ul>;`,
-    junior: `const people = [
+const App = ({ people = initialPeople } = {}) => <ul>{people.map(person => <li key={person.id}><span>{person.name}</span>{' '}<span>{person.age}</span></li>)}</ul>;`,
+    junior: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => {
+const App = ({ people = initialPeople } = {}) => {
   const items = [];
   for (const person of people) {
     items.push(
@@ -292,7 +293,7 @@ const App = () => {
     </main>
   );
 };`,
-    senior: `const people = [
+    senior: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
@@ -303,13 +304,14 @@ const PersonItem = ({ name, age }) => (
   </li>
 );
 
-const App = () => (
+const App = ({ people = initialPeople } = {}) => (
   <main>
     <ul>
       {people.map(({ id, ...person }) => <PersonItem key={id} {...person} />)}
     </ul>
   </main>
 );`,
+    hiddenSuite: "\ntest('renders exact names and ages from read-only current data,including zero and empty',()=>{\n const people=Object.freeze([Object.freeze({id:99,name:'  <b>\u017dofie \ud83e\udd88</b>  ',age:0}),Object.freeze({id:1,name:'Same',age:150}),Object.freeze({id:2,name:'Same',age:7})]);\n const view=render(<App people={people}/>);expect(view.container.querySelectorAll('ul')).toHaveLength(1);expect([...view.container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(people.map(person=>person.name+' '+person.age));\n view.rerender(<App people={Object.freeze([{id:7,name:'',age:0}])}/>);expect(view.container.querySelector('li').textContent).toBe(' 0');view.rerender(<App people={Object.freeze([])}/>);expect(view.container.querySelector('ul')).toBeTruthy();expect(view.container.querySelectorAll('li')).toHaveLength(0);expect(people[0].age).toBe(0);\n});\ntest('retains id-bound row nodes when order,name or age changes',()=>{\n const people=[{id:1,name:'One',age:10},{id:2,name:'Two',age:20},{id:3,name:'Three',age:30}],view=render(<App people={people}/>),nodes=[...view.container.querySelectorAll('li')];\n view.rerender(<App people={[{...people[2],name:'Changed',age:31},people[0],people[1]]}/>);let rows=[...view.container.querySelectorAll('li')];expect(rows[0]).toBe(nodes[2]);expect(rows[1]).toBe(nodes[0]);expect(rows[2]).toBe(nodes[1]);expect(rows[0].textContent).toBe('Changed 31');\n view.rerender(<App people={[people[1],{id:9,name:'New',age:0},people[2]]}/>);rows=[...view.container.querySelectorAll('li')];expect(rows[0]).toBe(nodes[1]);expect(rows[2]).toBe(nodes[2]);\n});\ntest('handles a hundred frozen people and independent mounts',()=>{\n const people=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:100-i,name:i===0?'x'.repeat(2000):'Person '+i,age:i})));const first=render(<App people={people}/>),second=render(<App people={[]}/>);\n expect([...first.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(people.map(person=>person.name+' '+person.age));first.rerender(<App people={[]}/>);expect(second.container.querySelectorAll('li')).toHaveLength(0);\n});\n",
   },
   "react-show-and-hide": {
     solution: `const App = () => {
@@ -347,6 +349,7 @@ const App = () => (
     </main>
   );
 };`,
+    hiddenSuite: "\ntest('conditionally adds/removes a nonempty paragraph through repeated toggles',()=>{\n const view=render(<App/>);const button=view.container.querySelector('button');expect(button).toBeTruthy();expect(button.textContent.trim().length>0).toBe(true);expect(view.container.querySelector('p')).toBeNull();\n for(let i=0;i<24;i++){fireEvent.click(button);const paragraphs=view.container.querySelectorAll('p');expect(paragraphs).toHaveLength(i%2===0?1:0);if(i%2===0)expect(paragraphs[0].textContent.trim().length>0).toBe(true);}\n});\ntest('keeps visibility through parent rerenders without mounting a hidden paragraph',()=>{\n const view=render(<App/>);view.rerender(<App/>);expect(view.container.querySelector('p')).toBeNull();fireEvent.click(view.container.querySelector('button'));view.rerender(<App/>);expect(view.container.querySelectorAll('p')).toHaveLength(1);fireEvent.click(view.container.querySelector('button'));view.rerender(<App/>);expect(view.container.querySelector('p')).toBeNull();\n});\ntest('owns visibility independently for concurrent and fresh mounts',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.click(first.container.querySelector('button'));expect(first.container.querySelector('p')).toBeTruthy();expect(second.container.querySelector('p')).toBeNull();fireEvent.click(second.container.querySelector('button'));expect(first.container.querySelector('p')).toBeTruthy();expect(second.container.querySelector('p')).toBeTruthy();fireEvent.click(first.container.querySelector('button'));expect(second.container.querySelector('p')).toBeTruthy();first.unmount();const third=render(<App/>);expect(third.container.querySelector('p')).toBeNull();\n});\n",
   },
   "react-add-a-todo": {
     solution: `const App = () => {
