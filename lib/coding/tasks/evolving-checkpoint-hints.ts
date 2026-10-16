@@ -45,22 +45,8 @@ const LADDERS: Record<string, CheckpointLadder> = {
       'Trim that one field where the object is built, and log the result once more to confirm.',
     ],
   },
-  'js-evolving-debug-2-start': {
-    hints: ['One variable is doing two jobs. Trace ["latte,1,4", "tea,2,1"] by hand: which total does tea start from?'],
-    approach: [
-      'Trace ["latte,1,4", "tea,2,1"] on paper: after each line, write down order, running and totals.',
-      'Log the same three values inside the loop and compare with your trace. tea should get 2, and `running` hands it latte\'s 4 as well.',
-      'Keep one total per item: read what the item has so far (or 0), add this order, write it back.',
-    ],
-  },
-  'js-evolving-debug-3-start': {
-    hints: ['Log `total * percent` alone for applyDiscount(100, 50, 10) and compare it with the 10 you expect to take off: 10 means ten percent, not ten times.'],
-    approach: [
-      'Call applyDiscount(100, 50, 10) in the scratch pad and log the result. Ten percent off 100 should leave 90.',
-      'Log the discount amount alone. 10 means ten percent, so the fraction is percent / 100.',
-      'Take total * percent / 100 off the total, and leave the threshold comparison as it is: that is the next step.',
-    ],
-  },
+  'js-evolving-debug-2-start': {"hints": ["Trace the two distinct items, then assign each own order total into a safe record. Keep exact item names, including prototype-like/Unicode names; repetition is the next step."], "approach": ["Parse each valid line and calculate that order product.", "Assign a safe own data entry for its distinct exact item name without reading inherited values.", "Return a fresh mutable totals record; repeated-item addition comes next."]},
+  'js-evolving-debug-3-start': {"hints": ["Log total*(percent/100), then subtract it from total. At this checkpoint keep strict > and no rounding; the next milestone changes those."], "approach": ["Log the removal amount separately: percent/100 is the fraction to remove.", "When total > threshold, subtract total*(percent/100) with ordinary Number arithmetic.", "Return that unrounded value; leave at/below-threshold inputs unchanged until the next milestone."]},
   'js-evolving-debug-4-start': {
     hints: ['Log what `trace("x", 5)` gives back: undefined. A pass-through logs the label and the value, then returns the value unchanged.'],
     approach: [

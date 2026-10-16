@@ -87,15 +87,15 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
     pitfalls: ['output-shape', 'output-shape', 'boundary', 'missing-return', 'runtime'],
     prompts: [
       text(
-        'Verify the setup, then write down what you assume. Press Run before you touch anything: the scratch pad already logs one parsed order, so read the Console and say what type `quantity` is. Then make `parseOrder(line)` return `{item, quantity, unitPrice}` with every field trimmed and the two numbers as numbers — `"latte,3,4.50"` gives `{item: "latte", quantity: 3, unitPrice: 4.5}`. Log `parts` after the split before you fix it, and log the result after.',
+        "Verify the setup, then write down what you assume. Press Run before you touch anything: the scratch pad already logs one parsed order, so read the Console and say what type `quantity` is. Then make `parseOrder(line)` return `{item, quantity, unitPrice}` with every field trimmed and the two numbers as numbers \u2014 `\"latte,3,4.50\"` gives `{item: \"latte\", quantity: 3, unitPrice: 4.5}`. Log `parts` after the split before you fix it, and log the result after. line remains a primitive string with exactly two ASCII commas and at most 20000 UTF-16 units. Trim the item with ECMAScript whitespace rules, preserving its interior/case/Unicode exactly, including empty or prototype-like names. Both numeric fields are nonblank after trimming and convert to finite Numbers using whole-field Number() semantics, including signs, decimal/exponent and binary/hex forms. Invalid lines are later work. This numeric conversion replaces the earlier checkpoint's raw-string numeric fields. Return a fresh mutable ordinary {item,quantity,unitPrice} record in that field order. Equivalent zero signs are accepted. Target: O(n) time and O(n) extra space for parseOrder, n=1+raw line length.",
         'Ověř si prostředí a pak si zapiš, co předpokládáš. Než na cokoli sáhneš, stiskni Spustit: zápisník už loguje jednu naparsovanou objednávku, tak si přečti Konzoli a řekni, jakého typu je `quantity`. Potom uprav `parseOrder(line)` tak, aby vracela `{item, quantity, unitPrice}` s oříznutými poli a oběma čísly jako čísly — `"latte,3,4.50"` dá `{item: "latte", quantity: 3, unitPrice: 4.5}`. Než to opravíš, zaloguj `parts` hned po rozdělení, a po opravě zaloguj výsledek.',
       ),
       text(
-        'Trace it by hand before you trust it. `summarize(lines)` should map each item to the sum of its order totals: `["latte,1,4", "tea,2,1", "latte,1,4"]` gives `{latte: 8, tea: 2}`. On paper, walk that input through the loop and write down `order`, `running` and `totals` after every line. Then log the same three values inside the loop and compare. Ask the question out loud: is `running` tracked per item, or across all items? `orderTotal` is fine — prove it to yourself with one log before you move on.',
+        "Trace it by hand before you trust it. `summarize(lines)` should map each item to the sum of its order totals: `[\"latte,1,4\", \"tea,2,1\", \"latte,1,4\"]` gives `{latte: 8, tea: 2}`. On paper, walk that input through the loop and write down `order`, `running` and `totals` after every line. Then log the same three values inside the loop and compare. Ask the question out loud: is `running` tracked per item, or across all items? `orderTotal` is fine \u2014 prove it to yourself with one log before you move on. Repeated items now add in input order; begin a new item at 0 and add every order product, keeping groups whose final sum is 0. Keep the earlier valid parsing/Number rules. lines is a dense readonly array of at most 2000 strings with at most 20000 total UTF-16 units, possibly frozen. orderTotal multiplies quantity*unitPrice with ordinary Number arithmetic; products and running item totals are finite by input guarantee. Do not round totals. Match trimmed item names exactly, without Unicode normalization. The result is a fresh mutable record, ordinary or null-prototype, whose own enumerable data entries include every item even when its total is 0. Built-in/prototype names such as __proto__, constructor and toString are ordinary item keys; inherited values never supply a prior total. Own-key order follows JavaScript numeric-index/creation order. Do not mutate inputs or share output state across calls. Let n=1+line count+total UTF-16 units. Target: O(n) time and O(n) extra space for summarize.",
         'Než kódu uvěříš, projdi ho ručně. `summarize(lines)` má každé položce přiřadit součet jejích objednávek: `["latte,1,4", "tea,2,1", "latte,1,4"]` dá `{latte: 8, tea: 2}`. Na papíře proveď tenhle vstup cyklem a po každém řádku si zapiš `order`, `running` a `totals`. Pak tytéž tři hodnoty zaloguj uvnitř cyklu a porovnej. Polož si tu otázku nahlas: sleduje se `running` pro každou položku zvlášť, nebo napříč všemi? `orderTotal` je v pořádku — ověř si to jedním logem, než půjdeš dál.',
       ),
       text(
-        'Validate the logic at its edges. `applyDiscount(total, threshold, percent)` should take `percent` off (a whole number: `10` means ten percent) when `total` is at or above `threshold`, rounded to two decimals, and return `total` unchanged below it: `applyDiscount(50, 50, 10)` is `45`, `applyDiscount(49.99, 50, 10)` is `49.99`. Two things are wrong. Log the inputs and the result for a total exactly at the threshold, then for one a cent below it, then log `total * percent` on its own.',
+        "Validate the logic at its edges. `applyDiscount(total, threshold, percent)` should take `percent` off (a whole number: `10` means ten percent) when `total` is at or above `threshold`, rounded to two decimals, and return `total` unchanged below it: `applyDiscount(50, 50, 10)` is `45`, `applyDiscount(49.99, 50, 10)` is `49.99`. Two things are wrong. Log the inputs and the result for a total exactly at the threshold, then for one a cent below it, then log `total * percent` on its own. total and threshold are finite Numbers from 0 through 1e9 (fractional values allowed); percent is an integer from 0 through 100. Use ordinary Number operations in this order: removed=total*(percent/100), discounted=total-removed. Equivalent zero signs are accepted. Target: O(1) time and O(1) extra space per applyDiscount; earlier helpers retain their own input-size targets. When total >= threshold return Math.round(discounted*100)/100; when total < threshold return the original total without rounding, even if it has more than two decimals. Keep the stated subtraction order: mathematically equivalent multiplication can round differently at binary half-cent boundaries.",
         'Ověř logiku na okrajích. `applyDiscount(total, threshold, percent)` má odečíst `percent` (celé číslo: `10` znamená deset procent), když je `total` na prahu `threshold` nebo nad ním, zaokrouhlit na dvě desetinná místa, a pod prahem vrátit `total` beze změny: `applyDiscount(50, 50, 10)` je `45`, `applyDiscount(49.99, 50, 10)` je `49.99`. Špatně jsou dvě věci. Zaloguj vstupy a výsledek pro částku přesně na prahu, pak pro částku o cent nižší, a nakonec zaloguj samotné `total * percent`.',
       ),
       text(
@@ -108,9 +108,9 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
       ),
     ],
     hints: [
-      text('Before you fix anything, log `parts` right after the split and read the Console. The quotes around the numbers are the bug.', 'Než cokoli opravíš, zaloguj `parts` hned po rozdělení a přečti si Konzoli. Ta chyba jsou uvozovky kolem čísel.'),
-      text('One variable is doing two jobs. Ask out loud: is `running` tracked per item, or across all items?', 'Jedna proměnná dělá dvě práce. Zeptej se nahlas: sleduje se `running` pro každou položku, nebo napříč všemi?'),
-      text('Log the inputs and the result for a total exactly at the threshold, then for one a cent below it. Then log `total * percent` alone.', 'Zaloguj vstupy a výsledek pro částku přesně na prahu, pak pro částku o cent nižší. Potom zaloguj samotné `total * percent`.'),
+      text("Log the split fields and their types. Convert each complete numeric field with Number(), preserving exact trimmed item names and fresh records.", 'Než cokoli opravíš, zaloguj `parts` hned po rozdělení a přečti si Konzoli. Ta chyba jsou uvozovky kolem čísel.'),
+      text("Trace per-item totals in input order. Store safe own entries even for __proto__/constructor, and keep every item including zero totals.", 'Jedna proměnná dělá dvě práce. Zeptej se nahlas: sleduje se `running` pro každou položku, nebo napříč všemi?'),
+      text("Log both sides of the threshold. Subtract total*(percent/100) before rounding that branch; leave the below-threshold total unchanged.", 'Zaloguj vstupy a výsledek pro částku přesně na prahu, pak pro částku o cent nižší. Potom zaloguj samotné `total * percent`.'),
       text('A pass-through helper logs and then returns. Once trace hands the value back, build report one piece at a time with a trace() between the pieces.', 'Průchozí pomocník zaloguje a pak vrátí. Jakmile trace hodnotu vrací, stav report po kouscích a mezi kousky dej trace().'),
       text('When a bad line throws, read the error, log the line that caused it, and add one check for that case. Check for empty first, then the field count, then the numbers.', 'Když špatný řádek vyhodí chybu, přečti si ji, zaloguj řádek, který ji způsobil, a přidej jednu kontrolu pro ten případ. Nejdřív prázdný řádek, pak počet polí, pak čísla.'),
     ],
@@ -118,17 +118,17 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
       [
         text('Run it as it is. The scratch pad already logs one order; read the Console before you read the code.', 'Spusť to tak, jak to je. Zápisník už loguje jednu objednávku; přečti si Konzoli dřív než kód.'),
         text('Log `parts` after the split. Every field is text, and two of them are meant to be numbers.', 'Zaloguj `parts` po rozdělení. Každé pole je text, a dvě z nich mají být čísla.'),
-        text('Trim each field, then convert the two numbers with Number(). Log the result once more to confirm.', 'Každé pole ořízni a obě čísla převeď přes Number(). Pro jistotu výsledek ještě jednou zaloguj.'),
+        text("Trim the item and convert both complete numeric fields with Number(), including exponent/prefixed forms. Log the record and types once more.", 'Každé pole ořízni a obě čísla převeď přes Number(). Pro jistotu výsledek ještě jednou zaloguj.'),
       ],
       [
         text('Trace ["latte,1,4", "tea,2,1", "latte,1,4"] on paper: after each line, write down order, running and totals.', 'Projdi ["latte,1,4", "tea,2,1", "latte,1,4"] na papíře: po každém řádku si zapiš order, running a totals.'),
         text('Log the same three values inside the loop and compare with your trace. Where they differ is where the bug is.', 'Tytéž tři hodnoty zaloguj uvnitř cyklu a porovnej se svým zápisem. Kde se liší, tam je chyba.'),
-        text('Keep one total per item: read what the item has so far (or 0), add this order, write it back.', 'Drž jeden součet na položku: přečti, co položka zatím má (nebo 0), přičti tuhle objednávku a zapiš zpět.'),
+        text("Use safe own data entries for every exact item name. Start a new item at 0, add each product in input order and retain zero totals.", 'Drž jeden součet na položku: přečti, co položka zatím má (nebo 0), přičti tuhle objednávku a zapiš zpět.'),
       ],
       [
         text('Test the boundary first: what should a total exactly at the threshold get? Log what it gets.', 'Nejdřív otestuj hranici: co má dostat částka přesně na prahu? Zaloguj, co dostane.'),
         text('10 means ten percent, so the fraction is percent / 100. Log the discount amount alone and check it against arithmetic you did in your head.', '10 znamená deset procent, takže zlomek je percent / 100. Zaloguj samotnou slevu a porovnej ji s tím, co spočítáš z hlavy.'),
-        text('Round the discounted total with Math.round(x * 100) / 100, and leave totals below the threshold untouched.', 'Sníženou částku zaokrouhli přes Math.round(x * 100) / 100 a částky pod prahem nech být.'),
+        text("Compute removed=total*(percent/100), then discounted=total-removed. Round only that discounted branch with Math.round(discounted*100)/100.", 'Sníženou částku zaokrouhli přes Math.round(x * 100) / 100 a částky pod prahem nech být.'),
       ],
       [
         text('Fix trace first: log the label and the value, then return the value. Prove it with trace("x", 5) in the scratch pad.', 'Nejdřív oprav trace: zaloguj popisek a hodnotu, pak hodnotu vrať. Ověř to v zápisníku přes trace("x", 5).'),
@@ -143,6 +143,7 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
     ],
     tests: [
       [
+        check("parseOrder(\"a,0x10,0b10\")", {"item": "a", "quantity": 16, "unitPrice": 2}),
         check('parseOrder("latte,3,4.50")', { item: 'latte', quantity: 3, unitPrice: 4.5 }),
         check('typeof parseOrder("tea,2,1").quantity', 'number', ['quantity is a number, not the text "2"', 'quantity je číslo, ne text "2"']),
         check('parseOrder(" tea , 2 , 1.25 ")', { item: 'tea', quantity: 2, unitPrice: 1.25 }, ['spaces around every field are trimmed', 'mezery kolem každého pole jsou oříznuté']),
@@ -150,6 +151,7 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
         check('parseOrder("cake,0,2.5").quantity', 0, ['zero is a quantity', 'nula je množství'], true),
       ],
       [
+        check("(()=>{const out=summarize(['zero,0,2']);return Object.hasOwn(out,'zero')&&out.zero===0;})()", true),
         check('summarize(["latte,1,4","tea,2,1","latte,1,4"])', { latte: 8, tea: 2 }, ['each item keeps its own total', 'každá položka má vlastní součet']),
         check('summarize(["a,1,1","b,1,1","a,1,1","b,1,1"])', { a: 2, b: 2 }),
         check('summarize(["tea,2,1.5"])', { tea: 3 }),
@@ -157,6 +159,7 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
         check('summarize([])', {}, ['no lines, no totals', 'žádné řádky, žádné součty'], true),
       ],
       [
+        check("applyDiscount(19.999,20,50)", 19.999),
         check('applyDiscount(50, 50, 10)', 45, ['exactly at the threshold counts', 'přesně na prahu se počítá'], true),
         check('applyDiscount(49.99, 50, 10)', 49.99, ['a cent below it does not', 'o cent níž už ne'], true),
         check('applyDiscount(100, 50, 10)', 90),
@@ -210,10 +213,11 @@ export const DEBUG_CHECKPOINTS: Record<string, DebugCheckpoint[]> = {
     },
     {
       prompt: text(
-        'Trace it by hand. For `["latte,1,4", "tea,2,1"]`, write down `order`, `running` and `totals` after each line, then log them and compare. Make `summarize` right for lines whose items are all different.',
+        "Trace it by hand. For `[\"latte,1,4\", \"tea,2,1\"]`, write down `order`, `running` and `totals` after each line, then log them and compare. Make `summarize` right for lines whose items are all different. Items at this checkpoint are distinct after trimming; repeated-item accumulation comes next. Keep the earlier valid parsing/Number rules. lines is a dense readonly array of at most 2000 strings with at most 20000 total UTF-16 units, possibly frozen. orderTotal multiplies quantity*unitPrice with ordinary Number arithmetic; products and running item totals are finite by input guarantee. Do not round totals. Match trimmed item names exactly, without Unicode normalization. The result is a fresh mutable record, ordinary or null-prototype, whose own enumerable data entries include every item even when its total is 0. Built-in/prototype names such as __proto__, constructor and toString are ordinary item keys; inherited values never supply a prior total. Own-key order follows JavaScript numeric-index/creation order. Do not mutate inputs or share output state across calls. Let n=1+line count+total UTF-16 units. Target: O(n) time and O(n) extra space for summarize.",
         'Projdi to ručně. Pro `["latte,1,4", "tea,2,1"]` si po každém řádku zapiš `order`, `running` a `totals`, pak je zaloguj a porovnej. Oprav `summarize` pro řádky, jejichž položky jsou všechny různé.',
       ),
       tests: [
+        check("(()=>{const out=summarize(['__proto__,1,2']);return Object.hasOwn(out,'__proto__')&&out.__proto__===2;})()", true),
         check('summarize(["latte,1,4","tea,2,1"])', { latte: 4, tea: 2 }, ['the second item does not inherit the first total', 'druhá položka nedědí první součet']),
         check('summarize(["a,2,3"])', { a: 6 }),
         check('summarize([])', {}, undefined, true),
@@ -221,10 +225,11 @@ export const DEBUG_CHECKPOINTS: Record<string, DebugCheckpoint[]> = {
     },
     {
       prompt: text(
-        '`percent` is a whole number: `10` means ten percent. Log `total * percent` for `applyDiscount(100, 50, 10)`, see why the result is absurd, and fix the arithmetic. Leave the threshold comparison for the next step.',
+        "`percent` is a whole number: `10` means ten percent. Log `total * percent` for `applyDiscount(100, 50, 10)`, see why the result is absurd, and fix the arithmetic. Leave the threshold comparison for the next step. total and threshold are finite Numbers from 0 through 1e9 (fractional values allowed); percent is an integer from 0 through 100. Use ordinary Number operations in this order: removed=total*(percent/100), discounted=total-removed. Equivalent zero signs are accepted. Target: O(1) time and O(1) extra space per applyDiscount; earlier helpers retain their own input-size targets. At this checkpoint discount only when total > threshold and return discounted without rounding. Leave totals at/below the threshold unchanged; inclusive comparison and cent rounding come next.",
         '`percent` je celé číslo: `10` znamená deset procent. Zaloguj `total * percent` pro `applyDiscount(100, 50, 10)`, podívej se, proč je výsledek absurdní, a oprav aritmetiku. Porovnání s prahem nech na další krok.',
       ),
       tests: [
+        check("applyDiscount(7.5,5,20)", 6),
         check('applyDiscount(100, 50, 10)', 90, ['ten percent off, not ten times', 'deset procent dolů, ne desetinásobek']),
         check('applyDiscount(200, 50, 50)', 100),
         check('applyDiscount(20, 50, 10)', 20, ['below the threshold nothing changes', 'pod prahem se nic nemění'], true),
