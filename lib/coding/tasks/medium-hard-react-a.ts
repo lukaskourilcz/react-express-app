@@ -445,8 +445,8 @@ test('every row node follows its player when names reorder',()=>{const {containe
     tier: 3,
     focus: ['timers', 'effect-cleanup', 'lists-keys'],
     title: 'Notices that dismiss themselves',
-    prompt: 'The Save and Delete buttons each add a notice, "Saved" or "Deleted", to the region with `role="status"`. Each notice is an `li` with its text in a `span` and a button named "Dismiss <text>", such as "Dismiss Saved", which removes it at once. A notice also leaves by itself 300 milliseconds after it appeared; a real one would stay for several seconds, and the short wait keeps the checks quick. At most three notices show at once, so a fourth pushes out the oldest. Give every notice an id from a counter and use it as the key: the text is not unique, and an index moves when an older notice leaves. Move each notice into a `Notice` component whose effect starts the 300 ms timeout and whose cleanup clears it. Then a notice that is dismissed or pushed out early leaves no timer behind, and each timer belongs to exactly one notice.',
-    starter: `import React, { useState } from 'react';
+    prompt: "The Save and Delete buttons each add a notice, \"Saved\" or \"Deleted\", to the region with `role=\"status\"`. Each notice is an `li` with its text in a `span` and a button named \"Dismiss <text>\", such as \"Dismiss Saved\", which removes it at once. A notice also leaves by itself 300 milliseconds after it appeared; a real one would stay for several seconds, and the short wait keeps the checks quick. At most three notices show at once, so a fourth pushes out the oldest. Give every notice an id from a counter and use it as the key: the text is not unique, and an index moves when an older notice leaves. Move each notice into a `Notice` component whose effect starts the 300 ms timeout and whose cleanup clears it. Then a notice that is dismissed or pushed out early leaves no timer behind, and each timer belongs to exactly one notice. Duplicate text is still a separate notice: dismissing one Saved removes only that id. Surviving LI nodes keep their identity when older notices leave, another arrives, or the parent re-renders. Every notice stays through 299 ms and leaves at its own full 300 ms boundary under a controlled clock; browser scheduling may be later. Each waiting notice owns one pending timeout, with no timer left after dismiss, eviction, expiry or unmount. Repeated adds and dismissals keep working beyond the sample sequence. Every independent or fresh App starts with an empty status region and its own counter/timers. The child may be called Notice or an equivalent name. Development Strict Mode may repeat setup and cleanup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [notices, setNotices] = useState([]);
@@ -546,6 +546,74 @@ test('each notice keeps its own 300 ms', () => withClock(async clock => {
   await clock.tick(180);
   expect(texts()).toEqual([]);
 }));
+
+const withNoticeClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const noticeRows=scope=>Array.from(within(scope).getByRole('status').querySelectorAll('li'));
+const noticeTexts=scope=>noticeRows(scope).map(row=>row.querySelector('span').textContent);
+const noticePress=(scope,label)=>fireEvent.click(within(scope).getByRole('button',{name:label}));
+test('dismissing one duplicate notice leaves the other one',()=>withNoticeClock(async clock=>{const root=render(<App/>);noticePress(root.container,'Save');noticePress(root.container,'Save');expect(noticeTexts(root.container)).toEqual(['Saved','Saved']);const second=noticeRows(root.container)[1];fireEvent.click(within(second).getByRole('button',{name:'Dismiss Saved'}));expect(noticeTexts(root.container)).toEqual(['Saved']);expect(clock.pending()).toBe(1);root.unmount();expect(clock.pending()).toBe(0);}));
+
 `,
   },
   {

@@ -93,7 +93,7 @@ export const REACT_VARIANTS: ReactVariant[] = [
   {
     id: 'react-abort-a-request',
     note: 'lists the post titles instead of counting them',
-    edits: [['return <p>{posts.length} posts</p>;', 'return <ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul>;']],
+    edits: [['return <main>{error && <p role="alert">{error}</p>}<p>{posts.length} posts</p></main>;', 'return <main>{error && <p role="alert">{error}</p>}<ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul></main>;']],
     correct: true,
   },
   {

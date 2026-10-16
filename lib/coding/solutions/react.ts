@@ -2008,7 +2008,7 @@ test('only the latest selected user updates this mounted instance',()=>withPhase
     solution: `const App = () => {
   const [query, setQuery] = useState(''); const [settledQuery, setSettledQuery] = useState('');
   useEffect(() => { const timer = setTimeout(() => setSettledQuery(query), 500); return () => clearTimeout(timer); }, [query]);
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><p>Search: {settledQuery}</p></>;
+  return <><input aria-label="Search" value={query} onChange={event => setQuery(event.target.value)} /><p>Search: {settledQuery}</p></>;
 };`,
     junior: `const App = () => {
   const [query, setQuery] = useState('');
@@ -2037,7 +2037,7 @@ test('only the latest selected user updates this mounted instance',()=>withPhase
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input aria-label="Search" type="text" value={query} onChange={handleChange} />
       <p>Search: {settledQuery}</p>
     </main>
   );
@@ -2062,8 +2062,6 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK: keystrokes 100 ms apart, then
-    // the page is read at every step up to the 500 ms the prompt names.
     hiddenSuite: `${FAKE_CLOCK}
 test('a burst of keystrokes shows nothing until 500 ms after the last one, then only the final query', () => withClock(async clock => {
   const { container } = render(<App />);
@@ -2091,13 +2089,26 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
   expect(container.textContent).not.toContain('heron');
   await clock.tick(50);
   expect(container.textContent).toContain('heron');
-}));`,
+}));` + `
+test('sixteen literal queries keep their raw text and settle at499plus1,including clearing',()=>withStepClock(async clock=>{const root=render(<App/>);let previous='';const values=['  Mixed Case  ','<b>Literal</b>','a&b','☕','x'.repeat(2000),'','Again','two words','A','a','0','Search: marker','(typing…)','repeat','  ','end'];for(const value of values){fireEvent.change(typed(root.container),{target:{value}});expect(typed(root.container).value).toBe(value);await clock.tick(499);expectSettled(root.container,previous);await clock.tick(1);expectSettled(root.container,value);previous=value;expect(clock.pending()).toBe(0);}root.unmount();}));
+test('a new keystroke cancels the old deadline and parent renders do not restart the new one',()=>withStepClock(async clock=>{const root=render(<App/>);fireEvent.change(typed(root.container),{target:{value:'First'}});await clock.tick(400);fireEvent.change(typed(root.container),{target:{value:'Latest'}});await clock.tick(100);expectSettled(root.container,'');for(let i=0;i<12;i++)root.rerender(<App/>);await clock.tick(399);expectSettled(root.container,'');await clock.tick(1);expectSettled(root.container,'Latest');root.unmount();expect(clock.pending()).toBe(0);}));
+test('independent and fresh mounted debounce state owns its own pending timer',()=>withStepClock(async clock=>{const a=render(<App/>),b=render(<App/>);fireEvent.change(typed(a.container),{target:{value:'Left'}});await clock.tick(100);fireEvent.change(typed(b.container),{target:{value:'Right'}});await clock.tick(400);expectSettled(a.container,'Left');expectSettled(b.container,'');a.unmount();await clock.tick(100);expectSettled(b.container,'Right');fireEvent.change(typed(b.container),{target:{value:'Removed'}});b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(typed(fresh.container).value).toBe('');expectSettled(fresh.container,'');fresh.unmount();expect(clock.pending()).toBe(0);await clock.tick(1000);}));
+`,
   },
   "react-abort-a-request": {
     solution: `const App = () => {
   const [posts, setPosts] = useState([]);
-  useEffect(() => { const controller = new AbortController(); fetch('https://jsonplaceholder.typicode.com/posts', {signal: controller.signal}).then(r => r.json()).then(setPosts).catch(error => { if (error.name !== 'AbortError') console.error(error); }); return () => controller.abort(); }, []);
-  return <p>{posts.length} posts</p>;
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/posts', {signal: controller.signal})
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setPosts(data); })
+      .catch(error => { if (active && error.name !== 'AbortError') setError('Could not load posts.'); });
+    return () => { active = false; controller.abort(); };
+  }, []);
+  return <main>{error && <p role="alert">{error}</p>}<p>{posts.length} posts</p></main>;
 };`,
     junior: `const App = () => {
   const [posts, setPosts] = useState([]);
@@ -2105,21 +2116,24 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
 
     const loadPosts = async () => {
       try {
         const response = await fetch('https://jsonplaceholder.typicode.com/posts', { signal: controller.signal });
+        if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setPosts(data);
+        if (active) setPosts(data);
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          setErrorMessage(error.message);
+        if (active && error.name !== 'AbortError') {
+          setErrorMessage('Could not load posts.');
         }
       }
     };
     loadPosts();
 
     return () => {
+      active = false;
       controller.abort();
     };
   }, []);
@@ -2127,7 +2141,7 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
   if (errorMessage !== '') {
     return (
       <main>
-        <p>Could not load: {errorMessage}</p>
+        <p role="alert">{errorMessage}</p>
       </main>
     );
   }
@@ -2144,21 +2158,26 @@ const useJson = url => {
   const [state, setState] = useState({ data: null, error: null });
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     fetch(url, { signal: controller.signal })
-      .then(response => response.json())
-      .then(data => setState({ data, error: null }))
-      // Unmounting aborts on purpose; that is not a failure worth reporting
-      .catch(error => { if (error.name !== 'AbortError') setState({ data: null, error }); });
-    return () => controller.abort();
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setState({ data, error: null }); })
+      .catch(error => { if (active && error.name !== 'AbortError') setState({ data: null, error }); });
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return state;
 };
 
 const App = () => {
   const { data: posts, error } = useJson(POSTS_URL);
-  if (error) return <main><p role="alert">Could not load anything.</p></main>;
+  if (error) return <main><p role="alert">Could not load posts.</p></main>;
   return <main><p>{posts ? posts.length : 0} posts</p></main>;
 };`,
+    hiddenSuite: `
+test('empty and100record responses render their own count or exact literal list without parent refetch',()=>withPhaseResponses(async calls=>{for(const data of[[],Array.from({length:100},(_,i)=>({id:i+1,title:i===0?'':i%2?'Duplicate':'<b>Literal</b>'}))]){const n=calls.length,root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(n+1));expect(calls[n].url).toBe('https://jsonplaceholder.typicode.com/posts');expect(calls[n].signal.aborted).toBe(false);expectPosts(root.container,[]);await phaseHeaders(calls[n]);expectPosts(root.container,[]);await phaseBody(calls[n],data);expectPosts(root.container,data);expect(root.container.querySelector('li b')).toBeNull();for(let i=0;i<8;i++)root.rerender(<App/>);expect(calls).toHaveLength(n+1);expectPosts(root.container,data);root.unmount();expect(calls[n].signal.aborted).toBe(true);}}));
+test('HTTP,network and JSON failures show the fixed alert without failed response data',()=>withPhaseResponses(async calls=>{for(const failure of['http','network','json']){const n=calls.length,root=render(<App/>);if(failure==='http')await phaseDone(calls[n],[{id:1,title:'Failed body'},{id:2,title:'Second'}],500);else if(failure==='network')await act(async()=>calls[n].fail(new TypeError('Offline')));else{await phaseHeaders(calls[n]);await act(async()=>calls[n].badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load posts.'));expect(root.container.textContent).not.toContain('Failed body');expect(root.container.querySelectorAll('li')).toHaveLength(0);expect(Array.from(root.container.querySelectorAll('p')).filter(p=>/^[0-9]+ posts$/.test(p.textContent)).every(p=>p.textContent==='0 posts')).toBe(true);root.unmount();}}));
+test('separate mounted requests own distinct signals and an old removal does not affect a fresh response',()=>withPhaseResponses(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);expect(calls[0].signal).not.toBe(calls[1].signal);await phaseHeaders(calls[0]);a.unmount();expect(calls[0].signal.aborted).toBe(true);expect(calls[1].signal.aborted).toBe(false);await phaseDone(calls[1],[{id:1,title:'Right'}]);expectPosts(b.container,[{id:1,title:'Right'}]);b.unmount();const fresh=render(<App/>);await phaseDone(calls[2],[{id:3,title:'Fresh'},{id:4,title:'Again'}]);expectPosts(fresh.container,[{id:3,title:'Fresh'},{id:4,title:'Again'}]);fresh.unmount();expect(calls[2].signal.aborted).toBe(true);}));
+`,
   },
   "react-paginated-posts": {
     solution: `const App = () => {

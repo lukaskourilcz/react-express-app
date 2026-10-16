@@ -186,21 +186,22 @@ const App = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL, { signal: controller.signal });
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
         if (requestError.name === 'AbortError') return;
-        setError(requestError.message);
+        if (active) setError('Could not load posts.');
       }
     };
 
     loadItems();
 
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, []);
 
   return (
