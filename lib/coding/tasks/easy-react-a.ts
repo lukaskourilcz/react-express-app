@@ -643,7 +643,7 @@ test('an empty nearest size is a provided value rather than the default',()=>{
     tier: 2,
     focus: ['useContext', 'useState'],
     title: 'Share a count through context',
-    prompt: 'The basket count lives in App\'s state. Provide `{ count, add }` through `BasketContext`, where `add` adds one to the count. `AddButton` calls `add` when clicked, and `BasketCount` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with `useContext`. The count starts at 0.',
+    prompt: `The basket count lives in App's state. Provide \`{ count, add }\` through \`BasketContext\`, where \`add\` adds one to the count. \`AddButton\` calls \`add\` when clicked, and \`BasketCount\` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with \`useContext\`. The count starts at 0. Every invocation of add adds one, including several updates queued before the next render. Use the current nearest provider’s count and callback, even when the same consumer element is retained and the provider value changes. Names are raw plain text up to 2000 UTF-16 units. Keep the count and existing button nodes through parent renders, and keep separate and fresh baskets independent. Consumers are always placed under a provider; behavior outside one is not part of this exercise.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const BasketContext = createContext(null);
@@ -707,6 +707,11 @@ test('BasketCount shows whatever the provider holds', () => {
   const { container } = render(<BasketContext.Provider value={{ count: 7, add: () => {} }}><BasketCount /></BasketContext.Provider>);
   expect(container.textContent).toBe('Items in basket: 7');
 });
+
+
+test('two add calls queued before the next render both count',()=>{
+ const view=render(<App/>),button=screen.getByRole('button',{name:'Add Apples'});act(()=>{fireEvent.click(button);fireEvent.click(button);});expect(view.container.querySelector('header').textContent).toBe('Items in basket: 2');
+});
 `,
   },
 
@@ -719,7 +724,7 @@ test('BasketCount shows whatever the provider holds', () => {
     tier: 1,
     focus: ['custom-hook', 'useState'],
     title: 'A useToggle hook',
-    prompt: 'Write and export `useToggle(initial = false)`, a hook that keeps a boolean in state and returns `[on, toggle]`, where `toggle` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state.',
+    prompt: `Write and export \`useToggle(initial = false)\`, a hook that keeps a boolean in state and returns \`[on, toggle]\`, where \`toggle\` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state. initial is a boolean used only on the first render, with false as the default; later prop changes must not reset the state. Every call to toggle flips the current boolean, including several calls in one handler or a retained earlier toggle function. The returned function does not need to keep the same identity between renders. Preserve independent queues for separate hook calls and component instances, state through parent renders, and fresh initial state after unmounting.`,
     starter: `import React, { useState } from 'react';
 
 // Write and export useToggle here.
@@ -772,6 +777,11 @@ test('a click turns it off and a second click back on', () => {
   expect(button('Wi-Fi').textContent).toBe('Wi-Fi: off');
   fireEvent.click(button('Wi-Fi'));
   expect(button('Wi-Fi').textContent).toBe('Wi-Fi: on');
+});
+
+
+test('two toggle calls in one handler apply two flips',()=>{
+ const Twice=()=>{const[on,toggle]=useToggle(true);return <button onClick={()=>{toggle();toggle();}}>{on?'yes':'no'}</button>;};render(<Twice/>);const button=screen.getByRole('button');fireEvent.click(button);expect(button.textContent).toBe('yes');
 });
 `,
   },

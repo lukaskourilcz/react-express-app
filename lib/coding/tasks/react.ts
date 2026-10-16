@@ -2879,7 +2879,7 @@ test('ordinary keys leave the dialog open',()=>{
     tier: 3,
     focus: ["useContext"],
     title: "Theme context",
-    prompt: "Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click.",
+    prompt: `Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click. Start at light and keep switching on every ordinary click, with the button text Theme: light or Theme: dark. Parent renders retain the current theme and button node. Each mounted App owns its provider state; toggling or unmounting one must not alter another, and a fresh App starts at light. This task concerns state ownership and context rather than a particular provider object shape.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2917,7 +2917,7 @@ const toggleTheme = () => setTheme(/* the other theme */);
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('the nested child reads the theme from context', () => {
@@ -2934,6 +2934,11 @@ test('the nested child toggles the theme for everyone', () => {
   expect(container.textContent).not.toContain('light');
   fireEvent.click(toggle);
   expect(container.textContent).toContain('light');
+});
+
+
+test('six ordinary clicks keep toggling the nested button',()=>{
+ const view=render(<App/>),button=view.container.querySelector('button');for(let i=0;i<6;i++){fireEvent.click(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));}
 });
 `,
   },

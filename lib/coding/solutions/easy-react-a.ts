@@ -684,7 +684,6 @@ export const BasketCount = () => <p>Items in basket: {useBasket().count}</p>;
 const App = () => {
   const [count, setCount] = useState(0);
   const add = useCallback(() => setCount((previous) => previous + 1), []);
-  // A new object only when the count changes, so consumers skip needless renders.
   const basket = useMemo(() => ({ count, add }), [count, add]);
 
   return (
@@ -721,7 +720,20 @@ test('two baskets on one page count apart', () => {
   fireEvent.click(within(first.container).getByRole('button', { name: 'Add Apples' }));
   expect(first.container.querySelector('header').textContent).toBe('Items in basket: 1');
   expect(second.container.querySelector('header').textContent).toBe('Items in basket: 0');
-});`,
+});
+
+
+test('twenty-five queued bursts and parent renders count every addition',()=>{
+ const view=render(<App/>),buttons=[...view.container.querySelectorAll('button')];let expected=0;for(let turn=0;turn<25;turn++){const length=turn%7+1;act(()=>{for(let i=0;i<length;i++)fireEvent.click(buttons[(turn+i)%2]);});expected+=length;expect(view.container.querySelector('header').textContent).toBe('Items in basket: '+expected);view.rerender(<App data-parent={turn}/>);expect([...view.container.querySelectorAll('button')]).toEqual(buttons);expect(view.container.querySelector('header').textContent).toBe('Items in basket: '+expected);}
+});
+test('the latest nearest count and callback reach stable consumers',()=>{
+ const child=<><BasketCount count={999}/><AddButton name="  Reef <b>🦈  " add={()=>{throw new Error('obsolete prop');}}/></>,seen=[];const view=render(<BasketContext.Provider value={{count:0,add:()=>seen.push(-1)}}>{child}</BasketContext.Provider>);for(let i=0;i<20;i++){const count=[0,1,7,1000000][i%4],before=seen.length;view.rerender(<BasketContext.Provider value={{count,add:()=>seen.push(i)}}>{child}</BasketContext.Provider>);expect(view.container.querySelector('p').textContent).toBe('Items in basket: '+count);expect(view.container.querySelector('button').textContent).toBe('Add   Reef <b>🦈  ');expect(seen).toHaveLength(before);fireEvent.click(view.container.querySelector('button'));expect(seen).toHaveLength(before+1);expect(seen[before]).toBe(i);}
+ const a=render(<BasketContext.Provider value={{count:31,add:()=>seen.push('outer')}}><BasketContext.Provider value={{count:8,add:()=>seen.push('inner')}}><BasketCount/><AddButton name="Inner"/></BasketContext.Provider></BasketContext.Provider>);expect(a.container.querySelector('p').textContent).toBe('Items in basket: 8');fireEvent.click(a.container.querySelector('button'));expect(seen[seen.length-1]).toBe('inner');a.unmount();
+});
+test('independent and fresh baskets keep their own counters',()=>{
+ const a=render(<App/>),b=render(<App/>);for(let i=0;i<18;i++){fireEvent.click(within(a.container).getByRole('button',{name:'Add Apples'}));expect(a.container.querySelector('header').textContent).toBe('Items in basket: '+(i+1));expect(b.container.querySelector('header').textContent).toBe('Items in basket: 0');}a.unmount();fireEvent.click(within(b.container).getByRole('button',{name:'Add Bread'}));expect(b.container.querySelector('header').textContent).toBe('Items in basket: 1');b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('header').textContent).toBe('Items in basket: 0');fresh.unmount();
+});
+`,
   },
 
   /* ── custom hooks ─────────────────────────────────────────────────── */
@@ -753,11 +765,10 @@ export const useToggle = (initial = false) => {
   const [on, setOn] = useState(initial);
 
   const toggle = () => {
-    if (on) {
-      setOn(false);
-    } else {
-      setOn(true);
-    }
+    setOn(previous => {
+      if (previous) return false;
+      return true;
+    });
   };
 
   return [on, toggle];
@@ -790,7 +801,6 @@ export default App;`,
 
 export const useToggle = (initial = false) => {
   const [on, setOn] = useState(initial);
-  // Stable across renders, so it can be passed down without new props each time.
   const toggle = useCallback(() => setOn((previous) => !previous), []);
   return [on, toggle];
 };
@@ -839,7 +849,19 @@ test('toggle flips the value every time', () => {
     seen.push(toggle.textContent);
   }
   expect(seen).toEqual(['no', 'yes', 'no']);
-});`,
+});
+
+
+test('queued and retained toggle operations always flip the current boolean',()=>{
+ let latest;const Trial=({initial})=>{const[on,toggle]=useToggle(initial);latest={on,toggle};return <button onClick={toggle}>{on?'yes':'no'}</button>;};const view=render(<Trial initial={true}/>),first=latest.toggle;let expected=true;for(let i=0;i<24;i++){const count=i%7+1;act(()=>{for(let j=0;j<count;j++)first();});if(count%2)expected=!expected;expect(typeof latest.on).toBe('boolean');expect(latest.on).toBe(expected);view.rerender(<Trial initial={!expected}/>);expect(latest.on).toBe(expected);expect(view.container.querySelector('button').textContent).toBe(expected?'yes':'no');}
+});
+test('initial is used only on mount and two hook calls keep separate queues',()=>{
+ let latest;const Pair=({initial})=>{const[a,flipA]=useToggle(initial),[b,flipB]=useToggle();latest={a,b,flipA,flipB};return <p>{String(a)+'/'+String(b)}</p>;};const view=render(<Pair initial={false}/>);let a=false,b=false;for(let i=0;i<24;i++){act(()=>{latest.flipA();latest.flipA();latest.flipB();});b=!b;expect(latest.a).toBe(a);expect(latest.b).toBe(b);view.rerender(<Pair initial={true}/>);expect(latest.a).toBe(a);expect(latest.b).toBe(b);}view.unmount();const fresh=render(<Pair initial={true}/>);expect(latest.a).toBe(true);expect(latest.b).toBe(false);fresh.unmount();
+});
+test('forty-eight independent App operations and separate mounts preserve both settings',()=>{
+ const a=render(<App/>),b=render(<App/>);let wifi=true,bluetooth=false;for(let i=0;i<48;i++){const name=i%3===0?'Bluetooth':'Wi-Fi';fireEvent.click(within(a.container).getByRole('button',{name:new RegExp('^'+name+':')}));if(name==='Wi-Fi')wifi=!wifi;else bluetooth=!bluetooth;expect(within(a.container).getByRole('button',{name:/^Wi-Fi:/}).textContent).toBe('Wi-Fi: '+(wifi?'on':'off'));expect(within(a.container).getByRole('button',{name:/^Bluetooth:/}).textContent).toBe('Bluetooth: '+(bluetooth?'on':'off'));expect(within(b.container).getByRole('button',{name:/^Wi-Fi:/}).textContent).toBe('Wi-Fi: on');expect(within(b.container).getByRole('button',{name:/^Bluetooth:/}).textContent).toBe('Bluetooth: off');a.rerender(<App data-parent={i}/>);}a.unmount();b.unmount();const fresh=render(<App/>);expect(button('Wi-Fi').textContent).toBe('Wi-Fi: on');expect(button('Bluetooth').textContent).toBe('Bluetooth: off');fresh.unmount();
+});
+`,
   },
   'react-easy2-use-window-width': {
     solution: `import React, { useEffect, useState } from 'react';

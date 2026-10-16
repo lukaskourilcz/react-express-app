@@ -3624,7 +3624,6 @@ const App = () => {
 const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
   const toggleTheme = useCallback(() => setTheme(current => (current === 'light' ? 'dark' : 'light')), []);
-  // Memoised so consumers only re-render when the theme itself changes
   const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -3647,6 +3646,19 @@ const App = () => (
     <main><Toolbar /></main>
   </ThemeProvider>
 );`,
+    hiddenSuite: `
+
+
+test('forty-eight ordinary clicks keep the button and theme through parent renders',()=>{
+ const view=render(<App/>),button=view.container.querySelector('button');for(let i=0;i<48;i++){fireEvent.click(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));view.rerender(<App data-parent={i}/>);expect(view.container.querySelector('button')).toBe(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));}
+});
+test('two mounted theme providers never change the other button',()=>{
+ const a=render(<App/>),b=render(<App/>),one=a.container.querySelector('button'),two=b.container.querySelector('button');for(let i=0;i<20;i++){fireEvent.click(one);expect(one.textContent).toBe('Theme: '+(i%2?'light':'dark'));expect(two.textContent).toBe('Theme: light');}fireEvent.click(two);expect(two.textContent).toBe('Theme: dark');expect(one.textContent).toBe('Theme: light');a.unmount();fireEvent.click(two);expect(two.textContent).toBe('Theme: light');b.unmount();
+});
+test('unmounting a dark provider leaves a fresh provider at light',()=>{
+ const view=render(<App/>);fireEvent.click(view.container.querySelector('button'));expect(view.container.querySelector('button').textContent).toBe('Theme: dark');view.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('button').textContent).toBe('Theme: light');fresh.unmount();
+});
+`,
   },
   "react-usedebounce-hook": {
     solution: `const fruits = ['Apple', 'Banana', 'Cherry'];

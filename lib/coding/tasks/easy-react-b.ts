@@ -1626,7 +1626,7 @@ test('only lines with " and " have a Split button', () => {
     tier: 2,
     focus: ['useContext', 'useReducer'],
     title: 'Dispatch through context',
-    prompt: 'App keeps the tasks in a reducer and hands `dispatch` to `AddTask` and, through `TaskList`, to every `TaskItem` as an `onDispatch` prop. `TaskList` never uses it; it only passes it on. Provide `dispatch` through `TasksDispatchContext` around the page instead, have `AddTask` and `TaskItem` read it with `useContext`, and remove the `onDispatch` props.',
+    prompt: `App keeps the tasks in a reducer and hands \`dispatch\` to \`AddTask\` and, through \`TaskList\`, to every \`TaskItem\` as an \`onDispatch\` prop. \`TaskList\` never uses it; it only passes it on. Provide \`dispatch\` through \`TasksDispatchContext\` around the page instead, have \`AddTask\` and \`TaskItem\` read it with \`useContext\`, and remove the \`onDispatch\` props. Preserve exact raw single-line task text, including empty text, spaces, Unicode and literal markup up to 2000 UTF-16 units; this exercise does not add title validation. Each submit prevents navigation, dispatches one { type: "added", text } action and clears only that field. Each checkbox dispatches { type: "toggled", id: task.id } using the current task and nearest current callback. Supplied ids can be unique strings or positive integers. Retain draft state and existing list rows through provider/parent updates, and keep separate and fresh instances independent. Obsolete onDispatch props must not decide where an action goes.`,
     starter: `import React, { createContext, useContext, useReducer, useState } from 'react';
 
 export const TasksDispatchContext = createContext(null);
@@ -1724,6 +1724,11 @@ test('TaskItem dispatches through the context', () => {
   fireEvent.click(boxes()[0]);
   expect(seen).toEqual([{ type: 'toggled', id: 7 }]);
 });
+
+
+test('adding through context preserves the exact draft text',()=>{
+ const seen=[],view=render(<TasksDispatchContext.Provider value={action=>seen.push(action)}><AddTask/></TasksDispatchContext.Provider>);fireEvent.change(screen.getByLabelText('New task'),{target:{value:'  Reef <b>🦈  '}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(seen).toEqual([{type:'added',text:'  Reef <b>🦈  '}]);expect(screen.getByLabelText('New task').value).toBe('');
+});
 `,
   },
   {
@@ -1734,7 +1739,7 @@ test('TaskItem dispatches through the context', () => {
     tier: 2,
     focus: ['useContext', 'forms'],
     title: 'A radio group through context',
-    prompt: '`RadioGroup` takes a `name`, the chosen `value` and an `onChange`, and every `Radio` inside it needs all three. Have `RadioGroup` provide `{ name, value, onChange }` through `RadioContext`, and have `Radio` read it with `useContext`. Each Radio\'s input takes the group\'s `name`, is `checked` when its own `value` equals the group\'s, and calls `onChange` with its own value when picked. App passes each Radio only its value and its label.',
+    prompt: `\`RadioGroup\` takes a \`name\`, the chosen \`value\` and an \`onChange\`, and every \`Radio\` inside it needs all three. Have \`RadioGroup\` provide \`{ name, value, onChange }\` through \`RadioContext\`, and have \`Radio\` read it with \`useContext\`. Each Radio's input takes the group's \`name\`, is \`checked\` when its own \`value\` equals the group's, and calls \`onChange\` with its own value when picked. App passes each Radio only its value and its label. Compare values strictly: numeric 0 and string "0" are different, and callbacks receive the original value rather than its DOM string form or an event. Values are strings or finite numbers. Follow changes to the group name, chosen value and callback, including an empty string value, without resetting the children. Keep the fieldset/legend and each label’s input association. Give different logical groups different names so the browser keeps their native radio selection separate. A fresh App starts with Medium selected; parent renders preserve the current choice.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const RadioContext = createContext(null);
@@ -1805,6 +1810,11 @@ test('picking Large updates the page', () => {
 test('every radio carries the group name', () => {
   render(<App />);
   expect(screen.getAllByRole('radio').map(radio => radio.name)).toEqual(['size', 'size', 'size']);
+});
+
+
+test('numeric and string values compare strictly and callbacks preserve their type',()=>{
+ const seen=[],view=render(<RadioGroup name="mixed" value={0} onChange={value=>seen.push(value)} legend="Mixed"><Radio value={0}>Number zero</Radio><Radio value="0">Text zero</Radio></RadioGroup>);const radios=[...view.container.querySelectorAll('input')];expect(radios.map(node=>node.checked)).toEqual([true,false]);fireEvent.click(radios[1]);expect(seen).toEqual(['0']);
 });
 `,
   },

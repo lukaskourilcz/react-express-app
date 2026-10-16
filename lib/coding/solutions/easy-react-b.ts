@@ -2988,7 +2988,21 @@ test('a ticked task can be unticked', () => {
   render(<App />);
   fireEvent.click(boxes()[1]);
   expect(boxes()[1].checked).toBe(false);
-});`,
+});
+
+
+const submitTask=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('current provider callbacks receive exact actions from stable AddTask and TaskItem consumers',()=>{
+ const seen=[],obsolete=()=>{throw new Error('onDispatch prop is obsolete');},child=<AddTask onDispatch={obsolete}/>;const view=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}>{child}</TasksDispatchContext.Provider>);const field=within(view.container).getByLabelText('New task'),raw=['',' ','  raw <b>  ','🦈漢字','0','r'.repeat(2000)];for(let i=0;i<20;i++){const value=raw[i%raw.length];fireEvent.change(field,{target:{value}});view.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}>{child}</TasksDispatchContext.Provider>);expect(within(view.container).getByLabelText('New task')).toBe(field);expect(field.value).toBe(value);submitTask(view.container);expect(seen[i]).toEqual({source:i,action:{type:'added',text:value}});expect(field.value).toBe('');}view.unmount();
+ const item=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}><ul><TaskItem task={{id:1,text:'first',done:false}} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);for(let i=0;i<18;i++){const task=Object.freeze({id:i%2?'id-'+i:901+i,text:'  Item <b> 🦈 '+i+'  ',done:i%2===0});item.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}><ul><TaskItem task={task} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);const checkbox=item.container.querySelector('input');expect(checkbox.checked).toBe(task.done);expect(item.container.querySelector('li').textContent).toBe(task.text);fireEvent.click(checkbox);expect(seen[20+i]).toEqual({source:i,action:{type:'toggled',id:task.id}});expect(task.done).toBe(i%2===0);}item.unmount();
+});
+test('twenty-four additions and toggles retain raw task order,state and prior rows',()=>{
+ const view=render(<App/>),expected=[{text:'Rinse the regulator',done:false},{text:'Log the dive',done:true}],raw=['',' ','  exact <b>  ','🦈漢字','duplicate','x'.repeat(2000)];for(let i=0;i<24;i++){const rows=[...view.container.querySelectorAll('li')],value=raw[i%raw.length];fireEvent.change(screen.getByLabelText('New task'),{target:{value}});submitTask(view.container);expected.push({text:value,done:false});const next=[...view.container.querySelectorAll('li')];rows.forEach((node,index)=>expect(next[index]).toBe(node));const index=(i*5)%expected.length;fireEvent.click(next[index].querySelector('input'));expected[index].done=!expected[index].done;expect(next.map(node=>node.textContent)).toEqual(expected.map(row=>row.text));expect(next.map(node=>node.querySelector('input').checked)).toEqual(expected.map(row=>row.done));view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('New task').value).toBe('');}
+});
+test('two task apps and a fresh mount own separate reducers and drafts',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('New task'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('New task'),{target:{value:'Beta'}});submitTask(a.container);expect(a.container.textContent).toContain('Alpha');expect(b.container.querySelectorAll('li')).toHaveLength(2);expect(within(b.container).getByLabelText('New task').value).toBe('Beta');submitTask(b.container);fireEvent.click(a.container.querySelector('input[type=checkbox]'));expect(a.container.querySelector('input[type=checkbox]').checked).toBe(true);expect(b.container.querySelector('input[type=checkbox]').checked).toBe(false);a.unmount();b.unmount();const fresh=render(<App/>);expect([...fresh.container.querySelectorAll('li')].map(node=>node.textContent)).toEqual(['Rinse the regulator','Log the dive']);expect(screen.getByLabelText('New task').value).toBe('');fresh.unmount();
+});
+`,
   },
   'react-easy3-radio-group': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -3094,7 +3108,6 @@ export default App;`,
 export const RadioContext = createContext(null);
 
 export const RadioGroup = ({ name, value, onChange, legend, children }) => {
-  // A new object on every render would re-render every Radio; this one changes with its fields.
   const group = useMemo(() => ({ name, value, onChange }), [name, value, onChange]);
   return (
     <RadioContext.Provider value={group}>
@@ -3192,6 +3205,18 @@ test('a value set from outside checks the matching radio', () => {
   rerender(group('L'));
   expect(screen.getByLabelText('Large').checked).toBe(true);
   expect(screen.getByLabelText('Small').checked).toBe(false);
-});`,
+});
+
+
+test('twenty controlled name,value and callback changes reach the same children',()=>{
+ const values=['',0,'0',-1,'reef-🦈',42],seen=[],children=values.map((value,i)=><Radio key={i} value={value}>{'Option '+i+' <b> 🦈'}</Radio>);const view=render(<RadioGroup name="initial" value={values[0]} onChange={value=>seen.push({source:-1,value})} legend="Initial">{children}</RadioGroup>);const first=[...view.container.querySelectorAll('input')];for(let i=0;i<20;i++){const chosen=i%values.length,name='group-'+i;view.rerender(<RadioGroup name={name} value={values[chosen]} onChange={value=>seen.push({source:i,value})} legend={'Legend '+i}>{children}</RadioGroup>);const inputs=[...view.container.querySelectorAll('input')];expect(inputs).toEqual(first);expect(inputs.map(node=>node.name)).toEqual(values.map(()=>name));expect(inputs.map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));expect(view.container.querySelector('legend').textContent).toBe('Legend '+i);expect([...view.container.querySelectorAll('label')].map(node=>node.control)).toEqual(inputs);const next=(chosen+1)%values.length;fireEvent.click(inputs[next]);expect(seen[i]).toEqual({source:i,value:values[next]});}
+});
+test('the nearest and sibling groups keep names,chosen values and callbacks local',()=>{
+ const seen=[],view=render(<RadioContext.Provider value={{name:'outer',value:'a',onChange:value=>seen.push(['outer',value])}}><Radio value="b">Outer B</Radio><RadioGroup name="inner" value="a" onChange={value=>seen.push(['inner',value])} legend="Inner"><Radio value="a">Inner A</Radio><Radio value="b">Inner B</Radio></RadioGroup><RadioGroup name="side" value="b" onChange={value=>seen.push(['side',value])} legend="Side"><Radio value="a">Side A</Radio><Radio value="b">Side B</Radio></RadioGroup></RadioContext.Provider>);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual([false,true,false,false,true]);fireEvent.click(within(view.container).getByLabelText('Outer B'));fireEvent.click(within(view.container).getByLabelText('Inner B'));fireEvent.click(within(view.container).getByLabelText('Side A'));expect(seen).toEqual([['outer','b'],['inner','b'],['side','a']]);
+});
+test('forty-eight App choices and fresh mounting retain controlled state',()=>{
+ const view=render(<App/>),labels=['Small','Medium','Large'],values=['S','M','L'];for(let i=0;i<48;i++){const chosen=(i*2)%3;fireEvent.click(screen.getByLabelText(labels[chosen]));expect(view.container.querySelector('p').textContent).toBe('Chosen size: '+values[chosen]);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));view.rerender(<App data-parent={i}/>);}view.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Medium').checked).toBe(true);expect(fresh.container.querySelector('p').textContent).toBe('Chosen size: M');fresh.unmount();
+});
+`,
   },
 };
