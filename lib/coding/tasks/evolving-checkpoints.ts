@@ -13,15 +13,18 @@ import { checkpointLadder } from './evolving-checkpoint-hints';
 
 interface Checkpoint {
   prompt: Localized;
+  focus?: CodingTask['focus'];
+  references?: CodingTask['references'];
   tests?: CallTest[];
   suite?: string;
   typeTests?: TypeTest[];
 }
 const calls = (...entries: [string, unknown][]) =>
   entries.map(([call, expected]) => test(call, expected));
-const step = (en: string, cs: string, tests: CallTest[]): Checkpoint => ({
+const step = (en: string, cs: string, tests: CallTest[], metadata: Pick<Checkpoint, 'focus' | 'references'> = {}): Checkpoint => ({
   prompt: text(en, cs),
   tests,
+  ...metadata,
 });
 const ui = (en: string, cs: string, body: string): Checkpoint => ({
   prompt: text(en, cs),
@@ -30,24 +33,36 @@ const ui = (en: string, cs: string, body: string): Checkpoint => ({
 const CHECKPOINTS: Record<string, Checkpoint[]> = {
   'js-evolving-calculator': [
     step(
-      'Implement calculate(expression) for a single non-negative integer, optionally surrounded by whitespace. Return its numeric value.',
+      "Implement calculate(expression) for one non-negative integer, optionally surrounded by whitespace. expression is a primitive string with at most 20000 UTF-16 units. After ECMAScript trim whitespace is removed, it contains one or more ASCII decimal digits; leading zeros are allowed. Its numeric value is at most Number.MAX_SAFE_INTEGER. Return that exact Number; equivalent zero signs are accepted. There are no signs, operators, exponent notation, hexadecimal forms or internal spaces at this checkpoint. n is the actual raw string length. Target: O(n) time and O(n) extra space in the string-copy model. Trimming and Number conversion are allowed; do not narrow the result to 32 bits.",
       'Napiš calculate(expression) pro jedno nezáporné celé číslo s volitelnými krajními mezerami. Vrať číselnou hodnotu.',
       calls(
+        ["calculate(\"4294967296\")", 4294967296],
         ['calculate("0")', 0],
         ['calculate("42")', 42],
         ['calculate(" 7 ")', 7],
         ['calculate("1234")', 1234],
       ),
+      { focus: ['strings', 'functions'], references: [{ title: text('Number()', ''), url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/Number' }] },
     ),
     step(
-      'Add subtraction to calculate, evaluated left to right alongside addition. Operands can now be non-negative decimals.',
+      "Add subtraction alongside addition, applying operators from left to right. Operands may now be non-negative decimal literals: one or more ASCII digits, optionally followed by a dot and one or more digits. Leading zeros remain valid. JavaScript whitespace is allowed between tokens, never inside a number. Inputs are valid primitive strings up to 20000 UTF-16 units, with finite Number operands and results. Use ordinary Number arithmetic, including its rounding: 0.1 + 0.2 is 0.30000000000000004. There are no unary signs or parentheses at this checkpoint. Target: O(n) time and O(n) extra space, where n is the raw string length.",
       'Do calculate přidej odčítání vyhodnocované zleva spolu se sčítáním. Operandy nyní mohou být nezáporná desetinná čísla.',
-      calls(['calculate("10-3-2")', 5], ['calculate("1.5+2.5-1")', 3]),
+      calls(
+        ["calculate(\"0.1+0.2\")", 0.30000000000000004],
+        ["calculate(\"10-3-2\")", 5],
+        ["calculate(\"1.5+2.5-1\")", 3],
+      ),
+      { focus: ["strings", "while"] },
     ),
     step(
-      'Add nested parentheses to calculate, retaining operator precedence. For this step inputs are valid and division is non-zero.',
+      "Add nested parentheses, keeping the earlier four operators, precedence and left associativity. A parenthesized expression acts as one operand. Inputs are valid primitive strings up to 20000 UTF-16 units, with at most 64 nested parentheses, finite Number operands/final results and no division by zero. Use the same ASCII decimal literals, leading zeros, JavaScript whitespace between tokens and ordinary Number rounding. Unary signs and malformed-input handling belong to the next milestone. Scan with an index or sticky number expression; do not repeatedly copy the remaining suffix. Target: O(n) time and O(n) extra space, where n is the raw string length.",
       'Do calculate přidej vnořené závorky a zachovej prioritu operátorů. V této etapě jsou vstupy platné a dělitel nenulový.',
-      calls(['calculate("2*(3+4)")', 14], ['calculate("2*(3+(4/2))")', 10]),
+      calls(
+        ["calculate(\"2\\uFEFF*(3+4)\")", 14],
+        ["calculate(\"2*(3+4)\")", 14],
+        ["calculate(\"2*(3+(4/2))\")", 10],
+      ),
+      { focus: ["strings", "recursion", "while"] },
     ),
     step(
       'Add calculateWithVariables(expression, variables). Resolve identifiers [A-Za-z_][A-Za-z0-9_]* from own finite-number properties and evaluate the expression. This step uses valid expressions and defined variables.',
@@ -536,6 +551,8 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
           id: `${id}-start`,
           prompt: checkpoint.prompt,
           ...checkpointLadder(`${id}-start`),
+          ...(checkpoint.focus ? { focus: checkpoint.focus } : {}),
+          ...(checkpoint.references ? { references: checkpoint.references } : {}),
           previousRequirements: [...prompts],
           estimatedMinutes: 5,
           title: stageTitle(project.title, prompts.length + 1),
