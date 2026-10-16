@@ -521,35 +521,30 @@ const countStatus = (items: Status[], wanted: Status): number =>
   return null;
 };`,
     junior: `const pairWithSum = (sorted: readonly number[], target: number): [number, number] | null => {
-  for (let i = 0; i < sorted.length; i += 1) {
-    for (let j = i + 1; j < sorted.length; j += 1) {
-      const sum = sorted[i] + sorted[j];
-      if (sum === target) {
-        return [sorted[i], sorted[j]];
-      }
-    }
+  let left = 0;
+  let right = sorted.length - 1;
+  while (left < right) {
+    const first = sorted[left];
+    const second = sorted[right];
+    const sum = first + second;
+    if (sum === target) return [first, second];
+    if (sum < target) left += 1;
+    else right -= 1;
   }
   return null;
 };`,
     senior: `const pairWithSum = (sorted: readonly number[], target: number): [number, number] | null => {
-  // The list is sorted, so each value's partner can be binary-searched among the later values.
-  const hasLater = (wanted: number, from: number): boolean => {
-    let low = from;
-    let high = sorted.length - 1;
-    while (low <= high) {
-      const middle = (low + high) >>> 1;
-      if (sorted[middle] === wanted) return true;
-      if (sorted[middle] < wanted) low = middle + 1;
-      else high = middle - 1;
-    }
-    return false;
-  };
-  for (const [index, value] of sorted.entries()) {
-    if (hasLater(target - value, index + 1)) return [value, target - value];
+  let left = 0, right = sorted.length - 1;
+  while (left < right) {
+    const a = sorted[left], b = sorted[right];
+    if (a + b === target) return [a, b];
+    if (a + b < target) ++left;
+    else --right;
   }
   return null;
 };`,
     hiddenTests: [
+      {"call": "(()=>{let count=0;const alphabet=[-3,-1,0,2,4];function test(a){Object.freeze(a);for(let target=-6;target<=8;target++){let expected=null;outer:for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)if(a[i]+a[j]===target){expected=[a[i],a[j]];break outer;}const result=pairWithSum(a,target);if(expected===null?result!==null:!Array.isArray(result)||result.length!==2||result[0]!==expected[0]||result[1]!==expected[1])return false;count++;}return true;}function build(a,from,left){if(!test(a.slice()))return false;if(!left)return true;for(let i=from;i<alphabet.length;i++)if(!build([...a,alphabet[i]],i,left-1))return false;return true;}return build([],0,5)&&count===3780;})()", "expected": true},{"call": "(()=>{for(const [a,target,expected]of [[[-4,-1,0,1,4],0,[-4,4]],[[2,2],4,[2,2]],[[-0,0],0,[0,0]],[[1000000,1000000],2000000,[1000000,1000000]]]){Object.freeze(a);const first=pairWithSum(a,target),second=pairWithSum(a,target);if(first===second||!first||first.length!==2||first.some((v,i)=>v!==expected[i]))return false;first[0]=99;first.push(99);if(second.length!==2||second.some((v,i)=>v!==expected[i]))return false;}return pairWithSum(Object.freeze([2]),4)===null;} )()", "expected": true},{"call": "(()=>{const a=Object.freeze(Array.from({length:10000},(_,i)=>i-5000));return pairWithSum(a,2000000)===null&&pairWithSum(a,-2000000)===null&&JSON.stringify(pairWithSum(a,0))===JSON.stringify([-4999,4999])&&a[0]===-5000&&a.length===10000;})()", "expected": true},
       { call: "pairWithSum([1, 2, 4, 5], 6)", expected: [1, 5] },
       { call: "pairWithSum([1, 2, 3], 7)", expected: null },
       { call: "pairWithSum([1, 3, 4], 6)", expected: null },
@@ -594,6 +589,7 @@ const countStatus = (items: Status[], wanted: Status): number =>
   return search(0, sorted.length - 1);
 };`,
     hiddenTests: [
+      {"call": "(()=>{const values=[-1,-0,0,0.25,1,1.5,2],targets=[-2,-1,-0,0,0.1,0.25,0.5,1,1.25,1.5,2,3];let count=0;function check(a){Object.freeze(a);for(const target of targets){const at=binarySearch(a,target),present=a.includes(target);if(present?(!Number.isInteger(at)||at<0||at>=a.length||a[at]!==target):at!==-1)return false;count++;}return true;}function build(a,start,left){if(!check(a.slice()))return false;if(!left)return true;for(let i=start;i<values.length;i++)if(!build([...a,values[i]],i,left-1))return false;return true;}return build([],0,4)&&count===3960;})()", "expected": true},{"call": "(()=>{const a=Object.freeze([-1000000000,-0,0,0,0.1,0.10000000000000002,1000000000]);for(const target of [-1000000000,0,0.1,0.10000000000000002,1000000000]){const at=binarySearch(a,target);if(!Number.isInteger(at)||a[at]!==target)return false;}return binarySearch(a,0.10000000000000001)===4&&binarySearch(a,0.125)===-1&&a.length===7&&Object.is(a[1],-0);})()", "expected": true},{"call": "(()=>{const a=Object.freeze(Array.from({length:20000},(_,i)=>i*0.5));for(const at of [0,1,9999,10000,19998,19999])if(binarySearch(a,a[at])!==at)return false;return binarySearch(a,-0.5)===-1&&binarySearch(a,10000)===-1&&binarySearch(a,1.25)===-1&&binarySearch(Object.freeze([]),0)===-1;})()", "expected": true},
       { call: "binarySearch(Array.from({ length: 1000 }, (_, i) => i * 2), 998)", expected: 499 },
       { call: "binarySearch([1, 3, 5, 7, 9, 11], 11)", expected: 5 },
       { call: "binarySearch([2, 4, 6], 1)", expected: -1 },

@@ -1107,14 +1107,14 @@ const findWord = (grid, word) => {
   return results.sort();
 };`,
     junior: `const arrangements = letters => {
-  const sorted = letters.split("").sort();
+  const sorted = Array.from(letters).sort();
   const used = [];
   for (let i = 0; i < sorted.length; i++) {
     used.push(false);
   }
   const results = [];
-  const build = current => {
-    if (current.length === sorted.length) {
+  const build = (current, depth) => {
+    if (depth === sorted.length) {
       results.push(current);
       return;
     }
@@ -1126,11 +1126,11 @@ const findWord = (grid, word) => {
         continue;
       }
       used[i] = true;
-      build(current + sorted[i]);
+      build(current + sorted[i], depth + 1);
       used[i] = false;
     }
   };
-  build("");
+  build("", 0);
   results.sort();
   return results;
 };`,
@@ -1139,12 +1139,13 @@ const findWord = (grid, word) => {
   const orders = [];
   for (const letter of new Set(letters)) {
     const at = letters.indexOf(letter);
-    const rest = letters.slice(0, at) + letters.slice(at + 1);
+    const rest = letters.slice(0, at) + letters.slice(at + letter.length);
     for (const tail of arrangements(rest)) orders.push(letter + tail);
   }
   return orders.sort();
 };`,
     hiddenTests: [
+      {"call": "(()=>{function oracle(text){let results=[''];for(const point of Array.from(text)){const next=new Set();for(const value of results){const a=Array.from(value);for(let i=0;i<=a.length;i++)next.add([...a.slice(0,i),point,...a.slice(i)].join(''));}results=[...next];}return results.sort();}function same(a,b){return Array.isArray(a)&&a.length===b.length&&a.every((x,i)=>x===b[i]);} for(let n=0;n<=5;n++)for(let a=0;a<=n;a++)for(let b=0;b<=n-a;b++){const text='a'.repeat(a)+'b'.repeat(b)+'c'.repeat(n-a-b),expected=oracle(text);if(!same(arrangements(text),expected)||!same(arrangements([...text].reverse().join('')),expected))return false;}return true;})()", "expected": true},{"call": "(()=>{function oracle(text){let results=[''];for(const point of Array.from(text)){const next=new Set();for(const value of results){const a=Array.from(value);for(let i=0;i<=a.length;i++)next.add([...a.slice(0,i),point,...a.slice(i)].join(''));}results=[...next];}return results.sort();}function same(a,b){return Array.isArray(a)&&a.length===b.length&&a.every((x,i)=>x===b[i]);} for(const text of ['\ud83d\ude00a','\ud83d\ude00\ud83d\ude00a','A a','e\\u0301\u00e9','\u00e9\u00e9a','Z0-','\ud834\udd1ea\ud83d\ude00','\\n a','']){const expected=oracle(text),first=arrangements(text),second=arrangements(text);if(first===second||!same(first,expected)||!same(second,expected))return false;first.pop();first.push('changed');if(!same(second,expected)||!same(arrangements(text),expected))return false;}return true;})()", "expected": true},{"call": "(()=>{const same=arrangements('\ud83d\ude00'.repeat(10));if(same.length!==1||same[0]!=='\ud83d\ude00'.repeat(10))return false;const text='abcdefg',out=arrangements(text);if(out.length!==5040||new Set(out).size!==5040||out[0]!=='abcdefg'||out[out.length-1]!=='gfedcba')return false;for(let i=0;i<out.length;i++){if([...out[i]].sort().join('')!==text||i>0&&out[i-1]>out[i])return false;}const repeated=arrangements('aaaaaaaaab');return repeated.length===10&&repeated.every(v=>v.length===10&&v.split('b').length===2);})()", "expected": true},
       { call: 'arrangements("aaaaaaaaab").length', expected: 10 },
       { call: 'arrangements("aaaaaaaabb").length', expected: 45 },
       { call: 'arrangements("cba")', expected: ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'] },

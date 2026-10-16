@@ -941,7 +941,7 @@ const findWord = (grid, word) => {
     tier: 4,
     focus: ['recursion', 'map-set', 'sort'],
     title: 'Every arrangement, once',
-    prompt: 'Write `arrangements(letters)`, returning every different order of the letters of a string, each order once, sorted the way `sort` orders strings when no compare function is given. `arrangements("aab")` gives `["aab", "aba", "baa"]`: the two `a`s are the same letter, so swapping them makes nothing new. Build the orders recursively: an order is one of the letters followed by an order of the letters that are left. Count each letter in a `Map`, so each position picks each different letter once, taking one from its count before going deeper and putting it back afterwards. Never make a repeat and remove it later: for `"aaaaaaaaab"`, making every order first would mean 3,628,800 of them to find 10. The empty string has one order, `""`.',
+    prompt: 'Write `arrangements(letters)`, returning every different order of the letters of a string, each order once, sorted the way `sort` orders strings when no compare function is given. `arrangements("aab")` gives `["aab", "aba", "baa"]`: the two `a`s are the same letter, so swapping them makes nothing new. Build the orders recursively: an order is one of the letters followed by an order of the letters that are left. Count each letter in a `Map`, so each position picks each different letter once, taking one from its count before going deeper and putting it back afterwards. Never make a repeat and remove it later: for `"aaaaaaaaab"`, making every order first would mean 3,628,800 of them to find 10. The empty string has one order, `""`. letters is a well-formed primitive Unicode string of at most 10 code points (use Array.from or for-of, so an emoji is one letter). Do not normalize Unicode, fold case or trim whitespace. There are at most 10000 distinct output strings. Return a fresh mutable array on each call, including the empty case, in default UTF16 string-sort order. Equivalent duplicate-avoiding algorithms are accepted; Map recursion is the teaching approach, not a required syntax check. Target: O(n^2*p*log(p)) time and O(n^2+n*p) space, a conservative upper bound including recursive path copies and comparison sorting, where n is code-point count plus one and p is distinct output count plus two. A count-based traversal can improve these factors.',
     starter: `const arrangements = letters => {
 
 };
@@ -973,6 +973,7 @@ console.log(arrangements("aab"));
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
+      {"call": "arrangements(\"\ud83d\ude00a\")", "expected": ["a\ud83d\ude00", "\ud83d\ude00a"], "label": "one code point can occupy two UTF16 units"},
       { call: 'arrangements("abc")', expected: ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'] },
       { call: 'arrangements("aab")', expected: ['aab', 'aba', 'baa'], label: 'repeated letters make no repeats' },
       { call: 'arrangements("abab")', expected: ['aabb', 'abab', 'abba', 'baab', 'baba', 'bbaa'] },

@@ -1087,7 +1087,7 @@ const tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] =
     tier: 3,
     focus: ["two-pointer", "while", "tuples"],
     title: "Pair with a sum",
-    prompt: "Write `pairWithSum(sorted: readonly number[], target: number): [number, number] | null`, finding two values in an ascending list that add up to the target with two pointers: one at each end, moved inward in a `while` loop depending on whether the current sum is too small or too large. Return the pair as a tuple, or `null` when there is none. `pairWithSum([1, 2, 3, 4, 6], 6)` gives `[2, 4]`.",
+    prompt: "Write `pairWithSum(sorted: readonly number[], target: number): [number, number] | null`, finding two values in an ascending list that add up to the target with two pointers: one at each end, moved inward in a `while` loop depending on whether the current sum is too small or too large. Return the pair as a tuple, or `null` when there is none. `pairWithSum([1, 2, 3, 4, 6], 6)` gives `[2, 4]`. sorted is a dense readonly array of at most 10000 integer Numbers from -1000000 to 1000000 in nondecreasing order; target is an integer from -2000000 to 2000000. Inputs may be frozen. Use distinct indices; duplicate values may form a pair. If several value pairs work, return the one with the smallest first value. Preserve the input and return a fresh mutable pair on each success. Either zero sign is accepted as zero. Keep the precise mutable tuple-or-null return and readonly input types. Target: O(n) time and O(1) auxiliary space, where n is one plus sorted.length.",
     starter: `const pairWithSum = (sorted: readonly number[], target: number): [number, number] | null => {
 
 };
@@ -1117,6 +1117,7 @@ console.log(pairWithSum([1, 2, 3, 4, 6], 6));
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
+      {"call": "pairWithSum([-4,-1,0,1,4],0)", "expected": [-4, 4], "label": "choose the smallest first value"},
       { call: "pairWithSum([1, 2, 3, 4, 6], 6)", expected: [2, 4] },
       { call: "pairWithSum([1, 3, 5], 8)", expected: [3, 5] },
       { call: "pairWithSum([1, 2], 10)", expected: null, label: "no pair adds up", edge: true },
@@ -1139,7 +1140,7 @@ console.log(pairWithSum([1, 2, 3, 4, 6], 6));
     tier: 3,
     focus: ["while", "readonly"],
     title: "Binary search",
-    prompt: "Write `binarySearch(sorted: readonly number[], target: number): number`, returning the index of the target in an ascending list or -1 when it is absent, by halving the search range in a `while` loop: compare the middle value, then continue in the left or the right half. `binarySearch([1, 3, 5, 7], 5)` gives 2, and an empty list gives -1.",
+    prompt: "Write `binarySearch(sorted: readonly number[], target: number): number`, returning the index of the target in an ascending list or -1 when it is absent, by halving the search range in a `while` loop: compare the middle value, then continue in the left or the right half. `binarySearch([1, 3, 5, 7], 5)` gives 2, and an empty list gives -1. sorted is a dense readonly array of at most 20000 finite Number values from -1000000000 to 1000000000 in nondecreasing order, and target is a finite Number in that range. Values may repeat and include fractions; compare with === without rounding or tolerance. Any matching index is accepted for duplicate values. Do not change the input, which may be frozen. Keep the stated readonly/number signature. Equivalent iterative or recursive halving is accepted. Target: O(log(n)) time and O(log(n)) space, a common upper bound including recursive frames, where n is two plus sorted.length; an iterative loop uses O(1) space.",
     starter: `const binarySearch = (sorted: readonly number[], target: number): number => {
 
 };
@@ -1169,6 +1170,7 @@ console.log(binarySearch([1, 3, 5, 7], 5));
     verify: "tests",
     estimatedMinutes: 9,
     tests: [
+      {"call": "binarySearch([0.25,1.5,2.75],1.5)", "expected": 1, "label": "compare the exact numeric target"},
       { call: "binarySearch([1, 3, 5, 7], 5)", expected: 2 },
       { call: "binarySearch([1, 3, 5, 7], 1)", expected: 0 },
       { call: "binarySearch([1, 3, 5, 7], 4)", expected: -1, label: "a value that is not there", edge: true },

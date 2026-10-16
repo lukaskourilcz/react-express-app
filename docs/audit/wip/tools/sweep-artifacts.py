@@ -36,6 +36,9 @@ PATTERNS = [
 # Matches that read as an artifact but are the item's own subject, each
 # settled by hand. Keyed by item, field and the matched text.
 ALLOW = {
+    # This permutation example has nine a letters and one b: its ten
+    # distinct outputs contrast with 10! naive branches, not a Git revision.
+    ('js-mh-arrangements', 'question', 'aaaaaaaaab'),
     # Nested repetition's decoded literal is data, not a Git revision.
     ('alg-path-stacks-4', 'question', 'accaccacc'),
     # Run-length encoding's literal example input and encoded output contain

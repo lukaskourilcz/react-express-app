@@ -271,9 +271,10 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
   ],
   'ts-evolving-result': [
     step(
-      'Implement generic mapResult<T,U> for successful Result<T> values. Apply fn once and wrap its value as {ok:true,value}. Keep the Result union and precise return types; callbacks do not throw yet.',
+      'Implement generic mapResult<T,U> for successful Result<T> values. Apply fn once and wrap its value as {ok:true,value}. Keep the Result union and precise return types; callbacks do not throw yet. Only successful inputs are required at this checkpoint; failure handling is the next milestone. Inputs may be frozen. Call fn synchronously exactly once with the exact opaque value and wrap its exact result in a fresh mutable success record; do not inspect, clone, await or coerce payloads. A Promise returned by fn stays the value. Keep mapResult<T,U>(result:Result<T>,fn:(value:T)=>U):Result<U>. Target: O(1) time and O(1) extra space, excluding callback work and payload storage, per runtime call; compiler work is separate.',
       'Napiš generickou mapResult<T,U> pro úspěšné hodnoty Result<T>. Jednou zavolej fn a výsledek obal do {ok:true,value}. Zachovej unii Result a přesné návratové typy; callbacky zatím nevyhazují výjimky.',
       calls(
+        ["(()=>{let count=0;const value=[];const out=mapResult({ok:true,value},x=>{count++;return x;});return out.ok===true&&out.value===value&&count===1;})()", true],
         ['mapResult({ok:true,value:2},n=>n*3)', { ok: true, value: 6 }],
         ['mapResult({ok:true,value:0},String)', { ok: true, value: '0' }],
         [
