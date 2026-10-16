@@ -11,7 +11,7 @@ import { runChecks } from '../../../../lib/coding/sandbox';
 import { nodeTypeScriptChecker } from '../../../../lib/coding/ts-check-node';
 import { codeOutcome, gradeDesign, prepareDesign } from '../../../../lib/coding/grade';
 import { runReactSuite } from '../../../../lib/coding/react-runner';
-import { withHiddenCases } from '../../../../lib/coding/react-hidden';
+import { splitHiddenCases, withHiddenCases } from '../../../../lib/coding/react-hidden';
 
 async function main() {
   const [taskId, arg, extra] = process.argv.slice(2);
@@ -35,7 +35,8 @@ async function main() {
   if (task.track === 'react') {
     if (!task.suite) { console.log(JSON.stringify({ verdict: 'checklist-task: no suite' })); return; }
     const run = await runReactSuite({ suite: withHiddenCases(task.suite, solution?.hiddenSuite), appSource: code });
-    console.log(JSON.stringify({ verdict: run.compileError ? 'error' : run.timedOut ? 'timeout' : run.failed === 0 && run.total > 0 ? 'passed' : 'failed', compileError: run.compileError, cases: run.cases }, null, 1));
+    const { visible, hidden } = splitHiddenCases(run.cases);
+    console.log(JSON.stringify({ verdict: run.compileError ? 'error' : run.timedOut ? 'timeout' : run.failed === 0 && run.total > 0 ? 'passed' : 'failed', compileError: run.compileError, cases: run.cases, visible, hidden }, null, 1));
     return;
   }
   const tests = task.tests ?? [];

@@ -10,10 +10,10 @@ export const REACT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
 const title = 'Deep End';
 const intro = 'Practise React one list at a time.';
 
-const App = () => (
+const App = ({ heading = title, description = intro } = {}) => (
   <main>
-    <h1>{title}</h1>
-    <p>{intro}</p>
+    <h1>{heading}</h1>
+    <p>{description}</p>
   </main>
 );
 
@@ -24,14 +24,14 @@ export default App;
 const title = 'Deep End';
 const intro = 'Practise React one list at a time.';
 
-const App = () => {
-  const heading = <h1>{title}</h1>;
-  const paragraph = <p>{intro}</p>;
+const App = ({ heading = title, description = intro } = {}) => {
+  const headingNode = <h1>{heading}</h1>;
+  const paragraphNode = <p>{description}</p>;
 
   return (
     <main>
-      {heading}
-      {paragraph}
+      {headingNode}
+      {paragraphNode}
     </main>
   );
 };
@@ -50,25 +50,26 @@ const Intro = ({ heading, text }) => (
   </>
 );
 
-const App = () => (
+const App = ({ heading = title, description = intro } = {}) => (
   <main>
-    <Intro heading={title} text={intro} />
+    <Intro heading={heading} text={description} />
   </main>
 );
 
 export default App;
 `,
+    hiddenSuite: "\ntest('renders changed plain strings exactly, including empty and markup-like values', () => {\n const values=['',' ','  Deep  End  ','\u017dralok \ud83e\udd88','e\\u0301','<em>literal</em>','&amp;','line\\nbreak','x'.repeat(2000)];\n const view=render(<App heading=\"first\" description=\"initial\"/>);\n for(let i=0;i<values.length;i++){\n  const heading=values[i],description=values[values.length-1-i];\n  view.rerender(<App heading={heading} description={description}/>);\n  expect(view.container.querySelectorAll('h1')).toHaveLength(1);\n  expect(view.container.querySelectorAll('p')).toHaveLength(1);\n  expect(view.container.querySelector('h1').textContent).toBe(heading);\n  expect(view.container.querySelector('p').textContent).toBe(description);\n }\n});\ntest('keeps two app instances independent', () => {\n const first=render(<App heading=\"One\" description=\"First\"/>);\n const second=render(<App heading=\"Two\" description=\"Second\"/>);\n first.rerender(<App heading=\"Updated\" description=\"Changed\"/>);\n expect(second.container.querySelector('h1').textContent).toBe('Two');\n expect(second.container.querySelector('p').textContent).toBe('Second');\n expect(first.container.querySelector('h1').textContent).toBe('Updated');\n});\ntest('defaults each omitted prop independently', () => {\n const view=render(<App heading=\"Custom\"/>);\n expect(view.container.querySelector('p').textContent).toBe('Practise React one list at a time.');\n view.rerender(<App description=\"Another\"/>);\n expect(view.container.querySelector('h1').textContent).toBe('Deep End');\n expect(view.container.querySelector('p').textContent).toBe('Another');\n});\n",
   },
   "react-greeting-component": {
     solution: `import React from 'react';
 
 const names = ['Ana', 'Bo', 'Cyril'];
 
-const Greeting = ({ name }) => <p>Hello, {name}</p>;
+export const Greeting = ({ name }) => <p>Hello, {name}</p>;
 
-const App = () => (
+const App = ({ people = names } = {}) => (
   <main>
-    {names.map(name => (
+    {people.map(name => (
       <Greeting key={name} name={name} />
     ))}
   </main>
@@ -80,14 +81,14 @@ export default App;
 
 const names = ['Ana', 'Bo', 'Cyril'];
 
-function Greeting(props) {
+export function Greeting(props) {
   const message = 'Hello, ' + props.name;
   return <p>{message}</p>;
 }
 
-const App = () => {
+const App = ({ people = names } = {}) => {
   const greetings = [];
-  for (const name of names) {
+  for (const name of people) {
     greetings.push(<Greeting key={name} name={name} />);
   }
 
@@ -100,19 +101,20 @@ export default App;
 
 const names = ['Ana', 'Bo', 'Cyril'];
 
-const Greeting = ({ name }) => <p>{\`Hello, \${name}\`}</p>;
+export const Greeting = ({ name }) => <p>{\`Hello, \${name}\`}</p>;
 
 // A list component may return an array directly; it needs no wrapper of its own.
 const Greetings = ({ people }) => people.map(name => <Greeting key={name} name={name} />);
 
-const App = () => (
+const App = ({ people = names } = {}) => (
   <main>
-    <Greetings people={names} />
+    <Greetings people={people} />
   </main>
 );
 
 export default App;
 `,
+    hiddenSuite: "\ntest('named Greeting accepts exact names and changes with its prop', () => {\n const view=render(<Greeting name=\"Initial\"/>);\n for(const name of ['',' ','  Ana  ','\u017dofie \ud83e\udd88','e\\u0301','<b>Ada</b>','&amp;','line\\nbreak','x'.repeat(2000)]){\n  view.rerender(<Greeting name={name}/>);\n  expect(view.container.querySelectorAll('p')).toHaveLength(1);\n  expect(view.container.querySelector('p').textContent).toBe('Hello, '+name);\n }\n});\ntest('renders arbitrary read-only lists in order through changes and emptiness', () => {\n const values=Object.freeze(['Zoe','  Ana  ','','<i>Bo</i>','\u017dofie']);\n const view=render(<App people={values}/>);\n const messages=()=>[...view.container.querySelectorAll('p')].map(p=>p.textContent);\n expect(messages()).toEqual(values.map(name=>'Hello, '+name));\n view.rerender(<App people={Object.freeze([...values].reverse())}/>);\n expect(messages()).toEqual([...values].reverse().map(name=>'Hello, '+name));\n view.rerender(<App people={Object.freeze([])}/>);expect(messages()).toEqual([]);\n view.rerender(<App people={Object.freeze(['New'])}/>);expect(messages()).toEqual(['Hello, New']);\n expect([...values]).toEqual(['Zoe','  Ana  ','','<i>Bo</i>','\u017dofie']);\n});\ntest('handles a hundred unique names and independent app instances', () => {\n const names=Object.freeze(Array.from({length:100},(_,i)=>'Person '+(99-i)));\n const first=render(<App people={names}/>),second=render(<App people={Object.freeze(['Other'])}/>);\n expect([...first.container.querySelectorAll('p')].map(p=>p.textContent)).toEqual(names.map(name=>'Hello, '+name));\n first.rerender(<App people={Object.freeze([])}/>);\n expect(second.container.querySelector('p').textContent).toBe('Hello, Other');\n});\n",
   },
   "react-price-component": {
     solution: `import React from 'react';
@@ -123,12 +125,12 @@ const items = [
   { id: 3, name: 'Sticker', amount: 0.99, currency: 'USD' },
 ];
 
-const Price = ({ amount, currency }) => <span>{amount.toFixed(2)} {currency}</span>;
+export const Price = ({ amount, currency }) => <span>{amount.toFixed(2)} {currency}</span>;
 
-const App = () => (
+const App = ({ products = items } = {}) => (
   <main>
     <ul>
-      {items.map(item => (
+      {products.map(item => (
         <li key={item.id}>
           {item.name} <Price amount={item.amount} currency={item.currency} />
         </li>
@@ -147,15 +149,15 @@ const items = [
   { id: 3, name: 'Sticker', amount: 0.99, currency: 'USD' },
 ];
 
-function Price(props) {
+export function Price(props) {
   const formatted = props.amount.toFixed(2);
   const text = formatted + ' ' + props.currency;
   return <span>{text}</span>;
 }
 
-const App = () => {
+const App = ({ products = items } = {}) => {
   const rows = [];
-  for (const item of items) {
+  for (const item of products) {
     rows.push(
       <li key={item.id}>
         {item.name} <Price amount={item.amount} currency={item.currency} />
@@ -182,12 +184,12 @@ const items = [
 
 const formatPrice = (amount, currency) => \`\${amount.toFixed(2)} \${currency}\`;
 
-const Price = ({ amount, currency }) => <span>{formatPrice(amount, currency)}</span>;
+export const Price = ({ amount, currency }) => <span>{formatPrice(amount, currency)}</span>;
 
-const App = () => (
+const App = ({ products = items } = {}) => (
   <main>
     <ul>
-      {items.map(({ id, name, ...price }) => (
+      {products.map(({ id, name, ...price }) => (
         <li key={id}>
           {name} <Price {...price} />
         </li>
@@ -198,6 +200,7 @@ const App = () => (
 
 export default App;
 `,
+    hiddenSuite: "\ntest('named Price follows Number.toFixed for changed amounts and currencies', () => {\n const view=render(<Price amount={0} currency=\"EUR\"/>);\n const amounts=[-1000000,-12.345,-0.005,-0,0,0.004,0.005,1.005,2.675,9.999,1234.5,1000000];\n for(let i=0;i<amounts.length;i++){\n  const amount=amounts[i],currency=i%2?'JPY':'QQQ';\n  view.rerender(<Price amount={amount} currency={currency}/>);\n  expect(view.container.querySelectorAll('span')).toHaveLength(1);\n  expect(view.container.querySelector('span').textContent).toBe(amount.toFixed(2)+' '+currency);\n }\n});\ntest('renders read-only products exactly in order through replacement and emptiness', () => {\n const products=Object.freeze([\n  Object.freeze({id:99,name:'  Caf\u00e9 \ud83e\udd88  ',amount:2.675,currency:'GBP'}),\n  Object.freeze({id:1,name:'<b>literal</b>',amount:0,currency:'JPY'}),\n  Object.freeze({id:42,name:'',amount:-9.999,currency:'USD'}),\n ]);\n const view=render(<App products={products}/>);\n const check=(expected)=>{\n  expect(view.container.querySelectorAll('ul')).toHaveLength(1);\n  const rows=[...view.container.querySelectorAll('ul li')];expect(rows).toHaveLength(expected.length);\n  rows.forEach((row,i)=>{\n   expect(row.textContent).toContain(expected[i].name);\n   expect(row.querySelector('span').textContent).toBe(expected[i].amount.toFixed(2)+' '+expected[i].currency);\n  });\n };\n check(products);const reversed=Object.freeze([...products].reverse());\n view.rerender(<App products={reversed}/>);check(reversed);\n view.rerender(<App products={Object.freeze([])}/>);check([]);\n view.rerender(<App products={products}/>);check(products);\n expect(products[0].amount).toBe(2.675);expect(products[1].name).toBe('<b>literal</b>');\n});\ntest('supports a hundred products and independent mounted lists', () => {\n const products=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:100-i,name:'Product '+i,amount:i-50.125,currency:i%2?'EUR':'CZK'})));\n const first=render(<App products={products}/>),second=render(<App products={Object.freeze([])}/>);\n const rows=[...first.container.querySelectorAll('ul li')];expect(rows).toHaveLength(100);\n rows.forEach((row,i)=>{\n  expect(row.textContent).toContain(products[i].name);\n  expect(row.querySelector('span').textContent).toBe(products[i].amount.toFixed(2)+' '+products[i].currency);\n });\n first.rerender(<App products={Object.freeze([])}/>);\n expect(second.container.querySelectorAll('li')).toHaveLength(0);\n});\n",
   },
   "react-keyed-book-list": {
     solution: `import React from 'react';
