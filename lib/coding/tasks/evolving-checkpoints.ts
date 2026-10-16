@@ -535,11 +535,12 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
   return {
     '2': {
       ...step(
-        `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}.`,
+        `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}. Keep the earlier exact name and integer rules: preserve case, Unicode representation and interior spaces; use ECMAScript trim and UTF16 lengths, and accept signed zero as zero. Ordinary inherited data fields are allowed, extra getters are ignored, and required-field accessors/proxies are outside this exercise. Raw names have at most 20000 code units. Return a fresh mutable Draft without changing or retaining caller state. Item.id and Item.version must be number fields even though this checkpoint has no update/API behavior yet. Target: O(n) time and O(n) space for normalization, where n is one plus raw name UTF16 length; type declarations themselves have no runtime cost.`,
         `Převeď normalizeInput do TypeScriptu: vstup unknown, návrat Draft|null, kde Draft={name:string;${amount}:number}. Zachovej předchozí validaci. Definuj Item=Draft & {id:number;version:number}.`,
         // The earlier validation, checked where the stage-1 checks leave gaps:
         // a positive amount, a negative one, and both upper limits exactly.
         calls(
+          [`normalizeInput({name:'e\\u0301',${amount}:0})`, {name:'e\u0301',[amount]:0}],
           [`normalizeInput({name:'Plan',${amount}:5})`, { name: 'Plan', [amount]: 5 }],
           [`normalizeInput({name:'A',${amount}:-1})`, null],
           [`normalizeInput({name:'x'.repeat(80),${amount}:1})`, { name: 'x'.repeat(80), [amount]: 1 }],
@@ -547,6 +548,9 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
         ),
       ),
       typeTests: [
+        {code: `{const item:Item={id:1,name:"A",${amount}:0,version:1};const id:number=item.id;const version:number=item.version;}`},
+        {code: `{const item:Item={id:1,name:"A",${amount}:0,version:"bad"};}`, rejects: true},
+        {code: `{const item:Item={id:"bad",name:"A",${amount}:0,version:1};}`, rejects: true},
         { code: '{const d:Draft|null=normalizeInput({});}' },
         { code: '{const bad:string=normalizeInput({});}', rejects: true },
       ],
