@@ -244,24 +244,23 @@ const STACKS: Boards = {
   return answer;
 }`,
     `function decodeString(text) {
-  const stack = []; // [the text before a bracket, how many times to repeat what is inside]
-  let current = "";
+  const stack = [];
+  let parts = [];
   let count = 0;
   for (const char of text) {
-    if (char >= "0" && char <= "9") {
-      count = count * 10 + Number(char); // a count can have several digits
-    } else if (char === "[") {
-      stack.push([current, count]);
-      current = "";
+    if (char >= "0" && char <= "9") count = count * 10 + Number(char);
+    else if (char === "[") {
+      stack.push({ parts, times: count });
+      parts = [];
       count = 0;
     } else if (char === "]") {
-      const [before, times] = stack.pop();
-      current = before + current.repeat(times);
-    } else {
-      current += char;
-    }
+      const body = parts.join("");
+      const parent = stack.pop();
+      parts = parent.parts;
+      parts.push(body.repeat(parent.times));
+    } else parts.push(char);
   }
-  return current;
+  return parts.join("");
 }`,
     `function slidingMax(numbers, k) {
   const result = [];
@@ -342,47 +341,38 @@ const STACKS: Boards = {
   return answer;
 }`,
     `function decodeString(text) {
-  const counts = [];
-  const texts = [];
-  let current = "";
-  let count = 0;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char >= "0" && char <= "9") {
-      count = count * 10 + Number(char);
-    } else if (char === "[") {
-      counts.push(count);
-      texts.push(current);
-      count = 0;
-      current = "";
-    } else if (char === "]") {
-      const times = counts.pop();
-      const before = texts.pop();
-      let repeated = "";
-      for (let j = 0; j < times; j++) {
-        repeated = repeated + current;
+  let position = 0;
+  function readGroup() {
+    const parts = [];
+    while (position < text.length && text[position] !== "]") {
+      const char = text[position];
+      if (char >= "0" && char <= "9") {
+        let times = 0;
+        while (text[position] >= "0" && text[position] <= "9") {
+          times = times * 10 + Number(text[position++]);
+        }
+        position++; // opening bracket
+        const body = readGroup();
+        position++; // closing bracket
+        parts.push(body.repeat(times));
+      } else {
+        parts.push(char);
+        position++;
       }
-      current = before + repeated;
-    } else {
-      current = current + char;
     }
+    return parts.join("");
   }
-  return current;
+  return readGroup();
 }`,
     `function slidingMax(numbers, k) {
   const result = [];
   const queue = [];
+  let front = 0;
   for (let i = 0; i < numbers.length; i++) {
-    if (queue.length > 0 && queue[0] <= i - k) {
-      queue.shift();
-    }
-    while (queue.length > 0 && numbers[queue[queue.length - 1]] <= numbers[i]) {
-      queue.pop();
-    }
+    if (front < queue.length && queue[front] <= i - k) front++;
+    while (queue.length > front && numbers[queue[queue.length - 1]] <= numbers[i]) queue.pop();
     queue.push(i);
-    if (i >= k - 1) {
-      result.push(numbers[queue[0]]);
-    }
+    if (i >= k - 1) result.push(numbers[queue[front]]);
   }
   return result;
 }`,
@@ -427,32 +417,29 @@ const evalRPN = (tokens) =>
   return answer;
 };`,
     `const decodeString = (text) => {
-  const stack = [];
-  let current = "";
+  const frames = [{ chunks: [], times: 1 }];
   let count = 0;
   for (const char of text) {
-    if (/\\d/.test(char)) {
-      count = count * 10 + Number(char);
-    } else if (char === "[") {
-      stack.push({ before: current, times: count });
-      [current, count] = ["", 0];
+    if (char >= "0" && char <= "9") count = count * 10 + Number(char);
+    else if (char === "[") {
+      frames.push({ chunks: [], times: count });
+      count = 0;
     } else if (char === "]") {
-      const { before, times } = stack.pop();
-      current = before + current.repeat(times);
-    } else {
-      current += char;
-    }
+      const child = frames.pop();
+      frames[frames.length - 1].chunks.push(child.chunks.join("").repeat(child.times));
+    } else frames[frames.length - 1].chunks.push(char);
   }
-  return current;
+  return frames[0].chunks.join("");
 };`,
     `const slidingMax = (numbers, k) => {
   const queue = [];
   const result = [];
+  let front = 0;
   for (const [i, value] of numbers.entries()) {
-    if (queue[0] <= i - k) queue.shift();
-    while (queue.length && numbers[queue[queue.length - 1]] <= value) queue.pop();
+    if (front < queue.length && queue[front] <= i - k) front++;
+    while (queue.length > front && numbers[queue[queue.length - 1]] <= value) queue.pop();
     queue.push(i);
-    if (i >= k - 1) result.push(numbers[queue[0]]);
+    if (i >= k - 1) result.push(numbers[queue[front]]);
   }
   return result;
 };`,
@@ -468,11 +455,11 @@ const HIDDEN: Record<string, Hidden> = {
     [["(() => {for(let n=0;n<=8;n++)for(let code=0;code<2**n;code++){const bits=Object.freeze(Array.from({length:n},(_,i)=>(code>>i)&1));for(let k=0;k<=n+1;k++){let best=0;for(let left=0;left<n;left++){let zeros=0;for(let right=left;right<n;right++){zeros+=bits[right]===0?1:0;if(zeros<=k)best=Math.max(best,right-left+1);}}if(longestOnes(bits,k)!==best)return false;}}return true;})()", true], ["(() => {const bits=[-0,1,-0],copy=bits.slice();return [longestOnes(bits,1),bits.every((v,i)=>Object.is(v,copy[i])),longestOnes(Object.freeze(bits.slice()),1099511627776),longestOnes(Object.freeze([1,0]),-0),longestOnes(Object.freeze([]),1099511627776)];})()", [2, true, 3, 1, 0]], ["[longestOnes(Object.freeze(Array(20000).fill(0)),10000),longestOnes(Object.freeze(Array(20000).fill(1)),0),longestOnes(Object.freeze(Array.from({length:20000},(_,i)=>i%2)),1),longestOnes(Object.freeze(Array(20000).fill(0)),1099511627776)]", [10000, 20000, 3, 20000]], ["longestOnes([0], 1)", 1], ["longestOnes([1, 0, 0, 1], 1)", 2]],
   ],
   'alg-path-stacks': [
-    [['simplifyPath("/a//b////c/d//././/..")', '/a/b/c'], ['simplifyPath("/..hidden/")', '/..hidden']],
-    [['evalRPN(["2", "3", "4", "*", "+"])', 14], ['evalRPN(["-3", "-4", "*"])', 12]],
-    [['nextGreater([2, 7, 3, 5, 4, 6, 8])', [7, 8, 5, 6, 6, 8, -1]], ['nextGreater([1, 1, 2])', [2, 2, -1]]],
-    [['decodeString("2[a2[b]c]")', 'abbcabbc'], ['decodeString("12[q]")', 'qqqqqqqqqqqq']],
-    [['slidingMax([7, 2, 4], 2)', [7, 4]], ['slidingMax([1, -1], 1)', [1, -1]]],
+    [["(() => {const names=['a','..','.','',' b ','...'];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code,path='',expected='';for(let i=0;i<n;i++){const part=names[digits%6];digits=Math.floor(digits/6);path+='/'+part;if(part==='..')expected=expected.slice(0,Math.max(0,expected.lastIndexOf('/')));else if(part!==''&&part!=='.')expected+='/'+part;}if(simplifyPath(path||'/')!==(expected||'/'))return false;}return true;})()", true], ["[simplifyPath('/ a /.. /'),simplifyPath('/A/%2e%2e/\\\\/\ud83d\ude00/\\ud83d'),simplifyPath('/__proto__/constructor'),simplifyPath('/../../x'),simplifyPath('/.../..hidden/.file')]", ["/ a /.. ", "/A/%2e%2e/\\/\ud83d\ude00/\ud83d", "/__proto__/constructor", "/x", "/.../..hidden/.file"]], ["(() => {const path='/'+'a/'.repeat(9999)+'a';return path.length===20000&&simplifyPath(path)===path&&simplifyPath('/'+'../'.repeat(6666))==='/';})()", true], ["simplifyPath(\"/a//b////c/d//././/..\")", "/a/b/c"], ["simplifyPath(\"/..hidden/\")", "/..hidden"]],
+    [["(() => {const values=[-3n,-1n,0n,2n,5n],ops=['+','-','*','/'];const apply=(a,b,op)=>op==='+'?a+b:op==='-'?a-b:op==='*'?a*b:a/b;for(const a of values)for(const b of values)for(const op of ops){if(op==='/'&&b===0n)continue;const tokens=Object.freeze([String(a),String(b),op]);if(evalRPN(tokens)!==Number(apply(a,b,op)))return false;}for(const a of values)for(const b of values)for(const c of values)for(const op of ops)for(const end of ops){if(!(op==='/'&&b===0n)){const first=apply(a,b,op);if(!(end==='/'&&c===0n)&&evalRPN(Object.freeze([String(a),String(b),op,String(c),end]))!==Number(apply(first,c,end)))return false;}if(!(end==='/'&&c===0n)){const last=apply(b,c,end);if(!(op==='/'&&last===0n)&&evalRPN(Object.freeze([String(a),String(b),String(c),end,op]))!==Number(apply(a,last,op)))return false;}}return true;})()", true], ["(() => {const tokens=['9007199254740991','1','-'],copy=tokens.slice();return evalRPN(tokens)===9007199254740990&&tokens.every((v,i)=>v===copy[i])&&evalRPN(Object.freeze(['4294967296','1','+']))===4294967297&&evalRPN(Object.freeze(['-7','2','/']))===-3&&evalRPN(Object.freeze(['-0']))===0;})()", true], ["(() => {const left=['1'];for(let i=1;i<10000;i++)left.push('1','+');const deep=Array(10000).fill('1').concat(Array(9999).fill('+'));return left.length===19999&&evalRPN(Object.freeze(left))===10000&&evalRPN(Object.freeze(deep))===10000;})()", true], ["evalRPN([\"2\", \"3\", \"4\", \"*\", \"+\"])", 14], ["evalRPN([\"-3\", \"-4\", \"*\"])", 12]],
+    [["(() => {const values=[-2,-.5,-0,0,.25,3];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(values[digits%6]);digits=Math.floor(digits/6);}Object.freeze(input);const expected=input.map((value,i)=>{for(let j=i+1;j<n;j++)if(input[j]>value)return input[j];return -1;});const out=nextGreater(input);if(!Array.isArray(out)||out.length!==n||!out.every((v,i)=>v===expected[i]))return false;}return true;})()", true], ["(() => {const input=[-Infinity,-0,0,.5,Infinity,Infinity],copy=input.slice(),a=nextGreater(input),b=nextGreater(Object.freeze(input.slice())),x=nextGreater([]),y=nextGreater([]),expected=[-0,.5,.5,Infinity,-1,-1];if(a===input||a===b||x===y||x.length||y.length||!a.every((v,i)=>v===expected[i])||!b.every((v,i)=>v===expected[i]))return false;a[0]=99;return a[0]===99&&b[0]===0&&input.every((v,i)=>Object.is(v,copy[i]));})()", true], ["(() => {const increasing=Object.freeze(Array.from({length:20000},(_,i)=>i)),falling=Object.freeze(Array.from({length:20000},(_,i)=>20000-i));return nextGreater(increasing).every((v,i)=>v===(i===19999?-1:i+1))&&nextGreater(falling).every(v=>v===-1)&&nextGreater(Object.freeze(Array(20000).fill(.5))).every(v=>v===-1);})()", true], ["nextGreater([2, 7, 3, 5, 4, 6, 8])", [7, 8, 5, 6, 6, 8, -1]], ["nextGreater([1, 1, 2])", [2, 2, -1]]],
+    [["(() => {const chunks=[['a','a'],['2[b]','bb'],['3[]',''],['2[c2[d]]','cddcdd'],['1[\ud83d\ude00]','\ud83d\ude00'],[' a ',' a ']];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code,input='',expected='';for(let i=0;i<n;i++){const pair=chunks[digits%6];digits=Math.floor(digits/6);input+=pair[0];expected+=pair[1];}if(decodeString(input)!==expected)return false;}return true;})()", true], ["decodeString('2[ a ]')===' a  a '&&decodeString('1['.repeat(64)+'\ud83d\ude00\\ud83d'+']'.repeat(64))==='\ud83d\ude00\\ud83d'&&decodeString('1000['.repeat(64)+']'.repeat(64))===''&&decodeString('2[\u00e9\\u0301]')==='\u00e9\\u0301\u00e9\\u0301' ", true], ["decodeString('1[a]'.repeat(5000))==='a'.repeat(5000)&&decodeString('1000[20[a]]')==='a'.repeat(20000)&&decodeString('3[]'.repeat(5000))==='' ", true], ["decodeString(\"2[a2[b]c]\")", "abbcabbc"], ["decodeString(\"12[q]\")", "qqqqqqqqqqqq"]],
+    [["(() => {const values=[-2,-.5,-0,0,.25,3];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(values[digits%6]);digits=Math.floor(digits/6);}Object.freeze(input);for(let k=1;k<=n+1;k++){const expected=[];for(let left=0;left+k<=n;left++){let best=-Infinity;for(let j=left;j<left+k;j++)best=Math.max(best,input[j]);expected.push(best);}const out=slidingMax(input,k);if(!Array.isArray(out)||out.length!==expected.length||!out.every((v,i)=>v===expected[i]))return false;}}return true;})()", true], ["(() => {const input=[-Infinity,-0,0,.5,Infinity],copy=input.slice(),a=slidingMax(input,2),b=slidingMax(Object.freeze(input.slice()),2),x=slidingMax(input,1099511627776),y=slidingMax(input,1099511627776),expected=[0,0,.5,Infinity];if(a===input||a===b||x===y||x.length||y.length||a.length!==4||b.length!==4||!a.every((v,i)=>v===expected[i])||!b.every((v,i)=>v===expected[i]))return false;a[0]=99;return a[0]===99&&b[0]===0&&input.every((v,i)=>Object.is(v,copy[i]))&&slidingMax([],1).length===0;})()", true], ["(() => {const down=Object.freeze(Array.from({length:20000},(_,i)=>20000-i)),up=Object.freeze(Array.from({length:20000},(_,i)=>i)),a=slidingMax(down,10000),b=slidingMax(up,10000),c=slidingMax(Object.freeze(Array(20000).fill(.5)),10000);return a.length===10001&&a.every((v,i)=>v===20000-i)&&b.length===10001&&b.every((v,i)=>v===i+9999)&&c.length===10001&&c.every(v=>v===.5);})()", true], ["slidingMax([7, 2, 4], 2)", [7, 4]], ["slidingMax([1, -1], 1)", [1, -1]]],
   ],
 };
 

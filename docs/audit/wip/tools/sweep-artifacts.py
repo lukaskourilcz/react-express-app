@@ -36,6 +36,8 @@ PATTERNS = [
 # Matches that read as an artifact but are the item's own subject, each
 # settled by hand. Keyed by item, field and the matched text.
 ALLOW = {
+    # Nested repetition's decoded literal is data, not a Git revision.
+    ('alg-path-stacks-4', 'question', 'accaccacc'),
     # Run-length encoding's literal example input and encoded output contain
     # only hex characters. Read in this exact task, they are data, not revisions.
     ('js-run-length-encode', 'question', 'aaabccdddd'),

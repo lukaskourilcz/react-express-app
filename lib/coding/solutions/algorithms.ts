@@ -922,7 +922,8 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
     while (next < tasks.length) {
       const index = next;
       next += 1;
-      results[index] = await tasks[index]();
+      const task = tasks[index];
+      results[index] = await task();
     }
   };
   const workers = [];
@@ -936,7 +937,8 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   for (let start = 0; start < tasks.length; start += size) {
     const batch = [];
     for (let offset = 0; offset < size && start + offset < tasks.length; offset += 1) {
-      batch.push(tasks[start + offset]());
+      const task = tasks[start + offset];
+      batch.push(task());
     }
     const settled = await Promise.all(batch);
     for (let index = 0; index < settled.length; index += 1) {
@@ -947,9 +949,6 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
 };`,
     senior: `const promisePool = async (tasks, limit) => {
   const results = new Array(tasks.length);
-  // One shared iterator: every worker pulls the next unclaimed task from it, so
-  // no two ever take the same one and a freed slot refills immediately —
-  // unlike fixed batches, which idle until the slowest task in a batch lands.
   const pending = tasks.entries();
   const worker = async () => {
     for (const [index, task] of pending) results[index] = await task();
@@ -957,12 +956,7 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
   return results;
 };`,
-    hiddenTests: [
-      { call: '(async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = [0, 1, 2, 3].map(i => async () => { await wait(20 - i * 5); return i; }); return promisePool(tasks, 2); })()', expected: [0, 1, 2, 3] },
-      { call: '(async () => { let running = 0; let peak = 0; const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = Array.from({ length: 6 }, () => async () => { running += 1; if (running > peak) peak = running; await wait(5); running -= 1; return 1; }); await promisePool(tasks, 3); return peak; })()', expected: 3 },
-      { call: 'promisePool([() => Promise.resolve(1)], 1)', expected: [1] },
-      { call: '(async () => { const results = await promisePool([() => Promise.resolve("a"), () => Promise.resolve("b"), () => Promise.resolve("c")], 2); return results.join(""); })()', expected: 'abc' },
-    ],
+    hiddenTests: [{"call": "(async () => {for(let n=0;n<=8;n++)for(const limit of [1,2,3,1099511627776]){let running=0,peak=0;const count=Array(n).fill(0),tasks=Object.freeze(Array.from({length:n},(_,i)=>function(){'use strict';if(this!==undefined||arguments.length)throw Error('call shape');count[i]++;running++;peak=Math.max(peak,running);return new Promise(resolve=>setTimeout(()=>{running--;resolve(i);},(n-i)%4));}));const result=await promisePool(tasks,limit);if(result.length!==n||!result.every((value,i)=>value===i)||count.some(value=>value!==1)||running!==0||peak>Math.min(limit,n))return false;}return true;})()", "expected": true}, {"call": "(async () => {const object=Object.freeze({value:1}),symbol=Symbol('value'),values=[undefined,object,symbol,NaN,-0,Infinity],tasks=Object.freeze(values.map(value=>()=>Promise.resolve(value))),a=await promisePool(tasks,2),b=await promisePool(tasks,1099511627776);if(a===b||a.length!==values.length||!values.every((value,i)=>Object.hasOwn(a,i)&&Object.is(a[i],value)&&Object.is(b[i],value)))return false;a[0]='changed';if(a[0]!=='changed'||b[0]!==undefined)return false;for(const reason of [undefined,0,symbol,object]){let count=0;try{await promisePool(Object.freeze([()=>{count++;return Promise.reject(reason);}]),1);return false;}catch(error){if(!Object.is(error,reason)||count!==1)return false;}}return true;})()", "expected": true}, {"call": "(async () => {const tasks=Object.freeze(Array.from({length:2000},(_,i)=>()=>Promise.resolve(i)));for(const limit of [1,31,1099511627776]){const result=await promisePool(tasks,limit);if(result.length!==2000||!result.every((value,i)=>value===i))return false;}const a=await promisePool([],1),b=await promisePool([],1);return a!==b;})()", "expected": true}, {"call": "(async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = [0, 1, 2, 3].map(i => async () => { await wait(20 - i * 5); return i; }); return promisePool(tasks, 2); })()", "expected": [0, 1, 2, 3]}, {"call": "(async () => { let running = 0; let peak = 0; const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = Array.from({ length: 6 }, () => async () => { running += 1; if (running > peak) peak = running; await wait(5); running -= 1; return 1; }); await promisePool(tasks, 3); return peak; })()", "expected": 3}, {"call": "promisePool([() => Promise.resolve(1)], 1)", "expected": [1]}, {"call": "(async () => { const results = await promisePool([() => Promise.resolve(\"a\"), () => Promise.resolve(\"b\"), () => Promise.resolve(\"c\")], 2); return results.join(\"\"); })()", "expected": "abc"}],
   },
 
   'alg-retry-backoff': {
@@ -979,35 +973,24 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   }
   throw lastError;
 };`,
-    junior: `const retryWithBackoff = (fn, attempts) => {
-  const wait = ms => new Promise(done => setTimeout(done, ms));
-  return new Promise(function (resolve, reject) {
-    let attempt = 0;
-    let delay = 100;
-    const tryOnce = function () {
-      if (attempt >= attempts) {
-        reject(new Error("no attempts were made"));
-        return;
+    junior: `const retryWithBackoff = async (fn, attempts) => {
+  let lastError = new Error("no attempts were made");
+  let delay = 100;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < attempts) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
       }
-      attempt = attempt + 1;
-      fn().then(resolve, function (error) {
-        if (attempt >= attempts) {
-          reject(error);
-          return;
-        }
-        const thisDelay = delay;
-        delay = delay * 2;
-        wait(thisDelay).then(tryOnce);
-      });
-    };
-    tryOnce();
-  });
+    }
+  }
+  throw lastError;
 };`,
     senior: `const retryWithBackoff = async (fn, attempts) => {
   const wait = ms => new Promise(done => setTimeout(done, ms));
-  // The delay before attempt i (counting from one) is 100 × 2^(i-1): nothing
-  // before the first, and nothing after the last failure either — waiting to
-  // announce a defeat you have already suffered helps no caller.
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await fn();
@@ -1018,13 +1001,6 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   }
   throw new Error("retryWithBackoff needs at least one attempt");
 };`,
-    hiddenTests: [
-      { call: '(() => { let runs = 0; return retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); })()', expected: 2 },
-      { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
-      { call: '(async () => { const started = Date.now(); await retryWithBackoff(async () => { throw new Error("down"); }, 2).catch(() => "failed"); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
-      { call: 'retryWithBackoff(async () => 0, 1)', expected: 0 },
-      // Success on the fourth attempt has waited 100 + 200 + 400 ms; a wait that grows by 100 ms each time totals 600.
-      { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 4) throw new Error("flaky"); return runs; }, 5); const elapsed = Date.now() - started; return elapsed >= 650 && elapsed < 1200; })()', expected: true },
-    ],
+    hiddenTests: [{"call": "(async () => {for(let budget=1;budget<=5;budget++){const start=Date.now(),times=[],reason={};let calls=0;try{await retryWithBackoff(function(){'use strict';if(this!==undefined||arguments.length)throw Error('call shape');times.push(Date.now()-start);calls++;return Promise.reject(reason);},budget);return false;}catch(error){if(error!==reason)return false;}if(calls!==budget||times.length!==budget)return false;for(let i=1;i<times.length;i++){const gap=times[i]-times[i-1],delay=100*2**(i-1);if(gap<delay-10||gap>delay+500)return false;}const expected=100*(2**(budget-1)-1),elapsed=Date.now()-start;if(elapsed<expected-50||elapsed>expected+1000)return false;}return true;})()", "expected": true}, {"call": "(async () => {for(const attempts of [-1000000000000,-1,-0,0]){let calls=0;const start=Date.now();try{await retryWithBackoff(()=>{calls++;return Promise.resolve(1);},attempts);return false;}catch(error){if(!(error instanceof Error)||calls!==0||Date.now()-start>1000)return false;}}const object={},symbol=Symbol('same');for(const value of [undefined,0,false,-0,symbol,object])if(!Object.is(await retryWithBackoff(()=>Promise.resolve(value),5),value))return false;for(const reason of [undefined,0,symbol,object]){try{await retryWithBackoff(()=>Promise.reject(reason),2);return false;}catch(error){if(!Object.is(error,reason))return false;}}return true;})()", "expected": true}, {"call": "(async () => {const start=Date.now(),times=[];let calls=0,running=0,peak=0;const result=await retryWithBackoff(()=>{calls++;times.push(Date.now()-start);running++;peak=Math.max(peak,running);return new Promise((resolve,reject)=>setTimeout(()=>{running--;calls===5?resolve('done'):reject('again');},7));},5);const elapsed=Date.now()-start;if(result!=='done'||calls!==5||running!==0||peak!==1||elapsed<1485||elapsed>2535)return false;for(let i=1;i<times.length;i++){const gap=times[i]-times[i-1],expected=7+100*2**(i-1);if(gap<expected-10||gap>expected+500)return false;}return true;})()", "expected": true}, {"call": "(() => { let runs = 0; return retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error(\"once\"); return runs; }, 4); })()", "expected": 2}, {"call": "(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error(\"once\"); return runs; }, 4); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()", "expected": true}, {"call": "(async () => { const started = Date.now(); await retryWithBackoff(async () => { throw new Error(\"down\"); }, 2).catch(() => \"failed\"); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()", "expected": true}, {"call": "retryWithBackoff(async () => 0, 1)", "expected": 0}, {"call": "(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 4) throw new Error(\"flaky\"); return runs; }, 5); const elapsed = Date.now() - started; return elapsed >= 650 && elapsed < 1200; })()", "expected": true}],
   },
 };
