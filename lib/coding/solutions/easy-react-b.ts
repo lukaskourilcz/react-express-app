@@ -2651,7 +2651,13 @@ test('Undo works again after the next removal', () => {
   removeTask('Three');
   undo();
   expect(texts(container)).toEqual(['One', 'Two', 'Three']);
-});`,
+});
+
+
+test('sixty current removals and latest-only undos follow an immutable positional model',()=>{const initial=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'task-'+i,text:i%4?'Task '+i:'duplicate'}))),before=JSON.stringify(initial),model=initial.map(task=>({...task})),view=render(<App initialTasks={initial}/>);let last=null;for(let step=0;step<60;step++){if(last&&(step%3===2||model.length===0)){fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));model.splice(last.index,0,last.task);last=null;}else if(model.length){const index=(step*5+7)%model.length;last={index,task:model[index]};fireEvent.click(view.container.querySelectorAll('li button')[index]);model.splice(index,1);}expect(texts(view.container)).toEqual(model.map(task=>task.text));expect(Boolean(within(view.container).queryByRole('button',{name:'Undo'}))).toBe(Boolean(last));expect(JSON.stringify(initial)).toBe(before);}});
+test('empty,single,duplicate and literal task snapshots retain their own latest removal through parents',()=>{for(const names of [[],['x'.repeat(500)],['same','middle','same'],['<b>raw</b>','"quoted" 🦈']]){const items=names.map((text,i)=>({id:i,text})),view=render(<App initialTasks={items}/>);expect(texts(view.container)).toEqual(names);expect(within(view.container).queryByRole('button',{name:'Undo'})).toBeNull();if(names.length){fireEvent.click(view.container.querySelectorAll('li button')[names.length-1]);view.rerender(<App initialTasks={[{id:'new',text:'replacement'}]}/>);expect(texts(view.container)).toEqual(names.slice(0,-1));fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));expect(texts(view.container)).toEqual(names);}expect(view.container.querySelector('b')).toBeNull();view.unmount();}});
+test('separate Apps own undo memory and fresh mounts recover their initial snapshot',()=>{const items=[{id:1,text:'one'},{id:2,text:'two'}],a=render(<App initialTasks={items}/>),b=render(<App initialTasks={items}/>);fireEvent.click(a.container.querySelector('li button'));expect(texts(a.container)).toEqual(['two']);expect(texts(b.container)).toEqual(['one','two']);expect(within(b.container).queryByRole('button',{name:'Undo'})).toBeNull();fireEvent.click(b.container.querySelectorAll('li button')[1]);fireEvent.click(within(a.container).getByRole('button',{name:'Undo'}));expect(texts(a.container)).toEqual(['one','two']);expect(texts(b.container)).toEqual(['one']);a.unmount();b.unmount();const fresh=render(<App initialTasks={items}/>);expect(texts(fresh.container)).toEqual(['one','two']);expect(within(fresh.container).queryByRole('button',{name:'Undo'})).toBeNull();});
+`,
   },
   'react-easy3-split-a-line': {
     solution: `import React, { useState } from 'react';

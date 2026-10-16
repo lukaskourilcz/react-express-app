@@ -627,7 +627,7 @@ test('dismissing one duplicate notice leaves the other one',()=>withNoticeClock(
     tier: 3,
     focus: ['forms', 'events', 'splice', 'accessibility'],
     title: 'A tag input',
-    prompt: 'A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call `preventDefault()` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an `li` with the tag in a `span` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling `splice` on the copy.',
+    prompt: `A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call \`preventDefault()\` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an \`li\` with the tag in a \`span\` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling \`splice\` on the copy. Normalize with JavaScript trim().toLowerCase() and compare the resulting strings exactly, including non-ASCII text. Preserve other text literally; do not interpret markup or impose a four-tag cap. Input strings are single-line and up to 500 characters. Ignore key events while composition is active: check event.nativeEvent.isComposing (or the corresponding native-event flag) before adding, clearing, preventing default or removing a tag. A composing Enter or comma belongs to input-method text entry; a later non-composing confirmation adds the tag normally. Backspace removes a tag only when the field is exactly empty, not whitespace. Other keys stay unprevented. Separate and fresh Apps keep their own text and tags.`,
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -655,6 +655,7 @@ export default App;
 };
 
 const keyDown = (event) => {
+  if (event.nativeEvent?.isComposing || event.isComposing) return;
   if (event.key === 'Enter' || event.key === ',') {
     event.preventDefault();
     add();
@@ -671,14 +672,14 @@ const remove = (index) => {
 
 // <button type="button" aria-label={'Remove tag ' + tag} onClick={() => remove(index)}>×</button>`,
     hints: [
-      'A keydown handler runs before the browser acts on the key, which is why `preventDefault()` there keeps the comma out of the field and stops Enter from submitting a form.',
-      '`splice(index, 1)` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until `setTags` hands React the new one. `tags.slice(0, -1)` is a new array without the last tag.',
+      `A keydown handler runs before the browser acts on the key, which is why \`preventDefault()\` there keeps the comma out of the field and stops Enter from submitting a form. First check the native composition flag: Enter can confirm an input-method composition rather than submit a tag.`,
+      `\`splice(index, 1)\` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until \`setTags\` hands React the new one. \`tags.slice(0, -1)\` is a new array without the last tag.`,
     ],
     approach: [
-      'Handle `onKeyDown` on the input: Enter and comma prevent the default and add the tag, Backspace on empty text removes the last one.',
-      'Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.',
-      'Removing copies the tags, splices out one index and stores the copy.',
-      'Render each tag with a remove button that has `aria-label="Remove tag <tag>"`, so the button says what it removes.',
+      `Ignore composing keyboard events before handling Enter, comma or Backspace. Handle ordinary Enter/comma with preventDefault and add; ordinary Backspace on an exactly empty field removes the last tag.`,
+      `Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.`,
+      `Removing copies the tags, splices out one index and stores the copy.`,
+      `Render each tag with a remove button that has \`aria-label="Remove tag <tag>"\`, so the button says what it removes.`,
     ],
     verify: 'tests',
     estimatedMinutes: 20,
@@ -734,6 +735,9 @@ test('Enter is prevented, so a form around the field is not sent', () => {
   type('html');
   expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
 });
+
+
+test('composing keys leave pending text and tags alone until normal confirmation',()=>{render(<App/>);type('日本語');expect(fireEvent.keyDown(field(),{key:'Enter',isComposing:true})).toBe(true);expect(field().value).toBe('日本語');expect(tags()).toEqual([]);key('Enter');expect(tags()).toEqual(['日本語']);expect(field().value).toBe('');expect(fireEvent.keyDown(field(),{key:'Backspace',isComposing:true})).toBe(true);expect(tags()).toEqual(['日本語']);type(' ChEcK ');expect(fireEvent.keyDown(field(),{key:',',isComposing:true})).toBe(true);expect(field().value).toBe(' ChEcK ');key(',');expect(tags()).toEqual(['日本語','check']);expect(field().value).toBe('');});
 `,
   },
   {

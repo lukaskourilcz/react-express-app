@@ -970,7 +970,7 @@ test('derived totals preserve fractional prices without rounding',()=>{
     tier: 1,
     focus: ['pagination', 'slice'],
     title: 'One page at a time',
-    prompt: 'The Previous and Next buttons already change `page`, which starts at 1, but the list shows every photo. Show only the current page: take `photos.slice(start, start + PAGE_SIZE)`, where `start` is `(page - 1) * PAGE_SIZE`, and render each photo as a list item. Under the list, show "Page <page> of <pageCount>". App takes the photos as a prop, so a longer or shorter list pages the same way.',
+    prompt: `The Previous and Next buttons already change \`page\`, which starts at 1, but the list shows every photo. Show only the current page: take \`photos.slice(start, start + PAGE_SIZE)\`, where \`start\` is \`(page - 1) * PAGE_SIZE\`, and render each photo as a list item. Under the list, show "Page <page> of <pageCount>". App takes the photos as a prop, so a longer or shorter list pages the same way. PAGE_SIZE is 4. Accept zero to 100 literal photo names up to 500 characters, including duplicates; use unique keys for the read-only rows. An empty gallery has one empty page and reads "Page 1 of 1". Both controls keep the page between 1 and pageCount, including repeated boundary clicks; disabling a boundary control is optional. Previous moves back one page, not directly to the beginning. Same-length replacement arrays update the current page values without resetting its number; use a fresh App when changing the list length. Parent renders retain the page; separate galleries and fresh mounts are independent. Never mutate the supplied photos.`,
     starter: `import React, { useState } from 'react';
 
 const allPhotos = ['Harbour', 'Lighthouse', 'Dunes', 'Pier', 'Cliffs', 'Reef', 'Marina', 'Bay', 'Cove', 'Jetty'];
@@ -978,12 +978,12 @@ const PAGE_SIZE = 4;
 
 const App = ({ photos = allPhotos }) => {
   const [page, setPage] = useState(1);
-  const pageCount = Math.ceil(photos.length / PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
 
   return <main>
     <h2>One page at a time</h2>
     <ul>
-      {photos.map((photo) => <li key={photo}>{photo}</li>)}
+      {photos.map((photo, index) => <li key={index}>{photo}</li>)}
     </ul>
     <button type="button" onClick={() => setPage((previous) => Math.max(1, previous - 1))}>Previous</button>
     <button type="button" onClick={() => setPage((previous) => Math.min(pageCount, previous + 1))}>Next</button>
@@ -997,11 +997,13 @@ const visible = photos.slice(start, start + PAGE_SIZE);
 
 // <ul>{visible.map(...)}</ul>
 // <p>Page {page} of {pageCount}</p>`,
-    hints: ['Pages count from 1 and array indexes from 0, so page 1 starts at index 0 and page 2 at index `PAGE_SIZE`. `slice(start, end)` stops before `end` and never runs past the end of the array.'],
+    hints: [
+      `Pages count from 1 and array indexes from 0, so page 1 starts at index 0 and page 2 at index \`PAGE_SIZE\`. \`slice(start, end)\` stops before \`end\` and never runs past the end of the array. Keep pageCount at least 1 so an empty gallery has a single empty page.`,
+    ],
     approach: [
-      'Work out `start` as `(page - 1) * PAGE_SIZE` while rendering.',
-      'Take `photos.slice(start, start + PAGE_SIZE)` and map that, not `photos`, to list items.',
-      'Add a paragraph that reads "Page {page} of {pageCount}".',
+      `Work out \`start\` as \`(page - 1) * PAGE_SIZE\` while rendering.`,
+      `Take \`photos.slice(start, start + PAGE_SIZE)\` and map that, not \`photos\`, to list items.`,
+      `Add a paragraph that reads "Page {page} of {pageCount}".`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -1029,6 +1031,9 @@ test('the last page holds the two that are left', () => {
   expect(shown(container)).toEqual(['Cove', 'Jetty']);
   expect(container.textContent).toContain('Page 3 of 3');
 });
+
+
+test('an empty gallery stays on Page 1 of 1 without phantom photos',()=>{const view=render(<App photos={[]}/>),q=within(view.container);for(let i=0;i<4;i++){expect(shown(view.container)).toEqual([]);expect(view.container.querySelector('p').textContent).toBe('Page 1 of 1');fireEvent.click(q.getByRole('button',{name:'Next'}));fireEvent.click(q.getByRole('button',{name:'Previous'}));}expect(view.container.querySelector('p').textContent).toBe('Page 1 of 1');});
 `,
   },
   {
@@ -1039,7 +1044,7 @@ test('the last page holds the two that are left', () => {
     tier: 2,
     focus: ['pagination', 'slice'],
     title: 'Show more',
-    prompt: 'Show the first 3 comments as list items and a "Show more" button under them. Each click shows 3 more. Keep how many are shown in state, not a second copy of the comments, and render `comments.slice(0, shown)`. While any comment is still hidden the button stays; once every comment shows, the button goes away. App takes the comments as a prop, and a short list may need no button at all.',
+    prompt: `Show the first 3 comments as list items and a "Show more" button under them. Each click shows 3 more. Keep how many are shown in state, not a second copy of the comments, and render \`comments.slice(0, shown)\`. While any comment is still hidden the button stays; once every comment shows, the button goes away. App takes the comments as a prop, and a short list may need no button at all. Accept zero to 100 literal comment strings up to 500 characters, including duplicates. Use unique keys for these read-only rows rather than the comment text. The comments prop can be replaced with a new array of any length: keep the shown count and derive the visible prefix from the current data. A shorter array shows all it has; later growth can make Show more return. Preserve order, spaces and literal markup text. No eight-comment cap is allowed. Parent renders retain the count, while separate Apps and fresh mounts keep independent counts. Never mutate the input array.`,
     starter: `import React, { useState } from 'react';
 
 const allComments = [
@@ -1058,7 +1063,7 @@ const App = ({ comments = allComments }) => {
   return <main>
     <h2>Show more</h2>
     <ul>
-      {comments.map((comment) => <li key={comment}>{comment}</li>)}
+      {comments.map((comment, index) => <li key={index}>{comment}</li>)}
     </ul>
   </main>;
 };
@@ -1069,11 +1074,13 @@ export default App;
 
 // <ul>{comments.slice(0, shown).map(...)}</ul>
 // {/* some comments still hidden? */ && <button ...>Show more</button>}`,
-    hints: ['Store a number, the count of comments on screen, and derive the list from it with `slice(0, shown)`. Asking `slice` for more than the array holds is fine: it stops at the end.'],
+    hints: [
+      `Store a number, the count of comments on screen, and derive the list from it with \`slice(0, shown)\`. Asking \`slice\` for more than the array holds is fine: it stops at the end. Derive from the current prop so updated data appears immediately. Repeated text cannot serve as a unique key for these read-only rows.`,
+    ],
     approach: [
-      'Keep `shown` in `useState(3)`.',
-      'Render `comments.slice(0, shown)` as list items.',
-      'Render the button only while `shown < comments.length`, and let a click call `setShown((previous) => previous + 3)`.',
+      `Keep \`shown\` in \`useState(3)\`.`,
+      `Render \`comments.slice(0, shown)\` as list items.`,
+      `Render the button only while \`shown < comments.length\`, and let a click call \`setShown((previous) => previous + 3)\`.`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -1100,6 +1107,9 @@ test('the button goes when every comment shows', () => {
   expect(count(container)).toBe(8);
   expect(more()).toBeNull();
 });
+
+
+test('duplicate comment replacements remain the current derived prefix',()=>{const view=render(<App comments={['a','a','b','c','c','d','d']}/>);fireEvent.click(within(view.container).getByRole('button',{name:'Show more'}));for(const comments of [['b','b'],['a','a','a','b','b','b','c'],['x','x','y','y','y','y','z']]){view.rerender(<App comments={comments}/>);expect([...view.container.querySelectorAll('li')].map(item=>item.textContent)).toEqual(comments.slice(0,6));}});
 `,
   },
   {
@@ -1110,7 +1120,7 @@ test('the button goes when every comment shows', () => {
     tier: 2,
     focus: ['pagination', 'accessibility'],
     title: 'Numbered page buttons',
-    prompt: 'The list already shows one page of `songs`. Add a button for each page, labelled 1, 2, 3 and so on up to `Math.ceil(songs.length / PAGE_SIZE)`, inside `<nav aria-label="Pages">`. Clicking a number shows that page. The button of the current page carries `aria-current="page"`, and the others carry no `aria-current` at all, so a screen reader says which page is open. App takes the songs as a prop, so work the page count out from them.',
+    prompt: `The list already shows one page of \`songs\`. Add a button for each page, labelled 1, 2, 3 and so on up to \`Math.ceil(songs.length / PAGE_SIZE)\`, inside \`<nav aria-label="Pages">\`. Clicking a number shows that page. The button of the current page carries \`aria-current="page"\`, and the others carry no \`aria-current\` at all, so a screen reader says which page is open. App takes the songs as a prop, so work the page count out from them. PAGE_SIZE is 3. The list can contain zero to 100 literal strings up to 500 characters; duplicate titles are valid and must remain separate rows. Assign unique keys to these read-only rows instead of using repeated text as identity. Empty input has an empty Pages navigation and no page buttons. Every reachable page displays its exact slice, with exactly one current marker when pages exist. Same-length replacement arrays update the displayed values while retaining the selected page; use a fresh App when changing the list length. Parent renders retain the choice, while separate pagers and fresh mounts are independent.`,
     starter: `import React, { useState } from 'react';
 
 const allSongs = ['Blue Water', 'Low Tide', 'Salt Air', 'Deep End', 'Riptide', 'Undertow', 'Sea Glass'];
@@ -1123,7 +1133,7 @@ const App = ({ songs = allSongs }) => {
   return <main>
     <h2>Numbered page buttons</h2>
     <ul>
-      {songs.slice(start, start + PAGE_SIZE).map((song) => <li key={song}>{song}</li>)}
+      {songs.slice(start, start + PAGE_SIZE).map((song, index) => <li key={start + index}>{song}</li>)}
     </ul>
   </main>;
 };
@@ -1137,11 +1147,13 @@ const pages = Array.from({ length: pageCount }, (_, index) => index + 1);
 //   {pages.map((number) => <button key={number} type="button"
 //     aria-current={/* "page" or undefined */} onClick={...}>{number}</button>)}
 // </nav>`,
-    hints: ['React leaves an attribute out when its value is `undefined`, so `aria-current={number === page ? "page" : undefined}` marks one button and leaves the rest bare.'],
+    hints: [
+      `React leaves an attribute out when its value is \`undefined\`, so \`aria-current={number === page ? "page" : undefined}\` marks one button and leaves the rest bare. Titles can repeat; a unique position key is suitable here because each row contains only read-only text, not local input state.`,
+    ],
     approach: [
-      'Work out `pageCount` from `songs.length` and `PAGE_SIZE`, and build the list of page numbers from 1 to `pageCount`.',
-      'Render one button per number inside `<nav aria-label="Pages">`; a click calls `setPage(number)`.',
-      'Give each button `aria-current="page"` when its number is the current page and `undefined` otherwise.',
+      `Work out \`pageCount\` from \`songs.length\` and \`PAGE_SIZE\`, and build the list of page numbers from 1 to \`pageCount\`.`,
+      `Render one button per number inside \`<nav aria-label="Pages">\`; a click calls \`setPage(number)\`.`,
+      `Give each button \`aria-current="page"\` when its number is the current page and \`undefined\` otherwise.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1166,6 +1178,9 @@ test('only the current page is marked', () => {
   expect(pages()[1].getAttribute('aria-current')).toBeNull();
   expect(pages()[2].getAttribute('aria-current')).toBeNull();
 });
+
+
+test('more than four numbered pages are reachable and the last page is marked',()=>{const songs=Array.from({length:17},(_,i)=>'Song '+i),view=render(<App songs={songs}/>),nav=within(view.container).getByRole('navigation',{name:'Pages'}),buttons=[...nav.querySelectorAll('button')];expect(buttons.map(button=>button.textContent)).toEqual(['1','2','3','4','5','6']);fireEvent.click(buttons[5]);expect(shown(view.container)).toEqual(songs.slice(15));expect(buttons.map(button=>button.getAttribute('aria-current'))).toEqual([null,null,null,null,null,'page']);});
 `,
   },
 

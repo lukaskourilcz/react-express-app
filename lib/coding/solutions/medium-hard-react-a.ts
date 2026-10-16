@@ -1075,6 +1075,7 @@ const App = () => {
   };
 
   const keyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (event.key === 'Enter' || event.key === ',') {
       // Before the browser acts on the key: no form submit, and no comma in the field.
       event.preventDefault();
@@ -1129,6 +1130,7 @@ const App = () => {
   };
 
   const handleKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       addTag();
@@ -1178,6 +1180,7 @@ const App = () => {
   const [tags, setTags] = useState([]);
 
   const onKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (ADD_KEYS.has(event.key)) {
       event.preventDefault();
       const tag = text.trim().toLowerCase();
@@ -1240,7 +1243,13 @@ test('removing from either end keeps the rest in order', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Remove tag a' }));
   fireEvent.click(screen.getByRole('button', { name: 'Remove tag d' }));
   expect(tags()).toEqual(['b', 'c']);
-});`,
+});
+
+
+test('normalization is exact JavaScript trim/lowercase and has no four-tag cap',()=>{render(<App/>);const values=[' React ','CSS','ŽLUŤOUČKÝ','ČESKÝ','日本語',' İ ','<B>raw</B>','naïve','  ninth  ',' NBSP '],expected=[];for(let i=0;i<values.length;i++){type(values[i]);expect(fireEvent.keyDown(field(),{key:i%2?',':'Enter'})).toBe(false);const value=values[i].trim().toLowerCase();if(value&&!expected.includes(value))expected.push(value);expect(tags()).toEqual(expected);expect(field().value).toBe('');}for(const value of [' css ','ČESKÝ','   ',' ']){add(value);expect(tags()).toEqual(expected);expect(field().value).toBe('');}const buttons=[...screen.getByRole('list',{name:'Tags chosen'}).querySelectorAll('button')];expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(expected.map(tag=>'Remove tag '+tag));expect(document.querySelector('main b')).toBeNull();});
+test('exact empty Backspace,ordinary keys and repeated removals preserve order',()=>{render(<App/>);['one','two','three','four','five','six'].forEach(add);type(' ');expect(key('Backspace')).toBe(true);expect(tags()).toEqual(['one','two','three','four','five','six']);for(const name of ['Escape','Tab','x']){expect(key(name)).toBe(true);expect(field().value).toBe(' ');}type('');key('Backspace');expect(tags()).toEqual(['one','two','three','four','five']);fireEvent.click(screen.getByRole('button',{name:'Remove tag three'}));expect(tags()).toEqual(['one','two','four','five']);for(let i=0;i<6;i++)key('Backspace');expect(tags()).toEqual([]);add('FIVE');expect(tags()).toEqual(['five']);});
+test('two fields and fresh mounts keep tag/input state separate',()=>{const a=render(<App/>),b=render(<App/>),read=view=>[...view.container.querySelectorAll('li span')].map(span=>span.textContent),enter=(view,text)=>{const input=within(view.container).getByLabelText('Tags');fireEvent.change(input,{target:{value:text}});fireEvent.keyDown(input,{key:'Enter'});};enter(a,'Left');enter(b,'Right');a.rerender(<App/>);expect(read(a)).toEqual(['left']);expect(read(b)).toEqual(['right']);fireEvent.click(within(a.container).getByRole('button',{name:'Remove tag left'}));expect(read(a)).toEqual([]);expect(read(b)).toEqual(['right']);a.unmount();b.unmount();const fresh=render(<App/>);expect(read(fresh)).toEqual([]);expect(within(fresh.container).getByLabelText('Tags').value).toBe('');});
+`,
   },
   'react-mh-select-all': {
     solution: `import React, { useEffect, useRef, useState } from 'react';

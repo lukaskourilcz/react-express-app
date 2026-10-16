@@ -1537,7 +1537,7 @@ test('an emoji uses two UTF-16 units in the counter',()=>{
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Undo a removal',
-    prompt: 'Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call `splice(index, 0, task)` on the copy, which inserts without removing anything. Only the latest removal can be undone.',
+    prompt: `Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call \`splice(index, 0, task)\` on the copy, which inserts without removing anything. Only the latest removal can be undone. initialTasks is the initial snapshot for each mount: zero to 100 tasks with unique string ids or unique integer ids and literal single-line text up to 500 characters. Remove the current clicked position, even when texts repeat. Restore the entire task without trimming or changing its text, including at positions beyond the starter list. A second removal replaces the pending undo; undoing it does not reveal an older undo. Parent renders retain edits and undo memory, while separate Apps and fresh mounts are independent. Never mutate the supplied array or its objects. Copied splice is the demonstrated insertion; equivalent immutable outcomes are accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingTasks = [
@@ -1584,11 +1584,13 @@ const undo = () => {
 };
 
 // {removed && <button type="button" onClick={undo}>Undo</button>}`,
-    hints: ['`splice(index, 0, item)` removes nothing and inserts `item` before the element now at `index`. An index equal to the length inserts at the end, which is where a removed last task came from.'],
+    hints: [
+      `\`splice(index, 0, item)\` removes nothing and inserts \`item\` before the element now at \`index\`. An index equal to the length inserts at the end, which is where a removed last task came from.`,
+    ],
     approach: [
-      'Add `const [removed, setRemoved] = useState(null)`, and in `remove` store `{ task: tasks[index], index }` as well as filtering the task out.',
-      'Write `undo`: copy `tasks`, call `splice(removed.index, 0, removed.task)` on the copy, store the copy, and set `removed` back to `null`.',
-      'Render the Undo button only while `removed` holds something.',
+      `Add \`const [removed, setRemoved] = useState(null)\`, and in \`remove\` store \`{ task: tasks[index], index }\` as well as filtering the task out.`,
+      `Write \`undo\`: copy \`tasks\`, call \`splice(removed.index, 0, removed.task)\` on the copy, store the copy, and set \`removed\` back to \`null\`.`,
+      `Render the Undo button only while \`removed\` holds something.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1622,6 +1624,9 @@ test('Undo brings the last task back to the end', () => {
   undo();
   expect(texts(container)).toEqual(ALL);
 });
+
+
+test('Undo restores the exact long literal task at an index beyond three',()=>{const items=Array.from({length:12},(_,i)=>({id:'id-'+i,text:'  Task '+i+' 🦈  '})),view=render(<App initialTasks={items}/>);fireEvent.click(view.container.querySelectorAll('li button')[9]);fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));expect(texts(view.container)).toEqual(items.map(task=>task.text));expect(within(view.container).queryByRole('button',{name:'Undo'})).toBeNull();});
 `,
   },
   {
