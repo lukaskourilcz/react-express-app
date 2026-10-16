@@ -1599,7 +1599,7 @@ test('Unicode whitespace is empty for this custom blankness rule',()=>{
     tier: 1,
     focus: ['splice', 'useState'],
     title: 'Draw a card',
-    prompt: 'Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". Copy the deck, call `splice(index, 1)` on the copy, and read the drawn card from the array `splice` returns. Never splice the array that is in state, or the `cards` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes.',
+    prompt: `Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". For a splice-based solution, copy the deck, call \`splice(index, 1)\` on the copy, and read the drawn card from the array \`splice\` returns. Never splice the array that is in state, or the \`cards\` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes. Grading accepts equivalent immutable removal. cards is the initial deck snapshot for a mount; parent renders do not reset it. It can be empty or contain up to 100 cards, with unique string ids or unique integer ids and nonblank single-line names up to 500 characters. Show each complete literal name without trimming, truncating or interpreting markup. Remove by the current position, retain the order of every other card and show only the latest draw. Separate Apps and fresh mounts keep independent decks.`,
     starter: `import React, { useState } from 'react';
 
 const startingDeck = [
@@ -1666,6 +1666,9 @@ test('the last card empties the deck', () => {
   expect(deck(container)).toEqual([]);
   expect(container.textContent).toContain('You drew Joker');
 });
+
+
+test('cards beyond the fifth position can be drawn with their whole name',()=>{const cards=Array.from({length:12},(_,i)=>({id:'id-'+i,name:'Long card '+i+' 🦈'}));const view=render(<App cards={cards}/>);fireEvent.click(view.container.querySelectorAll('button')[9]);expect(deck(view.container)).toEqual(cards.filter((_,i)=>i!==9).map(card=>card.name));expect(view.container.querySelector('p').textContent).toBe('You drew '+cards[9].name);});
 `,
   },
   {
@@ -1676,7 +1679,7 @@ test('the last card empties the deck', () => {
     tier: 2,
     focus: ['splice', 'forms'],
     title: 'Insert at a position',
-    prompt: 'The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call `splice(position - 1, 0, name)` on the copy. A position past the end adds the name at the end, which `splice` does by itself. A position below 1 puts the name at the top: a negative start would make `splice` count from the end.',
+    prompt: `The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call \`splice(position - 1, 0, name)\` on the copy. A position past the end adds the name at the end, which \`splice\` does by itself. A position below 1 puts the name at the top: a negative start would make \`splice\` count from the end. The Position input contains an integer from-10000 to 10000, or is empty (use the top). Name is a nonblank single-line string up to 500 characters; preserve its literal spaces, punctuation and case. Repeated ordinary submissions use the current growing queue and must prevent form navigation. The controlled fields start empty and at 1 respectively. Parent renders retain each queue; separate Apps and fresh mounts are independent. This lesson demonstrates splice on a copy; equivalent immutable insertion is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingQueue = ['Ana', 'Ben', 'Cleo'];
@@ -1745,6 +1748,9 @@ test('a position past the end adds at the end', () => {
   add('Dan', '9');
   expect(queue(container)).toEqual(['Ana', 'Ben', 'Cleo', 'Dan']);
 });
+
+
+test('names retain literal spaces and positions use the growing queue',()=>{const view=render(<App/>);for(let i=0;i<8;i++)add('  Person '+i+'  ','10000');expect(queue(view.container)).toEqual(['Ana','Ben','Cleo',...Array.from({length:8},(_,i)=>'  Person '+i+'  ')]);});
 `,
   },
   {
@@ -1755,7 +1761,7 @@ test('a position past the end adds at the end', () => {
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Take a seat',
-    prompt: 'A row of four seats holds a name or `null` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call `splice(index, 1, "You")` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled.',
+    prompt: `A row of four seats holds a name or \`null\` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call \`splice(index, 1, "You")\` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled. Start with [null,"Ana", null,"Ben"]. Both initial free seats are enabled; after either is chosen, exactly one seat contains "You" and all other people keep their original positions. Disabled buttons must stay disabled across parent renders and cannot change the selection when clicked. Use type="button" so taking a seat never submits an ancestor form. Separate mounted rows are independent and a fresh App starts from the original row. This lesson demonstrates splice on a copy; equivalent immutable replacement is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingRow = [null, 'Ana', null, 'Ben'];
@@ -1820,6 +1826,9 @@ test('once seated, the other free seat is disabled', () => {
   fireEvent.click(seat(3));
   expect(seat(1).disabled).toBe(true);
 });
+
+
+test('taking a seat never submits a containing form',()=>{let submits=0;const view=render(<form onSubmit={event=>{event.preventDefault();submits++;}}><App/></form>);fireEvent.click(within(view.container).getByRole('button',{name:'Take seat 1'}));expect(submits).toBe(0);expect(row(view.container)).toEqual(['Seat 1: You','Seat 2: Ana','Take seat 3','Seat 4: Ben']);});
 `,
   },
 ];

@@ -2297,7 +2297,13 @@ test('the cards App was given stay as they were', () => {
 test('no card is named before the first draw', () => {
   const { container } = render(<App />);
   expect(container.textContent).not.toContain('You drew');
-});`,
+});
+
+
+test('twenty-four arbitrary removals match a positional model without changing frozen input',()=>{const cards=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'card-'+i,name:i%4?'Card '+i:'Echo'}))),before=JSON.stringify(cards),model=cards.map(card=>({...card})),view=render(<App cards={cards}/>);for(let step=0;model.length;step++){const index=(step*7+3)%model.length,[chosen]=model.splice(index,1);fireEvent.click(view.container.querySelectorAll('button')[index]);expect(deck(view.container)).toEqual(model.map(card=>card.name));expect(view.container.querySelector('p').textContent).toBe('You drew '+chosen.name);expect(JSON.stringify(cards)).toBe(before);}expect(view.container.querySelectorAll('button')).toHaveLength(0);});
+test('empty and literal names remain text through repeated parent renders',()=>{const empty=render(<App cards={[]}/>);expect(deck(empty.container)).toEqual([]);expect(empty.container.textContent).not.toContain('You drew');empty.unmount();for(const name of ['  padded  ','<b>raw</b>','"quoted" 🦈','x'.repeat(500)]){const cards=[{id:1,name}],view=render(<App cards={cards}/>);expect(deck(view.container)).toEqual([name]);fireEvent.click(view.container.querySelector('button'));view.rerender(<App cards={[{id:2,name:'replacement prop'}]}/>);expect(deck(view.container)).toEqual([]);expect(view.container.querySelector('p').textContent).toBe('You drew '+name);expect(view.container.querySelector('b')).toBeNull();view.unmount();}});
+test('separate decks retain their own draws and a fresh mount reads its initial snapshot',()=>{const cards=[{id:1,name:'First'},{id:2,name:'Second'}],a=render(<App cards={cards}/>),b=render(<App cards={cards}/>);fireEvent.click(a.container.querySelectorAll('button')[1]);expect(deck(a.container)).toEqual(['First']);expect(deck(b.container)).toEqual(['First','Second']);a.rerender(<App cards={cards}/>);expect(deck(a.container)).toEqual(['First']);fireEvent.click(b.container.querySelector('button'));expect(deck(a.container)).toEqual(['First']);expect(deck(b.container)).toEqual(['Second']);a.unmount();b.unmount();const fresh=render(<App cards={cards}/>);expect(deck(fresh.container)).toEqual(['First','Second']);expect(fresh.container.textContent).not.toContain('You drew');});
+`,
   },
   'react-easy2-insert-at-position': {
     solution: `import React, { useState } from 'react';
@@ -2426,7 +2432,13 @@ test('the starting queue is left alone for the next visit', () => {
   first.unmount();
   const { container } = render(<App />);
   expect(queue(container)).toEqual(['Ana', 'Ben', 'Cleo']);
-});`,
+});
+
+
+test('twenty-four ordinary insertions agree with the current one-based positional model',()=>{const view=render(<App/>),expected=['Ana','Ben','Cleo'];for(let i=0;i<24;i++){const position=[-10000,0,1,2,6,10000,''][i%7],name=i%4?'Person '+i:' <b>🦈 '+i+'</b> ',index=Math.min(expected.length,Math.max(0,Number(position)-1));expected.splice(index,0,name);add(name,String(position));expect(queue(view.container)).toEqual(expected);view.rerender(<App data-parent={i}/>);expect(queue(view.container)).toEqual(expected);}expect(view.container.querySelector('b')).toBeNull();});
+test('submitting the form prevents navigation and preserves the entered literal name',()=>{const view=render(<App/>),q=within(view.container);fireEvent.change(q.getByLabelText('Name'),{target:{value:'"quoted" 🦈'}});fireEvent.change(q.getByLabelText('Position'),{target:{value:'2'}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(queue(view.container)).toEqual(['Ana','"quoted" 🦈','Ben','Cleo']);});
+test('two queues and their controlled fields remain independent and remount with the authored defaults',()=>{const a=render(<App/>),b=render(<App/>);const enter=(view,name,position)=>{const q=within(view.container);fireEvent.change(q.getByLabelText('Name'),{target:{value:name}});fireEvent.change(q.getByLabelText('Position'),{target:{value:position}});fireEvent.click(q.getByRole('button',{name:'Add'}));};enter(a,'Left','2');enter(b,'Right','1');a.rerender(<App/>);expect(queue(a.container)).toEqual(['Ana','Left','Ben','Cleo']);expect(queue(b.container)).toEqual(['Right','Ana','Ben','Cleo']);a.unmount();b.unmount();const fresh=render(<App/>);expect(queue(fresh.container)).toEqual(['Ana','Ben','Cleo']);expect(within(fresh.container).getByLabelText('Name').value).toBe('');expect(within(fresh.container).getByLabelText('Position').value).toBe('1');});
+`,
   },
   'react-easy2-take-a-seat': {
     solution: `import React, { useState } from 'react';
@@ -2556,6 +2568,12 @@ test('the starting row is left alone for the next visit', () => {
   first.unmount();
   const { container } = render(<App />);
   expect(row(container)).toEqual(['Take seat 1', 'Seat 2: Ana', 'Take seat 3', 'Seat 4: Ben']);
-});`,
+});
+
+
+test('each choice survives parent renders and ignores attempts to click the disabled free seat',()=>{for(const chosen of [1,3]){const view=render(<App/>),q=within(view.container);fireEvent.click(q.getByRole('button',{name:'Take seat '+chosen}));const expected=chosen===1?['Seat 1: You','Seat 2: Ana','Take seat 3','Seat 4: Ben']:['Take seat 1','Seat 2: Ana','Seat 3: You','Seat 4: Ben'];for(let i=0;i<12;i++){view.rerender(<App data-parent={i}/>);const other=q.getByRole('button',{name:'Take seat '+(chosen===1?3:1)});expect(other.disabled).toBe(true);fireEvent.click(other);expect(row(view.container)).toEqual(expected);expect(view.container.querySelectorAll('li')).toHaveLength(4);}view.unmount();}});
+test('two mounted rows do not share a selection and fresh rows restore all original seats',()=>{const a=render(<App/>),b=render(<App/>);fireEvent.click(within(a.container).getByRole('button',{name:'Take seat 3'}));expect(row(b.container)).toEqual(['Take seat 1','Seat 2: Ana','Take seat 3','Seat 4: Ben']);fireEvent.click(within(b.container).getByRole('button',{name:'Take seat 1'}));expect(row(a.container)).toEqual(['Take seat 1','Seat 2: Ana','Seat 3: You','Seat 4: Ben']);a.unmount();b.unmount();const fresh=render(<App/>);expect(row(fresh.container)).toEqual(['Take seat 1','Seat 2: Ana','Take seat 3','Seat 4: Ben']);});
+test('ordinary native button activation keeps the other seat disabled without submitting',()=>{let submits=0;const view=render(<form onSubmit={event=>{event.preventDefault();submits++;}}><App/></form>),q=within(view.container);const first=q.getByRole('button',{name:'Take seat 1'});expect(first.getAttribute('type')).toBe('button');act(()=>first.click());const other=q.getByRole('button',{name:'Take seat 3'});expect(other.disabled).toBe(true);act(()=>other.click());expect(submits).toBe(0);expect(row(view.container)).toEqual(['Seat 1: You','Seat 2: Ana','Take seat 3','Seat 4: Ben']);});
+`,
   },
 };

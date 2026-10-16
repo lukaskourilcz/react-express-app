@@ -2303,7 +2303,13 @@ test('the last song can go', () => {
   const { container } = render(<App songs={[{ id: 7, title: 'Ebb' }]} />);
   fireEvent.click(screen.getByRole('button', { name: 'Remove Ebb' }));
   expect(titles(container)).toEqual([]);
-});`,
+});
+
+
+test('twenty-four positional removals keep raw titles and labels aligned without mutating frozen songs',()=>{const songs=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'song-'+i,title:i%4?' Track '+i+' 🦈 ':'Duplicate'}))),before=JSON.stringify(songs),expected=songs.map(song=>song.title),view=render(<App songs={songs}/>);for(let step=0;expected.length;step++){const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(expected.map(title=>'Remove '+title));expect(buttons.every(button=>button.textContent==='×')).toBe(true);const index=(step*5+9)%expected.length;expected.splice(index,1);fireEvent.click(buttons[index]);expect(titles(view.container)).toEqual(expected);expect(JSON.stringify(songs)).toBe(before);}});
+test('empty,single,long and duplicate playlists preserve the requested snapshot through parents',()=>{for(const names of [[],['x'.repeat(500)],['same','middle','same'],['"quoted"','<i>raw</i>']]){const songs=names.map((title,i)=>({id:i,title})),view=render(<App songs={songs}/>);expect(titles(view.container)).toEqual(names);if(names.length){fireEvent.click(view.container.querySelectorAll('button')[names.length-1]);expect(titles(view.container)).toEqual(names.slice(0,-1));}view.rerender(<App songs={[{id:'replacement',title:'new prop'}]}/>);expect(titles(view.container)).toEqual(names.slice(0,-1));expect(view.container.querySelector('i')).toBeNull();view.unmount();}});
+test('separate playlists and a fresh mount own their removals',()=>{const songs=[{id:1,title:'one'},{id:2,title:'two'}],a=render(<App songs={songs}/>),b=render(<App songs={songs}/>);fireEvent.click(a.container.querySelector('button'));expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one','two']);fireEvent.click(b.container.querySelectorAll('button')[1]);expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one']);a.unmount();b.unmount();const fresh=render(<App songs={songs}/>);expect(titles(fresh.container)).toEqual(['one','two']);});
+`,
   },
 
   /* ── derived state ────────────────────────────────────────────────── */
@@ -2770,7 +2776,13 @@ test('the items prop is left alone', () => {
   render(<App items={items} />);
   splitLine('Oil and vinegar');
   expect(items).toEqual(['Oil and vinegar']);
-});`,
+});
+
+
+test('all matching lines split in their current places without changing frozen input',()=>{const items=Object.freeze(Array.from({length:24},(_,i)=>i%3?'fixed-'+i:'left-'+i+' and middle-'+i+' and right-'+i+' and end-'+i)),before=JSON.stringify(items),expected=[...items],view=render(<App items={items}/>);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and ')),parts=expected[index].split(' and '),row=view.container.querySelectorAll('li')[index];fireEvent.click(within(row).getByRole('button',{name:'Split'}));expected.splice(index,1,...parts);expect(lines(view.container)).toEqual(expected);expect(JSON.stringify(items)).toBe(before);}expect(view.container.querySelectorAll('button')).toHaveLength(0);});
+test('only the exact delimiter splits and empty pieces are retained as separate lines',()=>{for(const items of [[],['candy','a AND b','one and two'],[' and ',' and end','start and '],[' a  and  b ','a and b and c and d and e and f']]){const expected=[...items],view=render(<App items={items}/>);expect(view.container.querySelectorAll('button')).toHaveLength(items.filter(item=>item.includes(' and ')).length);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and '));fireEvent.click(view.container.querySelectorAll('li')[index].querySelector('button'));expected.splice(index,1,...expected[index].split(' and '));expect(lines(view.container)).toEqual(expected);}view.unmount();}});
+test('parent renders,separate lists and fresh snapshots do not share edits',()=>{const items=['one and two','three'],a=render(<App items={items}/>),b=render(<App items={items}/>);fireEvent.click(a.container.querySelector('button'));a.rerender(<App items={['replacement']}/>);expect(lines(a.container)).toEqual(['one','two','three']);expect(lines(b.container)).toEqual(items);a.unmount();b.unmount();const fresh=render(<App items={items}/>);expect(lines(fresh.container)).toEqual(items);});
+`,
   },
 
   /* ── useContext ───────────────────────────────────────────────────── */

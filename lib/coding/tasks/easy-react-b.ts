@@ -1376,7 +1376,7 @@ test('Italic releases without changing Bold',()=>{const {container}=render(<App/
     tier: 1,
     focus: ['accessibility', 'splice'],
     title: 'Name the remove buttons',
-    prompt: 'Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an `aria-label` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call `splice(index, 1)` on the copy. Remove by position, because the same song can be on the list twice.',
+    prompt: `Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an \`aria-label\` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call \`splice(index, 1)\` on the copy. Remove by position, because the same song can be on the list twice. songs is the initial snapshot for each mount; later parent renders retain the edited playlist. Accept zero to 100 songs with unique string ids or unique integer ids and nonblank single-line titles up to 500 characters. Preserve every literal title in its span and in the aria-label string ("Remove " plus title), including spaces and punctuation. Do not interpret title text as markup or trim it. Every remaining song must have its own visible × button, even after repeated removals at changing positions. Separate Apps and fresh mounts own their playlists. Equivalent immutable positional removal is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingSongs = [
@@ -1441,6 +1441,9 @@ test('every song has a named button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: /^Remove / }).length).toBe(5);
 });
+
+
+test('literal titles name every remove button without silently trimming',()=>{const title='  <b>Long 🦈 title</b>  ',view=render(<App songs={[{id:'one',title}]}/>),button=view.container.querySelector('button');expect(button.getAttribute('aria-label')).toBe('Remove '+title);expect(button.textContent).toBe('×');expect(titles(view.container)).toEqual([title]);expect(view.container.querySelector('b')).toBeNull();fireEvent.click(button);expect(titles(view.container)).toEqual([]);});
 `,
   },
 
@@ -1629,7 +1632,7 @@ test('Undo brings the last task back to the end', () => {
     tier: 2,
     focus: ['splice', 'split'],
     title: 'Split a line in place',
-    prompt: 'Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". Get the parts with `split(" and ")`, copy the list, and call `splice(index, 1, ...parts)` on the copy. That one call removes the line and inserts every part where it stood.',
+    prompt: `Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". You can get the parts with \`split(" and ")\`, copy the list, and call \`splice(index, 1, ...parts)\` on the copy. That one call removes the line and inserts every part where it stood. A sequence of ordered splice insertions on a copy, or equivalent immutable replacement, is also valid. Match only the exact case-sensitive delimiter " and "; do not trim or otherwise normalize the parts. Keep empty pieces as individual list lines. items is an initial snapshot of zero to 100 single-line strings up to 500 characters; duplicates and literal markup text are allowed. Any line without the exact delimiter has no Split button. Parent renders retain edits, while separate and fresh Apps keep independent lists. Never change the supplied array.`,
     starter: `import React, { useState } from 'react';
 
 const startingList = ['Eggs and milk', 'Bread', 'Rice and beans', 'Tea'];
@@ -1692,6 +1695,9 @@ test('only lines with " and " have a Split button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: 'Split' }).length).toBe(2);
 });
+
+
+test('splitting preserves literal spaces and every part beyond the third',()=>{const parts=['  first','second  ','<b>🦈</b>','fourth','fifth  '],text=parts.join(' and '),view=render(<App items={['before',text,'after']}/>);fireEvent.click(view.container.querySelector('button'));expect(lines(view.container)).toEqual(['before',...parts,'after']);expect(view.container.querySelector('b')).toBeNull();});
 `,
   },
 
