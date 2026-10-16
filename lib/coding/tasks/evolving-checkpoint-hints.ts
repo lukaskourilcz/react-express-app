@@ -34,33 +34,19 @@ const LADDERS: Record<string, CheckpointLadder> = {
   'js-evolving-graph-1-start': {"hints": ["Use Object.keys on the record itself. It ignores inherited, hidden and symbol metadata and preserves JavaScript key order without reading values."], "approach": ["Read only own enumerable string IDs, preserving Object.keys numeric-index/creation order.", "Return a fresh mutable array without visiting empty dependencies or unrelated metadata."]},
   'js-evolving-graph-2-start': {"hints": ["Validate each dependency against the declared own enumerable task keys. Inherited/hidden metadata is not a task; then use the previous acyclic ordered DFS."], "approach": ["Reject any dependency absent from the task-key set before traversal.", "Walk dependencies left to right and append each task after its dependencies.", "Keep each completed task once; cycle handling is the next milestone."]},
   'js-evolving-graph-3-start': {"hints": ["For a valid layered graph, collect all currently ready tasks in key order before completing any of them. Return new independent arrays; layered invalid-input handling comes next."], "approach": ["Keep validated DFS behavior in default mode.", "In true layered mode, collect a full ready layer using only earlier completed layers.", "Append a new array per layer and repeat; invalid layered inputs are introduced next."]},
-  'js-evolving-graph-4-start': { hints: ['Walk the tasks in plan() order, so each dependency comes first: a task finishes at its duration plus the latest finish among its dependencies. Remember which dependency that was, and follow those links back from the task that finishes last.'] },
-  'js-evolving-graph-5-start': { hints: ['Walk plan(graph) in order: a task is affected when it is one of the changed ones or any of its dependencies is affected. Keeping the affected tasks in that walk gives them in plan order.'] },
+  'js-evolving-graph-4-start': {"hints": ["In plan order, choose the first largest dependency total and add this task duration. Preserve fractional and zero values, exact tie order and fresh paths; validation/defaults come next."], "approach": ["Use supplied own task durations, including non-enumerable data values.", "Combine each task with its first greatest dependency chain in left-to-right order.", "Keep the first overall maximum in plan order; return fresh result/path arrays."]},
+  'js-evolving-graph-5-start': {"hints": ["Start with the changed-ID Set, then scan plan order so every affected dependency can mark its dependents. Preserve exact names and never include an unaffected ancestor."], "approach": ["Get dependency-first plan order for the valid graph.", "Mark changed IDs, then mark a task when any dependency is affected.", "Return marked tasks once in plan order; invalid changed-ID handling comes next."]},
 
   'js-evolving-debug-1-start': {
-    hints: ['Before you fix anything, log `parts` right after the split and read the Console. The item name still has the spaces from the line around it; the numbers wait for the next step.'],
+    hints: ['Before you fix anything, log `parts` right after the split and read the Console. The item name still has the spaces from the line around it; the numbers wait for the next step. Trim all ECMAScript edge whitespace on the item, while preserving both raw numeric-field strings.'],
     approach: [
       'Run it as it is. The scratch pad already logs one order; read the Console before you read the code.',
       'Log `parts` after the split and look at the first field: " latte " keeps the spaces the line had around the name.',
       'Trim that one field where the object is built, and log the result once more to confirm.',
     ],
   },
-  'js-evolving-debug-2-start': {
-    hints: ['One variable is doing two jobs. Trace ["latte,1,4", "tea,2,1"] by hand: which total does tea start from?'],
-    approach: [
-      'Trace ["latte,1,4", "tea,2,1"] on paper: after each line, write down order, running and totals.',
-      'Log the same three values inside the loop and compare with your trace. tea should get 2, and `running` hands it latte\'s 4 as well.',
-      'Keep one total per item: read what the item has so far (or 0), add this order, write it back.',
-    ],
-  },
-  'js-evolving-debug-3-start': {
-    hints: ['Log `total * percent` alone for applyDiscount(100, 50, 10) and compare it with the 10 you expect to take off: 10 means ten percent, not ten times.'],
-    approach: [
-      'Call applyDiscount(100, 50, 10) in the scratch pad and log the result. Ten percent off 100 should leave 90.',
-      'Log the discount amount alone. 10 means ten percent, so the fraction is percent / 100.',
-      'Take total * percent / 100 off the total, and leave the threshold comparison as it is: that is the next step.',
-    ],
-  },
+  'js-evolving-debug-2-start': {"hints": ["Trace the two distinct items, then assign each own order total into a safe record. Keep exact item names, including prototype-like/Unicode names; repetition is the next step."], "approach": ["Parse each valid line and calculate that order product.", "Assign a safe own data entry for its distinct exact item name without reading inherited values.", "Return a fresh mutable totals record; repeated-item addition comes next."]},
+  'js-evolving-debug-3-start': {"hints": ["Log total*(percent/100), then subtract it from total. At this checkpoint keep strict > and no rounding; the next milestone changes those."], "approach": ["Log the removal amount separately: percent/100 is the fraction to remove.", "When total > threshold, subtract total*(percent/100) with ordinary Number arithmetic.", "Return that unrounded value; leave at/below-threshold inputs unchanged until the next milestone."]},
   'js-evolving-debug-4-start': {
     hints: ['Log what `trace("x", 5)` gives back: undefined. A pass-through logs the label and the value, then returns the value unchanged.'],
     approach: [

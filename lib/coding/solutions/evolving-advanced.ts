@@ -44,7 +44,7 @@ function calculateWithVariables(expression,variables){let valid=true;const sourc
  ],
  'js-evolving-graph': [
  `function criticalPath(graph,durations={}){const order=plan(graph);if(!order)return null;const paths=new Map();let best={duration:0,path:[]};for(const id of order){const duration=Object.hasOwn(durations,id)?durations[id]:1;if(typeof duration!=='number'||!Number.isFinite(duration)||duration<0)return null;let prior={duration:0,path:[]};for(const dep of graph[id]){const p=paths.get(dep);if(!prior.path.length||p.duration>prior.duration)prior=p}const current={duration:prior.duration+duration,path:[...prior.path,id]};paths.set(id,current);if(!best.path.length||current.duration>best.duration)best=current}return best}`,
- `function impactedNodes(graph,changed){const order=plan(graph);if(!order||changed.some(id=>!Object.hasOwn(graph,id)))return null;const affected=new Set(changed);for(const id of order)if(graph[id].some(dep=>affected.has(dep)))affected.add(id);return order.filter(id=>affected.has(id))}`,
+ `function impactedNodes(graph,changed){const order=plan(graph);if(!order||changed.some(id=>!Object.prototype.propertyIsEnumerable.call(graph,id)))return null;const affected=new Set(changed);for(const id of order)if(graph[id].some(dep=>affected.has(dep)))affected.add(id);return order.filter(id=>affected.has(id))}`,
  ],
  'ts-evolving-result': [
  `function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:string[]}{const values:T[]=[],errors:string[]=[];for(const r of results){if(r.ok)values.push(r.value);else errors.push(r.error)}return {values,errors}}`,
@@ -266,7 +266,7 @@ function calculateWithVariables(expression, variables) {
   const order = plan(graph);
   if (order === null) return null;
   for (const id of changed) {
-    if (!Object.prototype.hasOwnProperty.call(graph, id)) return null;
+    if (!Object.prototype.propertyIsEnumerable.call(graph, id)) return null;
   }
   const affected = new Set();
   for (const id of changed) {
@@ -589,7 +589,7 @@ function runProgram(lines) {
 }`,
  `function impactedNodes(graph, changed) {
   const order = plan(graph);
-  if (!order || !changed.every(id => Object.hasOwn(graph, id))) return null;
+  if (!order || !changed.every(id => Object.prototype.propertyIsEnumerable.call(graph, id))) return null;
   // Reverse the edges once, then walk forward from every changed node.
   const dependents = new Map(order.map(id => [id, []]));
   for (const id of order) {
@@ -597,11 +597,12 @@ function runProgram(lines) {
   }
   const affected = new Set();
   const queue = [...changed];
-  while (queue.length > 0) {
-    const id = queue.shift();
+  let head = 0;
+  while (head < queue.length) {
+    const id = queue[head++];
     if (affected.has(id)) continue;
     affected.add(id);
-    queue.push(...dependents.get(id));
+    for (const dependent of dependents.get(id)) queue.push(dependent);
   }
   return order.filter(id => affected.has(id));
 }`,
