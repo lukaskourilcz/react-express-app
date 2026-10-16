@@ -120,33 +120,38 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { focus: ["filter", "sort", "map"] },
     ),
     step(
-      'Add groupRows(rows, field, valueField). For finite numeric values return {key,count,sum} groups in first-seen order, matching keys by strict equality.',
+      "Add groupRows(rows, field, valueField), counting each row and summing its value into a strict-equality key group. At this checkpoint every referenced amount is a finite Number; ignoring invalid amounts is added next. rows is a dense array of at most 20000 non-null records. field/valueField are string property names of at most 64 UTF-16 units, including empty/prototype-like names. Use ordinary property lookup; missing keys read undefined. Referenced properties are data (no proxies/accessors); frozen inputs and inherited data are valid, and unused fields remain opaque. Keys may be undefined, null, booleans, Numbers including NaN/infinities, strings up to 128 UTF-16 units, symbols, object/function identities or BigInts of at most 256 bits. Group with ===: NaN never matches any earlier key, zero signs share a group and objects match only by identity. Preserve first-seen group order and original key references; equivalent zero signs are accepted. Use ordinary Number addition, including rounding/possible overflow. Return a fresh mutable array of fresh mutable {key,count,sum} data records and never mutate rows. Target: O(n) time and O(n) extra space, where n is rows.length+1, using normal Map lookup with the stated bounded key widths.",
       'Přidej groupRows(rows, field, valueField). Pro konečné číselné hodnoty vrať skupiny {key,count,sum} v pořadí prvního výskytu, klíče porovnávej striktně.',
       calls(
+        ["groupRows([{k:NaN,v:1},{k:NaN,v:2}],\"k\",\"v\").map(group=>group.count)", [1, 1]],
         [
           'groupRows([{k:"a",v:2},{k:"a",v:3}],"k","v")',
           [{ key: 'a', count: 2, sum: 5 }],
         ],
         ['groupRows([],"k","v")', []],
       ),
+      { focus: ["map-set", "objects"] },
     ),
     step(
-      'Add joinRows(left, right, leftKey, rightKey) as an inner join. Return {left,right} pairs for every strict-equality key match, in left order then right order. Omit unmatched rows.',
+      "Add joinRows(left, right, leftKey, rightKey) as an inner join. Emit {left:row,right:row} for each strict-equality key match and omit unmatched left rows. Left-join output is added next. left/right are dense arrays of at most 1000 non-null records each. Key property names are strings up to 64 UTF-16 units, including empty/prototype-like names. Read ordinary data properties; missing reads undefined and inherited data is valid. Frozen inputs are valid; proxies/accessors at referenced fields are outside scope and unused data stays opaque. Keys use the earlier bounded group-key domain and === semantics: NaN never matches, zero signs match and objects/symbols match by identity. Keep exact source row references and every duplicate-key combination, in left position order then right position order. Return fresh mutable pair records in a fresh mutable array; never clone or mutate source rows. Inputs produce at most 20000 output pairs. Target: O(n*m+L) time and O(n+m+L) extra space, where n=left.length+1, m=right.length+1 and L is output pair count. A correct indexed join may be faster.",
       'Přidej joinRows(left, right, leftKey, rightKey) jako vnitřní spojení. Vrať dvojice {left,right} pro striktně shodné klíče, v pořadí levých a poté pravých řádků. Neshodné vynech.',
       calls(
+        ["joinRows([{k:NaN}],[{k:NaN}],\"k\",\"k\").length", 0],
         [
           'joinRows([{id:1}],[{fk:1}],"id","fk")',
           [{ left: { id: 1 }, right: { fk: 1 } }],
         ],
         ['joinRows([{id:1}],[{fk:"1"}],"id","fk")', []],
       ),
+      { focus: ["filter", "map", "objects"] },
     ),
   ],
   'js-evolving-events': [
     step(
-      'Implement createBus() with on(event, listener) and emit(event, value). Deliver a value synchronously to the registered listener for that event. Unknown events do nothing.',
+      "Implement createBus() with on(event, listener) and emit(event, value), delivering values synchronously to the registered listener. At this checkpoint each event is registered at most once per bus; multiple listeners come next. Events are case-sensitive strings of at most 128 UTF-16 units (including empty/prototype-like names) or symbols matched by identity; use no Unicode normalization. Listeners are functions and do not throw, register or recursively emit at this step. Deliver exactly once before emit returns, ignore the listener return value and do nothing for unknown events. Pass the exact value unchanged, including undefined, null, falsy primitives, functions and cyclic/opaque objects; do not inspect or clone payloads. Each bus owns independent private state. There are at most 20000 registrations per bus. Target: O(1) time per on/emit, excluding callback work; O(k) extra space across k registered event names, with ordinary bounded-key lookup. Creating a bus takes O(1).",
       'Napiš createBus() s on(event, listener) a emit(event, value). Hodnotu synchronně doruč registrovanému posluchači dané události. Neznámá událost nic nedělá.',
       calls(
+        ["(()=>{const value={},bus=createBus();let same=false;bus.on('x',received=>same=received===value);bus.emit('x',value);return same;})()", true],
         [
           '(()=>{const b=createBus(),a=[];b.on("x",v=>a.push(v));b.emit("x",2);return a})()',
           [2],
@@ -164,19 +169,22 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
           [1, 2],
         ],
       ),
+      { focus: ["closures", "map-set"] },
     ),
     step(
-      'Make on return an idempotent unsubscribe function. Removing one subscription must not remove other registrations, even of the same callback.',
+      "Make on(event, listener) return a fresh idempotent unsubscribe function for that registration only. Preserve every other subscription, including registrations of the same callback or another event. Repeating it or calling it after removal does nothing further. Callbacks do not throw, change subscriptions or reenter emit at this checkpoint; once comes next. Keep the earlier bounded event/payload rules, independent state, one-argument delivery, ignored listener returns and n/k definitions. Target: O(n) time and O(n) extra space per emit, excluding callback work/persistent state. Creating a bus and registering/unsubscribing target O(1) amortized time; state remains O(k).",
       'on nově vrací idempotentní odhlašovací funkci. Odebrání jednoho odběru nesmí odebrat ostatní registrace ani stejného callbacku.',
-      calls([
+      calls(
+        ["(()=>{const bus=createBus();let calls=0;const fn=()=>calls++;bus.on('x',fn);const off=bus.on('x',fn);off();off();bus.emit('x');return calls;})()", 1],[
         '(()=>{const b=createBus(),a=[];const off=b.on("x",()=>a.push(1));off();off();b.emit("x");return a})()',
         [],
       ]),
     ),
     step(
-      'Catch listener exceptions during emit, continue delivery and return thrown values in order. Successful emit returns [].',
+      "Catch each listener exception, continue and return the thrown values from this emit in order, in a fresh mutable array. Unknown/successful emits return fresh []. Keep exact values, including undefined, objects or arrays; do not stringify, flatten or deduplicate. Keep prior once/unsubscribe and bounded nesting. Listeners may now throw, but explicit subscription changes during delivery and snapshot semantics come next. Keep the earlier bounded event/payload rules, independent state, one-argument delivery, ignored listener returns and n/k definitions. Target: O(n) time and O(n) extra space per emit, excluding callback work/persistent state. Creating a bus and registering/unsubscribing target O(1) amortized time; state remains O(k).",
       'V emit zachyť výjimky posluchačů, pokračuj v doručování a vrať vyhozené hodnoty v pořadí. Úspěšné emit vrací [].',
       calls(
+        ["(()=>{const bus=createBus();bus.on('é',()=>{throw 'a'});bus.on('e\\u0301',()=>{throw 'b'});return bus.emit('é');})()", ["a"]],
         [
           '(()=>{const b=createBus();b.on("x",()=>{throw "a"});b.on("x",()=>{throw "b"});return b.emit("x")})()',
           ['a', 'b'],
