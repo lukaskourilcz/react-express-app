@@ -280,7 +280,7 @@ test('Cancel with nothing waiting does no harm', async () => {
     tier: 2,
     focus: ['timers', 'effect-cleanup'],
     title: 'Countdown to launch',
-    prompt: 'Show a number that starts at 3 and goes down by one every 100 milliseconds. At 0, show "Liftoff!" instead of the number and stop counting: clear the interval then, so it does not keep running. Start the interval with `setInterval` in an effect, and return a cleanup that calls `clearInterval`, so a countdown that leaves the page stops too.',
+    prompt: "Show a number that starts at 3 and goes down by one every 100 milliseconds. At 0, show \"Liftoff!\" instead of the number and stop counting: clear the interval then, so it does not keep running. Start the interval with `setInterval` in an effect, and return a cleanup that calls `clearInterval`, so a countdown that leaves the page stops too. Keep the number in a paragraph, unchanged until each full 100 ms boundary: 3, then 2, then 1, then Liftoff! at 300 ms. A controlled clock checks these boundaries; real browser timers may run later. There is one active interval per waiting mounted countdown and none after Liftoff or unmount. Ordinary parent re-renders must not restart the remaining delay or add listeners/timers. Independent and fresh mounts start their own countdown at 3. Either a count-dependent interval with cleanup or a single interval cleared at zero is fine. Development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -357,6 +357,72 @@ test('leaving the page clears the interval', () => {
     spy.restore();
   }
 });
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pendingIntervals: () => [...timers.values()].filter(timer => timer.every > 0).length,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+test('the first tick waits one full100ms',()=>withStepClock(async clock=>{const root=render(<App/>);expect(root.container.querySelector('p').textContent).toBe('3');await clock.tick(99);expect(root.container.querySelector('p').textContent).toBe('3');await clock.tick(1);expect(root.container.querySelector('p').textContent).toBe('2');root.unmount();expect(clock.pendingIntervals()).toBe(0);}));
+
 `,
   },
 
@@ -1010,8 +1076,8 @@ test('only the current page is marked', () => {
     tier: 2,
     focus: ['abort', 'useRef'],
     title: 'Stop the download',
-    prompt: '"Download" fetches `/api/report`, shows "Downloading…" and then "Done" when the response arrives. Make "Stop" cancel it: create a new `AbortController` each time a download starts, keep it in a ref, pass its `signal` to `fetch`, and call `abort()` on it from Stop. The aborted `fetch` rejects, and the code in the starter then shows "Stopped". Stop after a finished download changes nothing, and so does Stop with no download at all.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: "\"Download\" fetches `/api/report`, shows \"Downloading…\" and then \"Done\" when the response arrives. Make \"Stop\" cancel it: create a new `AbortController` each time a download starts, keep it in a ref, pass its `signal` to `fetch`, and call `abort()` on it from Stop. The aborted `fetch` rejects, and the code in the starter then shows \"Stopped\". Stop after a finished download changes nothing, and so does Stop with no download at all. Keep one paragraph for Ready, Downloading…, Done, Stopped or Failed. A non-abort rejection shows Failed; an AbortError shows Stopped. This exercise finishes when fetch resolves and does not parse a download body. Each new Download supersedes and aborts the previous request; only its own current controller may update success or failure. An already-fulfilled older fetch must not finish the new pending download. All requests target exactly /api/report. Keep both buttons available through repeated downloads; Stop with no pending work preserves the terminal status. Ordinary parent re-renders do not start another request. Unmount aborts and invalidates pending work, while independent/fresh instances own their controller and start Ready. Development Strict Mode may repeat cleanup/setup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('Ready');
@@ -1022,7 +1088,7 @@ const App = () => {
       await fetch('/api/report');
       setStatus('Done');
     } catch (error) {
-      setStatus('Stopped');
+      setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
     }
   };
 
@@ -1041,21 +1107,30 @@ export default App;
 `,
     skeleton: `const controllerRef = useRef(null);
 
+useEffect(() => () => {
+  const previous = controllerRef.current;
+  controllerRef.current = null;
+  previous?.abort();
+}, []);
+
 const download = async () => {
+  // Abort the previous download before storing a new controller.
   const controller = new AbortController();
   controllerRef.current = controller;
-  // fetch('/api/report', { signal: controller.signal })
+  // Pass controller.signal to fetch. Check it is still current before
+  // showing Done, Stopped or Failed.
 };
 
 const stop = () => {
-  // abort the controller in the ref, if there is one
+  // Abort the current controller, if any.
 };`,
-    hints: ['An `AbortController` cancels once: after `abort()` its signal stays aborted, and a `fetch` given that signal rejects at once. So each download needs a controller of its own, and the ref holds the latest one.'],
+    hints: ["A controller aborts once. Give each new download its own controller and allow only that current controller to update status; cleanup aborts and invalidates it."],
     approach: [
-      'Create `const controllerRef = useRef(null)`.',
-      'At the start of `download`, make a new `AbortController`, store it in `controllerRef.current`, and pass `{ signal: controller.signal }` as the second argument to `fetch`.',
-      'In `stop`, call `controllerRef.current?.abort()`. The `?.` covers a Stop before any download.',
-    ],
+      "Keep the current download controller in a ref; each new Download aborts and replaces the previous controller.",
+      "Pass its signal to fetch, show Downloading…, and accept Done or the classified error only if it is still current.",
+      "Stop aborts the current controller and is harmless when no request is pending.",
+      "Cleanup clears the current ref before aborting, so late continuations cannot update the removed instance."
+],
     verify: 'tests',
     estimatedMinutes: 9,
     suite: `${header()}${FAKE_FETCH}
@@ -1084,6 +1159,9 @@ test('Stop aborts the request and shows Stopped', () => withFetch(async calls =>
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('Stopped');
 }));
+
+test('Stop is harmless before or after one correctly addressed download',()=>withFetch(async calls=>{const root=render(<App/>);expect(status(root.container)).toBe('Ready');press('Stop');expect(calls).toHaveLength(0);expect(status(root.container)).toBe('Ready');press('Download');expect(calls).toHaveLength(1);expect(calls[0].url).toBe('/api/report');await act(async()=>calls[0].respond({}));expect(status(root.container)).toBe('Done');await act(async()=>press('Stop'));expect(status(root.container)).toBe('Done');}));
+
 `,
   },
   {
@@ -1094,7 +1172,7 @@ test('Stop aborts the request and shows Stopped', () => withFetch(async calls =>
     tier: 2,
     focus: ['abort', 'fetch'],
     title: 'A cancel is not an error',
-    prompt: 'The starter loads `/api/prices` with an `AbortController`, and its Cancel button aborts the request. But every rejection shows "Could not load prices", so a cancel looks like a failure. In the `catch`, check the error\'s `name`: an `AbortError` shows "Cancelled", and any other error still shows "Could not load prices". Check the name, not the message, which differs from browser to browser.',
+    prompt: "The starter loads `/api/prices` with an `AbortController`, and its Cancel button aborts the request. But every rejection shows \"Could not load prices\", so a cancel looks like a failure. In the `catch`, check the error's `name`: an `AbortError` shows \"Cancelled\", and any other error still shows \"Could not load prices\". Check the name, not the message, which differs from browser to browser. On a normal mount, start one request to exactly /api/prices and initially show Loading…. A resolved fetch shows Prices loaded. For ordinary Error or DOMException rejections, compare the case-sensitive name exactly: AbortError means Cancelled; aborterror, TimeoutError and other names are failures regardless of the message. Keep one paragraph with the current status and the Cancel button. Repeated Cancel after the request settles does not replace its terminal status or make another request. Parent re-renders preserve the same request. Each independent or fresh mount owns a new controller and starts Loading; unmounting aborts its request. Development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
@@ -1157,6 +1235,9 @@ test('a failed request is still an error', () => withFetch(async calls => {
   await act(async () => { calls[0].fail(new TypeError('Failed to fetch')); });
   expect(status(container)).toBe('Could not load prices');
 }));
+
+test('case-sensitive error names do not turn a real failure into a cancellation',()=>withFetch(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(1);expect(calls[0].url).toBe('/api/prices');expect(status(root.container)).toBe('Loading…');const error=new Error('The operation was aborted.');error.name='aborterror';await act(async()=>calls[0].fail(error));expect(status(root.container)).toBe('Could not load prices');}));
+
 `,
   },
   {
@@ -1167,12 +1248,13 @@ test('a failed request is still an error', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'effect-cleanup'],
     title: 'Only the latest search',
-    prompt: 'Each change of the query starts a request for `/api/posts?q=<query>`, which answers with matching posts, but an old, slow answer can still arrive last and replace the results of a newer query. Give each run of the effect its own `AbortController`, pass its `signal` to `fetch`, and abort it in the effect\'s cleanup. React runs that cleanup before the next run and when the component leaves the page, so every request but the latest is cancelled. Ignore the `AbortError` an aborted request rejects with.',
+    prompt: "Each change of the query starts a request for `/api/posts?q=<query>`, which answers with matching posts, but an old, slow answer can still arrive last and replace the results of a newer query. Give each run of the effect its own `AbortController`, pass its `signal` to `fetch`, and abort it in the effect's cleanup. React runs that cleanup before the next run and when the component leaves the page, so every request but the latest is cancelled. Ignore the `AbortError` an aborted request rejects with. Keep the Search input controlled with its raw value, up to 2000 UTF-16 code units; encode it with encodeURIComponent as the single q parameter, without trimming it. Empty query makes no request, clears results/errors and cancels old work. Clear the previous list/error when any new query starts. Await the JSON body, checking response.ok first. Render every exact literal returned post title in order in one UL, keyed by id; the dense read-only response has at most 100 ordinary records with unique positive integer ids and plain titles up to 2000 code units, including duplicate or empty titles. HTTP, network or JSON failure for the active query shows Could not load posts. as an alert with an empty list; another query can recover. Ignore completed or queued response-processing work after that effect cleans up, even if the transport has already settled. Only the active query may change results or errors. Parent re-renders do not refetch; removed/fresh mounts own separate query state. A loading label is optional. One effect lifetime means normal mounting; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!query) return;
@@ -1184,6 +1266,7 @@ const App = () => {
   return <main>
     <h2>Only the latest search</h2>
     <label>Search <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    {error && <p role="alert">{error}</p>}
     <ul>
       {results.map((post) => <li key={post.id}>{post.title}</li>)}
     </ul>
@@ -1193,21 +1276,31 @@ const App = () => {
 export default App;
 `,
     skeleton: `useEffect(() => {
+  setResults([]);
+  setError('');
   if (!query) return;
+  let active = true;
   const controller = new AbortController();
-  fetch(/* the URL */, { signal: controller.signal })
-    .then(/* ... */)
-    .catch((error) => {
-      // an AbortError is expected here; anything else is not
+  fetch('/api/posts?q=' + encodeURIComponent(query), { signal: controller.signal })
+    .then(response => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
+    .then(posts => {
+      // Commit results only while this effect is active.
+    })
+    .catch(error => {
+      // Ignore cancellation and stale work; show other active failures.
     });
-  return () => /* abort this run's request */;
+  return () => { active = false; controller.abort(); };
 }, [query]);`,
-    hints: ['The cleanup a run of an effect returns belongs to that run, so it aborts that run\'s controller, the one the closure remembers. A later run makes a new controller.'],
+    hints: ["Each effect run owns its controller and active flag. Abort and mark it inactive during cleanup, then accept parsed results or errors only while that run is active."],
     approach: [
-      'Inside the effect, after the empty-query check, create `const controller = new AbortController()`.',
-      'Pass `{ signal: controller.signal }` to `fetch`, and add a `catch` that ignores an error named `AbortError`.',
-      'Return `() => controller.abort()` from the effect.',
-    ],
+      "Clear results/errors whenever the raw query changes; empty query starts no request.",
+      "Each nonempty effect creates its own controller and active flag, then fetches the encoded query with its signal.",
+      "Check response.ok, await JSON, and commit exact titles only while active. Show the fixed alert for active non-abort failures.",
+      "Cleanup first invalidates the effect and then aborts its transport so queued processing cannot replace the latest query."
+],
     verify: 'tests',
     estimatedMinutes: 9,
     suite: `${header()}${FAKE_FETCH}
@@ -1237,6 +1330,16 @@ test('an old answer never replaces a newer one', () => withFetch(async calls => 
   await act(async () => { forQuery(calls, 'a').respond([{ id: 2, title: 'Apples' }, { id: 3, title: 'Avocados' }]); });
   expect(shown(container)).toEqual(['Abacus']);
 }));
+
+const withSearchPhases=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let releaseJSON,rejectJSON;const json=new Promise((yes,no)=>{releaseJSON=yes;rejectJSON=no;});const signal=options.signal;calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>json}),body:releaseJSON,badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new TypeError('Offline'))});const abort=()=>{const error=new Error('Aborted');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const searchInput=scope=>within(scope).getByLabelText('Search');
+const changeSearch=(scope,text)=>fireEvent.change(searchInput(scope),{target:{value:text}});
+const searchHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const searchBody=async(call,data)=>{await act(async()=>call.body(data));};
+const searchDone=async(call,data,status=200)=>{await searchHeaders(call,status);await searchBody(call,data);};
+
+test('raw queries are encoded and actual response titles stay literal',()=>withFetch(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(0);const query='ice cream & tea/☕';changeSearch(root.container,query);await waitFor(()=>expect(calls).toHaveLength(1));const url=new URL(calls[0].url,'https://example.test');expect(url.pathname).toBe('/api/posts');expect(url.searchParams.get('q')).toBe(query);expect([...url.searchParams.keys()]).toEqual(['q']);await act(async()=>calls[0].respond([{id:1,title:'<b>Actual title</b>'},{id:2,title:'<b>Actual title</b>'}]));expect(shown(root.container)).toEqual(['<b>Actual title</b>','<b>Actual title</b>']);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
   },
 

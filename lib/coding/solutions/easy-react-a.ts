@@ -322,7 +322,11 @@ test('a second countdown starts from 3 again', () => withClock(async clock => {
   first.unmount();
   const second = render(<App />);
   expect(second.container.querySelector('p').textContent).toBe('3');
-}));`,
+}));` + `
+test('all three100ms boundaries lead to a stable Liftoff with no active interval',()=>withStepClock(async clock=>{const root=render(<App/>);for(const label of['3','2','1']){expect(root.container.querySelector('p').textContent).toBe(label);expect(clock.pendingIntervals()).toBe(1);await clock.tick(99);expect(root.container.querySelector('p').textContent).toBe(label);await clock.tick(1);}expect(root.container.querySelector('p').textContent).toBe('Liftoff!');expect(clock.pendingIntervals()).toBe(0);await clock.tick(5000);expect(root.container.querySelector('p').textContent).toBe('Liftoff!');expect(clock.pendingIntervals()).toBe(0);root.unmount();}));
+test('ordinary parent renders do not reset the remaining interval deadline',()=>withStepClock(async clock=>{const root=render(<App/>);await clock.tick(50);for(let i=0;i<12;i++)root.rerender(<App/>);expect(clock.pendingIntervals()).toBe(1);await clock.tick(49);expect(root.container.querySelector('p').textContent).toBe('3');await clock.tick(1);expect(root.container.querySelector('p').textContent).toBe('2');await clock.tick(200);expect(root.container.querySelector('p').textContent).toBe('Liftoff!');expect(clock.pendingIntervals()).toBe(0);root.unmount();}));
+test('staggered mounted countdowns own their intervals and early removal leaves none',()=>withStepClock(async clock=>{const a=render(<App/>);await clock.tick(50);const b=render(<App/>);expect(clock.pendingIntervals()).toBe(2);await clock.tick(50);expect(a.container.querySelector('p').textContent).toBe('2');expect(b.container.querySelector('p').textContent).toBe('3');await clock.tick(200);expect(a.container.querySelector('p').textContent).toBe('Liftoff!');expect(b.container.querySelector('p').textContent).toBe('1');expect(clock.pendingIntervals()).toBe(1);a.unmount();await clock.tick(50);expect(b.container.querySelector('p').textContent).toBe('Liftoff!');expect(clock.pendingIntervals()).toBe(0);b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('3');fresh.unmount();expect(clock.pendingIntervals()).toBe(0);await clock.tick(1000);}));
+`,
   },
 
   /* ── useContext ───────────────────────────────────────────────────── */
@@ -1370,22 +1374,29 @@ test('a list that fits on one page has one button', () => {
 
   /* ── abort ────────────────────────────────────────────────────────── */
   'react-easy2-stop-the-download': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('Ready');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const download = async () => {
+    controllerRef.current?.abort();
     // A controller aborts once, so every download gets a new one.
     const controller = new AbortController();
     controllerRef.current = controller;
     setStatus('Downloading…');
     try {
       await fetch('/api/report', { signal: controller.signal });
-      setStatus('Done');
+      if (controllerRef.current === controller) setStatus('Done');
     } catch (error) {
-      setStatus('Stopped');
+      if (controllerRef.current === controller) setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
     }
   };
 
@@ -1403,22 +1414,29 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('Ready');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const download = async () => {
+    if (controllerRef.current !== null) controllerRef.current.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
     setStatus('Downloading…');
     try {
       const options = { signal: controller.signal };
       await fetch('/api/report', options);
-      setStatus('Done');
+      if (controllerRef.current === controller) setStatus('Done');
     } catch (error) {
-      setStatus('Stopped');
+      if (controllerRef.current === controller) setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
     }
   };
 
@@ -1439,23 +1457,27 @@ const App = () => {
 };
 
 export default App;`,
-    senior: `import React, { useRef, useState } from 'react';
+    senior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('Ready');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const download = async () => {
-    // Starting again replaces an unfinished download instead of racing it.
     controllerRef.current?.abort();
     const { signal } = (controllerRef.current = new AbortController());
     setStatus('Downloading…');
     try {
       await fetch('/api/report', { signal });
-      setStatus('Done');
+      if (controllerRef.current?.signal === signal) setStatus('Done');
     } catch (error) {
-      // Only the latest download may report; a replaced one has nothing to say.
-      if (controllerRef.current.signal === signal) setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
+      if (controllerRef.current?.signal === signal) setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
     }
   };
 
@@ -1494,7 +1516,11 @@ test('Stop cancels the latest of two downloads', () => withFetch(async calls => 
   press('Download');
   await act(async () => { press('Stop'); });
   expect(calls[1].signal.aborted).toBe(true);
-}));`,
+}));` + `
+test('sixteen downloads keep fresh signals and terminal success,cancel and failure states',()=>withFetch(async calls=>{const root=render(<App/>);for(let n=0;n<16;n++){press('Download');expect(calls).toHaveLength(n+1);expect(calls[n].url).toBe('/api/report');expect(calls[n].signal.aborted).toBe(false);expect(status(root.container)).toBe('Downloading…');let expected;if(n%3===0){await act(async()=>calls[n].respond({}));expected='Done';}else if(n%3===1){await act(async()=>press('Stop'));expected='Stopped';}else{await act(async()=>calls[n].fail(new TypeError('Offline')));expected='Failed';}expect(status(root.container)).toBe(expected);await act(async()=>{press('Stop');press('Stop');});expect(status(root.container)).toBe(expected);root.rerender(<App/>);expect(calls).toHaveLength(n+1);}expect(new Set(calls.map(c=>c.signal)).size).toBe(16);}));
+test('an already-fulfilled older request cannot finish a newer pending download',()=>withFetch(async calls=>{const root=render(<App/>);press('Download');await act(async()=>{calls[0].respond({});press('Download');});expect(calls).toHaveLength(2);expect(calls[0].signal.aborted).toBe(true);expect(calls[1].signal.aborted).toBe(false);expect(status(root.container)).toBe('Downloading…');await act(async()=>calls[1].respond({}));expect(status(root.container)).toBe('Done');press('Download');await act(async()=>press('Download'));expect(calls[2].signal.aborted).toBe(true);expect(status(root.container)).toBe('Downloading…');await act(async()=>press('Stop'));expect(calls[3].signal.aborted).toBe(true);expect(status(root.container)).toBe('Stopped');}));
+test('independent and fresh mounted downloaders keep their own controller and cleanup aborts pending work',()=>withFetch(async calls=>{const a=render(<App/>),b=render(<App/>);fireEvent.click(within(a.container).getByRole('button',{name:'Download'}));fireEvent.click(within(b.container).getByRole('button',{name:'Download'}));expect(calls[0].signal).not.toBe(calls[1].signal);await act(async()=>fireEvent.click(within(a.container).getByRole('button',{name:'Stop'})));expect(status(a.container)).toBe('Stopped');expect(status(b.container)).toBe('Downloading…');expect(calls[1].signal.aborted).toBe(false);a.unmount();b.unmount();expect(calls[1].signal.aborted).toBe(true);const fresh=render(<App/>);expect(status(fresh.container)).toBe('Ready');fireEvent.click(within(fresh.container).getByRole('button',{name:'Download'}));expect(calls).toHaveLength(3);fresh.unmount();expect(calls[2].signal.aborted).toBe(true);}));
+`,
   },
   'react-easy2-cancel-is-not-an-error': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1612,7 +1638,11 @@ test('a DOMException named AbortError is a cancel too', () => withFetch(async ca
   const { container } = render(<App />);
   await act(async () => { calls[0].fail(new DOMException('Aborted', 'AbortError')); });
   expect(status(container)).toBe('Cancelled');
-}));`,
+}));` + `
+test('only the exact AbortError name is Cancelled across varied error messages',()=>withFetch(async calls=>{for(const name of['AbortError','aborterror','ABORTERROR','TimeoutError','TypeError','Error','AbortErrorSuffix']){const n=calls.length,root=render(<App/>),error=new Error(name==='AbortError'?'opaque message':'The operation was aborted.');error.name=name;await act(async()=>calls[n].fail(error));expect(status(root.container)).toBe(name==='AbortError'?'Cancelled':'Could not load prices');root.unmount();}}));
+test('normal parent renders do not refetch and Cancel after settlement preserves the terminal status',()=>withFetch(async calls=>{for(const outcome of['success','failure']){const n=calls.length,root=render(<App/>);for(let i=0;i<12;i++)root.rerender(<App/>);expect(calls).toHaveLength(n+1);expect(calls[n].url).toBe('/api/prices');expect(calls[n].signal.aborted).toBe(false);if(outcome==='success')await act(async()=>calls[n].respond([]));else await act(async()=>calls[n].fail(new TypeError('Offline')));const before=status(root.container);await act(async()=>{fireEvent.click(within(root.container).getByRole('button',{name:'Cancel'}));fireEvent.click(within(root.container).getByRole('button',{name:'Cancel'}));});expect(status(root.container)).toBe(before);root.unmount();expect(calls[n].signal.aborted).toBe(true);}}));
+test('independent mounted requests use distinct signals and a fresh instance starts Loading',()=>withFetch(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);expect(calls[0].signal).not.toBe(calls[1].signal);await act(async()=>fireEvent.click(within(a.container).getByRole('button',{name:'Cancel'})));expect(status(a.container)).toBe('Cancelled');expect(status(b.container)).toBe('Loading…');expect(calls[1].signal.aborted).toBe(false);await act(async()=>calls[1].respond([]));expect(status(b.container)).toBe('Prices loaded');a.unmount();b.unmount();const fresh=render(<App/>);expect(status(fresh.container)).toBe('Loading…');expect(calls).toHaveLength(3);expect(calls[2].signal.aborted).toBe(false);fresh.unmount();expect(calls[2].signal.aborted).toBe(true);}));
+`,
   },
   'react-easy2-latest-search-wins': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -1620,24 +1650,29 @@ test('a DOMException named AbortError is a cancel too', () => withFetch(async ca
 const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    setResults([]);
+    setError('');
     if (!query) return;
     // Each run owns its controller; the cleanup below aborts this one.
+    let active = true;
     const controller = new AbortController();
     fetch('/api/posts?q=' + encodeURIComponent(query), { signal: controller.signal })
-      .then((response) => response.json())
-      .then((posts) => setResults(posts))
+      .then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then((posts) => { if (active) setResults(posts); })
       .catch((error) => {
-        // An aborted search is expected; anything else is a real failure.
-        if (error.name !== 'AbortError') throw error;
+        // Only failures from the current, non-cancelled search are shown.
+        if (active && error.name !== 'AbortError') setError('Could not load posts.');
       });
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, [query]);
 
   return <main>
     <h2>Only the latest search</h2>
     <label>Search <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    {error && <p role="alert">{error}</p>}
     <ul>
       {results.map((post) => <li key={post.id}>{post.title}</li>)}
     </ul>
@@ -1650,30 +1685,36 @@ export default App;`,
 const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    setResults([]);
+    setError('');
     if (query === '') {
       return;
     }
 
+    let active = true;
     const controller = new AbortController();
     const url = '/api/posts?q=' + encodeURIComponent(query);
 
     fetch(url, { signal: controller.signal })
       .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
         return response.json();
       })
       .then((posts) => {
-        setResults(posts);
+        if (active) setResults(posts);
       })
       .catch((error) => {
         if (error.name === 'AbortError') {
           return;
         }
-        console.error(error);
+        if (active) setError('Could not load posts.');
       });
 
     return () => {
+      active = false;
       controller.abort();
     };
   }, [query]);
@@ -1682,6 +1723,7 @@ const App = () => {
     <main>
       <h2>Only the latest search</h2>
       <label>Search <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      {error && <p role="alert">{error}</p>}
       <ul>
         {results.map((post) => (
           <li key={post.id}>{post.title}</li>
@@ -1696,26 +1738,32 @@ export default App;`,
 
 const searchPosts = async (query, signal) => {
   const response = await fetch('/api/posts?q=' + encodeURIComponent(query), { signal });
+  if (!response.ok) throw new Error('Request failed');
   return response.json();
 };
 
 const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    setResults([]);
+    setError('');
     if (!query) return undefined;
+    let active = true;
     const controller = new AbortController();
-    searchPosts(query, controller.signal).then(setResults, (error) => {
-      if (error.name !== 'AbortError') console.error(error);
+    searchPosts(query, controller.signal).then(posts => { if (active) setResults(posts); }, (error) => {
+      if (active && error.name !== 'AbortError') setError('Could not load posts.');
     });
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, [query]);
 
   return (
     <main>
       <h2>Only the latest search</h2>
       <label>Search <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      {error && <p role="alert">{error}</p>}
       <ul aria-live="polite">
         {results.map((post) => <li key={post.id}>{post.title}</li>)}
       </ul>
@@ -1776,7 +1824,11 @@ test('a cancelled request leaves no unhandled rejection', () => withFetch(async 
   } finally {
     rejections.stop();
   }
-}));`,
+}));` + `
+test('long and repeated changed queries own fresh controllers and exact parsed records',()=>withSearchPhases(async calls=>{const root=render(<App/>),queries=['a','ab','three','two words','?&/','αβ','☕','x'.repeat(2000),'same','a','x','six','last','two words','end','a'];for(let n=0;n<queries.length;n++){changeSearch(root.container,queries[n]);await waitFor(()=>expect(calls).toHaveLength(n+1));const url=new URL(calls[n].url,'https://example.test');expect(url.pathname).toBe('/api/posts');expect(url.searchParams.get('q')).toBe(queries[n]);expect(searchInput(root.container).value).toBe(queries[n]);expect(calls[n].signal.aborted).toBe(false);if(n)expect(calls[n-1].signal.aborted).toBe(true);expect(shown(root.container)).toEqual([]);await searchHeaders(calls[n]);expect(shown(root.container)).toEqual([]);const data=n===4?[]:Array.from({length:n===5?100:3},(_,i)=>({id:i+1,title:i===0?'':i%2?'Duplicate':'<b>Literal '+n+'</b>'}));await searchBody(calls[n],data);expect(shown(root.container)).toEqual(data.map(x=>x.title));expect(root.container.querySelector('li b')).toBeNull();root.rerender(<App/>);expect(calls).toHaveLength(n+1);}expect(new Set(calls.map(c=>c.signal)).size).toBe(queries.length);changeSearch(root.container,'');expect(shown(root.container)).toEqual([]);expect(calls).toHaveLength(queries.length);expect(calls[calls.length-1].signal.aborted).toBe(true);}));
+test('HTTP,network and JSON failures are visible and a new query recovers without stale alerts',()=>withSearchPhases(async calls=>{const root=render(<App/>);let serial=0;for(const failure of['http','network','json']){changeSearch(root.container,'failure '+serial++);const call=calls[calls.length-1];if(failure==='http')await searchDone(call,[{id:1,title:'Failed body'}],503);else if(failure==='network')await act(async()=>call.fail());else{await searchHeaders(call);await act(async()=>call.badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load posts.'));expect(shown(root.container)).toEqual([]);changeSearch(root.container,'recovery '+serial++);await searchDone(calls[calls.length-1],[{id:1,title:'Recovered'}]);expect(shown(root.container)).toEqual(['Recovered']);expect(within(root.container).queryByRole('alert')).toBeNull();}}));
+test('parsed work from a cleaned-up query or removed mount cannot commit',()=>withSearchPhases(async calls=>{const root=render(<App/>);changeSearch(root.container,'old');await searchHeaders(calls[0]);changeSearch(root.container,'new');await searchDone(calls[1],[{id:1,title:'Newest'}]);await searchBody(calls[0],[{id:2,title:'Stale'}]);expect(shown(root.container)).toEqual(['Newest']);changeSearch(root.container,'pending');await searchHeaders(calls[2]);changeSearch(root.container,'');expect(calls[2].signal.aborted).toBe(true);await searchBody(calls[2],[{id:3,title:'Cleared'}]);expect(shown(root.container)).toEqual([]);changeSearch(root.container,'gone');await searchHeaders(calls[3]);root.unmount();expect(calls[3].signal.aborted).toBe(true);const fresh=render(<App/>);expect(searchInput(fresh.container).value).toBe('');changeSearch(fresh.container,'fresh');await searchDone(calls[4],[{id:4,title:'Fresh'}]);await searchBody(calls[3],[{id:5,title:'Removed'}]);expect(shown(fresh.container)).toEqual(['Fresh']);}));
+`,
   },
 
   /* ── accessibility ────────────────────────────────────────────────── */

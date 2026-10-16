@@ -623,7 +623,7 @@ test('Stop cancels both and shows Stopped', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'effect-cleanup'],
     title: 'Remove listeners with one abort',
-    prompt: 'The status line shows which device you used last: "Last input: keyboard" after a key press anywhere in the window, and "Last input: mouse" after the mouse moves. Add both listeners to `window` in one effect that runs once, and give each of them the options `{ signal: controller.signal }` from a single `AbortController`. The effect\'s cleanup is then one call, `controller.abort()`, which removes both listeners without a `removeEventListener` for each.',
+    prompt: "The status line shows which device you used last: \"Last input: keyboard\" after a key press anywhere in the window, and \"Last input: mouse\" after the mouse moves. Add both listeners to `window` in one effect that runs once, and give each of them the options `{ signal: controller.signal }` from a single `AbortController`. The effect's cleanup is then one call, `controller.abort()`, which removes both listeners without a `removeEventListener` for each. Initially the paragraph reads Last input: none. Every keydown counts, including keys other than the sample a or Enter and events bubbling from a focused page element. Repeated mixed keydown/mousemove events always show the latest device. Ordinary parent re-renders preserve exactly the same two registrations and their shared signal. Each independent or fresh instance has its own controller and initial none state; the same window event updates every mounted instance. Unmount aborts only that instance's signal and removes its actual callbacks. One setup refers to an ordinary mounted lifetime; development Strict Mode may repeat setup/cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -689,6 +689,10 @@ test('both listeners share one signal', () => {
     added.restore();
   }
 });
+
+const traceInputListeners=()=>{const original=window.addEventListener,records=[];window.addEventListener=function(type,listener,options){if(type==='keydown'||type==='mousemove'){const row={type,signal:options?.signal,calls:0};records.push(row);return original.call(this,type,function(event){row.calls++;if(typeof listener==='function')return listener.call(this,event);return listener.handleEvent(event);},options);}return original.call(this,type,listener,options);};return{records,restore:()=>{window.addEventListener=original;}};};
+test('a key bubbling from the page is keyboard input too',()=>{const root=render(<App/>),target=document.createElement('button');document.body.appendChild(target);try{fireEvent.mouseMove(window);expect(line(root.container)).toBe('Last input: mouse');fireEvent.keyDown(target,{key:'Escape'});expect(line(root.container)).toBe('Last input: keyboard');}finally{target.remove();}});
+
 `,
   },
 

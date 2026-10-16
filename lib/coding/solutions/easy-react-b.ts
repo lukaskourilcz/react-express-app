@@ -1256,7 +1256,11 @@ test('the status starts at none and follows the latest input', () => {
   fireEvent.mouseMove(window);
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(line(container)).toBe('Last input: keyboard');
-});`,
+});` + `
+test('thirty-six mixed keys and mouse events always follow the latest event',()=>{const root=render(<App/>);const keys=['Escape','ArrowLeft','Tab','Home','F4',' ','Z','Enter','Shift'];for(let i=0;i<36;i++){fireEvent.mouseMove(window);expect(line(root.container)).toBe('Last input: mouse');fireEvent.keyDown(window,{key:keys[i%keys.length]});expect(line(root.container)).toBe('Last input: keyboard');}});
+test('parent renders keep the same two listeners and aborted callbacks never run afterward',()=>{const trace=traceInputListeners();let root;try{root=render(<App/>);expect(trace.records).toHaveLength(2);const signal=trace.records[0].signal;expect(signal).toBe(trace.records[1].signal);for(let i=0;i<12;i++){fireEvent.mouseMove(window);fireEvent.keyDown(window,{key:'Escape'});root.rerender(<App/>);}expect(trace.records).toHaveLength(2);expect(trace.records.every(r=>r.signal===signal)).toBe(true);const before=trace.records.map(r=>r.calls);root.unmount();expect(signal.aborted).toBe(true);fireEvent.mouseMove(window);fireEvent.keyDown(window,{key:'Escape'});expect(trace.records.map(r=>r.calls)).toEqual(before);}finally{root?.unmount();trace.restore();}});
+test('independent instances own separate shared signals and fresh status starts none',()=>{const trace=traceInputListeners();let a,b,fresh;try{a=render(<App/>);b=render(<App/>);expect(trace.records).toHaveLength(4);const first=trace.records[0].signal,second=trace.records[2].signal;expect(first).not.toBe(second);expect(trace.records[1].signal).toBe(first);expect(trace.records[3].signal).toBe(second);fireEvent.keyDown(window,{key:'Escape'});expect(line(a.container)).toBe('Last input: keyboard');expect(line(b.container)).toBe('Last input: keyboard');a.unmount();expect(first.aborted).toBe(true);expect(second.aborted).toBe(false);fireEvent.mouseMove(window);expect(line(b.container)).toBe('Last input: mouse');fresh=render(<App/>);expect(line(fresh.container)).toBe('Last input: none');expect(trace.records).toHaveLength(6);expect(trace.records[4].signal).not.toBe(second);expect(trace.records[4].signal.aborted).toBe(false);}finally{a?.unmount();b?.unmount();fresh?.unmount();trace.restore();}});
+`,
   },
 
   /* ── pagination ───────────────────────────────────────────────────── */
