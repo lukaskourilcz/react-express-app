@@ -7,6 +7,10 @@ for (const locale of ['en', 'cs']) for (const theme of ['light', 'dark']) {
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme as 'light' | 'dark' });
     await page.addInitScript(({ locale, theme }) => { localStorage.setItem('devquiz.lang', locale); localStorage.setItem('devquiz:color-mode', theme); }, { locale, theme });
     await page.goto(`${locale === 'cs' ? '/cs' : ''}/topics/${slug}`);
+    // The build-time fallback has the same article markup. Wait for the live
+    // route before focusing: React replaces fallback nodes during startup.
+    // The separate JavaScript-disabled test covers the static disclosure.
+    await expect(page.locator('.ss-public-fallback')).toHaveCount(0);
     const article = page.locator('article.ss-topic-article');
     // The interface ships English only, but the Czech guides stay published,
     // so the article names its own language instead of borrowing the page's.
