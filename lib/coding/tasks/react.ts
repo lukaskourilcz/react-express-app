@@ -199,7 +199,7 @@ test('label is exactly OFF,then ON,and keeps alternating',()=>{const {container}
     tier: 1,
     focus: ["useState", "forms"],
     title: "Live paragraph",
-    prompt: "Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state.",
+    prompt: `Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state. Give the input the accessible name Your text. Start with an empty input and empty paragraph. Preserve raw single-line text, including spaces, literal markup and Unicode, up to 2000 UTF-16 code units. The paragraph contains only that value, with no prefix or normalization. Parent renders and separate instances must preserve their own state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -214,7 +214,9 @@ export default App;
 `,
     skeleton: `const [text, setText] = useState('');
 
+<label>Your text
 <input value={text} onChange={event => setText(/* what the input holds now */)} />
+</label>
 <p>{/* the same text */}</p>`,
     hints: ["Use one state value for both the input value and paragraph text."],
     approach: [
@@ -226,7 +228,7 @@ export default App;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('mirrors what is typed', () => {
@@ -236,7 +238,10 @@ test('mirrors what is typed', () => {
   expect(input.value).toBe('hello there');
   expect(container.querySelector('p').textContent).toContain('hello there');
 });
-`,
+
+test('the initially empty paragraph mirrors spaces exactly',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');expect(view.container.querySelector('p').textContent).toBe('');fireEvent.change(field,{target:{value:'  reef  '}});expect(view.container.querySelector('p').textContent).toBe('  reef  ');
+});`,
   },
   {
     id: "react-data-list",
@@ -571,7 +576,7 @@ test('substring matching restores the full list after clearing',()=>{const {cont
     tier: 1,
     focus: ["forms", "events"],
     title: "Controlled form",
-    prompt: "Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit.",
+    prompt: `Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit. Label the inputs Name and Email and keep both controlled from the first render. Show a snapshot of the last submitted values; editing the draft must not change that result until the next submit. Empty values are allowed. Preserve raw names up to 2000 UTF-16 code units of single-line text; email examples use ordinary valid addresses and the current native field value. The result wording is up to you. Parent renders and separate forms keep their own drafts and results.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -606,7 +611,7 @@ const submit = event => {
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the submitted values and does not reload', () => {
@@ -623,7 +628,10 @@ test('shows nothing before the form is submitted', () => {
   const { container } = render(<App />);
   expect(container.textContent).not.toContain('sam@example.com');
 });
-`,
+
+test('a real submit event is prevented before showing the submitted values',()=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Name'),{target:{value:'Visible User'}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:'visible@example.test'}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(view.container.textContent).toContain('Visible User');expect(view.container.textContent).toContain('visible@example.test');
+});`,
   },
   {
     id: "react-effect-on-mount",
@@ -1150,7 +1158,7 @@ test('renders the users when the request succeeds', async () => {
     tier: 2,
     focus: ["fetch", "useState"],
     title: "Select fetched user",
-    prompt: "Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first.",
+    prompt: `Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first. Use https://jsonplaceholder.typicode.com/users with GET on mount, and render the returned array in order. Each user has a unique string or positive integer id and a name/email; the array can be empty or contain up to 24 users. Display names may repeat and may contain spaces, Unicode or literal markup, up to 2000 UTF-16 units. After each choice, display only that user’s name and email outside the buttons; another choice replaces the previous details. Keep button identity and selection through parent renders. Independent and fresh instances own their requests and selection. This exercise covers successful responses, not loading/error UI.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1207,7 +1215,7 @@ const visibleItems = items;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows details only after a user is selected', async () => {
@@ -1218,6 +1226,14 @@ test('shows details only after a user is selected', async () => {
   fireEvent.click(target);
   await waitFor(() => expect(container.textContent).toContain('ervin@example.com'));
 });
+
+
+const withUsers=async body=>{const calls=[],real=globalThis.fetch;globalThis.fetch=(url,options={})=>new Promise(resolve=>calls.push({url:String(url),options,respond:users=>resolve({ok:true,status:200,json:()=>Promise.resolve(users)})}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const userOutput=root=>{const copy=root.cloneNode(true);copy.querySelectorAll('button').forEach(node=>node.remove());return copy.textContent;};
+const userRequest=call=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/users');expect(String(call.options.method||'GET').toUpperCase()).toBe('GET');};
+test('each fetched button reveals that user name and email outside the button list',()=>withUsers(async calls=>{
+ const view=render(<App/>),users=[{id:91,name:'Ada Reef',email:'ada@reef.test'},{id:203,name:'Bo Bay',email:'bo@bay.test'}];expect(view.container.querySelectorAll('button')).toHaveLength(0);userRequest(calls[0]);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));expect(userOutput(view.container)).not.toContain(users[0].email);fireEvent.click(buttons[0]);expect(userOutput(view.container)).toContain(users[0].name);expect(userOutput(view.container)).toContain(users[0].email);expect(userOutput(view.container)).not.toContain(users[1].email);
+}));
 `,
     api: {
       method: "GET",
@@ -1424,7 +1440,7 @@ test('Refresh renders the actual new response title',()=>withPhasedRequests(asyn
     tier: 3,
     focus: ["fetch", "forms"],
     title: "POST a new post",
-    prompt: "Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it.",
+    prompt: `Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it. Label the controlled input Title. Use https://jsonplaceholder.typicode.com/posts, method POST, a JSON content-type header and JSON.stringify({ title }). For nonblank single-line titles up to 2000 UTF-16 code units, preserve the exact text, including leading/trailing spaces, Unicode and literal markup. Prevent navigation. Display the latest returned title and id, not values invented from the draft. Wait for both the response and its JSON body; until then retain any previous result. Editing the draft does not alter a submitted or displayed snapshot. Submissions in this exercise are sequential and successful; response ordering, failures and blank-title behavior are outside its scope. Keep parent state and separate forms independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1461,7 +1477,7 @@ const createItem = async newItem => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('sends the title and renders what comes back', async () => {
@@ -1471,6 +1487,18 @@ test('sends the title and renders what comes back', async () => {
   await waitFor(() => expect(container.textContent).toContain('My new post'));
   expect(container.textContent).toContain('101');
 });
+
+
+const withPosts = async body => {
+ const calls=[],real=globalThis.fetch;
+ globalThis.fetch=(url,options={})=>new Promise(resolve=>{let jsonResolve;const json=new Promise(done=>{jsonResolve=done;});calls.push({url:String(url),options,response:()=>resolve({ok:true,status:201,json:()=>json}),json:jsonResolve});});
+ try{await body(calls);}finally{globalThis.fetch=real;}
+};
+const postEvent=container=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+const checkPost=(call,title)=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/posts');expect(String(call.options.method||'GET').toUpperCase()).toBe('POST');const headers=call.options.headers||{},entry=typeof headers.get==='function'?headers.get('content-type'):Object.entries(headers).find(([key])=>key.toLowerCase()==='content-type')?.[1];expect(/^application\\/json(?:;|$)/i.test(entry||'')).toBe(true);expect(typeof call.options.body).toBe('string');expect(JSON.parse(call.options.body)).toEqual({title});};
+test('the request preserves its title and the result comes from the response body',()=>withPosts(async calls=>{
+ const view=render(<App/>);const title='  A raw title 🦈  ';fireEvent.change(screen.getByLabelText('Title'),{target:{value:title}});postEvent(view.container);expect(calls).toHaveLength(1);checkPost(calls[0],title);expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].response());expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].json({id:785,title:'Assigned by server'}));expect(view.container.textContent).toContain('785');expect(view.container.textContent).toContain('Assigned by server');
+}));
 `,
     api: {
       method: "POST",
@@ -2269,7 +2297,7 @@ test('creates, edits, and deletes', async () => {
     tier: 3,
     focus: ["useRef", "timers"],
     title: "Stopwatch",
-    prompt: "Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running.",
+    prompt: `Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running. Reset also stops the stopwatch. After Stop, Start resumes the saved count with a fresh full second before the next tick. Start while running may be ignored or restart the one interval, but must not create another. Parent renders preserve elapsed state and the pending interval. Clear it on unmount and keep separate instances independent. Either a number alone or a number with a seconds label is accepted.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2344,7 +2372,70 @@ test('Stop freezes the count and Reset clears it', () => withClock(async clock =
   expect(elapsed(container)).toContain('0');
   expect(container.textContent).not.toContain('1');
 }));
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('a stopped stopwatch resumes after a fresh full second',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(1500);fireEvent.click(control(view.container,'stop'));await clock.tick(3000);fireEvent.click(control(view.container,'start'));await clock.tick(999);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('1');await clock.tick(1);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('2');
+}));`,
   },
   {
     id: "react-uselocalstorage-hook",

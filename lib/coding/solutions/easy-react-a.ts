@@ -104,12 +104,14 @@ test('a fresh instance does not keep an old input ref or value',()=>{
 `,
   },
   'react-easy2-cancel-the-reminder': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
   // The id only matters to the handlers, so it lives in a ref: storing it causes no render.
   const timeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   const remind = () => {
     // A second press starts the wait over instead of queueing a second message.
@@ -130,11 +132,13 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
   const timeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   const remind = () => {
     if (timeoutRef.current !== null) {
@@ -179,7 +183,6 @@ const App = () => {
     timeoutRef.current = setTimeout(() => setMessage('Time to stretch'), DELAY_MS);
   };
 
-  // A reminder still waiting when the page closes goes with it.
   useEffect(() => cancel, []);
 
   return (
@@ -214,7 +217,21 @@ test('a reminder can be set again after a cancel', async () => {
   press('Cancel');
   press('Remind me');
   await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
-});`,
+});
+
+
+test('a repeated action model owns one reminder and preserves an already shown message',()=>withTestClock(async clock=>{
+ const view=render(<App/>);let now=0,due=null,message='';const steps=['remind',299,'remind',299,1,'cancel','remind',150,'cancel',500,'cancel','remind',300,'remind',299,'cancel',1];
+ for(let i=0;i<51;i++){const op=steps[i%steps.length];if(typeof op==='number'){now+=op;await clock.tick(op);if(due!==null&&due<=now){message='Time to stretch';due=null;}}else if(op==='remind'){press('Remind me');due=now+300;}else{press('Cancel');due=null;}view.rerender(<App data-parent={i}/>);expect(view.container.querySelector('p').textContent).toBe(message);expect(clock.pending()).toBe(due===null?0:1);}
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('Cancel at 299 ms cancels the pending callback but never erases a completed reminder',()=>withTestClock(async clock=>{
+ const view=render(<App/>);press('Remind me');await clock.tick(299);press('Cancel');await clock.tick(1000);expect(view.container.querySelector('p').textContent).toBe('');press('Remind me');await clock.tick(300);for(let i=0;i<20;i++)press('Cancel');expect(view.container.querySelector('p').textContent).toBe('Time to stretch');expect(clock.pending()).toBe(0);
+}));
+test('separate instances keep separate timers and removal clears only its owner',()=>withTestClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Remind me'}));await clock.tick(100);fireEvent.click(two.getByRole('button',{name:'Remind me'}));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(299);expect(b.container.querySelector('p').textContent).toBe('');await clock.tick(1);expect(b.container.querySelector('p').textContent).toBe('Time to stretch');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+}));
+`,
   },
 
   /* ── timers ───────────────────────────────────────────────────────── */
@@ -402,7 +419,6 @@ export default App;`,
 
 export const ThemeContext = createContext('light');
 
-// One place to read the theme, so every consumer reads it the same way.
 const useTheme = () => useContext(ThemeContext);
 
 export const Badge = () => {
@@ -440,7 +456,20 @@ test('a new provider value reaches the badge', () => {
   const { container, rerender } = render(<ThemeContext.Provider value="dark"><Badge /></ThemeContext.Provider>);
   rerender(<ThemeContext.Provider value="sepia"><Badge /></ThemeContext.Provider>);
   expect(container.textContent).toContain('Theme: sepia');
-});`,
+});
+
+
+const assertTheme=(root,value)=>{expect(root.textContent).toBe('Theme: '+value);const classes=root.querySelector('span').className.split(' ');expect(classes).toContain('badge');expect(classes).toContain('badge--'+value);};
+test('text and class follow twenty-five provider changes even with the same child element',()=>{
+ const child=<Badge theme="ignored"/>,view=render(<ThemeContext.Provider value="dark">{child}</ThemeContext.Provider>);for(const value of ['light','sepia','','reef-1',...Array.from({length:21},(_,i)=>'palette-'+i)]){view.rerender(<ThemeContext.Provider value={value}>{child}</ThemeContext.Provider>);assertTheme(view.container,value);}
+});
+test('the nearest provider controls each sibling without prop drilling',()=>{
+ const a=render(<ThemeContext.Provider value="outer"><div><ThemeContext.Provider value="inner"><Badge theme="other"/></ThemeContext.Provider></div></ThemeContext.Provider>),b=render(<ThemeContext.Provider value="elsewhere"><Badge/></ThemeContext.Provider>);assertTheme(a.container,'inner');assertTheme(b.container,'elsewhere');a.rerender(<ThemeContext.Provider value="changed-outer"><ThemeContext.Provider value=""><Badge/></ThemeContext.Provider></ThemeContext.Provider>);assertTheme(a.container,'');assertTheme(b.container,'elsewhere');a.unmount();b.unmount();
+});
+test('provider removal restores the default on a fresh badge',()=>{
+ const view=render(<ThemeContext.Provider value="not-default"><Badge/></ThemeContext.Provider>);assertTheme(view.container,'not-default');view.rerender(<Badge theme="dark"/>);assertTheme(view.container,'light');view.unmount();const fresh=render(<Badge/>);assertTheme(fresh.container,'light');fresh.unmount();
+});
+`,
   },
   'react-easy2-nearest-provider': {
     solution: `import React, { createContext, useContext } from 'react';
@@ -508,7 +537,6 @@ export const SizeContext = createContext('medium');
 
 export const Label = ({ text }) => <span>{text} ({useContext(SizeContext)})</span>;
 
-// A small wrapper keeps each size next to the part of the page it applies to.
 const Sized = ({ size, children }) => <SizeContext.Provider value={size}>{children}</SizeContext.Provider>;
 
 const App = () => (
@@ -546,7 +574,19 @@ test('the closer of two providers wins', () => {
     </SizeContext.Provider>,
   );
   expect(container.textContent).toBe('Inner (tiny)');
-});`,
+});
+
+
+test('twenty-four current provider changes reach an unchanged Label element',()=>{
+ const child=<Label text="  Reef <b>🦈  "/>,view=render(<SizeContext.Provider value="first">{child}</SizeContext.Provider>);const values=['','tiny','huge',...Array.from({length:21},(_,i)=>'size-'+i)];for(const value of values){view.rerender(<SizeContext.Provider value={value}>{child}</SizeContext.Provider>);expect(view.container.textContent).toBe('  Reef <b>🦈   ('+value+')');}
+});
+test('nested and sibling providers retain exact local values and raw labels',()=>{
+ const a=render(<SizeContext.Provider value="outer"><section><Label text="Outer"/><SizeContext.Provider value="inner"><aside><Label text="Inner"/></aside></SizeContext.Provider></section></SizeContext.Provider>),b=render(<SizeContext.Provider value="separate"><Label text="Side"/></SizeContext.Provider>);expect(a.container.querySelector('aside').textContent).toBe('Inner (inner)');expect(a.container.textContent).toBe('Outer (outer)Inner (inner)');expect(b.container.textContent).toBe('Side (separate)');a.rerender(<SizeContext.Provider value="new"><Label text="x"/></SizeContext.Provider>);expect(a.container.textContent).toBe('x (new)');expect(b.container.textContent).toBe('Side (separate)');a.unmount();b.unmount();
+});
+test('default and long labels return when no provider is present',()=>{
+ const value='r'.repeat(2000),view=render(<Label text={value}/>);expect(view.container.textContent).toBe(value+' (medium)');view.rerender(<SizeContext.Provider value="override"><Label text="Changed"/></SizeContext.Provider>);expect(view.container.textContent).toBe('Changed (override)');view.rerender(<Label text="Back"/>);expect(view.container.textContent).toBe('Back (medium)');view.unmount();const fresh=render(<Label text="Fresh"/>);expect(fresh.container.textContent).toBe('Fresh (medium)');fresh.unmount();
+});
+`,
   },
   'react-easy2-shared-basket': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -1944,9 +1984,11 @@ test('a fresh disclosure starts closed with a working target',()=>{const a=rende
 `,
   },
   'react-easy2-labelled-field': {
-    solution: `import React, { useState } from 'react';
+    solution: `import React, { useId, useState } from 'react';
 
 const App = () => {
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
@@ -1957,27 +1999,29 @@ const App = () => {
 
   return <main>
     <h2>A field that explains its error</h2>
-    <form onSubmit={save}>
-      <label htmlFor="email">Email</label>
+    <form onSubmit={save} noValidate>
+      <label htmlFor={fieldId}>Email</label>
       {/* undefined leaves each attribute out while there is no error. */}
       <input
-        id="email"
+        id={fieldId}
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? 'email-error' : undefined}
+        aria-describedby={error ? errorId : undefined}
       />
-      {error && <p id="email-error" className="error">{error}</p>}
+      {error && <p id={errorId} className="error">{error}</p>}
       <button type="submit">Save</button>
     </form>
   </main>;
 };
 
 export default App;`,
-    junior: `import React, { useState } from 'react';
+    junior: `import React, { useId, useState } from 'react';
 
 const App = () => {
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
@@ -1994,23 +2038,23 @@ const App = () => {
   let describedBy = undefined;
   if (error !== '') {
     invalid = 'true';
-    describedBy = 'email-error';
+    describedBy = errorId;
   }
 
   return (
     <main>
       <h2>A field that explains its error</h2>
-      <form onSubmit={save}>
-        <label htmlFor="email">Email</label>
+      <form onSubmit={save} noValidate>
+        <label htmlFor={fieldId}>Email</label>
         <input
-          id="email"
+          id={fieldId}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={invalid}
           aria-describedby={describedBy}
         />
-        {error !== '' ? <p id="email-error" className="error">{error}</p> : null}
+        {error !== '' ? <p id={errorId} className="error">{error}</p> : null}
         <button type="submit">Save</button>
       </form>
     </main>
@@ -2031,7 +2075,6 @@ const App = () => {
     setError(email.trim() ? '' : 'Enter your email');
   };
 
-  // Spread only when there is something to say, so the valid field stays bare.
   const errorProps = error ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
 
   return (
@@ -2070,7 +2113,20 @@ test('the label is a label element tied to the input', () => {
   const label = screen.getByText('Email');
   expect(label.tagName).toBe('LABEL');
   expect(label.getAttribute('for')).toBe(field().id);
-});`,
+});
+
+
+test('eighteen custom validation cycles keep raw native field values and error attributes consistent',()=>{
+ const view=render(<App/>);const values=['',' ',' ','ana@example.com','not-an-email','0','z'.repeat(2000),' ','reef@example.test'];
+ for(let i=0;i<18;i++){fireEvent.change(field(),{target:{value:values[i%values.length]}});const nativeValue=field().value;save();view.rerender(<App data-parent={i}/>);expect(field().value).toBe(nativeValue);if(nativeValue.trim()===''){expect(field().getAttribute('aria-invalid')).toBe('true');const id=field().getAttribute('aria-describedby'),message=document.getElementById(id);expect(message.textContent).toBe('Enter your email');expect(view.container.contains(message)).toBe(true);}else{expect(field().getAttribute('aria-invalid')).toBeNull();expect(field().getAttribute('aria-describedby')).toBeNull();expect(screen.queryByText('Enter your email')).toBeNull();}}
+});
+test('each label and error points to its own instance with stable unique ids',()=>{
+ const a=render(<App/>),b=render(<App/>),fa=a.container.querySelector('input'),fb=b.container.querySelector('input');const la=a.container.querySelector('label'),lb=b.container.querySelector('label');expect(la.control).toBe(fa);expect(lb.control).toBe(fb);expect(fa.id===fb.id).toBe(false);fireEvent.click(within(a.container).getByRole('button',{name:'Save'}));fireEvent.click(within(b.container).getByRole('button',{name:'Save'}));const ea=fa.getAttribute('aria-describedby'),eb=fb.getAttribute('aria-describedby');expect(ea===eb).toBe(false);expect(a.container.contains(document.getElementById(ea))).toBe(true);expect(b.container.contains(document.getElementById(eb))).toBe(true);const oldId=fb.id;b.rerender(<App data-parent="same"/>);expect(fb.id).toBe(oldId);fireEvent.change(fa,{target:{value:'ok@example.test'}});fireEvent.click(within(a.container).getByRole('button',{name:'Save'}));expect(fa.getAttribute('aria-invalid')).toBeNull();expect(fb.getAttribute('aria-invalid')).toBe('true');a.unmount();b.unmount();
+});
+test('a fresh field starts without old errors and every form submit prevents navigation',()=>{
+ const view=render(<App/>);const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(field().getAttribute('aria-invalid')).toBe('true');view.unmount();const fresh=render(<App/>);expect(field().value).toBe('');expect(field().getAttribute('aria-invalid')).toBeNull();expect(field().getAttribute('aria-describedby')).toBeNull();expect(screen.queryByText('Enter your email')).toBeNull();fresh.unmount();
+});
+`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

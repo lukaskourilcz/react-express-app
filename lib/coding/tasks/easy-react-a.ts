@@ -207,8 +207,8 @@ test('a long search survives a jump unchanged',()=>{
     tier: 2,
     focus: ['useRef', 'timers'],
     title: 'Cancel the reminder',
-    prompt: 'Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that `setTimeout` returns in a ref rather than in state, and pass it to `clearTimeout` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that \`setTimeout\` returns in a ref rather than in state, and pass it to \`clearTimeout\` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing. The wait lasts the full 300 ms; a real browser callback may run later. A new reminder and Cancel do not erase an already displayed message. Parent renders must not restart a pending wait. Clear the pending timeout on unmount, and keep each instance independent.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
@@ -238,7 +238,9 @@ const remind = () => {
 
 const cancel = () => {
   // clear the waiting timeout
-};`,
+};
+
+// Clear timeoutRef.current from an effect cleanup on unmount.`,
     hints: ['`setTimeout` returns an id, and `clearTimeout(id)` stops that timeout if it has not fired yet. A ref keeps the id between renders without causing a render of its own; `clearTimeout(null)` is allowed and does nothing.'],
     approach: [
       'Create `const timeoutRef = useRef(null)` in App.',
@@ -271,7 +273,70 @@ test('Cancel with nothing waiting does no harm', async () => {
   press('Remind me');
   await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('the first reminder waits the full 300 ms',()=>withTestClock(async clock=>{
+ const view=render(<App/>);press('Remind me');await clock.tick(299);expect(view.container.querySelector('p').textContent).toBe('');await clock.tick(1);expect(view.container.querySelector('p').textContent).toBe('Time to stretch');
+}));`,
   },
 
   /* ── timers ───────────────────────────────────────────────────────── */
@@ -438,7 +503,7 @@ test('the first tick waits one full100ms',()=>withStepClock(async clock=>{const 
     tier: 1,
     focus: ['useContext'],
     title: 'Read the theme',
-    prompt: '`Badge` expects a `theme` prop, but `Toolbar` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through `ThemeContext`. Make `Badge` read the theme with `useContext(ThemeContext)` instead of taking a prop, for both its text and its class name. Leave `Toolbar` as it is: with context, the components in between pass nothing along.',
+    prompt: `\`Badge\` expects a \`theme\` prop, but \`Toolbar\` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through \`ThemeContext\`. Make \`Badge\` read the theme with \`useContext(ThemeContext)\` instead of taking a prop, for both its text and its class name. Leave \`Toolbar\` as it is: with context, the components in between pass nothing along. Provider values are strings, including an explicitly empty string; an empty value is not the no-provider default. Use the latest value for both the exact text Theme: <value> and the badge--<value> class. Repeated provider changes must reach the same child element, and nested or separate providers must remain independent. Without a provider, use light. Keep the supplied Toolbar unchanged.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 export const ThemeContext = createContext('light');
@@ -491,6 +556,11 @@ test('outside any provider it shows the default', () => {
   const { container } = render(<Badge />);
   expect(container.textContent).toContain('Theme: light');
 });
+
+
+test('an explicitly empty theme does not use the no-provider default',()=>{
+ const view=render(<ThemeContext.Provider value=""><Badge theme="ignored"/></ThemeContext.Provider>);expect(view.container.textContent).toBe('Theme: ');expect(view.container.querySelector('span').className.split(' ')).toContain('badge--');
+});
 `,
   },
   {
@@ -501,7 +571,7 @@ test('outside any provider it shows the default', () => {
     tier: 2,
     focus: ['useContext'],
     title: 'Nearest provider wins',
-    prompt: 'Create and export `SizeContext` with `createContext("medium")`. `Label` shows its text and then, in brackets, the size it reads from `SizeContext`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it.',
+    prompt: `Create and export \`SizeContext\` with \`createContext("medium")\`. \`Label\` shows its text and then, in brackets, the size it reads from \`SizeContext\`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it. Size values are strings, including an explicitly empty string; that displays an empty pair of brackets rather than the default. Follow the current nearest provider through repeated updates to the same child, and keep sibling providers independent. Preserve the raw label text, including spaces, Unicode and literal markup up to 2000 UTF-16 units. medium is used only when there is no provider.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 // Create and export SizeContext here, with "medium" as its default.
@@ -557,6 +627,11 @@ test('the label in the section reads large', () => {
 test('the inner provider wins for the note', () => {
   const { container } = render(<App />);
   expect(container.querySelector('aside').textContent).toBe('Note (small)');
+});
+
+
+test('an empty nearest size is a provided value rather than the default',()=>{
+ const view=render(<SizeContext.Provider value="outer"><SizeContext.Provider value=""><Label text="Raw label"/></SizeContext.Provider></SizeContext.Provider>);expect(view.container.textContent).toBe('Raw label ()');
 });
 `,
   },
@@ -1418,8 +1493,8 @@ test('reopening keeps the same controlled paragraph id',()=>{render(<App/>);cons
     tier: 2,
     focus: ['accessibility', 'forms'],
     title: 'A field that explains its error',
-    prompt: 'The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a `<label>` whose `htmlFor` matches the input\'s `id`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set `aria-invalid="true"` on the input, and point the input\'s `aria-describedby` at the error. While there is no error, the input carries neither attribute.',
-    starter: `import React, { useState } from 'react';
+    prompt: `The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a \`<label>\` whose \`htmlFor\` matches the input's \`id\`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set \`aria-invalid="true"\` on the input, and point the input's \`aria-describedby\` at the error. While there is no error, the input carries neither attribute. Use stable unique field and error ids for each instance. This exercise validates blankness only: test the current native field value with trim(), and use noValidate on the form so native email-format validation does not block that custom check. On each Save, blank or whitespace-only text sets the error and any nonblank text clears it; do not normalize the stored field value yourself. Values are single-line strings up to 2000 UTF-16 code units. Parent renders preserve ids and state, and each label/error must refer to its own instance.`,
+    starter: `import React, { useId, useState } from 'react';
 
 const App = () => {
   const [email, setEmail] = useState('');
@@ -1443,19 +1518,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `<label htmlFor="email">Email</label>
+    skeleton: `const fieldId = useId();
+const errorId = fieldId + '-error';
+
+<label htmlFor={fieldId}>Email</label>
 <input
-  id="email"
+  id={fieldId}
   aria-invalid={error ? true : undefined}
-  aria-describedby={error ? 'email-error' : undefined}
+  aria-describedby={error ? errorId : undefined}
   ...
 />
-{error && <p id="email-error" className="error">{error}</p>}`,
-    hints: ['`htmlFor` is how JSX writes the `for` attribute. An attribute whose value is `undefined` is left out, so `error ? "email-error" : undefined` adds `aria-describedby` only while the error shows.'],
+{error && <p id={errorId} className="error">{error}</p>}
+
+// <form noValidate onSubmit={save}>`,
+    hints: [`useId supplies a stable id for this instance. Derive an error id from it and use the same values in htmlFor, id and aria-describedby. An undefined attribute is left out, so add the error attributes only while an error exists.`],
     approach: [
-      'Swap the span for `<label htmlFor="email">Email</label>` and give the input `id="email"`.',
-      'Give the error paragraph an id, such as `email-error`.',
-      'On the input, set `aria-invalid` and `aria-describedby` only while there is an error, and `undefined` otherwise.',
+      `Create a field id with useId and derive an error id from it; tie the label to that field id.`,
+      `On Save, prevent navigation and check email.trim(); use noValidate on the form because this lesson checks blankness, not email syntax.`,
+      `Give the error its own id and add aria-invalid plus aria-describedby only while the error exists.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1480,7 +1560,10 @@ test('the field points at its error', () => {
   const message = document.getElementById(field().getAttribute('aria-describedby'));
   expect(message.textContent).toBe('Enter your email');
 });
-`,
+
+test('Unicode whitespace is empty for this custom blankness rule',()=>{
+ render(<App/>);fireEvent.change(field(),{target:{value:' '}});save();expect(field().getAttribute('aria-invalid')).toBe('true');expect(document.getElementById(field().getAttribute('aria-describedby')).textContent).toBe('Enter your email');
+});`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */

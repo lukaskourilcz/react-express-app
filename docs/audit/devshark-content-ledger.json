@@ -321216,6 +321216,2492 @@
     "notes": "Read every original/final field and all three complete modules. Senior keeps its original Set cleanup strategy. An empty pending draft intentionally clears an existing displayed result,matching all original boards;the formerly ambiguous nothing-is-sent phrase is made precise. Parent rerenders are not treated as new clicks. Callback cleanup is a newly explicit policy,not a claim that the original tests already required it. No full hint/QA variant exists. Final English material and execution reread; same-session self-review only.",
     "pass": "second-reading"
    }
+  },
+  {
+   "id": "react-easy2-cancel-the-reminder",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 14,
+   "objective": "Own one resettable reminder timeout per component and cancel only pending work without erasing completed feedback.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8d38014884a1cf5b",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "441eec6d960d040c",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Resettable delayed UI actions remain common frontend work.",
+    "practicalUtility": "Cancel must stop the correct pending callback without affecting another widget.",
+    "transferable": "Ref identity,timeout replacement,deadline boundaries and lifecycle cleanup transfer.",
+    "audienceFit": "The existing eight-minute level14tier2exercise supplies button handlers and state;cleanup guidance is added to its skeleton.",
+    "riskOutcome": "Early callbacks or shared timer ids can send unwanted reminders or cancel another instance."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked cancel,no immediate message,repeat-then-cancel and setting again after cancellation.",
+    "A250mscallback and module-shared timer ownership both passed original suites.",
+    "Reference/junior did not dispose pending timeouts on unmount;senior already did."
+   ],
+   "rationale": "Keep senior byte-identical and the reference/junior direct/guarded ref styles. Add only unmount cleanup and the starter useEffect import to the latter. Clarify full300mswait,preservation of already displayed feedback,parent preservation and per-instance ownership. A visible299+1case plus three hidden cases cover51modelled actions,late cancellation,twenty no-op cancels and separate/removed/fresh timer state. The independent alternative passes. Both wrong controls include correct cleanup before baseline/final grading,so early firing and shared ownership are isolated defects;both genuinely pass originals and fail now.",
+   "evidence": [
+    "https://react.dev/reference/react/useRef",
+    "https://react.dev/reference/react/useEffect",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/clearTimeout",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "wrong-fires-after-250ms",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-cancel-the-reminder",
+      "contentHash": "8d38014884a1cf5b",
+      "label": "wrong-shares-timer-between-instances",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b115; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useRef",
+     "https://react.dev/reference/react/useEffect",
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/clearTimeout",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all original/final fields and three complete programs. Existing strong cancellation checks are preserved. Timeout handles may remain stale after firing in reference/senior,but clearing an expired handle is harmless;pending resource counts,not one sentinel spelling,are checked. New remind and Cancel intentionally retain completed feedback,matching original boards. No full hint or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-easy3-give-focus-back",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 14,
+   "objective": "Keep an exact saved name separate from its edit draft and return focus to the correct persistent opener on every close.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8fee2e4c3c8700d1",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "1165cb958899823e",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Keyboard focus restoration remains important for inline editing.",
+    "practicalUtility": "Save,Cancel and Escape must preserve the intended name and the users place.",
+    "transferable": "DOM refs,controlled drafts,form navigation and component-local state transfer.",
+    "audienceFit": "The existing eight-minute level14tier2task supplies the form and focus-on-open behavior.",
+    "riskOutcome": "Global selectors or trimmed data can return focus elsewhere and silently alter user input."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked opening focus,Save/Cancel/Escape restoration,discarded Escape draft,ordinary keys and Escape from Cancel.",
+    "Only one editor and one plain renamed value were tested.",
+    "Trimming saved names or restoring the global first button passed all original cases."
+   ],
+   "rationale": "Keep all three published programs byte-identical,including nullable senior draft state. Clarify raw empty/space/literal/Unicode/2000unit values,submit navigation prevention,parent draft persistence and per-instance opener ownership. One visible literal-space save plus three hidden cases cover24edit cycles,all close routes,Escape from Save,actual cancelable submit events,two editors,removal and fresh state. The independently structured reducer alternative passes. Global-first focus and trimming controls pass originals and fail final checks. Native single-line sanitization is respected;no impossible newline round trip is required.",
+   "evidence": [
+    "https://react.dev/reference/react/useRef",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "wrong-trims-a-saved-name",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-give-focus-back",
+      "contentHash": "8fee2e4c3c8700d1",
+      "label": "wrong-restores-global-first-button",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b115; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useRef",
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus",
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every original/final field and all three complete unchanged modules. Form submission uses a real cancelable Event and directly observes preventDefault;it is not simulated by assuming a keydown creates native submission. Both empty-name and nullable draft handling were traced. No full hint/QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-mh-select-all",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 14,
+   "objective": "Derive native checkbox mixed state from current message selection and delete only selected rows without losing surviving identities.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "8681eed701b4a17a",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "6636689bd6f66ff3",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Bulk selection and tri-state controls remain common in inboxes and data grids.",
+    "practicalUtility": "Unchecking one row must not clear unrelated choices.",
+    "transferable": "Derived state,DOM-only properties,stable keys and immutable deletion transfer.",
+    "audienceFit": "The existing twenty-minute level14tier3task supplies fixed messages and state scaffolding.",
+    "riskOutcome": "Selection errors can remove unintended records or leave stale counts."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already covered initial/partial/all/empty states,bulk toggling,deletion,count cleanup and selection after deletion.",
+    "It did not uncheck one item from a multi-item selection.",
+    "Clearing all on individual uncheck or filtering ids by greater-than passed originals."
+   ],
+   "rationale": "Keep all three modules byte-identical,including reference array membership,junior explicit loops and senior Set/TriStateCheckbox. One visible uncheck-after-select-all case plus three hidden cases exhaust all16selectionmasks and all15nonempty deletion subsets,checkeachremaining checkbox/count/indeterminate/disabled state,retain surviving LI identity under deletion,coverparents and independent/fresh roots. The reducer/object-map alternative passes. Both wrong uncheck predicates pass originals and fail now. The model universe is the authored fixed four messages,not an invented arbitrary-record API;no irrelevant complexity target is added.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/indeterminate",
+    "https://react.dev/learn/choosing-the-state-structure",
+    "https://react.dev/learn/rendering-lists",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "wrong-clears-all-on-individual-uncheck",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "react-mh-select-all",
+      "contentHash": "8681eed701b4a17a",
+      "label": "wrong-uncheck-removes-smaller-ids",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b115; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/indeterminate",
+     "https://react.dev/learn/choosing-the-state-structure",
+     "https://react.dev/learn/rendering-lists",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all original/final fields,three whole boards and both original visible/hidden suites. Native indeterminate is independent of checked;the tests observe both DOM properties. Exhaustive claims apply only to the16fixed selectionmasks/15nonempty deletion subsets,not arbitrary programs. Stable-node checks compare only surviving rows. No complete hint or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-stopwatch",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 14,
+   "objective": "Count elapsed seconds with one owned timer,resume after Stop and dispose running work on Reset or removal.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "c6eb188f1f0d65e5",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "b465b2c1f8790d28",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Interval lifecycle management remains a standard React exercise.",
+    "practicalUtility": "Stop/resume and independent instances reveal timer ownership mistakes.",
+    "transferable": "Functional updates,effect dependencies,custom interval hooks and cleanup transfer.",
+    "audienceFit": "The existing twenty-minute level14tier3exercise retains its simple control API and full skeleton filling.",
+    "riskOutcome": "Shared intervals or capped counters can freeze one timer or clear another."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked999+1timing,duplicate Start,Stop freeze and Reset.",
+    "Runs never exceeded three seconds and all roots were tested alone.",
+    "A three-second cap and module-shared interval id passed originals."
+   ],
+   "rationale": "Keep all three published modules and complete full hint unchanged,including the valid junior state-held interval id and senior saved-callback useInterval hook. Clarify Reset stops,resume starts a full new second,labels remain flexible and repeated Start may ignore or restart the single interval as the original hidden note allowed. A visible fresh999+1resume plus three hidden cases cover31/32seconds,twelve stop/resume/reset cycles,parent renders,pending timer counts and independent/removed/fresh roots. A reducer/effect alternative displaying seconds as a word passes. The two wrong controls pass originals and fail final cases. No strict ref-only or one favoured label spelling is enforced.",
+   "evidence": [
+    "https://react.dev/reference/react/useEffect",
+    "https://react.dev/reference/react/useRef",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/setInterval",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/clearInterval",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "wrong-caps-count-at-three",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-stopwatch",
+      "contentHash": "c6eb188f1f0d65e5",
+      "label": "wrong-shares-an-interval-id",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b115; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useEffect",
+     "https://react.dev/reference/react/useRef",
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/setInterval",
+     "https://developer.mozilla.org/en-US/docs/Web/API/Window/clearInterval",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every original/final field,the entire full hint,all three unchanged boards and the original controlled clock. Parent renders do not count as Start. Duplicate Starts are exercised at aligned boundaries so both original allowed ignore/restart policies remain valid. The full hint retains every literal skeleton line. No existing QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-mh-menu-button",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 14,
+   "objective": "Keep action-menu focus,selection and outside dismissal consistent with the scoped ARIA menu-button keyboard contract.",
+   "intendedLevel": "intermediate",
+   "revision": 2,
+   "contentHash": "e299da97569e6fe9",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "9972403f5f1c6b75",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Accessible action menus remain practical application controls.",
+    "practicalUtility": "Tab must leave without a keyboard trap or focus being stolen back.",
+    "transferable": "Native default actions,blur relatedTarget,ref containment,unique ids and effect-owned listeners transfer.",
+    "audienceFit": "The existing thirty-five-minute level14tier4exercise already supplies menu structure and keyboard scaffolding.",
+    "riskOutcome": "Wrong containment or prevented Tab can close inside interactions or trap keyboard users."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked wrapping,Home/End,ArrowDown opening,Enter/click choices,Escape,inside/outside mousedown and listener lifetime.",
+    "All original boards kept the menu open when focus left via Tab;the brief claimed APG behavior without this required close.",
+    "Junior lacked a menu name,reference used one static controls id,and senior wrote its latest callback ref during rendering.",
+    "Preventing default for Tab and treating a nested LI descendant as outside both passed originals;the existing ArrowUp QA control was already covered.",
+    "Before publication,full native-browser harness CI exposed a false failure:an inactive opaque-origin frame changes activeElement on focus()without dispatching focusout;the visible Tab case omitted the explicit blur transition."
+   ],
+   "rationale": "Preserve all three strategies:reference active index,junior explicit branches and senior move table/signal hook. Add menu onBlur closing only when relatedTarget leaves,without preventDefault or focus return;give junior an Actions menu name,useId for reference optional controls,and update senior latest callback in an effect. Starter imports useId as an available option. One visible native Tab-default/focus-leave case plus three hidden cases exercise48keyboard moves,roles/name/tabIndex,parent focus preservation,eighteen exact choices through nested empty child nodes,instance-owned optional ids and no outside-focus theft. Empty nested spans preserve the authored item labels. The independent alternative passes. Both isolated wrong controls include correct naming/id/blur behavior and pass frozen originals. Existing ArrowUp-always-last variant still materializes and fails;it is not counted as a new discovery. Closed-button Enter/Space rely on native button activation;optional typeahead/ArrowUp opening are not required or claimed. Staged revision2atPR457changes only the visible Tab test to dispatch Testing Library blur with relatedTarget before focusing the outside button. All Tab default-prevention,menu-closed and actual-focus assertions remain. Native Chromium diagnostics show hasFocus:false,activeElement changing Rename to After menu and zero focusout events before the fix;the complete simulated transition closes the menu. All seven answer/starter/control programs remain byte-identical. Fresh7/7current-hash results pass. An additional control that removes only the focus-leave handler still fails the Tab assertion in both the server worker and actual browser,so the requirement is retained. Full built browser harness passes206assertions after the change. No reviewed item is counted twice.",
+   "evidence": [
+    "https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/",
+    "https://www.w3.org/WAI/ARIA/apg/patterns/menubar/",
+    "https://react.dev/reference/react/useId",
+    "https://react.dev/reference/react/useRef",
+    "https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/relatedTarget",
+    "git:89f5038bbb04d93ca3280d98d975183faa89fe56preserves staged B115revision19972403f5f1c6b75;original pre-audit hash9ff613f0915d40af.",
+    "run:PR457required38968786126failed one of206built browser harness assertions;all source programs were unchanged. SQLpassed;later checks are not claimed.",
+    "run:native Chromium A/B probe24assertions confirms hasFocus:false/no natural focusout;explicit blur preserves outside focus and closes the menu.",
+    "run:fresh7/7revision2server-worker outcomes;four valid programs,one starter,two original semantic wrong controls;all seven source programs unchanged.",
+    "run:additional missing-onBlur control fails retained Tab/focus requirements in server and native browser;native expected-negative probe24assertions passes.",
+    "run:complete built browser harness206assertions passes;current combined B115–B117matrix remains105/105after replacing seven old-hash Menu rows,not adding another item."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "wrong-traps-tab-default",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-menu-button",
+      "contentHash": "e299da97569e6fe9",
+      "label": "wrong-nested-mousedown-is-outside",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "notes": "Seven fresh staged revision2cases. Old Menu revision1worker outcomes remain historical in Git/private evidence. All other B115–B117current hashes/rows are unchanged. Finite worker/native browser evidence,not physical-keyboard certification."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English",
+     "native-browser-focus-transition-reread"
+    ],
+    "run": "Codex session2026-10-16UTC,PR457staged B115revision2;no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/",
+     "https://www.w3.org/WAI/ARIA/apg/patterns/menubar/",
+     "https://react.dev/reference/react/useId",
+     "https://react.dev/reference/react/useRef",
+     "https://developer.mozilla.org/en-US/docs/Web/API/FocusEvent/relatedTarget",
+     "git:89f5038bbb04d93ca3280d98d975183faa89fe56preserves staged B115revision19972403f5f1c6b75;original pre-audit hash9ff613f0915d40af.",
+     "run:PR457required38968786126failed one of206built browser harness assertions;all source programs were unchanged. SQLpassed;later checks are not claimed.",
+     "run:native Chromium A/B probe24assertions confirms hasFocus:false/no natural focusout;explicit blur preserves outside focus and closes the menu.",
+     "run:fresh7/7revision2server-worker outcomes;four valid programs,one starter,two original semantic wrong controls;all seven source programs unchanged.",
+     "run:additional missing-onBlur control fails retained Tab/focus requirements in server and native browser;native expected-negative probe24assertions passes.",
+     "run:complete built browser harness206assertions passes;current combined B115–B117matrix remains105/105after replacing seven old-hash Menu rows,not adding another item."
+    ],
+    "notes": "Read all old/final fields,all original and new suite/model blocks,the existing fully materialized ArrowUp control and all three complete modules. The real Tab key event is observed for defaultPrevented,then focus is moved to an outside button to model browser navigation;this is finite jsdom/worker evidence,not a physical-keyboard certification. Moving focus among items stays inside and does not close. The optional aria-controls remains optional for junior/other valid programs,but present relationships must belong to their instance. Senior no longer writes a ref during render. No full hint exists. Final English material and execution reread; same-session self-review only. Revision2rereading checked React Testing Librarys focusout mapping,all original assertions and stable learner answer programs. The missing-handler negative still fails. Prior staged revision is preserved at89f5038b;no second item is counted.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-live-paragraph",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Mirror a controlled input exactly without prefixes,normalization or shared state.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "aabd3b50bde9ed7b",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "8a3d7e29427dc66e",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Controlled text fields remain a basic React skill.",
+    "practicalUtility": "The rendered value must match what the field actually holds.",
+    "transferable": "One source of truth,controlled value props and instance-local hooks transfer.",
+    "audienceFit": "Retains the ten-minute level15tier1exercise and its simple skeleton.",
+    "riskOutcome": "Substring-only checks can accept unwanted formatting and silent text changes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked repeated changes,deletion and controlled value props from the first render.",
+    "Prefixing the paragraph or trimming only its displayed value passed original substring checks.",
+    "Reference/junior and the complete skeleton filling lacked a programmatic input label;senior already supplied one."
+   ],
+   "rationale": "Keep senior exact and preserve reference/junior state/handler styles;add only the Your text label to the latter and the complete skeleton filling. Clarify empty initial result,exact raw single-line input up to2000UTF16units,parent and instance state. One visible literal-space case plus three hidden cases exercise24raw/Unicode/long updates,controlled props,long-to-empty deletion and independent/removed/fresh mirrors. Reducer/child-component alternative passes. Prefix and paragraph-trim controls pass originals and fail final checks. Full skeleton filling retains each literal public skeleton line while adding its label. No preferred component layout or complexity target is imposed.",
+   "evidence": [
+    "https://react.dev/reference/react-dom/components/input",
+    "https://react.dev/learn/sharing-state-between-components",
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "wrong-adds-a-paragraph-prefix",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 5
+     },
+     {
+      "id": "react-live-paragraph",
+      "contentHash": "aabd3b50bde9ed7b",
+      "label": "wrong-trims-only-the-paragraph",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 5
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b116; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react-dom/components/input",
+     "https://react.dev/learn/sharing-state-between-components",
+     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all original/final English fields,the whole complete skeleton filling,all three original/final modules and the existing trusted React-props check. The latter remains;new checks are actual DOM/value behavior rather than a source-spelling restriction. Single-line values omit native-sanitized newlines. Senior custom useInput/aria-live style remains unchanged. No existing QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-controlled-form",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Submit immutable field snapshots without navigation while keeping later drafts separate and controlled.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "3f1548fbf80c1d80",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "0418cd3b788be2fc",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Controlled form submission remains common UI work.",
+    "practicalUtility": "Editing a draft must not silently rewrite the last submitted result.",
+    "transferable": "Immutable updates,separate live/result state and native form events transfer.",
+    "audienceFit": "Retains the ten-minute level15tier1two-field exercise with generic update scaffolding.",
+    "riskOutcome": "Mutable or live-rendered results can falsely claim a different value was submitted."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already rejected navigation through the runners trusted preventDefault guard,even though the visible assertion did not inspect the flag.",
+    "It only submitted Sam once and did not edit after submission.",
+    "Rendering live fields after submission passed originals;reference/junior lacked input labels."
+   ],
+   "rationale": "Keep senior exact and the reference object/junior separate-state strategies;add Name/Email labels to reference/junior only. Clarify controlled initial values,raw names,empty values,valid conventional email fixtures,flexible result wording and immutable last-snapshot behavior. A visible real cancelable submit plus three hidden cases cover20raw/long/literal submissions,unsent edits,parent renders,value props,two forms and fresh state. The independent reducer alternative uses a definition list,so no paragraph or separator format is forced. Live-result mutation control passes originals and fails now. Missing preventDefault was already rejected by the original runner and stays an existing-regression control,not a newly found false pass.",
+   "evidence": [
+    "https://react.dev/reference/react-dom/components/input",
+    "https://react.dev/learn/updating-objects-in-state",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "wrong-does-not-prevent-form-navigation",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 3,
+      "hidden": 3
+     },
+     {
+      "id": "react-controlled-form",
+      "contentHash": "3f1548fbf80c1d80",
+      "label": "wrong-displays-the-live-draft-after-submit",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 3,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b116; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react-dom/components/input",
+     "https://react.dev/learn/updating-objects-in-state",
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every original/final field and all three whole boards. Event.defaultPrevented is observed directly for the new event,while the original runner guard remains untouched. Output assertions use actual rendered text and unique payloads instead of input.value or one favourite sentence. Empty values are allowed;this is state/submission work,not mailbox validation. No complete filling or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-easy3-characters-left",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Derive a UTF-16 length limit and guard both presentation and form submission while preserving exact appended posts.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "c0b73c93d6717896",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "1dfa10910810b28f",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Length counters and submit validation remain common frontend work.",
+    "practicalUtility": "A disabled button alone cannot validate direct form submissions.",
+    "transferable": "Derived state,native events,UTF16length and immutable append transfer.",
+    "audienceFit": "Retains the six-minute level15tier1derived-state exercise and its supplied handler.",
+    "riskOutcome": "Incorrect Unicode counts or unchecked submits can accept content beyond the declared limit."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked0/80/81/83/90ASCIIlengths,valid posting/reset and shortening text.",
+    "All boards appended invalid values when the form was submitted directly.",
+    "Counting code points instead of the intended JavaScript length passed the ASCII-only examples."
+   ],
+   "rationale": "Preserve all three published layouts and counting styles;add one guard after preventDefault using reference left,junior canPost or senior sendable. Clarify80UTF16units via text.length,paired emoji,newlines,raw whitespace/markup,2000unit input domain and invalid-submit no-op behavior. One visible emoji plus three hidden cases exercise direct empty/over-limit submission,24count/post cycles across79/80/81and40/41emoji boundaries,newlines,stable prior LI nodes,parent state and independent/fresh posts. The independent reducer alternative passes. No-guard and code-point controls pass originals and fail final checks. A malformed newline literal in the first private added suite caused seven suite compilation errors;it was repaired without changing answer programs or weakening semantics,and seven fresh current-hash outcomes replace those obsolete rows. Actual JavaScript syntax validation follows Sucrase transformation;transformation alone had not rejected the bad literal.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+    "https://react.dev/learn/choosing-the-state-structure",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "wrong-trusts-only-the-disabled-button",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "react-easy3-characters-left",
+      "contentHash": "c0b73c93d6717896",
+      "label": "wrong-counts-code-points",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b116; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+     "https://react.dev/learn/choosing-the-state-structure",
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every original/final field,all three complete modules,original cases and the final escaped newline fixture. Counts explicitly follow UTF16units,not user-perceived grapheme clusters. Whitespace-only valid posts remain allowed,matching all original boards. The initial malformed-suite rows are excluded from the current matrix;the fresh seven cases all compile and have expected verdicts. No complete filling or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-easy2-labelled-field",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Keep native labels,error descriptions and custom blankness validation scoped to the correct field instance.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "ed2f34f067e656d4",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "273667cc398ccddd",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Accessible error associations remain practical form work.",
+    "practicalUtility": "Each field must describe its own error without stealing another labels target.",
+    "transferable": "Stable ids,conditional ARIA attributes,native sanitization and validation scope transfer.",
+    "audienceFit": "Retains the nine-minute level15tier2label/error exercise;useId guidance replaces static-id examples.",
+    "riskOutcome": "Shared ids or mismatched native/custom validation can leave errors tied to another field or stale."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already tested label/for association,empty errors,filled attributes and correction.",
+    "Reference/junior used globally repeated field/error ids and let native email-format validation block their blankness-only custom rule;senior already used useId/noValidate.",
+    "Untrimmed Unicode whitespace and static shared ids passed the original one-instance ASCII examples."
+   ],
+   "rationale": "Keep senior exact and reference/junior error styles. Give reference/junior stable useId field/error relationships and noValidate;update starter,skeleton,hint and approach consistently. Explicitly scope validation to current native value.trim blankness,not email syntax or raw impossible whitespace round trips. One visible NBSP case and three hidden cases cover18empty/Unicode-space/ordinary/malformed/long cycles,parent id persistence,actual label.control targets,each instance-owned error,correction isolation and cancelable submit/fresh state. A span-error alternative remains valid. Both wrong controls include correct other policy changes,pass originals and fail new cases. No server/account email validity or full form-conformance claim is made.",
+   "evidence": [
+    "https://react.dev/reference/react/useId",
+    "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/noValidate",
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email",
+    "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "wrong-does-not-trim-blank-values",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-labelled-field",
+      "contentHash": "ed2f34f067e656d4",
+      "label": "wrong-shares-field-and-error-ids",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b116; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useId",
+     "https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/noValidate",
+     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email",
+     "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all old/final fields and three complete modules,including the unchanged senior. Assertions use the native email input value because the platform sanitizes some text before onChange. noValidate is deliberate for this blankness-only lesson and leaves custom preventDefault active. No exact id spelling or paragraph/error class is required;only correct unique associations. No complete filling or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-mh-rename-in-place",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Rename the current file set with exact duplicate rules,stable rows and correctly restored per-instance focus.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "ce2ddcd38abac70f",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "08f86bab37243ff9",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Inline list editing remains common application UI.",
+    "practicalUtility": "Duplicate checks must use the current names rather than a stale initial list.",
+    "transferable": "Keyed identity,Map callback refs,post-commit focus and local drafts transfer.",
+    "audienceFit": "Retains the twenty-five-minute level15tier3multi-row edit exercise.",
+    "riskOutcome": "Stale duplicate rules or ambiguous labels can edit the wrong item and lose keyboard position."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked trimmed save,Escape,duplicates,blank/same names,switching files,focus return,error cleanup and retry.",
+    "It did not compare duplicates against previously renamed values or release old names for reuse.",
+    "Junior input ids repeated across separate instances;overbroad case folding and original-FILES duplicate checks passed originals."
+   ],
+   "rationale": "Keep reference/senior exact and the junior explicit-loop/inputRef/Map style,adding only an instance useId prefix to its label/input ids and making that hook available in the starter. Clarify exact case-sensitive trimmed plain strings,no Unicode normalization,current duplicate ownership,2000unit single-line domain,parent state,stable rows and optional unique ids. One visible case-sensitive rename plus three hidden cases covernew-name reservation/old-name reuse,24raw/Unicode/long save-or-Escape cycles,real submit prevention,preserved LI identity,two editors,local labels/focus and fresh files. The independent editor-object/Map alternative passes. Both stale/overbroad duplicate controls pass originals and fail new cases. The existing any-key-close QA still materializes and fails;it is preserved,not recounted as new.",
+   "evidence": [
+    "https://react.dev/learn/rendering-lists",
+    "https://react.dev/learn/manipulating-the-dom-with-refs",
+    "https://react.dev/reference/react/useId",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "wrong-case-folds-duplicate-names",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-rename-in-place",
+      "contentHash": "ce2ddcd38abac70f",
+      "label": "wrong-checks-only-the-original-file-names",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b116; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/learn/rendering-lists",
+     "https://react.dev/learn/manipulating-the-dom-with-refs",
+     "https://react.dev/reference/react/useId",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 26/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every old/final field,the complete existing any-key QA program and all three whole modules. This is a browser string/list exercise,not validation of real filesystem paths or platform-specific filename policies. No focus is returned to an old opener when switching files;the new input owns focus. Existing blank/same-name and error-retry cases remain. No complete filling exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-post-a-new-post",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Send exact title snapshots as JSON and render the server-assigned object after its body resolves.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "15f2f11a0b817d86",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "1d6e9f963c758742",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "JSON form submission remains routine frontend work.",
+    "practicalUtility": "The response can differ from the submitted draft and must remain authoritative.",
+    "transferable": "Request headers,serialization,snapshot isolation and asynchronous bodies transfer.",
+    "audienceFit": "Keeps the twenty-minute level15tier3exercise and successful sequential-request scope.",
+    "riskOutcome": "Inventing ids or omitting the content type can silently misrepresent saved data."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original only checked one fixed title and fixture id101.",
+    "Omitting the content-type header or inventing {id:101,title} passed originals.",
+    "Reference/junior lacked programmatic labels and senior silently trimmed a title that the other boards preserved."
+   ],
+   "rationale": "Add Title labels to reference/junior and preserve the raw title in senior while retaining its existing blank guard,loading,error and reset behavior. Clarify nonblank successful sequential submissions;blank/failure/concurrent ordering are outside scope,so do not force a policy inconsistent with the existing boards. One visible controlled deferred response plus three hidden cases inspect method,exact endpoint,case-insensitive JSON header and parsed string body;separate response/body resolution rejects optimistic or invented results. Sixteen raw/Unicode/quoted/2000unit request snapshots,later unsent drafts,parents,two independently resolved forms and fresh state reject both original false passes. Reducer-free draft/result alternative uses a definition list;JSON,paragraph or DL presentations remain valid.",
+   "evidence": [
+    "https://react.dev/reference/react-dom/components/input",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "https://jsonplaceholder.typicode.com/guide/",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "wrong-omits-the-json-content-type",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-post-a-new-post",
+      "contentHash": "15f2f11a0b817d86",
+      "label": "wrong-invents-the-created-object",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b117; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react-dom/components/input",
+     "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+     "https://jsonplaceholder.typicode.com/guide/",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all old/final English fields,all three whole modules,API note and helper. JSONPlaceholder practice writes do not persist;no real writes are used in this finite grader. Response titles in deferred checks are distinct from sent titles and ids vary rather than stay101. Input clearing after success is optional. Existing success case remains. No complete skeleton filling or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-mh-signup-form",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 15,
+   "objective": "Derive accessible current-value form errors,delay them until touch/submit and focus the first invalid field.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "5716987a88f5c74d",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "9f2262055719dadd",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Accessible custom validation remains common form work.",
+    "practicalUtility": "Error visibility,validity and first-invalid focus must agree with the current values.",
+    "transferable": "Derived state,touched flags,refs,exact password comparison and unique associations transfer.",
+    "audienceFit": "Retains the thirty-five-minute level15tier4multi-field validation exercise.",
+    "riskOutcome": "Shared ids or boundary mistakes can identify the wrong field or admit an invalid password."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked touch timing,error removal,first invalid focus,ASCII digit presence,trimmed email and successful welcome.",
+    "All boards repeated input ids across instances;reference/junior repeated error ids too.",
+    "Seven-unit digit passwords and trimmed repeat-password equality passed the original examples."
+   ],
+   "rationale": "Keep all three derived-validation strategies,adding useId prefixes to reference/junior and a unique senior Field input id derived alongside its error id. Update starter/skeleton/hint consistently. Clarify eight UTF16units,ASCII digits,exact untrimmed password equality,the stated simple email regex and current native field values. Five visible/fifteen hidden are batch totals:signup adds one visible seven/eight boundary and three hidden cases covering ten invalid combinations,three valid long/emoji/space passwords,twelve email patterns,twenty correction/dependency cycles,retained input nodes,first-invalid positions,local label.control/error paragraphs,unique stable ids,two forms and fresh untouched state. Reducer alternative derives errors at render and uses separate visibility state. Both wrong controls include fixed ids,pass originals and fail final checks. Refined email-boundary/copy rows replace seven earlier staged signup outcomes;one identity/revision remains.",
+   "evidence": [
+    "https://react.dev/reference/react/useId",
+    "https://react.dev/learn/choosing-the-state-structure",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "wrong-allows-seven-unit-passwords",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "react-mh-signup-form",
+      "contentHash": "5716987a88f5c74d",
+      "label": "wrong-trims-the-repeat-password",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b117; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useId",
+     "https://react.dev/learn/choosing-the-state-structure",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every old/final field,all three complete programs and original twelve visible/hidden checks. Blank repeat equals blank password and need not itself fail until different,matching the explicit rule. Email pattern is intentionally not full mailbox validation;native type=email can sanitize spaces before React sees them,while junior text input can preserve them. Expected validity uses each actual native value. No complete filling/QA exists. This code is an isolated teaching form,not the app account/auth handler. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-select-fetched-user",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 16,
+   "objective": "Render returned users in order and keep one exact selected name/email independent from the button list.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "0967e7974af129f0",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "98c70ea9debd2dad",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Fetching a list and selecting its detail remains common UI work.",
+    "practicalUtility": "The selected record must come from data rather than a fixed fixture or index.",
+    "transferable": "Mount effects,stable keys,opaque ids and independent state transfer.",
+    "audienceFit": "Keeps the ten-minute level16tier2exercise and successful-response scope.",
+    "riskOutcome": "Fixture-specific selectors can show another persons details or all emails."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original tested only selecting the second fixed user and only asserted that email.",
+    "Reference omitted the selected name outside the button list although the task asked for name and email.",
+    "Always choosing the second user or rendering every email after a choice passed originals."
+   ],
+   "rationale": "Keep junior/senior byte-identically and add the selected name to the reference detail section. Clarify GET endpoint,mount loading,zero-to24returned users,unique opaque ids,duplicate display names,raw names and latest one-record detail. One visible configurable two-user response plus three hidden cases cover all24choices twice using a coprime order,exact button order/identity,unselected-email exclusion,parents,empty/single long-name data,independently resolved instances and a fresh unselected mount. Details are observed outside buttons by cloning/removing buttons,without requiring a particular detail tag or paragraph arrangement. Reducer/data-object alternative passes;two fixture-specific controls pass originals and fail final checks. Network failures/loading UI remain outside this small lesson.",
+   "evidence": [
+    "https://react.dev/learn/rendering-lists",
+    "https://react.dev/reference/react/useEffect",
+    "https://react.dev/learn/choosing-the-state-structure",
+    "https://jsonplaceholder.typicode.com/guide/",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "wrong-always-selects-the-second-user",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     },
+     {
+      "id": "react-select-fetched-user",
+      "contentHash": "0967e7974af129f0",
+      "label": "wrong-displays-every-email-after-selection",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 2,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b117; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/learn/rendering-lists",
+     "https://react.dev/reference/react/useEffect",
+     "https://react.dev/learn/choosing-the-state-structure",
+     "https://jsonplaceholder.typicode.com/guide/",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all old/final fields,three whole modules,the API note and fetch fixture. New fixtures include repeated display names and string ids,so selection is not inferred from display text or a fixed index. No real network or account data is used. No complete filling or existing QA variant exists. Original single selection case remains. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-easy2-read-the-theme",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 20,
+   "objective": "Read the nearest current theme context for both rendered text and class without prop drilling.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8483d746ea1caffa",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "f0c18571a4b9e080",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Context subscription remains a basic React composition skill.",
+    "practicalUtility": "An explicit empty provider differs from having no provider.",
+    "transferable": "Nearest-provider lookup,defaults and live subscriptions transfer.",
+    "audienceFit": "Retains the six-minute level20tier1Badge/Toolbar exercise.",
+    "riskOutcome": "Stale classes and truthy fallbacks can misrepresent the current theme."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked App,different provider,default,ignored prop,dark class and one text update.",
+    "It did not check the class after a non-dark update or distinguish an empty provided value from no provider.",
+    "Constant dark classes and a truthy fallback passed originals."
+   ],
+   "rationale": "All three published boards and Toolbar remain exact. Clarify current string values including empty,exact text/class and independent scopes. One visible empty value plus three hidden cases cover25provider changes with the same child element,text and class together,nearest nested/sibling values,provider removal and fresh default. A module-level custom-hook alternative keeps hook naming/rules and alternative class assembly. The two semantic wrong controls pass originals and fail final checks;neither test requires a specific variable spelling or hook placement inside the Badge versus a valid custom hook. Seven baseline rows were refreshed after refining the alternative to a module-level custom hook;wrong-control identities/behavior did not change.",
+   "evidence": [
+    "https://react.dev/reference/react/useContext",
+    "https://react.dev/reference/react/createContext",
+    "https://react.dev/reference/rules/rules-of-hooks",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "wrong-falls-back-for-an-empty-provider-value",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-read-the-theme",
+      "contentHash": "8483d746ea1caffa",
+      "label": "wrong-keeps-the-dark-class",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b117; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useContext",
+     "https://react.dev/reference/react/createContext",
+     "https://react.dev/reference/rules/rules-of-hooks",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every original/final field,three whole boards and original hidden suite. React docs currently identify19.3while installed execution is19.2.8;the documented nearest/default/current behavior is executed in the installed isolated runner. Empty strings are deliberately included;undefined/null provider behavior is not claimed. No complete filling or existing QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "react-easy2-nearest-provider",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "react",
+   "topic": "react",
+   "level": 20,
+   "objective": "Render raw labels with the nearest current size value and use the default only without a provider.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "b3326f5f81fba2bd",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "3f8ffffbccb95b61",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Nested context scoping remains relevant to composed React interfaces.",
+    "practicalUtility": "Each label must follow the nearest provider rather than an initial or outer value.",
+    "transferable": "Context defaults,live updates and sibling isolation transfer.",
+    "audienceFit": "Retains the seven-minute level20tier2nested-provider exercise.",
+    "riskOutcome": "A truthy fallback or stale captured value silently breaks provider overrides."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original already checked App section/aside/default and independently supplied nonstandard providers.",
+    "It never updated one mounted Label or supplied an empty string.",
+    "Truthy fallback and a useRef-captured first size passed original suites."
+   ],
+   "rationale": "Keep all three complete boards unchanged. Clarify empty string versus absent provider,current updates and exact raw label text. One visible empty nested provider plus three hidden cases cover24provider changes to the same child element,local sibling/nested values,raw Unicode/markup/spaces,2000unit labels,provider removal and fresh default. A module-level useSize hook alternative passes. Both semantic wrong controls pass originals and fail new checks. Current-value behavior is observed through output rather than banning useRef or requiring one source spelling.",
+   "evidence": [
+    "https://react.dev/reference/react/useContext",
+    "https://react.dev/reference/react/createContext",
+    "https://react.dev/learn/passing-data-deeply-with-context",
+    "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+    "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "wrong-falls-back-for-an-empty-provider-value",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "react-easy2-nearest-provider",
+      "contentHash": "b3326f5f81fba2bd",
+      "label": "wrong-freezes-the-first-provider-value",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-16, sequential five-item batch b117; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-16",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://react.dev/reference/react/useContext",
+     "https://react.dev/reference/react/createContext",
+     "https://react.dev/learn/passing-data-deeply-with-context",
+     "run: 35/35 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 10 wrong).",
+     "run: baseline matched 25/35 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: 20 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all old/final English fields,the three whole modules and existing six visible/hidden cases. The finite tests exercise string sizes including empty,not undefined/null or arbitrary React-node labels. Label text remains plain text and exact,with existing parentheses. No complete filling/QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
   }
  ]
 }

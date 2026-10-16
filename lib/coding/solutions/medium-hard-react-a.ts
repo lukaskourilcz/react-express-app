@@ -1484,7 +1484,24 @@ test('Select all after a delete selects only what is left', () => {
   fireEvent.click(all());
   expect(deleteButton().textContent).toBe('Delete selected (3)');
   expect(all().checked).toBe(true);
-});`,
+});
+
+
+const subjectsForModel=['Lunch on Friday','Invoice 1042','Your parcel is on its way','Team photos'];
+const expectSelection=(subjects,selected)=>{
+ expect(deleteButton().textContent).toBe('Delete selected ('+selected.size+')');expect(deleteButton().disabled).toBe(selected.size===0);expect(all().checked).toBe(subjects.length>0&&selected.size===subjects.length);expect(all().indeterminate).toBe(selected.size>0&&selected.size<subjects.length);expect(all().disabled).toBe(subjects.length===0);for(const subject of subjects)expect(box(subject).checked).toBe(selected.has(subject));
+};
+test('all sixteen selection states support independent individual unchecks',()=>{
+ const view=render(<App/>);
+ for(let mask=0;mask<16;mask++){fireEvent.click(all());fireEvent.click(all());const selected=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){fireEvent.click(box(subjectsForModel[i]));selected.add(subjectsForModel[i]);}expectSelection(subjectsForModel,selected);view.rerender(<App data-parent={mask}/>);expectSelection(subjectsForModel,selected);for(let i=3;i>=0;i--)if(selected.has(subjectsForModel[i])){fireEvent.click(box(subjectsForModel[i]));selected.delete(subjectsForModel[i]);expectSelection(subjectsForModel,selected);}}
+});
+test('every nonempty deletion subset removes only selected rows and retains surviving node identity',()=>{
+ for(let mask=1;mask<16;mask++){const view=render(<App/>);const oldRows=new Map(subjectsForModel.map(subject=>[subject,box(subject).closest('li')]));const removed=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){removed.add(subjectsForModel[i]);fireEvent.click(box(subjectsForModel[i]));}fireEvent.click(deleteButton());const kept=subjectsForModel.filter(subject=>!removed.has(subject));expect(screen.queryAllByRole('listitem').map(li=>li.textContent.trim())).toEqual(kept);expectSelection(kept,new Set());for(const subject of kept)expect(box(subject).closest('li')).toBe(oldRows.get(subject));if(kept.length){fireEvent.click(all());expectSelection(kept,new Set(kept));fireEvent.click(deleteButton());expectSelection([],new Set());}view.unmount();}
+});
+test('one inbox selection or deletion never changes another inbox or the next mount',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('checkbox',{name:'Lunch on Friday'}));fireEvent.click(two.getByRole('checkbox',{name:'Team photos'}));fireEvent.click(two.getByRole('button',{name:'Delete selected (1)'}));expect(one.getByRole('checkbox',{name:'Team photos'})).toBeTruthy();expect(one.getByRole('checkbox',{name:'Lunch on Friday'}).checked).toBe(true);expect(two.queryByRole('checkbox',{name:'Team photos'})).toBeNull();expect(one.getAllByRole('listitem')).toHaveLength(4);expect(two.getAllByRole('listitem')).toHaveLength(3);a.unmount();b.unmount();const fresh=render(<App/>);expectSelection(subjectsForModel,new Set());expect(screen.getAllByRole('listitem')).toHaveLength(4);fresh.unmount();
+});
+`,
   },
   'react-mh-use-shortcut': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1789,7 +1806,7 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useEffect, useRef, useState } from 'react';
+    junior: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1798,6 +1815,7 @@ const FILES = [
 ];
 
 const App = () => {
+  const fieldPrefix = useId();
   const [files, setFiles] = useState(FILES);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -1876,9 +1894,9 @@ const App = () => {
             return (
               <li key={file.id}>
                 <form onSubmit={handleSubmit}>
-                  <label htmlFor={'rename-' + file.id}>{'New name for ' + file.name}</label>
+                  <label htmlFor={fieldPrefix + '-rename-' + file.id}>{'New name for ' + file.name}</label>
                   <input
-                    id={'rename-' + file.id}
+                    id={fieldPrefix + '-rename-' + file.id}
                     ref={inputRef}
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -2061,7 +2079,20 @@ test('a key other than Escape leaves the form open', () => {
   fireEvent.click(renameButton('notes.txt'));
   fireEvent.keyDown(input('notes.txt'), { key: 'a' });
   expect(input('notes.txt')).toBeTruthy();
-});`,
+});
+
+
+test('current renamed names are reserved and old names can be reused by another file',()=>{
+ render(<App/>);fireEvent.click(renameButton('report.pdf'));type('report.pdf','new-report.pdf');submit('report.pdf');fireEvent.click(renameButton('notes.txt'));type('notes.txt','new-report.pdf');submit('notes.txt');expect(screen.getByRole('alert').textContent).toBe('That name is taken');expect(input('notes.txt')).toBeTruthy();type('notes.txt','report.pdf');submit('notes.txt');expect(names()).toEqual(['new-report.pdf','report.pdf','photo.jpg']);expect(document.activeElement).toBe(renameButton('report.pdf'));
+});
+test('twenty-four raw rename cycles keep stable rows, trimmed values and local draft state',()=>{
+ const view=render(<App/>);const model=['report.pdf','notes.txt','photo.jpg'];const rows=screen.getAllByRole('listitem');
+ for(let i=0;i<24;i++){const index=i%3,old=model[index],raw=['  reef-'+i+'.txt  ','<b>literal-'+i+'</b>','🦈-'+i,'x'.repeat(1990)+i][i%4];fireEvent.click(renameButton(old));expect(input(old).value).toBe(old);type(old,raw);view.rerender(<App data-parent={i}/>);expect(input(old).value).toBe(raw);expect(document.activeElement).toBe(input(old));if(i%5===0){fireEvent.keyDown(input(old),{key:'Escape'});}else{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>input(old).closest('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);model[index]=raw.trim();}expect(names()).toEqual(model);expect(document.activeElement).toBe(renameButton(model[index]));rows.forEach((row,n)=>expect(screen.getAllByRole('listitem')[n]).toBe(row));}
+});
+test('edit labels and focus remain local to each instance, with fresh mounts restoring initial files',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Rename notes.txt'}));fireEvent.click(two.getByRole('button',{name:'Rename notes.txt'}));const fa=a.container.querySelector('input'),fb=b.container.querySelector('input');expect(one.getByLabelText('New name for notes.txt')).toBe(fa);expect(two.getByLabelText('New name for notes.txt')).toBe(fb);fireEvent.change(fb,{target:{value:'beta.txt'}});fireEvent.submit(fb.closest('form'));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename beta.txt'}));expect(fa.value).toBe('notes.txt');fireEvent.keyDown(fa,{key:'Escape'});expect(document.activeElement).toBe(one.getByRole('button',{name:'Rename notes.txt'}));a.unmount();b.unmount();const fresh=render(<App/>);expect(names()).toEqual(['report.pdf','notes.txt','photo.jpg']);expect(screen.queryAllByRole('textbox')).toHaveLength(0);fresh.unmount();
+});
+`,
   },
   'react-mh-wait-for-export': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -2404,11 +2435,12 @@ test('removal during an answer body cannot schedule another poll',()=>withExport
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
   'react-mh-menu-button': {
-    solution: `import React, { useEffect, useRef, useState } from 'react';
+    solution: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
 const App = () => {
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   // The item with the focus, by index.
   const [active, setActive] = useState(0);
@@ -2490,12 +2522,12 @@ const App = () => {
       ref={buttonRef}
       aria-haspopup="menu"
       aria-expanded={open ? 'true' : 'false'}
-      aria-controls={open ? 'actions-menu' : undefined}
+      aria-controls={open ? menuId : undefined}
       onClick={() => (open ? setOpen(false) : openAt(0))}
       onKeyDown={onButtonKeyDown}
     >Actions</button>
     {open && (
-      <ul id="actions-menu" role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+      <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
         {ITEMS.map((item, index) => (
           <li
             key={item}
@@ -2629,7 +2661,7 @@ const App = () => {
         Actions
       </button>
       {open && (
-        <ul role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown}>
+        <ul aria-label="Actions" role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
           {ITEMS.map((item, index) => (
             <li
               key={item}
@@ -2664,7 +2696,7 @@ const MOVES = {
 
 const useOutsideMouseDown = (active, refs, onOutside) => {
   const latest = useRef(onOutside);
-  latest.current = onOutside;
+  useEffect(() => { latest.current = onOutside; }, [onOutside]);
   useEffect(() => {
     if (!active) return undefined;
     const controller = new AbortController();
@@ -2724,7 +2756,7 @@ const App = () => {
         }}
       >Actions</button>
       {open && (
-        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setActive(null); }}>
           {ITEMS.map((item, index) => (
             <li key={item} role="menuitem" tabIndex={-1} ref={(node) => { itemRefs.current[index] = node; }} onClick={() => choose(item)}>
               {item}
@@ -2813,7 +2845,22 @@ test('ArrowUp from the third item moves the focus to the second', () => {
   expect(focused()).toBe('Delete');
   key('ArrowUp');
   expect(focused()).toBe('Duplicate');
-});`,
+});
+
+
+test('forty-eight keyboard moves preserve roles, focus and each wrapping direction',()=>{
+ const view=render(<App/>);fireEvent.click(trigger());expect(screen.getByRole('menu',{name:'Actions'})).toBeTruthy();items().forEach(item=>expect(item.tabIndex).toBe(-1));let index=0;const moves=['ArrowDown','ArrowDown','ArrowUp','End','ArrowUp','Home','ArrowUp','ArrowDown'];
+ for(let i=0;i<48;i++){const move=moves[i%moves.length];index=move==='Home'?0:move==='End'?2:(index+(move==='ArrowDown'?1:2))%3;const event=new KeyboardEvent('keydown',{key:move,bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(document.activeElement).toBe(items()[index]);view.rerender(<App data-parent={i}/>);expect(document.activeElement).toBe(items()[index]);}
+ key('Escape');expect(document.activeElement).toBe(trigger());
+});
+test('eighteen choices accept nested inside targets and keep the exact chosen item',()=>{
+ const view=render(<App/>);const labels=['Rename','Duplicate','Delete'];
+ for(let i=0;i<18;i++){fireEvent.click(trigger());const panel=screen.getByRole('menu');const target=items()[i%3];const nested=document.createElement('span');nested.textContent='';target.appendChild(nested);fireEvent.mouseDown(nested);expect(screen.queryByRole('menu')).toBe(panel);if(i%2===0)fireEvent.click(nested);else{key('Home');for(let n=0;n<i%3;n++)key('ArrowDown');key('Enter');}expect(screen.getByText('Chose '+labels[i%3])).toBeTruthy();expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(trigger());}
+});
+test('optional menu ids belong to their own instance and outside focus is never stolen',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);const ta=one.getByRole('button',{name:'Actions'}),tb=two.getByRole('button',{name:'Actions'});fireEvent.click(ta);const firstId=ta.getAttribute('aria-controls');if(firstId)expect(one.getByRole('menu').id).toBe(firstId);act(()=>tb.focus());expect(one.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(tb);fireEvent.click(tb);const secondId=tb.getAttribute('aria-controls');if(secondId){expect(two.getByRole('menu').id).toBe(secondId);if(firstId)expect(firstId===secondId).toBe(false);}key('End');key('Enter');expect(two.getByText('Chose Delete')).toBeTruthy();expect(one.queryByText('Chose Delete')).toBeNull();a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.queryByRole('menu')).toBeNull();expect(trigger().getAttribute('aria-expanded')).toBe('false');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   'react-mh-city-combobox': {
     solution: `import React, { useId, useState } from 'react';
@@ -3195,7 +3242,7 @@ test('independent selections,cancellation,option clicks and fresh empty state',(
 `,
   },
   'react-mh-signup-form': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useId, useRef, useState } from 'react';
 
 const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 const FIELDS = ['email', 'password', 'repeat'];
@@ -3208,6 +3255,7 @@ const errorsFor = (values) => ({
 });
 
 const App = () => {
+  const prefix = useId();
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
   // Only whether to show an error is state: a field was left, or a submit was tried.
   const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
@@ -3240,9 +3288,9 @@ const App = () => {
   // A function, not a component: the inputs keep their identity between renders.
   const field = (name, label, type) => (
     <div>
-      <label htmlFor={name}>{label}</label>
+      <label htmlFor={prefix + name}>{label}</label>
       <input
-        id={name}
+        id={prefix + name}
         name={name}
         type={type}
         ref={refs[name]}
@@ -3251,9 +3299,9 @@ const App = () => {
         onBlur={leave}
         // undefined leaves the attribute out while the error is hidden.
         aria-invalid={shown(name) ? 'true' : undefined}
-        aria-describedby={shown(name) ? name + '-error' : undefined}
+        aria-describedby={shown(name) ? prefix + name + '-error' : undefined}
       />
-      {shown(name) && <p id={name + '-error'}>{errors[name]}</p>}
+      {shown(name) && <p id={prefix + name + '-error'}>{errors[name]}</p>}
     </div>
   );
 
@@ -3269,9 +3317,10 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
+  const prefix = useId();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -3332,43 +3381,43 @@ const App = () => {
     <main>
       <h2>Create an account</h2>
       <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="email">Email</label>
+        <label htmlFor={prefix + 'email'}>Email</label>
         <input
-          id="email"
+          id={prefix + 'email'}
           ref={emailRef}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           onBlur={() => setEmailLeft(true)}
           aria-invalid={showEmailError ? 'true' : undefined}
-          aria-describedby={showEmailError ? 'email-error' : undefined}
+          aria-describedby={showEmailError ? prefix + 'email-error' : undefined}
         />
-        {showEmailError && <p id="email-error">{emailError}</p>}
+        {showEmailError && <p id={prefix + 'email-error'}>{emailError}</p>}
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor={prefix + 'password'}>Password</label>
         <input
-          id="password"
+          id={prefix + 'password'}
           type="password"
           ref={passwordRef}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           onBlur={() => setPasswordLeft(true)}
           aria-invalid={showPasswordError ? 'true' : undefined}
-          aria-describedby={showPasswordError ? 'password-error' : undefined}
+          aria-describedby={showPasswordError ? prefix + 'password-error' : undefined}
         />
-        {showPasswordError && <p id="password-error">{passwordError}</p>}
+        {showPasswordError && <p id={prefix + 'password-error'}>{passwordError}</p>}
 
-        <label htmlFor="repeat">Repeat password</label>
+        <label htmlFor={prefix + 'repeat'}>Repeat password</label>
         <input
-          id="repeat"
+          id={prefix + 'repeat'}
           type="password"
           ref={repeatRef}
           value={repeat}
           onChange={(event) => setRepeat(event.target.value)}
           onBlur={() => setRepeatLeft(true)}
           aria-invalid={showRepeatError ? 'true' : undefined}
-          aria-describedby={showRepeatError ? 'repeat-error' : undefined}
+          aria-describedby={showRepeatError ? prefix + 'repeat-error' : undefined}
         />
-        {showRepeatError && <p id="repeat-error">{repeatError}</p>}
+        {showRepeatError && <p id={prefix + 'repeat-error'}>{repeatError}</p>}
 
         <button type="submit">Create account</button>
       </form>
@@ -3388,12 +3437,13 @@ const RULES = [
 ];
 
 const Field = ({ rule, value, error, inputRef, onChange, onBlur }) => {
-  const errorId = useId();
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   return (
     <div>
-      <label htmlFor={rule.name}>{rule.label}</label>
+      <label htmlFor={fieldId}>{rule.label}</label>
       <input
-        id={rule.name}
+        id={fieldId}
         name={rule.name}
         type={rule.type}
         ref={inputRef}
@@ -3504,7 +3554,31 @@ test('a form with errors is not sent', () => {
   submit();
   expect(screen.queryByText(/^Welcome/)).toBeNull();
   expect(document.activeElement).toBe(field('Repeat password'));
-});`,
+});
+
+
+const signMessages=['Enter an email like name@example.com','Use 8 or more characters with a number','The passwords do not match'];
+const signLabels=['Email','Password','Repeat password'];
+const signInput=(root,index)=>within(root).getByLabelText(signLabels[index]);
+const signType=(root,index,value)=>fireEvent.change(signInput(root,index),{target:{value}});
+const signCheck=(root,index,message)=>{const input=signInput(root,index),id=input.getAttribute('aria-describedby');if(message){expect(input.getAttribute('aria-invalid')).toBe('true');const error=document.getElementById(id);expect(root.contains(error)).toBe(true);expect(error.tagName).toBe('P');expect(error.textContent).toBe(message);}else{expect(input.getAttribute('aria-invalid')).toBeNull();expect(id).toBeNull();}};
+const signSubmit=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('password boundaries,exact repeats and every first-invalid position follow current values',()=>{
+ const matrix=[['bad','abcdefg1','abcdefg1'],['ok@example.test','abcdef1','abcdef1'],['ok@example.test','abcdefg1','abcdefg1 '],['ok@example.test',' abcdef1','abcdef1'],['ok@example.test','🦈🦈🦈1','🦈🦈🦈1'],['ok@example.test','abcdefgh','abcdefgh'],['ok@example.test','abcdefg١','abcdefg١'],['bad','short','different'],['ok@example.test','abcdefg1','different'],['ok@example.test','x'.repeat(1999)+'1','different']];
+ for(const values of matrix){const view=render(<App/>),root=view.container;values.forEach((value,i)=>signType(root,i,value));const actual=signLabels.map((_,i)=>signInput(root,i).value),invalid=[!(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(actual[0].trim())),actual[1].length<8||!/[0-9]/.test(actual[1]),actual[2]!==actual[1]];signSubmit(root);expect(document.activeElement).toBe(signInput(root,invalid.indexOf(true)));invalid.forEach((bad,i)=>signCheck(root,i,bad?signMessages[i]:null));expect(root.textContent).not.toContain('Welcome,');view.unmount();}
+ for(const email of ['','@reef.test','reef@','a@@b.test','a@b','a b@c.test','a@b c.test','  bad  ','a@b..c','café+reef@example.test','🦈@reef.test','x'.repeat(1987)+'@reef.test']){const view=render(<App/>),root=view.container;signType(root,0,email);fireEvent.blur(signInput(root,0));const expected=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(signInput(root,0).value.trim());signCheck(root,0,expected?null:signMessages[0]);view.unmount();}
+ for(const values of [['  café+reef@example.test  ','🦈🦈🦈🦈1'],['reef@example.test','  abcde1'],['reef@example.test','x'.repeat(1999)+'1']]){const view=render(<App/>),root=view.container;signType(root,0,values[0]);signType(root,1,values[1]);signType(root,2,values[1]);const email=signInput(root,0).value.trim();signSubmit(root);expect(root.querySelector('form')).toBeNull();expect(root.textContent).toContain('Welcome, '+email);view.unmount();}
+});
+test('twenty field corrections keep touch state,live dependencies and input identity',()=>{
+ const view=render(<App/>),root=view.container;const nodes=signLabels.map((_,i)=>signInput(root,i));
+ for(let i=0;i<20;i++){const password=i%2?'abcdefg1':'abcdefgh';signType(root,1,password);signType(root,2,'abcdefg1');if(i===0){signLabels.forEach((_,j)=>signCheck(root,j,null));fireEvent.blur(nodes[1]);fireEvent.blur(nodes[2]);}signCheck(root,1,i%2?null:signMessages[1]);signCheck(root,2,i%2?null:signMessages[2]);signCheck(root,0,null);view.rerender(<App data-parent={i}/>);signLabels.forEach((_,j)=>expect(signInput(root,j)).toBe(nodes[j]));}
+ signSubmit(root);signCheck(root,0,signMessages[0]);signType(root,0,'current@example.test');signCheck(root,0,null);signType(root,0,'bad');signCheck(root,0,signMessages[0]);
+});
+test('labels and error ids belong to their own form and fresh state is untouched',()=>{
+ const a=render(<App/>),b=render(<App/>);for(const root of [a.container,b.container]){signType(root,2,'different');signSubmit(root);signLabels.forEach((_,i)=>{const input=signInput(root,i),label=[...root.querySelectorAll('label')].find(label=>label.textContent===signLabels[i]);expect(label.control).toBe(input);signCheck(root,i,signMessages[i]);});}
+ const nodes=[...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')];expect(new Set(nodes.map(node=>node.id)).size).toBe(nodes.length);const ids=nodes.map(node=>node.id);a.rerender(<App/>);b.rerender(<App/>);expect([...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')].map(node=>node.id)).toEqual(ids);signType(a.container,0,'alpha@example.test');signCheck(a.container,0,null);signCheck(b.container,0,signMessages[0]);a.unmount();b.unmount();const fresh=render(<App/>);signLabels.forEach((_,i)=>{expect(signInput(fresh.container,i).value).toBe('');signCheck(fresh.container,i,null);});fresh.unmount();
+});
+`,
   },
   'react-mh-carousel': {
     solution: `import React, { useEffect, useState } from 'react';

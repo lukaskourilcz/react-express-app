@@ -225,7 +225,7 @@ test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEv
   "react-live-paragraph": {
     solution: `const App = () => {
   const [text, setText] = useState('');
-  return <><input value={text} onChange={event => setText(event.target.value)} /><p>{text}</p></>;
+  return <><label>Your text <input value={text} onChange={event => setText(event.target.value)} /></label><p>{text}</p></>;
 };`,
     junior: `const App = () => {
   const [text, setText] = useState('');
@@ -236,7 +236,7 @@ test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEv
 
   return (
     <main>
-      <input type="text" value={text} onChange={handleChange} />
+      <label>Your text <input type="text" value={text} onChange={handleChange} /></label>
       <p>{text}</p>
     </main>
   );
@@ -279,7 +279,20 @@ test('the input is controlled from the first render: its value comes from state'
   expect(reactProps(input).value).toBe('');
   fireEvent.change(input, { target: { value: 'kept in state' } });
   expect(reactProps(input).value).toBe('kept in state');
-});`,
+});
+
+
+test('twenty-four raw updates remain exact and controlled through parent renders',()=>{
+ const view=render(<App/>);const values=['',' ','  raw  ','<b>literal</b>','0','false','🦈漢字','café','x'.repeat(2000)];
+ for(let i=0;i<24;i++){const value=values[i%values.length],field=screen.getByLabelText('Your text');fireEvent.change(field,{target:{value}});expect(field.value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);expect(reactProps(field).value).toBe(value);view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Your text').value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);}
+});
+test('long-to-short-to-empty changes do not leave text from a previous value',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');for(const value of ['long '.repeat(100),'short','s','','<i>','  ']){fireEvent.change(field,{target:{value}});expect(view.container.querySelector('p').textContent).toBe(value);expect(field.value).toBe(value);}
+});
+test('independent mirrors and a fresh mount never share text state',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Your text'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Your text'),{target:{value:'Beta'}});expect(a.container.querySelector('p').textContent).toBe('Alpha');expect(b.container.querySelector('p').textContent).toBe('Beta');a.unmount();expect(b.container.querySelector('p').textContent).toBe('Beta');b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Your text').value).toBe('');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   "react-data-list": {
     solution: `const initialPeople = [
@@ -580,7 +593,7 @@ test('independent search text and fresh full list',()=>{const root=render(<><sec
   const [submitted, setSubmitted] = useState(null);
   const updateField = event => setForm(value => ({...value, [event.target.name]: event.target.value}));
   const submit = event => { event.preventDefault(); setSubmitted(form); };
-  return <><form onSubmit={submit}><input name="name" value={form.name} onChange={updateField} /><input name="email" value={form.email} onChange={updateField} /><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
+  return <><form onSubmit={submit}><label>Name <input name="name" value={form.name} onChange={updateField} /></label><label>Email <input name="email" value={form.email} onChange={updateField} /></label><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
 };`,
     junior: `const App = () => {
   const [name, setName] = useState('');
@@ -612,8 +625,8 @@ test('independent search text and fresh full list',()=>{const root=render(<><sec
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={name} onChange={handleNameChange} />
-        <input type="email" value={email} onChange={handleEmailChange} />
+        <label>Name <input type="text" value={name} onChange={handleNameChange} /></label>
+        <label>Email <input type="email" value={email} onChange={handleEmailChange} /></label>
         <button type="submit">Submit</button>
       </form>
       {result}
@@ -651,6 +664,22 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+const submitSnapshot=(container)=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('twenty raw submissions preserve the last snapshot while the live fields change',()=>{
+ const view=render(<App/>);const names=['',' ','  Reef <b>  ','0','🦈漢字','n'.repeat(2000)];
+ for(let i=0;i<20;i++){const name=names[i%names.length],email='person'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:name}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:email}});if(i===0)expect(view.container.textContent).not.toContain(email);submitSnapshot(view.container);expect(view.container.textContent).toContain(name);expect(view.container.textContent).toContain(email);const pendingName='unsent-name-'+i,pendingEmail='unsent'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:pendingName}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:pendingEmail}});view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Name').value).toBe(pendingName);expect(screen.getByLabelText('Email').value).toBe(pendingEmail);expect(view.container.textContent).toContain(email);expect(view.container.textContent).not.toContain(pendingEmail);expect(view.container.textContent).not.toContain(pendingName);}
+ fireEvent.change(screen.getByLabelText('Name'),{target:{value:''}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:''}});submitSnapshot(view.container);expect(view.container.textContent).not.toContain('person19@example.test');expect(view.container.textContent).not.toContain('unsent19@example.test');
+});
+test('both inputs carry controlled value props from the first render',()=>{
+ const view=render(<App/>);const props=node=>node[Object.keys(node).find(key=>key.startsWith('__reactProps$'))]||{};const name=screen.getByLabelText('Name'),email=screen.getByLabelText('Email');expect(props(name).value).toBe('');expect(props(email).value).toBe('');fireEvent.change(name,{target:{value:'controlled name'}});fireEvent.change(email,{target:{value:'controlled@example.test'}});expect(props(name).value).toBe('controlled name');expect(props(email).value).toBe('controlled@example.test');expect(view.container.textContent).not.toContain('controlled@example.test');
+});
+test('separate forms keep their own drafts and submitted snapshots',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.change(one.getByLabelText('Name'),{target:{value:'Alpha'}});fireEvent.change(one.getByLabelText('Email'),{target:{value:'alpha@example.test'}});submitSnapshot(a.container);fireEvent.change(two.getByLabelText('Name'),{target:{value:'Beta'}});fireEvent.change(two.getByLabelText('Email'),{target:{value:'beta@example.test'}});submitSnapshot(b.container);expect(a.container.textContent).toContain('alpha@example.test');expect(a.container.textContent).not.toContain('beta@example.test');expect(b.container.textContent).toContain('beta@example.test');expect(b.container.textContent).not.toContain('alpha@example.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Name').value).toBe('');expect(screen.getByLabelText('Email').value).toBe('');expect(fresh.container.textContent).not.toContain('alpha@example.test');fresh.unmount();
+});
+`,
   },
   "react-effect-on-mount": {
     solution: `const App = () => {
@@ -1371,7 +1400,7 @@ test('a request that throws shows a message and no items', () => withRequests(as
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [selected, setSelected] = useState(null);
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <p>{selected.email}</p>}</>;
+  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <section><p>{selected.name}</p><p>{selected.email}</p></section>}</>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
@@ -1422,7 +1451,6 @@ const UserDetails = ({ user }) => (
 
 const App = () => {
   const [users, setUsers] = useState([]);
-  // Only the id lives in state, so the details can never drift from the list
   const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
@@ -1448,6 +1476,19 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('all twenty-four fetched choices stay exact through repeated selection and parents',()=>withUsers(async calls=>{
+ const users=Array.from({length:24},(_,i)=>({id:'opaque-'+(31+i*17),name:i<2?'Same display name':'  Reef <b> 🦈 '+i+'  ',email:'unique'+i+'@reef.test'}));const view=render(<App/>);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));users.forEach(user=>expect(userOutput(view.container)).not.toContain(user.email));for(let turn=0;turn<48;turn++){const index=(turn*7)%24;fireEvent.click(buttons[index]);const out=userOutput(view.container);expect(out).toContain(users[index].name);expect(out).toContain(users[index].email);users.forEach((user,i)=>{if(i!==index)expect(out).not.toContain(user.email);});view.rerender(<App data-parent={turn}/>);expect(userOutput(view.container)).toContain(users[index].email);expect([...view.container.querySelectorAll('button')]).toEqual(buttons);expect(calls).toHaveLength(1);}
+}));
+test('empty and single-user results are data rather than a built-in fixture',()=>withUsers(async calls=>{
+ const empty=render(<App/>);await act(async()=>calls[0].respond([]));expect(empty.container.querySelectorAll('button')).toHaveLength(0);expect(userOutput(empty.container)).not.toContain('@');empty.unmount();const one=render(<App/>),user={id:777,name:'u'.repeat(2000),email:'one@reef.test'};await act(async()=>calls[1].respond([user]));expect(one.container.querySelectorAll('button')).toHaveLength(1);fireEvent.click(one.container.querySelector('button'));expect(userOutput(one.container)).toContain(user.name);expect(userOutput(one.container)).toContain(user.email);one.unmount();
+}));
+test('independent user requests and selections do not leak into another or a fresh mount',()=>withUsers(async calls=>{
+ const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);calls.forEach(userRequest);await act(async()=>{calls[1].respond([{id:1,name:'Beta',email:'beta@reef.test'}]);calls[0].respond([{id:1,name:'Alpha',email:'alpha@reef.test'}]);});fireEvent.click(a.container.querySelector('button'));expect(userOutput(a.container)).toContain('alpha@reef.test');expect(userOutput(b.container)).not.toContain('beta@reef.test');fireEvent.click(b.container.querySelector('button'));expect(userOutput(b.container)).toContain('beta@reef.test');expect(userOutput(a.container)).not.toContain('beta@reef.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelectorAll('button')).toHaveLength(0);await act(async()=>calls[2].respond([{id:1,name:'Fresh',email:'fresh@reef.test'}]));expect(userOutput(fresh.container)).not.toContain('fresh@reef.test');fresh.unmount();
+}));
+`,
   },
   "react-filter-fetched-users": {
     solution: `const App = () => {
@@ -1699,7 +1740,7 @@ test('newest refresh owns the result and fresh mounts ignore old pending request
     solution: `const App = () => {
   const [title, setTitle] = useState(''); const [created, setCreated] = useState(null);
   const submit = async event => { event.preventDefault(); const response = await fetch('https://jsonplaceholder.typicode.com/posts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})}); setCreated(await response.json()); };
-  return <><form onSubmit={submit}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
+  return <><form onSubmit={submit}><label>Title <input value={title} onChange={event => setTitle(event.target.value)} /></label><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
 };`,
     junior: `const App = () => {
   const [title, setTitle] = useState('');
@@ -1728,7 +1769,7 @@ test('newest refresh owns the result and fresh mounts ignore old pending request
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={title} onChange={handleChange} />
+        <label>Title <input type="text" value={title} onChange={handleChange} /></label>
         <button type="submit">Create</button>
       </form>
       {result}
@@ -1755,7 +1796,7 @@ const App = () => {
     setSaving(true);
     setError('');
     try {
-      setCreated(await postJson(POSTS_URL, { title: title.trim() }));
+      setCreated(await postJson(POSTS_URL, { title }));
       setTitle('');
     } catch (failure) {
       setError(failure.message);
@@ -1775,6 +1816,21 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('sixteen sequential posts use fresh exact snapshots and await each JSON body',()=>withPosts(async calls=>{
+ const view=render(<App/>),raw=['literal <b>reef</b>','  keep these spaces  ','quotes " and slash \\\\','🦈漢字café','x'.repeat(2000)];let previous=null;
+ expect(calls).toHaveLength(0);
+ for(let i=0;i<16;i++){const value=i%raw.length===4?raw[4]:raw[i%raw.length]+'-'+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value}});postEvent(view.container);expect(calls).toHaveLength(i+1);checkPost(calls[i],value);const serverTitle='Server reef 🦈 '+i,id=9000+i;expect(view.container.textContent).not.toContain(serverTitle);if(previous)expect(view.container.textContent).toContain(previous);await act(async()=>calls[i].response());expect(view.container.textContent).not.toContain(serverTitle);await act(async()=>calls[i].json({id,title:serverTitle}));expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).toContain(String(id));if(previous)expect(view.container.textContent).not.toContain(previous);previous=serverTitle;const pending='not submitted '+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value:pending}});view.rerender(<App data-parent={i}/>);expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).not.toContain(pending);expect(calls).toHaveLength(i+1);}
+}));
+test('editing a draft while its request is pending cannot rewrite the returned object',()=>withPosts(async calls=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Submitted reef'}});postEvent(view.container);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Unsent reef'}});checkPost(calls[0],'Submitted reef');await act(async()=>calls[0].response());await act(async()=>calls[0].json({id:427,title:'Server snapshot'}));expect(view.container.textContent).toContain('Server snapshot');expect(view.container.textContent).not.toContain('Unsent reef');
+}));
+test('two post forms and a fresh mount own separate drafts and created objects',()=>withPosts(async calls=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Title'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Title'),{target:{value:'Beta'}});postEvent(a.container);postEvent(b.container);checkPost(calls[0],'Alpha');checkPost(calls[1],'Beta');await act(async()=>{calls[1].response();calls[0].response();});await act(async()=>{calls[1].json({id:42,title:'Beta server'});calls[0].json({id:41,title:'Alpha server'});});expect(a.container.textContent).toContain('Alpha server');expect(a.container.textContent).not.toContain('Beta server');expect(b.container.textContent).toContain('Beta server');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Title').value).toBe('');expect(fresh.container.textContent).not.toContain('server');expect(calls).toHaveLength(2);fresh.unmount();
+}));
+`,
   },
   "react-create-and-append": {
     solution: `const App = () => {
@@ -2902,7 +2958,6 @@ test('Delete removes only the post whose button was clicked', async () => {
 const App = () => {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
-  // A null delay pauses the interval; the hook owns setup and teardown, so Start cannot double up
   useInterval(() => setSeconds(current => current + 1), running ? 1000 : null);
 
   const reset = () => {
@@ -2919,10 +2974,12 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, which the visible suite declares,
-    // so each second is exact and a second interval shows as a count that
-    // runs ahead.
-    hiddenSuite: `${NUMBERS_SHOWN}
+    hiddenSuite: `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+
 const secondsShown = container => numbersShown(container.querySelector('p'));
 
 test('Start counts exactly one per second from 0', () => withClock(async clock => {
@@ -2964,7 +3021,21 @@ test('Stop freezes the count, Reset returns exactly 0, and nothing ticks afterwa
   expect(secondsShown(container)).toBe('0');
   await clock.tick(2000);
   expect(secondsShown(container)).toBe('0');
-}));`,
+}));
+
+
+test('long runs keep counting beyond three and Reset stops the timer',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(31000);expect(secondsShown(view.container)).toBe('31');expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));await clock.tick(6000);expect(secondsShown(view.container)).toBe('31');fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe('31');await clock.tick(1);expect(secondsShown(view.container)).toBe('32');fireEvent.click(control(view.container,'reset'));expect(secondsShown(view.container)).toBe('0');expect(clock.pending()).toBe(0);await clock.tick(3000);expect(secondsShown(view.container)).toBe('0');view.unmount();
+}));
+test('twelve stop, resume and reset cycles preserve elapsed state under parent renders',()=>withTestClock(async clock=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){fireEvent.click(control(view.container,'start'));fireEvent.click(control(view.container,'start'));await clock.tick(1000*(i%4+1)+i*7);const expected=i%4+1;view.rerender(<App data-parent={i}/>);expect(secondsShown(view.container)).toBe(String(expected));expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));expect(clock.pending()).toBe(0);await clock.tick(1777);expect(secondsShown(view.container)).toBe(String(expected));fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe(String(expected));await clock.tick(1);expect(secondsShown(view.container)).toBe(String(expected+1));fireEvent.click(control(view.container,'reset'));expect(clock.pending()).toBe(0);expect(secondsShown(view.container)).toBe('0');}
+ view.unmount();
+}));
+test('independent stopwatches own their interval and a removed one cannot clear another',()=>withTestClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.click(control(a.container,'start'));await clock.tick(500);fireEvent.click(control(b.container,'start'));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(999);expect(secondsShown(b.container)).toBe('0');await clock.tick(1);expect(secondsShown(b.container)).toBe('1');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(secondsShown(fresh.container)).toBe('0');fresh.unmount();
+}));
+`,
   },
   "react-uselocalstorage-hook": {
     solution: `const useLocalStorage = (key, initial) => {

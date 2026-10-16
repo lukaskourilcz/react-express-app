@@ -741,7 +741,7 @@ test('Enter is prevented, so a form around the field is not sent', () => {
     tier: 3,
     focus: ['derived-state', 'forms', 'useRef', 'useEffect'],
     title: 'Select all, or some',
-    prompt: 'An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its `indeterminate` property. `indeterminate` has no HTML attribute and no React prop, so put a ref on the box and set `ref.current.indeterminate` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled.',
+    prompt: `An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its \`indeterminate\` property. \`indeterminate\` has no HTML attribute and no React prop, so put a ref on the box and set \`ref.current.indeterminate\` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled. Unchecking any one selected message leaves the other selections alone, including after Select all. Preserve each surviving list row when deleting, update the count from the remaining messages and keep separate inbox instances independent. Parent renders must preserve the selection and indeterminate state.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const MESSAGES = [
@@ -860,7 +860,10 @@ test('Delete selected removes the chosen messages', () => {
   expect(all().checked).toBe(false);
   expect(all().indeterminate).toBe(false);
 });
-`,
+
+test('unchecking one item after Select all keeps the other three selected',()=>{
+ render(<App/>);fireEvent.click(all());fireEvent.click(box('Invoice 1042'));expect(deleteButton().textContent).toBe('Delete selected (3)');expect(all().indeterminate).toBe(true);expect(box('Lunch on Friday').checked).toBe(true);expect(box('Your parcel is on its way').checked).toBe(true);expect(box('Team photos').checked).toBe(true);
+});`,
   },
   {
     id: 'react-mh-use-shortcut',
@@ -972,8 +975,8 @@ test('/ is prevented, so no slash is typed anywhere', () => {
     tier: 3,
     focus: ['forms', 'useRef', 'events', 'lists-keys'],
     title: 'Rename in place',
-    prompt: 'Each file in the list shows its name in a `span` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with `role="alert"`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a `Map` in a ref, keyed by file id, and focus the right one in an effect once the form has gone.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `Each file in the list shows its name in a \`span\` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with \`role="alert"\`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a \`Map\` in a ref, keyed by file id, and focus the right one in an effect once the form has gone. Compare trimmed names exactly and case-sensitively, without Unicode normalization. They are plain single-line strings up to 2000 UTF-16 code units; this exercise does not validate filesystem paths. Duplicate checks use the current file names, so an old name becomes available after its file is renamed. Preserve file order and the existing list rows, parent draft state and each instance’s own labels, data and focus. If you use DOM ids, make them unique to the instance.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1079,7 +1082,10 @@ test('blank text keeps the old name', () => {
   submit('photo.jpg');
   expect(names()).toEqual(['report.pdf', 'notes.txt', 'photo.jpg']);
 });
-`,
+
+test('duplicate comparisons are case-sensitive',()=>{
+ render(<App/>);fireEvent.click(renameButton('notes.txt'));type('notes.txt','REPORT.PDF');submit('notes.txt');expect(names()).toEqual(['report.pdf','REPORT.PDF','photo.jpg']);expect(screen.queryByRole('alert')).toBeNull();expect(document.activeElement).toBe(renameButton('REPORT.PDF'));
+});`,
   },
   {
     id: 'react-mh-wait-for-export',
@@ -1220,8 +1226,8 @@ test('starting an export uses POST', () => withFetch(async calls => {
     tier: 4,
     focus: ['accessibility', 'useRef', 'events', 'effect-cleanup'],
     title: 'A menu button',
-    prompt: 'A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has `aria-haspopup="menu"` and `aria-expanded`, `"true"` or `"false"`. The open menu is a `ul` with `role="menu"`, each item an `li` with `role="menuitem"` and `tabIndex={-1}`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A `mousedown` anywhere outside the button and the menu closes it without moving the focus: add that listener to `document` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call `focus()` on them.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has \`aria-haspopup="menu"\` and \`aria-expanded\`, \`"true"\` or \`"false"\`. The open menu is a \`ul\` with \`role="menu"\`, each item an \`li\` with \`role="menuitem"\` and \`tabIndex={-1}\`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A \`mousedown\` anywhere outside the button and the menu closes it without moving the focus: add that listener to \`document\` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call \`focus()\` on them. Give the menu the accessible name Actions. Tab and Shift+Tab keep their normal browser action: once keyboard focus leaves the menu, close it without returning focus to the Actions button. Moving focus between menu items keeps it open. An outside mousedown or focus change must not steal focus. If you provide aria-controls, use an id belonging only to that instance. Nested content inside a menu item or the trigger still counts as inside. Parent renders and repeated choices must preserve the active item and the chosen result.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
@@ -1338,7 +1344,10 @@ test('a mousedown outside closes the menu', () => {
   fireEvent.mouseDown(screen.getByRole('heading'));
   expect(screen.queryByRole('menu')).toBeNull();
 });
-`,
+
+test('Tab can leave the menu without its default action being blocked',()=>{
+ const view=render(<><App/><button type="button">After menu</button></>);fireEvent.click(trigger());const event=new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(false);const outside=screen.getByRole('button',{name:'After menu'});act(()=>fireEvent.blur(document.activeElement,{relatedTarget:outside}));act(()=>outside.focus());expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(outside);
+});`,
   },
   {
     id: 'react-mh-city-combobox',
@@ -1477,8 +1486,8 @@ test('two comboboxes have their own labelled input,list and option ids',()=>{con
     tier: 4,
     focus: ['forms', 'derived-state', 'accessibility', 'useRef'],
     title: 'A sign-up form that says what is wrong',
-    prompt: 'The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its `blur`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a `p` with an id of its own, and the field gets `aria-invalid="true"` and `aria-describedby` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match \`/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/\` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its \`blur\`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a \`p\` with an id of its own, and the field gets \`aria-invalid="true"\` and \`aria-describedby\` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email. Password length means JavaScript UTF-16 code units (\`password.length\`); the required digit is an ASCII digit 0–9. Compare both password fields exactly, without trimming them. Email uses the stated simple pattern, not complete mailbox validation. Validate the current native email value after trimming it. Field values can contain up to 2000 units of single-line text. Give every instance stable unique field/error ids so labels and error descriptions remain local. Parent renders retain input nodes and touched state; separate and fresh forms remain independent.`,
+    starter: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
@@ -1510,6 +1519,7 @@ export default App;
     skeleton: `const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
 const [tried, setTried] = useState(false);
 const [welcome, setWelcome] = useState('');
+const prefix = useId();
 const refs = { email: useRef(null), password: useRef(null), repeat: useRef(null) };
 
 const errors = {
@@ -1528,11 +1538,13 @@ const submit = (event) => {
 
 // <input ... onBlur={() => setTouched({ ...touched, email: true })}
 //        aria-invalid={shown('email') ? 'true' : undefined}
-//        aria-describedby={shown('email') ? 'email-error' : undefined} />
-// {shown('email') && <p id="email-error">{errors.email}</p>}`,
+//        aria-describedby={shown('email') ? prefix + 'email-error' : undefined} />
+// {shown('email') && <p id={prefix + 'email-error'}>{errors.email}</p>}
+
+// Derive each input id from prefix too, and use that same id in its label htmlFor.`,
     hints: [
-      'The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.',
-      '`aria-describedby` makes a screen reader read the error with the field, and `aria-invalid` says the field needs attention. React drops an attribute whose value is `undefined`, which is how a field with no shown error has neither.',
+      `The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.`,
+      `\`aria-describedby\` makes a screen reader read the error with the field, and \`aria-invalid\` says the field needs attention. React drops an attribute whose value is \`undefined\`, which is how a field with no shown error has neither. Use useId to derive stable field and error ids unique to each mounted form.`,
     ],
     approach: [
       'Work out each field’s message from the values: the email pattern on the trimmed email, the length and a digit for the password, equality for the repeat.',
@@ -1604,6 +1616,11 @@ test('a valid submit welcomes the new user', () => {
   type('Repeat password', 'correct1horse');
   submit();
   expect(screen.getByText('Welcome, ada@example.com')).toBeTruthy();
+});
+
+
+test('seven UTF-16 units are too short even with a digit',()=>{
+ render(<App/>);type('Password','abcdef1');leave('Password');expect(describedBy('Password')).toBe('Use 8 or more characters with a number');type('Password','abcdefg1');expect(describedBy('Password')).toBeNull();
 });
 `,
   },
