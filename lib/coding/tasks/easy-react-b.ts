@@ -932,11 +932,11 @@ test('a short page disables Next', () => withFetch(async calls => {
     tier: 2,
     focus: ['slice', 'derived-state'],
     title: 'Breadcrumbs from a path',
-    prompt: 'Show the current `path` as breadcrumbs. For "/docs/react/hooks" the crumbs read "docs", "react" and "hooks". Every crumb but the last is a link to the path up to and including it, "/docs" and then "/docs/react", and the last is plain text. Split the path on "/", drop the empty parts that the leading slash and any trailing slash leave, and build each link from `parts.slice(0, index + 1)`. Work the crumbs out while rendering, so they follow when "Go up" shortens the path.',
+    prompt: "Show the current `path` as breadcrumbs. For \"/docs/react/hooks\" the crumbs read \"docs\", \"react\" and \"hooks\". Every crumb but the last is a link to the path up to and including it, \"/docs\" and then \"/docs/react\", and the last is plain text. Split the path on \"/\", drop the empty parts that the leading slash and any trailing slash leave, and build each link from `parts.slice(0, index + 1)`. Work the crumbs out while rendering, so they follow when \"Go up\" shortens the path. The starter normalizes start once by dropping all empty slash-separated parts,including repeated/trailing slashes;root is '/'. start is an initial-only root-relative path,up to 100 segments and 2000 UTF16 units,whose nonempty segments contain only ASCII letters,digits,hyphens or underscores. No query,fragment,percent decoding or dot-segment resolution is needed. Every Go up removes one actual segment immediately,including from a trailing-slash start,and clamps at root;the native type-button is disabled there. Keep one Breadcrumb-named navigation landmark with an OL and exact literal segment labels. The last crumb is not a link,with an optional span/aria-current. Ordinary parent re-renders and later start prop changes preserve the current path;independent/fresh instances use their own initial start. No full-page navigation or link activation is required to perform Go up.",
     starter: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
 
   const goUp = () => setPath((previous) => previous.slice(0, previous.lastIndexOf('/')) || '/');
 
@@ -990,6 +990,9 @@ test('Go up shortens the crumbs', () => {
   expect(crumbs(container)).toEqual(['docs', 'react']);
   expect(links(container)).toEqual(['/docs']);
 });
+
+test('the first Go up from a trailing slash removes a real segment',()=>{const {container}=render(<App start="/docs/react/"/>);fireEvent.click(screen.getByRole('button',{name:'Go up'}));expect(crumbs(container)).toEqual(['docs']);expect(links(container)).toEqual([]);});
+
 `,
   },
   {

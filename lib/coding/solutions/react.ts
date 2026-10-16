@@ -519,8 +519,8 @@ test('separate lists and fresh mounts keep their own initial todos',()=>{const r
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const filtered = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
+  const filtered = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <><input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
 };`,
     junior: `const names = ['Ana', 'Daniel', 'John'];
 
@@ -531,7 +531,7 @@ const App = () => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matches = [];
   for (const name of names) {
     const lowerName = name.toLowerCase();
@@ -542,7 +542,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input type="text" aria-label="Search names" value={query} onChange={handleChange} />
       <ul>
         {matches.map(name => <li key={name}>{name}</li>)}
       </ul>
@@ -551,7 +551,7 @@ const App = () => {
 };`,
     senior: `const names = ['Ana', 'Daniel', 'John'];
 
-const matches = (name, query) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+const matches = (name, query) => name.toLowerCase().includes(query.trim().toLowerCase());
 
 const App = () => {
   const [query, setQuery] = useState('');
@@ -565,6 +565,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const expectedNames=['Ana','Daniel','John'];
+const searchRows=scope=>Array.from(scope.querySelectorAll('li'));
+test('every raw query is controlled,trimmed,case-insensitive literal substring search',()=>{const {container,rerender}=render(<App/>);const input=within(container).getByLabelText('Search names');let previous=new Map(searchRows(container).map(li=>[li.textContent,li]));for(const query of['an','  an  ','OH','da','L','not found','  ','','A','.','[','ana','n','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});expect(input.value).toBe(query);const expected=expectedNames.filter(name=>name.toLowerCase().includes(query.trim().toLowerCase())),current=searchRows(container);expect(current.map(li=>li.textContent)).toEqual(expected);for(const li of current)if(previous.has(li.textContent))expect(li).toBe(previous.get(li.textContent));previous=new Map(current.map(li=>[li.textContent,li]));rerender(<App/>);expect(searchRows(container).map(li=>li.textContent)).toEqual(expected);expect(input.value).toBe(query);}});
+test('twenty changed searches never destructively shorten the source',()=>{const {container}=render(<App/>),input=within(container).getByLabelText('Search names');for(let i=0;i<20;i++){const q=['ANA','oh','none','', ' an '][i%5];fireEvent.change(input,{target:{value:q}});expect(searchRows(container).map(li=>li.textContent)).toEqual(expectedNames.filter(n=>n.toLowerCase().includes(q.trim().toLowerCase())));}});
+test('independent search text and fresh full list',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.change(a.querySelector('input'),{target:{value:'ana'}});expect(searchRows(a).map(li=>li.textContent)).toEqual(['Ana']);expect(searchRows(b).map(li=>li.textContent)).toEqual(expectedNames);root.unmount();expect(searchRows(render(<App/>).container).map(li=>li.textContent)).toEqual(expectedNames);});
+`,
   },
   "react-controlled-form": {
     solution: `const App = () => {
@@ -1209,29 +1217,51 @@ const App = () => {
   },
   "react-filter-fetched-users": {
     solution: `const App = () => {
-  const [users, setUsers] = useState([]); const [query, setQuery] = useState('');
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  const filtered = users.filter(user => user.name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
+  const [users, setUsers] = useState([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const filtered = users.filter(user => user.name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <>{loading && <p role="status">Loading users…</p>}{error && <p role="alert">{error}</p>}<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   const handleChange = (event) => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matchingUsers = [];
   for (const user of users) {
     const lowerName = user.name.toLowerCase();
@@ -1242,7 +1272,9 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
+      <input type="text" aria-label="Filter users" value={query} onChange={handleChange} />
       <ul>
         {matchingUsers.map(user => <li key={user.id}>{user.name}</li>)}
       </ul>
@@ -1253,18 +1285,22 @@ const App = () => {
 
 const useUsers = () => {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     fetch(USERS_URL)
-      .then(response => response.json())
-      .then(data => { if (active) setUsers(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  return users;
+  return { users, loading, error };
 };
 
 const App = () => {
-  const users = useUsers();
+  const { users, loading, error } = useUsers();
   const [query, setQuery] = useState('');
 
   const visible = useMemo(() => {
@@ -1274,12 +1310,20 @@ const App = () => {
 
   return (
     <main>
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
       <input type="search" aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <p role="status">{visible.length} of {users.length} shown</p>
       <ul>{visible.map(user => <li key={user.id}>{user.name}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('pending input filters the current readonly response locally and retains surviving rows',async()=>withUserRequests(async calls=>{const {container,rerender}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/users');expect(calls[0].options.method===undefined||calls[0].options.method==='GET').toBe(true);expect(within(container).getByText('Loading users…').getAttribute('role')).toBe('status');const input=within(container).getByLabelText('Filter users');fireEvent.change(input,{target:{value:' alpha '}});expect(calls).toHaveLength(1);const data=Object.freeze([{id:1,name:'Alpha'},{id:2,name:' beta Alpha '},{id:3,name:'Alpha'},{id:4,name:'<b>literal</b>'},{id:5,name:''},{id:6,name:'🌊'},{id:7,name:'x'.repeat(2000)}].map(Object.freeze));await fulfillUsers(calls[0],data);expect(within(container).queryByText('Loading users…')).toBeNull();let previous=new Map();for(const query of[' alpha ','','B',' [ ','LIT','not found','  ','🌊','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});const expected=data.filter(u=>u.name.toLowerCase().includes(query.trim().toLowerCase()));expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));const rows=Array.from(container.querySelectorAll('li'));expected.forEach((u,i)=>{if(previous.has(u.id))expect(rows[i]).toBe(previous.get(u.id));});previous=new Map(expected.map((u,i)=>[u.id,rows[i]]));expect(container.querySelector('li b')).toBeNull();expect(input.value).toBe(query);rerender(<App/>);expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));expect(calls).toHaveLength(1);}}));
+test('HTTP,network and JSON failures show an alert without retrying on typing',async()=>withUserRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));await act(async()=>{if(failure==='http')calls[index].resolve({ok:false,status:503,json:async()=>[{id:1,name:'Must not render'}]});else if(failure==='network')calls[index].reject(new Error('Offline'));else calls[index].resolve({ok:true,status:200,json:async()=>{throw new Error('Bad JSON');}});});await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(within(scope).queryByText('Loading users…')).toBeNull();expect(fetchedNames(scope)).toEqual([]);fireEvent.change(within(scope).getByLabelText('Filter users'),{target:{value:'still local'}});expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('each mounted list fetches for itself and an old response cannot replace a fresh list',async()=>withUserRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await fulfillUsers(calls[1],[{id:1,name:'Right'}]);await fulfillUsers(calls[0],[{id:1,name:'Left'}]);expect(fetchedNames(a)).toEqual(['Left']);expect(fetchedNames(b)).toEqual(['Right']);root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await fulfillUsers(calls[3],[]);await fulfillUsers(calls[2],[{id:2,name:'Stale'}]);expect(fetchedNames(fresh.container)).toEqual([]);expect(within(fresh.container).queryByText('Loading users…')).toBeNull();}));
+`,
   },
   "react-refresh-data": {
     solution: `const App = () => {
@@ -2777,7 +2821,9 @@ test('concurrent tabs never share ids or selection and fresh mount resets',()=>{
 `,
   },
   "react-accordion": {
-    solution: `const sections = [
+    solution: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2785,10 +2831,13 @@ test('concurrent tabs never share ids or selection and fresh mount resets',()=>{
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
   const toggle = id => setOpenId(current => current === id ? null : id);
-  return <>{sections.map(section => <section key={section.id}><button onClick={() => toggle(section.id)}>{section.title}</button>{openId === section.id && <p>{section.body}</p>}</section>)}</>;
+  return <>{sections.map(section => <section key={section.id}><h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>{openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}</section>)}</>;
 };`,
-    junior: `const sections = [
+    junior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2796,6 +2845,7 @@ const App = () => {
 
 const App = () => {
   const [openSectionId, setOpenSectionId] = useState(null);
+  const idPrefix = useId();
 
   const handleToggle = (sectionId) => {
     if (openSectionId === sectionId) {
@@ -2810,11 +2860,11 @@ const App = () => {
       {sections.map(section => {
         let body = null;
         if (section.id === openSectionId) {
-          body = <p>{section.body}</p>;
+          body = <p id={idPrefix + '-' + section.id}>{section.body}</p>;
         }
         return (
           <section key={section.id}>
-            <button onClick={() => handleToggle(section.id)}>{section.title}</button>
+            <h3><button type="button" aria-expanded={openSectionId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => handleToggle(section.id)}>{section.title}</button></h3>
             {body}
           </section>
         );
@@ -2822,14 +2872,16 @@ const App = () => {
     </main>
   );
 };`,
-    senior: `const sections = [
+    senior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
 ];
 
 const AccordionItem = ({ section, open, onToggle }) => {
-  const panelId = \`panel-\${section.id}\`;
+  const panelId = useId();
   return (
     <section>
       <h3>
@@ -2844,7 +2896,6 @@ const AccordionItem = ({ section, open, onToggle }) => {
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
-  // Clicking the open header closes it; clicking another swaps in one step
   const toggle = useCallback(id => setOpenId(current => (current === id ? null : id)), []);
   return (
     <main>
@@ -2854,6 +2905,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const accordionTitles=['Shipping','Returns','Support'],accordionBodies=['Ships within two days','Returns stay open for thirty days','Support answers every weekday'];
+const checkAccordion=(scope,open,ids)=>{const buttons=Array.from(scope.querySelectorAll('button'));expect(buttons).toHaveLength(3);buttons.forEach((b,i)=>{expect(within(scope).getByRole('button',{name:accordionTitles[i]})).toBe(b);const heading=within(scope).getByRole('heading',{name:accordionTitles[i]});expect(heading.contains(b)).toBe(true);expect(b.type).toBe('button');expect(b.getAttribute('aria-expanded')).toBe(String(i===open));expect(b.getAttribute('aria-controls')).toBe(ids[i]);});expect(new Set(ids).size).toBe(3);expect(ids.every(id=>typeof id==='string'&&id.length>0)).toBe(true);const paragraphs=Array.from(scope.querySelectorAll('p'));expect(paragraphs.map(p=>p.textContent)).toEqual(open===null?[]:[accordionBodies[open]]);if(open!==null)expect(document.getElementById(ids[open])).toBe(paragraphs[0]);return buttons;};
+test('thirty-six repeated and switched panels keep stable relationships and focus',()=>{const {container,rerender}=render(<App/>);const ids=Array.from(container.querySelectorAll('button')).map(b=>b.getAttribute('aria-controls'));let open=null,buttons=checkAccordion(container,open,ids);for(let i=0;i<36;i++){const index=[2,2,0,1,1,2,0,0,1][i%9];buttons[index].focus();fireEvent.click(buttons[index]);open=open===index?null:index;buttons=checkAccordion(container,open,ids);expect(document.activeElement).toBe(buttons[index]);rerender(<App/>);checkAccordion(container,open,ids);}});
+test('concurrent accordions have unique targets and independent panels',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),ai=Array.from(a.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls')),bi=Array.from(b.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));expect(new Set([...ai,...bi]).size).toBe(6);const aa=checkAccordion(a,null,ai),bb=checkAccordion(b,null,bi);fireEvent.click(aa[0]);fireEvent.click(bb[1]);checkAccordion(a,0,ai);checkAccordion(b,1,bi);fireEvent.click(aa[2]);checkAccordion(a,2,ai);checkAccordion(b,1,bi);});
+test('a fresh accordion starts with every body absent',()=>{const a=render(<App/>);fireEvent.click(a.container.querySelector('button'));a.unmount();const b=render(<App/>),ids=Array.from(b.container.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));checkAccordion(b.container,null,ids);});
+`,
   },
   "react-star-rating": {
     solution: `const stars = [1, 2, 3, 4, 5];

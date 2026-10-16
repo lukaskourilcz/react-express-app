@@ -214,7 +214,7 @@ const App = () => {
 
 export default App;
 `,
-  'react-accordion': `import React, { useState } from 'react';
+  'react-accordion': `import React, { useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -224,6 +224,7 @@ const sections = [
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
 
   const toggle = id => {
     setOpenId(current => (current === id ? null : id));
@@ -234,8 +235,8 @@ const App = () => {
       <h2>Accordion</h2>
       {sections.map(section => (
         <section key={section.id}>
-          <button onClick={() => toggle(section.id)}>{section.title}</button>
-          {openId === section.id && <p>{section.body}</p>}
+          <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+          {openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}
         </section>
       ))}
     </main>
@@ -414,31 +415,33 @@ const App = () => {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
+    item.name.toLowerCase().includes(query.trim().toLowerCase())
   );
 
   return (
     <main>
       <h2>Filter fetched users</h2>
-      {loading && <p>Loading…</p>}
+      {loading && <p role="status">Loading users…</p>}
       {error && <p role="alert">{error}</p>}
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleItems.map(item => (
           <li key={item.id}>{item.name}</li>
@@ -743,12 +746,12 @@ const names = ['Ana', 'Daniel', 'John'];
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const visibleNames = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
+  const visibleNames = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <main>
       <h2>Search a list</h2>
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleNames.map(name => (
           <li key={name}>{name}</li>

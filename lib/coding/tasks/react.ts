@@ -509,7 +509,7 @@ test('removing the middle todo preserves the others in order',()=>{const {contai
     tier: 1,
     focus: ["derived-state", "filter"],
     title: "Search a list",
-    prompt: "Filter the names declared in the starter with a text input, rendering the matches as LI items — all three before anything is typed. Matching ignores case, so typing ANA still leaves Ana on screen.",
+    prompt: "Filter the fixed starter names with a controlled native text/search input named `Search names`. Start with all three exact LI texts in starter order. Match a literal substring after query.trim().toLowerCase() against each name.toLowerCase();preserve the raw query in the input. Thus `an` or ` AN ` shows Ana and Daniel. Treat punctuation literally,not as a regular expression. Queries may have up to 2000 UTF16 units. Empty/whitespace query restores all names;no match gives zero LI rows,with either an empty UL or the existing No matches message. Derive matches from the unchanged source on every render. Surviving visible LI nodes keep their identity as the query changes;previously removed rows may mount again when restored. Ordinary parent re-renders preserve the query;separate and fresh mounts start with an empty query and all names. No extra data prop or CSS style is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const names = ['Ana', 'Daniel', 'John'];
@@ -525,15 +525,15 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [query, setQuery] = useState('');
-const visibleNames = names.filter(name => /* name includes query, both in lower case */);
+const visibleNames = names.filter(name => /* name includes the trimmed query, both in lower case */);
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleNames.map(name => (
     <li key={name}>{name}</li>
   ))}
 </ul>`,
-    hints: ["Store only the query. Derive filtered names during render."],
+    hints: ["Store the raw query,trim/lowercase only for matching,and derive from the unchanged names. Label the input Search names."],
     approach: [
       "Store only the query string in useState; the names list is a constant that never changes.",
       "Bind the input to that query state so every keystroke updates it.",
@@ -543,7 +543,7 @@ const visibleNames = names.filter(name => /* name includes query, both in lower 
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows every name before typing', () => {
@@ -557,6 +557,9 @@ test('filters as the user types, ignoring case', () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ana');
 });
+
+test('substring matching restores the full list after clearing',()=>{const {container}=render(<App/>),input=container.querySelector('input');fireEvent.change(input,{target:{value:'an'}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel']);fireEvent.change(input,{target:{value:''}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel','John']);});
+
 `,
   },
   {
@@ -1191,7 +1194,7 @@ test('shows details only after a user is selected', async () => {
     tier: 2,
     focus: ["derived-state", "filter", "fetch"],
     title: "Filter fetched users",
-    prompt: "Fetch the users once, then filter the rendered LI list with a text input, ignoring case. The filtering happens locally: do not send a new request on every keystroke.",
+    prompt: "Fetch https://jsonplaceholder.typicode.com/users once per normal mounted instance,then filter locally without another request on input or ordinary parent renders. GET is the default;development Strict Mode may deliberately repeat effect setup/cleanup. Always render a controlled native text/search input named `Filter users` and a UL. While the request or JSON body is pending,show `Loading users\u2026` as a status. Check response.ok before awaiting response.json(). Success returns a dense read-only array of up to 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units;names may repeat or be empty. Show each exact literal name as an LI in response order,with stable id keys. Match name.toLowerCase() against query.trim().toLowerCase() as a literal substring while preserving raw input;queries may be up to 2000 units. Typing before data arrives filters the eventual data using the latest query. Preserve surviving visible LI nodes and do not mutate response data. HTTP,network or JSON failure ends loading,keeps an empty list and shows `Could not load users.` as an alert;typing never retries. Clean up the effect so a removed instance ignores late results. Separate/fresh mounts own their requests,query and empty initial list. The API stub is local;no production user data or backend setup is needed.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1211,43 +1214,45 @@ const [error, setError] = useState('');
 const [query, setQuery] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items.filter(item =>
-  /* the user's name includes query, both in lower case */
+  /* the user's name includes the trimmed query, both in lower case */
 );
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleItems.map(item => (
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Fetch once. Filter locally from users and query—do not fetch on every keystroke."],
+    hints: ["Fetch once per ordinary mount,handle loading/status/JSON failures,and ignore late results after cleanup. Filter the current data locally using a trimmed query;typing must not refetch."],
     approach: [
       "Fetch the users once in an effect with an empty dependency array; the query must not be a dependency.",
-      "Hold the search text in its own useState value bound to a controlled input.",
-      "Derive the visible list during render by filtering the fetched users on a case-insensitive substring match.",
+      "Keep the controlled Filter users input available while loading. Track loading/error;check response.ok,catch failures and clean up late results.",
+      "Derive the visible list during render from the fetched users and current trimmed,lowercase query,without changing either source value.",
       "Map only that derived list, so typing never triggers another network request.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('filters the fetched users locally', async () => {
@@ -1257,6 +1262,13 @@ test('filters the fetched users locally', async () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ervin Howell');
 });
+
+const withUserRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),options,resolve,reject}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const fulfillUsers=async(call,data)=>{await act(async()=>{call.resolve({ok:true,status:200,json:async()=>data});});};
+const fetchedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('typing filters the actual response without another request',async()=>withUserRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await fulfillUsers(calls[0],[{id:1,name:'Delta'},{id:2,name:'River'}]);const input=container.querySelector('input');fireEvent.change(input,{target:{value:'IV'}});expect(fetchedNames(container)).toEqual(['River']);expect(calls).toHaveLength(1);}));
+
 `,
     api: {
       method: "GET",
@@ -2334,8 +2346,8 @@ test('ArrowLeft wraps focus and selection to Alerts',()=>{const {container}=rend
     tier: 3,
     focus: ["derived-state", "useState"],
     title: "Accordion",
-    prompt: "Render the three sections declared in the starter, each a header button with a body paragraph. No body shows at first; clicking a header opens that one, and opening a second closes the first — never two bodies at once.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: "Render the three starter sections in order with their exact titles and bodies. Each title is one native type-button control inside a heading,such as h3. Initially no body paragraph exists. Clicking opens that section and closes any other;clicking the already-open header closes it,so at most one paragraph exists. Every repeated choice,including Support,works. Set each button's aria-expanded to its actual open state and aria-controls to a nonempty stable panel id made with useId. The open paragraph has that id and exact body text. Targets are distinct within and across mounted accordions. Keep focus on the native header after activation;native Enter/Space and Tab behavior need no duplicate key handlers. Ordinary parent re-renders preserve state and ids;independent/fresh mounts start closed. No additional arrow-key or region-landmark behavior is required.",
+    starter: `import React, { useEffect, useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -2354,6 +2366,7 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [openId, setOpenId] = useState(null);
+const idPrefix = useId();
 
 const toggle = id => {
   setOpenId(current => /* null when id is already open, otherwise id */);
@@ -2361,11 +2374,11 @@ const toggle = id => {
 
 {sections.map(section => (
   <section key={section.id}>
-    <button onClick={() => toggle(section.id)}>{section.title}</button>
-    {/* the body in a paragraph, only while section.id is openId */}
+    <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+    {/* the body in a paragraph with id idPrefix + '-' + section.id, only while open */}
   </section>
 ))}`,
-    hints: ["Store the id of the single open section rather than a flag on every one."],
+    hints: ["Store the single open id,or null. Give heading buttons expanded state and stable useId panel targets;clicking the same header closes it."],
     approach: [
       "Keep one state value holding the id of the open section, starting as null because every section begins closed.",
       "Map the sections to a heading button each, deciding whether a section is open by comparing its id with the stored one.",
@@ -2376,7 +2389,7 @@ const toggle = id => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts with every section closed', () => {
@@ -2401,6 +2414,9 @@ test('opening one section closes the other', () => {
   expect(container.textContent).toContain('thirty days');
   expect(container.textContent).not.toContain('Ships within two days');
 });
+
+test('the current Support panel can close again',()=>{const {container}=render(<App/>),buttons=Array.from(container.querySelectorAll('button'));fireEvent.click(buttons[2]);expect(Array.from(container.querySelectorAll('p')).map(p=>p.textContent)).toEqual(['Support answers every weekday']);fireEvent.click(buttons[2]);expect(container.querySelector('p')).toBeNull();});
+
 `,
   },
   {

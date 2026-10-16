@@ -325,7 +325,7 @@ test('a failure keeps the photos and Try again asks for the same page', () => wi
     tier: 3,
     focus: ['derived-state', 'accessibility', 'events'],
     title: 'Sort a table by any column',
-    prompt: 'The table of top scorers should sort by whichever column you choose. Each column header holds a button. The first click on a column sorts the rows by it, ascending; the next click on the same column sorts descending, and the one after that ascending again. A click on a different column sorts by that column, ascending. The sorted column’s `th` carries `aria-sort="ascending"` or `aria-sort="descending"`, and the other headers carry no `aria-sort` at all, so a screen reader can announce how the table is sorted. Keep only the column and the direction in state, and sort a copy of `PLAYERS` while rendering: `PLAYERS` itself never changes order. Names and teams compare with `localeCompare`, goals as numbers, and rows that tie keep their order from `PLAYERS` in both directions. Before the first click, the rows are in `PLAYERS` order.',
+    prompt: "The table of top scorers should sort by whichever column you choose. Each column header holds a button. The first click on a column sorts the rows by it, ascending; the next click on the same column sorts descending, and the one after that ascending again. A click on a different column sorts by that column, ascending. The sorted column\u2019s `th` carries `aria-sort=\"ascending\"` or `aria-sort=\"descending\"`, and the other headers carry no `aria-sort` at all, so a screen reader can announce how the table is sorted. Keep only the column and the direction in state, and sort a copy of `PLAYERS` while rendering: `PLAYERS` itself never changes order. Names and teams compare with `localeCompare`, goals as numbers, and rows that tie keep their order from `PLAYERS` in both directions. Before the first click, the rows are in `PLAYERS` order. Keep the original caption,headers and exact name/team/goals cells. Header controls are native type-button elements inside scope=col headers. Use stable player identities so each surviving TR node follows its player through every reorder. Repeat mixed column choices for any number of clicks;ordinary parent re-renders preserve the current sort. Simultaneous tables own their sort choices and fresh mounts start unsorted in the original PLAYERS order. Copy/sort,toSorted or an equivalent immutable stable operation is fine;no one comparison implementation is required.",
     starter: `import React, { useState } from 'react';
 
 export const PLAYERS = [
@@ -432,6 +432,9 @@ test('text columns sort as text', () => {
   sortBy('Team');
   expect(names()).toEqual(['Ali', 'Ben', 'Mia', 'Zoe']);
 });
+
+test('every row node follows its player when names reorder',()=>{const {container}=render(<App/>);const before=new Map(Array.from(container.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr]));sortBy('Name');for(const tr of container.querySelectorAll('tbody tr'))expect(tr).toBe(before.get(tr.cells[0].textContent));});
+
 `,
   },
   {
