@@ -7,7 +7,7 @@ function calculateWithVariables(expression,variables){let valid=true;const sourc
  `function runProgram(lines){const variables=Object.create(null),results=[];for(const line of lines){const assignment=/^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=([^=]*)$/.exec(line);const value=calculateWithVariables(assignment?assignment[2]:line,variables);if(value===null)return null;if(assignment)variables[assignment[1]]=value;results.push(value)}return {variables,results}}`,
  ],
  'js-evolving-query': [
- `function groupRows(rows,field,valueField){const groups=[];for(const row of rows){let g=groups.find(g=>g.key===row[field]);if(!g){g={key:row[field],count:0,sum:0};groups.push(g)}g.count++;if(typeof row[valueField]==='number'&&Number.isFinite(row[valueField]))g.sum+=row[valueField]}return groups}`,
+ `function groupRows(rows,field,valueField){const groups=[],byKey=new Map();for(const row of rows){const key=row[field];let g=key===key?byKey.get(key):undefined;if(!g){g={key,count:0,sum:0};groups.push(g);if(key===key)byKey.set(key,g)}g.count++;if(typeof row[valueField]==='number'&&Number.isFinite(row[valueField]))g.sum+=row[valueField]}return groups}`,
  `function joinRows(left,right,leftKey,rightKey,mode='inner'){return left.flatMap(l=>{const matches=right.filter(r=>l[leftKey]===r[rightKey]);return matches.length?matches.map(r=>({left:l,right:r})):mode==='left'?[{left:l,right:null}]:[]})}`,
  ],
  'js-evolving-events': [
@@ -111,17 +111,14 @@ function calculateWithVariables(expression, variables) {
  'js-evolving-query': [
  `function groupRows(rows, field, valueField) {
   const groups = [];
+  const byKey = new Map();
   for (const row of rows) {
     const key = row[field];
-    let group = null;
-    for (const candidate of groups) {
-      if (candidate.key === key) {
-        group = candidate;
-      }
-    }
-    if (group === null) {
+    let group = key === key ? byKey.get(key) : undefined;
+    if (group === undefined) {
       group = { key: key, count: 0, sum: 0 };
       groups.push(group);
+      if (key === key) byKey.set(key, group);
     }
     group.count = group.count + 1;
     const amount = row[valueField];
@@ -486,11 +483,13 @@ function runProgram(lines) {
   const groups = new Map();
   for (const row of rows) {
     const key = row[field];
-    const group = groups.get(key) ?? { key, count: 0, sum: 0 };
+    // A private fresh slot keeps each NaN separate under the task's === rule.
+    const slot = key === key ? key : Symbol();
+    const group = groups.get(slot) ?? { key, count: 0, sum: 0 };
     group.count += 1;
     // Number.isFinite never coerces, so numeric strings and other values are skipped.
     if (Number.isFinite(row[valueField])) group.sum += row[valueField];
-    groups.set(key, group);
+    groups.set(slot, group);
   }
   return [...groups.values()];
 }`,
@@ -499,11 +498,13 @@ function runProgram(lines) {
   const byKey = new Map();
   for (const row of right) {
     const key = row[rightKey];
+    if (key !== key) continue; // NaN never matches under ===.
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key).push(row);
   }
   return left.flatMap(row => {
-    const matches = byKey.get(row[leftKey]) ?? [];
+    const key = row[leftKey];
+    const matches = key === key ? byKey.get(key) ?? [] : [];
     if (matches.length > 0) return matches.map(match => ({ left: row, right: match }));
     return mode === 'left' ? [{ left: row, right: null }] : [];
   });
