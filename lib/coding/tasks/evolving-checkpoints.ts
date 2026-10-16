@@ -352,28 +352,34 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ),
     ),
     step(
-      'Add update(fn:(value:T)=>T):void. Apply fn to the current state and pass its result through set.',
+      "Add update(fn:(value:T)=>T):void. Apply fn to the current state and pass its result through set. Keep the earlier exact opaque state and detached get/set rules. update also works detached: call fn synchronously exactly once with the original current value, then store its exact return reference/value through set without cloning, coercion or awaiting. Callbacks do not throw, change this store themselves or depend on this. No subscriptions or history are required yet. Preserve update(fn:(value:T)=>T):void. Target: O(1) time and O(1) extra storage for update itself, excluding callback work and opaque state storage.",
       'Přidej update(fn:(value:T)=>T):void. Zavolej fn s aktuálním stavem a výsledek předej do set.',
-      calls([
+      calls(
+        ["(()=>{let count=0;const s=createStore(1);s.update(v=>{count++;return v+1;});return [s.get(),count];})()",[2, 1]],[
         '(()=>{const s=createStore(1);s.update(n=>n+2);return s.get()})()',
         3,
       ]),
+      { additionalTypeTests: [{"code": "{const s=createStore(1);const update:(fn:(v:number)=>number)=>void=s.update;const empty:void=update((n:number)=>n+1);}"}, {"code": "{createStore(1).update((n:number)=>String(n));}", "rejects": true}] },
     ),
     step(
-      'Add undo():boolean. Each actual set/update records the prior value; undo restores it and notifies subscribers once. Return false without notifying when history is empty.',
+      "Add undo():boolean. Each actual set/update records the prior value; undo restores it and notifies subscribers once. Return false without notifying when history is empty. Keep all earlier opaque-state, Object.is, independent snapshot subscription and nonthrowing/nonreentrant callback rules. Save original state references without cloning; undo restores that exact prior value and notifies once, or returns false without notification/history changes when unavailable. Equal set/update creates no undo entry. No redo is required here. Methods work detached. Do not impose a fixed history cap; this task uses at most 10000 state-changing calls and 256 live subscriptions. Target: O(n) time per state operation, amortized in the usual array append/pop model, and O(h+n) space for retained history and registrations, where n is one plus live subscriptions and h is one plus retained past states; get is O(1). Callback work and opaque state contents are excluded.",
       'Přidej undo():boolean. Každá skutečná změna set/update uloží původní hodnotu; undo ji obnoví a jednou informuje odběratele. Bez historie vrať false bez oznámení.',
-      calls([
+      calls(
+        ["(()=>{const first=[],s=createStore(first);s.set([1]);s.undo();return s.get()===first;})()",true],[
         '(()=>{const s=createStore(0);s.set(1);return [s.undo(),s.get(),s.undo()]})()',
         [true, 0, false],
       ]),
+      { additionalTypeTests: [{"code": "{const flag:boolean=createStore(1).undo();}"}, {"code": "{const bad:string=createStore(1).undo();}", "rejects": true}] },
     ),
     step(
-      'Add selectStore<T,U>(store,select:(value:T)=>U) with get():U. Subscribe to the source and keep the selected value current after source changes.',
+      "Add selectStore<T,U>(store,select:(value:T)=>U) with get():U. Subscribe to the source and keep the selected value current after source changes. Accept any source with get():T and subscribe(fn:(value:T)=>void):()=>void; do not require other createStore methods. A source does not emit on subscribe and sends its current original value synchronously on each change. Compute select once from source.get() during creation and once per notification from its supplied value. get returns the same cached opaque U until a notification, without rereading the source, recomputing, cloning or awaiting it. Selectors do not throw, change the source or depend on this. This checkpoint needs only get; derived subscribers/dispose come next. Target: O(1) time and O(1) extra space for own work per creation, notification or get, excluding selector execution, source get/subscribe/notification work and opaque payload storage.",
       'Přidej selectStore<T,U>(store,select:(value:T)=>U) s get():U. Přihlas se ke zdroji a po jeho změnách udržuj vybranou hodnotu aktuální.',
-      calls([
+      calls(
+        ["(()=>{let count=0;const s=createStore(1),d=selectStore(s,v=>{count++;return [v];}),first=d.get();return d.get()===first&&count===1;})()",true],[
         '(()=>{const s=createStore({n:1}),d=selectStore(s,x=>x.n);s.set({n:2});return d.get()})()',
         2,
       ]),
+      { additionalTypeTests: [{"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const value:string=d.get();}"}, {"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const bad:number=d.get();}", "rejects": true}] },
     ),
     step(
       'Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw.',
