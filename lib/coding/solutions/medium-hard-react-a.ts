@@ -398,11 +398,12 @@ test('ordinary product and line buttons retain order through removal and re-addi
 `,
   },
   'react-mh-load-more': {
-    solution: `import React, { useEffect, useState } from 'react';
+    solution: `import React, { useRef, useEffect, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [photos, setPhotos] = useState([]);
   // The last page on screen: the next request asks for page + 1.
   const [page, setPage] = useState(0);
@@ -410,21 +411,29 @@ const App = () => {
   const [status, setStatus] = useState('loading');
 
   const load = (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     setStatus('loading');
     fetch('/api/photos?page=' + number)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
       .then((next) => {
+        if (!current) return;
         // The updater form appends to whatever is on screen when the answer arrives.
         setPhotos((shown) => [...shown, ...next]);
         setPage(number);
         // A short page is the last one.
         setStatus(next.length < PAGE_SIZE ? 'done' : 'ready');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => { if (current) setStatus('error'); });
   };
 
   useEffect(() => {
     load(1);
+    return () => cancel.current();
   }, []);
 
   return <main>
@@ -445,11 +454,12 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useEffect, useState } from 'react';
+    junior: `import React, { useRef, useEffect, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [photos, setPhotos] = useState([]);
   const [lastPage, setLastPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -457,24 +467,30 @@ const App = () => {
   const [finished, setFinished] = useState(false);
 
   const loadPage = async (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     setLoading(true);
     setFailed(false);
     try {
       const response = await fetch('/api/photos?page=' + number);
+      if (!response.ok) throw new Error('Request failed');
       const newPhotos = await response.json();
+      if (!current) return;
       setPhotos((oldPhotos) => [...oldPhotos, ...newPhotos]);
       setLastPage(number);
       if (newPhotos.length < PAGE_SIZE) {
         setFinished(true);
       }
     } catch (error) {
-      setFailed(true);
+      if (current) setFailed(true);
     }
-    setLoading(false);
+    if (current) setLoading(false);
   };
 
   useEffect(() => {
     loadPage(1);
+    return () => cancel.current();
   }, []);
 
   let buttonText = 'Load more';
@@ -504,7 +520,7 @@ const App = () => {
 };
 
 export default App;`,
-    senior: `import React, { useCallback, useEffect, useReducer } from 'react';
+    senior: `import React, { useRef, useCallback, useEffect, useReducer } from 'react';
 
 const PAGE_SIZE = 3;
 const LABELS = { loading: 'Loading…', ready: 'Load more', error: 'Try again' };
@@ -527,21 +543,27 @@ const reducer = (state, action) => {
 };
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [{ photos, page, status }, dispatch] = useReducer(reducer, { photos: [], page: 0, status: 'loading' });
 
   const load = useCallback(async (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     dispatch({ type: 'request' });
     try {
       const response = await fetch('/api/photos?page=' + number);
       if (!response.ok) throw new Error('HTTP ' + response.status);
-      dispatch({ type: 'page', page: number, photos: await response.json() });
+      const next = await response.json();
+      if (current) dispatch({ type: 'page', page: number, photos: next });
     } catch {
-      dispatch({ type: 'failure' });
+      if (current) dispatch({ type: 'failure' });
     }
   }, []);
 
   useEffect(() => {
     load(1);
+    return () => cancel.current();
   }, [load]);
 
   return (
@@ -612,7 +634,13 @@ test('a full page keeps the button until an empty one ends the list', () => with
   await act(async () => { calls[2].respond([]); });
   expect(titles()).toHaveLength(6);
   expect(screen.getByText('That’s everything')).toBeTruthy();
-}));`,
+}));
+
+
+test('JSON and offline errors keep the prefix, retry and continue beyond page three',()=>auditTransport(async calls=>{const view=render(<App/>);let expected=[];for(let page=1;page<=5;page++){let call=calls[calls.length-1];expect(call.url).toBe('/api/photos?page='+page);if(page===1||page===3){await act(async()=>{if(page===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual(expected);expect(within(view.container).getByRole('alert')).toBeTruthy();auditClick(view,'Try again');call=calls[calls.length-1];expect(call.url).toBe('/api/photos?page='+page);expect(within(view.container).queryByRole('alert')).toBeNull();}const data=auditData(page*100,page===5?1:3);await auditReply(call,data);expected=expected.concat(data.map(x=>x.title));expect(auditRows(view)).toEqual(expected);if(page<5){auditClick(view,'Load more');const count=calls.length;fireEvent.click(auditButton(view,'Loading…'));expect(calls).toHaveLength(count);}}expect(within(view.container).getByText('That’s everything')).toBeTruthy();expect(within(view.container).queryByRole('button')).toBeNull();}));
+test('normal parent renders do not refetch or lose appended photos',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,3),second=auditData(10,3);await auditReply(calls[0],first);view.rerender(<App/>);expect(calls).toHaveLength(1);auditClick(view,'Load more');await auditReply(calls[1],second);view.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditRows(view)).toEqual(first.concat(second).map(x=>x.title));}));
+test('late responses from an unmounted app do not contaminate a separate or fresh app',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[0],auditData(1,3));auditClick(a,'Load more');a.unmount();await auditReply(calls[2],auditData(80,3));await auditReply(calls[1],auditData(20,1));expect(auditRows(b)).toEqual(auditData(20,1).map(x=>x.title));b.unmount();const fresh=render(<App/>);expect(calls[calls.length-1].url).toBe('/api/photos?page=1');await auditReply(calls[calls.length-1],[]);expect(auditRows(fresh)).toEqual([]);expect(within(fresh.container).queryByRole('button')).toBeNull();}));
+`,
   },
   'react-mh-sortable-table': {
     solution: `import React, { useState } from 'react';

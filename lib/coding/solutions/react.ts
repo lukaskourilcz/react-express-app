@@ -2238,23 +2238,55 @@ test('separate mounted requests own distinct signals and an old removal does not
   "react-paginated-posts": {
     solution: `const App = () => {
   const [posts, setPosts] = useState([]); const [page, setPage] = useState(1); const pageSize = 5;
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/posts').then(r => r.json()).then(setPosts); }, []);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setStatus('loading');
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => {
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (active) setStatus('error'); });
+    return () => { active = false; };
+  }, [attempt]);
   const visible = posts.slice((page - 1) * pageSize, page * pageSize);
-  return <><ul>{visible.map(post => <li key={post.id}>{post.title}</li>)}</ul><button disabled={page === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button disabled={page * pageSize >= posts.length} onClick={() => setPage(value => value + 1)}>Next</button></>;
+  return <>{status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}<ul>{visible.map(post => <li key={post.id}>{post.title}</li>)}</ul><button type="button" disabled={page === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button type="button" disabled={page * pageSize >= posts.length} onClick={() => setPage(value => value + 1)}>Next</button></>;
 };`,
     junior: `const App = () => {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setStatus('loading');
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
-      const data = await response.json();
-      setPosts(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
     };
     loadPosts();
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
@@ -2283,11 +2315,13 @@ test('separate mounted requests own distinct signals and an old removal does not
 
   return (
     <main>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>
         {postsOnPage.map(post => <li key={post.id}>{post.title}</li>)}
       </ul>
-      <button onClick={handlePrevious} disabled={isFirstPage}>Previous</button>
-      <button onClick={handleNext} disabled={isLastPage}>Next</button>
+      <button type="button" onClick={handlePrevious} disabled={isFirstPage}>Previous</button>
+      <button type="button" onClick={handleNext} disabled={isLastPage}>Next</button>
     </main>
   );
 };`,
@@ -2297,7 +2331,7 @@ const PAGE_SIZE = 5;
 const usePagination = (items, pageSize) => {
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
-  const current = Math.min(page, pageCount); // stays valid even if the list shrinks
+  const current = Math.min(page, pageCount);
   const slice = useMemo(() => items.slice((current - 1) * pageSize, current * pageSize), [items, current, pageSize]);
   return {
     page: current,
@@ -2310,16 +2344,32 @@ const usePagination = (items, pageSize) => {
 
 const App = () => {
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    fetch(POSTS_URL).then(response => response.json()).then(data => { if (active) setPosts(data); });
+    setPosts([]);
+    setStatus('loading');
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => {
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (active) setStatus('error'); });
     return () => { active = false; };
-  }, []);
+  }, [attempt]);
 
   const { page, pageCount, slice, previous, next } = usePagination(posts, PAGE_SIZE);
 
   return (
     <main>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>{slice.map(post => <li key={post.id}>{post.title}</li>)}</ul>
       <nav aria-label="Pagination">
         <button type="button" onClick={previous} disabled={page === 1}>Previous</button>
@@ -2329,6 +2379,13 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('empty, full and partial boundaries retain order and literal titles',()=>auditTransport(async calls=>{for(const size of [0,1,5,6,10,11,37,50]){const view=render(<App/>),call=calls[calls.length-1],data=auditData(300,size),count=Math.max(1,Math.ceil(size/5));await auditReply(call,data);const requests=calls.length;for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(data.slice((page-1)*5,page*5).map(x=>x.title));expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');for(let page=count;page>1;page--)auditClick(view,'Previous');auditClick(view,'Previous');expect(auditRows(view)).toEqual(data.slice(0,5).map(x=>x.title));expect(calls).toHaveLength(requests);view.unmount();}}));
+test('HTTP, JSON and offline failures clear on retry and allow successful paging',()=>auditTransport(async calls=>{const view=render(<App/>);for(let failure=0;failure<3;failure++){const call=calls[calls.length-1];await act(async()=>{if(failure===0)call.reply(auditData(1,10),false);else if(failure===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual([]);expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');auditClick(view,'Try again');expect(within(view.container).queryByRole('alert')).toBeNull();expect(calls[calls.length-1].url).toBe('https://jsonplaceholder.typicode.com/posts');}const data=auditData(1,12);await auditReply(calls[calls.length-1],data);auditClick(view,'Next');expect(auditRows(view)).toEqual(data.slice(5,10).map(x=>x.title));}));
+test('rerenders retain the page, while separate and fresh roots start their own fetch',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>),data=auditData(1,12);await auditReply(calls[0],data);await auditReply(calls[1],data.slice(0,1));auditClick(a,'Next');a.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditRows(a)).toEqual(data.slice(5,10).map(x=>x.title));expect(auditRows(b)).toEqual(data.slice(0,1).map(x=>x.title));a.unmount();b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(3);await auditReply(calls[2],data);expect(auditRows(fresh)).toEqual(data.slice(0,5).map(x=>x.title));}));
+`,
   },
   "react-dependent-fetch": {
     solution: `const App = () => {

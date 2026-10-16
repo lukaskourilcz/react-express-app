@@ -1399,7 +1399,7 @@ const App = ({ recipes = allRecipes }) => {
   return <main>
     <h2>The results line</h2>
     <ul>
-      {recipes.slice(start, start + PAGE_SIZE).map((recipe) => <li key={recipe}>{recipe}</li>)}
+      {recipes.slice(start, start + PAGE_SIZE).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
     </ul>
     <p>{line}</p>
     <button type="button" disabled={page <= 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1437,7 +1437,7 @@ const App = ({ recipes = allRecipes }) => {
     <main>
       <h2>The results line</h2>
       <ul>
-        {visible.map((recipe) => <li key={recipe}>{recipe}</li>)}
+        {visible.map((recipe, index) => <li key={start + index}>{recipe}</li>)}
       </ul>
       <p>{line}</p>
       <button type="button" disabled={isFirstPage} onClick={() => setPage(page - 1)}>Previous</button>
@@ -1466,7 +1466,7 @@ const App = ({ recipes = allRecipes }) => {
     <main>
       <h2>The results line</h2>
       <ul>
-        {recipes.slice(start, end).map((recipe) => <li key={recipe}>{recipe}</li>)}
+        {recipes.slice(start, end).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
       </ul>
       <p>{describeRange(start + 1, end, total)}</p>
       <button type="button" disabled={page <= 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1500,7 +1500,13 @@ test('one short page', () => {
   const { container } = render(<App recipes={['A', 'B', 'C']} />);
   expect(line(container)).toBe('Showing 1 to 3 of 3 recipes');
   expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true);
-});`,
+});
+
+
+test('all boundary lengths and duplicate literal rows agree with their ranges',()=>{for(const size of [0,1,4,5,8,10,37]){const recipes=Object.freeze(Array.from({length:size},(_,i)=>i%3===0?' repeat ':i%3===1?' repeat ':'<recipe>&'+i+'x'.repeat(i===2?450:0)));const view=render(<App recipes={recipes}/>),count=Math.max(1,Math.ceil(size/4));for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(recipes.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe(size?'Showing '+((page-1)*4+1)+' to '+Math.min(page*4,size)+' of '+size+' recipes':'No recipes');expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');expect(auditRows(view)).toEqual(recipes.slice((count-1)*4));for(let page=count;page>1;page--)auditClick(view,'Previous');auditClick(view,'Previous');expect(auditRows(view)).toEqual(recipes.slice(0,4));view.unmount();}});
+test('same-length duplicate replacements derive the current page from current data',()=>{const a=Object.freeze(['x','x','y','y','a','a','b','b','z','z','z','z']),b=Object.freeze(['q','q','r','r','<new>','<new>',' ',' ','t','t','t','t']);const view=render(<App recipes={a}/>);auditClick(view,'Next');view.rerender(<App recipes={b}/>);expect(auditRows(view)).toEqual(b.slice(4,8));auditClick(view,'Next');expect(auditRows(view)).toEqual(b.slice(8,12));view.rerender(<App recipes={a}/>);auditClick(view,'Previous');expect(auditRows(view)).toEqual(a.slice(4,8));});
+test('separate and fresh recipe pagers retain only their own page',()=>{const recipes=Object.freeze(Array.from({length:21},(_,i)=>'R'+i));const a=render(<App recipes={recipes}/>),b=render(<App recipes={recipes}/>);auditClick(a,'Next');a.rerender(<App recipes={recipes}/>);expect(auditRows(a)).toEqual(recipes.slice(4,8));expect(auditRows(b)).toEqual(recipes.slice(0,4));auditClick(b,'Next');auditClick(b,'Next');expect(auditRows(a)).toEqual(recipes.slice(4,8));a.unmount();b.unmount();const fresh=render(<App recipes={recipes}/>);expect(auditRows(fresh)).toEqual(recipes.slice(0,4));});
+`,
   },
   'react-easy3-rows-per-page': {
     solution: `import React, { useState } from 'react';
@@ -1528,7 +1534,7 @@ const App = ({ orders = allOrders }) => {
       <option value="20">20</option>
     </select></label>
     <ul>
-      {orders.slice(start, start + rowsPerPage).map((order) => <li key={order}>{order}</li>)}
+      {orders.slice(start, start + rowsPerPage).map((order, index) => <li key={start + index}>{order}</li>)}
     </ul>
     <p>Page {page} of {pageCount}</p>
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1578,7 +1584,7 @@ const App = ({ orders = allOrders }) => {
         <option value="20">20</option>
       </select></label>
       <ul>
-        {visibleOrders.map((order) => <li key={order}>{order}</li>)}
+        {visibleOrders.map((order, index) => <li key={start + index}>{order}</li>)}
       </ul>
       <p>Page {page} of {pageCount}</p>
       <button type="button" disabled={page === 1} onClick={goBack}>Previous</button>
@@ -1594,7 +1600,6 @@ const allOrders = Array.from({ length: 23 }, (_, index) => 'Order ' + (index + 1
 const SIZES = [5, 10, 20];
 
 const App = ({ orders = allOrders }) => {
-  // Size and page change together, so they live together.
   const [view, setView] = useState({ page: 1, rowsPerPage: SIZES[0] });
   const { page, rowsPerPage } = view;
   const pageCount = Math.max(1, Math.ceil(orders.length / rowsPerPage));
@@ -1611,7 +1616,7 @@ const App = ({ orders = allOrders }) => {
         {SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
       </select></label>
       <ul>
-        {orders.slice(start, start + rowsPerPage).map((order) => <li key={order}>{order}</li>)}
+        {orders.slice(start, start + rowsPerPage).map((order, index) => <li key={start + index}>{order}</li>)}
       </ul>
       <p>Page {page} of {pageCount}</p>
       <button type="button" disabled={page === 1} onClick={() => goTo(page - 1)}>Previous</button>
@@ -1648,7 +1653,13 @@ test('a smaller size also goes back to page 1', () => {
   press('Next');
   pickSize('5');
   expect(rows(container)).toEqual(range(1, 5));
-});`,
+});
+
+
+test('all offered sizes preserve exact ordered data and handle short or empty boundaries',()=>{for(const length of [0,1,5,6,10,20,21,73]){const orders=Object.freeze(Array.from({length},(_,i)=>i%3===0?' repeat ':i%3===1?' repeat ':'<order>&'+i+'x'.repeat(i===2?450:0)));const view=render(<App orders={orders}/>);for(const size of [5,20,10,5]){fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:String(size)}});const count=Math.max(1,Math.ceil(length/size));for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(orders.slice((page-1)*size,page*size));expect(view.container.querySelector('p').textContent).toBe('Page '+page+' of '+count);expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');expect(auditRows(view)).toEqual(orders.slice((count-1)*size));}view.unmount();}});
+test('current same-length duplicate data replaces the chosen slice without resetting',()=>{const orders=Object.freeze(Array.from({length:23},(_,i)=>i%2?'same':'same')),updated=Object.freeze(Array.from({length:23},(_,i)=>i%3?'new':'<different>'));const view=render(<App orders={orders}/>);auditClick(view,'Next');view.rerender(<App orders={updated}/>);expect(auditRows(view)).toEqual(updated.slice(5,10));expect(view.container.querySelector('p').textContent).toBe('Page 2 of 5');fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'10'}});expect(auditRows(view)).toEqual(updated.slice(0,10));auditClick(view,'Next');expect(auditRows(view)).toEqual(updated.slice(10,20));});
+test('separate or fresh order pagers keep independent page and size choices',()=>{const orders=Object.freeze(Array.from({length:41},(_,i)=>'Order '+i));const a=render(<App orders={orders}/>),b=render(<App orders={orders}/>);fireEvent.change(within(a.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'20'}});auditClick(a,'Next');a.rerender(<App orders={orders}/>);expect(auditRows(a)).toEqual(orders.slice(20,40));expect(auditRows(b)).toEqual(orders.slice(0,5));a.unmount();b.unmount();const fresh=render(<App orders={orders}/>);expect(auditRows(fresh)).toEqual(orders.slice(0,5));});
+`,
   },
   'react-easy3-fetch-a-page': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -1658,13 +1669,27 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   // Runs after the first render and after every render in which page changed.
   useEffect(() => {
+    let current = true;
+    setPosts([]);
+    setStatus('loading');
     fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-      .then((response) => response.json())
-      .then((data) => setPosts(data));
-  }, [page]);
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then((data) => {
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (current) setStatus('error'); });
+    return () => { current = false; };
+  }, [page, attempt]);
 
   // The server gives no total: a page shorter than PAGE_SIZE is the last one.
   const lastPage = posts.length < PAGE_SIZE;
@@ -1675,8 +1700,10 @@ const App = () => {
       {posts.map((post) => <li key={post.id}>{post.title}</li>)}
     </ul>
     <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
-    <button type="button" disabled={lastPage} onClick={() => setPage((previous) => previous + 1)}>Next</button>
+    <button type="button" disabled={status !== 'ready' || lastPage} onClick={() => setPage((previous) => previous + 1)}>Next</button>
   </main>;
 };
 
@@ -1688,18 +1715,28 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const url = '/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE;
-
+    let current = true;
+    setPosts([]);
+    setStatus('loading');
     async function loadPage() {
-      const response = await fetch(url);
-      const data = await response.json();
-      setPosts(data);
+      try {
+        const response = await fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      } catch {
+        if (current) setStatus('error');
+      }
     }
-
     loadPage();
-  }, [page]);
+    return () => { current = false; };
+  }, [page, attempt]);
 
   let isFirstPage = false;
   if (page === 1) {
@@ -1718,8 +1755,10 @@ const App = () => {
         {posts.map((post) => <li key={post.id}>{post.title}</li>)}
       </ul>
       <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
       <button type="button" disabled={isFirstPage} onClick={() => setPage(page - 1)}>Previous</button>
-      <button type="button" disabled={isLastPage} onClick={() => setPage(page + 1)}>Next</button>
+      <button type="button" disabled={status !== 'ready' || isLastPage} onClick={() => setPage(page + 1)}>Next</button>
     </main>
   );
 };
@@ -1732,19 +1771,26 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    // A slow answer for a page the reader already left must not replace the current one.
     let current = true;
+    setPosts([]);
+    setStatus('loading');
     fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
       .then((data) => {
-        if (current) setPosts(data);
-      });
-    return () => {
-      current = false;
-    };
-  }, [page]);
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (current) setStatus('error'); });
+    return () => { current = false; };
+  }, [page, attempt]);
 
   return (
     <main>
@@ -1753,8 +1799,10 @@ const App = () => {
         {posts.map((post) => <li key={post.id}>{post.title}</li>)}
       </ul>
       <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
       <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
-      <button type="button" disabled={posts.length < PAGE_SIZE} onClick={() => setPage((previous) => previous + 1)}>Next</button>
+      <button type="button" disabled={status !== 'ready' || posts.length < PAGE_SIZE} onClick={() => setPage((previous) => previous + 1)}>Next</button>
     </main>
   );
 };
@@ -1773,7 +1821,7 @@ test('Previous fetches the page before', () => withFetch(async calls => {
   fireEvent.click(button('Next'));
   await act(async () => { calls[1].respond(posts(6, 5)); });
   fireEvent.click(button('Previous'));
-  expect(calls[2].url).toBe('/api/posts?_page=1&_limit=5');
+  checkPageUrl(calls[2].url, 1);
   await act(async () => { calls[2].respond(posts(1, 5)); });
   expect(titles(container)[0]).toBe('Post 1');
 }));
@@ -1791,7 +1839,13 @@ test('an empty page disables Next', () => withFetch(async calls => {
   await act(async () => { calls[0].respond([]); });
   expect(titles(container)).toEqual([]);
   expect(button('Next').disabled).toBe(true);
-}));`,
+}));
+
+
+test('a late former page cannot overwrite the current page or its error state',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,5),latest=auditData(80,5);await auditReply(calls[0],first);auditClick(view,'Next');expect(auditRows(view)).toEqual([]);expect(auditButton(view,'Next').disabled).toBe(true);expect(auditButton(view,'Previous').disabled).toBe(false);auditClick(view,'Previous');expect(calls).toHaveLength(3);auditPageUrl(calls[2].url,1);await auditReply(calls[2],latest);await auditReply(calls[1],auditData(200,2));expect(auditRows(view)).toEqual(latest.map(x=>x.title));expect(auditButton(view,'Next').disabled).toBe(false);auditClick(view,'Next');auditClick(view,'Previous');await auditReply(calls[4],first);await act(async()=>{calls[3].fail();});expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).queryByRole('alert')).toBeNull();}));
+test('HTTP, JSON and transport failures retry the same page and clear the alert',()=>auditTransport(async calls=>{const view=render(<App/>);for(let failure=0;failure<3;failure++){const call=calls[calls.length-1];auditPageUrl(call.url,1);await act(async()=>{if(failure===0)call.reply(auditData(1,5),false);else if(failure===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual([]);expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');expect(auditButton(view,'Next').disabled).toBe(true);auditClick(view,'Try again');expect(within(view.container).queryByRole('alert')).toBeNull();}await auditReply(calls[calls.length-1],auditData(1,5));for(let page=2;page<=5;page++){auditClick(view,'Next');const call=calls[calls.length-1];auditPageUrl(call.url,page);const data=auditData(page*100,page===5?0:5);await auditReply(call,data);expect(auditRows(view)).toEqual(data.map(x=>x.title));}expect(auditButton(view,'Next').disabled).toBe(true);}));
+test('normal rerenders do not fetch and separate or fresh pagers have their own requests',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[0],auditData(10,5));await auditReply(calls[1],auditData(20,2));a.rerender(<App/>);expect(calls).toHaveLength(2);auditClick(a,'Next');expect(calls).toHaveLength(3);a.unmount();await auditReply(calls[2],auditData(30,5));expect(auditRows(b)).toEqual(auditData(20,2).map(x=>x.title));b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(4);auditPageUrl(calls[3].url,1);await auditReply(calls[3],[]);expect(auditRows(fresh)).toEqual([]);expect(auditButton(fresh,'Previous').disabled).toBe(true);}));
+`,
   },
 
   /* ── slice ────────────────────────────────────────────────────────── */
