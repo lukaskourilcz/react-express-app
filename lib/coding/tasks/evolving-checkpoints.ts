@@ -382,45 +382,55 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const value:string=d.get();}"}, {"code": "{const d=selectStore(createStore({n:1}),(v:{n:number})=>String(v.n));const bad:number=d.get();}", "rejects": true}] },
     ),
     step(
-      'Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw.',
+      "Add transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Compute pure steps privately and perform one set with the final value. Return true; this step uses callbacks that do not throw. Keep the earlier full createStore/selectStore contracts. Also accept any minimal source with get():T and set(value:T):void. steps is a dense readonly/frozen array of at most 10000 synchronous pure functions with stable membership and no this dependence; each receives the exact previous opaque result once in order. Read source.get once, stage only local references without clone/freeze/coercion/await, then call source.set exactly once with the final value, including empty/no-op transactions. Do not expose intermediate values or extra undo entries. Callbacks and source methods do not throw or mutate the source; pure steps do not mutate their inputs. Preserve boolean return and generic readonly step types. Target: O(n) time and O(1) extra space for transaction work, where n is one plus steps.length, excluding callback/source work and opaque payload storage. Earlier source/derived history and subscription bounds remain separate.",
       'Přidej transactStore<T>(store,steps:readonly ((value:T)=>T)[]):boolean. Čisté kroky vypočti soukromě a proveď jedno set s konečným výsledkem. Vrať true; callbacky této etapy nevyhazují výjimky.',
-      calls([
+      calls(
+        ["(()=>{let sets=0;const source={get:()=>1,set:()=>{sets++;}};return [transactStore(source,[]),sets];})()",[true, 1]],[
         '(()=>{const s=createStore(1);return [transactStore(s,[x=>x+1,x=>x*3]),s.get()]})()',
         [true, 6],
       ]),
+      { additionalTypeTests: [{"code": "{const source={get:()=>1,set:(v:number):void=>{}};const steps:readonly ((n:number)=>number)[]=[n=>n+1];const ok:boolean=transactStore(source,steps);}"}, {"code": "{const bad:string=transactStore(createStore(1),[]);}", "rejects": true}, {"code": "{transactStore(createStore(1),[(n:number)=>String(n)]);}", "rejects": true}] },
     ),
   ],
   'ts-evolving-schema': [
     step(
-      'Implement validate(schema,value:unknown):string[] for the string schema. Return [] for strings and ["$: expected string"] otherwise. Keep the supplied Schema union.',
+      "Implement validate(schema,value:unknown):string[] for the string schema. Return [] for strings and [\"$: expected string\"] otherwise. Keep the supplied Schema union. The runtime schema in this checkpoint is only \"string\"; keep the supplied union unchanged for the next milestone. Test primitive typeof string without coercion: empty, whitespace and exact Unicode strings up to 20000 UTF16 units are valid; boxed String values and all other opaque values are invalid. Do not inspect, convert, clone or mutate the value. Each call returns a fresh mutable string[] with exactly the stated error, or a fresh empty array. Preserve validate(schema:Schema,value:unknown):string[]. Target: O(1) time and O(1) extra space per call, excluding input storage; string contents are not traversed.",
       'Napiš validate(schema,value:unknown):string[] pro schéma string. Pro řetězce vrať [] a jinak ["$: expected string"]. Zachovej dodanou unii Schema.',
       calls(
+        ["validate('string',new String('x'))",["$: expected string"]],
         ['validate("string","a")', []],
         ['validate("string","")', []],
         ['validate("string",2)', ['$: expected string']],
         ['validate("string",null)', ['$: expected string']],
       ),
+      { additionalTypeTests: [{"code": "{const fn:(schema:Schema,value:unknown)=>string[]=validate;const errors:string[]=fn(\"string\",undefined);}"}, {"code": "{const bad:number=validate(\"string\",1);}", "rejects": true}] },
     ),
     step(
-      'Extend Schema with {object:Record<string,Schema>} and validate flat records. Check declared fields in schema order, allow extras, and use $.FIELD paths. Missing fields are undefined.',
+      "Extend Schema with {object:Record<string,Schema>} and validate flat records. Check declared fields in schema order, allow extras, and use $.FIELD paths. Missing fields are undefined. Keep all earlier primitive/no-coercion and fresh mutable string[] rules. Schemas are valid ordinary data with exactly one structural discriminator and acyclic nesting; schema field maps may be frozen or have null prototypes. Traverse only own enumerable schema fields in Object.keys order; a missing own candidate field is undefined even if inherited. Read declared own data fields only, ignore extras without inspecting them, and do not mutate schemas or values. Field names contain at most 64 UTF16 units; build paths by literal dot/index concatenation without escaping. Values may be frozen or have prototypes; selected fields have ordinary data descriptors. Unvisited extras may have getters. Schema depth is at most 32 and a call visits at most 20000 schema/value pairs; each field map has at most 1000 keys. Exclude input payload contents and unvisited extra fields from work counts. Runtime object schemas here are flat maps of primitive schemas and candidate object values are non-null non-array records; retain all primitive runtime checks too. Target: O(n+p) time and O(n+p) extra space, where n is one plus the number of declared fields and p is the total returned error-text length.",
       'Rozšiř Schema o {object:Record<string,Schema>} a validuj ploché záznamy. Deklarovaná pole kontroluj v pořadí schématu, další povol a použij cesty $.POLE. Chybějící pole je undefined.',
-      calls([
+      calls(
+        ["validate({object:{name:'string'}},Object.create({name:'inherited'}))",["$.name: expected string"]],[
         'validate({object:{name:"string"}},{name:2})',
         ['$.name: expected string'],
       ]),
+      { additionalTypeTests: [{"code": "{const errors:string[]=validate({object:{x:\"boolean\"}},{});}"}, {"code": "{validate({object:{x:\"date\"}},{});}", "rejects": true}] },
     ),
     step(
-      'Extend Schema with {array:Schema}. Validate each array element in order using $[INDEX] paths. A non-array returns ["$: expected array"].',
+      "Extend Schema with {array:Schema}. Validate each array element in order using $[INDEX] paths. A non-array returns [\"$: expected array\"]. Keep all earlier primitive/no-coercion and fresh mutable string[] rules. Schemas are valid ordinary data with exactly one structural discriminator and acyclic nesting; schema field maps may be frozen or have null prototypes. Traverse only own enumerable schema fields in Object.keys order; a missing own candidate field is undefined even if inherited. Read declared own data fields only, ignore extras without inspecting them, and do not mutate schemas or values. Field names contain at most 64 UTF16 units; build paths by literal dot/index concatenation without escaping. Values may be frozen or have prototypes; selected fields have ordinary data descriptors. Unvisited extras may have getters. Schema depth is at most 32 and a call visits at most 20000 schema/value pairs; each field map has at most 1000 keys. Exclude input payload contents and unvisited extra fields from work counts. Arrays are ordinary arrays with standard prototypes/iteration, may be frozen or sparse, and have length at most 10000. Validate every numeric index from 0 to length-1; holes count as undefined rather than being skipped. Do not fill holes or mutate arrays. Wrong array containers produce one error at their current path. Optional schemas are not required yet. Target: O(n*d+p) time and O(n*d+p) extra space as a common upper bound, where n is one plus visited schema/value pairs, d is one plus maximum visited schema depth, and p is the total UTF16 length of returned error strings. This includes repeated error-array copying and rendered paths; implementations that collect directly may use less.",
       'Rozšiř Schema o {array:Schema}. Každý prvek pole validuj v pořadí s cestou $[INDEX]. Jiný typ vrací ["$: expected array"].',
-      calls(['validate({array:"number"},[1,"x"])', ['$[1]: expected number']]),
+      calls(
+        ["validate({array:'number'},new Array(2))",["$[0]: expected number", "$[1]: expected number"]],['validate({array:"number"},[1,"x"])', ['$[1]: expected number']]),
+      { additionalTypeTests: [{"code": "{const errors:string[]=validate({array:{object:{x:\"number\"}}},[]);}"}, {"code": "{validate({array:\"date\"},[]);}", "rejects": true}] },
     ),
     step(
-      'Add validateRecord(schema:Schema,value:unknown):string[] for plain records. Validate every own enumerable value and replace the root path with $.KEY. Preserve key order; an empty record succeeds.',
+      "Add validateRecord(schema:Schema,value:unknown):string[] for plain records. Validate every own enumerable value and replace the root path with $.KEY. Preserve key order; an empty record succeeds. Keep all earlier primitive/no-coercion and fresh mutable string[] rules. Schemas are valid ordinary data with exactly one structural discriminator and acyclic nesting; schema field maps may be frozen or have null prototypes. Traverse only own enumerable schema fields in Object.keys order; a missing own candidate field is undefined even if inherited. Read declared own data fields only, ignore extras without inspecting them, and do not mutate schemas or values. Field names contain at most 64 UTF16 units; build paths by literal dot/index concatenation without escaping. Values may be frozen or have prototypes; selected fields have ordinary data descriptors. Unvisited extras may have getters. Schema depth is at most 32 and a call visits at most 20000 schema/value pairs; each field map has at most 1000 keys. Exclude input payload contents and unvisited extra fields from work counts. Keep full optional/array validation, including sparse holes as undefined. Runtime validateRecord inputs at this checkpoint are non-null non-array ordinary records (possibly frozen or with null/inherited prototypes). Visit only Object.keys(value), ignore inherited, non-enumerable and symbol keys, preserve its standard numeric/string key order, and rewrite only the leading $ in each nested error. Record keys use letters, digits and underscores, at most 64 units; at most 1000 entries. Each record result is a fresh mutable string[]. Preserve validateRecord(schema:Schema,value:unknown):string[]. Target: O(n*d+p) time and O(n*d+p) extra space as a common upper bound, where n is one plus visited schema/value pairs, d is one plus maximum visited schema depth, and p is the total UTF16 length of returned error strings. This includes repeated error-array copying and rendered paths; implementations that collect directly may use less. For validateRecord, n and p aggregate all entry validations plus the record-key traversal; d includes their deepest schema visit.",
       'Přidej validateRecord(schema:Schema,value:unknown):string[] pro prosté záznamy. Validuj každou vlastní enumerable hodnotu a kořen cesty nahraď $.KLÍČ. Zachovej pořadí klíčů; prázdný záznam uspěje.',
       calls(
+        ["validateRecord('number',{z:'bad',a:'bad'})",["$.z: expected number", "$.a: expected number"]],
         ['validateRecord("number",{a:"x"})', ['$.a: expected number']],
         ['validateRecord("number",{})', []],
       ),
+      { additionalTypeTests: [{"code": "{const fn:(schema:Schema,value:unknown)=>string[]=validateRecord;const out:string[]=fn({optional:\"number\"},{});}"}, {"code": "{const bad:number=validateRecord(\"number\",{});}", "rejects": true}, {"code": "{validateRecord(\"date\",{});}", "rejects": true}] },
     ),
     step(
       'Add validateUnion(schemas:readonly Schema[],value:unknown):string[]. Succeed if any branch validates; otherwise return the shortest error list, breaking ties by schema order. Empty schemas returns ["$: no alternatives"].',
