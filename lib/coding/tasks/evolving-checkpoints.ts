@@ -100,20 +100,24 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { focus: ["filter", "functions"] },
     ),
     step(
-      'Add options.orderBy and desc (default false). After filtering, stably sort numeric or string field values. Copy before sorting; equal values retain input order.',
+      "Add stable sorting after filtering. orderBy is omitted/undefined or a field name, including the empty string. desc is a boolean, default false. After filtering, sort by that field: retained values are all finite Numbers or all strings of at most 128 UTF-16 units. Compare with ordinary numeric or literal UTF-16 < and >; use no locale order or Unicode normalization. Equal values keep their input order in both directions. Without orderBy, keep input order. Keep the earlier input, identity and immutability rules and the n/m definitions. Pagination comes next. Target: O(n*m + n*log(n)) time and O(n+m) extra space.",
       'Přidej options.orderBy a desc (výchozí false). Po filtraci stabilně seřaď číselné či řetězcové hodnoty pole. Před řazením kopíruj; shody zachovají pořadí vstupu.',
       calls(
+        ["query([{v:\"é\",id:0},{v:\"e\\u0301\",id:1}],{orderBy:\"v\"}).map(row=>row.id)", [1, 0]],
         ['query([{x:3},{x:1}],{orderBy:"x"})', [{ x: 1 }, { x: 3 }]],
         ['query([{x:1},{x:2}],{orderBy:"x",desc:true})', [{ x: 2 }, { x: 1 }]],
       ),
+      { focus: ["filter", "sort"] },
     ),
     step(
-      'Add options.select, an array of field names. After pagination project each row onto these fields; omit absent fields. Never mutate the source records.',
+      "Keep filtering, stable sorting and pagination, then add projection. select is omitted/undefined or a dense array of at most 64 field names, including duplicates or no names. When supplied, create a fresh mutable record per row with only selected own data fields that exist, including non-enumerable fields. Keep values by reference, including undefined; omit inherited/missing fields. Output entries must be own enumerable writable/configurable data properties, including __proto__. Ordinary or null-prototype records are valid; key insertion order is not part of the result. Keep the earlier input, identity and immutability rules and the n/m definitions. With no select, retain original record references; deduplication comes next. Target: O(n*m + n*log(n)) time and O(n+m) extra space. The selected-field count and name width are bounded, so projection is linear in row count.",
       'Přidej options.select, pole názvů vlastností. Po stránkování promítni každý řádek na tato pole a chybějící vynech. Neměň původní záznamy.',
       calls(
+        ["Object.hasOwn(query([{x:undefined}],{select:['x']})[0],'x')", true],
         ['query([{x:1,y:2}],{select:["x"]})', [{ x: 1 }]],
         ['query([{x:1}],{select:["missing"]})', [{}]],
       ),
+      { focus: ["filter", "sort", "map"] },
     ),
     step(
       'Add groupRows(rows, field, valueField). For finite numeric values return {key,count,sum} groups in first-seen order, matching keys by strict equality.',
