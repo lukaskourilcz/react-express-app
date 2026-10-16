@@ -433,12 +433,14 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const fn:(schema:Schema,value:unknown)=>string[]=validateRecord;const out:string[]=fn({optional:\"number\"},{});}"}, {"code": "{const bad:number=validateRecord(\"number\",{});}", "rejects": true}, {"code": "{validateRecord(\"date\",{});}", "rejects": true}] },
     ),
     step(
-      'Add validateUnion(schemas:readonly Schema[],value:unknown):string[]. Succeed if any branch validates; otherwise return the shortest error list, breaking ties by schema order. Empty schemas returns ["$: no alternatives"].',
+      "Add validateUnion(schemas:readonly Schema[],value:unknown):string[]. Succeed if any branch validates; otherwise return the shortest error list, breaking ties by schema order. Empty schemas returns [\"$: no alternatives\"]. Retain all earlier schema and record contracts. schemas is a dense readonly/frozen array of at most 1000 valid acyclic schemas; do not sort/mutate it. A zero-error branch succeeds; if none succeeds, choose the first branch among those with minimum error count, not minimum text length. Returning after a successful branch or checking other valid branches is allowed; no observable getter/callback behavior is part of a schema. Empty, success and failure results are fresh mutable string[]. Preserve validateUnion(schemas:readonly Schema[], value:unknown):string[]. Target: O(n*d+p) time and O(n*d+p) extra space for this checkpoint, where n is one plus the summed schema/value-pair counts across all branches plus array length, d is maximum schema depth+1, and p is total generated branch-error text. This bounds the permitted full scan even on success. Retain depth 32, <=20000 aggregate pairs and prior key/array bounds.",
       'Přidej validateUnion(schemas:readonly Schema[],value:unknown):string[]. Uspěj při shodě kterékoli větve; jinak vrať nejkratší seznam chyb, při shodě podle pořadí schémat. Prázdná schémata vrací ["$: no alternatives"].',
       calls(
+        ["validateUnion(['string','boolean'],2)",["$: expected string"]],
         ['validateUnion(["string","number"],2)', []],
         ['validateUnion([],1)', ['$: no alternatives']],
       ),
+      { additionalTypeTests: [{"code": "{const rules:readonly Schema[]=[\"number\"];const errors:string[]=validateUnion(rules,undefined);}"}, {"code": "{const bad:number=validateUnion([\"string\"],1);}", "rejects": true}, {"code": "{validateUnion([\"date\"],1);}", "rejects": true}] },
     ),
   ],
   'react-evolving-board': [
