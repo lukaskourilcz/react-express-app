@@ -2702,7 +2702,7 @@ test('ArrowUp from the third item moves the focus to the second', () => {
 });`,
   },
   'react-mh-city-combobox': {
-    solution: `import React, { useState } from 'react';
+    solution: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -2710,10 +2710,11 @@ const CITIES = [
   'Madrid', 'Oslo', 'Paris', 'Prague', 'Rome', 'Vienna',
 ];
 
-const LIST_ID = 'city-options';
-const optionId = (index) => 'city-option-' + index;
-
 const App = () => {
+  const baseId = useId();
+  const inputId = baseId + '-input';
+  const LIST_ID = baseId + '-list';
+  const optionId = index => baseId + '-option-' + index;
   const [text, setText] = useState('');
   // -1 means no active option.
   const [active, setActive] = useState(-1);
@@ -2756,9 +2757,9 @@ const App = () => {
 
   return <main>
     <h2>Where to?</h2>
-    <label htmlFor="city">City</label>
+    <label htmlFor={inputId}>City</label>
     <input
-      id="city"
+      id={inputId}
       role="combobox"
       autoComplete="off"
       aria-autocomplete="list"
@@ -2777,6 +2778,7 @@ const App = () => {
             id={optionId(index)}
             role="option"
             aria-selected={index === active ? 'true' : 'false'}
+            onMouseDown={event => event.preventDefault()}
             onClick={() => pick(city)}
           >{city}</li>
         ))}
@@ -2788,7 +2790,7 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useState } from 'react';
+    junior: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -2797,6 +2799,10 @@ const CITIES = [
 ];
 
 const App = () => {
+  const baseId = useId();
+  const inputId = baseId + '-input';
+  const listId = baseId + '-list';
+  const optionId = index => baseId + '-option-' + index;
   const [text, setText] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const [listOpen, setListOpen] = useState(false);
@@ -2860,18 +2866,18 @@ const App = () => {
 
   let activeId;
   if (listVisible && activeIndex >= 0) {
-    activeId = 'option-' + activeIndex;
+    activeId = optionId(activeIndex);
   }
 
   return (
     <main>
       <h2>Where to?</h2>
-      <label htmlFor="city">City</label>
+      <label htmlFor={inputId}>City</label>
       <input
-        id="city"
+        id={inputId}
         role="combobox"
         aria-autocomplete="list"
-        aria-controls="city-list"
+        aria-controls={listId}
         aria-expanded={listVisible ? 'true' : 'false'}
         aria-activedescendant={activeId}
         value={text}
@@ -2879,13 +2885,14 @@ const App = () => {
         onKeyDown={handleKeyDown}
       />
       {listVisible && (
-        <ul id="city-list" role="listbox">
+        <ul id={listId} role="listbox">
           {matches.map((city, index) => (
             <li
               key={city}
-              id={'option-' + index}
+              id={optionId(index)}
               role="option"
               aria-selected={index === activeIndex ? 'true' : 'false'}
+              onMouseDown={event => event.preventDefault()}
               onClick={() => chooseCity(city)}
             >
               {city}
@@ -2916,6 +2923,7 @@ const suggestionsFor = (text) => {
 
 const App = () => {
   const baseId = useId();
+  const inputId = baseId + '-input';
   const [text, setText] = useState('');
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
@@ -2963,9 +2971,9 @@ const App = () => {
   return (
     <main>
       <h2>Where to?</h2>
-      <label htmlFor="city">City</label>
+      <label htmlFor={inputId}>City</label>
       <input
-        id="city"
+        id={inputId}
         role="combobox"
         autoComplete="off"
         aria-autocomplete="list"
@@ -2983,7 +2991,8 @@ const App = () => {
       {expanded && (
         <ul id={listId} role="listbox" aria-label="Cities">
           {suggestions.map((city, index) => (
-            <li key={city} id={idOf(index)} role="option" aria-selected={index === active} onClick={() => pick(city)}>
+            <li key={city} id={idOf(index)} role="option" aria-selected={index === active} onMouseDown={event => event.preventDefault()}
+            onClick={() => pick(city)}>
               {city}
             </li>
           ))}
@@ -3062,7 +3071,14 @@ test('ArrowUp from the third option moves to the second', () => {
   expect(activeOption().textContent).toBe('Bern');
   key('ArrowUp');
   expect(activeOption().textContent).toBe('Berlin');
-});`,
+});
+
+const citySeed=['Amsterdam','Athens','Barcelona','Berlin','Bern','Bratislava','Brussels','Bucharest','Budapest','Copenhagen','Dublin','Helsinki','Lisbon','London','Madrid','Oslo','Paris','Prague','Rome','Vienna'];
+const checkCity=(scope,raw,active,open=true)=>{const input=within(scope).getByRole('combobox',{name:'City'}),q=raw.trim().toLowerCase(),expected=q?citySeed.filter(c=>c.toLowerCase().startsWith(q)).slice(0,5):[],expanded=open&&expected.length>0,opts=within(scope).queryAllByRole('option');expect(input.value).toBe(raw);expect(input.getAttribute('aria-autocomplete')).toBe('list');expect(input.getAttribute('aria-expanded')).toBe(String(expanded));expect(opts.map(o=>o.textContent)).toEqual(expanded?expected:[]);if(expanded){const list=within(scope).getByRole('listbox');expect(list.tagName).toBe('UL');expect(document.getElementById(input.getAttribute('aria-controls'))).toBe(list);opts.forEach((o,i)=>{expect(o.tagName).toBe('LI');expect(o.id.length>0).toBe(true);expect(o.getAttribute('aria-selected')).toBe(String(i===active));});expect(new Set(opts.map(o=>o.id)).size).toBe(opts.length);}else expect(within(scope).queryByRole('listbox')).toBeNull();expect(input.getAttribute('aria-activedescendant')).toBe(expanded&&active>=0?opts[active].id:null);if(q&&!expected.length)expect(within(scope).getByText('No cities match')).toBeTruthy();else expect(within(scope).queryByText('No cities match')).toBeNull();return {input,expected,opts};};
+test('long keyboard navigation wraps without moving actual focus and closed lists stay closed',()=>{const {container}=render(<App/>);let {input}=checkCity(container,'',-1,false);act(()=>input.focus());fireEvent.change(input,{target:{value:'b'}});let active=-1;for(let i=0;i<36;i++){const k=['ArrowUp','ArrowDown','ArrowDown','ArrowUp','ArrowUp'][i%5],event=new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});fireEvent(input,event);active=active<0?(k==='ArrowDown'?0:4):(active+(k==='ArrowDown'?1:4))%5;checkCity(container,'b',active);expect(document.activeElement).toBe(input);expect(event.defaultPrevented).toBe(true);}const chosen=checkCity(container,'b',active).expected[active];fireEvent.keyDown(input,{key:'Enter'});checkCity(container,chosen,-1,false);expect(within(container).getByText('Selected: '+chosen)).toBeTruthy();fireEvent.change(input,{target:{value:'be'}});checkCity(container,'be',-1);const noSelection=new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});fireEvent(input,noSelection);expect(noSelection.defaultPrevented).toBe(false);checkCity(container,'be',-1);fireEvent.keyDown(input,{key:'ArrowDown'});fireEvent.keyDown(input,{key:'Escape'});checkCity(container,'be',-1,false);for(const k of['ArrowDown','ArrowUp','Enter','x']){const e=new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});fireEvent(input,e);expect(e.defaultPrevented).toBe(false);checkCity(container,'be',-1,false);}expect(within(container).getByText('Selected: '+chosen)).toBeTruthy();expect(document.activeElement).toBe(input);});
+test('all current prefix suggestions and stable relationships follow raw input and parent renders',()=>{const {container,rerender}=render(<App/>);const input=within(container).getByRole('combobox',{name:'City'}),inputId=input.id,listId=input.getAttribute('aria-controls');let previous=new Map();for(const raw of['A',' b ','be','BER','br','B','Lon','  ','xyz','Pa','pRa','o','c','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:raw}});const {opts}=checkCity(container,raw,-1);for(const option of opts)if(previous.has(option.textContent))expect(option).toBe(previous.get(option.textContent));previous=new Map(opts.map(o=>[o.textContent,o]));rerender(<App/>);checkCity(container,raw,-1);expect(input.id).toBe(inputId);expect(input.getAttribute('aria-controls')).toBe(listId);}});
+test('independent selections,cancellation,option clicks and fresh empty state',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');const ai=checkCity(a,'',-1,false).input,bi=checkCity(b,'',-1,false).input;fireEvent.change(ai,{target:{value:'b'}});fireEvent.change(bi,{target:{value:'be'}});fireEvent.keyDown(ai,{key:'ArrowUp'});checkCity(a,'b',4);checkCity(b,'be',-1);fireEvent.keyDown(ai,{key:'Enter'});checkCity(a,'Brussels',-1,false);act(()=>bi.focus());const bern=within(b).getByRole('option',{name:'Bern'});fireEvent.mouseDown(bern);fireEvent.click(bern);checkCity(b,'Bern',-1,false);expect(document.activeElement).toBe(bi);expect(within(a).getByText('Selected: Brussels')).toBeTruthy();expect(within(b).getByText('Selected: Bern')).toBeTruthy();root.unmount();const fresh=render(<App/>);checkCity(fresh.container,'',-1,false);expect(within(fresh.container).queryByText(/^Selected:/)).toBeNull();});
+`,
   },
   'react-mh-signup-form': {
     solution: `import React, { useRef, useState } from 'react';

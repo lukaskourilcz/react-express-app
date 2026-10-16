@@ -634,7 +634,7 @@ test('shows nothing before the form is submitted', () => {
     tier: 1,
     focus: ["useEffect"],
     title: "Effect on mount",
-    prompt: "Render the text “Waiting…” and replace it with “Ready!” once the component has mounted — after the first render, not during it. The waiting text must be gone afterwards.",
+    prompt: "Render exactly one element with role status. Its first committed text is `Waiting\u2026`. Use an effect after that initial render to replace it with exactly `Ready!`;do not start Ready or change state during rendering. The waiting text is absent after the update. No timer or cleanup resource is needed. Ordinary parent re-renders keep Ready. Every independent or fresh mounted instance starts with its own Waiting state and then becomes Ready. Use the starter useEffect/useState or an equivalent local-state custom hook/reducer. This is a normal mounted-lifetime exercise,not a promise that development Strict Mode runs effect setup only once.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -647,26 +647,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [status, setStatus] = useState('Waiting…');
 
 useEffect(() => {
-  // run the side effect here
+  // Replace the waiting status after the initial render.
+}, []);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["An effect with [] runs after the first render."],
+return <p role="status">{status}</p>;`,
+    hints: ["Keep Waiting… as initial state. A useEffect with [] changes it after the first render;rendering Ready immediately skips that transition."],
     approach: [
       "Put the status message in useState with the waiting text as its initial value.",
-      "Add a useEffect with an empty dependency array so its body runs once after the first render.",
-      "Inside that effect set the status state to the ready text, and the re-render swaps the paragraph content.",
+      "Add a useEffect with an empty dependency array for the normal mounted lifetime. Development Strict Mode may repeat setup/cleanup.",
+      "Inside that effect set the status state to the ready text, and the re-render replaces the status content.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('replaces the waiting text after mounting', async () => {
@@ -674,6 +672,10 @@ test('replaces the waiting text after mounting', async () => {
   await waitFor(() => expect(container.textContent).toContain('Ready!'));
   expect(container.textContent).not.toContain('Waiting');
 });
+
+const observeFirstCommit=()=>{let first;function Probe(){const ref=React.useRef(null);React.useLayoutEffect(()=>{first=ref.current.querySelector('[role="status"]').textContent;},[]);return <section ref={ref}><App/></section>;}const root=render(<Probe/>);return {root,first,Probe};};
+test('first committed status is Waiting before the mounted Ready update',async()=>{const {root,first}=observeFirstCommit();expect(first).toBe('Waiting…');await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));});
+
 `,
   },
   {
@@ -788,7 +790,7 @@ test('shows the message once the timeout fires', async () => {
     tier: 2,
     focus: ["fetch", "useEffect"],
     title: "GET one user",
-    prompt: "Fetch user 1 from the training API and render that user’s name and email once the response arrives.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users/1 once per normal mounted instance and display that response's exact name and email as literal text. A single paragraph,separate paragraphs or the existing email link are all fine. A successful JSON body is an ordinary record with id:1 and plain string name/email values up to 2000 UTF16 units. While the request or JSON body is pending,show an element with role status reading `Loading\u2026`;do not show user data yet. Check response.ok before awaiting response.json(). On HTTP,network or JSON failure,finish loading,show `Could not load user.` as an alert,and render no failed response data. No retry control is required. Ordinary parent re-renders do not fetch again. Clean up so a removed instance ignores late responses;independent/fresh mounts own their request and initial state. Development Strict Mode may deliberately repeat effect setup/cleanup. The API stub is local;no key or production user data is needed.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -807,24 +809,27 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItem = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
-      setItem(await response.json());
+      const data = await response.json();
+      if (active) setItem(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load user.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItem();
+  return () => { active = false; };
 }, []);`,
-    hints: ["Fetch in an effect, await response.json(), then save the user in state."],
+    hints: ["Fetch in an effect,check response.ok and await the JSON body. Keep Loading… until the body settles,catch failures and ignore late results after cleanup."],
     approach: [
       "Start the user state as null so the component can tell a not-yet-loaded record from a loaded one.",
-      "Fetch the single user inside a useEffect with an empty dependency array so the request fires once on mount.",
+      "Fetch the single user inside a useEffect with an empty dependency array for the normal mounted lifetime,with cleanup and HTTP/JSON failure handling.",
       "Await the parsed JSON body and store the whole object in state, then read the name and email fields off it.",
       "Guard the render so a fallback shows while the user state is still null.",
     ],
@@ -832,7 +837,7 @@ useEffect(() => {
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders the fetched name and email', async () => {
@@ -840,6 +845,15 @@ test('renders the fetched name and email', async () => {
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
   expect(container.textContent).toContain('leanne@example.com');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('loading lasts until the actual user JSON body arrives',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');expect(container.textContent).not.toContain('Body user');await sendJSON(calls[0],{id:1,name:'Body user',email:'body@example.test'});await waitFor(()=>expect(container.textContent).toContain('Body user'));expect(container.textContent).toContain('body@example.test');expect(within(container).queryByRole('status')).toBeNull();}));
+
 `,
     api: {
       method: "GET",
@@ -856,7 +870,7 @@ test('renders the fetched name and email', async () => {
     tier: 2,
     focus: ["fetch", "lists-keys"],
     title: "GET users list",
-    prompt: "Fetch the users list and render one LI per user showing their name. Start from an empty array so the first render, before any data arrives, does not throw.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users once per normal mounted instance. Start from an empty array and always render one UL,empty before the JSON body arrives. On success,render one LI per response record,in exact response order,with its exact name as literal text. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units;names may repeat or be empty. Key by id and keep surviving rows stable across normal parent re-renders. Check response.ok and await response.json(). HTTP,network or JSON failure leaves the UL empty and shows `Could not load users.` as an alert. A loading indicator is optional in this task. Do not refetch on ordinary parent renders;separate/fresh mounts own their request and empty initial list. Clean up late results after unmount. Development Strict Mode may deliberately repeat effect setup/cleanup. No retry control or real backend setup is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -875,20 +889,22 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items;
 
@@ -897,17 +913,17 @@ const visibleItems = items;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Start with an empty array so users.map is always safe."],
+    hints: ["Start from an empty array and map exact returned records,including duplicate names. Check response.ok,catch failures and ignore late results after cleanup."],
     approach: [
       "Initialise the users state as an empty array so mapping over it is safe on the very first render.",
-      "Fetch the users collection in a useEffect with an empty dependency array and store the parsed array in state.",
+      "Fetch the users collection in a useEffect with an empty dependency array and check response.ok,store the parsed array and catch failures with cleanup.",
       "Map that array into list items, keying each one by the user id that the API returns.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders one list item per fetched user', async () => {
@@ -915,6 +931,15 @@ test('renders one list item per fetched user', async () => {
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
   expect(container.textContent).toContain('Ervin Howell');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('duplicate names remain distinct records in response order',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:7,name:'Same'},{id:8,name:'Same'},{id:9,name:'Last'}]);expect(phasedNames(container)).toEqual(['Same','Same','Last']);}));
+
 `,
     api: {
       method: "GET",
@@ -931,7 +956,7 @@ test('renders one list item per fetched user', async () => {
     tier: 2,
     focus: ["fetch", "conditional"],
     title: "Loading state",
-    prompt: "Fetch the users list. Show “Loading…” while the request is in flight, then replace it with one LI per user showing their name.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users once per normal mounted instance. Show an element with role status reading `Loading\u2026` until both the response and its JSON body have arrived. Check response.ok before awaiting response.json(). Success replaces the status with one UL of exact literal user names in response order,one LI per record. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units,including duplicate/empty names. An empty successful array finishes loading and shows an empty UL. HTTP,network or JSON failure also finishes loading,shows `Could not load users.` as an alert and keeps an empty UL,without rendering a failed body. Ordinary parent re-renders preserve state without refetching. Clean up removed instances so late responses cannot replace a fresh list;independent/fresh mounts own their request and loading state. Development Strict Mode may repeat effect setup/cleanup. No retry control or real service availability is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -950,20 +975,22 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items;
 
@@ -974,18 +1001,18 @@ if (loading) return /* a paragraph reading Loading… */;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Set loading false in finally so success and failure both finish loading."],
+    hints: ["Keep Loading… through JSON parsing. Finish loading for successful empty arrays and all failures;catch the error and ignore late results after cleanup."],
     approach: [
       "Add a second useState boolean for loading that starts true, alongside the users array state.",
       "Fetch in a mount effect and set the users from the parsed response.",
       "Turn loading off in a finally block so both success and failure finish loading.",
-      "Return the loading view early while the flag is true, and the mapped list once it is false.",
+      "Return a Loading… status until the full body settles. Then render the exact list or an alert plus empty UL;empty success also finishes loading.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 // The page's text without the starter's heading, which says "Loading state".
@@ -1004,6 +1031,15 @@ test('shows loading first, then the users', async () => {
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
   expect(pageText(container)).not.toContain('Loading');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('JSON body parsing is still part of loading',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');expect(phasedNames(container)).toEqual([]);await sendJSON(calls[0],[]);expect(within(container).queryByRole('status')).toBeNull();expect(container.querySelectorAll('ul')).toHaveLength(1);}));
+
 `,
     api: {
       method: "GET",

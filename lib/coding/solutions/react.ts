@@ -656,7 +656,7 @@ const App = () => {
     solution: `const App = () => {
   const [status, setStatus] = useState('Waiting…');
   useEffect(() => setStatus('Ready!'), []);
-  return <p>{status}</p>;
+  return <p role="status">{status}</p>;
 };`,
     junior: `const App = () => {
   const [isReady, setIsReady] = useState(false);
@@ -672,7 +672,7 @@ const App = () => {
 
   return (
     <main>
-      <p>{message}</p>
+      <p role="status">{message}</p>
     </main>
   );
 };`,
@@ -692,6 +692,12 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('one live status replaces Waiting exactly',async()=>{const {root,first}=observeFirstCommit();expect(first).toBe('Waiting…');expect(within(root.container).getAllByRole('status')).toHaveLength(1);await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));expect(root.container.textContent).not.toContain('Waiting');});
+test('ordinary parent updates preserve Ready',async()=>{const {root,Probe}=observeFirstCommit();await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));for(let i=0;i<12;i++){root.rerender(<Probe/>);expect(within(root.container).getByRole('status').textContent).toBe('Ready!');}});
+test('every independent and fresh instance commits its own Waiting state first',()=>{const initial=[];function Watch({label}){const ref=React.useRef(null);React.useLayoutEffect(()=>{initial.push([label,ref.current.querySelector('[role="status"]').textContent]);},[]);return <section ref={ref}><App/></section>;}const root=render(<><Watch label="a"/><Watch label="b"/></>);expect(initial).toEqual([['a','Waiting…'],['b','Waiting…']]);expect(within(root.container).getAllByRole('status').map(p=>p.textContent)).toEqual(['Ready!','Ready!']);root.unmount();const fresh=observeFirstCommit();expect(fresh.first).toBe('Waiting…');expect(within(fresh.root.container).getByRole('status').textContent).toBe('Ready!');});
+`,
   },
   "react-document-title": {
     solution: `const App = () => {
@@ -832,30 +838,53 @@ test('leaving before the second is up clears the timeout', () => withClock(async
   "react-get-one-user": {
     solution: `const App = () => {
   const [user, setUser] = useState(null);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users/1').then(response => response.json()).then(setUser); }, []);
-  return user ? <p>{user.name} — {user.email}</p> : <p>Loading…</p>;
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users/1')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  if (loading) return <p role="status">Loading…</p>;
+  if (error) return <p role="alert">{error}</p>;
+  return user ? <p>{user.name} — {user.email}</p> : null;
 };`,
     junior: `const App = () => {
   const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadUser = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
-      const data = await response.json();
-      setUser(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUser(data);
+      } catch {
+        if (active) setError('Could not load user.');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadUser();
+    return () => { active = false; };
   }, []);
 
   if (isLoading) {
     return (
       <main>
-        <p>Loading…</p>
+        <p role="status">Loading…</p>
       </main>
     );
   }
+
+  if (error) return <p role="alert">{error}</p>;
 
   return (
     <main>
@@ -868,15 +897,18 @@ test('leaving before the second is up clears the timeout', () => withClock(async
 
 const useUser = id => {
   const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
+    setUser(null);
+    setError('');
     fetch(\`\${USERS_URL}/\${id}\`)
-      .then(response => response.json())
-      // A response that lands after unmount, or after the id changed, is ignored
-      .then(data => { if (active) setUser(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); });
     return () => { active = false; };
   }, [id]);
-  return user;
+  return { user, error, loading: user === null && !error };
 };
 
 const UserCard = ({ user }) => (
@@ -884,10 +916,30 @@ const UserCard = ({ user }) => (
 );
 
 const App = () => {
-  const user = useUser(1);
-  return <main>{user ? <UserCard user={user} /> : <p>Loading…</p>}</main>;
+  const { user, error, loading } = useUser(1);
+  return <main>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <UserCard user={user} />}</main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+
 test('asks for user 1 and shows the name and email of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users/1');
@@ -896,24 +948,45 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
   request.respond({ id: 1, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' });
   await waitFor(() => expect(container.textContent).toContain('Ada Lovelace'));
   expect(container.textContent).toContain('ada@engine.example');
-}));`,
+}));
+
+test('single authoritative record is literal and ordinary parent renders do not refetch',async()=>withPhasedRequests(async calls=>{const {container,rerender}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));checkGet(calls[0],'https://jsonplaceholder.typicode.com/users/1');await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');await sendJSON(calls[0],{id:1,name:'<b>Literal user</b> 🌊',email:'learner+tag@example.test'});await waitFor(()=>expect(container.textContent).toContain('<b>Literal user</b> 🌊'));expect(container.textContent).toContain('learner+tag@example.test');expect(container.querySelector('b')).toBeNull();expect(within(container).queryByRole('alert')).toBeNull();for(let i=0;i<4;i++){rerender(<App/>);expect(calls).toHaveLength(1);expect(container.textContent).toContain('learner+tag@example.test');}}));
+test('HTTP,network and JSON failures finish loading without rendering a failed body',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],503);await sendJSON(calls[index],{id:1,name:'Failed body',email:'failed@example.test'});}else if(failure==='network'){await act(async()=>calls[index].fail());}else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load user.'));expect(within(scope).queryByRole('status')).toBeNull();expect(scope.textContent).not.toContain('Failed body');root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('independent mounted users and a late old response do not replace each other',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[1]);await sendJSON(calls[1],{id:1,name:'Right',email:'right@example.test'});await sendHeaders(calls[0]);await sendJSON(calls[0],{id:1,name:'Left',email:'left@example.test'});expect(a.textContent).toContain('Left');expect(a.textContent).not.toContain('Right');expect(b.textContent).toContain('Right');root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await sendHeaders(calls[3]);await sendJSON(calls[3],{id:1,name:'Fresh',email:'fresh@example.test'});await sendHeaders(calls[2]);await sendJSON(calls[2],{id:1,name:'Stale',email:'stale@example.test'});expect(fresh.container.textContent).toContain('Fresh');expect(fresh.container.textContent).not.toContain('Stale');}));
+`,
   },
   "react-get-users-list": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(response => response.json()).then(setUsers); }, []);
-  return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); });
+    return () => { active = false; };
+  }, []);
+  return <main>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   const items = [];
@@ -923,6 +996,7 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
 
   return (
     <main>
+      {error && <p role="alert">{error}</p>}
       <ul>{items}</ul>
     </main>
   );
@@ -931,17 +1005,23 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
 
 const useUsers = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const response = await fetch(USERS_URL);
-      const data = await response.json();
-      if (active) setUsers(data);
+      try {
+        const response = await fetch(USERS_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      }
     };
     load();
     return () => { active = false; };
   }, []);
-  return users;
+  return { users, error };
 };
 
 const UserList = ({ users }) => (
@@ -951,10 +1031,37 @@ const UserList = ({ users }) => (
 );
 
 const App = () => {
-  const users = useUsers();
-  return <main><UserList users={users} /></main>;
+  const { users, error } = useUsers();
+  return <main>{error && <p role="alert">{error}</p>}<UserList users={users} /></main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+
 test('asks for the users list and renders one item per user of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -964,39 +1071,64 @@ test('asks for the users list and renders one item per user of the answer', () =
   await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
-}));`,
+}));
+
+test('empty,pending and one-hundred-record responses preserve exact literal order and parent state',async()=>withPhasedRequests(async calls=>{for(const data of[[],Array.from({length:100},(_,i)=>({id:i+1,name:i===0?'':i%4===0?'<b>literal</b>':i%3===0?'Duplicate':'Name '+(100-i)}))]){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));checkGet(calls[index],'https://jsonplaceholder.typicode.com/users');expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual([]);await sendHeaders(calls[index]);expect(phasedNames(scope)).toEqual([]);await sendJSON(calls[index],Object.freeze(data.map(Object.freeze)));expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(scope.querySelector('li b')).toBeNull();const nodes=Array.from(scope.querySelectorAll('li'));root.rerender(<App/>);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));nodes.forEach((n,i)=>expect(scope.querySelectorAll('li')[i]).toBe(n));expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('all request failure kinds leave the UL empty and show an alert',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],500);await sendJSON(calls[index],[{id:1,name:'Failed body'}]);}else if(failure==='network')await act(async()=>calls[index].fail());else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual([]);root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('concurrent and fresh lists own their responses',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[1]);await sendJSON(calls[1],[{id:1,name:'Right'}]);await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:1,name:'Left'}]);expect(phasedNames(a)).toEqual(['Left']);expect(phasedNames(b)).toEqual(['Right']);root.unmount();const fresh=render(<App/>);expect(phasedNames(fresh.container)).toEqual([]);await waitFor(()=>expect(calls).toHaveLength(3));await sendHeaders(calls[2]);await sendJSON(calls[2],[]);expect(phasedNames(fresh.container)).toEqual([]);}));
+`,
   },
   "react-loading-state": {
     solution: `const App = () => {
-  const [users, setUsers] = useState([]); const [loading, setLoading] = useState(true);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers).finally(() => setLoading(false)); }, []);
-  if (loading) return <p>Loading…</p>;
-  return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  if (loading) return <p role="status">Loading…</p>;
+  return <main>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   if (isLoading) {
     return (
       <main>
-        <p>Loading…</p>
+        <p role="status">Loading…</p>
       </main>
     );
   }
 
   return (
     <main>
+      {error && <p role="alert">{error}</p>}
       <ul>
         {users.map(user => <li key={user.id}>{user.name}</li>)}
       </ul>
@@ -1006,14 +1138,15 @@ test('asks for the users list and renders one item per user of the answer', () =
     senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
 
 const App = () => {
-  // null means "nothing has arrived yet", so the loading flag is derived, not stored twice
   const [users, setUsers] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     fetch(USERS_URL)
-      .then(response => response.json())
-      .then(data => { if (active) setUsers(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) { setError('Could not load users.'); setUsers([]); } });
     return () => { active = false; };
   }, []);
 
@@ -1023,11 +1156,38 @@ const App = () => {
     <main aria-busy={loading}>
       {loading
         ? <p role="status">Loading…</p>
-        : <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>}
+        : <>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></>}
     </main>
   );
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+
 test('Loading stays while the request is in flight, then one item per user replaces it', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -1040,7 +1200,12 @@ test('Loading stays while the request is in flight, then one item per user repla
   expect(pageText(container)).not.toContain('Loading');
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
-}));`,
+}));
+
+test('loading covers headers and body,then exact empty or literal rows replace it',async()=>withPhasedRequests(async calls=>{for(const data of[[],[{id:1,name:'Same'},{id:2,name:'Same'},{id:3,name:'<b>literal</b>'},{id:4,name:'🌊'}]]){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));checkGet(calls[index],'https://jsonplaceholder.typicode.com/users');expect(within(scope).getByRole('status').textContent).toBe('Loading…');expect(phasedNames(scope)).toEqual([]);await sendHeaders(calls[index]);expect(within(scope).getByRole('status').textContent).toBe('Loading…');await sendJSON(calls[index],data);expect(within(scope).queryByRole('status')).toBeNull();expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(scope.querySelector('li b')).toBeNull();root.rerender(<App/>);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('HTTP,network and JSON failure each stop the spinner and show an alert',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],500);await sendJSON(calls[index],[{id:1,name:'Failed body'}]);}else if(failure==='network')await act(async()=>calls[index].fail());else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(within(scope).queryByRole('status')).toBeNull();expect(phasedNames(scope)).toEqual([]);root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('separate loading lifetimes and late old responses do not replace fresh rows',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:1,name:'Left'}]);expect(phasedNames(a)).toEqual(['Left']);expect(within(b).getByRole('status').textContent).toBe('Loading…');await sendHeaders(calls[1]);await sendJSON(calls[1],[]);expect(within(b).queryByRole('status')).toBeNull();root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await sendHeaders(calls[3]);await sendJSON(calls[3],[{id:1,name:'Fresh'}]);await sendHeaders(calls[2]);await sendJSON(calls[2],[{id:1,name:'Stale'}]);expect(phasedNames(fresh.container)).toEqual(['Fresh']);}));
+`,
   },
   "react-fetch-error-state": {
     solution: `const App = () => {

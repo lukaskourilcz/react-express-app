@@ -1273,8 +1273,8 @@ test('a mousedown outside closes the menu', () => {
     tier: 4,
     focus: ['accessibility', 'events', 'filter', 'derived-state'],
     title: 'An autocomplete for cities',
-    prompt: 'A field labelled "City" suggests cities as you type. Build it as an ARIA combobox. The input has `role="combobox"`, `aria-autocomplete="list"`, `aria-controls` with the id of the list, and `aria-expanded`, `"true"` while suggestions show. The suggestions are the cities that start with the typed text, ignoring case and the spaces around it, at most five, in a `ul` with `role="listbox"`; each is an `li` with `role="option"` and an id of its own. An empty field shows no list. When nothing matches there is no list either, and a paragraph says "No cities match". ArrowDown and ArrowUp move the active option, wrapping at the ends; with no active option, ArrowDown goes to the first and ArrowUp to the last. The focus stays in the input: `aria-activedescendant` names the active option’s id, and that option has `aria-selected="true"`; with no active option the input has no `aria-activedescendant`. Enter picks the active option: the field takes its name, the list closes, and a paragraph reads "Selected: Paris". A click on an option picks it too, and Enter with no active option does nothing. Escape closes the list and leaves the text alone. Typing opens the list again with no active option. Keep the text, the active index and whether the list is open in state, and work the suggestions out from the text while rendering.',
-    starter: `import React, { useState } from 'react';
+    prompt: "A field labelled \"City\" suggests cities as you type. Build it as an ARIA combobox. The input has `role=\"combobox\"`, `aria-autocomplete=\"list\"`, `aria-controls` with the id of the list, and `aria-expanded`, `\"true\"` while suggestions show. The suggestions are the cities that start with the typed text, ignoring case and the spaces around it, at most five, in a `ul` with `role=\"listbox\"`; each is an `li` with `role=\"option\"` and an id of its own. An empty field shows no list. When nothing matches there is no list either, and a paragraph says \"No cities match\". ArrowDown and ArrowUp move the active option, wrapping at the ends; with no active option, ArrowDown goes to the first and ArrowUp to the last. The focus stays in the input: `aria-activedescendant` names the active option\u2019s id, and that option has `aria-selected=\"true\"`; with no active option the input has no `aria-activedescendant`. Enter picks the active option: the field takes its name, the list closes, and a paragraph reads \"Selected: Paris\". A click on an option picks it too, and Enter with no active option does nothing. Escape closes the list and leaves the text alone. Typing opens the list again with no active option. Keep the text, the active index and whether the list is open in state, and work the suggestions out from the text while rendering. Use the starter useId base to give each mounted input,label,list and current option a nonempty distinct id,unique across instances;keep the input/list ids stable across normal parent re-renders. Input remains a controlled native field with its raw text,up to 2000 UTF16 units. Every repeated arrow/Enter/Escape interaction works. Arrow keys prevent default while the list shows;Enter prevents default only when it picks an active option. With a closed list,arrows do not reopen it;type to reopen. Leave unrelated keys to the browser. Picking keeps the input focused. Last Selected text persists through later typing/Escape until another pick. Surviving options keep their DOM identity while narrowing a prefix. Simultaneous components and fresh mounts have independent empty state. No blur-closing,Home/End,virtualization or arbitrary city-data API is required.",
+    starter: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -1283,18 +1283,19 @@ const CITIES = [
 ];
 
 const App = () => {
+  const baseId = useId();
   const [text, setText] = useState('');
 
   return <main>
     <h2>Where to?</h2>
-    <label htmlFor="city">City</label>
-    <input id="city" value={text} onChange={(event) => setText(event.target.value)} />
+    <label htmlFor={baseId + '-input'}>City</label>
+    <input id={baseId + '-input'} value={text} onChange={(event) => setText(event.target.value)} />
   </main>;
 };
 
 export default App;
 `,
-    skeleton: `const [text, setText] = useState('');
+    skeleton: `// text, setText and baseId are provided by the starter.
 const [active, setActive] = useState(-1);
 const [open, setOpen] = useState(false);
 const [selected, setSelected] = useState('');
@@ -1302,7 +1303,8 @@ const [selected, setSelected] = useState('');
 const query = text.trim().toLowerCase();
 const suggestions = query === '' ? [] : CITIES.filter(/* starts with query */).slice(0, 5);
 const showList = open && suggestions.length > 0;
-const optionId = (index) => 'city-option-' + index;
+const listId = baseId + '-list';
+const optionId = (index) => baseId + '-option-' + index;
 
 const onKeyDown = (event) => {
   // ArrowDown / ArrowUp: move active, wrapping; preventDefault so the caret stays put
@@ -1387,6 +1389,9 @@ test('text with no match says so', () => {
   expect(screen.queryByRole('listbox')).toBeNull();
   expect(field().getAttribute('aria-expanded')).toBe('false');
 });
+
+test('two comboboxes have their own labelled input,list and option ids',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const scopes=Array.from(container.querySelectorAll('[data-scope]')),inputs=scopes.map(s=>within(s).getByRole('combobox',{name:'City'}));expect(new Set(inputs.map(i=>i.id)).size).toBe(2);inputs.forEach(i=>fireEvent.change(i,{target:{value:'b'}}));const lists=scopes.map(s=>within(s).getByRole('listbox'));inputs.forEach((i,n)=>expect(document.getElementById(i.getAttribute('aria-controls'))).toBe(lists[n]));const ids=[...inputs,...lists,...scopes.flatMap(s=>Array.from(s.querySelectorAll('[role="option"]')))].map(n=>n.id);expect(ids.every(Boolean)).toBe(true);expect(new Set(ids).size).toBe(ids.length);});
+
 `,
   },
   {

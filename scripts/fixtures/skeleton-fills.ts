@@ -462,26 +462,29 @@ const App = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items;
 
   return (
     <main>
       <h2>GET users list</h2>
+      {loading && <p role="status">Loading…</p>}
       {error && <p role="alert">{error}</p>}
       <ul>
         {visibleItems.map(item => (
@@ -519,24 +522,26 @@ const App = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items;
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p role="status">Loading…</p>;
 
   return (
     <main>

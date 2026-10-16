@@ -35,44 +35,32 @@ const FULLSTACK_STATUS_AND_ALERT = '{loading&&<p role="status">Loading</p>}{erro
 export const REACT_VARIANTS: ReactVariant[] = [
   {
     id: 'react-loading-state',
-    note: 'keeps the starter heading "Loading state"',
-    edits: [
-      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading state</h2><p>Loading…</p></main>;'],
-      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading state</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
-    ],
+    note: "keeps the starter heading \"Loading state\"",
+    edits: [["if (loading) return <p role=\"status\">Loading\u2026</p>;", "if (loading) return <main><h2>Loading state</h2><p role=\"status\">Loading\u2026</p></main>;"], ["return <main>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;", "return <main><h2>Loading state</h2>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;"]],
     correct: true,
   },
   {
     id: 'react-loading-state',
-    note: 'keeps the starter heading and never shows a loading line',
-    edits: [
-      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading state</h2></main>;'],
-      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading state</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
-    ],
+    note: "keeps the starter heading and never shows a loading line",
+    edits: [["if (loading) return <p role=\"status\">Loading\u2026</p>;", "if (loading) return <main><h2>Loading state</h2></main>;"], ["return <main>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;", "return <main><h2>Loading state</h2>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;"]],
     correct: false,
   },
   {
     id: 'react-loading-state',
-    note: 'shows "Loading…" in the heading itself, then "Users"',
-    edits: [
-      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading…</h2></main>;'],
-      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Users</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
-    ],
+    note: "shows \"Loading\u2026\" in the heading itself, then \"Users\"",
+    edits: [["if (loading) return <p role=\"status\">Loading\u2026</p>;", "if (loading) return <main><h2 role=\"status\">Loading\u2026</h2></main>;"], ["return <main>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;", "return <main><h2>Users</h2>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;"]],
     correct: true,
   },
   {
     id: 'react-loading-state',
-    note: 'keeps the starter heading and shows "Loading…" in an h3 under it',
-    edits: [
-      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading state</h2><h3>Loading…</h3></main>;'],
-      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading state</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
-    ],
+    note: "keeps the starter heading and shows \"Loading\u2026\" in an h3 under it",
+    edits: [["if (loading) return <p role=\"status\">Loading\u2026</p>;", "if (loading) return <main><h2>Loading state</h2><h3 role=\"status\">Loading\u2026</h3></main>;"], ["return <main>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;", "return <main><h2>Loading state</h2>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;"]],
     correct: true,
   },
   {
     id: 'react-loading-state',
-    note: 'keeps a "Loading…" heading once the users have arrived',
-    edits: [['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading…</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;']],
+    note: "keeps a \"Loading\u2026\" heading once the users have arrived",
+    edits: [["return <main>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;", "return <main><h2>Loading\u2026</h2>{error && <p role=\"alert\">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;"]],
     correct: false,
   },
   {
