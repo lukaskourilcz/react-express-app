@@ -375,7 +375,7 @@ const App = () => {
         const data = await response.json();
         setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        setError('Could not load users');
       } finally {
         setLoading(false);
       }
@@ -385,7 +385,7 @@ const App = () => {
   }, []);
   const visibleItems = items;
 
-  if (error) return <p>Could not load the users: {error}</p>;
+  if (error) return <p role="alert">{error}</p>;
 
   return (
     <main>
