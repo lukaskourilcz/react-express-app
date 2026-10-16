@@ -52,7 +52,7 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   { id: 'alg-retry-backoff', label: 'a linear backoff', replace: [['await wait(100 * Math.pow(2, attempt - 1));', 'await wait(100 * attempt);']] },
   { id: 'js-evolving-query-2', label: 'an offset with no default', replace: [['const offset=options.offset??0;', 'const offset=options.offset;']] },
   ...['3', '4', '5'].map((stage): KnownAnswer => ({ id: `js-evolving-query-${stage}`, label: 'deduplicating without distinct', replace: [['if(options.distinct){', 'if(true){']] })),
-  { id: 'js-evolving-events-5', label: 'replaying history to a plain subscription', replace: [['if(replay)', 'if(true)']] },
+  { id: 'js-evolving-events-5', label: 'replaying history to a plain subscription', replace: [['if(replay&&record)', 'if(record)']] },
   { id: 'alg-easy2-meetings-clash', label: 'flagging only a meeting inside the one before it', replace: [['if (sorted[i][0] < sorted[i - 1][1]) return true;', 'if (sorted[i][1] <= sorted[i - 1][1]) return true;']] },
   { id: 'alg-easy2-hand-out-snacks', label: 'sorting the appetites but not the snacks', replace: [['const sizes = [...snacks].sort((a, b) => a - b);', 'const sizes = [...snacks];']] },
   { id: 'js-mh2-folder-tree', label: 'sibling folders in insertion order', replace: [['const folders = names.filter(name => folder[name] !== null).sort();', 'const folders = names.filter(name => folder[name] !== null);']] },

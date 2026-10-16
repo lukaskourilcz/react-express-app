@@ -193,42 +193,54 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       ),
     ),
     step(
-      'Add createBufferedBus() with on, once, emit, pause and resume. Pause queues event/value pairs; resume delivers them FIFO through createBus and returns listener errors. This step does not pause inside a listener.',
+      "Add createBufferedBus() exposing on, once, emit, pause and resume. Keep the earlier bounded exact event names, opaque payloads, independent subscriptions and snapshot/error rules. Each bus starts unpaused. pause is idempotent. A paused emit queues the exact event/value pair and returns fresh mutable []; an unpaused emit dispatches immediately. resume unpauses, removes queued pairs oldest first before delivery and returns a fresh mutable array of the direct errors from those deliveries, in delivery/listener order. Resolve subscriptions when draining, not when enqueueing; keep thrown arrays as single error values. Empty resume is safe. At most 20000 emissions and registrations occur per bus; inherited nesting limits still apply. Let q=1+events drained by this resume, c=total subscription entries captured for their delivery and n=q+c. Target: O(n) time amortized over queue operations, excluding callback work and separately charged nested calls. Queue storage is O(H), H=1+lifetime queued pairs, with O(k) subscription state and O(c) transient delivery/error space. Enqueue, pause and dequeue target amortized O(1); use a cursor, linked nodes or two stacks instead of shifting the queue. Callbacks do not call pause, resume or the buffered emit during a flush at this checkpoint; stopping/reentering a flush comes next.",
       'Přidej createBufferedBus() s on, once, emit, pause a resume. Pause řadí události a hodnoty do fronty; resume je doručí FIFO přes createBus a vrátí chyby posluchačů. V této etapě posluchač nepozastavuje doručování.',
-      calls([
-        '(()=>{const b=createBufferedBus(),a=[];b.on("x",v=>a.push(v));b.pause();b.emit("x",1);const before=a.slice();b.resume();return [before,a]})()',
-        [[], [1]],
-      ]),
+      calls(
+        ["(()=>{const bus=createBufferedBus(),seen=[];bus.on('x',value=>seen.push(value));bus.pause();bus.emit('x',1);bus.emit('x',2);bus.resume();return seen;})()", [1, 2]],
+        [
+          '(()=>{const b=createBufferedBus(),a=[];b.on("x",v=>a.push(v));b.pause();b.emit("x",1);const before=a.slice();b.resume();return [before,a]})()',
+          [[], [1]],
+        ],
+      ),
     ),
     step(
-      'Add createReplayBus(capacity) with emit and on(event,listener,replay=false). Keep the newest capacity values per event and replay them oldest first to a replay subscription. on returns unsubscribe.',
+      "Add createReplayBus(capacity) with emit and on(event,listener,replay=false). Keep the earlier exact event/payload and live subscription/error rules. capacity is any non-negative safe integer, including 0 and values above 2^32; allocate history lazily, never an array of length capacity. Retain exact values even without listeners, before dispatching live callbacks. Histories are separate per event/bus. on(event,listener,replay=false) returns an idempotent unsubscribe; false/omitted means future values only, true synchronously delivers the newest retained values oldest first, then future live values. Replay callbacks do not throw, recursively emit or change subscriptions at this step. There are at most 20000 emissions and registrations per bus; inherited live nesting limits remain. Let n=1+live subscriptions for emit, or 1+retained values delivered by replaying on. Target: O(n) time and O(n) transient delivery space, excluding callback work; retaining one value targets amortized O(1), not repeated history copies. Persistent history is O(H) across H=1+lifetime emissions, bounded further by capacity per event, with O(k) subscription state. Zero capacity still dispatches live values. This checkpoint has no clear method; clearing history comes next.",
       'Přidej createReplayBus(capacity) s emit a on(event,listener,replay=false). Uchovej nejnovějších capacity hodnot na událost a přehraj je od nejstarší pro odběr s replay. on vrací odhlášení.',
-      calls([
-        '(()=>{const b=createReplayBus(2),a=[];[1,2,3].forEach(v=>b.emit("x",v));b.on("x",v=>a.push(v),true);return a})()',
-        [2, 3],
-      ]),
+      calls(
+        ["(()=>{const bus=createReplayBus(4294967296),seen=[];bus.emit('x',1);bus.emit('x',2);bus.on('x',value=>seen.push(value),true);return seen;})()", [1, 2]],
+        [
+          '(()=>{const b=createReplayBus(2),a=[];[1,2,3].forEach(v=>b.emit("x",v));b.on("x",v=>a.push(v),true);return a})()',
+          [2, 3],
+        ],
+      ),
     ),
   ],
   'js-evolving-graph': [
     step(
-      'Implement plan(graph) for independent tasks whose dependency arrays are empty. Return every task ID in Object.keys order, including an empty result for an empty graph.',
+      "Implement plan(graph) for independent tasks: every task dependency is an empty array, so no dependency traversal is required. graph is a non-null non-array record with any prototype, possibly frozen, containing at most 20000 own properties. Task IDs are its own enumerable string keys (at most 64 UTF-16 units); ignore inherited, non-enumerable and symbol keys without reading their values. IDs may be empty, Unicode or prototype-like. Return them exactly in Object.keys order: canonical array-index keys in numeric order, then other string keys in creation order. Do not sort or normalize names. Return a fresh mutable array, including for empty graphs, without mutating graph/arrays. Task fields are data properties; unused metadata may contain accessors and stays opaque. Proxies are outside scope. Target: O(n) time and O(n) extra space, n=1+all own properties, using bounded-name lookup. Dependency ordering comes in the next milestone.",
       'Napiš plan(graph) pro nezávislé úkoly s prázdnými poli závislostí. Vrať ID úkolů v pořadí Object.keys, pro prázdný graf prázdné pole.',
       calls(
+        ["plan(Object.assign(Object.create({inherited:[]}),{own:[]}))", ["own"]],
         ['plan({})', []],
         ['plan({a:[]})', ['a']],
         ['plan({b:[],a:[]})', ['b', 'a']],
         ['plan({a:[],b:[],c:[]})', ['a', 'b', 'c']],
       ),
+      { focus: ['objects', 'functions'], references: [{ title: text('Own enumerable keys', ''), url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys' }] },
     ),
     step(
-      'Validate dependencies before traversal. Return null if a referenced task does not exist as an own key of graph. Otherwise retain dependency-first ordering; this step uses acyclic graphs.',
+      "Validate every dependency before traversal. Return null if any referenced ID is not a declared own enumerable task key, including a name found only in inherited or hidden metadata. Otherwise keep the earlier deterministic DFS order and bounded graph/ownership/n/m rules. Graphs remain acyclic at this checkpoint; cycle rejection comes next. Target: O(n+m) time and O(n+m) extra space.",
       'Před průchodem ověř závislosti. Vrať null, pokud odkazovaný úkol není vlastním klíčem graph. Jinak zachovej pořadí závislostí; tato etapa používá acyklické grafy.',
-      calls(['plan({a:["missing"]})', null]),
+      calls(
+        ["plan(Object.assign(Object.create({missing:[]}),{root:[\"missing\"]}))", null],
+        ['plan({a:["missing"]})', null]),
     ),
     step(
-      'Add options.layers to plan(graph, options={}). When true, return arrays of tasks that can run together, ordered by graph keys. A task enters the next layer only after all dependencies are in earlier layers.',
+      "Add plan(graph, options={}) with options.layers omitted/undefined/false or true. Default/false retains the previous validated DFS result, including null for invalid graphs. For true, this checkpoint supplies only valid acyclic graphs with declared dependencies. Return fresh mutable arrays of every currently ready task, in Object.keys order within each layer. All dependencies must have completed in earlier layers; collect the whole layer before marking its members complete. Empty graph returns fresh []. Keep prior graph bounds, exact IDs, ownership and n/m definitions. Do not share layer arrays with each other or across calls. Target: O(n*(n+m)) time and O(n+m) extra space; rescanning for each layer is allowed and a correct depth/index approach may be faster. Invalid layered graphs are handled in the next milestone.",
       'Přidej options.layers do plan(graph, options={}). Při true vrať pole souběžně spustitelných úkolů v pořadí klíčů grafu. Úkol patří do další vrstvy až po všech závislostech v předchozích vrstvách.',
-      calls([
+      calls(
+        ["(()=>{const layers=plan({root:['leaf'],leaf:[]},{layers:true});layers[0].push('mutable');return layers;})()", [["leaf", "mutable"], ["root"]]],
+        [
         'plan({a:[],b:[],c:["a","b"]},{layers:true})',
         [['a', 'b'], ['c']],
       ]),
