@@ -1035,7 +1035,7 @@ export default App;
 
 const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
 
   useEffect(() => {
@@ -1057,7 +1057,7 @@ const App = () => {
   return (
     <main>
       <h2>useDebounce hook</h2>
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Filter fruit" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visible.map(fruit => (
           <li key={fruit}>{fruit}</li>
@@ -1071,14 +1071,16 @@ export default App;
 `,
   'react-uselocalstorage-hook': `import React, { useEffect, useState } from 'react';
 
-const useLocalStorage = (key, initial) => {
+export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => {
-    const stored = localStorage.getItem(key);
-    return stored === null ? initial : JSON.parse(stored);
+    try {
+      const stored = localStorage.getItem(key);
+      return stored === null ? initial : JSON.parse(stored);
+    } catch { return initial; }
   });
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Continue in memory. */ }
   }, [key, value]);
 
   return [value, setValue];

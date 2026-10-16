@@ -389,7 +389,13 @@ test('a line that comes back goes on the end', () => {
   press('Remove one Tea');
   press('Add Tea');
   expect(lines()).toEqual(['Cake × 1', 'Tea × 1']);
-});`,
+});
+
+
+test('strict ids and immutable reducer transitions agree with an independent model',()=>{const products=[{id:0,name:'zero'},{id:'0',name:'string zero'},{id:'__proto__',name:'<b>🦈</b>'},{id:'x'.repeat(100),name:'  long name  '}];let actual=[],model=[];for(let i=0;i<96;i++){const product=products[(i*7+Math.floor(i/5))%products.length],remove=i%4===0,action=remove?{type:'remove',id:product.id}:{type:'add',product:Object.freeze({...product})};const frozen=Object.freeze(model.map(line=>Object.freeze({...line}))),saved=JSON.stringify(frozen);actual=basketReducer(frozen,action);const index=model.findIndex(line=>line.id===product.id);if(remove){if(index>=0){model[index]={...model[index],quantity:model[index].quantity-1};if(model[index].quantity===0)model.splice(index,1);}}else if(index<0)model.push({...product,quantity:1});else model[index]={...model[index],quantity:model[index].quantity+1};expect(actual).toEqual(model);expect(JSON.stringify(frozen)).toBe(saved);}const current=model.map(line=>({...line}));for(const type of ['constructor','toString','__proto__','clear-all'])expect(basketReducer(current,{type})).toBe(current);});
+test('provider actions compose in one event and nearest providers stay independent',()=>{const Probe=({label})=>{const{lines,add,remove}=useBasket();return <section><output>{label}:{lines.reduce((n,line)=>n+line.quantity,0)}</output><button onClick={()=>{for(let i=0;i<7;i++)add({id:'tea',name:'Tea'});remove('tea');}}>{label}</button></section>;};const tree=()=> <BasketProvider><Probe label="outer"/><BasketProvider><Probe label="inner"/></BasketProvider></BasketProvider>;const a=render(tree()),b=render(<BasketProvider><Probe label="separate"/></BasketProvider>);for(let i=1;i<=8;i++){fireEvent.click(within(a.container).getByRole('button',{name:'inner'}));a.rerender(tree());expect([...a.container.querySelectorAll('output')].map(x=>x.textContent)).toEqual(['outer:0','inner:'+6*i]);expect(b.container.textContent).toContain('separate:0');}a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.textContent).toContain('Basket (0)');});
+test('ordinary product and line buttons retain order through removal and re-addition',()=>{const view=render(<App/>),q=within(view.container);for(let i=0;i<12;i++)fireEvent.click(q.getByRole('button',{name:'Add Tea'}));fireEvent.click(q.getByRole('button',{name:'Add Cake'}));for(let i=0;i<12;i++)fireEvent.click(q.getByRole('button',{name:'Remove one Tea'}));fireEvent.click(q.getByRole('button',{name:'Add Tea'}));expect(lines()).toEqual(['Cake × 1','Tea × 1']);let caught;const Guard=()=>{try{useBasket();}catch(error){caught=error;}return null;};render(<Guard/>);expect(caught instanceof Error).toBe(true);expect(caught.message).toBe('useBasket must be used inside BasketProvider');});
+`,
   },
   'react-mh-load-more': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -1509,10 +1515,9 @@ test('one inbox selection or deletion never changes another inbox or the next mo
 const TYPING = ['INPUT', 'TEXTAREA', 'SELECT'];
 
 export const useShortcut = (key, handler) => {
-  // Updated on every render, so the listener always calls the newest handler,
-  // with the newest state in it, without being added again.
+  // Publish only committed handlers; an abandoned render must not change it.
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  useEffect(() => { handlerRef.current = handler; });
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -1548,7 +1553,7 @@ export default App;`,
 
 export const useShortcut = (key, handler) => {
   const savedHandler = useRef(handler);
-  savedHandler.current = handler;
+  useEffect(() => { savedHandler.current = handler; });
 
   useEffect(() => {
     const listener = (event) => {
@@ -1710,7 +1715,13 @@ test('a new key moves the listener to that key', () => {
   press('a');
   press('b');
   expect(seen).toEqual(['a', 'b']);
-});`,
+});
+
+
+test('a suspended uncommitted handler never replaces the last committed callback',()=>{const seen=[],pending=new Promise(()=>{});const Probe=({label,block})=>{useShortcut('q',()=>seen.push(label));if(block)throw pending;return <p>{label}</p>;};const view=render(<React.Suspense fallback={<p>Waiting</p>}><Probe label="committed" block={false}/></React.Suspense>);press('q');view.rerender(<React.Suspense fallback={<p>Waiting</p>}><Probe label="uncommitted" block={true}/></React.Suspense>);expect(view.container.textContent).toContain('Waiting');press('q');expect(seen).toEqual(['committed','committed']);view.unmount();});
+test('current committed callbacks,keys and capture-aware cleanup own their listeners',()=>{const watch=watchLiveListeners(window,'keydown'),seen=[];try{const Probe=({shortcut,label})=>{useShortcut(shortcut,event=>seen.push(label+event.key));return null;};const a=render(<Probe shortcut="q" label="0"/>),b=render(<Probe shortcut="z" label="B"/>);for(let i=0;i<18;i++){const shortcut=i%2?'Q':'q';a.rerender(<Probe shortcut={shortcut} label={String(i)}/>);expect(watch.active()).toBe(2);press(shortcut);expect(seen[seen.length-1]).toBe(String(i)+shortcut);const length=seen.length;press(shortcut==='q'?'Q':'q');expect(seen).toHaveLength(length);}a.unmount();expect(watch.active()).toBe(1);press('q');press('z');expect(seen[seen.length-1]).toBe('Bz');b.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}});
+test('typing fields stay untouched and thirty-six ordinary note shortcuts retain fresh state',()=>{const seen=[];const Probe=()=>{useShortcut('q',event=>seen.push(event.key));return <><input aria-label="input"/><textarea aria-label="area"/><select aria-label="select"><option>one</option></select></>;};const fields=render(<Probe/>);for(const node of fields.container.querySelectorAll('input,textarea,select')){const event=new KeyboardEvent('keydown',{key:'q',bubbles:true,cancelable:true});node.dispatchEvent(event);expect(event.defaultPrevented).toBe(false);}expect(seen).toEqual([]);fields.unmount();const view=render(<App/>);for(let i=1;i<=36;i++){press('n');expect(notes()).toBe('New notes: '+i);view.rerender(<App/>);}expect(press('/')).toBe(false);expect(document.activeElement).toBe(screen.getByLabelText('Search'));});
+`,
   },
   'react-mh-rename-in-place': {
     solution: `import React, { useEffect, useRef, useState } from 'react';

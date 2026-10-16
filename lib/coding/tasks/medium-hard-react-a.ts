@@ -37,7 +37,7 @@ export const MEDIUM_HARD_REACT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['useContext', 'useReducer', 'custom-hook'],
     title: 'A basket every page can reach',
-    prompt: 'A shop shows its basket in the header, the product list and the basket panel, three components that all need the same lines. Share them through context. `basketReducer(lines, action)` works out the next lines, where a line is `{ id, name, quantity }`. `{ type: "add", product }` adds one: the product’s line gains 1, or a new line with quantity 1 goes on the end. `{ type: "remove", id }` takes one away, and a line that reaches 0 leaves the list. Any other action returns the very same `lines`. Never change the array or a line you were given: return new ones. `BasketProvider` keeps the lines with `useReducer(basketReducer, [])` and provides `{ lines, add, remove }`, where `add(product)` and `remove(id)` dispatch. `useBasket()` reads that context and throws `new Error("useBasket must be used inside BasketProvider")` when there is no provider, so create the context with `null` as its default. Then finish the components: `BasketBadge` shows `Basket (n)`, where n counts items, not lines. `BasketLines` shows "Your basket is empty" when it is, and otherwise a list labelled "Basket" with one `li` per line: the text `Tea × 2` in a `span`, then the buttons "Remove one Tea" and "Add one Tea".',
+    prompt: `A shop shows its basket in the header, the product list and the basket panel, three components that all need the same lines. Share them through context. \`basketReducer(lines, action)\` works out the next lines, where a line is \`{ id, name, quantity }\`. \`{ type: "add", product }\` adds one: the product’s line gains 1, or a new line with quantity 1 goes on the end. \`{ type: "remove", id }\` takes one away, and a line that reaches 0 leaves the list. Any other action returns the very same \`lines\`. Never mutate the array or a line you were given; use new arrays and objects for changed data. \`BasketProvider\` keeps the lines with \`useReducer(basketReducer, [])\` and provides \`{ lines, add, remove }\`, where \`add(product)\` and \`remove(id)\` dispatch. \`useBasket()\` reads that context and throws \`new Error("useBasket must be used inside BasketProvider")\` when there is no provider, so create the context with \`null\` as its default. Then finish the components: \`BasketBadge\` shows \`Basket (n)\`, where n counts items, not lines. \`BasketLines\` shows "Your basket is empty" when it is, and otherwise a list labelled "Basket" with one \`li\` per line: the text \`Tea × 2\` in a \`span\`, then the buttons "Remove one Tea" and "Add one Tea". Products have string or finite integer ids; compare ids strictly, so 0 and "0" are different products. Each id keeps one name. Lines start with positive integer quantities; there is no two-item cap. Preserve insertion order, ignore removal of an absent id, and append a removed product at the end when it is added again. Public provider actions must compose correctly when called several times in one event. Separate and nested providers keep independent baskets; the nearest provider supplies each consumer.`,
     starter: `import React, { createContext, useContext, useReducer } from 'react';
 
 const PRODUCTS = [
@@ -119,14 +119,14 @@ export const useBasket = () => {
   return basket;
 };`,
     hints: [
-      'A reducer is a plain function, so you can call it in a test or in your head: the same lines and the same action always give the same answer. Returning the same array for an action you do not know is how React knows nothing changed.',
-      'A context with `null` as its default tells you something: `useContext` gives `null` only when no provider sits above the component. The count in the badge is a sum, `lines.reduce((sum, line) => sum + line.quantity, 0)`.',
+      `A reducer is a plain function, so you can call it in a test or in your head: the same lines and the same action always give the same answer. Returning the same array for an action you do not know is how React knows nothing changed.`,
+      `A context with \`null\` as its default tells you something: \`useContext\` gives \`null\` only when no provider sits above the component. The count in the badge is a sum, \`lines.reduce((sum, line) => sum + line.quantity, 0)\`.`,
     ],
     approach: [
-      'Write `basketReducer` with a `switch` on `action.type`: `map` to update a line, spread to append one, `filter` to drop a line at 0.',
-      'Create the context with `createContext(null)`. `BasketProvider` calls `useReducer` and provides the lines with `add` and `remove`.',
-      '`useBasket` reads the context and throws when it is `null`.',
-      'Finish `BasketBadge` with the total quantity and `BasketLines` with the empty message or the labelled list.',
+      `Write \`basketReducer\` with a \`switch\` on \`action.type\`: \`map\` to update a line, spread to append one, \`filter\` to drop a line at 0.`,
+      `Create the context with \`createContext(null)\`. \`BasketProvider\` calls \`useReducer\` and provides the lines with \`add\` and \`remove\`.`,
+      `\`useBasket\` reads the context and throws when it is \`null\`.`,
+      `Finish \`BasketBadge\` with the total quantity and \`BasketLines\` with the empty message or the labelled list.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
@@ -193,6 +193,9 @@ test('the reducer gives new arrays and leaves the old ones alone', () => {
   expect(after).toEqual([{ id: 'tea', name: 'Tea', quantity: 2 }]);
   expect(before[0].quantity).toBe(1);
 });
+
+
+test('repeated additions keep growing past two items',()=>{let value=[];const product={id:'tea',name:'Tea'};for(let i=1;i<=12;i++){value=basketReducer(value,{type:'add',product});expect(value).toEqual([{...product,quantity:i}]);}});
 `,
   },
   {
@@ -873,7 +876,7 @@ test('unchecking one item after Select all keeps the other three selected',()=>{
     tier: 3,
     focus: ['custom-hook', 'events', 'effect-cleanup', 'useRef'],
     title: 'Keyboard shortcuts with a hook',
-    prompt: 'Write `useShortcut(key, handler)`, a hook that calls `handler(event)` whenever that key is pressed anywhere on the page: add a `keydown` listener to `window` in an effect, and remove it in the cleanup. Two details make it pleasant to use. Keep the newest handler in a ref, updated on every render, and let the listener call `handlerRef.current`: the handler can then read fresh state while the listener is added once per key, not after every render. And ignore key presses whose target is an `input`, a `textarea` or a `select`, so typing a slash into a text field still types a slash. App already uses the hook: "/" moves the focus to the Search field, and "n" adds one to "New notes".',
+    prompt: `Write \`useShortcut(key, handler)\`, a hook that calls \`handler(event)\` whenever that key is pressed anywhere on the page: add a \`keydown\` listener to \`window\` in an effect, and remove it in the cleanup. Two details make it pleasant to use. Keep the newest handler in a ref, updated in an effect after each committed render, and let the listener call \`handlerRef.current\`: the handler can then read fresh state while the listener is added once per key, not after every render. And ignore key presses whose target is an \`input\`, a \`textarea\` or a \`select\`, so typing a slash into a text field still types a slash. App already uses the hook: "/" moves the focus to the Search field, and "n" adds one to "New notes". Export the hook. Match event.key exactly, including case, and forward the original event so the handler can prevent its default action. A suspended or abandoned render must not publish its handler. A normal or layout effect can update the ref. Keep one subscription per key through callback-only and parent renders; remove it with the same function and capture phase, or abort its signal. Each hook cleans up its own subscription. This exercise covers the three named typing controls and ordinary DOM key events; modifier policies, contenteditable and shortcut arbitration are outside its scope.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 export const useShortcut = (key, handler) => {
@@ -902,7 +905,7 @@ export default App;
 
 export const useShortcut = (key, handler) => {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler; // the newest handler, every render
+  useEffect(() => { handlerRef.current = handler; }); // only committed renders
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -913,13 +916,13 @@ export const useShortcut = (key, handler) => {
   }, [key]);
 };`,
     hints: [
-      'The effect depends on `key` only, so it runs once for a key and the listener it adds lives until the key changes or the component leaves. The handler App passes is a new function on every render; reading it from a ref means the listener always calls the newest one without being added again.',
-      '`event.target.tagName` is `"INPUT"`, `"TEXTAREA"` or `"SELECT"` for a key typed into a field. `removeEventListener` only removes the very function that was added, so keep it in a variable inside the effect.',
+      `A ref lets the key subscription call the latest committed handler without registering again. Update that ref in an effect, so a suspended render cannot overwrite the handler used by the visible page.`,
+      `\`event.target.tagName\` is \`"INPUT"\`, \`"TEXTAREA"\` or \`"SELECT"\` for a key typed into a field. \`removeEventListener\` only removes the very function that was added, so keep it in a variable inside the effect. Removal must match the capture phase too, unless cleanup aborts the subscription signal.`,
     ],
     approach: [
-      'Create `handlerRef` with `useRef(handler)` and assign `handlerRef.current = handler` in the hook’s body.',
-      'In an effect that depends on `key`, define the listener: skip events from fields, and call `handlerRef.current(event)` when `event.key` matches.',
-      'Add it to `window` and return a cleanup that removes it.',
+      `Initialize the ref with the first handler and publish later handlers in an effect after commit, never in the hook body.`,
+      `In an effect that depends on \`key\`, define the listener: skip events from fields, and call \`handlerRef.current(event)\` when \`event.key\` matches.`,
+      `Add it to \`window\` and return a cleanup that removes it.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
@@ -965,6 +968,11 @@ test('/ is prevented, so no slash is typed anywhere', () => {
   render(<App />);
   expect(press('/')).toBe(false);
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('shortcut matching preserves the exact key and original cancellable event',()=>{const events=[];const Probe=()=>{useShortcut('q',event=>{events.push(event);event.preventDefault();});return null;};render(<Probe/>);const upper=new KeyboardEvent('keydown',{key:'Q',bubbles:true,cancelable:true});document.body.dispatchEvent(upper);expect(events).toEqual([]);const lower=new KeyboardEvent('keydown',{key:'q',bubbles:true,cancelable:true});document.body.dispatchEvent(lower);expect(events[0]).toBe(lower);expect(lower.defaultPrevented).toBe(true);});
 `,
   },
   {

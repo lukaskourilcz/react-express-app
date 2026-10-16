@@ -2564,17 +2564,18 @@ const App = () => {
   );
 };`,
   },
-  "react-reusable-usefetch-hook": {
-    solution: `const useFetch = url => {
+  'react-reusable-usefetch-hook': {
+    solution: `export const useFetch = url => {
   const [state, setState] = useState({data: null, loading: true, error: ''});
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     setState({data: null, loading: true, error: ''});
     fetch(url, {signal: controller.signal})
       .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
-      .then(data => setState({data, loading: false, error: ''}))
-      .catch(error => { if (error.name !== 'AbortError') setState({data: null, loading: false, error: error.message}); });
-    return () => controller.abort();
+      .then(data => { if (active) setState({data, loading: false, error: ''}); })
+      .catch(error => { if (active) setState({data: null, loading: false, error: error?.message || 'Request failed'}); });
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return state;
 };
@@ -2585,13 +2586,15 @@ const App = () => {
   if (error) return <p>{error}</p>;
   return <ul>{data.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
-    junior: `const useFetch = (url) => {
+    junior: `export const useFetch = (url) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
+      setData(null);
       setLoading(true);
       setError('');
       try {
@@ -2600,14 +2603,15 @@ const App = () => {
           throw new Error('Request failed with status ' + response.status);
         }
         const json = await response.json();
-        setData(json);
+        if (active) setData(json);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError(requestError?.message || 'Request failed');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     load();
+    return () => { active = false; };
   }, [url]);
 
   return { data, loading, error };
@@ -2652,21 +2656,23 @@ const reducer = (state, action) => {
   }
 };
 
-const useFetch = url => {
+export const useFetch = url => {
   const [state, dispatch] = React.useReducer(reducer, initial);
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     dispatch({ type: 'start' });
     (async () => {
       try {
         const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
-        dispatch({ type: 'success', data: await response.json() });
+        const data = await response.json();
+        if (active) dispatch({ type: 'success', data });
       } catch (error) {
-        if (error.name !== 'AbortError') dispatch({ type: 'failure', error: error.message });
+        if (active) dispatch({ type: 'failure', error: error?.message || 'Request failed' });
       }
     })();
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return { data: state.data, loading: state.status === 'loading', error: state.error };
 };
@@ -2677,7 +2683,35 @@ const App = () => {
   if (error) return <main><p role="alert">{error}</p></main>;
   return <main><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+const showsANewMessage = (inFlight, now) => now.trim() !== '' && !inFlight.includes(now);
+
 test('Loading while the users request is in flight, then one item per user of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -2712,7 +2746,13 @@ test('a request that throws shows a message and no items', () => withRequests(as
   requestTo(calls, '/users').fail(new TypeError('Network down'));
   await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
   expect(container.querySelectorAll('li').length).toBe(0);
-}));`,
+}));
+
+
+test('obsolete transport,JSON success and failures cannot replace the current request',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/a"/>);calls[0].headers();await flush();view.rerender(<Probe url="/b"/>);calls[1].headers();await flush();view.rerender(<Probe url="/a"/>);const latest={answer:42,nested:[false,null]};calls[2].headers();calls[2].body(latest);await flush();expect(state.data).toBe(latest);calls[0].body({stale:true});calls[1].badBody(new Error('obsolete JSON'));await flush();expect(state).toEqual({data:latest,loading:false,error:''});view.rerender(<Probe url="/c"/>);view.rerender(<Probe url="/d"/>);calls[3].fail(new TypeError('obsolete transport'));await flush();expect(state).toEqual({data:null,loading:true,error:''});calls[4].headers();calls[4].body(null);await flush();expect(state).toEqual({data:null,loading:false,error:''});view.unmount();}));
+test('current HTTP,JSON and transport errors become terminal and the next url recovers',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/http"/>);calls[0].headers(503);await flush();expect(state.loading).toBe(false);expect(state.data).toBeNull();expect(Boolean(state.error)).toBe(true);for(let i=1;i<=3;i++){view.rerender(<Probe url={'/error'+i}/>);expect(state).toEqual({data:null,loading:true,error:''});if(i===1){calls[i].headers();calls[i].badBody(new SyntaxError('Invalid JSON'));}else calls[i].fail(i===2?new TypeError('Network unavailable'):Object.assign(new Error('Active aborted request'),{name:'AbortError'}));await flush();expect(state.loading).toBe(false);expect(Boolean(state.error)).toBe(true);}view.rerender(<Probe url="/recovery"/>);calls[4].headers();calls[4].body([]);await flush();expect(state).toEqual({data:[],loading:false,error:''});view.unmount();}));
+test('separate consumers and remounts do not share request state or stale completions',()=>withAuditRequests(async(calls,flush)=>{let one,two;const A=()=>{one=useFetch('/one');return null;},B=()=>{two=useFetch('/two');return null;};const a=render(<A/>),b=render(<B/>);calls[1].headers();calls[1].body('second');await flush();expect(one.loading).toBe(true);expect(two.data).toBe('second');a.unmount();if(calls[0].options.signal)expect(calls[0].options.signal.aborted).toBe(true);const fresh=render(<A/>);calls[0].headers();calls[0].body('old');await flush();expect(one).toEqual({data:null,loading:true,error:''});calls[2].headers();calls[2].body(false);await flush();expect(one.data).toBe(false);expect(two.data).toBe('second');fresh.unmount();b.unmount();}));
+`,
   },
   "react-crud-mini-app": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
@@ -3037,10 +3077,10 @@ test('independent stopwatches own their interval and a removed one cannot clear 
 }));
 `,
   },
-  "react-uselocalstorage-hook": {
-    solution: `const useLocalStorage = (key, initial) => {
-  const [value, setValue] = useState(() => { const stored = localStorage.getItem(key); return stored === null ? initial : JSON.parse(stored); });
-  useEffect(() => { localStorage.setItem(key, JSON.stringify(value)); }, [key, value]);
+  'react-uselocalstorage-hook': {
+    solution: `export const useLocalStorage = (key, initial) => {
+  const [value, setValue] = useState(() => { try { const stored = localStorage.getItem(key); return stored === null ? initial : JSON.parse(stored); } catch { return initial; } });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Keep the in-memory state usable when storage is unavailable. */ } }, [key, value]);
   return [value, setValue];
 };
 
@@ -3048,20 +3088,17 @@ const App = () => {
   const [count, setCount] = useLocalStorage('count', 0);
   return <><p>Count: {count}</p><button onClick={() => setCount(value => value + 1)}>Increment</button></>;
 };`,
-    junior: `const useLocalStorage = (key, initialValue) => {
-  const storedValue = localStorage.getItem(key);
-  let startingValue = initialValue;
-  if (storedValue !== null) {
-    startingValue = JSON.parse(storedValue);
-  }
-  const [value, setValue] = useState(startingValue);
-
-  const saveValue = (nextValue) => {
-    setValue(nextValue);
-    localStorage.setItem(key, JSON.stringify(nextValue));
-  };
-
-  return [value, saveValue];
+    junior: `export const useLocalStorage = (key, initialValue) => {
+  const [value, setValue] = useState(() => {
+    try {
+      const storedValue = localStorage.getItem(key);
+      return storedValue === null ? initialValue : JSON.parse(storedValue);
+    } catch { return initialValue; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }, [key, value]);
+  return [value, setValue];
 };
 
 const App = () => {
@@ -3083,21 +3120,17 @@ const App = () => {
     const raw = localStorage.getItem(key);
     return raw === null ? fallback : JSON.parse(raw);
   } catch {
-    return fallback; // corrupt or blocked storage falls back to the initial value
+    return fallback;
   }
 };
 
-const useLocalStorage = (key, initial) => {
+export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => readStorage(key, initial));
 
-  // Accepts a value or an updater, exactly like the setter from useState
-  const update = useCallback(next => {
-    setValue(current => {
-      const resolved = typeof next === 'function' ? next(current) : next;
-      localStorage.setItem(key, JSON.stringify(resolved));
-      return resolved;
-    });
-  }, [key]);
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }, [key, value]);
+  const update = useCallback(next => setValue(next), []);
 
   return [value, update];
 };
@@ -3111,6 +3144,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+const replaceStorageMethod=(name,method)=>{const target=Object.prototype.hasOwnProperty.call(localStorage,name)?localStorage:Object.getPrototypeOf(localStorage),descriptor=Object.getOwnPropertyDescriptor(target,name);Object.defineProperty(target,name,{configurable:true,writable:true,value:method});return()=>{if(descriptor)Object.defineProperty(target,name,descriptor);else delete target[name];};};
+test('functional setters compose and storage writes occur after rendering rather than inside an updater',()=>{localStorage.clear();let current,setter,inRender=false,badWrites=0,writes=0;const real=localStorage.setItem,restore=replaceStorageMethod('setItem',function(...args){writes++;if(inRender)badWrites++;return real.apply(this,args);});try{const Probe=()=>{inRender=true;try{[current,setter]=useLocalStorage('audit-counter',10);}finally{inRender=false;}return null;};const view=render(<Probe/>),savedSetter=setter;act(()=>{savedSetter(n=>n+1);savedSetter(n=>n*2);});expect(current).toBe(22);expect(JSON.parse(localStorage.getItem('audit-counter'))).toBe(22);act(()=>savedSetter({label:'raw <b>🦈</b>',values:[false,null,0]}));expect(current).toEqual({label:'raw <b>🦈</b>',values:[false,null,0]});expect(JSON.parse(localStorage.getItem('audit-counter'))).toEqual(current);expect(writes>0).toBe(true);expect(badWrites).toBe(0);view.unmount();}finally{restore();}});
+test('invalid JSON,read failures and write failures retain usable in-memory state',()=>{localStorage.clear();localStorage.setItem('count','{broken');const first=render(<App/>);expect(first.container.textContent).toContain('Count: 0');first.unmount();let reads=0;const restoreRead=replaceStorageMethod('getItem',()=>{reads++;throw new Error('SecurityError');});let view;try{view=render(<App/>);expect(reads>0).toBe(true);expect(view.container.textContent).toContain('Count: 0');}finally{restoreRead();if(view)view.unmount();}let writes=0;const restoreWrite=replaceStorageMethod('setItem',()=>{writes++;throw new Error('QuotaExceededError');});try{localStorage.clear();view=render(<App/>);for(let i=1;i<=8;i++){fireEvent.click(view.container.querySelector('button'));expect(view.container.textContent).toContain('Count: '+i);}expect(writes>0).toBe(true);view.unmount();}finally{restoreWrite();}});
+test('independent fixed keys,preserved unrelated storage and fresh mounts persist JSON values',()=>{localStorage.clear();localStorage.setItem('unrelated','keep');let one,two,setOne,setTwo;const A=()=>{[one,setOne]=useLocalStorage('left',3);return null;},B=()=>{[two,setTwo]=useLocalStorage('right',7);return null;};const a=render(<A/>),b=render(<B/>);expect(one).toBe(3);expect(two).toBe(7);act(()=>setOne([1,false,null]));act(()=>setTwo('value'));a.rerender(<A/>);expect(one).toEqual([1,false,null]);expect(two).toBe('value');expect(localStorage.getItem('unrelated')).toBe('keep');a.unmount();b.unmount();const fresh=render(<A/>);expect(one).toEqual([1,false,null]);expect(JSON.parse(localStorage.getItem('right'))).toBe('value');fresh.unmount();});
+`,
   },
   "react-tabs": {
     solution: `import React, { useId, useState } from 'react';
@@ -3660,11 +3701,11 @@ test('unmounting a dark provider leaves a fresh provider at light',()=>{
 });
 `,
   },
-  "react-usedebounce-hook": {
+  'react-usedebounce-hook': {
     solution: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
   useEffect(() => { const timer = setTimeout(() => setSettled(value), delay); return () => clearTimeout(timer); }, [value, delay]);
   return settled;
@@ -3674,11 +3715,11 @@ const App = () => {
   const [query, setQuery] = useState('');
   const settledQuery = useDebounce(query, 300);
   const visible = fruits.filter(fruit => fruit.toLowerCase().includes(settledQuery.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{visible.map(fruit => <li key={fruit}>{fruit}</li>)}</ul></>;
+  return <><input aria-label="Filter fruit" value={query} onChange={event => setQuery(event.target.value)} /><ul>{visible.map(fruit => <li key={fruit}>{fruit}</li>)}</ul></>;
 };`,
     junior: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   const timerRef = useRef(null);
 
@@ -3721,7 +3762,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input type="text" aria-label="Filter fruit" value={query} onChange={handleChange} />
       <ul>
         {matchingFruits.map(fruit => <li key={fruit}>{fruit}</li>)}
       </ul>
@@ -3730,17 +3771,17 @@ const App = () => {
 };`,
     senior: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
-    if (value === settled) return undefined; // nothing to wait for
+    if (value === settled) return undefined;
     const timer = setTimeout(() => setSettled(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay, settled]);
   return settled;
 };
 
-const normalize = text => text.trim().toLocaleLowerCase();
+const normalize = text => text.toLowerCase();
 
 const FruitList = ({ items }) => (
   items.length === 0
@@ -3763,10 +3804,67 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, so any delay above 10 ms works:
-    // a key every 10 ms never lets a value settle, and a debounce without
-    // clearTimeout lets the first value through after its delay anyway.
-    hiddenSuite: `${FAKE_CLOCK}
+    hiddenSuite: `
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
 test('a value replaced before the delay never reaches the list', () => withClock(async clock => {
   const { container } = render(<App />);
   const input = container.querySelector('input');
@@ -3778,7 +3876,13 @@ test('a value replaced before the delay never reaches the list', () => withClock
   await clock.tick(5000);
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Banana');
-}));`,
+}));
+
+
+test('changed delay restarts the pending wait and rapid values never publish early',()=>withAuditClock(async clock=>{let latest;const Probe=({value,delay})=>{latest=useDebounce(value,delay);return null;};const view=render(<Probe value="initial" delay={37}/>);expect(latest).toBe('initial');view.rerender(<Probe value="pending" delay={37}/>);await clock.tick(20);view.rerender(<Probe value="pending" delay={83}/>);await clock.tick(82);expect(latest).toBe('initial');await clock.tick(1);expect(latest).toBe('pending');for(let i=0;i<24;i++){view.rerender(<Probe value={'value-'+i} delay={37}/>);await clock.tick(36);expect(latest).toBe('pending');}await clock.tick(1);expect(latest).toBe('value-23');view.unmount();expect(clock.active()).toBe(0);}));
+test('opaque strings,empty values and parent renders retain literal debounce results',()=>withAuditClock(async clock=>{let latest;const Probe=({value})=>{latest=useDebounce(value,19);return null;};const view=render(<Probe value="start"/>);for(const value of ['', '  ', '<b>🦈</b>', '"quoted"', 'İ', 'x'.repeat(2000)]){const previous=latest;view.rerender(<Probe value={value}/>);await clock.tick(10);view.rerender(<Probe value={value}/>);await clock.tick(8);expect(latest).toBe(previous);await clock.tick(1);expect(latest).toBe(value);}view.unmount();expect(clock.active()).toBe(0);}));
+test('independent timers,fresh hooks and removed consumers clean up without affecting survivors',()=>withAuditClock(async clock=>{let one,two;const A=({value})=>{one=useDebounce(value,37);return null;},B=({value})=>{two=useDebounce(value,53);return null;};const a=render(<A value="a"/>),b=render(<B value="b"/>);a.rerender(<A value="next a"/>);b.rerender(<B value="next b"/>);await clock.tick(36);expect(one).toBe('a');expect(two).toBe('b');a.unmount();expect(clock.active()).toBe(1);await clock.tick(17);expect(two).toBe('next b');b.unmount();expect(clock.active()).toBe(0);const fresh=render(<A value="fresh"/>);expect(one).toBe('fresh');fresh.unmount();expect(clock.active()).toBe(0);}));
+`,
   },
   "react-todo-dashboard": {
     solution: `const App = () => {
