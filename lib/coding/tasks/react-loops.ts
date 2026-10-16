@@ -192,16 +192,16 @@ test('exports Price and accepts other products',()=>{const direct=render(<Price 
     tier: 1,
     focus: ["lists-keys", "map"],
     title: "Keyed book list",
-    prompt: "Render the `books` declared in the starter as a UL with one LI per book reading “<title> by <author>” in array order, for example “Dune by Frank Herbert”, with a paragraph above it reading “3 books”. Each LI takes its key from the book's `id`, never from the array index.",
+    prompt: "Render App's books prop, defaulting to the starter initialBooks, as one UL with one LI per book reading exactly `<title> by <author>` in array order. Above it render one paragraph with exactly `<count> books` (use books even for one). The no-props page keeps the original three books. books is a dense read-only array of at most 100 ordinary records with unique nonempty string ids up to 80 UTF16 units, and plain string titles/authors up to 2000 units; records/array may be frozen. Preserve exact text including empty strings, spaces, Unicode and markup-like text, displaying it literally. Do not mutate input. New props update the rows/count; an empty array keeps an empty UL and `0 books`. Key rows by id: an existing book must keep its LI DOM node through reorder, renaming and insertion/removal of other books. map or a loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
-const books = [
+const initialBooks = [
   { id: 'b1', title: 'Dune', author: 'Frank Herbert' },
   { id: 'b2', title: 'Emma', author: 'Jane Austen' },
   { id: 'b3', title: 'Ubik', author: 'Philip K. Dick' },
 ];
 
-const App = () => {
+const App = ({ books = initialBooks } = {}) => {
 
 
   return <main>
@@ -236,6 +236,7 @@ test('renders every book as title by author, in order', () => {
   const items = [...container.querySelectorAll('ul li')].map(li => li.textContent.trim());
   expect(items).toEqual(['Dune by Frank Herbert', 'Emma by Jane Austen', 'Ubik by Philip K. Dick']);
 });
+test('accepts other books and an empty list',()=>{const view=render(<App books={[{id:'x',title:'Other',author:'Writer'}]}/>);expect(view.container.querySelector('li').textContent).toBe('Other by Writer');expect(view.container.querySelector('p').textContent).toBe('1 books');view.rerender(<App books={[]}/>);expect(view.container.querySelectorAll('li')).toHaveLength(0);expect(view.container.querySelector('p').textContent).toBe('0 books');});
 `,
   },
   {
@@ -246,17 +247,17 @@ test('renders every book as title by author, in order', () => {
     tier: 1,
     focus: ["lists-keys", "filter", "map"],
     title: "In-stock list",
-    prompt: "Render only the `products` declared in the starter whose `inStock` is true, as a UL with one LI per product name, plus a paragraph reading “2 of 4 in stock”. Filter the array before mapping it, so Snorkel and Wetsuit never appear, and key each LI by the product id.",
+    prompt: "App receives products, defaulting to the starter initialProducts. Render only products whose boolean inStock is true as one UL with one LI containing each exact name in input order, and one paragraph reading exactly `<available> of <total> in stock`. The default is `2 of 4 in stock`. products is a dense read-only array of at most 100 ordinary records with unique positive integer ids, plain string names up to 2000 UTF16 units and boolean inStock values; records/array may be frozen. Names can repeat across different ids. Preserve exact literal text including empty, whitespace, Unicode and markup-like values; do not parse HTML or mutate input. Changing products updates filtering and both counts; empty input keeps an empty UL and `0 of 0 in stock`. Key rows by id: rows that remain visible keep their LI DOM node through reorder, rename and filtering of other rows. filter/map or an equivalent immutable loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
-const products = [
+const initialProducts = [
   { id: 1, name: 'Fins', inStock: true },
   { id: 2, name: 'Snorkel', inStock: false },
   { id: 3, name: 'Mask', inStock: true },
   { id: 4, name: 'Wetsuit', inStock: false },
 ];
 
-const App = () => {
+const App = ({ products = initialProducts } = {}) => {
 
 
   return <main>
@@ -293,6 +294,7 @@ test('reports how many products are in stock', () => {
   const { container } = render(<App />);
   expect(container.textContent).toContain('2 of 4 in stock');
 });
+test('accepts changed stock and empty products',()=>{const view=render(<App products={[{id:9,name:'Tea',inStock:false},{id:2,name:'Coffee',inStock:true}]}/>);expect([...view.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(['Coffee']);expect(view.container.querySelector('p').textContent).toBe('1 of 2 in stock');view.rerender(<App products={[]}/>);expect(view.container.querySelector('p').textContent).toBe('0 of 0 in stock');});
 `,
   },
   {
@@ -303,7 +305,7 @@ test('reports how many products are in stock', () => {
     tier: 1,
     focus: ["useState", "spread", "filter"],
     title: "Guest list",
-    prompt: "Start from the `initialGuests` declared in the starter and render a text input, an Add button and a UL with one LI per guest holding the name and its own Remove button. Add appends the typed name to the end of the list and clears the input; Remove drops only that guest. Never mutate an existing array: build a new one with spread when adding and with `filter` when removing, so a fresh mount still starts from the two original guests.",
+    prompt: "Start from initialGuests and render a text input with accessible name `Guest name`, an Add button and a UL with one LI per guest holding the exact name and its own Remove button. On Add, trim the input with JavaScript trim. Ignore an empty/whitespace-only result without changing the list or clearing that input; otherwise append one guest and clear the input. Duplicate names are allowed as separate guests. Remove deletes only the clicked guest, even when names match; adding after removing every guest works. Preserve internal spaces, Unicode and markup-like text literally. Use distinct stable row ids, keep surviving rows in order, and support repeated mixed additions/removals. Build new arrays/changed records without mutating previous state or the seed; spread/filter or equivalent immutable operations are fine. Independently mounted apps and fresh mounts each start with Ana and Bo. No network, persistence or Enter-key behavior is required.",
     starter: `${STARTER_IMPORT}
 
 const initialGuests = [
@@ -336,7 +338,7 @@ const removeGuest = id => {
     approach: [
       "Keep the guests array and the input text in two separate useState values, seeding the array from initialGuests.",
       "On Add, store a new array made of the previous guests followed by an object with a fresh id and the trimmed text, then clear the text.",
-      "On Remove, store the result of filtering the previous guests by a different id, so nothing touches the original array.",
+      "On Remove, store the result of filtering the previous guests by a different id, or another immutable equivalent, so nothing touches the original array.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -380,6 +382,7 @@ test('leaves the seed array untouched for the next mount', () => {
   expect(names).toHaveLength(2);
   expect(names[0]).toContain('Ana');
 });
+test('ignores blank names and removes one duplicate',()=>{const view=render(<App/>),input=view.container.querySelector('input');fireEvent.change(input,{target:{value:'  '}});fireEvent.click(button(view.container,'Add'));expect(view.container.querySelectorAll('li')).toHaveLength(2);fireEvent.change(input,{target:{value:' Ana '}});fireEvent.click(button(view.container,'Add'));expect(view.container.querySelectorAll('li')).toHaveLength(3);fireEvent.click(view.container.querySelectorAll('li')[2].querySelector('button'));expect(view.container.querySelectorAll('li')).toHaveLength(2);expect(view.container.querySelector('li').textContent).toContain('Ana');});
 `,
   },
   {
@@ -390,7 +393,7 @@ test('leaves the seed array untouched for the next mount', () => {
     tier: 2,
     focus: ["useState", "slice", "spread"],
     title: "Insert and reorder",
-    prompt: "Render `initialStops` as an OL. Each LI shows the stop name in a span and three buttons: “Insert after”, “Up”, and “Down”. Insert a new “Stop <n>”, using the next length, directly after the selected item. Up and Down swap with a neighbour and do nothing at the edges. Build new arrays with `slice` and spread; never mutate the previous state. Inserting after Reef should give Harbour, Reef, Stop 4, Lighthouse.",
+    prompt: "Render initialStops as one OL. Each LI shows the exact stop name in a span and three buttons: Insert after, Up and Down. Insert a new `Stop <n>`, where n is the total current length plus one, directly after the selected item. Repeated insertions work at the first, middle and last positions. Up/Down swap the selected stop with its neighbour and do nothing at either edge. Preserve order for every other item and keep each surviving stop's LI DOM node through moves/insertions by using stable unique ids as keys. Build new arrays without mutating prior state or initialStops; slice/spread or equivalent immutable array operations are fine. Support repeated mixed actions and independent/fresh mounts. Initially Harbour, Reef, Lighthouse; inserting after Reef gives Harbour, Reef, Stop 4, Lighthouse.",
     starter: `${STARTER_IMPORT}
 
 const initialStops = [
@@ -464,6 +467,7 @@ test('leaves the seed array untouched for the next mount', () => {
   const second = render(<App />);
   expect(stopNames(second.container)).toEqual(['Harbour', 'Reef', 'Lighthouse']);
 });
+test('inserts after the first item using the total length',()=>{const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Insert after'));expect(stopNames(view.container)).toEqual(['Harbour','Stop 4','Reef','Lighthouse']);});
 `,
   },
   {
@@ -474,7 +478,7 @@ test('leaves the seed array untouched for the next mount', () => {
     tier: 2,
     focus: ["useState", "map", "spread"],
     title: "Toggle done with map",
-    prompt: "Render the `initialTasks` declared in the starter as a UL where every LI holds a checkbox followed by the task text, checked when `done` is true, plus a paragraph reading “1 of 3 done”. Clicking a checkbox flips only that task's `done` and keeps the list order, so ticking “Write tests” makes the paragraph read “2 of 3 done”. Update with `map`, returning a new object for the matching task and the same object for every other one, so a fresh mount starts again from the seed.",
+    prompt: "Render initialTasks as a UL where every LI holds a labelled checkbox followed by its exact task text, checked when done is true. A paragraph reads exactly `<done> of <total> done`, initially `1 of 3 done`. Clicking any checkbox flips only that task, works repeatedly in both directions and updates the count while preserving list order and surviving LI DOM nodes. Key rows by stable task id. Prefer map to create a new array and a new object for the matching task, keeping unaffected objects unchanged; equivalent immutable loops are fine. Do not mutate prior state or the seed. Independently mounted apps and fresh mounts each start from the original flags. After ticking Write tests, the count is `2 of 3 done`; ticking it again restores `1 of 3 done`.",
     starter: `${STARTER_IMPORT}
 
 const initialTasks = [
@@ -547,6 +551,7 @@ test('leaves the seed tasks untouched for the next mount', () => {
   expect(boxes(second.container).map(box => box.checked)).toEqual([false, true, false]);
   expect(second.container.textContent).toContain('1 of 3 done');
 });
+test('toggling the first task twice restores its original flag',()=>{const view=render(<App/>);fireEvent.click(boxes(view.container)[0]);fireEvent.click(boxes(view.container)[0]);expect(boxes(view.container).map(b=>b.checked)).toEqual([false,true,false]);expect(view.container.querySelector('p').textContent).toBe('1 of 3 done');});
 `,
   },
   {

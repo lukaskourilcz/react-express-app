@@ -205,13 +205,13 @@ export default App;
   "react-keyed-book-list": {
     solution: `import React from 'react';
 
-const books = [
+const initialBooks = [
   { id: 'b1', title: 'Dune', author: 'Frank Herbert' },
   { id: 'b2', title: 'Emma', author: 'Jane Austen' },
   { id: 'b3', title: 'Ubik', author: 'Philip K. Dick' },
 ];
 
-const App = () => (
+const App = ({ books = initialBooks } = {}) => (
   <main>
     <p>{books.length} books</p>
     <ul>
@@ -226,13 +226,13 @@ export default App;
 `,
     junior: `import React from 'react';
 
-const books = [
+const initialBooks = [
   { id: 'b1', title: 'Dune', author: 'Frank Herbert' },
   { id: 'b2', title: 'Emma', author: 'Jane Austen' },
   { id: 'b3', title: 'Ubik', author: 'Philip K. Dick' },
 ];
 
-const App = () => {
+const App = ({ books = initialBooks } = {}) => {
   const count = books.length;
   const rows = [];
   for (const book of books) {
@@ -252,7 +252,7 @@ export default App;
 `,
     senior: `import React from 'react';
 
-const books = [
+const initialBooks = [
   { id: 'b1', title: 'Dune', author: 'Frank Herbert' },
   { id: 'b2', title: 'Emma', author: 'Jane Austen' },
   { id: 'b3', title: 'Ubik', author: 'Philip K. Dick' },
@@ -260,7 +260,7 @@ const books = [
 
 const Book = ({ title, author }) => <li>{\`\${title} by \${author}\`}</li>;
 
-const App = () => (
+const App = ({ books = initialBooks } = {}) => (
   <main>
     <p>{\`\${books.length} books\`}</p>
     <ul>
@@ -273,18 +273,19 @@ const App = () => (
 
 export default App;
 `,
+    hiddenSuite: "\ntest('renders exact arbitrary book text, counts and empty replacements',()=>{\n const books=Object.freeze([Object.freeze({id:'z',title:'  <b>Book</b>  ',author:'\u017dofie \ud83e\udd88'}),Object.freeze({id:'a',title:'',author:'  A  '})]);\n const view=render(<App books={books}/>);\n const check=values=>{expect(view.container.querySelector('p').textContent).toBe(values.length+' books');expect([...view.container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(values.map(book=>book.title+' by '+book.author));};\n check(books);view.rerender(<App books={Object.freeze([])}/>);check([]);\n view.rerender(<App books={Object.freeze([books[1]])}/>);check([books[1]]);\n expect(books[0].title).toBe('  <b>Book</b>  ');\n});\ntest('keeps each existing row attached to its id through reorder and renamed data',()=>{\n const initial=[{id:'one',title:'First',author:'A'},{id:'two',title:'Second',author:'B'},{id:'three',title:'Third',author:'C'}];\n const view=render(<App books={initial}/>),nodes=[...view.container.querySelectorAll('li')];\n view.rerender(<App books={[{...initial[2],title:'Renamed'},initial[0],initial[1]]}/>);\n let current=[...view.container.querySelectorAll('li')];\n expect(current[0]).toBe(nodes[2]);expect(current[1]).toBe(nodes[0]);expect(current[2]).toBe(nodes[1]);\n expect(current[0].textContent).toBe('Renamed by C');\n view.rerender(<App books={[initial[1],{id:'new',title:'New',author:'D'},initial[2]]}/>);\n current=[...view.container.querySelectorAll('li')];expect(current[0]).toBe(nodes[1]);expect(current[2]).toBe(nodes[2]);\n});\ntest('handles a hundred read-only books and independent mounts',()=>{\n const books=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:'b'+(100-i),title:i===0?'x'.repeat(2000):'Book '+i,author:i===99?'y'.repeat(2000):'Author '+i})));\n const first=render(<App books={books}/>),second=render(<App books={[]}/>);\n expect([...first.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(books.map(book=>book.title+' by '+book.author));\n first.rerender(<App books={[]}/>);expect(second.container.querySelector('p').textContent).toBe('0 books');\n});\n",
   },
   "react-in-stock-list": {
     solution: `import React from 'react';
 
-const products = [
+const initialProducts = [
   { id: 1, name: 'Fins', inStock: true },
   { id: 2, name: 'Snorkel', inStock: false },
   { id: 3, name: 'Mask', inStock: true },
   { id: 4, name: 'Wetsuit', inStock: false },
 ];
 
-const App = () => {
+const App = ({ products = initialProducts } = {}) => {
   const available = products.filter(product => product.inStock);
   return (
     <main>
@@ -302,14 +303,14 @@ export default App;
 `,
     junior: `import React from 'react';
 
-const products = [
+const initialProducts = [
   { id: 1, name: 'Fins', inStock: true },
   { id: 2, name: 'Snorkel', inStock: false },
   { id: 3, name: 'Mask', inStock: true },
   { id: 4, name: 'Wetsuit', inStock: false },
 ];
 
-const App = () => {
+const App = ({ products = initialProducts } = {}) => {
   const available = [];
   for (const product of products) {
     if (product.inStock) {
@@ -334,7 +335,7 @@ export default App;
 `,
     senior: `import React from 'react';
 
-const products = [
+const initialProducts = [
   { id: 1, name: 'Fins', inStock: true },
   { id: 2, name: 'Snorkel', inStock: false },
   { id: 3, name: 'Mask', inStock: true },
@@ -351,7 +352,7 @@ const ProductList = ({ items }) => (
   </ul>
 );
 
-const App = () => {
+const App = ({ products = initialProducts } = {}) => {
   const available = products.filter(inStock);
   return (
     <main>
@@ -363,6 +364,7 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\ntest('filters changed read-only products and reports exact counts, including empty',()=>{\n const products=Object.freeze([Object.freeze({id:99,name:'<b>Literal</b>',inStock:false}),Object.freeze({id:7,name:'  Caf\u00e9 \ud83e\udd88  ',inStock:true}),Object.freeze({id:2,name:'',inStock:true})]);\n const view=render(<App products={products}/>);\n const check=values=>{const available=values.filter(row=>row.inStock);expect(view.container.querySelector('p').textContent).toBe(available.length+' of '+values.length+' in stock');expect([...view.container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(available.map(row=>row.name));};\n check(products);const changed=Object.freeze(products.map(row=>Object.freeze({...row,inStock:!row.inStock})));view.rerender(<App products={changed}/>);check(changed);\n view.rerender(<App products={[]}/>);check([]);expect(products[0].inStock).toBe(false);\n});\ntest('keeps surviving rows attached to product ids across reorder, rename and filtering',()=>{\n const products=[{id:1,name:'Same',inStock:true},{id:2,name:'Same',inStock:true},{id:3,name:'Third',inStock:false}];\n const view=render(<App products={products}/>),nodes=[...view.container.querySelectorAll('li')];\n view.rerender(<App products={[{...products[1],name:'Renamed'},products[0],{...products[2],inStock:true}]}/>);\n let current=[...view.container.querySelectorAll('li')];expect(current[0]).toBe(nodes[1]);expect(current[1]).toBe(nodes[0]);expect(current[0].textContent).toBe('Renamed');\n view.rerender(<App products={[{...products[0],inStock:false},products[2],products[1]]}/>);\n current=[...view.container.querySelectorAll('li')];expect(current).toHaveLength(1);expect(current[0]).toBe(nodes[1]);\n view.rerender(<App products={[{...products[2],inStock:true},products[1]]}/>);\n expect([...view.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(['Third','Same']);\n});\ntest('handles all and no stock, a hundred products and independent mounts',()=>{\n const products=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:100-i,name:i===0?'x'.repeat(2000):'Product '+i,inStock:true})));\n const first=render(<App products={products}/>),second=render(<App products={[]}/>);\n expect(first.container.querySelector('p').textContent).toBe('100 of 100 in stock');expect([...first.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(products.map(row=>row.name));\n first.rerender(<App products={products.map(row=>({...row,inStock:false}))}/>);expect(first.container.querySelectorAll('li')).toHaveLength(0);expect(first.container.querySelector('p').textContent).toBe('0 of 100 in stock');expect(second.container.querySelector('p').textContent).toBe('0 of 0 in stock');\n});\n",
   },
   "react-guest-list": {
     solution: `import React, { useState } from 'react';
@@ -388,7 +390,7 @@ const App = () => {
 
   return (
     <main>
-      <input value={name} onChange={event => setName(event.target.value)} />
+      <input aria-label="Guest name" value={name} onChange={event => setName(event.target.value)} />
       <button onClick={addGuest}>Add</button>
       <ul>
         {guests.map(guest => (
@@ -448,7 +450,7 @@ const App = () => {
 
   return (
     <main>
-      <input value={name} onChange={event => setName(event.target.value)} />
+      <input aria-label="Guest name" value={name} onChange={event => setName(event.target.value)} />
       <button onClick={handleAdd}>Add</button>
       <ul>{rows}</ul>
     </main>
@@ -489,7 +491,7 @@ const App = () => {
 
   return (
     <main>
-      <input value={name} onChange={event => setName(event.target.value)} />
+      <input aria-label="Guest name" value={name} onChange={event => setName(event.target.value)} />
       <button onClick={addGuest}>Add</button>
       <ul>
         {guests.map(guest => (
@@ -502,6 +504,7 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\ntest('labels the input, trims names and ignores whitespace without clearing it',()=>{\n const view=render(<App/>),input=screen.getByRole('textbox',{name:'Guest name'});\n const names=()=>[...view.container.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(b=>b.remove());return copy.textContent.trim();});\n for(const value of ['',' ','\\t\\u00a0']){fireEvent.change(input,{target:{value}});fireEvent.click(button(view.container,'Add'));expect(names()).toEqual(['Ana','Bo']);expect(input.value).toBe(value);}\n fireEvent.change(input,{target:{value:'\\t<em>\u017dofie \ud83e\udd88</em>\\u00a0'}});fireEvent.click(button(view.container,'Add'));expect(names()).toEqual(['Ana','Bo','<em>\u017dofie \ud83e\udd88</em>']);expect(input.value).toBe('');\n});\ntest('removes only the selected duplicate and supports deleting then adding to an empty list',()=>{\n const view=render(<App/>),input=view.container.querySelector('input');\n const names=()=>[...view.container.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(b=>b.remove());return copy.textContent.trim();});\n for(const value of ['Ana',' Ana ','Bo']){fireEvent.change(input,{target:{value}});fireEvent.click(button(view.container,'Add'));}\n expect(names()).toEqual(['Ana','Bo','Ana','Ana','Bo']);\n fireEvent.click(view.container.querySelectorAll('li')[2].querySelector('button'));expect(names()).toEqual(['Ana','Bo','Ana','Bo']);\n while(view.container.querySelector('li'))fireEvent.click(view.container.querySelector('li button'));\n expect(names()).toEqual([]);fireEvent.change(input,{target:{value:'New'}});fireEvent.click(button(view.container,'Add'));expect(names()).toEqual(['New']);\n});\ntest('matches an ordered add/remove model and keeps mounted apps independent',()=>{\n const first=render(<App/>),second=render(<App/>),input=first.container.querySelector('input');let expected=['Ana','Bo'];\n const names=root=>[...root.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(b=>b.remove());return copy.textContent.trim();});\n for(let step=0;step<24;step++){\n  if(step%3!==2||expected.length===0){const value=step%4===0?' Ana ':'Guest '+step;fireEvent.change(input,{target:{value}});fireEvent.click(button(first.container,'Add'));expected=expected.concat(value.trim());expect(input.value).toBe('');}\n  else{const index=(step*7)%expected.length;fireEvent.click(first.container.querySelectorAll('li')[index].querySelector('button'));expected=expected.filter((_,i)=>i!==index);}\n  expect(names(first.container)).toEqual(expected);expect(names(second.container)).toEqual(['Ana','Bo']);\n }\n});\n",
   },
   "react-insert-and-reorder": {
     solution: `import React, { useState } from 'react';
@@ -676,6 +679,7 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\ntest('inserts repeatedly at first, middle and last positions using the current length',()=>{\n const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Insert after'));\n expect(stopNames(view.container)).toEqual(['Harbour','Stop 4','Reef','Lighthouse']);\n fireEvent.click(control(view.container.querySelectorAll('li')[3],'Insert after'));expect(stopNames(view.container)).toEqual(['Harbour','Stop 4','Reef','Lighthouse','Stop 5']);\n fireEvent.click(control(view.container.querySelectorAll('li')[1],'Insert after'));expect(stopNames(view.container)).toEqual(['Harbour','Stop 4','Stop 6','Reef','Lighthouse','Stop 5']);\n});\ntest('matches mixed insertion/move steps and preserves surviving row identity',()=>{\n const view=render(<App/>);let expected=['Harbour','Reef','Lighthouse'];\n for(let step=0;step<24;step++){\n  const prior=new Map([...view.container.querySelectorAll('li')].map(li=>[li.querySelector('span').textContent,li]));const index=(step*7+1)%expected.length;const row=view.container.querySelectorAll('li')[index];\n  if(step%4===0){fireEvent.click(control(row,'Insert after'));expected=[...expected.slice(0,index+1),'Stop '+(expected.length+1),...expected.slice(index+1)];}\n  else{const delta=step%4===2?1:-1;fireEvent.click(control(row,delta===1?'Down':'Up'));const target=index+delta;if(target>=0&&target<expected.length){const next=[...expected];[next[index],next[target]]=[next[target],next[index]];expected=next;}}\n  expect(stopNames(view.container)).toEqual(expected);\n  for(const li of view.container.querySelectorAll('li')){const name=li.querySelector('span').textContent;if(prior.has(name))expect(li).toBe(prior.get(name));}\n }\n});\ntest('ignores repeated edge moves and keeps independent mounts unchanged',()=>{\n const first=render(<App/>),second=render(<App/>);\n for(let i=0;i<6;i++){fireEvent.click(control(first.container.querySelectorAll('li')[0],'Up'));fireEvent.click(control(first.container.querySelectorAll('li')[2],'Down'));}\n expect(stopNames(first.container)).toEqual(['Harbour','Reef','Lighthouse']);\n fireEvent.click(control(first.container.querySelectorAll('li')[0],'Insert after'));fireEvent.click(control(first.container.querySelectorAll('li')[0],'Down'));\n expect(stopNames(second.container)).toEqual(['Harbour','Reef','Lighthouse']);\n});\n",
   },
   "react-toggle-done-with-map": {
     solution: `import React, { useState } from 'react';
@@ -804,6 +808,7 @@ const App = () => {
 
 export default App;
 `,
+    hiddenSuite: "\ntest('can toggle the same task repeatedly in both directions',()=>{\n const view=render(<App/>);\n for(let i=0;i<6;i++){fireEvent.click(boxes(view.container)[0]);expect(boxes(view.container).map(b=>b.checked)).toEqual([i%2===0,true,false]);expect(view.container.querySelector('p').textContent).toBe((i%2===0?2:1)+' of 3 done');}\n});\ntest('matches a repeated toggle model while preserving labels, order and row identity',()=>{\n const view=render(<App/>),nodes=[...view.container.querySelectorAll('li')];let expected=[false,true,false];\n for(let step=0;step<36;step++){\n  const index=(step*7+Math.floor(step/3))%3;fireEvent.click(boxes(view.container)[index]);expected=expected.map((value,i)=>i===index?!value:value);\n  expect(boxes(view.container).map(b=>b.checked)).toEqual(expected);expect(view.container.querySelector('p').textContent).toBe(expected.filter(Boolean).length+' of 3 done');\n  const rows=[...view.container.querySelectorAll('li')];expect(rows.map(li=>li.textContent.trim())).toEqual(['Write tests','Fix the build','Ship it']);rows.forEach((row,i)=>expect(row).toBe(nodes[i]));\n }\n});\ntest('keeps two mounted apps and a fresh mount independent',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.click(boxes(first.container)[2]);fireEvent.click(boxes(first.container)[1]);\n expect(boxes(first.container).map(b=>b.checked)).toEqual([false,false,true]);expect(boxes(second.container).map(b=>b.checked)).toEqual([false,true,false]);\n first.unmount();const third=render(<App/>);expect(boxes(third.container).map(b=>b.checked)).toEqual([false,true,false]);\n});\n",
   },
   "react-newest-first-todos": {
     solution: `import React, { useRef, useState } from 'react';
