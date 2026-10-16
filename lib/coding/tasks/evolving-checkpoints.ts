@@ -329,19 +329,22 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { additionalTypeTests: [{"code": "{const fn:<T>(r:readonly Result<T>[])=>{values:T[];errors:string[]}=partitionResults;}"}, {"code": "{const bad:{values:string[];errors:string[]}=partitionResults([{ok:true,value:1}]);}", "rejects": true}] },
     ),
     step(
-      'Add recoverResult<T>(result,fn) to recover a failure using fn(error):Result<T>. A success passes through without calling fn. Convert callback throws using the earlier error convention.',
+      "Add recoverResult<T>(result,fn) to recover a failure using fn(error):Result<T>. A success passes through without calling fn. Convert callback throws using the earlier error convention. On success return the original Result record without invoking fn. On failure call fn once synchronously with the exact original error string and return its exact Result record without cloning or awaiting it. Result records may be frozen and payloads are opaque. Use the earlier exact Error.message/String(nonError) policy for synchronous throws: messages/conversions are strings of at most 20000 units and conversion does not throw. A newly caught failure owns a mutable record. Do not mutate inputs. Target: O(1) time and O(1) additional wrapper space for recoverResult itself; callback work, opaque payloads and throwable text conversion are excluded.",
       'Přidej recoverResult<T>(result,fn), které opraví chybu pomocí fn(error):Result<T>. Úspěch předej bez volání fn. Výjimky callbacku převáděj podle dřívějšího pravidla.',
-      calls([
+      calls(
+        ["(()=>{const next={ok:true,value:[]};return recoverResult({ok:false,error:'x'},()=>next)===next;})()",true],[
         'recoverResult({ok:false,error:"x"},e=>({ok:true,value:e.length}))',
         { ok: true, value: 1 },
       ]),
+      { additionalTypeTests: [{"code": "{const fn:<T>(r:Result<T>,cb:(e:string)=>Result<T>)=>Result<T>=recoverResult;}"}, {"code": "{const bad:Result<string>=recoverResult<number>({ok:false,error:\"x\"},()=>({ok:true,value:1}));}", "rejects": true}] },
     ),
   ],
   'ts-evolving-store': [
     step(
-      'Implement generic createStore<T>(initial) with get():T and set(value:T):void. Store and replace ordinary numeric or string values in a closure.',
+      "Implement generic createStore<T>(initial) with get():T and set(value:T):void. Store and replace ordinary numeric or string values in a closure. At this checkpoint the runtime inputs are finite Number values from -1000000000 to 1000000000 or primitive strings of at most 20000 UTF16 units. Preserve exact values, including signed zero and text case/whitespace/Unicode representation; do not trim, normalize or coerce them. Each factory call owns an independent state binding. Both methods must work when detached from the returned object; set has a void return type. Keep the generic get/set types even though this checkpoint exercises only numbers and strings. Target: O(1) time and O(1) additional storage per createStore/get/set call, excluding storage of the original value.",
       'Napiš generické createStore<T>(initial) s get():T a set(value:T):void. Běžné číselné či řetězcové hodnoty ukládej a nahrazuj v uzávěru.',
       calls(
+        ["(()=>{const store=createStore('e\\u0301');store.set(' \u00e9 ');return store.get();})()"," \u00e9 "],
         ['createStore(1).get()', 1],
         ['createStore("a").get()', 'a'],
         ['(()=>{const s=createStore(1);s.set(2);return s.get()})()', 2],

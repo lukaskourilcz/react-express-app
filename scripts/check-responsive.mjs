@@ -536,10 +536,13 @@ async function openBrowser(seed, baseUrl) {
   if (IS_LINUX) chromeArgs.unshift('--no-sandbox', '--disable-dev-shm-usage');
   const chrome = spawn(CHROME, chromeArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
+  let devtoolsSocket;
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
+    // Release the control socket explicitly before shutting down its peer.
+    try { devtoolsSocket?.close(); } catch { /* ignore */ }
     try { chrome.kill('SIGKILL'); } catch { /* ignore */ }
     try { rmSync(userData, { recursive: true, force: true }); } catch { /* ignore */ }
   };
@@ -551,7 +554,7 @@ async function openBrowser(seed, baseUrl) {
     });
     const tabs = await getJSON(`http://127.0.0.1:${debugPort}/json`);
     const tab = tabs.find((t) => t.type === 'page');
-    const ws = new globalThis.WebSocket(tab.webSocketDebuggerUrl);
+    const ws = devtoolsSocket = new globalThis.WebSocket(tab.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       ws.addEventListener('open', resolve, { once: true });
       ws.addEventListener('error', () => reject(new Error('Unable to connect to Chrome DevTools.')), { once: true });
