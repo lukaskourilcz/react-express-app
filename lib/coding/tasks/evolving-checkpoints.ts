@@ -229,14 +229,18 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { focus: ['objects', 'functions'], references: [{ title: text('Own enumerable keys', ''), url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys' }] },
     ),
     step(
-      'Validate dependencies before traversal. Return null if a referenced task does not exist as an own key of graph. Otherwise retain dependency-first ordering; this step uses acyclic graphs.',
+      "Validate every dependency before traversal. Return null if any referenced ID is not a declared own enumerable task key, including a name found only in inherited or hidden metadata. Otherwise keep the earlier deterministic DFS order and bounded graph/ownership/n/m rules. Graphs remain acyclic at this checkpoint; cycle rejection comes next. Target: O(n+m) time and O(n+m) extra space.",
       'Před průchodem ověř závislosti. Vrať null, pokud odkazovaný úkol není vlastním klíčem graph. Jinak zachovej pořadí závislostí; tato etapa používá acyklické grafy.',
-      calls(['plan({a:["missing"]})', null]),
+      calls(
+        ["plan(Object.assign(Object.create({missing:[]}),{root:[\"missing\"]}))", null],
+        ['plan({a:["missing"]})', null]),
     ),
     step(
-      'Add options.layers to plan(graph, options={}). When true, return arrays of tasks that can run together, ordered by graph keys. A task enters the next layer only after all dependencies are in earlier layers.',
+      "Add plan(graph, options={}) with options.layers omitted/undefined/false or true. Default/false retains the previous validated DFS result, including null for invalid graphs. For true, this checkpoint supplies only valid acyclic graphs with declared dependencies. Return fresh mutable arrays of every currently ready task, in Object.keys order within each layer. All dependencies must have completed in earlier layers; collect the whole layer before marking its members complete. Empty graph returns fresh []. Keep prior graph bounds, exact IDs, ownership and n/m definitions. Do not share layer arrays with each other or across calls. Target: O(n*(n+m)) time and O(n+m) extra space; rescanning for each layer is allowed and a correct depth/index approach may be faster. Invalid layered graphs are handled in the next milestone.",
       'Přidej options.layers do plan(graph, options={}). Při true vrať pole souběžně spustitelných úkolů v pořadí klíčů grafu. Úkol patří do další vrstvy až po všech závislostech v předchozích vrstvách.',
-      calls([
+      calls(
+        ["(()=>{const layers=plan({root:['leaf'],leaf:[]},{layers:true});layers[0].push('mutable');return layers;})()", [["leaf", "mutable"], ["root"]]],
+        [
         'plan({a:[],b:[],c:["a","b"]},{layers:true})',
         [['a', 'b'], ['c']],
       ]),
