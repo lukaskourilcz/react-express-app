@@ -363,7 +363,7 @@ test('still toggles after the first two clicks',()=>{const view=render(<App/>);f
     tier: 1,
     focus: ["useState", "spread", "forms"],
     title: "Add a todo",
-    prompt: "Render a text input, an Add button and a UL that starts empty. Adding appends the typed text as a new LI and clears the input back to empty, and a second task must not replace the first.",
+    prompt: "Render one text input named `New todo`, an Add button and a UL that starts empty. Keep the input controlled. Add uses JavaScript trim() on the current text. A nonempty result appends one LI with that exact trimmed text and clears the input; whitespace-only input is a no-op and leaves the input unchanged. Preserve duplicate texts as distinct rows, input order, internal whitespace, Unicode and markup-like text literally. Inputs may have up to 2000 UTF16 units. Use stable unique per-item keys so earlier LI nodes survive later appends. Each click is a separate event. Ordinary parent re-renders preserve text and rows;independent and fresh mounts start with empty input/list. A form submit or a button click handler is fine,with no page navigation.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -380,27 +380,27 @@ export default App;
 const [todos, setTodos] = useState([]);
 
 const addTodo = () => {
-  // append { id: a new unique id, text } in a new array, then empty text
+  // trim text;ignore blank values,otherwise append a uniquely keyed item and empty text
 };
 
-<input value={text} onChange={event => setText(/* the typed text */)} />
+<input aria-label="New todo" value={text} onChange={event => setText(/* the typed text */)} />
 <button onClick={addTodo}>Add</button>
 <ul>
   {todos.map(todo => (
     <li key={todo.id}>{/* the todo's text */}</li>
   ))}
 </ul>`,
-    hints: ["Keep input and todos in separate state. Create a new array when adding."],
+    hints: ["Keep input and todos in separate state. Trim only outer whitespace,skip blanks and append duplicates with distinct stable keys. Label the input New todo."],
     approach: [
       "Use two separate useState values: one string for the input text and one array for the todos.",
       "Keep the input controlled so its value always reflects the text state.",
-      "On add, build a new array by spreading the previous todos and appending an object with a unique id, then reset the text state to empty.",
+      "On Add,trim the input and leave blank values unchanged. Otherwise append a uniquely keyed item in a new array and clear the text. Render literal text and preserve earlier rows.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('adds the typed task and clears the input', () => {
@@ -424,6 +424,9 @@ test('keeps earlier todos when another is added', () => {
   expect(container.querySelectorAll('li')).toHaveLength(2);
   expect(container.textContent).toContain('First');
 });
+
+test('appends trimmed duplicate text as distinct rows',()=>{const {container}=render(<App/>),input=container.querySelector('input');for(const value of['  Zed  ','Amy','Zed']){fireEvent.change(input,{target:{value}});fireEvent.click(container.querySelector('button'));}expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Zed','Amy','Zed']);expect(input.value).toBe('');});
+
 `,
   },
   {
@@ -435,7 +438,7 @@ test('keeps earlier todos when another is added', () => {
     tier: 1,
     focus: ["filter", "useState"],
     title: "Remove a todo",
-    prompt: "The starter holds three todos. Render each as an LI with its text and its own Remove button; clicking one Remove deletes only that todo and leaves the others in place.",
+    prompt: "Render the three starter initialTodos in order,each as an LI with its exact text and one button whose visible label is Remove and accessible name is `Remove <todo text>`. Clicking deletes only that id,even when removing the middle or last row or after earlier removals. Use stable ids as keys so surviving LI nodes keep their identity and relative order. Never mutate initialTodos or earlier state. After removing all three,no todo row or Remove button remains;an empty UL or the existing All done message are both fine. Ordinary parent re-renders do not restore removed rows;simultaneous and fresh mounts have independent initial lists. Use filter,a loop building a new array or an equivalent immutable operation.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const initialTodos = [
@@ -463,21 +466,21 @@ const removeTodo = id => {
 <ul>
   {todos.map(todo => (
     <li key={todo.id}>
-      {todo.text} <button onClick={/* remove this todo */}>Remove</button>
+      {todo.text} <button aria-label={'Remove ' + todo.text} onClick={/* remove this todo */}>Remove</button>
     </li>
   ))}
 </ul>`,
-    hints: ["Filter out the item whose id matches the clicked button."],
+    hints: ["Filter out only the clicked id. Name each Remove button with its todo text,and keep stable keys on surviving rows."],
     approach: [
       "Hold the todos in useState so removing an item can trigger a re-render.",
       "Map the todos into list items, each rendering its text plus a remove button that knows its own id.",
-      "In the remove handler, call the setter with filter so it returns a new array without the matching id instead of mutating the old one.",
+      "In the remove handler, call the setter with filter or an equivalent immutable operation so it returns a new array without the matching id instead of mutating the old one.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders a Remove button for each todo', () => {
@@ -492,6 +495,9 @@ test('removes only the clicked todo', () => {
   fireEvent.click(container.querySelector('li button'));
   expect(container.querySelectorAll('li')).toHaveLength(before - 1);
 });
+
+test('removing the middle todo preserves the others in order',()=>{const {container}=render(<App/>);fireEvent.click(container.querySelectorAll('li button')[1]);const labels=Array.from(container.querySelectorAll('li')).map(li=>{const copy=li.cloneNode(true);copy.querySelector('button').remove();return copy.textContent.trim();});expect(labels).toEqual(['Practice hooks','Ship the app']);});
+
 `,
   },
   {
@@ -503,7 +509,7 @@ test('removes only the clicked todo', () => {
     tier: 1,
     focus: ["derived-state", "filter"],
     title: "Search a list",
-    prompt: "Filter the names declared in the starter with a text input, rendering the matches as LI items — all three before anything is typed. Matching ignores case, so typing ANA still leaves Ana on screen.",
+    prompt: "Filter the fixed starter names with a controlled native text/search input named `Search names`. Start with all three exact LI texts in starter order. Match a literal substring after query.trim().toLowerCase() against each name.toLowerCase();preserve the raw query in the input. Thus `an` or ` AN ` shows Ana and Daniel. Treat punctuation literally,not as a regular expression. Queries may have up to 2000 UTF16 units. Empty/whitespace query restores all names;no match gives zero LI rows,with either an empty UL or the existing No matches message. Derive matches from the unchanged source on every render. Surviving visible LI nodes keep their identity as the query changes;previously removed rows may mount again when restored. Ordinary parent re-renders preserve the query;separate and fresh mounts start with an empty query and all names. No extra data prop or CSS style is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const names = ['Ana', 'Daniel', 'John'];
@@ -519,15 +525,15 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [query, setQuery] = useState('');
-const visibleNames = names.filter(name => /* name includes query, both in lower case */);
+const visibleNames = names.filter(name => /* name includes the trimmed query, both in lower case */);
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleNames.map(name => (
     <li key={name}>{name}</li>
   ))}
 </ul>`,
-    hints: ["Store only the query. Derive filtered names during render."],
+    hints: ["Store the raw query,trim/lowercase only for matching,and derive from the unchanged names. Label the input Search names."],
     approach: [
       "Store only the query string in useState; the names list is a constant that never changes.",
       "Bind the input to that query state so every keystroke updates it.",
@@ -537,7 +543,7 @@ const visibleNames = names.filter(name => /* name includes query, both in lower 
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows every name before typing', () => {
@@ -551,6 +557,9 @@ test('filters as the user types, ignoring case', () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ana');
 });
+
+test('substring matching restores the full list after clearing',()=>{const {container}=render(<App/>),input=container.querySelector('input');fireEvent.change(input,{target:{value:'an'}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel']);fireEvent.change(input,{target:{value:''}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel','John']);});
+
 `,
   },
   {
@@ -1185,7 +1194,7 @@ test('shows details only after a user is selected', async () => {
     tier: 2,
     focus: ["derived-state", "filter", "fetch"],
     title: "Filter fetched users",
-    prompt: "Fetch the users once, then filter the rendered LI list with a text input, ignoring case. The filtering happens locally: do not send a new request on every keystroke.",
+    prompt: "Fetch https://jsonplaceholder.typicode.com/users once per normal mounted instance,then filter locally without another request on input or ordinary parent renders. GET is the default;development Strict Mode may deliberately repeat effect setup/cleanup. Always render a controlled native text/search input named `Filter users` and a UL. While the request or JSON body is pending,show `Loading users\u2026` as a status. Check response.ok before awaiting response.json(). Success returns a dense read-only array of up to 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units;names may repeat or be empty. Show each exact literal name as an LI in response order,with stable id keys. Match name.toLowerCase() against query.trim().toLowerCase() as a literal substring while preserving raw input;queries may be up to 2000 units. Typing before data arrives filters the eventual data using the latest query. Preserve surviving visible LI nodes and do not mutate response data. HTTP,network or JSON failure ends loading,keeps an empty list and shows `Could not load users.` as an alert;typing never retries. Clean up the effect so a removed instance ignores late results. Separate/fresh mounts own their requests,query and empty initial list. The API stub is local;no production user data or backend setup is needed.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1205,43 +1214,45 @@ const [error, setError] = useState('');
 const [query, setQuery] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items.filter(item =>
-  /* the user's name includes query, both in lower case */
+  /* the user's name includes the trimmed query, both in lower case */
 );
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleItems.map(item => (
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Fetch once. Filter locally from users and query—do not fetch on every keystroke."],
+    hints: ["Fetch once per ordinary mount,handle loading/status/JSON failures,and ignore late results after cleanup. Filter the current data locally using a trimmed query;typing must not refetch."],
     approach: [
       "Fetch the users once in an effect with an empty dependency array; the query must not be a dependency.",
-      "Hold the search text in its own useState value bound to a controlled input.",
-      "Derive the visible list during render by filtering the fetched users on a case-insensitive substring match.",
+      "Keep the controlled Filter users input available while loading. Track loading/error;check response.ok,catch failures and clean up late results.",
+      "Derive the visible list during render from the fetched users and current trimmed,lowercase query,without changing either source value.",
       "Map only that derived list, so typing never triggers another network request.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('filters the fetched users locally', async () => {
@@ -1251,6 +1262,13 @@ test('filters the fetched users locally', async () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ervin Howell');
 });
+
+const withUserRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),options,resolve,reject}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const fulfillUsers=async(call,data)=>{await act(async()=>{call.resolve({ok:true,status:200,json:async()=>data});});};
+const fetchedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('typing filters the actual response without another request',async()=>withUserRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await fulfillUsers(calls[0],[{id:1,name:'Delta'},{id:2,name:'River'}]);const input=container.querySelector('input');fireEvent.change(input,{target:{value:'IV'}});expect(fetchedNames(container)).toEqual(['River']);expect(calls).toHaveLength(1);}));
+
 `,
     api: {
       method: "GET",
@@ -1403,7 +1421,7 @@ test('sends the title and renders what comes back', async () => {
     tier: 3,
     focus: ["fetch", "spread"],
     title: "Create and append",
-    prompt: "Start with an empty UL and an Add button. Clicking it POSTs a new todo and, once the response arrives, appends the created todo to the list — the list goes from no items to one.",
+    prompt: "Start with an empty UL and one native type-button Add control. Clicking POSTs to https://jsonplaceholder.typicode.com/todos with a JSON Content-Type header and a JSON body containing a nonempty title string and completed:false. The exact requested title is your choice. While a request or its JSON body is pending,disable the button and do not append an optimistic row. Check response.ok,then await response.json(). A successful response is an ordinary record with a string or number id and a plain string title up to 2000 UTF16 units. Append that exact returned title as literal LI text in response order;do not substitute the requested title. Server ids and titles may repeat,so choose keys that keep all existing LI nodes stable during appends. Re-enable Add after completion. HTTP failure,network rejection or JSON failure adds no row and preserves earlier rows;show `Could not add todo. Try again.` as an alert and allow retry. Starting a retry clears the alert. Ordinary parent re-renders preserve state;simultaneous and fresh instances have independent empty lists. Requests are sequential because pending disables Add. The provided API stub simulates writes;this exercise does not create persistent remote data.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1416,31 +1434,40 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos';
-const [items, setItems] = useState([]);
+    skeleton: `const [items, setItems] = useState([]);
+const [saving, setSaving] = useState(false);
+const [error, setError] = useState('');
 
 const createItem = async newItem => {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(newItem),
-  });
-  if (!response.ok) throw new Error('Request failed');
-  const createdItem = await response.json();
-  setItems(currentItems => [...currentItems, createdItem]);
-};`,
-    hints: ["After the request succeeds, update with previous => [...previous, created]."],
+  setSaving(true);
+  setError('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(newItem),
+    });
+    if (!response.ok) throw new Error('Request failed');
+    const createdItem = await response.json();
+    // append the returned title with a stable unique local key
+  } catch {
+    setError('Could not add todo. Try again.');
+  } finally {
+    setSaving(false);
+  }
+};
+// Disable Add while saving, render an error alert, and keep the UL's earlier rows.`,
+    hints: ["Disable Add until the response body settles. Check response.ok,append the exact returned title with a stable local key,and catch failures without changing earlier rows."],
     approach: [
       "Start the todos state as an empty array and POST a new todo from an async click handler.",
       "Set method POST, a JSON content-type header, and a JSON.stringify body describing the new todo.",
-      "Await the created record from the response, then append it with a functional state update that spreads the previous array.",
-      "Key the rendered items by the returned id, falling back to the index when the API repeats ids.",
+      "Check response.ok and await the JSON record before appending its exact title. Keep loading/error state;catch failures,show the retry alert,and re-enable Add in finally.",
+      "Server ids may repeat. Assign a local unique key,or use stable append-only positions because rows never reorder/remove here. Starting a retry clears the alert.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('appends the created todo to the list', async () => {
@@ -1449,6 +1476,13 @@ test('appends the created todo to the list', async () => {
   fireEvent.click(container.querySelector('button'));
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(1));
 });
+
+const withCreates=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),options,resolve,reject}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const settleCreate=async(call,data)=>{await act(async()=>{call.resolve({ok:true,status:201,json:async()=>data});});};
+const createdTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('uses the returned title and can append a repeated server id',async()=>withCreates(async calls=>{const {container}=render(<App/>);fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(1));await settleCreate(calls[0],{id:201,title:'First server title'});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(2));await settleCreate(calls[1],{id:201,title:'Second server title'});expect(createdTexts(container)).toEqual(['First server title','Second server title']);}));
+
 `,
     api: {
       method: "POST",
@@ -2312,8 +2346,8 @@ test('ArrowLeft wraps focus and selection to Alerts',()=>{const {container}=rend
     tier: 3,
     focus: ["derived-state", "useState"],
     title: "Accordion",
-    prompt: "Render the three sections declared in the starter, each a header button with a body paragraph. No body shows at first; clicking a header opens that one, and opening a second closes the first — never two bodies at once.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: "Render the three starter sections in order with their exact titles and bodies. Each title is one native type-button control inside a heading,such as h3. Initially no body paragraph exists. Clicking opens that section and closes any other;clicking the already-open header closes it,so at most one paragraph exists. Every repeated choice,including Support,works. Set each button's aria-expanded to its actual open state and aria-controls to a nonempty stable panel id made with useId. The open paragraph has that id and exact body text. Targets are distinct within and across mounted accordions. Keep focus on the native header after activation;native Enter/Space and Tab behavior need no duplicate key handlers. Ordinary parent re-renders preserve state and ids;independent/fresh mounts start closed. No additional arrow-key or region-landmark behavior is required.",
+    starter: `import React, { useEffect, useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -2332,6 +2366,7 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [openId, setOpenId] = useState(null);
+const idPrefix = useId();
 
 const toggle = id => {
   setOpenId(current => /* null when id is already open, otherwise id */);
@@ -2339,11 +2374,11 @@ const toggle = id => {
 
 {sections.map(section => (
   <section key={section.id}>
-    <button onClick={() => toggle(section.id)}>{section.title}</button>
-    {/* the body in a paragraph, only while section.id is openId */}
+    <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+    {/* the body in a paragraph with id idPrefix + '-' + section.id, only while open */}
   </section>
 ))}`,
-    hints: ["Store the id of the single open section rather than a flag on every one."],
+    hints: ["Store the single open id,or null. Give heading buttons expanded state and stable useId panel targets;clicking the same header closes it."],
     approach: [
       "Keep one state value holding the id of the open section, starting as null because every section begins closed.",
       "Map the sections to a heading button each, deciding whether a section is open by comparing its id with the stored one.",
@@ -2354,7 +2389,7 @@ const toggle = id => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts with every section closed', () => {
@@ -2379,6 +2414,9 @@ test('opening one section closes the other', () => {
   expect(container.textContent).toContain('thirty days');
   expect(container.textContent).not.toContain('Ships within two days');
 });
+
+test('the current Support panel can close again',()=>{const {container}=render(<App/>),buttons=Array.from(container.querySelectorAll('button'));fireEvent.click(buttons[2]);expect(Array.from(container.querySelectorAll('p')).map(p=>p.textContent)).toEqual(['Support answers every weekday']);fireEvent.click(buttons[2]);expect(container.querySelector('p')).toBeNull();});
+
 `,
   },
   {
@@ -2390,7 +2428,7 @@ test('opening one section closes the other', () => {
     tier: 3,
     focus: ["useState", "events"],
     title: "Star rating",
-    prompt: "Render one button per entry in the stars array from the starter, plus a line reading “Rating: n” starting at 0. Hovering a star previews that rating, moving the pointer away restores the committed one, and clicking commits it — after clicking the fourth star the line reads “Rating: 4”.",
+    prompt: "Render five native buttons in starter stars order, with accessible names `Rate 1 star`, `Rate 2 stars` through `Rate 5 stars`, plus one paragraph `Rating: n` starting at 0. The number is the committed rating; hovering never changes that line. Hovering a star previews filling exactly the prefix from 1 through that value, not just any equal number of stars. Leaving the star row restores the last committed prefix, initially none. Clicking any star commits that rating, including lower values and later changes. Use filled/empty characters, classes or equivalent visible state; no particular CSS or wrapper is required. Keep normal parent re-renders, simultaneous instances and fresh mounts independent. Buttons retain their accessible names in every state. Keyboard activation uses native buttons; a full radio-group navigation pattern is outside this exercise.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const stars = [1, 2, 3, 4, 5];
@@ -2411,13 +2449,13 @@ const shown = /* hovered while there is one, otherwise rating */;
 
 <div onMouseLeave={() => setHovered(0)}>
   {stars.map(star => (
-    <button key={star} onMouseEnter={/* preview star */} onClick={/* commit star */}>
+    <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={/* preview star */} onClick={/* commit star */}>
       {/* ★ when star is at most shown, otherwise ☆ */}
     </button>
   ))}
 </div>
 <p>Rating: {rating}</p>`,
-    hints: ["Keep the hovered value and the committed value apart, and display whichever applies."],
+    hints: ["Keep preview and committed state separate. Fill the exact prefix for the hovered value or committed fallback;the Rating line always shows the committed value. Give each star a stable accessible name."],
     approach: [
       "Hold two numbers in state: the committed rating and the star currently under the pointer, both starting at zero.",
       "Derive how many stars look filled during render, preferring the hovered number and falling back to the committed rating.",
@@ -2428,7 +2466,7 @@ const shown = /* hovered while there is one, otherwise rating */;
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 // How each star looks. Nothing is rated on the first render, so a star that
@@ -2468,6 +2506,9 @@ test('keeps the rating that was clicked', () => {
   expect(container.textContent).toContain('Rating: 4');
   expect(filled(container, unrated)).toBe(4);
 });
+
+test('the fifth star previews five without changing committed zero',()=>{const {container}=render(<App/>);const baseline=looks(container),all=Array.from(container.querySelectorAll('button'));hover(all[4]);expect(filled(container,baseline)).toBe(5);expect(container.querySelector('p').textContent).toBe('Rating: 0');leave(all[4]);expect(filled(container,baseline)).toBe(0);});
+
 `,
   },
   {

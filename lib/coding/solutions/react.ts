@@ -372,7 +372,7 @@ const App = ({ people = initialPeople } = {}) => (
   const [text, setText] = useState('');
   const [todos, setTodos] = useState([]);
   const addTodo = () => { if (!text.trim()) return; setTodos(items => [...items, {id: crypto.randomUUID(), text: text.trim()}]); setText(''); };
-  return <><input value={text} onChange={event => setText(event.target.value)} /><button onClick={addTodo}>Add</button><ul>{todos.map(todo => <li key={todo.id}>{todo.text}</li>)}</ul></>;
+  return <><input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} /><button onClick={addTodo}>Add</button><ul>{todos.map(todo => <li key={todo.id}>{todo.text}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [text, setText] = useState('');
@@ -397,7 +397,7 @@ const App = ({ people = initialPeople } = {}) => (
 
   return (
     <main>
-      <input type="text" value={text} onChange={handleChange} />
+      <input type="text" aria-label="New todo" value={text} onChange={handleChange} />
       <button onClick={handleAdd}>Add</button>
       <ul>
         {todos.map(todo => <li key={todo.id}>{todo.text}</li>)}
@@ -428,6 +428,14 @@ const App = ({ people = initialPeople } = {}) => (
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const todoTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+const addText=(scope,value)=>{const input=within(scope).getByRole('textbox',{name:'New todo'});fireEvent.change(input,{target:{value}});const before=input.value;fireEvent.click(within(scope).getByRole('button',{name:'Add'}));return {input,before};};
+test('trim blanks,duplicates,literal strings and stable appended rows',()=>{const {container,rerender}=render(<App/>);expect(container.querySelectorAll('ul')).toHaveLength(1);expect(todoTexts(container)).toEqual([]);let expected=[],nodes=[];for(const raw of['  Zed  ','',' '+String.fromCharCode(9,10),'Amy','Zed','<b>literal</b>',' 🌊 ','x'.repeat(2000),' Keep inside  space ']){const {input,before}=addText(container,raw);if(before.trim())expected.push(before.trim());expect(todoTexts(container)).toEqual(expected);nodes.forEach((node,i)=>expect(container.querySelectorAll('li')[i]).toBe(node));nodes=Array.from(container.querySelectorAll('li'));expect(input.value).toBe(before.trim()?'':before);expect(container.querySelector('li b')).toBeNull();rerender(<App/>);expect(todoTexts(container)).toEqual(expected);}});
+test('twenty-four additions preserve exact insertion order',()=>{const {container}=render(<App/>);const expected=[];for(let i=0;i<24;i++){const value=['Zulu','alpha','Zulu','item '+(24-i)][i%4];expected.push(value);addText(container,value);expect(todoTexts(container)).toEqual(expected);}});
+test('independent lists and fresh empty state',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');addText(a,'Left');expect(todoTexts(a)).toEqual(['Left']);expect(todoTexts(b)).toEqual([]);addText(b,'Right');expect(todoTexts(a)).toEqual(['Left']);expect(todoTexts(b)).toEqual(['Right']);root.unmount();expect(todoTexts(render(<App/>).container)).toEqual([]);});
+`,
   },
   "react-remove-a-todo": {
     solution: `const initialTodos = [
@@ -439,7 +447,7 @@ const App = ({ people = initialPeople } = {}) => (
 const App = () => {
   const [todos, setTodos] = useState(initialTodos);
   const removeTodo = id => setTodos(items => items.filter(item => item.id !== id));
-  return <ul>{todos.map(todo => <li key={todo.id}>{todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button></li>)}</ul>;
+  return <ul>{todos.map(todo => <li key={todo.id}>{todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => removeTodo(todo.id)}>Remove</button></li>)}</ul>;
 };`,
     junior: `const initialTodos = [
   { id: 1, text: 'Practice hooks' },
@@ -465,7 +473,7 @@ const App = () => {
       <ul>
         {todos.map(todo => (
           <li key={todo.id}>
-            {todo.text} <button onClick={() => handleRemove(todo.id)}>Remove</button>
+            {todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => handleRemove(todo.id)}>Remove</button>
           </li>
         ))}
       </ul>
@@ -496,14 +504,23 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const originalTodoTexts=['Practice hooks','Read the docs','Ship the app'];
+const remainingTodoTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>{const copy=li.cloneNode(true);copy.querySelector('button').remove();return copy.textContent.trim();});
+const checkRemoveRows=(scope,expected,nodes)=>{const rows=Array.from(scope.querySelectorAll('li'));expect(remainingTodoTexts(scope)).toEqual(expected);rows.forEach((row,i)=>{expect(row).toBe(nodes[originalTodoTexts.indexOf(expected[i])]);const b=within(row).getByRole('button',{name:'Remove '+expected[i]});expect(b.textContent).toBe('Remove');});};
+test('all six removal orders keep the clicked identity and surviving nodes',()=>{for(const order of[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]){const root=render(<App/>),scope=root.container,nodes=Array.from(scope.querySelectorAll('li'));let expected=[...originalTodoTexts];checkRemoveRows(scope,expected,nodes);for(const index of order){fireEvent.click(within(scope).getByRole('button',{name:'Remove '+originalTodoTexts[index]}));expected=expected.filter(t=>t!==originalTodoTexts[index]);checkRemoveRows(scope,expected,nodes);}expect(scope.querySelectorAll('li button')).toHaveLength(0);root.unmount();}});
+test('parent renders do not restore removed items',()=>{const {container,rerender}=render(<App/>),nodes=Array.from(container.querySelectorAll('li'));fireEvent.click(within(container).getByRole('button',{name:'Remove Read the docs'}));for(let i=0;i<4;i++){rerender(<App/>);checkRemoveRows(container,['Practice hooks','Ship the app'],nodes);}});
+test('separate lists and fresh mounts keep their own initial todos',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));expect(remainingTodoTexts(a)).toEqual(originalTodoTexts.slice(1));expect(remainingTodoTexts(b)).toEqual(originalTodoTexts);root.unmount();expect(remainingTodoTexts(render(<App/>).container)).toEqual(originalTodoTexts);});
+`,
   },
   "react-search-a-list": {
     solution: `const names = ['Ana', 'Daniel', 'John'];
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const filtered = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
+  const filtered = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <><input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
 };`,
     junior: `const names = ['Ana', 'Daniel', 'John'];
 
@@ -514,7 +531,7 @@ const App = () => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matches = [];
   for (const name of names) {
     const lowerName = name.toLowerCase();
@@ -525,7 +542,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input type="text" aria-label="Search names" value={query} onChange={handleChange} />
       <ul>
         {matches.map(name => <li key={name}>{name}</li>)}
       </ul>
@@ -534,7 +551,7 @@ const App = () => {
 };`,
     senior: `const names = ['Ana', 'Daniel', 'John'];
 
-const matches = (name, query) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+const matches = (name, query) => name.toLowerCase().includes(query.trim().toLowerCase());
 
 const App = () => {
   const [query, setQuery] = useState('');
@@ -548,6 +565,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const expectedNames=['Ana','Daniel','John'];
+const searchRows=scope=>Array.from(scope.querySelectorAll('li'));
+test('every raw query is controlled,trimmed,case-insensitive literal substring search',()=>{const {container,rerender}=render(<App/>);const input=within(container).getByLabelText('Search names');let previous=new Map(searchRows(container).map(li=>[li.textContent,li]));for(const query of['an','  an  ','OH','da','L','not found','  ','','A','.','[','ana','n','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});expect(input.value).toBe(query);const expected=expectedNames.filter(name=>name.toLowerCase().includes(query.trim().toLowerCase())),current=searchRows(container);expect(current.map(li=>li.textContent)).toEqual(expected);for(const li of current)if(previous.has(li.textContent))expect(li).toBe(previous.get(li.textContent));previous=new Map(current.map(li=>[li.textContent,li]));rerender(<App/>);expect(searchRows(container).map(li=>li.textContent)).toEqual(expected);expect(input.value).toBe(query);}});
+test('twenty changed searches never destructively shorten the source',()=>{const {container}=render(<App/>),input=within(container).getByLabelText('Search names');for(let i=0;i<20;i++){const q=['ANA','oh','none','', ' an '][i%5];fireEvent.change(input,{target:{value:q}});expect(searchRows(container).map(li=>li.textContent)).toEqual(expectedNames.filter(n=>n.toLowerCase().includes(q.trim().toLowerCase())));}});
+test('independent search text and fresh full list',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.change(a.querySelector('input'),{target:{value:'ana'}});expect(searchRows(a).map(li=>li.textContent)).toEqual(['Ana']);expect(searchRows(b).map(li=>li.textContent)).toEqual(expectedNames);root.unmount();expect(searchRows(render(<App/>).container).map(li=>li.textContent)).toEqual(expectedNames);});
+`,
   },
   "react-controlled-form": {
     solution: `const App = () => {
@@ -1192,29 +1217,51 @@ const App = () => {
   },
   "react-filter-fetched-users": {
     solution: `const App = () => {
-  const [users, setUsers] = useState([]); const [query, setQuery] = useState('');
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  const filtered = users.filter(user => user.name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
+  const [users, setUsers] = useState([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const filtered = users.filter(user => user.name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <>{loading && <p role="status">Loading users…</p>}{error && <p role="alert">{error}</p>}<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   const handleChange = (event) => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matchingUsers = [];
   for (const user of users) {
     const lowerName = user.name.toLowerCase();
@@ -1225,7 +1272,9 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
+      <input type="text" aria-label="Filter users" value={query} onChange={handleChange} />
       <ul>
         {matchingUsers.map(user => <li key={user.id}>{user.name}</li>)}
       </ul>
@@ -1236,18 +1285,22 @@ const App = () => {
 
 const useUsers = () => {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     fetch(USERS_URL)
-      .then(response => response.json())
-      .then(data => { if (active) setUsers(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  return users;
+  return { users, loading, error };
 };
 
 const App = () => {
-  const users = useUsers();
+  const { users, loading, error } = useUsers();
   const [query, setQuery] = useState('');
 
   const visible = useMemo(() => {
@@ -1257,12 +1310,20 @@ const App = () => {
 
   return (
     <main>
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
       <input type="search" aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <p role="status">{visible.length} of {users.length} shown</p>
       <ul>{visible.map(user => <li key={user.id}>{user.name}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('pending input filters the current readonly response locally and retains surviving rows',async()=>withUserRequests(async calls=>{const {container,rerender}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/users');expect(calls[0].options.method===undefined||calls[0].options.method==='GET').toBe(true);expect(within(container).getByText('Loading users…').getAttribute('role')).toBe('status');const input=within(container).getByLabelText('Filter users');fireEvent.change(input,{target:{value:' alpha '}});expect(calls).toHaveLength(1);const data=Object.freeze([{id:1,name:'Alpha'},{id:2,name:' beta Alpha '},{id:3,name:'Alpha'},{id:4,name:'<b>literal</b>'},{id:5,name:''},{id:6,name:'🌊'},{id:7,name:'x'.repeat(2000)}].map(Object.freeze));await fulfillUsers(calls[0],data);expect(within(container).queryByText('Loading users…')).toBeNull();let previous=new Map();for(const query of[' alpha ','','B',' [ ','LIT','not found','  ','🌊','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});const expected=data.filter(u=>u.name.toLowerCase().includes(query.trim().toLowerCase()));expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));const rows=Array.from(container.querySelectorAll('li'));expected.forEach((u,i)=>{if(previous.has(u.id))expect(rows[i]).toBe(previous.get(u.id));});previous=new Map(expected.map((u,i)=>[u.id,rows[i]]));expect(container.querySelector('li b')).toBeNull();expect(input.value).toBe(query);rerender(<App/>);expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));expect(calls).toHaveLength(1);}}));
+test('HTTP,network and JSON failures show an alert without retrying on typing',async()=>withUserRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));await act(async()=>{if(failure==='http')calls[index].resolve({ok:false,status:503,json:async()=>[{id:1,name:'Must not render'}]});else if(failure==='network')calls[index].reject(new Error('Offline'));else calls[index].resolve({ok:true,status:200,json:async()=>{throw new Error('Bad JSON');}});});await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(within(scope).queryByText('Loading users…')).toBeNull();expect(fetchedNames(scope)).toEqual([]);fireEvent.change(within(scope).getByLabelText('Filter users'),{target:{value:'still local'}});expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('each mounted list fetches for itself and an old response cannot replace a fresh list',async()=>withUserRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await fulfillUsers(calls[1],[{id:1,name:'Right'}]);await fulfillUsers(calls[0],[{id:1,name:'Left'}]);expect(fetchedNames(a)).toEqual(['Left']);expect(fetchedNames(b)).toEqual(['Right']);root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await fulfillUsers(calls[3],[]);await fulfillUsers(calls[2],[{id:2,name:'Stale'}]);expect(fetchedNames(fresh.container)).toEqual([]);expect(within(fresh.container).queryByText('Loading users…')).toBeNull();}));
+`,
   },
   "react-refresh-data": {
     solution: `const App = () => {
@@ -1431,33 +1492,50 @@ const App = () => {
   "react-create-and-append": {
     solution: `const App = () => {
   const [todos, setTodos] = useState([]);
-  const createTodo = async () => { const response = await fetch('https://jsonplaceholder.typicode.com/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'Practice', completed:false})}); const created = await response.json(); setTodos(items => [...items, created]); };
-  return <><button onClick={createTodo}>Add</button><ul>{todos.map((todo, index) => <li key={todo.id ?? index}>{todo.title}</li>)}</ul></>;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const createTodo = async () => {
+    setSaving(true); setError('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Practice', completed: false }) });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      setTodos(items => [...items, { ...created, key: crypto.randomUUID() }]);
+    } catch {
+      setError('Could not add todo. Try again.');
+    } finally { setSaving(false); }
+  };
+  return <><button type="button" disabled={saving} onClick={createTodo}>{saving ? 'Adding…' : 'Add'}</button>{error && <p role="alert">{error}</p>}<ul>{todos.map(todo => <li key={todo.key}>{todo.title}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [todos, setTodos] = useState([]);
-
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const handleAdd = async () => {
-    const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'New todo', completed: false }),
-    });
-    const createdTodo = await response.json();
-    setTodos((currentTodos) => {
-      const nextTodos = [...currentTodos, createdTodo];
-      return nextTodos;
-    });
+    setSaving(true);
+    setError('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New todo', completed: false }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const createdTodo = await response.json();
+      setTodos(currentTodos => {
+        const nextTodos = [...currentTodos, createdTodo];
+        return nextTodos;
+      });
+    } catch {
+      setError('Could not add todo. Try again.');
+    } finally {
+      setSaving(false);
+    }
   };
-
-  return (
-    <main>
-      <button onClick={handleAdd}>Add</button>
-      <ul>
-        {todos.map((todo, index) => <li key={index}>{todo.title}</li>)}
-      </ul>
-    </main>
-  );
+  return <main>
+    <button type="button" disabled={saving} onClick={handleAdd}>{saving ? 'Adding…' : 'Add'}</button>
+    {error && <p role="alert">{error}</p>}
+    <ul>{todos.map((todo, index) => <li key={index}>{todo.title}</li>)}</ul>
+  </main>;
 };`,
     senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
 
@@ -1474,13 +1552,16 @@ const createTodo = async title => {
 const App = () => {
   const [todos, setTodos] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const add = async () => {
     setSaving(true);
+    setError('');
     try {
       const created = await createTodo(\`Todo \${todos.length + 1}\`);
-      // The training API answers with the same id every time, so key on a local one
       setTodos(current => [...current, { ...created, key: crypto.randomUUID() }]);
+    } catch {
+      setError('Could not add todo. Try again.');
     } finally {
       setSaving(false);
     }
@@ -1489,10 +1570,18 @@ const App = () => {
   return (
     <main>
       <button type="button" onClick={add} disabled={saving}>{saving ? 'Adding…' : 'Add'}</button>
+      {error && <p role="alert">{error}</p>}
       <ul>{todos.map(todo => <li key={todo.key}>{todo.title}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const checkCreateRequest=call=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/todos');expect(call.options.method).toBe('POST');const headers=new Headers(call.options.headers);expect(headers.get('content-type').toLowerCase().startsWith('application/json')).toBe(true);const body=JSON.parse(call.options.body);expect(typeof body.title).toBe('string');expect(body.title.trim().length>0).toBe(true);expect(body.completed).toBe(false);};
+test('pending writes wait for the server and keep exact returned values with repeated ids',async()=>withCreates(async calls=>{const {container,rerender}=render(<App/>);expect(createdTexts(container)).toEqual([]);expect(container.querySelectorAll('ul')).toHaveLength(1);let nodes=[];const expected=[];for(let i=0;i<6;i++){const b=within(container).getByRole('button',{name:'Add'});expect(b.type).toBe('button');fireEvent.click(b);await waitFor(()=>expect(calls).toHaveLength(i+1));checkCreateRequest(calls[i]);expect(container.querySelector('button').disabled).toBe(true);expect(createdTexts(container)).toEqual(expected);fireEvent.click(container.querySelector('button'));expect(calls).toHaveLength(i+1);const title=['<b>literal</b>','Duplicate','Duplicate','🌊','x'.repeat(2000),'Last'][i];expected.push(title);await settleCreate(calls[i],{id:201,title});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));expect(createdTexts(container)).toEqual(expected);nodes.forEach((n,j)=>expect(container.querySelectorAll('li')[j]).toBe(n));nodes=Array.from(container.querySelectorAll('li'));expect(container.querySelector('li b')).toBeNull();rerender(<App/>);expect(createdTexts(container)).toEqual(expected);}}));
+test('HTTP,network and JSON failures keep earlier rows and allow an error-clearing retry',async()=>withCreates(async calls=>{for(const failure of['http','network','json']){const root=render(<App/>),container=root.container;let index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));await settleCreate(calls[index],{id:1,title:'Keep'});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));const call=calls[index];await act(async()=>{if(failure==='http')call.resolve({ok:false,status:500,json:async()=>({id:2,title:'Do not append'})});else if(failure==='network')call.reject(new Error('Offline'));else call.resolve({ok:true,status:201,json:async()=>{throw new Error('Invalid JSON');}});});await waitFor(()=>expect(within(container).getByRole('alert').textContent).toBe('Could not add todo. Try again.'));expect(createdTexts(container)).toEqual(['Keep']);expect(container.querySelector('button').disabled).toBe(false);index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));expect(within(container).queryByRole('alert')).toBeNull();await settleCreate(calls[index],{id:1,title:'Keep'});await waitFor(()=>expect(createdTexts(container)).toEqual(['Keep','Keep']));expect(container.querySelector('button').disabled).toBe(false);root.unmount();}}));
+test('separate and fresh lists do not share created rows',async()=>withCreates(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(1));await settleCreate(calls[0],{id:1,title:'Left'});expect(createdTexts(a)).toEqual(['Left']);expect(createdTexts(b)).toEqual([]);fireEvent.click(b.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(2));await settleCreate(calls[1],{id:1,title:'Right'});expect(createdTexts(a)).toEqual(['Left']);expect(createdTexts(b)).toEqual(['Right']);root.unmount();expect(createdTexts(render(<App/>).container)).toEqual([]);}));
+`,
   },
   "react-user-by-id": {
     solution: `const App = () => {
@@ -2732,7 +2821,9 @@ test('concurrent tabs never share ids or selection and fresh mount resets',()=>{
 `,
   },
   "react-accordion": {
-    solution: `const sections = [
+    solution: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2740,10 +2831,13 @@ test('concurrent tabs never share ids or selection and fresh mount resets',()=>{
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
   const toggle = id => setOpenId(current => current === id ? null : id);
-  return <>{sections.map(section => <section key={section.id}><button onClick={() => toggle(section.id)}>{section.title}</button>{openId === section.id && <p>{section.body}</p>}</section>)}</>;
+  return <>{sections.map(section => <section key={section.id}><h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>{openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}</section>)}</>;
 };`,
-    junior: `const sections = [
+    junior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2751,6 +2845,7 @@ const App = () => {
 
 const App = () => {
   const [openSectionId, setOpenSectionId] = useState(null);
+  const idPrefix = useId();
 
   const handleToggle = (sectionId) => {
     if (openSectionId === sectionId) {
@@ -2765,11 +2860,11 @@ const App = () => {
       {sections.map(section => {
         let body = null;
         if (section.id === openSectionId) {
-          body = <p>{section.body}</p>;
+          body = <p id={idPrefix + '-' + section.id}>{section.body}</p>;
         }
         return (
           <section key={section.id}>
-            <button onClick={() => handleToggle(section.id)}>{section.title}</button>
+            <h3><button type="button" aria-expanded={openSectionId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => handleToggle(section.id)}>{section.title}</button></h3>
             {body}
           </section>
         );
@@ -2777,14 +2872,16 @@ const App = () => {
     </main>
   );
 };`,
-    senior: `const sections = [
+    senior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
 ];
 
 const AccordionItem = ({ section, open, onToggle }) => {
-  const panelId = \`panel-\${section.id}\`;
+  const panelId = useId();
   return (
     <section>
       <h3>
@@ -2799,7 +2896,6 @@ const AccordionItem = ({ section, open, onToggle }) => {
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
-  // Clicking the open header closes it; clicking another swaps in one step
   const toggle = useCallback(id => setOpenId(current => (current === id ? null : id)), []);
   return (
     <main>
@@ -2809,6 +2905,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const accordionTitles=['Shipping','Returns','Support'],accordionBodies=['Ships within two days','Returns stay open for thirty days','Support answers every weekday'];
+const checkAccordion=(scope,open,ids)=>{const buttons=Array.from(scope.querySelectorAll('button'));expect(buttons).toHaveLength(3);buttons.forEach((b,i)=>{expect(within(scope).getByRole('button',{name:accordionTitles[i]})).toBe(b);const heading=within(scope).getByRole('heading',{name:accordionTitles[i]});expect(heading.contains(b)).toBe(true);expect(b.type).toBe('button');expect(b.getAttribute('aria-expanded')).toBe(String(i===open));expect(b.getAttribute('aria-controls')).toBe(ids[i]);});expect(new Set(ids).size).toBe(3);expect(ids.every(id=>typeof id==='string'&&id.length>0)).toBe(true);const paragraphs=Array.from(scope.querySelectorAll('p'));expect(paragraphs.map(p=>p.textContent)).toEqual(open===null?[]:[accordionBodies[open]]);if(open!==null)expect(document.getElementById(ids[open])).toBe(paragraphs[0]);return buttons;};
+test('thirty-six repeated and switched panels keep stable relationships and focus',()=>{const {container,rerender}=render(<App/>);const ids=Array.from(container.querySelectorAll('button')).map(b=>b.getAttribute('aria-controls'));let open=null,buttons=checkAccordion(container,open,ids);for(let i=0;i<36;i++){const index=[2,2,0,1,1,2,0,0,1][i%9];buttons[index].focus();fireEvent.click(buttons[index]);open=open===index?null:index;buttons=checkAccordion(container,open,ids);expect(document.activeElement).toBe(buttons[index]);rerender(<App/>);checkAccordion(container,open,ids);}});
+test('concurrent accordions have unique targets and independent panels',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),ai=Array.from(a.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls')),bi=Array.from(b.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));expect(new Set([...ai,...bi]).size).toBe(6);const aa=checkAccordion(a,null,ai),bb=checkAccordion(b,null,bi);fireEvent.click(aa[0]);fireEvent.click(bb[1]);checkAccordion(a,0,ai);checkAccordion(b,1,bi);fireEvent.click(aa[2]);checkAccordion(a,2,ai);checkAccordion(b,1,bi);});
+test('a fresh accordion starts with every body absent',()=>{const a=render(<App/>);fireEvent.click(a.container.querySelector('button'));a.unmount();const b=render(<App/>),ids=Array.from(b.container.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));checkAccordion(b.container,null,ids);});
+`,
   },
   "react-star-rating": {
     solution: `const stars = [1, 2, 3, 4, 5];
@@ -2817,7 +2921,7 @@ const App = () => {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const shown = hovered || rating;
-  return <><div onMouseLeave={() => setHovered(0)}>{stars.map(star => <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>)}</div><p>Rating: {rating}</p></>;
+  return <><div onMouseLeave={() => setHovered(0)}>{stars.map(star => <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>)}</div><p>Rating: {rating}</p></>;
 };`,
     junior: `const stars = [1, 2, 3, 4, 5];
 
@@ -2851,7 +2955,7 @@ const App = () => {
             symbol = '★';
           }
           return (
-            <button key={star} onMouseEnter={() => handleMouseEnter(star)} onMouseLeave={handleMouseLeave} onClick={() => handleClick(star)}>
+            <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => handleMouseEnter(star)} onMouseLeave={handleMouseLeave} onClick={() => handleClick(star)}>
               {symbol}
             </button>
           );
@@ -2866,8 +2970,7 @@ const App = () => {
 const Star = ({ value, filled, onHover, onSelect }) => (
   <button
     type="button"
-    aria-label={\`\${value} star\${value === 1 ? '' : 's'}\`}
-    aria-pressed={filled}
+    aria-label={\`Rate \${value} star\${value === 1 ? '' : 's'}\`}
     onMouseEnter={() => onHover(value)}
     onFocus={() => onHover(value)}
     onClick={() => onSelect(value)}
@@ -2879,7 +2982,7 @@ const Star = ({ value, filled, onHover, onSelect }) => (
 const App = () => {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(null);
-  const preview = hovered ?? rating; // the hover wins while the pointer is over a star
+  const preview = hovered ?? rating;
   const clearHover = () => setHovered(null);
 
   return (
@@ -2893,6 +2996,13 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const checkStarAppearance=(scope,baseline,shown,rating)=>{const all=Array.from(scope.querySelectorAll('button'));expect(all).toHaveLength(5);all.forEach((b,i)=>{expect(b.type).toBe('button');expect(within(scope).getByRole('button',{name:'Rate '+(i+1)+' star'+(i===0?'':'s')})).toBe(b);expect(b.outerHTML!==baseline[i]).toBe(i<shown);});expect(scope.querySelector('p').textContent).toBe('Rating: '+rating);return all;};
+test('every hover fills the exact prefix and leaves the committed number alone',()=>{const {container,rerender}=render(<App/>);const baseline=looks(container);let all=checkStarAppearance(container,baseline,0,0);for(const value of[5,1,4,2,3,1,5,2,4,3]){hover(all[value-1]);checkStarAppearance(container,baseline,value,0);rerender(<App/>);checkStarAppearance(container,baseline,value,0);leave(all[value-1]);all=checkStarAppearance(container,baseline,0,0);}});
+test('all committed ratings survive lower and higher previews',()=>{const {container}=render(<App/>),baseline=looks(container);let all=checkStarAppearance(container,baseline,0,0);for(const value of[2,5,1,3,4,2,1,5]){fireEvent.click(all[value-1]);checkStarAppearance(container,baseline,value,value);for(const preview of[1,5,2]){hover(all[preview-1]);checkStarAppearance(container,baseline,preview,value);leave(all[preview-1]);all=checkStarAppearance(container,baseline,value,value);}}});
+test('ratings are independent and fresh instances start at zero',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),ab=looks(a),bb=looks(b);const aa=checkStarAppearance(a,ab,0,0),bs=checkStarAppearance(b,bb,0,0);fireEvent.click(aa[1]);hover(bs[4]);checkStarAppearance(a,ab,2,2);checkStarAppearance(b,bb,5,0);leave(bs[4]);checkStarAppearance(b,bb,0,0);root.unmount();const fresh=render(<App/>);checkStarAppearance(fresh.container,looks(fresh.container),0,0);});
+`,
   },
   "react-modal": {
     solution: `const App = () => {

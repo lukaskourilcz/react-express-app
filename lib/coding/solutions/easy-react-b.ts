@@ -1681,7 +1681,7 @@ test('an empty page disables Next', () => withFetch(async calls => {
     solution: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
   // Worked out on every render, so the crumbs always match the path.
   // filter(Boolean) drops the empty strings the leading and trailing slashes leave.
   const parts = path.split('/').filter(Boolean);
@@ -1709,7 +1709,7 @@ export default App;`,
     junior: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
 
   const pieces = path.split('/');
   const parts = [];
@@ -1753,14 +1753,13 @@ const App = ({ start = '/docs/react/hooks' }) => {
 export default App;`,
     senior: `import React, { useState } from 'react';
 
-// Each crumb with the path up to and including it.
 const toCrumbs = (path) => {
   const parts = path.split('/').filter(Boolean);
   return parts.map((label, index) => ({ label, href: '/' + parts.slice(0, index + 1).join('/') }));
 };
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
   const crumbs = toCrumbs(path);
 
   return (
@@ -1811,7 +1810,13 @@ test('going up to the top empties the crumbs', () => {
   expect(links(container)).toEqual([]);
   fireEvent.click(screen.getByRole('button', { name: 'Go up' }));
   expect(crumbs(container)).toEqual([]);
-});`,
+});
+
+const checkCrumbState=(scope,parts)=>{const nav=within(scope).getByRole('navigation',{name:'Breadcrumb'});expect(nav.querySelectorAll('ol')).toHaveLength(1);expect(Array.from(nav.querySelectorAll('li')).map(li=>li.textContent)).toEqual(parts);expect(Array.from(nav.querySelectorAll('a')).map(a=>a.getAttribute('href'))).toEqual(parts.slice(0,-1).map((_,i)=>'/'+parts.slice(0,i+1).join('/')));expect(nav.querySelectorAll('li')).toHaveLength(parts.length);if(parts.length)expect(nav.querySelector('li:last-child a')).toBeNull();const b=within(scope).getByRole('button',{name:'Go up'});expect(b.type).toBe('button');expect(b.disabled).toBe(parts.length===0);return b;};
+test('normalized paths climb one real segment per click and clamp at root',()=>{for(const start of['/','///','/single/','//docs///react//hooks///','/a/a/b/a/','/'+Array.from({length:40},(_,i)=>'part-'+i).join('/')+'/']){const root=render(<App start={start}/>),scope=root.container;let parts=start.split('/').filter(Boolean);let b=checkCrumbState(scope,parts);while(parts.length){fireEvent.click(b);parts=parts.slice(0,-1);b=checkCrumbState(scope,parts);}fireEvent.click(b);checkCrumbState(scope,[]);root.unmount();}});
+test('parent renders preserve the current path and start is initial-only',()=>{const {container,rerender}=render(<App start="/one/two/three/"/>);fireEvent.click(checkCrumbState(container,['one','two','three']));checkCrumbState(container,['one','two']);rerender(<App start="/replacement/path"/>);checkCrumbState(container,['one','two']);fireEvent.click(container.querySelector('button'));checkCrumbState(container,['one']);});
+test('concurrent and fresh breadcrumbs do not share navigation state',()=>{const root=render(<><section data-scope="a"><App start="/a/b/c"/></section><section data-scope="b"><App start="/d/e"/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(checkCrumbState(a,['a','b','c']));checkCrumbState(a,['a','b']);checkCrumbState(b,['d','e']);root.unmount();checkCrumbState(render(<App start="/a/b/c"/>).container,['a','b','c']);});
+`,
   },
   'react-easy3-read-more': {
     solution: `import React, { useState } from 'react';
@@ -1915,7 +1920,12 @@ test('the sample review starts folded', () => {
   const { container } = render(<App />);
   expect(text(container).endsWith('...')).toBe(true);
   expect(text(container).length).toBe(63);
-});`,
+});
+
+test('exact UTF16 slicing,literal text,empty and boundary lengths',()=>{for(const value of['','a'.repeat(59),'b'.repeat(60),'c'.repeat(61),'🌊'.repeat(31),'<b>'+LONG+'</b>',' x '.repeat(666)]){const root=render(<App text={value}/>);expect(text(root.container)).toBe(value.length>60?value.slice(0,60)+'...':value);expect(root.container.querySelector('p b')).toBeNull();expect(root.container.querySelectorAll('button')).toHaveLength(value.length>60?1:0);if(value.length>60){fireEvent.click(root.container.querySelector('button'));expect(text(root.container)).toBe(value);}root.unmount();}});
+test('twenty toggles and prop changes preserve open state while showing current text',()=>{const {container,rerender}=render(<App text={LONG}/>);let open=false,current=LONG;for(let i=0;i<20;i++){const b=screen.getByRole('button');expect(b.type).toBe('button');expect(b.textContent).toBe(open?'Show less':'Read more');fireEvent.click(b);open=!open;expect(text(container)).toBe(open?current:current.slice(0,60)+'...');current='Revision '+i+' '+LONG;rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');if(i%3===0){rerender(<App text="short"/>);expect(text(container)).toBe('short');expect(container.querySelector('button')).toBeNull();rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');}}});
+test('separate and fresh reviews fold independently',()=>{const root=render(<><section data-scope="a"><App text={LONG}/></section><section data-scope="b"><App text={LONG}/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));expect(text(a)).toBe(LONG);expect(text(b)).toBe(LONG.slice(0,60)+'...');root.unmount();expect(text(render(<App text={LONG}/>).container)).toBe(LONG.slice(0,60)+'...');});
+`,
   },
 
   /* ── accessibility ────────────────────────────────────────────────── */

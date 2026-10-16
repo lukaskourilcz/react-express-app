@@ -214,7 +214,7 @@ const App = () => {
 
 export default App;
 `,
-  'react-accordion': `import React, { useState } from 'react';
+  'react-accordion': `import React, { useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -224,6 +224,7 @@ const sections = [
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
 
   const toggle = id => {
     setOpenId(current => (current === id ? null : id));
@@ -234,8 +235,8 @@ const App = () => {
       <h2>Accordion</h2>
       {sections.map(section => (
         <section key={section.id}>
-          <button onClick={() => toggle(section.id)}>{section.title}</button>
-          {openId === section.id && <p>{section.body}</p>}
+          <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+          {openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}
         </section>
       ))}
     </main>
@@ -251,14 +252,16 @@ const App = () => {
   const [todos, setTodos] = useState([]);
 
   const addTodo = () => {
-    setTodos(current => [...current, { id: crypto.randomUUID(), text }]);
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setTodos(current => [...current, { id: crypto.randomUUID(), text: trimmed }]);
     setText('');
   };
 
   return (
     <main>
       <h2>Add a todo</h2>
-      <input value={text} onChange={event => setText(event.target.value)} />
+      <input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} />
       <button onClick={addTodo}>Add</button>
       <ul>
         {todos.map(todo => (
@@ -412,31 +415,33 @@ const App = () => {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
+    item.name.toLowerCase().includes(query.trim().toLowerCase())
   );
 
   return (
     <main>
       <h2>Filter fetched users</h2>
-      {loading && <p>Loading…</p>}
+      {loading && <p role="status">Loading users…</p>}
       {error && <p role="alert">{error}</p>}
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleItems.map(item => (
           <li key={item.id}>{item.name}</li>
@@ -725,7 +730,7 @@ const App = () => {
       <ul>
         {todos.map(todo => (
           <li key={todo.id}>
-            {todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button>
+            {todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => removeTodo(todo.id)}>Remove</button>
           </li>
         ))}
       </ul>
@@ -741,12 +746,12 @@ const names = ['Ana', 'Daniel', 'John'];
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const visibleNames = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
+  const visibleNames = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <main>
       <h2>Search a list</h2>
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleNames.map(name => (
           <li key={name}>{name}</li>
@@ -772,7 +777,7 @@ const App = () => {
       <h2>Star rating</h2>
       <div onMouseLeave={() => setHovered(0)}>
         {stars.map(star => (
-          <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
+          <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
             {star <= shown ? '★' : '☆'}
           </button>
         ))}
