@@ -1000,7 +1000,7 @@ test('Go up shortens the crumbs', () => {
     tier: 1,
     focus: ['slice', 'conditional'],
     title: 'Read more',
-    prompt: 'A review longer than 60 characters starts folded: show `text.slice(0, 60)` followed by "...", with a "Read more" button under it. The button shows the whole review and turns into "Show less", which folds it again. A review of 60 characters or fewer shows in full, with no button at all.',
+    prompt: "A review longer than 60 characters starts folded: show `text.slice(0, 60)` followed by \"...\", with a \"Read more\" button under it. The button shows the whole review and turns into \"Show less\", which folds it again. A review of 60 characters or fewer shows in full, with no button at all. Use JavaScript string length and slice,which count UTF16 units,without trimming or parsing markup. text is a plain string up to 2000 units and may be empty. Keep exactly one paragraph with the current text,or its first 60 units plus the three literal dots while folded. A long review has exactly one native type-button control;short reviews have none. Every click toggles,including repeated clicks beyond two. When text changes on the same mounted component,render the new text while preserving the current open flag,even across a short review that temporarily has no button. Separate and fresh mounts start folded. No CSS or extra data API is required.",
     starter: `import React, { useState } from 'react';
 
 const sampleReview = 'The boat left on time, the crew knew every reef by name, and we saw four turtles before lunch.';
@@ -1054,6 +1054,9 @@ test('a short review shows in full, with no button', () => {
   expect(text(container)).toBe(SHORT);
   expect(screen.queryByRole('button')).toBe(null);
 });
+
+test('new long text is rendered while the current open state is preserved',()=>{const {container,rerender}=render(<App text={LONG}/>);fireEvent.click(screen.getByRole('button'));const next='New review: '+LONG;rerender(<App text={next}/>);expect(text(container)).toBe(next);expect(screen.getByRole('button').textContent).toBe('Show less');});
+
 `,
   },
 

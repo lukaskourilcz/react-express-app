@@ -1915,7 +1915,12 @@ test('the sample review starts folded', () => {
   const { container } = render(<App />);
   expect(text(container).endsWith('...')).toBe(true);
   expect(text(container).length).toBe(63);
-});`,
+});
+
+test('exact UTF16 slicing,literal text,empty and boundary lengths',()=>{for(const value of['','a'.repeat(59),'b'.repeat(60),'c'.repeat(61),'🌊'.repeat(31),'<b>'+LONG+'</b>',' x '.repeat(666)]){const root=render(<App text={value}/>);expect(text(root.container)).toBe(value.length>60?value.slice(0,60)+'...':value);expect(root.container.querySelector('p b')).toBeNull();expect(root.container.querySelectorAll('button')).toHaveLength(value.length>60?1:0);if(value.length>60){fireEvent.click(root.container.querySelector('button'));expect(text(root.container)).toBe(value);}root.unmount();}});
+test('twenty toggles and prop changes preserve open state while showing current text',()=>{const {container,rerender}=render(<App text={LONG}/>);let open=false,current=LONG;for(let i=0;i<20;i++){const b=screen.getByRole('button');expect(b.type).toBe('button');expect(b.textContent).toBe(open?'Show less':'Read more');fireEvent.click(b);open=!open;expect(text(container)).toBe(open?current:current.slice(0,60)+'...');current='Revision '+i+' '+LONG;rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');if(i%3===0){rerender(<App text="short"/>);expect(text(container)).toBe('short');expect(container.querySelector('button')).toBeNull();rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');}}});
+test('separate and fresh reviews fold independently',()=>{const root=render(<><section data-scope="a"><App text={LONG}/></section><section data-scope="b"><App text={LONG}/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));expect(text(a)).toBe(LONG);expect(text(b)).toBe(LONG.slice(0,60)+'...');root.unmount();expect(text(render(<App text={LONG}/>).container)).toBe(LONG.slice(0,60)+'...');});
+`,
   },
 
   /* ── accessibility ────────────────────────────────────────────────── */

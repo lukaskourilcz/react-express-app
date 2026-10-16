@@ -251,14 +251,16 @@ const App = () => {
   const [todos, setTodos] = useState([]);
 
   const addTodo = () => {
-    setTodos(current => [...current, { id: crypto.randomUUID(), text }]);
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setTodos(current => [...current, { id: crypto.randomUUID(), text: trimmed }]);
     setText('');
   };
 
   return (
     <main>
       <h2>Add a todo</h2>
-      <input value={text} onChange={event => setText(event.target.value)} />
+      <input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} />
       <button onClick={addTodo}>Add</button>
       <ul>
         {todos.map(todo => (
@@ -725,7 +727,7 @@ const App = () => {
       <ul>
         {todos.map(todo => (
           <li key={todo.id}>
-            {todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button>
+            {todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => removeTodo(todo.id)}>Remove</button>
           </li>
         ))}
       </ul>
@@ -772,7 +774,7 @@ const App = () => {
       <h2>Star rating</h2>
       <div onMouseLeave={() => setHovered(0)}>
         {stars.map(star => (
-          <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
+          <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
             {star <= shown ? '★' : '☆'}
           </button>
         ))}
