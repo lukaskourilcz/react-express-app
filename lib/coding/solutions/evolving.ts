@@ -29,10 +29,10 @@ const solutions: Record<string, (stage: number) => string> = {
   }`,
   'js-evolving-events': stage => `function createBus(){
     const events=new Map();
-    function add(event,fn,once=false){const sub={fn,once,fired:false};const list=events.get(event)||[];list.push(sub);events.set(event,list);return ()=>{const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}}
+    function add(event,fn,once=false){const sub={fn,once,fired:false};const list=events.get(event)||new Set();list.add(sub);events.set(event,list);return ()=>{list.delete(sub)}}
     return {on:(e,f)=>${stage >= 2 ? 'add(e,f),once:(e,f)=>add(e,f,true),' : '{add(e,f)},'}
       emit(event,value){const errors=[];for(const sub of [...(events.get(event)||[])]){
-        ${stage >= 2 ? `if(sub.once){if(sub.fired)continue;sub.fired=true;const list=events.get(event);const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}` : ''}
+        ${stage >= 2 ? `if(sub.once){if(sub.fired)continue;sub.fired=true;events.get(event).delete(sub)}` : ''}
         ${stage === 3 ? 'try{sub.fn(value)}catch(error){errors.push(error)}' : 'sub.fn(value);'}
       }${stage === 3 ? 'return errors;' : ''}}
     };
@@ -385,33 +385,24 @@ ${stage === 2 ? `  return page;
   return { on: on, emit: emit };
 }` : `function createBus() {
   const subscriptionsByEvent = new Map();
-  let nextId = 1;
 
   function getSubscriptions(event) {
     const existing = subscriptionsByEvent.get(event);
     if (existing !== undefined) return existing;
-    const created = [];
+    const created = new Set();
     subscriptionsByEvent.set(event, created);
     return created;
   }
 
-  function removeSubscription(event, id) {
-    const remaining = [];
-    for (const subscription of getSubscriptions(event)) {
-      if (subscription.id !== id) {
-        remaining.push(subscription);
-      }
-    }
-    subscriptionsByEvent.set(event, remaining);
+  function removeSubscription(event, subscription) {
+    getSubscriptions(event).delete(subscription);
   }
 
   function addSubscription(event, listener, once) {
-    const id = nextId;
-    nextId = nextId + 1;
-    const subscription = { id: id, listener: listener, once: once, fired: false };
-    getSubscriptions(event).push(subscription);
+    const subscription = { listener: listener, once: once, fired: false };
+    getSubscriptions(event).add(subscription);
     return function unsubscribe() {
-      removeSubscription(event, id);
+      removeSubscription(event, subscription);
     };
   }
 
@@ -430,7 +421,7 @@ ${stage === 2 ? `
       if (subscription.once) {
         if (subscription.fired) continue;
         subscription.fired = true;
-        removeSubscription(event, subscription.id);
+        removeSubscription(event, subscription);
       }
       subscription.listener(value);
     }
@@ -439,12 +430,12 @@ ${stage === 2 ? `
     const errors = [];
     const subscriptions = subscriptionsByEvent.get(event);
     if (subscriptions === undefined) return errors;
-    const snapshot = subscriptions.slice();
+    const snapshot = [...subscriptions];
     for (const subscription of snapshot) {
       if (subscription.once) {
         if (subscription.fired) continue;
         subscription.fired = true;
-        removeSubscription(event, subscription.id);
+        removeSubscription(event, subscription);
       }
       try {
         subscription.listener(value);
@@ -1150,9 +1141,9 @@ const hidden: Record<string, [string, unknown][][]> = {
     [["(()=>{const object={},other={},symbol=Symbol('x'),keys=[NaN,-0,0,undefined,null,false,1,'1','A','a',object,other,symbol,1n];for(let seed=0;seed<64;seed++){const left=Array.from({length:5},(_,i)=>({k:keys[(seed+i*3)%keys.length]})),right=Array.from({length:5},(_,i)=>({k:keys[(seed*3+i*2)%keys.length]}));for(const mode of ['inner','left']){const expected=[];for(const l of left){const matches=[];for(const r of right)if(l.k===r.k)matches.push(r);if(matches.length)for(const r of matches)expected.push([l,r]);else if(mode==='left')expected.push([l,null]);}const out=joinRows(left,right,'k','k',mode);if(out.length!==expected.length||out.some((pair,i)=>pair.left!==expected[i][0]||pair.right!==expected[i][1]))return false;}}return true;})()",true],["((()=>{const a={k:NaN},b={k:2},c={k:1},right=[{k:1},{k:1}],out=joinRows([a,b,c],right,'k','k','left');return out.length===4&&out[0].left===a&&out[0].right===null&&out[1].left===b&&out[1].right===null&&out[2].left===c&&out[2].right===right[0]&&out[3].right===right[1]&&joinRows([a],[],'k','k','left')[0].right===null;})()&&(()=>{let reads=0;const key={},leftRow=Object.create({constructor:key}),rightRow=Object.assign(Object.create(null),{'':key});Object.defineProperty(leftRow,'opaque',{get(){reads++;throw Error('opaque');}});Object.freeze(leftRow);Object.freeze(rightRow);const left=Object.freeze([leftRow,leftRow]),right=Object.freeze([rightRow,rightRow]),a=joinRows(left,right,'constructor',''),b=joinRows(left,right,'constructor','');if(reads!==0||a===b||a.length!==4||a[0]===a[1]||a[0]===b[0]||a.some(p=>p.left!==leftRow||p.right!==rightRow))return false;for(const name of ['left','right']){const d=Object.getOwnPropertyDescriptor(a[0],name);if(!d||!d.enumerable||!d.writable||!d.configurable)return false;}a[0].right=null;a.pop();return b[0].right===rightRow&&left.length===2&&right.length===2&&reads===0&&joinRows([{}],[{}],'missing','missing').length===1;})())",true],["(()=>{const l=Object.freeze({k:1}),r=Object.freeze({k:1}),left=Object.freeze(Array(100).fill(l)),right=Object.freeze(Array(200).fill(r)),out=joinRows(left,right,'k','k');if(out.length!==20000||out[0]===out[1]||out.some(pair=>pair.left!==l||pair.right!==r))return false;const unique=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({k:i}))),paired=joinRows(unique,unique,'k','k');return paired.length===1000&&paired.every((p,i)=>p.left===unique[i]&&p.right===unique[i])&&joinRows([],right,'k','k').length===0&&joinRows(left,[],'k','k').length===0;})()",true],['joinRows([{id:2},{id:1}],[{fk:1}],"id","fk","left")',[{left:{id:2},right:null},{left:{id:1},right:{fk:1}}]],['(()=>{const left=[{id:1}],right=[{fk:1}];joinRows(left,right,"id","fk","left");return [left,right]})()',[[{id:1}],[{fk:1}]]]],
   ],
   'js-evolving-events': [
-    [['(()=>{const b=createBus(),a=[];const fn=v=>a.push(v);b.on("e",fn);b.on("e",fn);b.emit("e",0);return a})()',[0,0]]],
-    [['(()=>{const b=createBus();let n=0;const off=b.once("x",()=>n++);off();b.emit("x");return n})()',0]],
-    [['(()=>{const b=createBus(),a=[];b.once("e",()=>{a.push(1);throw "oops"});b.on("e",()=>a.push(2));return [b.emit("e"),b.emit("e"),a]})()',[['oops'],[],[1,2,2]]]],
+    [["(()=>{const names=['A','a','','__proto__','constructor','é','e\\u0301',Symbol('same'),Symbol('same')];for(let seed=0;seed<64;seed++){const bus=createBus(),seen=[],expected=[],entries=[],callbacks=[0,1,2].map(id=>value=>seen.push([id,value]));for(let i=0;i<12;i++){const event=names[(seed+i*2)%names.length],id=i%3;entries.push({event,id});bus.on(event,callbacks[id]);}bus.emit(Symbol('same'),99);for(let turn=0;turn<12;turn++){const event=names[(seed*7+turn*5)%names.length],value=turn%2?turn:0;for(const entry of entries)if(entry.event===event)expected.push([entry.id,value]);bus.emit(event,value);if(seen.length!==expected.length)return false;}if(seen.some((v,i)=>v[0]!==expected[i][0]||v[1]!==expected[i][1]))return false;}return true;})()",true],["(()=>{let reads=0;const cycle=[];cycle.push(cycle);const array=Object.defineProperty([],0,{get(){reads++;throw Error('opaque');}}),object=Object.defineProperty({},'x',{get(){reads++;throw Error('opaque');}}),symbol=Symbol('payload'),fn=()=>0,values=[undefined,null,false,0,-0,NaN,'',symbol,fn,cycle,array,object],a=createBus(),b=createBus();let seen,arity,calls=0;a.on('x',function(value){seen=value;arity=arguments.length;calls++;return 99;});for(const value of values){const before=calls;a.emit('x',value);if(calls!==before+1||arity!==1||!Object.is(seen,value))return false;}b.emit('x',[]);a.emit('unknown',[]);return calls===values.length&&reads===0&&a!==b;})()",true],["(()=>{const bus=createBus();let count=0;const fn=()=>count++;for(let i=0;i<20000;i++)bus.on('x',fn);bus.emit('x',0);bus.emit('missing',0);if(count!==20000)return false;bus.emit('x',0);return count===40000;})()",true],['(()=>{const b=createBus(),a=[];const fn=v=>a.push(v);b.on("e",fn);b.on("e",fn);b.emit("e",0);return a})()',[0,0]]],
+    [["(()=>{const events=['é','e\\u0301',Symbol('same')];for(let seed=0;seed<64;seed++){const bus=createBus(),seen=[],expected=[],entries=[],callbacks=[0,1,2].map(id=>value=>seen.push([id,value]));for(let i=0;i<9;i++){const event=events[i%3],id=i%3,single=i%2===0,off=single?bus.once(event,callbacks[id]):bus.on(event,callbacks[id]);entries.push({event,id,single,active:true,off});}for(let i=0;i<9;i++)if((seed+i)%5===0){const unsubscribe=entries[i].off;unsubscribe();unsubscribe();entries[i].active=false;}for(let turn=0;turn<12;turn++){const event=events[(seed+turn)%3];for(const entry of entries)if(entry.active&&entry.event===event){expected.push([entry.id,turn]);if(entry.single)entry.active=false;}bus.emit(event,turn);}if(seen.length!==expected.length||seen.some((v,i)=>v[0]!==expected[i][0]||v[1]!==expected[i][1]))return false;}return true;})()",true],["((()=>{const bus=createBus(),trace=[],payload=[];let entered=false,same=true;bus.on('x',value=>{same&&=value===payload;trace.push('A');if(!entered){entered=true;bus.emit('x',payload);}});const off=bus.once('x',value=>{same&&=value===payload;trace.push('B');});bus.once('x',value=>{same&&=value===payload;trace.push('C');});bus.emit('x',payload);off();off();bus.emit('x',payload);return same&&trace.join(',')==='A,A,B,C,A';})()&&(()=>{let reads=0;const cycle=[];cycle.push(cycle);const array=Object.defineProperty([],0,{get(){reads++;throw Error('opaque');}}),object=Object.defineProperty({},'x',{get(){reads++;throw Error('opaque');}}),symbol=Symbol('payload'),fn=()=>0,values=[undefined,null,false,0,-0,NaN,'',symbol,fn,cycle,array,object],a=createBus(),b=createBus();let seen,arity,calls=0;a.on('x',function(value){seen=value;arity=arguments.length;calls++;return 99;});for(const value of values){const before=calls;a.emit('x',value);if(calls!==before+1||arity!==1||!Object.is(seen,value))return false;}b.emit('x',[]);a.emit('unknown',[]);return calls===values.length&&reads===0&&a!==b;})())",true],["(()=>{const bus=createBus();let count=0;const fn=()=>count++;for(let i=0;i<2000;i++)bus.once('x',fn);bus.emit('x');bus.emit('x');return count===2000;})()",true],['(()=>{const b=createBus();let n=0;const off=b.once("x",()=>n++);off();b.emit("x");return n})()',0]],
+    [["(()=>{const bus=createBus(),trace=[];let entered=false;bus.on('x',()=>{trace.push('A');if(!entered){entered=true;bus.on('x',()=>trace.push('C'));bus.emit('x');}});bus.once('x',()=>trace.push('B'));bus.emit('x');bus.emit('x');if(trace.join(',')!=='A,A,B,C,A,C')return false;const other=createBus(),seen=[],token={};let offB,offC;other.on('x',()=>{seen.push('A');offB();offC();});offB=other.once('x',()=>{seen.push('B');throw token});offC=other.on('x',()=>seen.push('C'));const errors=other.emit('x'),next=other.emit('x');if(seen.join(',')!=='A,B,C,A'||errors.length!==1||errors[0]!==token||next.length!==0)return false;const nested=createBus(),value=[];let thrown;nested.on('inner',()=>{throw value});nested.on('outer',()=>{thrown=nested.emit('inner');throw thrown;});const out=nested.emit('outer');return out.length===1&&out[0]===thrown&&thrown[0]===value;})()",true],["((()=>{const bus=createBus(),cycle={};cycle.self=cycle;const array=[],symbol=Symbol('error'),error=Error('opaque'),values=[undefined,null,false,NaN,symbol,cycle,array,error];for(const value of values)bus.on('x',()=>{throw value});const first=bus.emit('x'),second=bus.emit('x'),empty=bus.emit('missing'),again=bus.emit('missing');if(!Array.isArray(first)||first===second||empty===again||first.length!==values.length||!Object.hasOwn(first,'0')||first.some((v,i)=>!Object.is(v,values[i])))return false;first.pop();first.push('changed');empty.push('ok');return second.length===values.length&&Object.is(second[7],error)&&again.length===0&&empty.length===1;})()&&(()=>{const bus=createBus(),token={},trace=[];let inner;bus.on('inner',()=>{throw token});bus.on('outer',()=>{inner=bus.emit('inner');});const outer=bus.emit('outer');if(outer.length!==0||inner.length!==1||inner[0]!==token)return false;bus.once('x',()=>{trace.push('once');const nested=bus.emit('x');trace.push(nested.length);throw token;});bus.on('x',()=>trace.push('normal'));const result=bus.emit('x');if(result.length!==1||result[0]!==token||trace.join(',')!=='once,normal,0,normal')return false;const next=bus.emit('x');return next.length===0&&trace.join(',')==='once,normal,0,normal,normal';})())",true],["(()=>{const bus=createBus(),token={};for(let i=0;i<2000;i++)bus.once('x',()=>{throw token});const errors=bus.emit('x'),next=bus.emit('x');if(errors.length!==2000||errors.some(v=>v!==token)||next.length!==0)return false;errors.pop();return errors.length===1999;})()",true],['(()=>{const b=createBus(),a=[];b.once("e",()=>{a.push(1);throw "oops"});b.on("e",()=>a.push(2));return [b.emit("e"),b.emit("e"),a]})()',[['oops'],[],[1,2,2]]]],
     // A paused emit and a resume with nothing queued both return [].
     [['(()=>{const b=createBufferedBus();b.pause();return b.emit("x",1)})()',[]],['(()=>{const b=createBufferedBus();b.pause();return [b.resume(),createBufferedBus().resume()]})()',[[],[]]]],
     // emit returns the listeners' errors, and history is kept and cleared per event.
@@ -1300,14 +1291,13 @@ function createBus(){
   }`,
     () => `function createBus(){
     const events=new Map();
-    function add(event,fn,once){const sub={fn,once};const list=events.get(event)||[];list.push(sub);events.set(event,list);return ()=>{const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}}
+    function add(event,fn,once){const sub={fn,once,fired:false};const list=events.get(event)||new Set();list.add(sub);events.set(event,list);return ()=>{list.delete(sub)}}
     return {on:(e,f)=>add(e,f,false),once:(e,f)=>add(e,f,true),
       emit(event,value){
         const errors=[],list=events.get(event)||[];
-        // Each listener runs in its own try, so one that throws is recorded and
-        // the rest still hear the event. The list is read as it stands, one
-        // index at a time; stage three takes a snapshot first.
-        for(let i=0;i<list.length;i++){const sub=list[i];if(sub.once)list.splice(i--,1);try{sub.fn(value)}catch(error){errors.push(error)}}
+        // Catch each direct error. This checkpoint reads the live Set;
+        // stage three takes a snapshot before delivery-time mutations.
+        for(const sub of list){if(sub.once){if(sub.fired)continue;sub.fired=true;list.delete(sub)}try{sub.fn(value)}catch(error){errors.push(error)}}
         return errors;
       }};
   }`,
@@ -1466,3 +1456,7 @@ EVOLVING_SOLUTIONS["js-evolving-query-4-start"].hiddenTests = [{"call": "(()=>{c
 EVOLVING_SOLUTIONS["js-evolving-query-5-start"].hiddenTests = [{"call": "(()=>{const object={},other={},symbol=Symbol('x'),keys=[NaN,-0,0,undefined,null,false,1,'1','A','a',object,other,symbol,1n];for(let seed=0;seed<64;seed++){const left=Array.from({length:5},(_,i)=>({k:keys[(seed+i*3)%keys.length]})),right=Array.from({length:5},(_,i)=>({k:keys[(seed*3+i*2)%keys.length]}));for(const mode of ['inner']){const expected=[];for(const l of left){const matches=[];for(const r of right)if(l.k===r.k)matches.push(r);if(matches.length)for(const r of matches)expected.push([l,r]);else if(mode==='left')expected.push([l,null]);}const out=joinRows(left,right,'k','k');if(out.length!==expected.length||out.some((pair,i)=>pair.left!==expected[i][0]||pair.right!==expected[i][1]))return false;}}return true;})()", "expected": true}, {"call": "(()=>{let reads=0;const key={},leftRow=Object.create({constructor:key}),rightRow=Object.assign(Object.create(null),{'':key});Object.defineProperty(leftRow,'opaque',{get(){reads++;throw Error('opaque');}});Object.freeze(leftRow);Object.freeze(rightRow);const left=Object.freeze([leftRow,leftRow]),right=Object.freeze([rightRow,rightRow]),a=joinRows(left,right,'constructor',''),b=joinRows(left,right,'constructor','');if(reads!==0||a===b||a.length!==4||a[0]===a[1]||a[0]===b[0]||a.some(p=>p.left!==leftRow||p.right!==rightRow))return false;for(const name of ['left','right']){const d=Object.getOwnPropertyDescriptor(a[0],name);if(!d||!d.enumerable||!d.writable||!d.configurable)return false;}a[0].right=null;a.pop();return b[0].right===rightRow&&left.length===2&&right.length===2&&reads===0&&joinRows([{}],[{}],'missing','missing').length===1;})()", "expected": true}, {"call": "(()=>{const l=Object.freeze({k:1}),r=Object.freeze({k:1}),left=Object.freeze(Array(100).fill(l)),right=Object.freeze(Array(200).fill(r)),out=joinRows(left,right,'k','k');if(out.length!==20000||out[0]===out[1]||out.some(pair=>pair.left!==l||pair.right!==r))return false;const unique=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({k:i}))),paired=joinRows(unique,unique,'k','k');return paired.length===1000&&paired.every((p,i)=>p.left===unique[i]&&p.right===unique[i])&&joinRows([],right,'k','k').length===0&&joinRows(left,[],'k','k').length===0;})()", "expected": true}];
 
 EVOLVING_SOLUTIONS["js-evolving-events-1-start"].hiddenTests = [{"call": "(()=>{const first=Symbol('event'),second=Symbol('event'),names=['A','a','','__proto__','constructor','toString','é','e\\u0301',first,second];for(let seed=0;seed<32;seed++){const bus=createBus(),seen=[],expected=[];for(let i=0;i<names.length;i++)bus.on(names[i],value=>seen.push([i,value]));bus.emit(Symbol('event'),99);for(let turn=0;turn<32;turn++){const index=(seed*7+turn*3)%names.length,value=turn%2?turn:0;expected.push([index,value]);bus.emit(names[index],value);if(seen.length!==expected.length)return false;}if(seen.some((v,i)=>v[0]!==expected[i][0]||v[1]!==expected[i][1]))return false;}return true;})()", "expected": true}, {"call": "(()=>{let reads=0;const cycle={};cycle.self=cycle;const opaque=Object.defineProperty({},'opaque',{get(){reads++;throw Error('opaque');}}),symbol=Symbol('value'),fn=()=>0,values=[undefined,null,false,0,-0,NaN,'',symbol,fn,cycle,opaque],a=createBus(),b=createBus();let received,called=0;a.on('x',value=>{received=value;called++;return 99;});for(const value of values){const before=called;a.emit('x',value);if(called!==before+1||!Object.is(received,value))return false;}b.emit('x',{});a.emit('unknown',{});return called===values.length&&reads===0&&a!==b;})()", "expected": true}, {"call": "(()=>{const bus=createBus(),seen=[];for(let i=0;i<20000;i++)bus.on('e'+i,value=>seen.push([i,value]));for(let i=19999;i>=0;i--)bus.emit('e'+i,i);bus.emit('e20000',99);return seen.length===20000&&seen.every((pair,i)=>pair[0]===19999-i&&pair[1]===19999-i);})()", "expected": true}];
+
+EVOLVING_SOLUTIONS["js-evolving-events-2-start"].hiddenTests = [{"call": "(()=>{const events=['é','e\\u0301',Symbol('same'),Symbol('same')];for(let mask=0;mask<256;mask++){const bus=createBus(),seen=[],expected=[],entries=[],callbacks=[0,1].map(id=>value=>seen.push([id,value]));for(let i=0;i<8;i++){const event=events[i%4],id=i%2;entries.push({event,id,active:true,off:bus.on(event,callbacks[id])});}for(let i=0;i<8;i++)if(mask>>i&1){const unsubscribe=entries[i].off;unsubscribe();unsubscribe();entries[i].active=false;}for(let i=0;i<events.length;i++){for(const entry of entries)if(entry.active&&entry.event===events[i])expected.push([entry.id,i]);bus.emit(events[i],i);}if(seen.length!==expected.length||seen.some((v,i)=>v[0]!==expected[i][0]||v[1]!==expected[i][1]))return false;}return true;})()", "expected": true}, {"call": "((()=>{const a=createBus(),b=createBus();let first=0,second=0;const fn=()=>first++,off=a.on('x',fn);if(typeof off!=='function')return false;off();const current=a.on('x',fn);b.on('x',()=>second++);off();a.emit('x');b.emit('x');if(first!==1||second!==1)return false;current();current();a.emit('x');b.emit('x');return first===1&&second===2;})()&&(()=>{let reads=0;const cycle=[];cycle.push(cycle);const array=Object.defineProperty([],0,{get(){reads++;throw Error('opaque');}}),object=Object.defineProperty({},'x',{get(){reads++;throw Error('opaque');}}),symbol=Symbol('payload'),fn=()=>0,values=[undefined,null,false,0,-0,NaN,'',symbol,fn,cycle,array,object],a=createBus(),b=createBus();let seen,arity,calls=0;a.on('x',function(value){seen=value;arity=arguments.length;calls++;return 99;});for(const value of values){const before=calls;a.emit('x',value);if(calls!==before+1||arity!==1||!Object.is(seen,value))return false;}b.emit('x',[]);a.emit('unknown',[]);return calls===values.length&&reads===0&&a!==b;})())", "expected": true}, {"call": "(()=>{const bus=createBus();let count=0,off;const fn=()=>count++;for(let i=0;i<20000;i++){const unsub=bus.on('x',fn);if(i===10000)off=unsub;}off();off();bus.emit('x');return count===19999;})()", "expected": true}];
+
+EVOLVING_SOLUTIONS["js-evolving-events-3-start"].hiddenTests = [{"call": "(()=>{const bus=createBus(),cycle={};cycle.self=cycle;const array=[],symbol=Symbol('error'),error=Error('opaque'),values=[undefined,null,false,NaN,symbol,cycle,array,error];for(const value of values)bus.on('x',()=>{throw value});const first=bus.emit('x'),second=bus.emit('x'),empty=bus.emit('missing'),again=bus.emit('missing');if(!Array.isArray(first)||first===second||empty===again||first.length!==values.length||!Object.hasOwn(first,'0')||first.some((v,i)=>!Object.is(v,values[i])))return false;first.pop();first.push('changed');empty.push('ok');return second.length===values.length&&Object.is(second[7],error)&&again.length===0&&empty.length===1;})()", "expected": true}, {"call": "(()=>{const bus=createBus(),token={},trace=[];let inner;bus.on('inner',()=>{throw token});bus.on('outer',()=>{inner=bus.emit('inner');});const outer=bus.emit('outer');if(outer.length!==0||inner.length!==1||inner[0]!==token)return false;bus.once('x',()=>{trace.push('once');const nested=bus.emit('x');trace.push(nested.length);throw token;});bus.on('x',()=>trace.push('normal'));const result=bus.emit('x');if(result.length!==1||result[0]!==token||trace.join(',')!=='once,normal,0,normal')return false;const next=bus.emit('x');return next.length===0&&trace.join(',')==='once,normal,0,normal,normal';})()", "expected": true}, {"call": "(()=>{const bus=createBus();bus.on('é',()=>{throw 'a'});bus.on('e\\u0301',()=>{throw 'b'});const first=bus.emit('é'),second=bus.emit('e\\u0301');return first.length===1&&first[0]==='a'&&second.length===1&&second[0]==='b';})()", "expected": true}];

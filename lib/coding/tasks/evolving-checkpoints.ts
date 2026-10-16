@@ -172,17 +172,19 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       { focus: ["closures", "map-set"] },
     ),
     step(
-      'Make on return an idempotent unsubscribe function. Removing one subscription must not remove other registrations, even of the same callback.',
+      "Make on(event, listener) return a fresh idempotent unsubscribe function for that registration only. Preserve every other subscription, including registrations of the same callback or another event. Repeating it or calling it after removal does nothing further. Callbacks do not throw, change subscriptions or reenter emit at this checkpoint; once comes next. Keep the earlier bounded event/payload rules, independent state, one-argument delivery, ignored listener returns and n/k definitions. Target: O(n) time and O(n) extra space per emit, excluding callback work/persistent state. Creating a bus and registering/unsubscribing target O(1) amortized time; state remains O(k).",
       'on nově vrací idempotentní odhlašovací funkci. Odebrání jednoho odběru nesmí odebrat ostatní registrace ani stejného callbacku.',
-      calls([
+      calls(
+        ["(()=>{const bus=createBus();let calls=0;const fn=()=>calls++;bus.on('x',fn);const off=bus.on('x',fn);off();off();bus.emit('x');return calls;})()", 1],[
         '(()=>{const b=createBus(),a=[];const off=b.on("x",()=>a.push(1));off();off();b.emit("x");return a})()',
         [],
       ]),
     ),
     step(
-      'Catch listener exceptions during emit, continue delivery and return thrown values in order. Successful emit returns [].',
+      "Catch each listener exception, continue and return the thrown values from this emit in order, in a fresh mutable array. Unknown/successful emits return fresh []. Keep exact values, including undefined, objects or arrays; do not stringify, flatten or deduplicate. Keep prior once/unsubscribe and bounded nesting. Listeners may now throw, but explicit subscription changes during delivery and snapshot semantics come next. Keep the earlier bounded event/payload rules, independent state, one-argument delivery, ignored listener returns and n/k definitions. Target: O(n) time and O(n) extra space per emit, excluding callback work/persistent state. Creating a bus and registering/unsubscribing target O(1) amortized time; state remains O(k).",
       'V emit zachyť výjimky posluchačů, pokračuj v doručování a vrať vyhozené hodnoty v pořadí. Úspěšné emit vrací [].',
       calls(
+        ["(()=>{const bus=createBus();bus.on('é',()=>{throw 'a'});bus.on('e\\u0301',()=>{throw 'b'});return bus.emit('é');})()", ["a"]],
         [
           '(()=>{const b=createBus();b.on("x",()=>{throw "a"});b.on("x",()=>{throw "b"});return b.emit("x")})()',
           ['a', 'b'],
