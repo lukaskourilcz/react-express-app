@@ -2289,7 +2289,117 @@ test('Export stays disabled while the job reports running, and a click on it ask
   expect(exportButton().disabled).toBe(true);
   fireEvent.click(exportButton());
   expect(calls).toHaveLength(2);
-}));`,
+}));
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+const withExportWire = async body => {
+ const real=globalThis.fetch,calls=[];
+ globalThis.fetch=(url,options={})=>new Promise(resolve=>{
+  let bodyResolve;
+  calls.push({url:String(url),method:options.method||'GET',respond:value=>resolve({ok:true,status:200,json:()=>Promise.resolve(value)}),
+   headers:()=>resolve({ok:true,status:200,json:()=>new Promise(done=>{bodyResolve=done;})}),body:value=>bodyResolve(value)});
+ });
+ try {await body(calls);}finally{globalThis.fetch=real;}
+};
+
+test('polling waits for the full body and each exact 200 ms deadline',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);
+ fireEvent.click(exportButton());expect(calls[0].method).toBe('POST');
+ await act(async()=>calls[0].headers());await clock.tick(600);expect(calls).toHaveLength(1);
+ await act(async()=>calls[0].body({id:'job_0-abc'}));expect(calls[1].url).toBe('/api/exports/job_0-abc');
+ for(let i=0;i<16;i++){
+  const call=calls[calls.length-1],length=calls.length;
+  await act(async()=>call.headers());await clock.tick(333);expect(calls).toHaveLength(length);
+  const progress=[0,1,37,99,100][i%5];await act(async()=>call.body({status:'running',progress}));
+  expect(screen.getByText('Preparing… '+progress+'%')).toBeTruthy();expect(exportButton().disabled).toBe(true);
+  view.rerender(<App data-parent={i}/>);await clock.tick(199);expect(calls).toHaveLength(length);
+  await clock.tick(1);expect(calls).toHaveLength(length+1);expect(calls[length].url).toBe('/api/exports/job_0-abc');
+ }
+ await act(async()=>calls[calls.length-1].respond({status:'done',url:'/files/exact-0.csv?part=2'}));
+ expect(screen.getByRole('link',{name:'Download the export'}).getAttribute('href')).toBe('/files/exact-0.csv?part=2');
+ expect(exportButton().disabled).toBe(false);const length=calls.length;await clock.tick(800);expect(calls).toHaveLength(length);expect(clock.pending()).toBe(0);
+ view.unmount();
+})));
+test('twelve new jobs preserve their ids, progress and terminal output',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){
+  const first=calls.length;fireEvent.click(exportButton());expect(calls[first].method).toBe('POST');
+  const id='export_'+i+'-z';await act(async()=>calls[first].respond({id}));expect(calls[first+1].url).toBe('/api/exports/'+id);
+  expect(screen.queryByRole('link')).toBeNull();expect(screen.queryByRole('alert')).toBeNull();
+  await act(async()=>calls[first+1].respond({status:'running',progress:i}));await clock.tick(200);
+  const done=i%2===0;await act(async()=>calls[first+2].respond(done?{status:'done',url:'/files/'+id+'.csv'}:{status:'failed'}));
+  if(done)expect(screen.getByRole('link').getAttribute('href')).toBe('/files/'+id+'.csv');
+  else expect(screen.getByRole('alert').textContent).toBe('The export failed');
+  expect(exportButton().disabled).toBe(false);const length=calls.length;await clock.tick(500);expect(calls).toHaveLength(length);
+ }
+ view.unmount();expect(clock.pending()).toBe(0);
+})));
+test('removal during an answer body cannot schedule another poll',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(exportButton());await act(async()=>calls[0].respond({id:'late'}));
+ await act(async()=>calls[1].headers());view.unmount();await act(async()=>calls[1].body({status:'running',progress:75}));
+ await clock.tick(1000);expect(calls).toHaveLength(2);expect(clock.pending()).toBe(0);
+ const fresh=render(<App/>);expect(exportButton().disabled).toBe(false);expect(screen.queryByRole('link')).toBeNull();fresh.unmount();
+})));
+`,
   },
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
@@ -3579,8 +3689,6 @@ const App = () => {
 };
 
 export default App;`,
-    // On the hand-moved clock of the visible suite: with real timers a pause
-    // of 70 ms let the old timer turn the slide before the click restarted it.
     hiddenSuite: `test('a click starts the wait over', () => withClock(async clock => {
   render(<App />);
   await clock.tick(130);
@@ -3619,7 +3727,119 @@ test('it goes on round from the last slide to the first', () => withClock(async 
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
 }));
 
-${timersClearedOnUnmount('leaving the page clears the timer', 200, `    press('Next');`)}`,
+test("leaving the page clears the timer", () => {
+  const hosts = [globalThis, window];
+  const real = hosts.map(host => [host.setTimeout, host.setInterval, host.clearTimeout, host.clearInterval]);
+  const started = [];
+  const cleared = [];
+  hosts.forEach((host, index) => {
+    const [setT, setI, clearT, clearI] = real[index];
+    host.setTimeout = (callback, ms, ...rest) => { const id = setT.call(host, callback, ms, ...rest); if (ms === 200) started.push(id); return id; };
+    host.setInterval = (callback, ms, ...rest) => { const id = setI.call(host, callback, ms, ...rest); if (ms === 200) started.push(id); return id; };
+    host.clearTimeout = id => { cleared.push(id); return clearT.call(host, id); };
+    host.clearInterval = id => { cleared.push(id); return clearI.call(host, id); };
+  });
+  try {
+    const { unmount } = render(<App />);
+    press('Next');
+    unmount();
+    expect(started.length > 0).toBe(true);
+    expect(started.every(id => cleared.includes(id))).toBe(true);
+  } finally {
+    hosts.forEach((host, index) => {
+      [host.setTimeout, host.setInterval, host.clearTimeout, host.clearInterval] = real[index];
+    });
+  }
+});
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('manual moves do not undo Pause and each new wait lasts 200 ms',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);const titles=['Spring sale','New arrivals','Free delivery','Gift cards'];let index=0;
+ for(let i=0;i<24;i++){
+  press('Pause');const delta=i%3===0?-1:1;press(delta===-1?'Previous':'Next');index=(index+delta+4)%4;
+  await clock.tick(777);expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);expect(slide().getAttribute('aria-live')).toBe('polite');
+  press('Play');await clock.tick(199);expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);
+  await clock.tick(1);index=(index+1)%4;expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);expect(clock.pending()).toBe(1);
+ }
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('pointer and focus holds combine without dropping a remaining hold',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);const root=carousel(),next=screen.getByRole('button',{name:'Next'}),prev=screen.getByRole('button',{name:'Previous'});
+ await clock.tick(155);fireEvent.mouseEnter(root);act(()=>next.focus());fireEvent.mouseLeave(root);
+ await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ act(()=>prev.focus());await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ fireEvent.mouseEnter(root);act(()=>prev.blur());await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ fireEvent.mouseLeave(root);view.rerender(<App data-parent="again"/>);await clock.tick(199);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');await clock.tick(1);expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('independent carousels own separate timers and fresh roots start at one',()=>withAuditClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);const first=within(a.container),second=within(b.container);
+ fireEvent.click(first.getByRole('button',{name:'Pause'}));await clock.tick(200);
+ expect(first.getByText('Slide 1 of 4: Spring sale')).toBeTruthy();expect(second.getByText('Slide 2 of 4: New arrivals')).toBeTruthy();
+ a.unmount();expect(clock.pending()).toBe(1);b.unmount();expect(clock.pending()).toBe(0);
+ const fresh=render(<App/>);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');fresh.unmount();expect(clock.pending()).toBe(0);
+}));
+`,
   },
   'react-mh-search-as-you-type': {
     solution: `import React, { useEffect, useRef, useState } from 'react';

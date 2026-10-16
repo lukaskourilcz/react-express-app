@@ -29,8 +29,8 @@ export const EASY_REACT_B_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['useRef', 'timers'],
     title: 'Send the latest draft',
-    prompt: '"Send later" sends the message 300 milliseconds after the click and shows "Sent: <text>". Whatever you type during that wait belongs in the message, but the timeout reads `draft` from the render in which you clicked, so it sends the old text. Keep the latest draft in a ref as well: set `draftRef.current` in the change handler, and read `draftRef.current` when the timeout fires. If the field is empty by then, nothing is sent.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `"Send later" sends the message 300 milliseconds after the click and shows "Sent: <text>". Whatever you type during that wait belongs in the message, but the timeout reads \`draft\` from the render in which you clicked, so it sends the old text. Keep the latest draft in a ref as well: set \`draftRef.current\` in the change handler, and read \`draftRef.current\` when the timeout fires. If the field is empty by then, nothing is sent. Each click schedules its own 300 ms wait and reads the current raw text when that wait ends; keep spaces and literal text unchanged, up to 2000 UTF-16 code units of single-line text. An empty draft clears the sent line at the deadline, including a previous result. Parent renders must not restart a pending wait. Clear all pending timeouts on unmount and keep separate instances independent. Browser callbacks may run later than the requested delay.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
@@ -63,7 +63,10 @@ const change = (event) => {
 
 const sendLater = () => {
   setTimeout(() => setSent(/* the latest draft */), 300);
-};`,
+};
+
+// Track each pending timeout in a ref-backed Set. Remove it when it fires.
+// In an effect cleanup, clear every pending timeout and empty the Set.`,
     hints: ['Each render makes new handler functions, and each one sees the state of its own render. A timeout keeps the function it was given, so it keeps that render\'s `draft`. A ref is one object shared by every render, so `ref.current` read later gives the value written last.'],
     approach: [
       'Create `const draftRef = useRef("")` in App.',
@@ -101,7 +104,70 @@ test('text typed during the wait is sent', async () => {
   await wait(350);
   expect(line(container)).toBe('Sent: Hi there');
 });
-`,
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('a send waits the complete 300 ms before reading the latest text',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('first');send();await clock.tick(299);expect(line(view.container)).toBe('');type(' latest ');await clock.tick(1);expect(line(view.container)).toBe('Sent:  latest ');
+}));`,
   },
   {
     id: 'react-easy3-give-focus-back',

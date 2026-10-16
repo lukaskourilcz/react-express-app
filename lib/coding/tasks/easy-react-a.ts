@@ -142,7 +142,7 @@ export const EASY_REACT_A_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['useRef', 'events'],
     title: 'Focus the search box',
-    prompt: 'The page has a Name field, a Search field and a "Jump to search" button. Clicking the button puts the keyboard focus in the Search field, so the user can type straight away. Create a ref with `useRef(null)`, attach it to the Search input with the `ref` attribute, and call `focus()` on `ref.current` in the click handler. Nothing is focused before the click, so do not use `autoFocus`.',
+    prompt: `The page has a Name field, a Search field and a "Jump to search" button. Clicking the button puts the keyboard focus in the Search field, so the user can type straight away. Create a ref with \`useRef(null)\`, attach it to the Search input with the \`ref\` attribute, and call \`focus()\` on \`ref.current\` in the click handler. Nothing is focused before the click, so do not use \`autoFocus\`. Preserve both field values exactly, including spaces, literal text and up to 2000 UTF-16 code units of single-line text. Repeated clicks and parent renders must work, and each instance must focus its own Search field.`,
     starter: `import React, { useRef } from 'react';
 
 const App = () => {
@@ -194,7 +194,10 @@ test('text already in the Search field stays there', () => {
   expect(document.activeElement).toBe(search());
   expect(search().value).toBe('shoes');
 });
-`,
+
+test('a long search survives a jump unchanged',()=>{
+ render(<App/>);const value='a'.repeat(120);fireEvent.change(search(),{target:{value}});screen.getByLabelText('Name').focus();fireEvent.click(jump());expect(search().value).toBe(value);expect(document.activeElement).toBe(search());
+});`,
   },
   {
     id: 'react-easy2-cancel-the-reminder',

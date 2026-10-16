@@ -54,7 +54,6 @@ export default App;`,
 
 const App = () => {
   const searchRef = useRef(null);
-  // Optional chaining: the handler cannot run before the ref is set, but it costs nothing to say so.
   const focusSearch = () => searchRef.current?.focus();
 
   return (
@@ -87,7 +86,22 @@ test('the button still works after App renders again', () => {
   screen.getByLabelText('Name').focus();
   fireEvent.click(jump());
   expect(document.activeElement).toBe(search());
-});`,
+});
+
+
+test('raw text in both inputs survives eighteen focus moves and parent renders',()=>{
+ const view=render(<App/>);const values=['',' ','  keep spaces  ','0','false','<b>literal</b>','🦈','áé漢字','a'.repeat(2000)];
+ for(let i=0;i<18;i++){const text=values[i%values.length],name='Name '+i;fireEvent.change(search(),{target:{value:text}});fireEvent.change(screen.getByLabelText('Name'),{target:{value:name}});screen.getByLabelText('Name').focus();view.rerender(<App data-parent={i}/>);expect(document.activeElement).toBe(screen.getByLabelText('Name'));fireEvent.click(jump());expect(document.activeElement).toBe(search());expect(search().value).toBe(text);expect(screen.getByLabelText('Name').value).toBe(name);}
+});
+test('each component focuses its own search rather than the first document match',()=>{
+ const a=render(<App/>),b=render(<App/>);const first=within(a.container),second=within(b.container);
+ const fa=first.getByLabelText('Search'),fb=second.getByLabelText('Search');expect(document.activeElement===fa||document.activeElement===fb||document.activeElement===first.getByLabelText('Name')||document.activeElement===second.getByLabelText('Name')).toBe(false);
+ fireEvent.change(fa,{target:{value:'first'}});fireEvent.change(fb,{target:{value:'second'}});fireEvent.click(second.getByRole('button',{name:'Jump to search'}));expect(document.activeElement).toBe(fb);fireEvent.click(first.getByRole('button',{name:'Jump to search'}));expect(document.activeElement).toBe(fa);expect(fb.value).toBe('second');a.unmount();fireEvent.click(second.getByRole('button',{name:'Jump to search'}));expect(document.activeElement).toBe(fb);b.unmount();
+});
+test('a fresh instance does not keep an old input ref or value',()=>{
+ const old=render(<App/>);fireEvent.change(search(),{target:{value:'previous'}});fireEvent.click(jump());const removed=search();old.unmount();const fresh=render(<App/>);expect(search()===removed).toBe(false);expect(search().value).toBe('');expect(document.activeElement===search()).toBe(false);fireEvent.click(jump());expect(document.activeElement).toBe(search());fresh.unmount();
+});
+`,
   },
   'react-easy2-cancel-the-reminder': {
     solution: `import React, { useRef, useState } from 'react';

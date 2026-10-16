@@ -36,6 +36,8 @@ PATTERNS = [
 # Matches that read as an artifact but are the item's own subject, each
 # settled by hand. Keyed by item, field and the matched text.
 ALLOW = {
+    # The export poll's latest server response, not a shuffled answer option.
+    ('react-mh-wait-for-export', 'explanation', 'the last answer'),
     # This permutation example has nine a letters and one b: its ten
     # distinct outputs contrast with 10! naive branches, not a Git revision.
     ('js-mh-arrangements', 'question', 'aaaaaaaaab'),

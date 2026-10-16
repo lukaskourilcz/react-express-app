@@ -11,13 +11,19 @@ import type { CodingSolution } from '../types';
 export const EASY_REACT_B_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── useRef ───────────────────────────────────────────────────────── */
   'react-easy3-send-latest-draft': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState('');
   // Every render shares this one object, so the timeout can read what was typed after the click.
   const draftRef = useRef('');
+  const pendingRef = useRef(new Set());
+
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => { pending.forEach(clearTimeout); pending.clear(); };
+  }, []);
 
   const change = (event) => {
     setDraft(event.target.value);
@@ -26,7 +32,11 @@ const App = () => {
 
   const sendLater = () => {
     // draft would be the text of the render that made this handler; the ref holds the text now.
-    setTimeout(() => setSent(draftRef.current), 300);
+    const timer = setTimeout(() => {
+      pendingRef.current.delete(timer);
+      setSent(draftRef.current);
+    }, 300);
+    pendingRef.current.add(timer);
   };
 
   return <main>
@@ -38,12 +48,18 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState('');
   const draftRef = useRef('');
+  const pendingRef = useRef(new Set());
+
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => { pending.forEach(clearTimeout); pending.clear(); };
+  }, []);
 
   const change = (event) => {
     const value = event.target.value;
@@ -52,10 +68,12 @@ const App = () => {
   };
 
   const sendLater = () => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      pendingRef.current.delete(timer);
       const latest = draftRef.current;
       setSent(latest);
     }, 300);
+    pendingRef.current.add(timer);
   };
 
   let message = '';
@@ -84,7 +102,6 @@ const App = () => {
   const draftRef = useRef(draft);
   const pendingRef = useRef(new Set());
 
-  // Sends still waiting when the page closes go with it.
   useEffect(() => {
     const pending = pendingRef.current;
     return () => pending.forEach(clearTimeout);
@@ -143,7 +160,22 @@ test('text typed after a send waits for the next one', async () => {
   send();
   await wait(350);
   expect(line(container)).toBe('Sent: second');
-});`,
+});
+
+
+test('each pending click reads the current draft at its own deadline',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('old');send();await clock.tick(100);send();type('  newest 🦈  ');await clock.tick(199);expect(line(view.container)).toBe('');await clock.tick(1);expect(line(view.container)).toBe('Sent:   newest 🦈  ');type('second');await clock.tick(99);expect(line(view.container)).toBe('Sent:   newest 🦈  ');await clock.tick(1);expect(line(view.container)).toBe('Sent: second');
+ const values=['',' ','  raw  ','<tag>literal</tag>','🦈漢字','x'.repeat(2000),'0','false'];
+ for(let i=0;i<16;i++){const value=values[i%values.length];const before=line(view.container);type('outdated');send();type(value);view.rerender(<App data-parent={i}/>);await clock.tick(299);expect(line(view.container)).toBe(before);await clock.tick(1);expect(line(view.container)).toBe(value===''?'':'Sent: '+value);expect(clock.pending()).toBe(0);}
+ view.unmount();
+}));
+test('emptying a pending message clears the previous sent line at the deadline',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('sent');send();await clock.tick(300);type('next');send();type('');await clock.tick(299);expect(line(view.container)).toBe('Sent: sent');await clock.tick(1);expect(line(view.container)).toBe('');expect(clock.pending()).toBe(0);
+}));
+test('independent sends and removal do not retain pending timeouts or old text',()=>withAuditClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);const first=within(a.container),second=within(b.container);fireEvent.change(first.getByLabelText('Message'),{target:{value:'A'}});fireEvent.click(first.getByRole('button',{name:'Send later'}));fireEvent.change(second.getByLabelText('Message'),{target:{value:'B'}});fireEvent.click(second.getByRole('button',{name:'Send later'}));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(300);expect(line(b.container)).toBe('Sent: B');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(line(fresh.container)).toBe('');expect(screen.getByLabelText('Message').value).toBe('');fresh.unmount();
+}));
+`,
   },
   'react-easy3-give-focus-back': {
     solution: `import React, { useRef, useState } from 'react';

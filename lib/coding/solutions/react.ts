@@ -3413,16 +3413,17 @@ test('ratings are independent and fresh instances start at zero',()=>{const root
     }
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      handleClose();
-    }
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = event => { if (event.key === 'Escape') handleClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
 
   let modal = null;
   if (isOpen) {
     modal = (
-      <div className="backdrop" onClick={handleBackdropClick} onKeyDown={handleKeyDown}>
+      <div className="backdrop" onClick={handleBackdropClick}>
         <div className="modal" role="dialog" aria-modal="true" tabIndex={-1}>
           <h3>Confirm</h3>
           <p>Are you sure?</p>
@@ -3445,18 +3446,20 @@ test('ratings are independent and fresh instances start at zero',()=>{const root
   useEffect(() => {
     const opener = document.activeElement;
     dialogRef.current?.focus();
-    return () => opener?.focus?.(); // hand focus back to whatever opened the dialog
+    return () => opener?.focus?.();
   }, []);
 
   const onBackdropClick = event => {
     if (!dialogRef.current.contains(event.target)) onClose();
   };
-  const onKeyDown = event => {
-    if (event.key === 'Escape') onClose();
-  };
+  useEffect(() => {
+    const onKeyDown = event => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="backdrop" onClick={onBackdropClick} onKeyDown={onKeyDown}>
+    <div className="backdrop" onClick={onBackdropClick}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1} ref={dialogRef}>
         <h3 id="modal-title">{title}</h3>
         {children}
@@ -3480,6 +3483,28 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('Escape works from the document and other keys preserve the dialog',()=>{
+ const view=render(<App/>);const keys=['Enter','Tab','ArrowLeft','ArrowRight',' ','a','escape','Esc','Home','End','Delete','Backspace'];
+ for(const key of keys){openModal(view.container);fireEvent.keyDown(document,{key});expect(dialog(view.container)).toBeTruthy();fireEvent.keyDown(document,{key:'Escape'});expect(dialog(view.container)).toBeNull();}
+});
+test('nested content clicks stay inside through twelve open and close cycles',()=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){
+  openModal(view.container);const panel=dialog(view.container);const extra=document.createElement('span');extra.textContent='Nested '+i;panel.appendChild(extra);fireEvent.click(extra);expect(dialog(view.container)).toBe(panel);
+  fireEvent.click(panel);expect(dialog(view.container)).toBe(panel);view.rerender(<App data-parent={i}/>);expect(dialog(view.container)).toBe(panel);
+  if(i%2===0)fireEvent.click(panel.parentElement);else fireEvent.click(within(panel).getByRole('button',{name:'Close'}));expect(dialog(view.container)).toBeNull();
+ }
+});
+test('document listeners are removed on close and unmount; independent roots remain independent',()=>{
+ const hosts=[document,window],real=hosts.map(host=>[host.addEventListener,host.removeEventListener]),active=hosts.map(()=>new Set());
+ hosts.forEach((host,i)=>{host.addEventListener=function(type,listener,options){if(type==='keydown')active[i].add(listener);return real[i][0].call(this,type,listener,options);};host.removeEventListener=function(type,listener,options){if(type==='keydown')active[i].delete(listener);return real[i][1].call(this,type,listener,options);};});
+ try{const a=render(<App/>),b=render(<App/>);openModal(a.container);expect(dialog(a.container)).toBeTruthy();expect(dialog(b.container)).toBeNull();openModal(b.container);a.unmount();fireEvent.keyDown(document,{key:'Escape'});expect(dialog(b.container)).toBeNull();expect(active[0].size+active[1].size).toBe(0);openModal(b.container);b.unmount();expect(active[0].size+active[1].size).toBe(0);const fresh=render(<App/>);expect(dialog(fresh.container)).toBeNull();fresh.unmount();}
+ finally{hosts.forEach((host,i)=>{[host.addEventListener,host.removeEventListener]=real[i];});}
+});
+`,
   },
   "react-theme-context": {
     solution: `const ThemeContext = React.createContext(null);

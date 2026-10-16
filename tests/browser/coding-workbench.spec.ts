@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { solutionFor } from '../../lib/coding/solutions';
+import { suiteCaseCount } from '../../lib/coding/react-hidden';
 import { hiddenGlobalMessage, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import { runInQuickJS } from '../../lib/coding/sandbox';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from '../../scripts/fixtures/utc-react';
@@ -162,6 +163,8 @@ test('React: a focus check passes on every Run, not just the first, and a build 
   test.setTimeout(120_000);
   await prepare(page);
   const id = 'react-easy2-focus-the-search';
+  const expectedCases = suiteCaseCount(CODING_TASKS.find(task => task.id === id)!.suite);
+  expect(expectedCases).toBeGreaterThan(0);
   await openTask(page, `/coding/react/${id}`);
   const run = page.getByRole('button', { name: 'Run', exact: true });
   const results = page.getByRole('tab', { name: /^Results/ });
@@ -172,12 +175,12 @@ test('React: a focus check passes on every Run, not just the first, and a build 
     await fillEditor(page, `${solutionFor(id)!.solution}\n// run ${attempt}\n`);
     if (attempt > 1) await expect(changed).toBeVisible();
     await run.click();
-    await expect(announced(page)).toHaveText(/^\d+ of \d+ passing$/, { timeout: 30_000 });
+    await expect(announced(page)).toHaveText(`${expectedCases} of ${expectedCases} passing`, { timeout: 30_000 });
     await expect(changed).toHaveCount(0);
     // From the second Run on, Results is the open tab and the preview is
     // not: its frame used to be display:none, and every focus check failed.
     await expect(results, `Run ${attempt}`).toHaveAttribute('aria-selected', 'true');
-    await expect(results, `Run ${attempt}`).toContainText('3/3');
+    await expect(results, `Run ${attempt}`).toContainText(`${expectedCases}/${expectedCases}`);
     // The suite moves focus inside the frame; the button that ran it keeps it.
     await expect(run).toBeFocused();
   }
