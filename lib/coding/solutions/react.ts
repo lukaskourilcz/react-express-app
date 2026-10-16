@@ -146,7 +146,12 @@ const App = () => {
     </main>
   );
 };`,
-    hiddenSuite: `${NUMBERS_SHOWN}
+    hiddenSuite: `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+
 test('the page shows exactly one number, 0, before any click', () => {
   const { container } = render(<App />);
   expect(numbersShown(container)).toBe('0');
@@ -160,7 +165,12 @@ test('the number is exactly 1 after one click and 3 after three', () => {
   fireEvent.click(button);
   fireEvent.click(button);
   expect(numbersShown(container)).toBe('3');
-});`,
+});
+
+test('each of thirty-six clicks adds exactly one',()=>{const {container,rerender}=render(<App/>);const read=()=>numbersShown(container);expect(read()).toBe('0');expect(container.querySelectorAll('button')).toHaveLength(1);expect(container.querySelector('button').textContent.trim().length>0).toBe(true);for(let i=1;i<=36;i++){fireEvent.click(container.querySelector('button'));expect(read()).toBe(String(i));if(i%5===0){rerender(<App/>);expect(read()).toBe(String(i));}}});
+test('two counters own their state',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"]'),b=container.querySelector('[data-scope="b"]');expect(numbersShown(a)).toBe('0');expect(numbersShown(b)).toBe('0');for(let i=0;i<7;i++)fireEvent.click(a.querySelector('button'));expect(numbersShown(a)).toBe('7');expect(numbersShown(b)).toBe('0');fireEvent.click(b.querySelector('button'));expect(numbersShown(b)).toBe('1');expect(numbersShown(a)).toBe('7');});
+test('a new mounted counter starts at zero',()=>{const first=render(<App/>);fireEvent.click(first.container.querySelector('button'));first.unmount();const second=render(<App/>);expect(numbersShown(second.container)).toBe('0');fireEvent.click(second.container.querySelector('button'));expect(numbersShown(second.container)).toBe('1');});
+`,
   },
   "react-toggle-button": {
     solution: `const App = () => {
@@ -199,12 +209,18 @@ const App = () => {
   const [on, toggle] = useToggle();
   return (
     <main>
-      <button type="button" aria-pressed={on} onClick={toggle}>
+      <button type="button" onClick={toggle}>
         {on ? 'ON' : 'OFF'}
       </button>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('one button has an exact label through repeated parent updates',()=>{const {container,rerender}=render(<App/>);expect(container.querySelectorAll('button')).toHaveLength(1);for(let i=0;i<=32;i++){const b=container.querySelector('button');expect(b.textContent).toBe(i%2?'ON':'OFF');expect(within(container).getByRole('button',{name:i%2?'ON':'OFF'})).toBe(b);rerender(<App/>);expect(b.textContent).toBe(i%2?'ON':'OFF');if(i<32)fireEvent.click(b);}});
+test('two mounted toggles stay independent',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"] button'),b=container.querySelector('[data-scope="b"] button');fireEvent.click(a);expect(a.textContent).toBe('ON');expect(b.textContent).toBe('OFF');fireEvent.click(b);fireEvent.click(b);expect(a.textContent).toBe('ON');expect(b.textContent).toBe('OFF');});
+test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEvent.click(a.container.querySelector('button'));a.unmount();const b=render(<App/>);expect(b.container.querySelector('button').textContent).toBe('OFF');});
+`,
   },
   "react-live-paragraph": {
     solution: `const App = () => {
@@ -2557,7 +2573,9 @@ const App = () => {
 };`,
   },
   "react-tabs": {
-    solution: `const tabs = [
+    solution: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
@@ -2565,62 +2583,110 @@ const App = () => {
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId);
-  return <><div role="tablist">{tabs.map(tab => <button key={tab.id} role="tab" aria-selected={tab.id === activeId} onClick={() => setActiveId(tab.id)}>{tab.label}</button>)}</div><div role="tabpanel">{active.panel}</div></>;
-};`,
-    junior: `const tabs = [
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
+
+  return (
+    <main>
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
+        {tabs.map(tab => (
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
 ];
 
 const App = () => {
-  const [activeTabId, setActiveTabId] = useState('profile');
-
-  const handleSelect = (tabId) => {
-    setActiveTabId(tabId);
-  };
-
-  let activePanel = '';
+  const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
+  let active = tabs[0];
   for (const tab of tabs) {
-    if (tab.id === activeTabId) {
-      activePanel = tab.panel;
-    }
+    if (tab.id === activeId) active = tab;
   }
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
 
   return (
     <main>
-      <div role="tablist">
-        {tabs.map(tab => {
-          let isSelected = false;
-          if (tab.id === activeTabId) {
-            isSelected = true;
-          }
-          return (
-            <button key={tab.id} role="tab" aria-selected={isSelected} onClick={() => handleSelect(tab.id)}>
-              {tab.label}
-            </button>
-          );
-        })}
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
+        {tabs.map(tab => (
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
       </div>
-      <div role="tabpanel">{activePanel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
-};`,
-    senior: `const tabs = [
+};
+
+export default App;`,
+    senior: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
 ];
 
-const Tab = ({ tab, selected, onSelect }) => (
+const Tab = ({ tab, selected, onSelect, idPrefix }) => (
   <button
     type="button"
     role="tab"
-    id={\`tab-\${tab.id}\`}
+    id={idPrefix + '-tab-' + tab.id}
     aria-selected={selected}
-    aria-controls={\`panel-\${tab.id}\`}
+    aria-controls={idPrefix + '-panel-' + tab.id}
     tabIndex={selected ? 0 : -1}
+    onFocus={() => onSelect(tab.id)}
     onClick={() => onSelect(tab.id)}
   >
     {tab.label}
@@ -2629,25 +2695,41 @@ const Tab = ({ tab, selected, onSelect }) => (
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId) ?? tabs[0];
 
-  // Left and Right move between tabs, as the WAI-ARIA tabs pattern expects
   const onKeyDown = event => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (!step) return;
-    const index = tabs.findIndex(tab => tab.id === activeId);
-    setActiveId(tabs[(index + step + tabs.length) % tabs.length].id);
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
   };
 
   return (
     <main>
       <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
-        {tabs.map(tab => <Tab key={tab.id} tab={tab} selected={tab.id === activeId} onSelect={setActiveId} />)}
+        {tabs.map(tab => <Tab key={tab.id} tab={tab} selected={tab.id === activeId} onSelect={setActiveId} idPrefix={idPrefix} />)}
       </div>
-      <div role="tabpanel" id={\`panel-\${active.id}\`} aria-labelledby={\`tab-\${active.id}\`}>{active.panel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id} aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const tabLabels=['Profile','Billing','Alerts'],tabPanels=['Profile details','Billing details','Alert settings'];
+const checkTabs=(scope,index)=>{const all=Array.from(scope.querySelectorAll('[role="tab"]')),panel=scope.querySelector('[role="tabpanel"]');expect(all).toHaveLength(3);expect(scope.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);expect(within(scope).getByRole('tablist',{name:'Account'}).contains(all[0])).toBe(true);all.forEach((t,i)=>{expect(t.tagName).toBe('BUTTON');expect(t.type).toBe('button');expect(t.textContent).toBe(tabLabels[i]);expect(t.getAttribute('aria-selected')).toBe(String(i===index));expect(t.tabIndex).toBe(i===index?0:-1);expect(t.id.length>0).toBe(true);expect(t.getAttribute('aria-controls').length>0).toBe(true);});expect(new Set(all.map(t=>t.id)).size).toBe(3);expect(new Set(all.map(t=>t.getAttribute('aria-controls'))).size).toBe(3);expect(panel.textContent).toBe(tabPanels[index]);expect(panel.id).toBe(all[index].getAttribute('aria-controls'));expect(panel.getAttribute('aria-labelledby')).toBe(all[index].id);expect(panel.tabIndex).toBe(0);return all;};
+test('all selected panels have proper stable relationships and normal parent updates',()=>{const {container,rerender}=render(<App/>);let all=checkTabs(container,0),ids=all.map(t=>t.id),targets=all.map(t=>t.getAttribute('aria-controls'));for(const i of [1,2,0,2,1,1,0,1,2,0]){fireEvent.click(all[i]);all=checkTabs(container,i);expect(all.map(t=>t.id).join('|')).toBe(ids.join('|'));expect(all.map(t=>t.getAttribute('aria-controls')).join('|')).toBe(targets.join('|'));rerender(<App/>);checkTabs(container,i);}});
+test('keyboard moves actual focus with wrapping,Home,End and automatic activation',()=>{const {container}=render(<App/>);let all=checkTabs(container,0),index=0;act(()=>all[index].focus());const keys=['ArrowLeft','ArrowRight','ArrowRight','ArrowRight','ArrowRight','Home','End','ArrowLeft','End','Home'];for(let round=0;round<3;round++)for(const key of keys){if(key==='ArrowLeft')index=(index+2)%3;else if(key==='ArrowRight')index=(index+1)%3;else index=key==='Home'?0:2;const before=document.activeElement;const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});fireEvent(before,event);expect(event.defaultPrevented).toBe(true);all=checkTabs(container,index);expect(document.activeElement).toBe(all[index]);}for(const key of ['ArrowUp','ArrowDown','x','Tab']){const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});fireEvent(all[index],event);expect(event.defaultPrevented).toBe(false);checkTabs(container,index);}act(()=>all[1].focus());checkTabs(container,1);expect(document.activeElement).toBe(all[1]);});
+test('concurrent tabs never share ids or selection and fresh mount resets',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');const aa=checkTabs(a,0),bb=checkTabs(b,0);expect(new Set([...aa,...bb].flatMap(t=>[t.id,t.getAttribute('aria-controls')])).size).toBe(12);fireEvent.click(aa[2]);checkTabs(a,2);checkTabs(b,0);act(()=>bb[1].focus());fireEvent.keyDown(bb[1],{key:'End'});checkTabs(a,2);checkTabs(b,2);root.unmount();checkTabs(render(<App/>).container,0);});
+`,
   },
   "react-accordion": {
     solution: `const sections = [

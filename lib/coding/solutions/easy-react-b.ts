@@ -2031,7 +2031,13 @@ test('three clicks leave it pressed', () => {
   fireEvent.click(button('Bold'));
   fireEvent.click(button('Bold'));
   expect(pressed('Bold')).toBe('true');
-});`,
+});
+
+const checkFormatting=(scope,bold,italic)=>{const bar=within(scope).getByRole('toolbar',{name:'Formatting'}),boldButton=within(bar).getByRole('button',{name:'Bold'}),italicButton=within(bar).getByRole('button',{name:'Italic'});expect(bar.querySelectorAll('button')).toHaveLength(2);for(const [b,on,label]of[[boldButton,bold,'Bold'],[italicButton,italic,'Italic']]){expect(b.type).toBe('button');expect(b.textContent).toBe(label);expect(b.getAttribute('aria-pressed')).toBe(String(on));}expect(scope.querySelector('p').textContent).toBe('The tide turns at noon.');expect(scope.querySelector('p').style.fontWeight).toBe(bold?'bold':'normal');expect(scope.querySelector('p').style.fontStyle).toBe(italic?'italic':'normal');return [boldButton,italicButton];};
+test('every mixed formatting action updates only its own state',()=>{const {container,rerender}=render(<App/>);let bold=false,italic=false;let bs=checkFormatting(container,bold,italic);for(const i of [1,1,0,0,0,1,0,1,1,0,0,1,0,1,0,0,0,1,1,1,0,1,0,1,0,0,1,0]){fireEvent.click(bs[i]);if(i===0)bold=!bold;else italic=!italic;bs=checkFormatting(container,bold,italic);rerender(<App/>);checkFormatting(container,bold,italic);}});
+test('two toolbars keep independent combinations',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"]'),b=container.querySelector('[data-scope="b"]');const aa=checkFormatting(a,false,false),bb=checkFormatting(b,false,false);fireEvent.click(aa[0]);fireEvent.click(bb[1]);checkFormatting(a,true,false);checkFormatting(b,false,true);fireEvent.click(aa[1]);checkFormatting(a,true,true);checkFormatting(b,false,true);});
+test('new toolbar starts with neither style',()=>{const a=render(<App/>);const bs=checkFormatting(a.container,false,false);fireEvent.click(bs[0]);fireEvent.click(bs[1]);a.unmount();checkFormatting(render(<App/>).container,false,false);});
+`,
   },
   'react-easy3-name-the-remove-buttons': {
     solution: `import React, { useState } from 'react';

@@ -1249,7 +1249,7 @@ test('an old answer never replaces a newer one', () => withFetch(async calls => 
     tier: 1,
     focus: ['accessibility'],
     title: 'An accessible disclosure',
-    prompt: 'The "Shipping details" toggle is a clickable `div`, which a keyboard cannot reach and a screen reader does not announce as a control. Make it a `<button type="button">` with `aria-expanded`, "true" while the details show and "false" while they are hidden. Give the details paragraph an id made with `useId`, so two of these on one page never share it, and point the button\'s `aria-controls` at that id. Render the details only while they are open.',
+    prompt: "The \"Shipping details\" toggle is a clickable `div`, which a keyboard cannot reach and a screen reader does not announce as a control. Make it a `<button type=\"button\">` with `aria-expanded`, \"true\" while the details show and \"false\" while they are hidden. Give the details paragraph an id made with `useId`, so two of these on one page never share it, and point the button's `aria-controls` at that id. Render the details only while they are open. Start closed and keep the button label and paragraph text from the starter. The nonempty controlled id stays stable through open/close cycles and ordinary parent re-renders; when open it identifies this instance's paragraph. Repeated clicks keep alternating. Simultaneously mounted disclosures have distinct ids and independent open state, and each fresh mount starts closed. Keep focus on the native button after toggling; its native keyboard activation needs no custom Enter/Space handler.",
     starter: `import React, { useId, useState } from 'react';
 
 const App = () => {
@@ -1299,6 +1299,9 @@ test('aria-controls names the details', () => {
   const details = document.getElementById(toggle().getAttribute('aria-controls'));
   expect(details.textContent).toBe('Orders ship within two working days.');
 });
+
+test('reopening keeps the same controlled paragraph id',()=>{render(<App/>);const t=toggle(),id=t.getAttribute('aria-controls');for(let i=0;i<3;i++)fireEvent.click(t);expect(t.getAttribute('aria-expanded')).toBe('true');expect(t.getAttribute('aria-controls')).toBe(id);expect(document.getElementById(id).textContent).toBe('Orders ship within two working days.');});
+
 `,
   },
   {

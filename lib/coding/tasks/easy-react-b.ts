@@ -1066,7 +1066,7 @@ test('a short review shows in full, with no button', () => {
     tier: 1,
     focus: ['accessibility', 'useState'],
     title: 'Buttons that say they are pressed',
-    prompt: 'Bold and Italic should switch their style on and off for the preview line, and a pressed button should say so. Give each button a state of its own and a click that flips it. Show that state with `aria-pressed`: `true` while the style is on and `false` while it is off. A screen reader announces the attribute as "pressed" or "not pressed", which a change of color cannot tell anyone. Keep the labels "Bold" and "Italic" as they are.',
+    prompt: "Bold and Italic should switch their style on and off for the preview line, and a pressed button should say so. Give each button a state of its own and a click that flips it. Show that state with `aria-pressed`: `true` while the style is on and `false` while it is off. A screen reader announces the attribute as \"pressed\" or \"not pressed\", which a change of color cannot tell anyone. Keep the labels \"Bold\" and \"Italic\" as they are. Keep the Formatting-named toolbar with two native buttons of type button and the exact starter preview text. Initially both buttons are not pressed and both styles are normal. Each click changes only that button's state and matching preview style, including releasing Italic and repeated mixed clicks. Keep the starter inline styles: fontWeight bold/normal and fontStyle italic/normal. Ordinary parent re-renders preserve the current combination; simultaneous and fresh mounts are independent. No specific CSS class is required.",
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -1122,6 +1122,9 @@ test('the labels stay the same', () => {
   fireEvent.click(button('Italic'));
   expect(button('Italic').textContent).toBe('Italic');
 });
+
+test('Italic releases without changing Bold',()=>{const {container}=render(<App/>);fireEvent.click(button('Bold'));fireEvent.click(button('Italic'));fireEvent.click(button('Italic'));expect(pressed('Italic')).toBe('false');expect(pressed('Bold')).toBe('true');expect(preview(container).fontStyle).toBe('normal');expect(preview(container).fontWeight).toBe('bold');});
+
 `,
   },
   {
