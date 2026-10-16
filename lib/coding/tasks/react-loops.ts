@@ -19,13 +19,13 @@ export const REACT_LOOP_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["jsx"],
     title: "Heading and intro",
-    prompt: "The starter declares two constants, `title` and `intro`. Render `title` inside an h1 and `intro` inside a paragraph, placing the constants in the JSX instead of retyping their text. The page must show exactly “Deep End” as its h1 and “Practise React one list at a time.” as its paragraph.",
+    prompt: "The starter supplies `heading` and `description` values to App, defaulting to the `title` and `intro` constants. Render heading in one h1 and description in one paragraph using JSX expressions. With no props the texts are exactly “Deep End” and “Practise React one list at a time.” Changing either prop must change its text on the next render. Both inputs are plain strings of up to 2000 UTF16 code units, including empty strings, whitespace, Unicode and markup-like text. Preserve their exact text and display markup-like content literally; do not parse it as HTML. No state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const title = 'Deep End';
 const intro = 'Practise React one list at a time.';
 
-const App = () => {
+const App = ({ heading = title, description = intro } = {}) => {
 
 
   return <main>
@@ -37,28 +37,29 @@ export default App;
 `,
     skeleton: `return (
   <main>
-    <h1>{/* the title constant */}</h1>
-    <p>{/* the intro constant */}</p>
+    <h1>{/* the heading value */}</h1>
+    <p>{/* the description value */}</p>
   </main>
 );`,
     hints: ["Curly braces let you drop a JavaScript value into JSX markup."],
     approach: [
       "Return one parent element from App that holds both the heading and the paragraph.",
-      "Put the title constant inside the h1 with curly braces instead of typing the words again.",
-      "Do the same for intro inside a paragraph, so changing a constant changes the page.",
+      "Put the heading value inside the h1 with curly braces instead of typing the words again.",
+      "Put description inside the paragraph. The supplied defaults keep the original page when no props are passed.",
     ],
     verify: "tests",
     estimatedMinutes: 5,
     suite: `${SUITE_IMPORTS}
-test('renders the title constant in an h1', () => {
+test('renders the heading value in an h1', () => {
   const { container } = render(<App />);
   expect(container.querySelector('h1').textContent).toBe('Deep End');
 });
 
-test('renders the intro constant in a paragraph', () => {
+test('renders the description value in a paragraph', () => {
   const { container } = render(<App />);
   expect(container.querySelector('p').textContent).toBe('Practise React one list at a time.');
 });
+test('accepts a different heading and description',()=>{const {container}=render(<App heading="Another heading" description="Another introduction"/>);expect(container.querySelector('h1').textContent).toBe('Another heading');expect(container.querySelector('p').textContent).toBe('Another introduction');});
 `,
   },
   {
@@ -69,12 +70,14 @@ test('renders the intro constant in a paragraph', () => {
     tier: 1,
     focus: ["jsx", "map"],
     title: "Greeting component",
-    prompt: "Write a `Greeting` component that takes a `name` prop and renders a paragraph reading “Hello, <name>”. In `App`, map over the `names` array declared in the starter and render one `Greeting` per name, so the page shows three paragraphs, “Hello, Ana”, “Hello, Bo” and “Hello, Cyril”, in that order.",
+    prompt: "Export a named `Greeting` component taking a name prop and rendering one paragraph with exactly `Hello, ` followed by that name. App receives `people`, defaulting to the starter names array, and renders one greeting per name in array order. With no props it shows “Hello, Ana”, “Hello, Bo” and “Hello, Cyril”. people is a dense read-only array of at most 100 unique strings, each at most 2000 UTF16 units; it may be frozen or empty. Preserve names exactly, including empty strings, whitespace, Unicode and markup-like text, without parsing HTML or mutating input. Re-rendering with new people must update the list; an empty array renders no paragraphs. Declare Greeting outside App and use each unique name as its key. map or a loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const names = ['Ana', 'Bo', 'Cyril'];
 
-const App = () => {
+export const Greeting = ({ name }) => null;
+
+const App = ({ people = names } = {}) => {
 
 
   return <main>
@@ -84,22 +87,22 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const Greeting = ({ name }) => (
+    skeleton: `export const Greeting = ({ name }) => (
   <p>{/* the greeting for this name */}</p>
 );
 
-{names.map(name => (
+{people.map(name => (
   <Greeting key={name} name={/* the name */} />
 ))}`,
     hints: ["A component is a function that receives props and returns JSX, and map can return one of them per array element."],
     approach: [
       "Declare Greeting above App as a function that reads name from its props.",
       "Return a paragraph from Greeting that joins the fixed word to the name.",
-      "Inside App, map the names array to Greeting elements, passing each name as a prop and as the key.",
+      "Inside App, render people in order as Greeting elements with the name prop and stable unique name key; keep the supplied default.",
     ],
     verify: "tests",
     estimatedMinutes: 5,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { Greeting } from './App';")}
 test('renders one greeting paragraph per name', () => {
   const { container } = render(<App />);
   expect(container.querySelectorAll('p')).toHaveLength(3);
@@ -110,6 +113,7 @@ test('greets every name in array order', () => {
   const texts = [...container.querySelectorAll('p')].map(p => p.textContent.trim());
   expect(texts).toEqual(['Hello, Ana', 'Hello, Bo', 'Hello, Cyril']);
 });
+test('exports Greeting and accepts a different people list',()=>{const direct=render(<Greeting name="Mia"/>);expect(direct.container.querySelector('p').textContent).toBe('Hello, Mia');direct.unmount();const {container}=render(<App people={['Zoe','Ada']}/>);expect([...container.querySelectorAll('p')].map(p=>p.textContent)).toEqual(['Hello, Zoe','Hello, Ada']);});
 `,
   },
   {
@@ -120,7 +124,7 @@ test('greets every name in array order', () => {
     tier: 1,
     focus: ["jsx", "lists-keys", "map"],
     title: "Price component",
-    prompt: "Write a `Price` component that takes `amount` and `currency` props and renders a span with the amount to two decimals, a space and the currency, so `amount={3.5}` with `currency=\"EUR\"` gives “3.50 EUR”. Render the `items` declared in the starter as a UL with one LI per item holding the item name and its `Price`, keyed by the item id.",
+    prompt: "Export a named `Price` component taking amount and currency props. Render one span with exactly `amount.toFixed(2)`, one space and currency: 3.5 with EUR gives “3.50 EUR”. Use JavaScript Number.toFixed(2), including its binary floating-point rounding (2.675 gives 2.67), rather than a different money-rounding rule. App receives products, defaulting to the starter items, and renders one UL with one LI per product in order, containing its exact name and Price. Use the unique item id as its key. products is a dense read-only array of at most 100 records with unique positive integer ids, plain string names up to 2000 UTF16 units, finite numeric amounts from -1000000 through 1000000, and three-uppercase-letter currencies. Arrays/records may be frozen; do not mutate them. Preserve literal name text, including whitespace and markup-like content, without parsing HTML. An empty array renders an empty UL. New products and changed Price props must update on re-render. No state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const items = [
@@ -129,7 +133,9 @@ const items = [
   { id: 3, name: 'Sticker', amount: 0.99, currency: 'USD' },
 ];
 
-const App = () => {
+export const Price = ({ amount, currency }) => null;
+
+const App = ({ products = items } = {}) => {
 
 
   return <main>
@@ -139,22 +145,22 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const Price = ({ amount, currency }) => (
+    skeleton: `export const Price = ({ amount, currency }) => (
   <span>{/* amount to two decimals, a space, the currency */}</span>
 );
 
-{items.map(item => (
+{products.map(item => (
   <li key={item.id}>{item.name} <Price amount={/* ... */} currency={/* ... */} /></li>
 ))}`,
     hints: ["Props arrive as a single object argument, and toFixed(2) turns a number into a two-decimal string."],
     approach: [
       "Declare Price above App and destructure amount and currency from its props.",
       "Format the amount with toFixed(2) and join it to the currency with one space inside a span.",
-      "Map the items to list items keyed by id, each rendering the name and a Price with that item's amount and currency.",
+      "Render products in order as list items keyed by id, each with the exact name and a Price using that amount and currency.",
     ],
     verify: "tests",
     estimatedMinutes: 8,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { Price } from './App';")}
 test('renders one list item per item with its name', () => {
   const { container } = render(<App />);
   const items = [...container.querySelectorAll('ul li')];
@@ -175,6 +181,7 @@ test('renders the formatted price inside a span', () => {
   const spans = [...container.querySelectorAll('span')].map(span => span.textContent.trim());
   expect(spans).toContain('3.50 EUR');
 });
+test('exports Price and accepts other products',()=>{const direct=render(<Price amount={2.675} currency="GBP"/>);expect(direct.container.querySelector('span').textContent).toBe('2.67 GBP');direct.unmount();const {container}=render(<App products={[{id:9,name:'Tea',amount:0,currency:'JPY'}]}/>);expect(container.querySelectorAll('li')).toHaveLength(1);expect(container.querySelector('li').textContent).toContain('Tea');expect(container.querySelector('li span').textContent).toBe('0.00 JPY');});
 `,
   },
   {

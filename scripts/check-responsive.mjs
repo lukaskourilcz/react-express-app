@@ -21,6 +21,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync
 import { tmpdir, platform } from 'node:os';
 import path from 'node:path';
 import { CLEARANCE } from './responsive-clearance.mjs';
+import { closeBrowserProcess } from './responsive-browser-process.mjs';
 
 const CHROME_CANDIDATES = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -543,7 +544,7 @@ async function openBrowser(seed, baseUrl) {
     closed = true;
     // Release the control socket explicitly before shutting down its peer.
     try { devtoolsSocket?.close(); } catch { /* ignore */ }
-    try { chrome.kill('SIGKILL'); } catch { /* ignore */ }
+    closeBrowserProcess(chrome);
     try { rmSync(userData, { recursive: true, force: true }); } catch { /* ignore */ }
   };
 

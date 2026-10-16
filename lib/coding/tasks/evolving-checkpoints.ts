@@ -532,7 +532,7 @@ const REACT_HEADER =
 function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
   const app = FULLSTACK_APPS.find((app) => app.slug === slug)!;
   const { amount, endpoint } = app;
-  return {
+  const checkpoints: Record<string, Checkpoint> = {
     '2': {
       ...step(
         `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}. Keep the earlier exact name and integer rules: preserve case, Unicode representation and interior spaces; use ECMAScript trim and UTF16 lengths, and accept signed zero as zero. Ordinary inherited data fields are allowed, extra getters are ignored, and required-field accessors/proxies are outside this exercise. Raw names have at most 20000 code units. Return a fresh mutable Draft without changing or retaining caller state. Item.id and Item.version must be number fields even though this checkpoint has no update/API behavior yet. Target: O(n) time and O(n) space for normalization, where n is one plus raw name UTF16 length; type declarations themselves have no runtime cost.`,
@@ -571,6 +571,13 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
       `const api=createApi(seed);render(<App fetcher={createLocalFetch(api)}/>);await settle();fireEvent.change(screen.getByLabelText('Search'),{target:{value:' ${app.first.toUpperCase()} '}});expect(screen.getAllByRole('listitem').length).toBe(1);expect(screen.getByRole('listitem').textContent).toContain('${app.first}');expect(api({method:'GET',path:endpoint}).body.length).toBe(3);`,
     ),
   };
+  if(slug==='workshops'){
+    const port=checkpoints['2'];
+    port.prompt={...port.prompt,en:port.prompt.en+" Draft.name must remain a primitive string type. Preserve the exact normalized name and trim every ECMAScript whitespace character, including tabs and nonbreaking spaces, rather than only ASCII spaces. Keep unknown input narrowing and numeric Item identity/version fields; this checkpoint still requires no update/API. The earlier O(n) normalization target and raw-name input size remain unchanged."};
+    port.tests=[...(port.tests??[]), {call:"normalizeInput({name:'\\tWorkshop\\u00a0',seats:1})",expected:{"name": "Workshop", "seats": 1}}];
+    port.typeTests=[...(port.typeTests??[]),{"code": "{const fn:(value:unknown)=>Draft|null=normalizeInput;const draft=fn({} as unknown);if(draft){const name:string=draft.name;}}"},{"code": "{const bad:number=({} as Draft).name;}", "rejects": true},{"code": "{const bad:Draft={name:1,seats:0};}", "rejects": true}];
+  }
+  return checkpoints;
 }
 
 /** "Title · 3". An English-only path has no Czech title, so its stages get none. */
