@@ -8,10 +8,11 @@ const solutions: Record<string, (stage: number) => string> = {
     ? 'function calculate(s) { return s.split("+").reduce((sum,n)=>sum+Number(n),0); }'
     : `function calculate(s) {
       let i=0;
+      const numeric=/\\d+(?:\\.\\d+)?/y;
       const space=()=>{while(/\\s/.test(s[i]||'') && i<s.length)i++};
       function atom(){ space(); ${stage === 3 ? `if(s[i]==='+'||s[i]==='-'){const op=s[i++];const n=atom();return op==='-'?-n:n}
         if(s[i]==='('){i++;const n=sum();space();if(s[i++]!==')')throw 0;return n}` : ''}
-        const m=s.slice(i).match(/^\\d+(?:\\.\\d+)?/);if(!m)throw 0;i+=m[0].length;return Number(m[0]);
+        numeric.lastIndex=i;const m=numeric.exec(s);if(!m)throw 0;i=numeric.lastIndex;return Number(m[0]);
       }
       function product(){let n=atom();space();while(s[i]==='*'||s[i]==='/'){const op=s[i++],v=atom();if(op==='/'&&v===0)throw 0;n=op==='*'?n*v:n/v;space()}return n}
       function sum(){let n=product();space();while(s[i]==='+'||s[i]==='-'){const op=s[i++],v=product();n=op==='+'?n+v:n-v;space()}return n}
@@ -93,12 +94,9 @@ function tokenize(expression) {
     if (char.trim() === '') {
       index = index + 1;
     } else if (DIGITS.includes(char)) {
-      let digits = '';
-      while (index < expression.length && DIGITS.includes(expression[index])) {
-        digits = digits + expression[index];
-        index = index + 1;
-      }
-      tokens.push({ type: 'number', value: Number(digits) });
+      const start = index;
+      while (index < expression.length && DIGITS.includes(expression[index])) index++;
+      tokens.push({ type: 'number', value: Number(expression.slice(start, index)) });
     } else {
       tokens.push({ type: 'operator', value: char });
       index = index + 1;
@@ -165,22 +163,14 @@ function tokenize(expression) {
     if (char.trim() === '') {
       index = index + 1;
     } else if (DIGITS.includes(char)) {
-      let digits = '';
-      while (index < expression.length && DIGITS.includes(expression[index])) {
-        digits = digits + expression[index];
-        index = index + 1;
-      }
+      const start = index;
+      while (index < expression.length && DIGITS.includes(expression[index])) index++;
       if (expression[index] === '.') {
-        index = index + 1;
-        let fraction = '';
-        while (index < expression.length && DIGITS.includes(expression[index])) {
-          fraction = fraction + expression[index];
-          index = index + 1;
-        }
-        if (fraction === '') return null;
-        digits = digits + '.' + fraction;
+        const fractionStart = ++index;
+        while (index < expression.length && DIGITS.includes(expression[index])) index++;
+        if (index === fractionStart) return null;
       }
-      tokens.push({ type: 'number', value: Number(digits) });
+      tokens.push({ type: 'number', value: Number(expression.slice(start, index)) });
     } else if (SYMBOLS.includes(char)) {
       tokens.push({ type: 'symbol', value: char });
       index = index + 1;
@@ -270,7 +260,7 @@ function calculate(expression) {
 
   const value = parseSum();
   if (value === null) return null;
-  if (position !== tokens.length) return null;
+  if (position !== tokens.length || !Number.isFinite(value)) return null;
   return value;
 }`,
   'js-evolving-query': stage => stage === 1 ? `function query(rows, options = {}) {
@@ -1139,9 +1129,9 @@ export const EVOLVING_SOLUTIONS: Record<string, CodingSolution> = Object.fromEnt
 
 const hidden: Record<string, [string, unknown][][]> = {
   'js-evolving-calculator': [
-    [['calculate("17+23+0+4")',44]],
-    [['calculate("20/2/2-1.5")',3.5]],
-    [['calculate("(1+2")',null],['calculate("2**3")',null],['calculate("1e2")',null],['calculate("3 / -(-2)")',1.5],['calculate("3*+2")',6],['calculate("1.")',null]],
+    [["(() => {for(let a=0;a<=20;a++)for(let b=0;b<=20;b++)for(let c=0;c<=3;c++){const text=String(a)+' + '+String(b)+'+'+String(c);if(calculate(text)!==a+b+c)return false;}return true;})()", true], ["[calculate('9007199254740991+0'),calculate('0001\\uFEFF+\\u00a00002'),calculate('0+0+0')]", [9007199254740991, 3, 0]], ["[calculate('1+'.repeat(9999)+'1'),calculate('0'.repeat(19984)+'9007199254740991')]", [10000, 9007199254740991]], ["calculate(\"17+23+0+4\")", 44]],
+    [["(() => {const values=[0,.1,.2,1.5,3,7],ops=['+','-','*','/'],rank=op=>op==='*'||op==='/'?2:1,apply=(a,b,op)=>op==='+'?a+b:op==='-'?a-b:op==='*'?a*b:a/b;for(const a of values)for(const b of values)for(const c of values)for(const x of ops)for(const y of ops){if(x==='/'&&b===0||y==='/'&&c===0)continue;const expected=rank(x)>=rank(y)?apply(apply(a,b,x),c,y):apply(a,apply(b,c,y),x);if(!Number.isFinite(expected))continue;if(calculate(String(a)+x+String(b)+y+String(c))!==expected)return false;}return true;})()", true], ["[calculate('1\\uFEFF+2*3'),calculate('0.1+0.2'),calculate('8/2/2'),calculate('9007199254740991+0')]", [7, 0.30000000000000004, 2, 9007199254740991]], ["[calculate('1+'.repeat(9999)+'1'),calculate('0'.repeat(19999)+'1')]", [10000, 1]], ["calculate(\"20/2/2-1.5\")", 3.5]],
+    [["(() => {const valid=[['--2',2],['-'.repeat(64)+'3',3],['+'.repeat(64)+'0.1+0.2',.1+.2],['2\\uFEFF*(3+4)',14],['1/('+'9'.repeat(400)+')',0]];for(const [text,expected] of valid)if(calculate(text)!==expected)return false;for(const text of ['',' ','1 +','2(3)','()','(1+2','1+2)','2**3','1e2','0x10','1.','.5','1 2','1,5','1\\u00852','1\\u200b+2','2/0','0/(1/0)','9'.repeat(400)])if(calculate(text)!==null)return false;return true;})()", true], ["[calculate('0.1+0.2'),calculate('('.repeat(64)+'--3'+')'.repeat(64)),calculate('3*+2'),calculate('0/(1/0)')]", [0.30000000000000004, 3, 6, null]], ["[calculate('1+'.repeat(9999)+'1'),calculate(' '.repeat(20000)),calculate('0'.repeat(19999)+'1')]", [10000, null, 1]], ["calculate(\"(1+2\")", null], ["calculate(\"2**3\")", null], ["calculate(\"1e2\")", null], ["calculate(\"3 / -(-2)\")", 1.5], ["calculate(\"3*+2\")", 6], ["calculate(\"1.\")", null]],
     // Whole names only, numbers only (a numeric string is not a number), and
     // every finite number, including the ones String() writes with an exponent.
     [['calculateWithVariables("ab+a",{a:1,ab:2})',3],['calculateWithVariables("_x1*2",{_x1:3})',6],['calculateWithVariables("a",{a:"2"})',null],['calculateWithVariables("x*2",{x:1e21})',2e21]],
@@ -1238,8 +1228,9 @@ function calculate(expression) {
 // nothing checks for a missing bracket, a stray token or a unary sign yet.
 function calculate(s) {
   let i=0;
+  const numeric=/\\d+(?:\\.\\d+)?/y;
   const space=()=>{while(/\\s/.test(s[i]||'') && i<s.length)i++};
-  function atom(){space();if(s[i]==='('){i++;const n=sum();space();i++;return n}const m=s.slice(i).match(/^\\d+(?:\\.\\d+)?/);i+=m[0].length;return Number(m[0])}
+  function atom(){space();if(s[i]==='('){i++;const n=sum();space();i++;return n}numeric.lastIndex=i;const m=numeric.exec(s);i=numeric.lastIndex;return Number(m[0])}
   function product(){let n=atom();space();while(s[i]==='*'||s[i]==='/'){const op=s[i++],v=atom();n=op==='*'?n*v:n/v;space()}return n}
   function sum(){let n=product();space();while(s[i]==='+'||s[i]==='-'){const op=s[i++],v=product();n=op==='+'?n+v:n-v;space()}return n}
   return sum();
@@ -1453,3 +1444,7 @@ for (const [id, steps] of Object.entries(checkpoints)) {
 
 // Single-number checkpoint boundaries; later milestones retain their own hidden suites.
 EVOLVING_SOLUTIONS['js-evolving-calculator-1-start'].hiddenTests = [{"call": "(() => {for(const value of [0n,1n,42n,4294967296n,9007199254740991n])for(let zeros=0;zeros<5;zeros++){const text='0'.repeat(zeros)+String(value);if(calculate(text)!==Number(value))return false;}for(let i=0;i<1000;i++){const value=BigInt(i)*9007199254740n;if(calculate(String(value))!==Number(value))return false;}return true;})()", "expected": true}, {"call": "(() => {const spaces=['\\t','\\n','\\v','\\f','\\r',' ','\\u00a0','\\u1680','\\u2000','\\u2001','\\u2002','\\u2003','\\u2004','\\u2005','\\u2006','\\u2007','\\u2008','\\u2009','\\u200a','\\u2028','\\u2029','\\u202f','\\u205f','\\u3000','\\ufeff'];return spaces.every(space=>calculate(space+'7'+space)===7);})()", "expected": true}, {"call": "[calculate(' '.repeat(9999)+'42'+' '.repeat(9999)),calculate('0'.repeat(19984)+'9007199254740991'),calculate('0'.repeat(20000))]", "expected": [42, 9007199254740991, 0]}];
+
+EVOLVING_SOLUTIONS['js-evolving-calculator-2-start'].hiddenTests = [{"call": "(() => {const values=[.1,.2,.5,1.25,3,7],ops=['+','-'];for(const a of values)for(const b of values)for(const c of values)for(const x of ops)for(const y of ops){const first=x==='+'?a+b:a-b,expected=y==='+'?first+c:first-c;if(calculate(String(a)+x+String(b)+y+String(c))!==expected)return false;}return true;})()", "expected": true}, {"call": "[calculate('0.1+0.2'),calculate('1\\uFEFF-2+3'),calculate('9007199254740991-0')]", "expected": [0.30000000000000004, 2, 9007199254740991]}, {"call": "[calculate('1+'.repeat(9999)+'1'),calculate('0'.repeat(19999)+'1')]", "expected": [10000, 1]}];
+
+EVOLVING_SOLUTIONS['js-evolving-calculator-3-start'].hiddenTests = [{"call": "(() => {const apply=(a,b,op)=>op==='+'?a+b:op==='-'?a-b:op==='*'?a*b:a/b;let previous=[{text:'0',value:0},{text:'0.1',value:.1},{text:'0.2',value:.2},{text:'2',value:2},{text:'3',value:3}];for(let level=0;level<3;level++){const next=[];for(let i=0;i<previous.length;i++)for(const op of ['+','-','*','/']){const a=previous[i],b=previous[(i*7+1)%previous.length];if(op==='/'&&b.value===0)continue;const value=apply(a.value,b.value,op);if(!Number.isFinite(value))continue;const text='('+a.text+op+b.text+')';if(calculate(text)!==value)return false;next.push({text,value});}previous=next.slice(0,32);}return true;})()", "expected": true}, {"call": "[calculate('2\\uFEFF*(3+4)'),calculate('('.repeat(64)+'0.1+0.2'+')'.repeat(64)),calculate('(8/2)/2')]", "expected": [14, 0.30000000000000004, 2]}, {"call": "[calculate('1+'.repeat(9999)+'1'),calculate('('.repeat(64)+'9007199254740991'+')'.repeat(64))]", "expected": [10000, 9007199254740991]}];

@@ -8,6 +8,9 @@ import { learnerConsoleFactory } from './coding-console';
 
 // Captured in the controller module, never passed into learner scope.
 const collectOutcomes = Promise.all.bind(Promise);
+// Private controller capability, captured before a task can revoke the
+// learner-visible Function constructors. Never passed into learner scope.
+const compileProgram = Function;
 
 export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
@@ -161,15 +164,13 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
   const grading = Array.isArray(input.expectations);
 
-  let evaluate: (console: typeof sink, probe: typeof PROBE) => (source: string) => unknown;
+  let evaluate: (console: typeof sink, probe: typeof PROBE) => (() => unknown)[];
   try {
-    // Declarations from the learner's code are in scope for the direct eval of
-    // each call, so a suite sees the functions the code defines. Strict mode,
-    // as in the grading sandbox: an undeclared assignment that Run let through
-    // as a stray global would otherwise fail only on Submit. The first line
-    // also declares `__probe` (PROBE_LINE), on the line "use strict" had, so
-    // the learner's line numbers stay as they were.
-    evaluate = new Function('console', `${PROBE_LINE}\n${input.code}\nreturn source => eval(source);`) as typeof evaluate;
+    // Compile authored call expressions as closures over the learner module,
+    // as Submit does. The controller needs no learner-visible eval and retains
+    // strict mode, the probe ABI and the learner's original line offset.
+    const callbacks = input.calls.map(source => '() => (' + source.trim().replace(/;+$/, '') + '\n)').join(',');
+    evaluate = compileProgram('console', PROBE_LINE + '\n' + input.code + '\n;return [' + callbacks + '];') as typeof evaluate;
   } catch (error) {
     // Code that does not parse, named as the grading sandbox names it.
     const syntax = error instanceof Error && error.name === 'SyntaxError';
@@ -177,9 +178,9 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   }
 
   try {
-    const evaluateCall = evaluate(sink, PROBE);
-    const outcomes = await collectOutcomes(input.calls.map(async (source) => {
-      try { return { ok: true, value: await evaluateCall(source), error: undefined }; }
+    const callbacks = evaluate(sink, PROBE);
+    const outcomes = await collectOutcomes(input.calls.map(async (_source, index) => {
+      try { return { ok: true, value: await callbacks[index](), error: undefined }; }
       catch (error) { return { ok: false, value: undefined, error: errorText(error) }; }
     }));
     const results = outcomes.map((outcome, index): CallOutcome => {

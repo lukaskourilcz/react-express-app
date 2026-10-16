@@ -14,8 +14,8 @@ interface CheckpointLadder {
 
 const LADDERS: Record<string, CheckpointLadder> = {
   'js-evolving-calculator-1-start': { hints: ['Trim the expression and turn what is left into a number with Number(); there is no operator to handle yet.'] },
-  'js-evolving-calculator-2-start': { hints: ['Read the numbers and the + and - signs between them from left to right, and apply each sign to a running total. A decimal operand reads with Number() like a whole one.'] },
-  'js-evolving-calculator-3-start': { hints: ['Treat a parenthesised group like a number: when a factor starts with "(", evaluate the whole expression inside it, then step past the ")". Calling the same function again handles any depth.'] },
+  'js-evolving-calculator-2-start': { hints: ["Read decimal numbers and binary + or - left to right. Keep ordinary Number rounding; no unary signs or parentheses are required at this step."], approach: ["Read the next complete decimal Number, followed by a binary + or - and another Number.", "Update the running result from left to right with ordinary Number arithmetic.", "This valid-input step does not yet need precedence, unary signs or validation."] },
+  'js-evolving-calculator-3-start': { hints: ["When an operand starts with (, read the enclosed sum and step past ). Keep the scanner at an index and use sticky numeric matches rather than copying the whole remaining suffix. Unary signs and validation are the next milestone."], approach: ["Read a number from the current index; when it starts with (, read the enclosed sum and step past ).", "Read products before sums, retaining left associativity at each precedence.", "Keep each numeric span once. Unary signs and malformed-input checks are introduced next."] },
   'js-evolving-calculator-4-start': { hints: ['Replace each name that matches /[A-Za-z_][A-Za-z0-9_]*/ with its value from variables, wrapped in parentheses so a negative value stays one operand, then hand the text to calculate.'] },
   'js-evolving-calculator-5-start': { hints: ['Keep the variables in an object. For each line, check for NAME = first: evaluate the right side with calculateWithVariables and store it under NAME. Every line, assignment or not, pushes its value onto results.'] },
 
@@ -132,6 +132,7 @@ export function checkpointLadder(id: string): Partial<Pick<CodingTask, 'hints' |
   if (!ladder) return {};
   return {
     hints: { en: ladder.hints, cs: [] },
-    ...(ladder.approach ? { approach: { en: ladder.approach, cs: [] } } : {}),
+    // A checkpoint must never inherit instructions for its later milestone.
+    approach: ladder.approach ? { en: ladder.approach, cs: [] } : undefined,
   };
 }

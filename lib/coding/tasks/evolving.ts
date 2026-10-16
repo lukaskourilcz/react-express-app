@@ -9,6 +9,7 @@ const test = (call: string, expected: unknown): CallTest => ({ call, expected, e
 interface Spec {
   starter: string;
   focus: string[];
+  focuses?: string[][];
   prompts: Localized[];
   hints: Localized[];
   /** Method steps per stage, offered on the hint ladder after the hint. */
@@ -31,18 +32,24 @@ interface Spec {
 const SPECS: Record<string, Spec> = {
   'js-evolving-calculator': {
     starter: 'function calculate(expression) {\n  // Return a number.\n}\n', focus: ['split', 'reduce'],
+    focuses: [['split', 'reduce'], ['strings', 'recursion', 'while'], ['strings', 'recursion', 'while']],
     prompts: [
-      text('Implement calculate(expression) for sums of one or more non-negative integers, with optional whitespace: "1 + 2" → 3. A single number returns itself. Inputs in this stage are valid.', 'Napiš calculate(expression) pro součet jednoho či více nezáporných celých čísel s volitelnými mezerami: "1 + 2" → 3. Samotné číslo vrátí sebe. Vstupy této etapy jsou platné.'),
-      text('Keep addition and add subtraction, multiplication and division. Respect precedence (* and / before + and -) and left associativity: "1 + 2 / 9 * 4" → 1.8888888888888888. Operands are non-negative decimals; inputs are valid and division is non-zero.', 'Zachovej sčítání a přidej odčítání, násobení a dělení. Respektuj prioritu (* a / před + a -) a vyhodnocování zleva: "1 + 2 / 9 * 4" → 1.8888888888888888. Operandy jsou nezáporná desetinná čísla; vstupy jsou platné a dělitel není nula.'),
-      text('Extend the engine with nested parentheses and unary +/-. Return null for malformed input, empty input, trailing tokens or division by zero. Numbers use digits with an optional decimal point followed by digits. Do not use eval or Function. Examples: "-(2+3)*4" → -20, "1 +" → null. Keep all earlier behavior.', 'Rozšiř engine o vnořené závorky a unární +/-. Pro neplatný či prázdný vstup, přebytečné tokeny a dělení nulou vrať null. Čísla mají číslice a volitelnou desetinnou tečku následovanou číslicemi. Nepoužívej eval ani Function. Příklady: "-(2+3)*4" → -20, "1 +" → null. Zachovej předchozí chování.'),
+      text("Implement calculate(expression) for sums of one or more non-negative decimal integer literals. Leading zeros and JavaScript whitespace around literals/operators are valid; whitespace inside a literal is not. A single number returns itself. Inputs are primitive strings of at most 20000 UTF-16 units and are valid at this stage. Every operand and running sum is an exact safe Number integer. Split on + and add the converted values in order; preserve all earlier single-number behavior. Target: O(n) time and O(n) extra space, where n is expression.length.", 'Napiš calculate(expression) pro součet jednoho či více nezáporných celých čísel s volitelnými mezerami: "1 + 2" → 3. Samotné číslo vrátí sebe. Vstupy této etapy jsou platné.'),
+      text("Keep addition/subtraction and add multiplication/division. * and / bind before + and -; operators at the same precedence apply left to right. For example, 1 + 2 / 9 * 4 gives 1.8888888888888888. Use the earlier ASCII decimal literal grammar with leading zeros, JavaScript whitespace between tokens and ordinary Number rounding. Inputs are valid primitive strings up to 20000 UTF-16 units, all operands/final results are finite and no division has a zero right operand. Unary signs and parentheses come later. Read numbers by index or a sticky regular expression rather than copying the remaining suffix for every token. Target: O(n) time and O(n) extra space, where n is expression.length.", 'Zachovej sčítání a přidej odčítání, násobení a dělení. Respektuj prioritu (* a / před + a -) a vyhodnocování zleva: "1 + 2 / 9 * 4" → 1.8888888888888888. Operandy jsou nezáporná desetinná čísla; vstupy jsou platné a dělitel není nula.'),
+      text("Extend the engine with parentheses and unary +/-. A literal is one or more ASCII digits, optionally followed by a dot and one or more digits; leading zeros are valid. JavaScript whitespace may occur between tokens, never inside a number. Use ordinary Number conversion/arithmetic and the earlier precedence/left associativity. Return null for malformed or empty input, trailing tokens, any division by a zero right operand, or a non-finite final result. A malformed nested division still fails even when another arithmetic step could hide it. Signs may repeat. Inputs are primitive strings of at most 20000 UTF-16 units, with at most 64 parenthesis levels and at most 64 consecutive unary signs. Other types are outside this task. Do not use native eval or any Function-family code compiler; these capabilities are unavailable in this exercise. Write a parser and consume the complete input. -(2+3)*4 gives -20; 1 + gives null. Match each number from the current index without copying the remaining suffix. Target: O(n) time and O(n) extra space, where n is expression.length.", 'Rozšiř engine o vnořené závorky a unární +/-. Pro neplatný či prázdný vstup, přebytečné tokeny a dělení nulou vrať null. Čísla mají číslice a volitelnou desetinnou tečku následovanou číslicemi. Nepoužívej eval ani Function. Příklady: "-(2+3)*4" → -20, "1 +" → null. Zachovej předchozí chování.'),
     ],
-    hints: [text('Split on + and accumulate numeric values.', 'Rozděl vstup podle + a sečti číselné hodnoty.'), text('Separate parsing a sum from parsing a product.', 'Odděl parsování součtu od parsování součinu.'), text('Use recursive descent: expression → term → unary → number or parenthesized expression. Verify every character was consumed.', 'Použij rekurzivní sestup: výraz → člen → unární operace → číslo nebo výraz v závorkách. Ověř spotřebování všech znaků.')],
+    hints: [text("Split on + and convert each whole literal with Number. The valid-input contract keeps every running sum safe.", 'Rozděl vstup podle + a sečti číselné hodnoty.'), text("Separate sum and product parsing. Read a number once from its current span; sticky RegExp lastIndex or start/end indices avoid repeated suffix copies.", 'Odděl parsování součtu od parsování součinu.'), text("Handle unary signs and parentheses as operands, reject zero divisors, require complete token consumption and check that the final Number is finite.", 'Použij rekurzivní sestup: výraz → člen → unární operace → číslo nebo výraz v závorkách. Ověř spotřebování všech znaků.')],
+    approaches: [
+      [text("Split at plus signs; convert each complete literal to Number.", ""), text("Accumulate left to right, preserving safe integer arithmetic under the input bounds.", "")],
+      [text("Scan each number/operator once. Parse products before sums, with a loop at each precedence.", ""), text("Use an index or sticky numeric match; keep number spans instead of growing a copied prefix.", "")],
+      [text("Tokenize without discarding unknown characters, or parse directly at an index.", ""), text("Read unary signs/parenthesized expressions as operands; apply products before sums and reject zero divisors.", ""), text("Require the entire input to be consumed and the final Number to be finite; otherwise return null.", "")],
+    ],
     tests: [
-      [test('calculate("1 + 2")', 3), test('calculate("0")', 0), test('calculate(" 12 + 30 + 5 ")', 47), test('calculate("999 + 1")', 1000),
+      [test("calculate(\"9007199254740991+0\")",9007199254740991), test('calculate("1 + 2")', 3), test('calculate("0")', 0), test('calculate(" 12 + 30 + 5 ")', 47), test('calculate("999 + 1")', 1000),
         {...test('calculate("2+3+4")', 9), label: text('Whitespace is optional: no spaces', 'Mezery jsou volitelné: bez mezer')},
         {...test('calculate("7 +8+ 9")', 24), label: text('Whitespace is optional: mixed spacing', 'Mezery jsou volitelné: různé rozestupy')}],
-      [test('calculate("1 + 2 / 9 * 4")', 1.8888888888888888), test('calculate("8 / 2 * 3")', 12), test('calculate("10 - 3 - 2")', 5), test('calculate("1.5 * 2 + 4")', 7)],
-      [test('calculate("-(2+3)*4")', -20), test('calculate("2*(3+(4/2))")', 10), test('calculate("1 +")', null), test('calculate("2 / (3-3)")', null), test('calculate("2x3")', null), test('calculate("")', null), test('calculate("1 2")', null), test('calculate("--2")', 2)],
+      [test("calculate(\"1\\uFEFF+2*3\")",7), test('calculate("1 + 2 / 9 * 4")', 1.8888888888888888), test('calculate("8 / 2 * 3")', 12), test('calculate("10 - 3 - 2")', 5), test('calculate("1.5 * 2 + 4")', 7)],
+      [test("calculate(\"0/(1/0)\")",null), test('calculate("-(2+3)*4")', -20), test('calculate("2*(3+(4/2))")', 10), test('calculate("1 +")', null), test('calculate("2 / (3-3)")', null), test('calculate("2x3")', null), test('calculate("")', null), test('calculate("1 2")', null), test('calculate("--2")', 2)],
     ],
   },
   'js-evolving-query': {
@@ -103,7 +110,7 @@ export function buildEvolvingTasks(specs: Record<string, Spec>): CodingTask[] {
       prompt: spec.prompts[index],
       previousRequirements: spec.prompts.slice(0,index),
       references: spec.references?.[index] ?? stageReferences(challenge.id,index),
-      starter: spec.starter, focus: spec.focus,
+      starter: spec.starter, focus: spec.focuses?.[index] ?? spec.focus,
       hints: { en: [spec.hints[index].en], cs: [spec.hints[index].cs] },
       ...(spec.approaches?.[index] ? { approach: { en: spec.approaches[index].map(step => step.en), cs: spec.approaches[index].map(step => step.cs) } } : {}),
       ...(spec.format ? { format: spec.format } : {}),

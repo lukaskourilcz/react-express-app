@@ -5,12 +5,14 @@ export interface TaskRuntimePolicy {
   forbidNativePromiseAll?: true;
   forbidNativeArrayFlatten?: true;
   forbidNativeCloneHelpers?: true;
+  forbidNativeDynamicCompilation?: true;
 }
 
 export const runtimePolicyForTask = (id: string): TaskRuntimePolicy | undefined =>
   id === 'js-clone-promise-all' ? { forbidNativePromiseAll: true }
     : id === 'alg-deep-flatten' ? { forbidNativeArrayFlatten: true }
-    : id === 'alg-deep-clone' ? { forbidNativeCloneHelpers: true } : undefined;
+    : id === 'alg-deep-clone' ? { forbidNativeCloneHelpers: true }
+    : /^js-evolving-calculator-(?:[3-5]|[45]-start)$/.test(id) ? { forbidNativeDynamicCompilation: true } : undefined;
 
 /** Self-contained so QuickJS and the Run realm install exactly the same rule,
  * before learner initialization can capture the original native function.
@@ -41,6 +43,36 @@ export const TASK_RUNTIME_POLICY_SOURCE = `(realm, policy) => {
       });
     }
   }
+  if (policy.forbidNativeDynamicCompilation === true) {
+    // Resolve every constructor in the target realm before replacing access.
+    // The policy installer can itself be called from a different realm.
+    const constructors = realm.Function('return [Function, Object.getPrototypeOf(async function(){}).constructor, Object.getPrototypeOf(function*(){}).constructor, Object.getPrototypeOf(async function*(){}).constructor];')();
+    // Build wrappers inside the target realm as well: a host-realm function
+    // would otherwise expose that host's Function through its prototype.
+    const makeBlocked = realm.Function('NativeError', 'return function(){throw new NativeError("Native eval and Function compilation are unavailable in this exercise. Parse the expression yourself.");};');
+    const constantGetter = realm.Function('value', 'return function(){return value;};');
+    const blocked = constructors.map(ctor => {
+      const replacement = makeBlocked(NativeError);
+      realm.Object.defineProperty(replacement, 'prototype', { value: ctor.prototype, writable: false });
+      realm.Object.defineProperty(replacement, 'name', { value: ctor.name });
+      realm.Object.defineProperty(replacement, 'length', { value: ctor.length });
+      return replacement;
+    });
+    for (let i = 0; i < constructors.length; i++) {
+      realm.Object.defineProperty(constructors[i].prototype, 'constructor', {
+        value: blocked[i], writable: false, configurable: false
+      });
+    }
+    // Accessors also prevent the QuickJS global-binding path from replacing
+    // a nonwritable data value through a value-only defineProperty call.
+    realm.Object.defineProperty(realm, 'Function', {
+      get: constantGetter(blocked[0]), configurable: false
+    });
+    realm.Object.defineProperty(realm, 'eval', {
+      get: constantGetter(makeBlocked(NativeError)), configurable: false
+    });
+  }
+
 }`;
 
 export function installTaskRuntimePolicy(realm: typeof globalThis, policy?: TaskRuntimePolicy): void {
