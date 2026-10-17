@@ -101,6 +101,9 @@ LADDERS['react-fullstack-planner-5-start'] = { hints: ["Keep the typed API expor
 LADDERS["react-fullstack-planner-6-start"] = { hints: ["Keep Name and hours in state and bind their value and onChange. Prevent the form submission from navigating, but do not send a POST yet. Keep the earlier list, loading, failure, retry and typed API behavior."] };
 LADDERS["react-fullstack-planner-8-start"] = { hints: ["Derive visible rows using the trimmed lowercase Search substring and hours greater than zero for Available only. Combine both filters over the loaded collection without changing API records. Retain the form, creation, pending guards and versioned Log hour behavior; pages and deletion come next."] };
 
+LADDERS["react-fullstack-stockroom-5-start"] = { hints: ["Keep the typed API exports and one stable transport per mounted app. Load the successful collection and render every name with its actual stock. Parent renders retain that API; separate or fresh mounts start independently. Loading, failed requests and Retry arrive in the next milestone."] };
+LADDERS["react-fullstack-stockroom-6-start"] = { hints: ["Bind Name and stock to state and prevent form navigation. Keep their complete values across rerenders, including empty input. This checkpoint does not send a POST; retain the earlier collection, loading/retry and typed API behavior."] };
+
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
  * entry, which the content contract reports. */
