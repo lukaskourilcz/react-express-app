@@ -467,7 +467,7 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
     ui(
       'Add "Move up TASK_TEXT" buttons. Move a task one position earlier in the full list, preserving its ID and completion. Disable the first task’s button.',
       'Přidej tlačítka "Move up TEXT_ÚKOLU". Posuň úkol o místo výše v úplném seznamu a zachovej ID i dokončení. První úkol má tlačítko zakázané.',
-      `render(<App/>);add('A');add('B');expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move up B',exact:true}));expect(screen.getAllByRole('checkbox')[0].getAttribute('aria-label')||screen.getAllByRole('checkbox')[0].closest('label').textContent).toBe('B');`,
+      `render(<App/>);add('A');add('B');expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move up B',exact:true}));expect(require('@testing-library/react').within(screen.getAllByRole('listitem')[0]).getByRole('checkbox',{name:'B',exact:true})).toBeTruthy();`,
     ),
   ],
   'react-evolving-catalog': [
