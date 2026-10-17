@@ -51,8 +51,9 @@ function skipLiteral(source: string, start: number): number {
   return i;
 }
 
-/** The spans every comment occupies, in order. A JSX comment carries its
- * wrapping braces with it, so removing it does not leave `{}` behind. */
+/** The spans every comment occupies, in order. Braces belong to the program,
+ * not the comment: preserving them works for both JavaScript blocks/objects
+ * and JSX's empty expression container, which renders nothing. */
 function commentSpans(source: string): [number, number][] {
   const spans: [number, number][] = [];
   let i = 0;
@@ -74,12 +75,8 @@ function commentSpans(source: string): [number, number][] {
     }
     if (c === '/' && source[i + 1] === '*') {
       const close = source.indexOf('*/', i + 2);
-      let from = i;
-      let to = close < 0 ? source.length : close + 2;
-      // `{/* ... */}` is one JSX comment; take the braces too.
-      const before = source.slice(0, from).match(/\{[ \t]*$/);
-      const after = source.slice(to).match(/^[ \t]*\}/);
-      if (before && after) { from -= before[0].length; to += after[0].length; }
+      const from = i;
+      const to = close < 0 ? source.length : close + 2;
       spans.push([from, to]);
       i = close < 0 ? source.length : close + 2;
       continue;

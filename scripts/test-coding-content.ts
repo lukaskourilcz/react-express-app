@@ -18,6 +18,7 @@ import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, playable }
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
+import { codingBoardContracts } from './coding-board-contract';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
   CODING_DIFFICULTIES,
@@ -340,6 +341,7 @@ const testingLibrary = async (): Promise<AsyncWaitConfig> => {
 };
 
 async function main() {
+  codingBoardContracts();
   // The solutions are proven on the grader's worker thread, built fresh from
   // the sources under test, as the deployment runs it.
   await buildSandboxWorker();
