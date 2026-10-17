@@ -5,7 +5,7 @@ Baseline main: `db95ad2afc89873222ee90ebdece2023ae8af474`. Tested application ch
 
 ## Result and approval boundary
 
-The monitoring SDK is 109,266 gzip bytes smaller (157,957 → 48,691, **69.2%**). Eight concurrent settings callers now initiate one provider read instead of eight. An old read can no longer overwrite settings cached after a successful save. Neither result relies on a faster production database or on a changed visual design.
+The monitoring SDK is 109,897 gzip bytes smaller (158,693 → 48,796, **69.3%**). Eight concurrent settings callers now initiate one provider read instead of eight. An old read can no longer overwrite settings cached after a successful save. Neither result relies on a faster production database or on a changed visual design.
 
 The local mobile home-page LCP median improved 3,320 → 3,076 ms (7.3%); repeat-browser LCP improved 792 → 604 ms. Several other pages did not improve, and desktop guide LCP increased in this small sample. These are **lab observations, not a production speedup claim or statistically established effect**.
 
@@ -28,7 +28,7 @@ Vercel recommends placing functions near data ([function regions](https://vercel
 
 Error reporting still initializes at the same point, with the same tracing sample rate and privacy settings. It has not been disabled or postponed to make a score look better. Consent-dependent PostHog was not loaded in the essential-consent measurements. A separate 60,000-byte monitoring gzip budget now prevents this regression, in addition to the unchanged 243,000-byte initial HTML dependency budget.
 
-The byte comparison uses Node gzip on both production-shaped builds with identical placeholder environment variables from `docs/quality/bundle-budget.json`. It is not Chrome transferSize: headers and the fixture server's gzip representation produce slightly different wire totals. The initial entry graph remains essentially unchanged; the saving is a bootstrap-started dynamic monitoring chunk, not a 69% reduction of all JavaScript.
+The byte comparison uses Node gzip on both production-shaped builds with identical placeholder environment variables from `docs/quality/bundle-budget.json`. It is not Chrome transferSize: headers and the fixture server's gzip representation produce slightly different wire totals. A final same-process Node gzip remeasurement is recorded in [monitoring-gzip.json](monitoring-gzip.json); it uses the same compression options as the budget check. Earlier exploratory byte counts used a different compression level and are superseded. The initial entry graph is 242,854 → 242,863 gzip bytes; the saving is a bootstrap-started dynamic monitoring chunk, not a 69% reduction of all JavaScript.
 
 ### Concurrent settings reads and stale responses
 
@@ -53,7 +53,7 @@ Host: macOS/Apple arm64, Google Chrome **155.0.8059.80**, Playwright 1.63.0, Nod
 - Mobile: 390 × 844, device scale 1, CPU ×4 slowdown, 150 ms latency, 1.6 Mbps download.
 - Desktop: 1440 × 1000, device scale 1, CPU ×1, 20 ms latency, 10 Mbps download.
 - Light theme, reduced motion, anonymous, essential consent; service workers blocked. External destinations and writes blocked. A localhost server supplies identical invented public settings after 400 ms, with commercial features disabled; no database/provider credentials.
-- Fresh browser/context per cold/repeat pair; browser cache enabled and bounded. Repeat navigation uses the same context. **Cold browser is not proof of a cold function, cold database or cold CDN**. Cache-hit counters and each resource's timings/bytes are preserved.
+- The localhost fixture uses Node HTTP/1.1, without a CDN; its transport is not a model of all production HTTP/2/3 behavior. Fresh browser/context per cold/repeat pair; browser cache enabled and bounded. Repeat navigation uses the same context. **Cold browser is not proof of a cold function, cold database or cold CDN**. Cache-hit counters and each resource's timings/bytes are preserved.
 - Navigation waits for load plus three seconds on mobile/1.5 seconds desktop. LCP and CLS are captured before the interaction. Safe menu/theme controls are then exercised for EventTiming; nothing starts a game or authenticates. EventTiming has a 16 ms reporting threshold: absent entries do not mean zero latency.
 - `navigation.ttfb` is responseStart minus requestStart; DNS/connect/TLS are separate navigation fields. Resource records include request wait, download, encoded/decoded/transfer bytes. Browser-cache zero-transfer resources are not new downloads.
 - 5 routes × 2 profiles × 3 samples × 2 browser-cache states = **60 navigations per build**, 120 total. Values below are medians; CLS column is the maximum across both cache states.
@@ -73,7 +73,7 @@ Host: macOS/Apple arm64, Google Chrome **155.0.8059.80**, Playwright 1.63.0, Nod
 
 The small desktop guide regression (816 → 908 ms) and home regression (772 → 816 ms) are retained rather than omitted. With three samples, host/scheduling variance and the fixed synthetic settings delay, this experiment does not establish a reliable desktop rendering gain. Premium's existing layout shift is unchanged (maximum 0.0303 desktop, 0.0155 mobile). Other sampled lab routes had zero observed CLS.
 
-The home page's complete cold-browser JavaScript transfer in this fixture was **435,322 → 325,426 bytes** including resource timing header estimates (25.2% less); encoded JS bodies were 427,822 → 317,926 bytes. That is the whole-page transfer comparison, separate from the 69.2% SDK-only gzip result. All 120 lab navigations requested public settings once; the eight-to-one server fix concerns concurrent callers at the server, not an invented eightfold reduction in one browser's requests.
+The home page's complete cold-browser JavaScript transfer in this fixture was **435,322 → 325,426 bytes** including resource timing header estimates (25.2% less); encoded JS bodies were 427,822 → 317,926 bytes. That is the whole-page transfer comparison, separate from the 69.3% SDK-only gzip result. All 120 lab navigations requested public settings once; the eight-to-one server fix concerns concurrent callers at the server, not an invented eightfold reduction in one browser's requests.
 
 Across the five routes, the median of each navigation's slowest reported menu/theme event was unchanged: mobile cold 96 ms, repeat 32 ms; desktop cold 80 ms, repeat 24 ms. These are distinct controls on the two profiles and a small EventTiming sample, not field INP or proof that all interactions are fast.
 
@@ -115,7 +115,7 @@ The exact protected preview also completed **20 navigations** (five routes, both
 
 TanStack Query already provides client read caching/deduplication, independent leaderboard reads are started together, and server request memoization exists. Navigation retains SPA history/current content during lazy loading. No speculative new prefetches or full-page reloads were added. Personal endpoint cache policies remain private/no-store unless an existing explicitly public response overrides them. Checkout, stock/price/eligibility checks remain server-owned; this work changes no commercial authorization.
 
-Two preloaded self-hosted variable Latin WOFF2 files total 73,092 encoded bytes (Manrope 24,836 + Inter 48,256). Home imagery is a small SVG wordmark/icons, not a large photographic LCP. No new image/font conversion or third-party script was added without evidence. Monitoring was the larger avoidable transfer cost.
+Two preloaded self-hosted variable Latin WOFF2 files total 73,092 encoded bytes (Manrope 24,836 + Inter 48,256). Home imagery is a small SVG wordmark/icons, not a large photographic LCP. The TypeScript compiler remains a 4.19 MB minified worker asset, loaded only for TypeScript work; it is absent from the anonymous home and quiz entry graph. Its first-use compiler cost has not been optimized or represented as a server-grading gain. No new image/font conversion or third-party script was added without evidence. Monitoring was the larger avoidable transfer cost.
 
 ## Reproduction
 
@@ -131,7 +131,22 @@ npm run test:performance
 npm run check:bundle
 ```
 
+The localhost fixture models the selected public routes and static assets, not every Vercel/preview routing rule. Functional/SEO regression suites use the standard Vite preview with their own API/Auth fixtures; do not treat the simplified performance fixture as a complete application server. Public sandbox/worker CORS matches production, while API responses receive no CORS header.
+
 The probe defaults to read-only anonymous production measurement. It blocks writes and external destinations via CDP interception (rather than Playwright routing, which disables cache). Optional `--fixture=1` supplies public invented settings in-browser and returns 503 for other API reads before any request is sent. Use that mode for previews so their environment cannot contact real providers. Protected access, if needed, is supplied by a private file through `--access=...`; never publish its URL/token.
+
+## Validation
+
+All final local checks passed; details and actual exit codes are in [validation.json](validation.json).
+
+- API, scripts and client tooling typechecks; cache/timing concurrency, invalidation and outage tests; full launch/verified-caller contracts against synthetic providers.
+- **104 client test files / 1,001 tests** passed with two workers. Production build passed. Public HTML checks covered 20 URLs, canonical/schema/locale rules, 725 coding share pages, seven Coding section pages and 92 daily-question pages.
+- The production-shaped budget passed: initial graph **242,863 / 243,000 bytes**, monitoring **48,796 / 60,000 bytes**: [budget result](bundle-budget-result.json). Security/unused checks and script syntax/diff checks passed. Both production dependency audits reported **zero vulnerabilities**. Twelve physical API handlers remain.
+- **78 browser tests** passed on the standard Vite preview using fixture API/Auth responses: signed-out/stored sessions, profile reads/writes and rollback on failure, JS/TypeScript/React editor Run, Skill Check/review, Challenge feedback, lazy route navigation/history, keyboard/focus, startup layout stability, public SEO and WCAG 2.2 AA. They used a browser launch wrapper whose unreachable local proxy and DNS rules block external networking while allowing localhost. No production accounts/providers were used.
+- Responsive checks: **56 light + 12 dark probes**, 360–1440 px, zero overflow/escaping/occlusion findings and zero unprobed routes. Big O text reflow at 200% is covered by the browser suite. This is emulation, not physical-device validation.
+- The application revision's [CI SQL job](https://github.com/lukaskourilcz/react-express-app/actions/runs/39028832004) passed on a separate Supabase Postgres 17 service with no production data or credentials. The broader verify job was still running at evidence capture; final documentation/lab-only commits start fresh PR checks. Consult the PR for their current status; this report does not predeclare them green.
+
+The first parallel local validation was stopped after resource/disk pressure; a guest process returned no result and the client run was interrupted. Serial launch and the two-worker full client rerun passed. A first functional-browser attempt on the simplified performance fixture was stopped after two missing sandbox CORS failures and one hidden-URL SEO rewrite mismatch. Console evidence identified the fixture, and the entire 78-test suite then passed on the standard preview. The committed fixture now supplies public sandbox/worker CORS and returns 503 for unimplemented API reads. The original comparison's selected pages used settings only, so these harness corrections do not alter its accepted results. No failed attempt is counted as passing evidence.
 
 ## Limits and remaining approval
 
