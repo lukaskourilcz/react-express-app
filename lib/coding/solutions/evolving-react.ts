@@ -2924,7 +2924,7 @@ const seniorBuilders: Record<string,(stage:number)=>string> = {
 const hiddenFrom: Record<string,{from:number;suite:string}[]> = {
   'react-evolving-board': [
     {from:2, suite:`test('Remaining counts every unfinished task under each filter',()=>{render(<App/>);add('One');add('Two');add('Three');fireEvent.click(screen.getByRole('checkbox',{name:'Two'}));for(const name of ['All','Active','Completed','All']){fireEvent.click(screen.getByRole('button',{name,exact:true}));expect(screen.getByLabelText('Remaining').textContent).toBe('2')}});`},
-    {from:5, suite:`const order=()=>screen.getAllByRole('checkbox').map(box=>box.closest('label').textContent);
+    {from:5, suite:`const order=()=>screen.queryAllByRole('listitem').map(li=>{let name='';require('@testing-library/react').within(li).getByRole('checkbox',{name:value=>{name=value;return true;}});return name;});
 test('Move down moves one place and is disabled on the last task of the full list',()=>{render(<App/>);add('A');add('B');add('C');expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('B,A,C');fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('B,C,A');expect(screen.getByRole('button',{name:'Move down A',exact:true}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(false)});
 test('under a filter a move swaps with the neighbour in the full list, and the full list decides what is disabled',()=>{render(<App/>);add('A');add('B');add('C');fireEvent.click(screen.getByRole('checkbox',{name:'B'}));fireEvent.click(screen.getByRole('button',{name:'Active',exact:true}));expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('A,C');expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(false);fireEvent.click(screen.getByRole('button',{name:'All',exact:true}));expect(order().join(',')).toBe('B,A,C');expect(screen.getByRole('checkbox',{name:'B'}).checked).toBe(true)});
 test('a moved duplicate keeps its own completion, and undo puts it back',()=>{render(<App/>);add('Dup');add('X');add('Dup');fireEvent.click(screen.getAllByRole('checkbox')[2]);fireEvent.click(screen.getAllByRole('button',{name:'Move up Dup',exact:true})[1]);expect(order().join(',')).toBe('Dup,Dup,X');expect(screen.getAllByRole('checkbox').map(box=>box.checked).join(',')).toBe('false,true,false');fireEvent.click(screen.getByRole('button',{name:'Undo',exact:true}));expect(order().join(',')).toBe('Dup,X,Dup');expect(screen.getAllByRole('checkbox').map(box=>box.checked).join(',')).toBe('false,false,true')});`},
@@ -3349,4 +3349,117 @@ test('history belongs to its mounted root, survives parent renders, and resets o
 for (const [id, cases] of Object.entries(HISTORY_BOARD_REVIEW_CASES)) {
   const solution = REACT_EVOLVING_SOLUTIONS[id];
   solution.hiddenSuite = [solution.hiddenSuite, cases].filter(Boolean).join("\n\n");
+}
+
+// Individual final-board and early explorer checks; checkpoint inheritance stays scoped.
+const EXPLORER_BOARD_REVIEW_CASES: Record<string,string> = {
+"react-evolving-board-5": `
+const HISTORY_STAGE=6;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+ if(HISTORY_STAGE>=6)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move down '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[m.rows.length-1].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(kind==='down'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move down '+row.name,exact:true}));if(i<m.rows.length-1){next=m.rows.slice();next.splice(i,2,m.rows[i+1],m.rows[i]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+
+test('longer duplicate boards retain all Undo snapshots and independent identity through both move directions',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Second','Same','Fourth','Fifth','Same'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',2);historyAction(v,m,'down',2);historyAction(v,m,'move',4);historyAction(v,m,'delete',3);while(m.past.length)historyAction(v,m,'undo');while(m.future.length)historyAction(v,m,'redo');});
+test('both directions cross hidden neighbors and a disabled boundary preserves Redo',()=>{const v=render(<App/>),m=historyModel();for(const name of ['A','B','C','D','E'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',1);historyAction(v,m,'toggle',3);historyAction(v,m,'filter','Active');historyAction(v,m,'down',0);historyAction(v,m,'move',2);historyAction(v,m,'filter','All');historyAction(v,m,'undo');historyAction(v,m,'move',0);historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'down',4);historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+"react-evolving-catalog-1-start": `
+const productsWithin=require('@testing-library/react').within;
+const productFixture=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const productControl=(v,name)=>productsWithin(v.container).getByLabelText(name);
+const productRows=(v,expected)=>{const lis=[...v.container.querySelectorAll('li')];expect(lis.length).toBe(expected.length);for(const [i,row]of expected.entries()){expect(lis[i].textContent).toContain(row.name);expect(new RegExp('(^|[^0-9])'+row.price+'([^0-9]|$)').test(lis[i].textContent)).toBe(true);}};
+const productQuery=(v,value)=>fireEvent.change(productControl(v,'Search'),{target:{value}});
+const productSort=(v,value)=>fireEvent.change(productControl(v,'Sort'),{target:{value}});
+const productExpected=(query,mode='name')=>productFixture.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>mode==='name'?a.name.localeCompare(b.name):mode==='price-asc'?a.price-b.price:b.price-a.price);
+const productEmpty=(v,empty)=>expect(Boolean(productsWithin(v.container).queryByText('No products',{exact:true}))).toBe(empty);
+
+test('all four named products retain their own prices exactly once',()=>{const v=render(<App/>);productRows(v,productFixture);expect(v.container.querySelectorAll('li').length).toBe(4);});
+test('ordinary parent renders do not lose or duplicate fixed products',()=>{const v=render(<App/>);for(let i=0;i<5;i++){v.rerender(<App/>);productRows(v,productFixture);}});
+test('independently mounted lists each retain the whole fixed dataset',()=>{const a=render(<App/>),b=render(<App/>);productRows(a,productFixture);productRows(b,productFixture);});
+test('a new list starts with every product after another root unmounts',()=>{const old=render(<App/>);old.unmount();productRows(render(<App/>),productFixture);});
+`,
+"react-evolving-catalog-1": `
+const productsWithin=require('@testing-library/react').within;
+const productFixture=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const productControl=(v,name)=>productsWithin(v.container).getByLabelText(name);
+const productRows=(v,expected)=>{const lis=[...v.container.querySelectorAll('li')];expect(lis.length).toBe(expected.length);for(const [i,row]of expected.entries()){expect(lis[i].textContent).toContain(row.name);expect(new RegExp('(^|[^0-9])'+row.price+'([^0-9]|$)').test(lis[i].textContent)).toBe(true);}};
+const productQuery=(v,value)=>fireEvent.change(productControl(v,'Search'),{target:{value}});
+const productSort=(v,value)=>fireEvent.change(productControl(v,'Sort'),{target:{value}});
+const productExpected=(query,mode='name')=>productFixture.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>mode==='name'?a.name.localeCompare(b.name):mode==='price-asc'?a.price-b.price:b.price-a.price);
+const productEmpty=(v,empty)=>expect(Boolean(productsWithin(v.container).queryByText('No products',{exact:true}))).toBe(empty);
+
+test('all products keep their literal name and price through varied substring searches',()=>{const v=render(<App/>);for(const query of ['', ' DATES ','a','rRo','an','le','\u00a0 Da \ufeff','nothing','<task>&','a'.repeat(300),'']){productQuery(v,query);const rows=productExpected(query);productRows(v,rows);productEmpty(v,!rows.length);}});
+test('empty results recover and parent renders preserve the selected query',()=>{const v=render(<App/>);productQuery(v,'zzzz');productRows(v,[]);productEmpty(v,true);v.rerender(<App/>);productRows(v,[]);productQuery(v,'dates');productRows(v,productExpected('dates'));productEmpty(v,false);});
+test('two mounted searches stay independent',()=>{const a=render(<App/>),b=render(<App/>);productQuery(a,'le');productQuery(b,'at');a.rerender(<App/>);productRows(a,productExpected('le'));productRows(b,productExpected('at'));});
+test('a fresh search starts with all four original products',()=>{const old=render(<App/>);productQuery(old,'rro');old.unmount();const v=render(<App/>);productRows(v,productFixture);productEmpty(v,false);});
+`,
+"react-evolving-catalog-2-start": `
+const productsWithin=require('@testing-library/react').within;
+const productFixture=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const productControl=(v,name)=>productsWithin(v.container).getByLabelText(name);
+const productRows=(v,expected)=>{const lis=[...v.container.querySelectorAll('li')];expect(lis.length).toBe(expected.length);for(const [i,row]of expected.entries()){expect(lis[i].textContent).toContain(row.name);expect(new RegExp('(^|[^0-9])'+row.price+'([^0-9]|$)').test(lis[i].textContent)).toBe(true);}};
+const productQuery=(v,value)=>fireEvent.change(productControl(v,'Search'),{target:{value}});
+const productSort=(v,value)=>fireEvent.change(productControl(v,'Sort'),{target:{value}});
+const productExpected=(query,mode='name')=>productFixture.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>mode==='name'?a.name.localeCompare(b.name):mode==='price-asc'?a.price-b.price:b.price-a.price);
+const productEmpty=(v,empty)=>expect(Boolean(productsWithin(v.container).queryByText('No products',{exact:true}))).toBe(empty);
+
+test('all three sort modes apply to the complete filtered result without pagination',()=>{const v=render(<App/>);expect(productControl(v,'Sort').value).toBe('name');for(const query of ['','e','t','A','nothing','']){productQuery(v,query);for(const mode of ['price-asc','price-desc','name']){productSort(v,mode);const rows=productExpected(query,mode);productRows(v,rows);productEmpty(v,!rows.length);}}});
+test('changing a query retains its chosen sort through parent renders',()=>{const v=render(<App/>);productSort(v,'price-desc');productQuery(v,'e');v.rerender(<App/>);expect(productControl(v,'Sort').value).toBe('price-desc');productRows(v,productExpected('e','price-desc'));productQuery(v,'');productRows(v,productExpected('','price-desc'));});
+test('sorting one mounted explorer never changes another root',()=>{const a=render(<App/>),b=render(<App/>);productSort(a,'price-desc');b.rerender(<App/>);productRows(a,productExpected('','price-desc'));productRows(b,productFixture);productQuery(b,'t');productSort(b,'price-asc');productRows(a,productExpected('','price-desc'));productRows(b,productExpected('t','price-asc'));});
+test('a newly mounted explorer starts in name order after earlier sorting',()=>{const old=render(<App/>);productSort(old,'price-desc');old.unmount();const v=render(<App/>);expect(productControl(v,'Sort').value).toBe('name');productRows(v,productFixture);});
+`,
+"react-evolving-catalog-2": `
+const productsWithin=require('@testing-library/react').within;
+const productFixture=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const productControl=(v,name)=>productsWithin(v.container).getByLabelText(name);
+const productRows=(v,expected)=>{const lis=[...v.container.querySelectorAll('li')];expect(lis.length).toBe(expected.length);for(const [i,row]of expected.entries()){expect(lis[i].textContent).toContain(row.name);expect(new RegExp('(^|[^0-9])'+row.price+'([^0-9]|$)').test(lis[i].textContent)).toBe(true);}};
+const productQuery=(v,value)=>fireEvent.change(productControl(v,'Search'),{target:{value}});
+const productSort=(v,value)=>fireEvent.change(productControl(v,'Sort'),{target:{value}});
+const productExpected=(query,mode='name')=>productFixture.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>mode==='name'?a.name.localeCompare(b.name):mode==='price-asc'?a.price-b.price:b.price-a.price);
+const productEmpty=(v,empty)=>expect(Boolean(productsWithin(v.container).queryByText('No products',{exact:true}))).toBe(empty);
+
+const productButton=(v,name)=>productsWithin(v.container).getByRole('button',{name,exact:true});
+const productPage=(v,rows,page)=>{const count=Math.ceil(rows.length/2);productRows(v,rows.slice(page*2,page*2+2));expect(productControl(v,'Page').textContent).toBe((count?page+1:0)+' / '+count);expect(productButton(v,'Previous').disabled).toBe(page===0);expect(productButton(v,'Next').disabled).toBe(page+1>=count);productEmpty(v,!rows.length);};
+test('every sort mode pages forward and backward with exact rows and boundary controls',()=>{const v=render(<App/>);for(const mode of ['name','price-desc','price-asc']){productSort(v,mode);const rows=productExpected('',mode);productPage(v,rows,0);fireEvent.click(productButton(v,'Next'));productPage(v,rows,1);fireEvent.click(productButton(v,'Next'));productPage(v,rows,1);fireEvent.click(productButton(v,'Previous'));productPage(v,rows,0);fireEvent.click(productButton(v,'Previous'));productPage(v,rows,0);}});
+test('each search and sort change resets page before rendering filtered results',()=>{const v=render(<App/>);for(const query of ['e','t','xyz',' DATES ','a']){productQuery(v,'');productSort(v,'name');fireEvent.click(productButton(v,'Next'));productQuery(v,query);productPage(v,productExpected(query),0);}productQuery(v,'');fireEvent.click(productButton(v,'Next'));productSort(v,'price-asc');productPage(v,productExpected('','price-asc'),0);});
+test('parent renders and independent roots retain their own query sort and page',()=>{const a=render(<App/>),b=render(<App/>);productSort(a,'price-desc');fireEvent.click(productButton(a,'Next'));productQuery(b,'t');productSort(b,'price-asc');a.rerender(<App/>);productPage(a,productExpected('','price-desc'),1);productPage(b,productExpected('t','price-asc'),0);});
+test('a fresh explorer starts on page one with default sorting after a prior root unmounts',()=>{const old=render(<App/>);productSort(old,'price-desc');fireEvent.click(productButton(old,'Next'));old.unmount();const v=render(<App/>);productPage(v,productFixture,0);expect(productControl(v,'Sort').value).toBe('name');});
+`,
+};
+for (const [id,cases] of Object.entries(EXPLORER_BOARD_REVIEW_CASES)) {
+  const solution=REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
 }
