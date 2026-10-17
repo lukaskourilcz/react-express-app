@@ -329596,7 +329596,8 @@
     "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
     "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
     "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+    "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
    ],
    "graderChecks": {
     "cases": [
@@ -329693,9 +329694,10 @@
      "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
      "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
      "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+     "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
     ],
-    "notes": "Read all original fields, two public/two hidden checks, three whole boards and partial. Separately reread final prompt, partial, hints/approach and all three complete programs. Existing senior id safety is retained; added request/draft policies are expressly declared instead of alleged as former brief requirements. No full hint fill or QA variant exists. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read all original fields, two public/two hidden checks, three whole boards and partial. Separately reread final prompt, partial, hints/approach and all three complete programs. Existing senior id safety is retained; added request/draft policies are expressly declared instead of alleged as former brief requirements. No full hint fill or QA variant exists. Final English material and execution reread; same-session self-review only. B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities.",
     "pass": "second-reading"
    }
   },
@@ -329713,8 +329715,8 @@
    "level": 25,
    "objective": "Keep a labelled controlled task draft as literal React state, independently across parent renders and roots.",
    "intendedLevel": "foundation",
-   "revision": 1,
-   "contentHash": "e78cc7e356b7ea6d",
+   "revision": 2,
+   "contentHash": "bd91750bbdc2bf8e",
    "hashSchema": "task-hash:v2",
    "previousHash": "88bca80f222e2482",
    "previousHashSchema": "task-hash:v2",
@@ -329763,13 +329765,15 @@
     "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
     "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
     "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+    "Superseded initial B125 hidden-helper hash: e78cc7e356b7ea6d",
+    "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "react-evolving-board-1-start",
-      "contentHash": "e78cc7e356b7ea6d",
+      "contentHash": "bd91750bbdc2bf8e",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -329778,7 +329782,7 @@
      },
      {
       "id": "react-evolving-board-1-start",
-      "contentHash": "e78cc7e356b7ea6d",
+      "contentHash": "bd91750bbdc2bf8e",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -329787,7 +329791,7 @@
      },
      {
       "id": "react-evolving-board-1-start",
-      "contentHash": "e78cc7e356b7ea6d",
+      "contentHash": "bd91750bbdc2bf8e",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -329796,7 +329800,7 @@
      },
      {
       "id": "react-evolving-board-1-start",
-      "contentHash": "e78cc7e356b7ea6d",
+      "contentHash": "bd91750bbdc2bf8e",
       "label": "wrong-truncates-controlled-draft",
       "expected": "failed",
       "verdict": "failed",
@@ -329805,7 +329809,7 @@
      },
      {
       "id": "react-evolving-board-1-start",
-      "contentHash": "e78cc7e356b7ea6d",
+      "contentHash": "bd91750bbdc2bf8e",
       "label": "wrong-trims-while-typing",
       "expected": "failed",
       "verdict": "failed",
@@ -329842,9 +329846,10 @@
      "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
      "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
      "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+     "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
     ],
-    "notes": "Read the original controlled reference, empty starter, one-case suite and checkpoint hint in full. Separately reread the unchanged whole program and final hint/hidden cases. Inspected checkpoint expansion and solution construction: adding ID-specific hidden cases and hints avoids altering later public cumulative contracts or their program fields. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read the original controlled reference, empty starter, one-case suite and checkpoint hint in full. Separately reread the unchanged whole program and final hint/hidden cases. Inspected checkpoint expansion and solution construction: adding ID-specific hidden cases and hints avoids altering later public cumulative contracts or their program fields. Final English material and execution reread; same-session self-review only. B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities.",
     "pass": "second-reading"
    }
   },
@@ -329862,8 +329867,8 @@
    "level": 25,
    "objective": "Trim on addition while keeping stable independent task identities and controlled completion across longer duplicate lists.",
    "intendedLevel": "foundation",
-   "revision": 1,
-   "contentHash": "9c7644f6aa9bfad1",
+   "revision": 2,
+   "contentHash": "1567223f7fd24a92",
    "hashSchema": "task-hash:v2",
    "previousHash": "f1d5bcfd9095eb98",
    "previousHashSchema": "task-hash:v2",
@@ -329912,13 +329917,15 @@
     "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
     "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
     "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+    "Superseded initial B125 hidden-helper hash: 9c7644f6aa9bfad1",
+    "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -329927,7 +329934,7 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -329936,7 +329943,7 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -329945,7 +329952,7 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -329954,7 +329961,7 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -329963,7 +329970,7 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "wrong-caps-tasks-at-three",
       "expected": "failed",
       "verdict": "failed",
@@ -329972,10 +329979,19 @@
      },
      {
       "id": "react-evolving-board-1",
-      "contentHash": "9c7644f6aa9bfad1",
+      "contentHash": "1567223f7fd24a92",
       "label": "wrong-toggles-only-first-two-identities",
       "expected": "failed",
       "verdict": "failed",
+      "visible": 2,
+      "hidden": 4
+     },
+     {
+      "id": "react-evolving-board-1",
+      "contentHash": "1567223f7fd24a92",
+      "label": "accessible-checkbox-alternative",
+      "expected": "passed",
+      "verdict": "passed",
       "visible": 2,
       "hidden": 4
      }
@@ -330009,9 +330025,10 @@
      "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
      "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
      "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+     "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
     ],
-    "notes": "Read all three whole original programs, inherited controlled-field case, add/trim/duplicate case and generator flow. Separately reread unchanged final program strings, final hint and all new model/identity cases. The reference history machinery is more than this early UI needs but remains valid; no unrelated generator rewrite is introduced. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read all three whole original programs, inherited controlled-field case, add/trim/duplicate case and generator flow. Separately reread unchanged final program strings, final hint and all new model/identity cases. The reference history machinery is more than this early UI needs but remains valid; no unrelated generator rewrite is introduced. Final English material and execution reread; same-session self-review only. B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities.",
     "pass": "second-reading"
    }
   },
@@ -330029,8 +330046,8 @@
    "level": 25,
    "objective": "Derive All, Active and Completed views without losing full-list identities or the current filter.",
    "intendedLevel": "foundation",
-   "revision": 1,
-   "contentHash": "d474570c49403774",
+   "revision": 2,
+   "contentHash": "bdafdf673ab9593b",
    "hashSchema": "task-hash:v2",
    "previousHash": "0f0367909961717c",
    "previousHashSchema": "task-hash:v2",
@@ -330079,13 +330096,15 @@
     "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
     "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
     "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+    "Superseded initial B125 hidden-helper hash: d474570c49403774",
+    "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "react-evolving-board-2-start",
-      "contentHash": "d474570c49403774",
+      "contentHash": "bdafdf673ab9593b",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -330094,7 +330113,7 @@
      },
      {
       "id": "react-evolving-board-2-start",
-      "contentHash": "d474570c49403774",
+      "contentHash": "bdafdf673ab9593b",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -330103,7 +330122,7 @@
      },
      {
       "id": "react-evolving-board-2-start",
-      "contentHash": "d474570c49403774",
+      "contentHash": "bdafdf673ab9593b",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -330112,7 +330131,7 @@
      },
      {
       "id": "react-evolving-board-2-start",
-      "contentHash": "d474570c49403774",
+      "contentHash": "bdafdf673ab9593b",
       "label": "wrong-caps-tasks-at-three",
       "expected": "failed",
       "verdict": "failed",
@@ -330121,10 +330140,19 @@
      },
      {
       "id": "react-evolving-board-2-start",
-      "contentHash": "d474570c49403774",
+      "contentHash": "bdafdf673ab9593b",
       "label": "wrong-completed-filter-shows-all",
       "expected": "failed",
       "verdict": "failed",
+      "visible": 3,
+      "hidden": 4
+     },
+     {
+      "id": "react-evolving-board-2-start",
+      "contentHash": "bdafdf673ab9593b",
+      "label": "accessible-checkbox-alternative",
+      "expected": "passed",
+      "verdict": "passed",
       "visible": 3,
       "hidden": 4
      }
@@ -330158,9 +330186,10 @@
      "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
      "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
      "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+     "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
     ],
-    "notes": "Read the checkpoint builder that derives from the preceding reference, all original inherited/current cases and original hint. Separately reread its exact final code, added hidden cases and final hint. Own hidden checks are attached after checkpoint builders, rather than changing global cumulative generation. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read the checkpoint builder that derives from the preceding reference, all original inherited/current cases and original hint. Separately reread its exact final code, added hidden cases and final hint. Own hidden checks are attached after checkpoint builders, rather than changing global cumulative generation. Final English material and execution reread; same-session self-review only. B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities.",
     "pass": "second-reading"
    }
   },
@@ -330178,8 +330207,8 @@
    "level": 25,
    "objective": "Delete only the clicked filtered identity and derive the complete-list unfinished count independently of the active view.",
    "intendedLevel": "intermediate",
-   "revision": 1,
-   "contentHash": "72f6adc3f5cf4509",
+   "revision": 2,
+   "contentHash": "cb2e005f66c26d6e",
    "hashSchema": "task-hash:v2",
    "previousHash": "0feb0e00554ad96f",
    "previousHashSchema": "task-hash:v2",
@@ -330229,13 +330258,15 @@
     "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
     "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
     "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+    "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+    "Superseded initial B125 hidden-helper hash: 72f6adc3f5cf4509",
+    "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -330244,7 +330275,7 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -330253,7 +330284,7 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -330262,7 +330293,7 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -330271,7 +330302,7 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -330280,7 +330311,7 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "wrong-completed-filter-shows-all",
       "expected": "failed",
       "verdict": "failed",
@@ -330289,10 +330320,19 @@
      },
      {
       "id": "react-evolving-board-2",
-      "contentHash": "72f6adc3f5cf4509",
+      "contentHash": "cb2e005f66c26d6e",
       "label": "wrong-caps-remaining-at-two",
       "expected": "failed",
       "verdict": "failed",
+      "visible": 4,
+      "hidden": 5
+     },
+     {
+      "id": "react-evolving-board-2",
+      "contentHash": "cb2e005f66c26d6e",
+      "label": "accessible-checkbox-alternative",
+      "expected": "passed",
+      "verdict": "passed",
       "visible": 4,
       "hidden": 5
      }
@@ -330326,9 +330366,10 @@
      "Installed React19.2.8/TypeScript5.9.3/QuickJS0.32; primary React documentation identifies19.3. No dependency upgrade or independent human review is claimed.",
      "run: 31/31 selected final-hash QuickJS verdicts across five items (16 valid, 5 starters, 10 wrong).",
      "run: baseline matched 21/31 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized."
+     "run: 16 selected authored-target/base-25-XP checks over supported boards pass; uncertain complexity stays unknown and is not penalized.",
+     "B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities."
     ],
-    "notes": "Read reference history state, junior loops and senior reducer/show predicates in full, plus all public inherited/current cases and original hidden Remaining. Separately reread their exact final strings, the final hint and independent model. Selected canonical validation checks two earlier answers fail the next step and two checkpoint answers fail their milestone; this is finite progression evidence, not acceptance of every later stage. Final English material and execution reread; same-session self-review only.",
+    "notes": "Read reference history state, junior loops and senior reducer/show predicates in full, plus all public inherited/current cases and original hidden Remaining. Separately reread their exact final strings, the final hint and independent model. Selected canonical validation checks two earlier answers fail the next step and two checkpoint answers fail their milestone; this is finite progression evidence, not acceptance of every later stage. Final English material and execution reread; same-session self-review only. B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities.",
     "pass": "second-reading"
    }
   }

@@ -1,8 +1,8 @@
 # devShark content audit — the question bank
 
-## Current individual source checkpoint — B125, 17 October 2026 UTC
+## Current individual source checkpoint — B125 refined, 17 October 2026 UTC
 
-655/725 current coding reviews;70 React tasks remain. All655coding/263native hashes are current/unique. B124/B125 initial committed evidence:66/66 worker outcomes,56/56 actual-browser verdicts,36safe25 and160layout probes, local gates0. B125 accessible-name refinement is pending before release, after detecting an unnecessarily label-specific hidden helper. Verified production645 via#462;ten records staged. #459 is deployed;#458/#461/#463 stay open,#435/#444 follow the whole audit. Finite same-session evidence only.
+B125 accessibility refinement: compute each checkbox accessible name via scoped Testing Library role queries, accepting both label and aria-label. Three valid aria-label alternatives pass original suites, fail the initial B125 label-specific helper, then pass the refined helper. Current cohort34/34worker (19valid/5starters/10wrong),29/29native and52protocol assertions,19safe25. Only four Board hidden hashes change; all published programs/prompts/public suites/hints/starters remain byte-identical. Same-session finite evidence; no added review identities. API/script types,launch,build,bundle and both production dependency audits freshly exit0. Prior B12580layout probes are reused because every served/public field, published program and client dependency remains identical; no new layout claim. Selected canonical,registry/index and all655coding/263native bindings are rechecked after this revision. Current source655/725,verified production645/725,70React remain;ten B124/B125 reviews await their own release. #459 deployed/closed via#462;#458/#461/#463 remain open.
 
 ## Current release checkpoint — 17 October 2026 UTC, PR #462
 

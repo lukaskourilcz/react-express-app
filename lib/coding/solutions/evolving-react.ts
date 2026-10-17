@@ -3079,7 +3079,8 @@ const auditInput=view=>view.container.querySelector('input:not([type="checkbox"]
 const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
 const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
 const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
-const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditWithin=require('@testing-library/react').within;
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>{let name='';const box=auditWithin(li).getByRole('checkbox',{name:value=>{name=value;return true;}});return {name,done:box.checked};});
 const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
 
 test('controlled text retains literal input rather than trimming or truncating it',()=>{const view=render(<App/>);for(const text of ['  Task  ','<task>&'+('x'.repeat(450)),' 日本語  ','','A	B']){fireEvent.change(auditInput(view),{target:{value:text}});expect(auditInput(view).value).toBe(text);view.rerender(<App/>);expect(auditInput(view).value).toBe(text);}expect(Boolean(auditButton(view,'Add'))).toBe(true);});
@@ -3092,7 +3093,8 @@ const auditInput=view=>view.container.querySelector('input:not([type="checkbox"]
 const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
 const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
 const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
-const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditWithin=require('@testing-library/react').within;
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>{let name='';const box=auditWithin(li).getByRole('checkbox',{name:value=>{name=value;return true;}});return {name,done:box.checked};});
 const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
 
 test('more than two duplicate identities toggle independently and retain literal trimmed text',()=>{const view=render(<App/>),names=['Same','Same','Third','<task>&'+('x'.repeat(440)),'Last','Same'];for(const name of names)auditAdd(view,'  '+name+'  ');expect(auditBoardRows(view)).toEqual(names.map(name=>({name,done:false})));for(const index of [4,2,0,5,4,1]){auditToggle(view,index);names[index]=names[index];}expect(auditBoardRows(view)).toEqual(names.map((name,i)=>({name,done:[0,1,2,5].includes(i)})));expect(view.container.querySelector('li task')).toBeNull();});
@@ -3105,7 +3107,8 @@ const auditInput=view=>view.container.querySelector('input:not([type="checkbox"]
 const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
 const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
 const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
-const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditWithin=require('@testing-library/react').within;
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>{let name='';const box=auditWithin(li).getByRole('checkbox',{name:value=>{name=value;return true;}});return {name,done:box.checked};});
 const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
 
 test('All Active and Completed each show their own derived rows',()=>{const view=render(<App/>),names=['One','One','Three','Four','Five','Six'];for(const name of names)auditAdd(view,name);auditToggle(view,0);auditToggle(view,3);for(const filter of ['Completed','Active','All','Completed','All']){auditClick(view,filter);const expected=names.map((name,i)=>({name,done:i===0||i===3})).filter(row=>filter==='All'||(filter==='Active'?!row.done:row.done));expect(auditBoardRows(view)).toEqual(expected);}expect(auditInput(view).value).toBe('');});
@@ -3118,7 +3121,8 @@ const auditInput=view=>view.container.querySelector('input:not([type="checkbox"]
 const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
 const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
 const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
-const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditWithin=require('@testing-library/react').within;
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>{let name='';const box=auditWithin(li).getByRole('checkbox',{name:value=>{name=value;return true;}});return {name,done:box.checked};});
 const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
 
 const auditRemaining=view=>view.container.querySelector('output[aria-label="Remaining"]').textContent;
