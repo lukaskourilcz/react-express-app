@@ -5616,6 +5616,7 @@ test('searching, sorting and paging never ask the server again', () => withServe
 }));`,
   },
   "react-comments-viewer": {
+    boardPlan: "// API plan: GET /comments returns {id,postId,name,email,body}; derive filters and domains.\n// For a large feed, request /posts/:id/comments?cursor=...&limit=20 or an email filter.\n// Index (post_id,id), use stable cursors and cache each query briefly; aggregate domains server-side.\n// Rate-limit reads and writes per account/IP; authenticate writes, cap body length and review new links.\n// Real public readers receive a redacted address rather than another person's full email.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
