@@ -51,7 +51,9 @@
     "test:react-engine": "esbuild scripts/test-react-engine.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/react-engine.mjs --log-level=warning && REACT_ALL_VARIANTS=1 node node_modules/.cache/shark/react-engine.mjs",
     "check:preview-release": "esbuild scripts/check-preview-release.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/preview-release.mjs --log-level=warning && node node_modules/.cache/shark/preview-release.mjs",
     "check:quickjs-build": "node scripts/rebuild-quickjs-sort.mjs",
-    "test:performance": "esbuild scripts/test-settings-cache.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/settings-cache.mjs --log-level=warning && node node_modules/.cache/shark/settings-cache.mjs && esbuild scripts/test-request-timing.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/request-timing.mjs --log-level=warning && node node_modules/.cache/shark/request-timing.mjs"
+    "test:performance": "esbuild scripts/test-settings-cache.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/settings-cache.mjs --log-level=warning && node node_modules/.cache/shark/settings-cache.mjs && esbuild scripts/test-request-timing.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/request-timing.mjs --log-level=warning && node node_modules/.cache/shark/request-timing.mjs",
+    "perf:measure": "node scripts/measure-web-performance.mjs",
+    "perf:fixture": "node scripts/performance-fixture-server.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

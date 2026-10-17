@@ -1,23 +1,38 @@
 // Bounded read-only browser lab. Never submits forms, logs in, or writes APIs.
 import { chromium } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import { dirname } from 'node:path';
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 const origin = new URL(args.url || 'https://devshark.app').origin;
 const routes = (args.routes || '/,/quiz,/learn,/coding,/leaderboard,/premium,/topics/javascript-closures,/big-o').split(',');
 const samples = Number(args.samples || 2), output = args.output || '/tmp/devshark-performance-2026-10-17/production-before.json';
+mkdirSync(dirname(output), { recursive: true });
+const access = args.access ? JSON.parse(readFileSync(args.access, 'utf8')) : null;
+const fixture = args.fixture ? JSON.parse(readFileSync('tests/fixtures/api-settings.json', 'utf8')) : null;
+if (fixture) fixture.billing = { ...fixture.billing, enabled: false, launchOffer: false };
 let browser;
 const results = [];
 try {
  for (const profile of (args.profiles || 'mobile,desktop').split(',')) for (const path of routes) for (let sample=0;sample<samples;sample++) {
   browser = await chromium.launch({ executablePath: process.env.CHROME_BIN, args: ['--disk-cache-size=8388608', '--media-cache-size=2097152', '--disable-gpu-shader-disk-cache'] });
   const context = await browser.newContext({ viewport: profile==='mobile'?{width:390,height:844}:{width:1440,height:1000}, deviceScaleFactor:1, isMobile:profile==='mobile', hasTouch:profile==='mobile', colorScheme:'light', reducedMotion:'reduce', serviceWorkers:'block' });
+  if (access) {
+   try {
+    if (new URL(access.url).origin !== origin) throw new Error('origin mismatch');
+    const response = await context.request.get(access.url);
+    if (response.status() !== 200 || new URL(response.url()).origin !== origin) throw new Error('access refused');
+   } catch { throw new Error('Preview authorization failed'); }
+  }
   const page = await context.newPage(), cdp=await context.newCDPSession(page);let blockedWrites=0;
   await cdp.send('Network.enable');
   await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
   cdp.on('Fetch.requestPaused', async e=>{
    const url=new URL(e.request.url);
-   if (!['GET','HEAD','OPTIONS'].includes(e.request.method) || (url.origin!==origin&&!url.hostname.endsWith('fonts.gstatic.com'))) {
+   if (fixture && url.origin === origin && url.pathname.startsWith('/api/') && e.request.method === 'GET') {
+    const body = url.pathname === '/api/settings' ? fixture : { error: { code: 'fixture_only', message: 'Isolated measurement' } };
+    await cdp.send('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: url.pathname === '/api/settings' ? 200 : 503, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Cache-Control', value: 'no-store' }], body: Buffer.from(JSON.stringify(body)).toString('base64') }).catch(()=>{});
+   } else if (!['GET','HEAD','OPTIONS'].includes(e.request.method) || (url.origin!==origin&&!url.hostname.endsWith('fonts.gstatic.com'))) {
     if(!['GET','HEAD','OPTIONS'].includes(e.request.method))blockedWrites++;
     await cdp.send('Fetch.failRequest',{requestId:e.requestId,errorReason:'BlockedByClient'}).catch(()=>{});
    } else await cdp.send('Fetch.continueRequest',{requestId:e.requestId}).catch(()=>{});
