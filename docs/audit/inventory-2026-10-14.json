@@ -19,7 +19,15 @@
     "effectiveProductionAtSnapshot": 1820,
     "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
     "overrideRecheckedOn": "2026-10-17",
-    "overrideRecheckEvidence": "docs/audit/question-overrides-2026-10-17.json: fresh production read-only aggregate/fingerprint matches485preserved deletions,zero active edits/custom,2014static/1820effective. All2168question review hashes checked. Q001revises five existing rows;59eligible answer-length candidates remain under#471."
+    "overrideRecheckEvidence": "docs/audit/question-overrides-2026-10-17.json: fresh production read-only aggregate/fingerprint matches485preserved deletions,zero active edits/custom,2014static/1820effective. All2168question review hashes checked. Q001revises five existing rows;59eligible answer-length candidates remain under#471.",
+    "answerLengthReconciliation": {
+      "evidence": "docs/audit/answer-length-reconciliation-2026-10-17.json",
+      "issue": 471,
+      "initialEligibleCandidates": 64,
+      "focusedRevisionsCompleted": 10,
+      "eligibleCandidatesRemaining": 54,
+      "automaticPublicationRule": false
+    }
   },
   "coding": {
     "authored": 770,

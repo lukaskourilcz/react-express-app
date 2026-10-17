@@ -120,9 +120,14 @@
     "rm-react-50",
     "rm-next-12",
     "rm-next-20",
-    "rm-node-1"
+    "rm-node-1",
+    "rm-node-81",
+    "rm-node-91",
+    "rm-node-92",
+    "rm-node-106",
+    "rm-node-166"
   ],
-  "remainingEligibleCandidates": 59,
+  "remainingEligibleCandidates": 54,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -132,10 +137,10 @@
         136,
         45
       ],
-      "uniqueLongest": 1905,
-      "correctUniqueLongest": 1057,
-      "share": 0.5548556430446194,
-      "flags": 100
+      "uniqueLongest": 1903,
+      "correctUniqueLongest": 1052,
+      "share": 0.5528113504992118,
+      "flags": 95
     },
     "eligible": {
       "count": 2014,
@@ -145,10 +150,10 @@
         127,
         41
       ],
-      "uniqueLongest": 1768,
-      "correctUniqueLongest": 962,
-      "share": 0.5441176470588235,
-      "flags": 59
+      "uniqueLongest": 1766,
+      "correctUniqueLongest": 957,
+      "share": 0.5419026047565119,
+      "flags": 54
     },
     "effective": {
       "count": 1820,
@@ -158,10 +163,10 @@
         109,
         30
       ],
-      "uniqueLongest": 1617,
-      "correctUniqueLongest": 901,
-      "share": 0.557204700061843,
-      "flags": 56
+      "uniqueLongest": 1615,
+      "correctUniqueLongest": 896,
+      "share": 0.5547987616099072,
+      "flags": 51
     }
   },
   "issue": 471
