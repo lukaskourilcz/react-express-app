@@ -170,9 +170,14 @@
     "rm-ai-89",
     "rm-db-15",
     "rm-db-46",
-    "rm-db-50"
+    "rm-db-50",
+    "rm-db-54",
+    "rm-db-59",
+    "rm-db-66",
+    "rm-db-69",
+    "rm-db-110"
   ],
-  "remainingEligibleCandidates": 9,
+  "remainingEligibleCandidates": 4,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -183,9 +188,9 @@
         45
       ],
       "uniqueLongest": 1896,
-      "correctUniqueLongest": 1018,
-      "share": 0.5369198312236287,
-      "flags": 50
+      "correctUniqueLongest": 1016,
+      "share": 0.5358649789029536,
+      "flags": 45
     },
     "eligible": {
       "count": 2014,
@@ -196,9 +201,9 @@
         41
       ],
       "uniqueLongest": 1759,
-      "correctUniqueLongest": 923,
-      "share": 0.5247299602046618,
-      "flags": 9
+      "correctUniqueLongest": 921,
+      "share": 0.5235929505400796,
+      "flags": 4
     },
     "effective": {
       "count": 1820,
@@ -209,9 +214,9 @@
         30
       ],
       "uniqueLongest": 1608,
-      "correctUniqueLongest": 865,
-      "share": 0.5379353233830846,
-      "flags": 9
+      "correctUniqueLongest": 863,
+      "share": 0.5366915422885572,
+      "flags": 4
     }
   },
   "issue": 471
