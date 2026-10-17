@@ -9,9 +9,8 @@ import { LeaderboardVisibilityCard } from '../src/components/Profile';
 import LeaderboardVisibilitySwitch from '../src/components/LeaderboardVisibilitySwitch';
 import { server } from './mocks/server';
 
-// The Profile's switch for "Show my name and photo on leaderboards"
-// (op=leaderboard-visibility, migration 049). The Leaderboard shows the same
-// component; tests/leaderboard.test.tsx covers it there.
+// Profile owns the leaderboard name and photo controls. The board only reads
+// the saved preference; tests/leaderboard.test.tsx verifies that boundary.
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
 vi.mock('../src/lib/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/auth')>()), useAuth: () => auth.value }));
 afterEach(() => { auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false }; });
@@ -49,17 +48,17 @@ describe('independent leaderboard names', () => {
     expect(screen.getByRole('switch', { name: 'Show my photo on leaderboards' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Show my name and photo on leaderboards' })).toBeNull();
   });
-  it('saves account or nickname and shares the choice between Profile and Leaderboard', async () => {
+  it('saves either name from the Profile card', async () => {
     serveSetting(); const puts = recordPuts();
-    renderWith(<><LeaderboardVisibilityCard /><LeaderboardVisibilitySwitch /></>);
-    const names = await screen.findAllByRole('radio', { name: /Account name/ });
-    await waitFor(() => expect(names[0]).toBeEnabled());
-    fireEvent.click(names[0]);
+    renderWith(<LeaderboardVisibilityCard />);
+    const account = await screen.findByRole('radio', { name: /Account name/ });
+    await waitFor(() => expect(account).toBeEnabled());
+    fireEvent.click(account);
     await waitFor(() => expect(puts).toEqual([{ mode: 'account' }]));
-    await waitFor(() => expect(names[1]).toBeChecked());
-    fireEvent.click(screen.getAllByRole('radio', { name: /Shark nickname/ })[1]);
+    await waitFor(() => expect(account).toBeChecked());
+    fireEvent.click(screen.getByRole('radio', { name: /Shark nickname/ }));
     await waitFor(() => expect(puts).toEqual([{ mode: 'account' }, { mode: 'nickname' }]));
-    expect(names[0]).not.toBeChecked();
+    await waitFor(() => expect(account).not.toBeChecked());
   });
   it('keeps the stored choice and announces a failed save', async () => {
     serveSetting('account'); const puts = recordPuts(true); renderWith(<LeaderboardVisibilitySwitch />);

@@ -267,10 +267,9 @@ it('drops the “You” mark from an offline copy an older version saved', async
   expect(document.querySelector('[aria-current="true"]')).toBeNull();
 });
 
-// ── Names on the public boards (migration 049) ──────────────────────────────
+// ── Names selected in Profile, displayed on the public boards ───────────────
 
 const PAT = { id: 'user-1', user_metadata: { full_name: 'Pat Example' } };
-const SWITCH = /Account name/;
 
 it('shows a learner who has not switched their name on as “Learner”, with the default avatar', async () => {
   server.use(http.get('*/api/leaderboard', () => HttpResponse.json({
@@ -288,81 +287,43 @@ it('shows a learner who has not switched their name on as “Learner”, with th
   expect(within(named).getByRole('img', { name: 'Harbour reader' })).toBeInTheDocument();
 });
 
-it('names the learner’s own pinned line only while they are switched on', async () => {
+it('uses the Profile preference for the pinned line without offering edits on the board', async () => {
   auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
-  server.use(leaderboardHandlers.pinned, visibilityHandler(false));
-  const hidden = await mount();
+  const puts: unknown[] = [];
+  server.use(leaderboardHandlers.pinned, visibilityHandler(false),
+    http.put('*/api/user/leaderboard-name', async ({ request }) => {
+      puts.push(await request.json());
+      return HttpResponse.json({ mode: 'account', nickname: 'sleepySharkie1', accountName: 'Pat Example' });
+    }),
+  );
+  const nicknameBoard = await mount();
   const pinned = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
   expect(within(pinned).getByText('sleepySharkie1')).toBeVisible();
   expect(within(pinned).getByText('You')).toBeVisible();
-  expect(await screen.findByRole('radio', { name: SWITCH })).not.toBeChecked();
-  hidden.unmount();
+  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('switch')).toBeNull();
+  nicknameBoard.unmount();
 
+  // Returning from Profile reads the stored account-name preference.
   server.use(visibilityHandler(true));
   await mount();
-  const shown = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
-  expect(within(shown).getByText('Pat Example')).toBeVisible();
-  expect(await screen.findByRole('radio', { name: SWITCH })).toBeChecked();
+  const account = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
+  expect(within(account).getByText('Pat Example')).toBeVisible();
+  expect(within(account).getByText('You')).toBeVisible();
+  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('switch')).toBeNull();
+  expect(puts).toEqual([]);
 });
 
-it('switches the learner’s name on from the board and reloads their own line at once', async () => {
+it('keeps the board available when the Profile name preference cannot load', async () => {
   auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
-  const puts: unknown[] = [];
-  let named = false;
-  let boards = 0;
-  let release = () => {};
-  const held = new Promise<void>((resolve) => { release = resolve; });
-  server.use(
-    // The personal board names the viewer's row once the flag is stored.
-    http.get('*/api/leaderboard', () => {
-      boards += 1;
-      const own = { ...leaderboardData.entries[0], is_viewer: true, display_name: named ? 'Pat Example' : null };
-      return HttpResponse.json({ ...leaderboardData, entries: [own, leaderboardData.entries[1]], me: { rank: 1, correct: 8, answered: 10, accuracy_pct: 80 } });
-    }),
-    visibilityHandler(false),
-    http.put('*/api/user/leaderboard-name', async ({ request }) => {
-      const body = (await request.json()) as { mode: string };
-      puts.push(body);
-      await held;
-      named = body.mode === 'account';
-      return HttpResponse.json({ mode: body.mode, nickname: 'sleepySharkie1', accountName: 'Pat Example' });
-    }),
+  server.use(leaderboardHandlers.populated,
+    http.get('*/api/user/leaderboard-name', () => HttpResponse.json({ error: { code: 'db_error', message: 'Unavailable' } }, { status: 503 })),
   );
   await mount();
-  const toggle = await screen.findByRole('radio', { name: SWITCH });
-  await waitFor(() => expect(toggle).toBeEnabled());
-  expect(toggle).not.toBeChecked();
-  const own = () => document.querySelector('tbody tr[aria-current="true"]') as HTMLElement;
-  expect(within(own()).getByText('Learner')).toBeVisible();
-
-  fireEvent.click(toggle);
-  // On at once, while the save is still on its way.
-  await waitFor(() => expect(puts).toEqual([{ mode: 'account' }]));
-  expect(toggle).toBeChecked();
-  release();
-  await waitFor(() => expect(within(own()).getByText('Pat Example')).toBeVisible());
-  expect(boards).toBe(2);
-  expect(toggle).toBeChecked();
-});
-
-it('puts the switch back and says so when saving it fails', async () => {
-  auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
-  const puts: unknown[] = [];
-  server.use(
-    leaderboardHandlers.populated,
-    visibilityHandler(false),
-    http.put('*/api/user/leaderboard-name', async ({ request }) => {
-      puts.push(await request.json());
-      return HttpResponse.json({ error: { code: 'db_error', message: 'Could not load or save leaderboard visibility' } }, { status: 500 });
-    }),
-  );
-  await mount();
-  const toggle = await screen.findByRole('radio', { name: SWITCH });
-  await waitFor(() => expect(toggle).toBeEnabled());
-  fireEvent.click(toggle);
-  expect(await screen.findByRole('alert')).toHaveTextContent('Your leaderboard setting wasn’t saved. Try again.');
-  expect(puts).toEqual([{ mode: 'account' }]);
-  await waitFor(() => expect(toggle).not.toBeChecked());
+  expect(await screen.findByText('Workshop learner')).toBeVisible();
+  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('switch')).toBeNull();
 });
 
 // ── This month (migration 056) ──────────────────────────────────────────────
