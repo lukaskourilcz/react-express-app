@@ -4068,7 +4068,7 @@ test('independent timers,fresh hooks and removed consumers clean up without affe
 
   const add = () => {
     if (!title.trim()) return;
-    setTodos(current => [...current, { id: Date.now(), title, completed: false }]);
+    setTodos(current => [...current, { id: crypto.randomUUID(), title, completed: false }]);
     setTitle('');
   };
 
@@ -7888,3 +7888,9 @@ test('Search reads the titles only, not the bodies', () => withRequests(async ca
 }));`,
   },
 };
+
+const TODO_IDENTITY_REVIEW_CASES=`const idRTL=require('@testing-library/react');test('two todos added during the same clock tick have separate removal identities',async()=>{const before=Date.now;Date.now=()=>1700000000000;try{const v=render(<App/>);await idRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(3));const query=idRTL.within(v.container);for(const title of['First new item','Second new item']){fireEvent.change(v.container.querySelector('input'),{target:{value:title}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));}expect(v.container.querySelectorAll('li').length).toBe(5);const last=v.container.querySelectorAll('li')[4];fireEvent.click(last.querySelector('button'));expect(v.container.querySelectorAll('li').length).toBe(4);expect(v.container.textContent).toContain('First new item');expect(v.container.textContent).not.toContain('Second new item');}finally{Date.now=before;}});
+
+test('duplicate titles keep independent identities and counts across mixed removals and empty recovery',()=>withRequests(async calls=>{const rtl=require('@testing-library/react'),v=render(<App/>);const request=requestTo(calls,'/todos');expect(Boolean(request)).toBe(true);answerLikeTheApi(request);await waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(3),soon);const model=SERVER_TODOS.slice(0,3).map(row=>({title:row.title,completed:row.completed})),query=rtl.within(v.container);const check=()=>{const items=Array.from(v.container.querySelectorAll('li'));expect(items.length).toBe(model.length);model.forEach((row,i)=>{expect(items[i].textContent).toContain(row.title);expect(items[i].textContent).toContain(row.completed?'done':'to do');expect(Boolean(rtl.within(items[i]).getByRole('button',{name:/^remove/i}))).toBe(true);});expect(v.container.textContent).toContain('Done: '+model.filter(row=>row.completed).length+' of '+model.length);};check();for(const title of['Repeated title','Repeated title','Third local']){fireEvent.change(v.container.querySelector('input'),{target:{value:title}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title,completed:false});check();}for(const index of[0,3,1]){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[index]).getByRole('button',{name:/^remove/i}));model.splice(index,1);check();}while(model.length){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[model.length-1]).getByRole('button',{name:/^remove/i}));model.pop();check();}fireEvent.change(v.container.querySelector('input'),{target:{value:'After empty'}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title:'After empty',completed:false});check();}));
+`;
+REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite=[REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite,TODO_IDENTITY_REVIEW_CASES].filter(Boolean).join("\n\n");

@@ -98,6 +98,18 @@ for (const { slug, endpoint, amount } of FULLSTACK_APPS) {
 
 LADDERS['react-fullstack-planner-5-start'] = { hints: ["Keep the typed API exports. For this checkpoint, load successful GET /api/tasks responses through one stable transport per mounted app and render every supplied name and its actual hours. Parent renders retain the transport; independent or fresh mounts start from their own seed. Loading, failures and Retry are introduced next."] };
 
+LADDERS["react-fullstack-planner-6-start"] = { hints: ["Keep Name and hours in state and bind their value and onChange. Prevent the form submission from navigating, but do not send a POST yet. Keep the earlier list, loading, failure, retry and typed API behavior."] };
+LADDERS["react-fullstack-planner-8-start"] = { hints: ["Derive visible rows using the trimmed lowercase Search substring and hours greater than zero for Available only. Combine both filters over the loaded collection without changing API records. Retain the form, creation, pending guards and versioned Log hour behavior; pages and deletion come next."] };
+
+LADDERS["react-fullstack-stockroom-5-start"] = { hints: ["Keep the typed API exports and one stable transport per mounted app. Load the successful collection and render every name with its actual stock. Parent renders retain that API; separate or fresh mounts start independently. Loading, failed requests and Retry arrive in the next milestone."] };
+LADDERS["react-fullstack-stockroom-6-start"] = { hints: ["Bind Name and stock to state and prevent form navigation. Keep their complete values across rerenders, including empty input. This checkpoint does not send a POST; retain the earlier collection, loading/retry and typed API behavior."] };
+
+LADDERS["react-fullstack-stockroom-8-start"] = { hints: ["Derive visible rows from the complete collection. Search is trimmed and case-insensitive and matches substrings; Available only means stock > 0, including exactly one. Combine filters without changing API records. Retain earlier creation and versioned updates; pagination and Delete come next."] };
+LADDERS["react-fullstack-workshops-5-start"] = { hints: ["Keep the typed API exports and one stable transport per mounted app. Load the successful collection and render every name with its actual seats. Parent renders retain that API; separate or fresh mounts start independently. Loading, failed requests and Retry arrive in the next milestone."] };
+LADDERS["react-fullstack-workshops-6-start"] = { hints: ["Bind Name and seats to state and prevent form navigation. Keep their complete values across rerenders, including empty input. This checkpoint does not send a POST; retain the earlier collection, loading/retry and typed API behavior."] };
+
+LADDERS["react-fullstack-workshops-8-start"] = { hints: ["Derive visible rows from the complete collection. Search is trimmed and case-insensitive and matches substrings; Available only means seats > 0, including exactly one. Combine filters without changing API records. Retain earlier creation and versioned updates; pagination and Delete come next."] };
+
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
  * entry, which the content contract reports. */

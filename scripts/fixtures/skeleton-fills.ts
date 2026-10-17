@@ -1017,7 +1017,7 @@ const App = () => {
 
   const add = () => {
     if (!title.trim()) return;
-    setTodos(current => [...current, { id: Date.now(), title, completed: false }]);
+    setTodos(current => [...current, { id: crypto.randomUUID(), title, completed: false }]);
     setTitle('');
   };
 
