@@ -88166,13 +88166,13 @@
    "levelTitle": "Staging & Status",
    "objective": "Explain that `git add -p` stages selected hunks of a file interactively.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "2ecf7f3e56231ab5",
-   "previousHash": "24b88ac736d6c189",
+   "revision": 3,
+   "contentHash": "f4843fc3d9ead60b",
+   "previousHash": "2ecf7f3e56231ab5",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -88188,24 +88188,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 9
+    "hint": "Picture a file holding both a bug fix and a stray debug line. What would you want to stage?",
+    "question": "What does this do?\n\n```bash\n$ git add -p\n```",
+    "options": [
+     "Stages whole files only",
+     "Lets you stage changes interactively, hunk by hunk",
+     "Prints a patch",
+     "Pushes patches"
+    ],
+    "correctAnswer": 1,
+    "explanation": "`-p` walks the file's diff hunk by hunk and asks whether to stage each one, so you can commit a bug fix without the debug print sitting next to it. The file then shows as `MM` in `git status`: part of it staged, part still only in the working tree. Without `-p`, `git add` always stages the file's whole current content."
    },
    "gates": {
     "quality": true,
@@ -88215,42 +88207,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "explanation does not mention the observable result: the file ends up partly staged (`MM`)"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Verified by driving the prompt: answering y then n staged only the first hunk. Splitting an accidental mixed change into reviewable commits is a real working skill; the hint and explanation are the gaps.",
+   "rationale": "Use comparable action-based alternatives and make MM conditional instead of claiming it always appears after patch mode.",
    "evidence": [
-    "run: printf 'y\\nn\\n' | git add -p f.txt -> '(1/2) Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]?' then '(2/2) ...'",
-    "run: git diff --staged -> '-line1/+CHANGED-TOP' only; git diff -> '-line20/+CHANGED-BOTTOM'; git status --short -> 'MM f.txt'"
+    "https://git-scm.com/docs/git-add",
+    "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint ('changes the unit Git asks you about') states both halves of the key: interactive, and smaller than a file"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "run: printf 'y\\nn\\n' | git add -p tracked.txt -> 'Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]' twice",
-     "run: git diff --staged -> '-line1/+CHANGED-TOP' only; git diff -> '-line20/+CHANGED-BOTTOM'; git status --short -> 'MM tracked.txt'"
+     "https://git-scm.com/docs/git-add",
+     "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "New hint gives the motivating situation and leaves the mechanism to the learner; explanation's MM claim is confirmed.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q003;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "2ecf7f3e56231ab5",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-git-24",
@@ -88923,13 +88918,13 @@
    "levelTitle": "Version Control Basics",
    "objective": "Explain that Git history is a chain (graph) of commits in which each commit records its parent.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "be0dce5be5401a05",
-   "previousHash": "8c3f3f07c171b040",
+   "revision": 3,
+   "contentHash": "98bf87cdcee56dbc",
+   "previousHash": "be0dce5be5401a05",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -88945,24 +88940,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 9
+    "hint": "Picture `git log` walking from the newest entry back to older ones, and ask what it follows.",
+    "question": "How does Git model project history?",
+    "options": [
+     "As a single file",
+     "As a series of commits, each linked to its parent",
+     "As a database table",
+     "As a zip archive"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Each commit stores the id of the commit it was built on (two or more for a merge; the very first commit has none), so the history is a graph Git can walk backwards. That is what makes `git log`, diffs between any two commits and merges possible; a zip archive or a single file would hold one state with no link from one version to the next, and Git keeps its objects as files under `.git`, not in a database table."
    },
    "gates": {
     "quality": true,
@@ -88972,44 +88959,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "explanation restates the key without saying why a zip archive or a table is the wrong mental model"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The parent-link model is the foundation the rest of the topic builds on and the key is exactly right. Hint and explanation are the weak parts.",
+   "rationale": "Replace the incorrect implication that every commit has exactly one parent with a snapshot/graph model that includes roots and merges. Use parallel descriptions of storage/history models.",
    "evidence": [
-    "run: git cat-file -p HEAD -> second line is 'parent e4ea41ca7b532c9fb2975456fb55827ecfe71188'",
-    "run: git log --graph --oneline -> '*   28b8710 Merge branch \\'side\\' / |\\\\ / | * 44ef02c Side work / * | 4453972 Main work' (parent links drawn as a graph)"
+    "https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History",
+    "https://git-scm.com/docs/git-cat-file",
+    "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint states the rule the item tests ('what each commit records about the commit that came before it' is the key)",
-     "explanation claimed every commit stores a parent id; the root commit has none"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "run: git cat-file -p HEAD on a first commit -> no 'parent' line, only tree/author/committer/message",
-     "run: git rev-list --parents -n1 HEAD on the root commit -> '5b5a1edd...' with no parent id following it"
+     "https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History",
+     "https://git-scm.com/docs/git-cat-file",
+     "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Root-commit exception added so every claim in the explanation holds.",
-    "changed": [
-     "hint",
-     "explanation"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q003;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "be0dce5be5401a05",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-git-30",
@@ -143011,19 +143001,19 @@
    "levelTitle": "Express: Basics",
    "objective": "Understand that next() passes control to the next matching middleware or route and that middleware must either call it or end the response.",
    "intendedLevel": "advanced",
-   "revision": 2,
-   "contentHash": "ced45b49d406969f",
-   "previousHash": "bc44a37395b1f7ec",
+   "revision": 3,
+   "contentHash": "63e2474bfedc2e8f",
+   "previousHash": "ced45b49d406969f",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -143033,24 +143023,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Picture the middleware stack as a queue of functions for one request. Ask what has to happen for the request to reach the function after this one.",
+    "question": "What does calling `next()` in middleware do?",
+    "options": [
+     "Ends the response",
+     "Passes control to the next matching middleware/handler",
+     "Restarts the request",
+     "Throws an error"
+    ],
+    "correctAnswer": 1,
+    "explanation": "next() hands the request to the next matching middleware or route handler in registration order. A middleware that neither calls next() nor sends a response leaves the client waiting until it times out, a common bug. Calling next(err) with an argument skips ordinary handlers and goes to error-handling middleware. Ending the response is the job of res.send or res.end, not next()."
    },
    "gates": {
     "quality": true,
@@ -143060,39 +143042,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback",
-    "explanation's 'without it the request stalls' is unqualified: the request only hangs when the middleware also does not respond",
-    "distractors 'Restarts the request' and 'Throws an error' are weak; next(err) is the real nuance",
-    "explanation does not mention next(err)"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Key is correct and the hanging-request consequence was demonstrated. The explanation needs the qualification and next(err); the hint is filler.",
+   "rationale": "Specify the no-argument call and keep all options about the request lifecycle. Clarify that next() does not itself return from the caller.",
    "evidence": [
-    "node: express@5.2.1: a handler that neither called next() nor responded produced no response within 1500 ms; a middleware that called next() let GET / reach its route (200)",
-    "https://expressjs.com/en/5x/api/application/: 'Middleware functions are executed sequentially, therefore the order of middleware inclusion is important.'"
+    "https://expressjs.com/en/5x/guide/using-middleware/",
+    "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: express@5.2.1: GET /hang whose handler neither called next() nor responded → no response within 1500 ms; GET /nexterr calling next(new Error()) → the (err, req, res, next) handler ran → 500",
-     "https://expressjs.com/en/5x/api/application/: 'Middleware functions are executed sequentially, therefore the order of middleware inclusion is important.'"
+     "https://expressjs.com/en/5x/guide/using-middleware/",
+     "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Explanation now qualifies the hang (neither next nor response) and covers next(err)."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q003;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "ced45b49d406969f",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-node-168",
@@ -143117,19 +143105,19 @@
    "levelTitle": "Express: Basics",
    "objective": "Know that app.use mounts middleware that runs for every request whose path starts with the mount path, regardless of HTTP method.",
    "intendedLevel": "advanced",
-   "revision": 2,
-   "contentHash": "dd7b4381d109345b",
-   "previousHash": "2b407605445a1094",
+   "revision": 3,
+   "contentHash": "bd1d6efec158a981",
+   "previousHash": "dd7b4381d109345b",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 3,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -143139,24 +143127,16 @@
    },
    "relevanceScore": 8,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 1,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 8
+    "hint": "Compare it with app.get: ask which HTTP methods and which paths app.use applies to when no path is given.",
+    "question": "What does `app.use(fn)` do?",
+    "options": [
+     "Defines a GET route",
+     "Mounts middleware that runs for matching requests",
+     "Starts the server",
+     "Sends a response"
+    ],
+    "correctAnswer": 1,
+    "explanation": "app.use(fn) mounts fn as middleware; with no path it runs for every request regardless of method, and with a path such as app.use('/api', fn) it runs for /api and any path beneath it, such as /api/users, but not for /apix. Registration order is execution order, so a body parser mounted after a route is too late for that route: its handler runs first, without the parsed body. app.get defines a GET route only, app.listen starts the server, and responses are sent from inside handlers with res.send or res.json."
    },
    "gates": {
     "quality": true,
@@ -143166,42 +143146,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback",
-    "explanation does not state the two things that distinguish app.use from app.get: any method and prefix matching, nor that order matters"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct and verified; the prefix-and-any-method semantics plus ordering are the transferable part and belong in the explanation.",
+   "rationale": "Shorten the correct option and distinguish registration from unconditional execution;earlier terminal handlers can prevent a later layer from running.",
    "evidence": [
-    "node: express@5.2.1: a function passed to app.use ran before the GET / route for that request (arguments.length 3)",
-    "https://expressjs.com/en/5x/api/application/: 'Mounts the specified middleware function or functions at the specified path ... Since path defaults to \"/\", middleware mounted without a path will be executed for every request to the app.'"
+    "https://expressjs.com/en/5x/guide/using-middleware/",
+    "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "explanation said app.use('/api') runs for 'any path that starts with /api'; matching is per path segment, so /apix does not match"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "node: express@5.2.1: app.use('/api', fn) ran for GET /api and POST /api/x but not for GET /apix (404, fn not called); a no-path app.use ran for every request",
-     "https://expressjs.com/en/5x/api/application/ app.use: 'A route will match any path that follows its path immediately with a \"/\". For example: app.use(\"/apple\", ...) will match \"/apple\", \"/apple/images\"… middleware mounted without a path will be executed for every request to the app.'"
+     "https://expressjs.com/en/5x/guide/using-middleware/",
+     "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key unchanged; the ordering sentence was also tightened so it no longer claims a later parser 'never sees' requests that a route might pass on with next().",
-    "changed": [
-     "explanation"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q003;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "dd7b4381d109345b",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-node-169",
@@ -143966,19 +143949,19 @@
    "levelTitle": "Express: Req & Res",
    "objective": "Know that res.redirect sends an HTTP redirect, 302 by default, with a Location header, and that the browser makes the second request.",
    "intendedLevel": "advanced",
-   "revision": 2,
-   "contentHash": "ccf7b5715d48e21f",
-   "previousHash": "4cf8f137ff675a65",
+   "revision": 3,
+   "contentHash": "ae82c4b1887a3ca5",
+   "previousHash": "ccf7b5715d48e21f",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 3,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -143988,24 +143971,16 @@
    },
    "relevanceScore": 7,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 1,
-     "audienceFit": 2,
-     "riskOutcome": 0
-    },
-    "relevanceScore": 7
+    "hint": "Ask what a response must contain for the browser to request a different URL on its own, and which status codes carry that instruction.",
+    "question": "What does `res.redirect(\"/login\")` do?",
+    "options": [
+     "Renders a page",
+     "Sends a redirect response (302 by default)",
+     "Throws",
+     "Sets a cookie"
+    ],
+    "correctAnswer": 1,
+    "explanation": "res.redirect('/login') sends a response with status 302 Found and a Location: /login header and ends the response; the browser then requests /login itself. Pass a status first to change it, for example res.redirect(301, '/login') for a permanent move. It renders nothing (that is res.render), throws nothing, and cookies are set with res.cookie. Express 5 dropped the 'back' shortcut; use req.get('Referrer') || '/' instead."
    },
    "gates": {
     "quality": true,
@@ -144015,37 +143990,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback",
-    "explanation omits the Location header, how to pick another status, and that the client performs the follow-up request"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Verified default 302 and Location on Express 5.2.1; the item is right but thin. Hint and explanation rewrite with the mechanism and the Express 5 change.",
+   "rationale": "Balance status/header-based alternatives and remove the overbroad renders-nothing claim: Express redirects can include a body. Omit the unrelated unsafe unvalidated-Referrer suggestion.",
    "evidence": [
-    "node: express@5.2.1: res.redirect('/login') → status 302, Location /login, body 'Found. Redirecting to /login'; res.redirect(301, '/login') → 301",
-    "https://expressjs.com/en/5x/api/response/: res.redirect 'If not specified, status defaults to 302 \"Found\".'",
-    "https://expressjs.com/en/guide/migrating-5.html: 'Express 5 no longer supports the magic string back in the res.redirect() and res.location() methods.'"
+    "https://expressjs.com/en/5x/api/response/",
+    "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: express@5.2.1 — res.redirect('/login') → 302, Location '/login', body 'Found. Redirecting to /login'; res.redirect(301,'/login') → 301; res.redirect('back') → Location 'back', i.e. treated as a literal path, so the magic string is gone"
+     "https://expressjs.com/en/5x/api/response/",
+     "run: PASS isolated Express5.3.0: next() reaches the next handler then caller continues;earlier terminal handler skips later app.use;redirect sends302/Location and a nonempty body. Loopback only.\nPASS private Git repository: root0/ordinary1/merge2 parent IDs;git add -p accepts one hunk and declines another,with exact staged/working diffs and MM only for that partial selection. No project Git state or remote changed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Distractor 'Throws' is thin, but options were outside this rewrite and the item still has one defensible answer."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q003;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "ccf7b5715d48e21f",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-node-176",
