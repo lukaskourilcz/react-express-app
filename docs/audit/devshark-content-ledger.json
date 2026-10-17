@@ -20,7 +20,7 @@
    "system-design",
    "typescript"
   ],
-  "codingTasks": false
+  "codingTasks": true
  },
  "sources": [
   {
@@ -2462,15 +2462,15 @@
    "topic": "ai",
    "level": 2,
    "levelTitle": "Machine Learning Basics",
-   "objective": "Define reinforcement learning by its feedback signal: reward and penalty from an environment.",
+   "objective": "Identify action-policy learning aimed at improving cumulative reward.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "62dbedf3b3fbe829",
-   "previousHash": "4681ffd2859a493e",
+   "revision": 3,
+   "contentHash": "62dd00290f78857f",
+   "previousHash": "62dbedf3b3fbe829",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -2486,24 +2486,16 @@
    },
    "relevanceScore": 7,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 1,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 0
-    },
-    "relevanceScore": 7
+    "hint": "Ask what tells this learner it did well: an answer key supplied up front, or a score that arrives after it acts.",
+    "question": "Reinforcement learning is best described as learning by:",
+    "options": [
+     "Trial and error, guided by rewards and penalties from an environment",
+     "Memorizing a fixed table of answers",
+     "Reading labeled input-output pairs",
+     "Sorting data into clusters"
+    ],
+    "correctAnswer": 0,
+    "explanation": "In reinforcement learning an agent acts in an environment, receives a reward or penalty, and adjusts its policy to maximize reward over time; nobody hands it the correct action. That delayed, evaluative signal is what separates it from supervised learning, which needs labeled input-output pairs, and from clustering, which gets no feedback at all. RLHF, used to tune chat assistants, is this same loop with human preference rankings as the reward."
    },
    "gates": {
     "quality": true,
@@ -2513,35 +2505,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback with a tag echo",
-    "explanation describes the key only; it never contrasts the reward signal with labeled pairs, which is the misconception the options are built around"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct and clearly written, with distractors that map onto the other paradigms; the hint is boilerplate and the explanation misses the contrast. Naming RLHF connects the paradigm to the models this audience actually calls.",
+   "rationale": "Shorten the correct option while preserving the reward-driven policy objective. Remove overbroad claims about no feedback in clustering,no possible expert guidance and a simplified RLHF loop unrelated to this definition.",
    "evidence": [
-    "fetched: https://platform.claude.com/docs/en/about-claude/glossary - RLHF trains a pretrained model from ranked human feedback"
+    "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "fetched https://platform.claude.com/docs/en/about-claude/glossary: RLHF 'human feedback consists of ranking a set of two or more example texts, and the reinforcement learning process encourages the model to prefer outputs that are similar to the higher-ranked ones'"
+     "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The explanation's RLHF sentence matches Anthropic's own description, so the compression to 'preference rankings as the reward' is a fair simplification at this level."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "62dbedf3b3fbe829",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-ai-120",
@@ -13064,13 +13066,13 @@
    "levelTitle": "Context Windows",
    "objective": "Know that input tokens and generated output tokens share one context window, so a long prompt leaves less room for the answer.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "b23cb306febba823",
-   "previousHash": "0b0a63c79ef2b508",
+   "revision": 3,
+   "contentHash": "c3b06a71561a570d",
+   "previousHash": "b23cb306febba823",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -13086,24 +13088,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Consider what the model is reading while it generates the last sentence of a long reply.",
+    "question": "Within a single request, the context window must accommodate:",
+    "options": [
+     "Only the input prompt",
+     "Both the input tokens and the output tokens together",
+     "Only the model's output",
+     "Neither input nor output"
+    ],
+    "correctAnswer": 1,
+    "explanation": "One window covers the whole request: system prompt, messages, tool definitions and documents, plus every token the model generates in reply. So a prompt that nearly fills the window leaves almost no room for an answer, and generation stops early - which is why you size a request with headroom for the output limit you set. Input-only and output-only are both wrong for the same reason: the model attends to the prompt and its own partial output as one continuous sequence."
    },
    "gates": {
     "quality": true,
@@ -13113,40 +13107,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "explanation is correct but stops short of the practical consequence: leaving headroom for the output token limit"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "One of the stronger items in the batch: exactly four exhaustive options and a correct key, held back only by the filler hint. The explanation gains from naming the headroom consequence.",
+   "rationale": "Scope the shared-budget rule to the stated decoder-only setup rather than every possible architecture/provider. Remove the guaranteed early-stop claim because oversized requests can be rejected or limited before generation.",
    "evidence": [
-    "fetched https://platform.claude.com/docs/en/build-with-claude/context-windows : the context window is all the text the model can reference including the response itself; everything in the request plus generated output counts; input alone over the limit returns 400 invalid_request_error (prompt is too long)"
+    "https://platform.claude.com/docs/en/build-with-claude/context-windows",
+    "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint asks whether the reply competes with the prompt for the same budget, which is the key stated"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "fetched https://platform.claude.com/docs/en/build-with-claude/context-windows : the context window covers all the text the model can reference including the response itself"
+     "https://platform.claude.com/docs/en/build-with-claude/context-windows",
+     "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Four exhaustive options and a correct key; the stop-early consequence in the explanation matches the documented stop_reason behavior.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q011;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "b23cb306febba823",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-ai-69",
@@ -15562,13 +15561,13 @@
    "levelTitle": "Hallucinations & Limitations",
    "objective": "Define hallucination as fluent output that is factually wrong or fabricated, and separate it from other LLM failure modes.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "aab024cb62b75e47",
-   "previousHash": "da9be8fcf58f4a9b",
+   "revision": 3,
+   "contentHash": "3645c547c89055e9",
+   "previousHash": "aab024cb62b75e47",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -15584,24 +15583,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask what is wrong in a hallucination: the shape of the output, or what it claims.",
+    "question": "In the context of LLMs, what is a 'hallucination'?",
+    "options": [
+     "When the model refuses to answer",
+     "When the model produces fluent, confident-sounding text that is factually wrong or fabricated",
+     "When the model runs out of tokens mid-sentence",
+     "When the model repeats the same word forever"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A hallucination is content that reads as fact but is not supported by the sources or by reality, and it is hard to spot precisely because the text is fluent and specific. Truncation, looping repetition and refusal are separate failure modes where the output is visibly wrong; a hallucination looks right. The name is a metaphor: mechanically the model is continuing the text with likely tokens, and nothing in that process checks a claim against a source."
    },
    "gates": {
     "quality": true,
@@ -15611,44 +15602,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback with a 'Focus on limitations' tag appended",
-    "explanation is one sentence restating the key and never distinguishes hallucination from the three failure modes the distractors name",
-    "'confident text' attributes a mental state to the model; 'confident-sounding' is what is actually observed",
-    "all three distractors open with \"When the model...\" while the key does not, a grammatical-shape clue"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The distractors are unusually good here - truncation, looping and refusal are all real, named failure modes - so the only real gaps are the filler hint and an explanation that never uses them. The three flagged possible duplicates are false positives on the shared stem shape 'In the context of LLMs, what is a X?': rm-ai-42 is corpus, rm-ai-57 is prompt, rm-ai-132 is jailbreak.",
+   "rationale": "Shorten the definition without making fluency/confidence universal requirements. Avoid claiming that every model system lacks retrieval or verification mechanisms.",
    "evidence": [
-    "run: read batch-ai-1.json, batch-ai-2.json and batch-ai-3.json - rm-ai-42 keys 'a large collection of text used as training data', rm-ai-57 keys 'the input text or instructions you give the model', rm-ai-132 keys a safety bypass; none tests hallucination",
-    "knowledge: hallucination is the standard term for unsupported but fluent model output"
+    "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf",
+    "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "rewrite turned the key into a bare noun phrase while the three distractors kept the When the model ... shape, making the key the odd one out"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: hallucination is the standard term for fluent output unsupported by sources; truncation, looping and refusal are separate, visibly different failure modes"
+     "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf",
+     "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Restores the parallel stem shape while keeping the reviewer's confident-sounding fix for the anthropomorphic wording.",
-    "changed": [
-     "options",
-     "correctAnswer"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q011;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "aab024cb62b75e47",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-ai-9",
@@ -31514,19 +31506,19 @@
    "topic": "databases",
    "level": 14,
    "levelTitle": "NoSQL & When to Use It",
-   "objective": "Identify the consistency trade-off a distributed document database makes.",
+   "objective": "Identify the CAP conflict between availability during partition and linearizable read/write consistency.",
    "intendedLevel": "advanced",
-   "revision": 2,
-   "contentHash": "0ee94ff04b5c5d27",
-   "previousHash": "a35db36d7fce5af1",
+   "revision": 3,
+   "contentHash": "b3e39d14b6525ff6",
+   "previousHash": "0ee94ff04b5c5d27",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -31538,24 +31530,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 2,
-     "wording": 2,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 2
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 1,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 8
+    "hint": "The choice only exists while the two sides cannot reach each other.",
+    "question": "Under CAP, a distributed database that keeps accepting writes on both sides of a network partition has chosen:",
+    "options": [
+     "Consistency over availability",
+     "Availability over consistency, with the replicas converging afterward",
+     "Durability over consistency",
+     "Partition tolerance over durability"
+    ],
+    "correctAnswer": 1,
+    "explanation": "CAP describes what a system does during a partition: either it refuses requests on the side that cannot confirm the current state (CP) or it answers anyway and reconciles later (AP). Accepting writes on both sides means the replicas can disagree until they converge, which is what eventual consistency means. Durability is not part of the trade — both kinds still persist what they accept — and partition tolerance is not optional for anything spanning machines. Do not reduce this to 'SQL is CP, NoSQL is AP': MongoDB replica sets elect one primary and refuse writes on the minority side, while Cassandra and DynamoDB default to the availability side."
    },
    "gates": {
     "quality": true,
@@ -31565,38 +31549,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "states one class of system's behavior as the norm: MongoDB, the document database this level uses as its example, elects a single primary, rejects writes on the minority side of a partition and defaults to w: majority — CP behavior, not AP",
-    "'by default' turns CAP, which describes behavior during a partition, into a permanent posture the product picks",
-    "hint is the generic fallback and the explanation repeats the same overgeneralization"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The keyed claim is a dated generalization that contradicts the level's own MongoDB example, so as written it teaches something a learner will have to unlearn. Recasting the question as what CAP actually describes keeps the objective and makes the answer checkable.",
+   "rationale": "Specify both reads and writes on one replicated value, rather than inferring full CAP availability from write acceptance alone. Remove the unsupported convergence guarantee and product-default claims.",
    "evidence": [
-    "https://www.mongodb.com/docs/manual/reference/write-concern/ : 'The implicit default write concern is w: majority', which waits for a majority of the replica set",
-    "knowledge: a MongoDB replica set has one primary; the minority side of a partition cannot elect one and rejects writes"
+    "https://groups.csail.mit.edu/tds/papers/Gilbert/Brewer6.pdf",
+    "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://www.mongodb.com/docs/manual/core/transactions/ : MongoDB transactions are atomic across documents, collections and shards, consistent with the replica-set model the explanation describes",
-     "knowledge: a MongoDB replica set has a single primary elected by a majority, so the minority side of a partition accepts no writes"
+     "https://groups.csail.mit.edu/tds/papers/Gilbert/Brewer6.pdf",
+     "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "This is the item that carried the 'document databases favour AP by default' error; the recast question is checkable and the explanation names MongoDB, Cassandra and DynamoDB separately instead of generalizing, though 'DynamoDB defaults to the availability side' is true of its default eventually-consistent reads rather than of single-region writes."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q012;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "0ee94ff04b5c5d27",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-111",
@@ -32950,19 +32941,19 @@
    "levelTitle": "Relational Basics",
    "objective": "State what referential integrity guarantees: no foreign-key value without a matching row.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "24da707a378f2304",
-   "previousHash": "345bd3156f22485d",
+   "revision": 3,
+   "contentHash": "93b83d367c3e7e0d",
+   "previousHash": "24da707a378f2304",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -32972,24 +32963,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask which writes the database starts refusing once the constraint exists.",
+    "question": "What does \"referential integrity\" ensure?",
+    "options": [
+     "Every foreign key value points to an existing row",
+     "Every column is indexed",
+     "All data is encrypted",
+     "Queries always run fast"
+    ],
+    "correctAnswer": 0,
+    "explanation": "Referential integrity means every foreign-key value matches an existing row in the referenced table: the database rejects an insert or update pointing at nothing, and blocks or cascades a delete that would orphan rows. Indexing, encryption and query speed are separate properties - Postgres does not even index the referencing column automatically, so integrity and performance are decisions you make separately."
    },
    "gates": {
     "quality": true,
@@ -32999,38 +32982,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic 'Explain the term in your own words' fallback",
-    "distractors (indexing, encryption, speed) are off-topic rather than plausible misreadings",
-    "explanation does not say which writes the database refuses"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct and consequential; only the filler hint and an explanation that never names the refused write hold it below the gate.",
+   "rationale": "Correct the every-value statement for nullable keys and acknowledge referential actions beyond blocking/cascading. Specify a single-column key to avoid composite MATCH semantics.",
    "evidence": [
-    "node: INSERT INTO orders(customer_id) VALUES (999) with foreign keys enforced -> 'FOREIGN KEY constraint failed'",
-    "run: https://www.postgresql.org/docs/current/ddl-constraints.html - 'the declaration of a foreign key constraint does not automatically create an index on the referencing columns'"
+    "https://www.postgresql.org/docs/17/ddl-constraints.html#DDL-CONSTRAINTS-FK",
+    "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "run: https://www.postgresql.org/docs/current/ddl-constraints.html - 'the declaration of a foreign key constraint does not automatically create an index on the referencing columns'",
-     "node:sqlite: INSERT INTO orders(customer_id) VALUES (999) with foreign keys enforced -> 'FOREIGN KEY constraint failed'"
+     "https://www.postgresql.org/docs/17/ddl-constraints.html#DDL-CONSTRAINTS-FK",
+     "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The explanation's Postgres indexing claim is the one correctness-critical line and it checks out verbatim."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q011;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "24da707a378f2304",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-16",
@@ -36526,13 +36516,13 @@
    "levelTitle": "Joins",
    "objective": "Recognize a self join as joining a table to itself under two aliases.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "87947600d594f9d8",
-   "previousHash": "9e28342383d08f22",
+   "revision": 3,
+   "contentHash": "b3b9cc948af27214",
+   "previousHash": "87947600d594f9d8",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -36548,24 +36538,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 9
+    "hint": "Ask what the word 'self' has to refer to here, then check which option matches that reading.",
+    "question": "A \"self join\" is:",
+    "options": [
+     "Joining a table to itself (e.g. employees to their managers)",
+     "Joining two unrelated databases",
+     "A join that never returns rows",
+     "A join without a condition"
+    ],
+    "correctAnswer": 0,
+    "explanation": "A self join lists one table twice under different aliases - FROM employees e JOIN employees m ON e.manager_id = m.id - because without the aliases no column reference could say which copy it means. It matches rows of a table to other rows of the same table, which is how hierarchies are queried. Joining two separate databases is a different problem, and a join with no condition is a cross join."
    },
    "gates": {
     "quality": true,
@@ -36575,41 +36557,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic 'Name the requirement or behavior first' fallback",
-    "explanation mentions aliases without saying why they are required, which is the whole mechanic"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct, with the cross-join distractor doing real work; the filler hint fails the gate and the alias mechanic needs one sentence.",
+   "rationale": "Keep the same-table/two-role definition and remove the broad equation of any no-condition join with cross join. Demonstrate inner and left self joins with synthetic VALUES only.",
    "evidence": [
-    "node: SELECT e.name, m.name FROM users e JOIN users m ON e.manager_id = m.id -> Jackson/Anderson, Nolan/Anderson, Ada/Jackson"
+    "https://www.postgresql.org/docs/17/queries-table-expressions.html#QUERIES-TABLE-ALIASES",
+    "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint states the key outright: 'Both sides of this join are the same table' is the correct option in other words"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "node:sqlite SELECT e.name, m.name FROM users e JOIN users m ON e.manager_id = m.id -> Jackson/Anderson, Sonia/Anderson, Ada/Jackson",
-     "node:sqlite the same join without aliases -> ERROR: ambiguous column name: name, which is why the explanation's alias requirement is right"
+     "https://www.postgresql.org/docs/17/queries-table-expressions.html#QUERIES-TABLE-ALIASES",
+     "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Explanation now gives the reason the aliases are mandatory rather than just mentioning them.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q011;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "87947600d594f9d8",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-47",
@@ -37070,21 +37056,21 @@
    "topic": "databases",
    "level": 7,
    "levelTitle": "Schema Design & Normalization",
-   "objective": "State the 1NF requirement: one value per column, no repeating groups.",
+   "objective": "Recognize a repeating group under the conventional introductory first-normal-form guideline.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "f13edd92ee01ada2",
-   "previousHash": "c4ce4a8b38dd6303",
+   "revision": 3,
+   "contentHash": "803d3c30744dfe6e",
+   "previousHash": "f13edd92ee01ada2",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -37094,24 +37080,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 9
+    "hint": "Look at what a single column may hold, not at how many tables the schema has.",
+    "question": "First normal form (1NF) requires that:",
+    "options": [
+     "Every column holds a single atomic value (no repeating groups/arrays)",
+     "There are no foreign keys",
+     "Every table has exactly one column",
+     "Data is denormalized"
+    ],
+    "correctAnswer": 0,
+    "explanation": "1NF asks that a column hold one value per row rather than a repeating group - not tags packed into a comma-separated string, and not phone1/phone2/phone3 columns - because you cannot filter, join or constrain part of a field reliably. Foreign keys, table count and denormalization are unrelated to it. A Postgres array or jsonb column is a deliberate exception, taken when the value is always read and written as a whole."
    },
    "gates": {
     "quality": true,
@@ -37121,36 +37099,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "'atomic' is asserted without an example, and read absolutely it condemns array and jsonb columns that Postgres schemas use deliberately",
-    "hint is the generic 'Name the requirement or behavior first' fallback",
-    "explanation repeats the rule instead of showing what violates it"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The key is the standard definition and the distractors are weak but harmless; the filler hint fails the gate and the absolute reading of 'atomic' needs the modern exception stated.",
+   "rationale": "Use an explicit conventional-design example rather than an absolute ban on every rich SQL value. Remove the claim that arrays/JSON become deliberate 1NF exceptions merely because an application reads/writes them as a whole.",
    "evidence": [
-    "knowledge: 1NF forbids repeating groups; Postgres array and jsonb types are a deliberate design choice, not a 1NF proof"
+    "https://learn.microsoft.com/en-us/previous-versions/troubleshoot/microsoft-365/microsoft-365-apps/access/database-normalization-description",
+    "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node:sqlite with tags packed into one column, WHERE tags LIKE '%red%' also matched 'reddish,teal' and WHERE tags = 'red' matched nothing, which is the filtering problem the explanation describes"
+     "https://learn.microsoft.com/en-us/previous-versions/troubleshoot/microsoft-365/microsoft-365-apps/access/database-normalization-description",
+     "run: read-only PostgreSQL17 VALUES/self-join CTE returns employee2→manager1 and employee3→manager1;LEFT JOIN retains3rows including theNULLmanager. No tables,user/Auth data or schema changed. Nullable-FK/1NF and model/context claims were checked in the cited primary documentation;no new constraint or model-generation experiment is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The array/jsonb sentence keeps 'atomic' from reading as an absolute, and it is scoped to Postgres."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q011;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "f13edd92ee01ada2",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-51",
@@ -37493,21 +37480,21 @@
    "topic": "databases",
    "level": 7,
    "levelTitle": "Schema Design & Normalization",
-   "objective": "State what 3NF removes: transitive dependencies of non-key columns on other non-key columns.",
+   "objective": "Recognize a concrete transitive dependency and a suitable third-normal-form decomposition.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "217abaae3db8b80e",
-   "previousHash": "e80f73afd25746d0",
+   "revision": 3,
+   "contentHash": "236378b4d183fde9",
+   "previousHash": "217abaae3db8b80e",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -37517,24 +37504,16 @@
    },
    "relevanceScore": 9,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 1
-    },
-    "relevanceScore": 9
+    "hint": "Picture an orders table that also stores the customer's city and that city's population. Ask which of those facts is about the order.",
+    "question": "Third normal form (3NF) removes:",
+    "options": [
+     "All foreign keys",
+     "Transitive dependencies (non-key columns depending on other non-key columns)",
+     "Primary keys",
+     "Indexes"
+    ],
+    "correctAnswer": 1,
+    "explanation": "3NF requires every non-key column to depend on the key alone. If orders stores customer_id, customer_city and city_population, the population is a fact about the city rather than about the order - a transitive dependency, fixed by moving it to a cities table. Foreign keys, primary keys and indexes are not what any normal form removes."
    },
    "gates": {
     "quality": true,
@@ -37544,41 +37523,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "correct option is markedly longer than the three one-word distractors",
-    "hint is the generic 'Name the requirement or behavior first' fallback",
-    "explanation restates the definition with no example, so 'transitive dependency' stays abstract"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct definition, but abstract without an example and the key stands out by length; the hint is filler.",
+   "rationale": "Use an explicit sole-candidate-key example instead of an overbroad shorthand for the formal 3NF rule. Preserve the non-key dependency objective and keep decomposition distinct from removing constraints.",
    "evidence": [
-    "knowledge: 3NF removes transitive functional dependencies on the key"
+    "https://learn.microsoft.com/en-us/previous-versions/troubleshoot/microsoft-365/microsoft-365-apps/access/database-normalization-description",
+    "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint restates the key: 'a fact about another non-key column instead of a fact about the key' is the correct option's parenthetical in other words"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: 3NF requires every non-key column to depend on the key alone, removing transitive dependencies through another non-key column"
+     "https://learn.microsoft.com/en-us/previous-versions/troubleshoot/microsoft-365/microsoft-365-apps/access/database-normalization-description",
+     "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The key is still much longer than the three short distractors, a length tell the rewrite identified but did not fix; the distractors are implausible enough that it does not decide the item.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q012;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "217abaae3db8b80e",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-55",
@@ -38034,19 +38017,19 @@
    "levelTitle": "Keys & Constraints",
    "objective": "Use a CHECK constraint to enforce a value rule at the database level.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "acc9be2c2d33a2db",
-   "previousHash": "4775a2e591d7b855",
+   "revision": 3,
+   "contentHash": "95d57d02fd2c749f",
+   "previousHash": "acc9be2c2d33a2db",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -38056,24 +38039,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The word 'constraint' is the clue. Ask what the database can be made to refuse on your behalf.",
+    "question": "A CHECK constraint is used to:",
+    "options": [
+     "Encrypt a column",
+     "Enforce a condition on values (e.g. price >= 0)",
+     "Create an index",
+     "Join two tables"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A CHECK constraint attaches a boolean condition to the table, and any insert or update that makes it false is rejected: CHECK (price >= 0) keeps negative prices out no matter which service wrote the row. Encryption, indexing and joining are separate features and none of them validates values. A CHECK sees only the row being written, so cross-row rules need UNIQUE, a foreign key or a trigger instead."
    },
    "gates": {
     "quality": true,
@@ -38083,43 +38058,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "correct option is markedly longer than the three-word distractors, which are unrelated features rather than misconceptions",
-    "hint is the generic 'Name the requirement or behavior first' fallback",
-    "explanation states the rule without the boundary that matters: a CHECK sees only the row being written"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct and genuinely useful - invariants enforced where no service can skip them; the length clue and filler hint are the defects.",
+   "rationale": "State the actual false-versus-NULL behavior and avoid claiming that no form of indexing can enforce a value rule. No live table or constraint is changed.",
    "evidence": [
-    "node: INSERT with credit=-1 under CHECK (credit >= 0) -> 'CHECK constraint failed: credit >= 0'",
-    "run: https://www.postgresql.org/docs/current/ddl-constraints.html - use UNIQUE, EXCLUDE or FOREIGN KEY for cross-row restrictions; a trigger for one-time checks against other rows"
+    "https://www.postgresql.org/docs/17/ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS",
+    "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint word-matches the key: 'a rule like price >= 0' is the example printed inside the correct option"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "node:sqlite credit INT CHECK (credit >= 0): INSERT with credit -1 -> ERROR: CHECK constraint failed: credit >= 0, while credit NULL was accepted",
-     "run: https://www.postgresql.org/docs/current/ddl-constraints.html - cross-row restrictions need UNIQUE, EXCLUDE or FOREIGN KEY constraints, or a trigger"
+     "https://www.postgresql.org/docs/17/ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS",
+     "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The key is still much longer than the three short distractors, a tell the rewrite named but left; the distractors are unrelated features, so it does not decide the item.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q012;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "acc9be2c2d33a2db",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-6",
@@ -38885,17 +38862,17 @@
    "levelTitle": "Data Types & NULL",
    "objective": "Distinguish NULL (absent/unknown) from 0, empty string and false.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "ba0fc566f2e32727",
-   "previousHash": "14f0d3116d6dba60",
+   "revision": 3,
+   "contentHash": "e615d2124d26f2ce",
+   "previousHash": "ba0fc566f2e32727",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -38907,24 +38884,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask why SQL needs IS NULL instead of letting you test the column with = 0 or = '' like any other value.",
+    "question": "What does NULL represent?",
+    "options": [
+     "The number zero",
+     "An empty string",
+     "The absence of a value (unknown/not applicable)",
+     "A boolean false"
+    ],
+    "correctAnswer": 2,
+    "explanation": "NULL marks a value that is missing or unknown, so it is not 0, not '' and not false, all of which are known values you can compare and index on. Because it is unknown, any comparison with it returns unknown rather than true, which is why WHERE col = NULL matches nothing and IS NULL exists. The same rule explains why COUNT(col) skips NULLs while COUNT(*) counts the rows."
    },
    "gates": {
     "quality": true,
@@ -38934,42 +38903,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic 'explain the term in your own words' fallback",
-    "explanation mentions comparison propagation but does not show a consequence the learner will meet"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct, well-distracted and squarely on the level objective; only the filler hint and a thin explanation hold it back. Related to rm-db-67 but distinct: this asks what NULL means, that one asks how it compares.",
+   "rationale": "Specify PostgreSQL and replace the any-comparison overstatement with ordinary equality and explicit NULL-aware predicates. Keep missing distinct from zero/empty/false.",
    "evidence": [
-    "node: sqlite select count(*)=3, count(v)=2, sum(v)=3 over values (1),(2),(NULL)",
-    "knowledge: SQL NULL is the unknown/absent marker, distinct from 0 and ''"
+    "https://www.postgresql.org/docs/17/functions-comparison.html",
+    "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint paraphrases the key ('a column where nobody has supplied a value yet') and rules out the zero and empty-string options by name"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "node: sqlite over values (1),(2),(NULL): count(*)=3, count(v)=2, sum(v)=3",
-     "node: sqlite where v = null matches 0 rows"
+     "https://www.postgresql.org/docs/17/functions-comparison.html",
+     "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Explanation is accurate as written; only the hint gave the definition away.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q012;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "ba0fc566f2e32727",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-67",
@@ -39209,17 +39181,17 @@
    "levelTitle": "Data Types & NULL",
    "objective": "Justify TIMESTAMP WITH TIME ZONE over a naive timestamp as recording an unambiguous instant.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "48f8140cd44f2b2f",
-   "previousHash": "c44273a06b8e4c6f",
+   "revision": 3,
+   "contentHash": "f84e5a3dba2d3fb6",
+   "previousHash": "48f8140cd44f2b2f",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -39231,24 +39203,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask what a stored value means when the writer and the reader sit in different time zones.",
+    "question": "A TIMESTAMP WITH TIME ZONE column is preferable to a naive timestamp because:",
+    "options": [
+     "It uses less space",
+     "It records an unambiguous instant regardless of server time zone",
+     "It is faster to index",
+     "It cannot be NULL"
+    ],
+    "correctAnswer": 1,
+    "explanation": "In PostgreSQL, timestamptz converts the input to an absolute instant on write (stored as UTC) and renders it in the session time zone on read, so the same moment means the same thing to every server and client. A plain timestamp stores wall-clock digits with no zone, so a value like 2026-03-29 02:30 can be ambiguous or nonexistent depending on where it was written. Both types occupy 8 bytes and index identically, so storage and index speed are not the reason to pick one, and neither type says anything about NULL."
    },
    "gates": {
     "quality": true,
@@ -39258,41 +39222,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback",
-    "explanation never addresses the space and index-speed distractors, both of which are false and easily shown"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct, high-value and well-distracted; the explanation just stops short of refuting the two measurable distractors. Verified both types are 8 bytes and that timestamptz stores UTC.",
+   "rationale": "Limit the preference to event instants with known offsets. Remove universal index-speed claims and avoid suggesting that timestamptz can disambiguate an unspecified local wall time automatically.",
    "evidence": [
-    "https://www.postgresql.org/docs/current/datatype-datetime.html : timestamp and timestamptz are both 8 bytes; timestamptz input is converted to UTC and output is converted to the session TimeZone"
+    "https://www.postgresql.org/docs/17/datatype-datetime.html",
+    "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "explanation gives PostgreSQL's UTC storage, 8-byte size and index behavior without naming the engine; TIMESTAMP WITH TIME ZONE keeps an offset in Oracle and is a different type in SQL Server"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "https://www.postgresql.org/docs/current/datatype-datetime.html : Table 8.9 lists 8 bytes for both timestamp and timestamp with time zone; input is converted to UTC and output is converted to the session TimeZone",
-     "knowledge: EU summer time starts on 29 March 2026, so 02:30 local does not exist that night in CET"
+     "https://www.postgresql.org/docs/17/datatype-datetime.html",
+     "run: PostgreSQL17 read-only literal expressions: negative>=0=false, zero>=0=true, NULL>=0=NULL; NULL=0=NULL, IS NULL and IS NOT DISTINCT FROM NULL=true; COUNT(value)=2 versus COUNT(*)=3; explicit-offset timestamptz values compare equal, corresponding naive digits do not; UTC display 2026-10-16 10:00:00, both timestamp types occupy8 bytes. No actual constraint/table changes or theorem/model execution.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Only the opening clause changes, which brings the 8-byte and index claims inside the PostgreSQL frame.",
-    "changed": [
-     "explanation"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q012;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "48f8140cd44f2b2f",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-db-7",
@@ -72075,17 +72043,17 @@
    "levelTitle": "Read a Meaningful Test",
    "objective": "Separate an interaction assertion (the dependency was called) from an outcome assertion (the data ended up right).",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "27230032f43c6103",
-   "previousHash": "bfd7365236274028",
+   "revision": 3,
+   "contentHash": "59a0c86aa3eb039f",
+   "previousHash": "27230032f43c6103",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
-    "wording": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
+    "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -72097,24 +72065,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 5,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The assertion was recorded at the moment of the call. Ask what had not happened yet.",
+    "question": "A test calls `saveUser(user)` and asserts that the save function was called once. What has it verified?",
+    "options": [
+     "That the user was stored correctly",
+     "That the code called the dependency — not what the dependency did with it",
+     "That the database schema is valid",
+     "That the user is retrievable afterwards"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Asserting on a call verifies the interaction, not the outcome. That is sometimes the point — you may care that a payment is charged exactly once. It is not evidence that the record ended up right."
    },
    "gates": {
     "quality": true,
@@ -72124,39 +72084,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "It draws the interaction/outcome line and then concedes when an interaction assertion is the right one — charged exactly once — which keeps it honest. Only the hint fails.",
+   "rationale": "Define a mocked dependency rather than a tautological direct call,and separate interaction count from durable outcomes or real payment guarantees.",
    "evidence": [
-    "knowledge: asserting on a spy call verifies that the collaborator was invoked, not what it did with the argument"
+    "https://jestjs.io/docs/mock-functions",
+    "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint hands over the key's own dichotomy, and 'the dependency' appears in no option but the key, so the hint can be matched to option 1 on a keyword"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: a spy or mock records that a collaborator was invoked; nothing about what the collaborator then did with the argument is observed"
+     "https://jestjs.io/docs/mock-functions",
+     "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Replacement hint points at the moment the call count is taken, leaving the learner to work out what is still unverified.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q009;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "27230032f43c6103",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-134",
@@ -72281,19 +72247,19 @@
    "topic": "general",
    "level": 17,
    "levelTitle": "Read a Meaningful Test",
-   "objective": "Pick the next test case by where the function has to make a decision: empty input and the escaping rule, not more volume.",
+   "objective": "Identify an input that exercises commas inside quoted CSV fields.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "173fd84526579c3e",
-   "previousHash": "ce1c6d5fd9f96a8e",
+   "revision": 3,
+   "contentHash": "44a076d91d9069ae",
+   "previousHash": "173fd84526579c3e",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -72305,24 +72271,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask where a CSV parser has to make a decision that one plain row never asks of it.",
+    "question": "A test for `parseCsv` passes a file with one row and asserts the parsed output. Which case would you add first?",
+    "options": [
+     "A file with a thousand rows",
+     "An empty file, and a row containing the separator inside a quoted field",
+     "The same file in a different directory",
+     "A file with a different name"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The empty input and the escaping rule are where parsers fail. Volume tells you about performance, not correctness, and neither the path nor the name of the file is part of what the function decides."
    },
    "gates": {
     "quality": true,
@@ -72332,35 +72290,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "the key packs two cases into one option, which makes it longer than the alternatives"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The quoted separator is the canonical CSV bug and the empty file is the canonical empty case, so the key teaches a transferable habit. The distractors correctly separate correctness from performance and from irrelevant properties.",
+   "rationale": "Replace an arbitrary which-first priority question with one specific parsing rule. Remove the false claim that volume can only test performance;large-input truncation is a correctness bug too.",
    "evidence": [
-    "knowledge: RFC 4180 style CSV allows the delimiter inside double-quoted fields, which is where naive split-on-comma parsers fail; empty input is the other standard boundary"
+    "https://www.rfc-editor.org/rfc/rfc4180",
+    "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://www.rfc-editor.org/rfc/rfc4180.txt section 2 rule 6: 'Fields containing line breaks (CRLF), double quotes, and commas should be enclosed in double-quotes' — the separator inside a quoted field is exactly the case a split-on-comma parser gets wrong"
+     "https://www.rfc-editor.org/rfc/rfc4180",
+     "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key packs two cases into one option and so runs longer than the alternatives, but the distractors are wrong on substance rather than on length."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q009;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "173fd84526579c3e",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-136",
@@ -72495,17 +72463,17 @@
    "levelTitle": "Make Checks Reliable",
    "objective": "Diagnose the false pass of an unawaited async assertion: the assertion sees a promise, not the value.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "01ea0ce380ab70dd",
-   "previousHash": "2159c5dd1180f0db",
+   "revision": 3,
+   "contentHash": "400f4c83a93053f0",
+   "previousHash": "01ea0ce380ab70dd",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -72517,24 +72485,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The assertion did run, and it ran on something. Ask what the call handed back at that instant.",
+    "question": "A test asserts on the result of an async function and passes even when the function returns the wrong value. What is the likeliest cause?",
+    "options": [
+     "The test runner is broken",
+     "The promise is not awaited, so the assertion sees the promise rather than the value",
+     "The function is too fast to observe",
+     "Async functions cannot be tested"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Without await the assertion sees the promise, not the value it will settle to, and a loose check — assert.ok(result), expect(result).toBeTruthy(), expect(result).toBeDefined() — is satisfied by any promise, so the test finishes before the work does and reports success. Awaiting the call, or returning the promise from the test, is what puts the real value in front of the assertion. A strict comparison against the promise fails instead, which is the noisier and luckier outcome."
    },
    "gates": {
     "quality": true,
@@ -72544,36 +72504,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "the key says the assertion \"runs before the value arrives\", which is only half the mechanism: it runs against the promise object, and a strict-equality assertion would then fail rather than pass",
-    "explanation does not name the loose assertion forms that make the false pass possible"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The false-passing async test is a genuine and common defect, and the key points at the right cause; the phrasing just overstates how universal the false pass is. Rewriting the key and the explanation to name the loose assertion forms makes it exact.",
+   "rationale": "Replace an unsupported likeliest-cause diagnosis with exact code and a matcher that demonstrates the missing-await error. Awaiting alone does not make a weak value assertion precise.",
    "evidence": [
-    "run: node --test (Node 22.22.2) on async getValue() returning 4 — \"ok 1 - A: missing await, truthiness assertion\" (assert.ok(getValue()) passes) while \"not ok 3 - C: awaited, strict equality\" fails with \"4 !== 5\""
+    "https://jestjs.io/docs/asynchronous",
+    "https://jestjs.io/docs/expect#tobetruthy",
+    "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "run: node --test (Node v22.22.2) on async getValue() returning 4 — 'ok 1 - A: missing await, truthiness assertion' (assert.ok on the unawaited call passes), 'not ok 2 - B: missing await, strict equality' fails showing '+ Promise {', 'not ok 3 - C: awaited, strict equality' fails 4 !== 5"
+     "https://jestjs.io/docs/asynchronous",
+     "https://jestjs.io/docs/expect#tobetruthy",
+     "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Ran all three variants: the rewritten key and the explanation's claim about loose versus strict assertions both hold exactly as written."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q009;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "01ea0ce380ab70dd",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-138",
@@ -72598,17 +72569,17 @@
    "levelTitle": "Make Checks Reliable",
    "objective": "Read order-dependent failures as leaked shared state rather than as a runner problem.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "673cd6e6ea4cca4d",
-   "previousHash": "a5704eb9cc3199d8",
+   "revision": 3,
+   "contentHash": "d2b9d9ef370f997f",
+   "previousHash": "673cd6e6ea4cca4d",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
-    "wording": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
+    "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -72620,24 +72591,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 5,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The test did not change between the two runs. Ask what did.",
+    "question": "A test passes alone and fails when the suite runs in a different order. What does that tell you?",
+    "options": [
+     "The test runner has a bug",
+     "Something is shared between tests and not reset — state is leaking",
+     "The suite is too large",
+     "The tests need to run in series"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Order sensitivity means one test can see what another left behind: a module-level cache, a stubbed global, a row in a database. Pinning the order hides it; resetting the shared thing between tests fixes it."
    },
    "gates": {
     "quality": true,
@@ -72647,34 +72610,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The explanation names the real culprits (module-level cache, stubbed global, a leftover row) and rejects the tempting fix of pinning the order. Only the hint keeps it below the gate.",
+   "rationale": "Treat shared-state leakage as a useful investigation rather than the only possible explanation. Avoid presenting a fixed order as a permanent cure.",
    "evidence": [
-    "run: node --test (Node 22.22.2) with a module-level Map shared by two tests — the whole file gives \"ok 1 - one\" / \"not ok 2 - two\", while the same test selected alone with --test-name-pattern \"two\" gives \"ok 1 - two\", \"# pass 1 # fail 0\""
+    "https://jestjs.io/docs/setup-teardown#general-advice",
+    "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "run: node --test (Node v22.22.2) on a file with a module-level Map — whole file gives 'ok 1 - one: fills the cache' / 'not ok 2 - two: expects an empty cache', the same test with --test-name-pattern 'two' gives 'ok 1' and '# fail 0'"
+     "https://jestjs.io/docs/setup-teardown#general-advice",
+     "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Reproduced the exact symptom in the stem; hint asks what changed between the runs without naming shared state."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q009;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "673cd6e6ea4cca4d",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-139",
@@ -73544,17 +73518,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Read a CI summary including its skips: a skipped test is an unanswered question, not a pass.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "29da14860fb2d228",
-   "previousHash": "b3c44364099de6eb",
+   "revision": 3,
+   "contentHash": "ed81fa7e7951384e",
+   "previousHash": "29da14860fb2d228",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -73566,24 +73540,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask what each number in that summary is evidence about.",
+    "question": "A CI run reports \"3 passed, 2 skipped\". What deserves attention?",
+    "options": [
+     "Nothing — no test failed",
+     "The skipped ones: a skip is an unanswered question, not a pass",
+     "Only the total count",
+     "The order the tests ran in"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Skips are how a suite quietly stops checking things. They are often added to unblock a release and then never removed. A skipped test in a diff needs the same question as a deleted one: what is no longer being verified, and who decided?"
    },
    "gates": {
     "quality": true,
@@ -73593,34 +73559,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Skips accumulate silently and the explanation gives the right review question — what is no longer verified, and who decided. Only the hint keeps it below the gate.",
+   "rationale": "Keep skipped distinct from passed without the alarmist claim that every skip exists only to bypass a release. Require an understood scope/reason rather than automatic deletion or failure.",
    "evidence": [
-    "run: node --test (Node 22.22.2) with three passing tests and two skipped whose bodies assert false reports \"# pass 3 / # fail 0 / # skipped 2\" and exits 0 — a green run in which two checks were never answered"
+    "https://jestjs.io/docs/api#testskipname-fn",
+    "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": "Souhrn z CI („3 passed, 2 skipped“) je doslovný výstup nástroje, takže zůstává anglicky."
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "run: node --test (Node v22.22.2) with three passing tests and two skipped whose bodies assert false reports '# pass 3 / # fail 0 / # skipped 2' and exits 0 — a green run in which two checks were never answered"
+     "https://jestjs.io/docs/api#testskipname-fn",
+     "run: PASS Node24 mock records one call with no storage implementation;installed Playwright truthy matcher accepts the promise fulfilling0 while awaited equality sees0;shared-state counterexample passes alone,fails after another operation and passes after cleanup. No actual database or universal order-failure cause is claimed.\nPASS standard CSV reader keeps a quoted comma inside one field;private Node test-runner demo reports3passed/2skipped and never runs the deliberately throwing skipped bodies. This demonstrates skip accounting only,not release coverage. Primary Jest docs confirm Jest-specific APIs.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Hint asks what each number is evidence about, which does not single out the skip line, and the three distractors are false."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q009;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "29da14860fb2d228",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-147",
@@ -73645,17 +73622,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Review a generated test suite for the inputs nobody described: invalid, empty and boundary values.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "5db8448b3d23077b",
-   "previousHash": "d2ea474cb8e1c4c0",
+   "revision": 3,
+   "contentHash": "1876bdef1394697a",
+   "previousHash": "5db8448b3d23077b",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -73667,24 +73644,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Notice what all ten inputs have in common, then ask what a parser does with everything else.",
+    "question": "A generated test suite for a date parser has ten cases, all with valid ISO strings. What is the most likely gap?",
+    "options": [
+     "Not enough valid formats",
+     "The invalid, empty and boundary inputs — the cases the parser exists to handle",
+     "Insufficient comments",
+     "Missing performance assertions"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Generated suites tend to cover the path that was described to them and miss the ones nobody mentioned. For a parser, that is the malformed input, the empty string and the boundary date — which is where parsers actually fail."
    },
    "gates": {
     "quality": true,
@@ -73694,40 +73663,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "the key is longer than the alternatives, and \"Insufficient comments\" is a style nitpick rather than a testing misconception"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Reviewing generated tests for the unstated cases is squarely a present-day skill, and the explanation names exactly where parsers fail. The hint is filler and one distractor is weak, but the item holds.",
+   "rationale": "Remove unsupported claims about generated tests and valid boundary dates. Ask about the clearly absent invalid-input class rather than guessing the entire suite’s coverage.",
    "evidence": [
-    "knowledge: a parser's failure modes are malformed input, empty input and boundary values; a suite of valid examples exercises only the accepting path"
+    "https://jestjs.io/docs/using-matchers",
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint repeats the key's phrase ('which inputs a parser exists to reject' against 'the cases the parser exists to handle') and asks whether they appear in the ten, which answers the question outright"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: a parser's failure modes are malformed input, empty input and boundary values; a suite of valid examples exercises only the accepting path"
+     "https://jestjs.io/docs/using-matchers",
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key is longer than the alternatives and option 2 is a style nitpick, but both distractors are wrong on substance.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "5db8448b3d23077b",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-148",
@@ -73752,17 +73728,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Allocate testing effort by risk: cost of being wrong multiplied by the chance it goes unnoticed.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "7af5b475631f0401",
-   "previousHash": "0e72994428bf260b",
+   "revision": 3,
+   "contentHash": "cffeeb91769301e0",
+   "previousHash": "7af5b475631f0401",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -73774,24 +73750,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask how each mistake would be discovered, and by whom.",
+    "question": "Two changes are waiting: a copy fix on a marketing page and a change to how refunds are calculated. Where does the testing effort go?",
+    "options": [
+     "Equally across both",
+     "Mostly on the refund calculation, where a mistake costs money and is hard to notice",
+     "Mostly on the copy, because users see it first",
+     "Neither needs tests"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Risk is the cost of being wrong multiplied by how likely it is to slip through. Wrong copy is visible and cheap to fix; a wrong refund is invisible, expensive, and discovered later by somebody else."
    },
    "gates": {
     "quality": true,
@@ -73801,39 +73769,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "A concrete allocation decision with a stated rule, and \"equally across both\" is the tempting wrong answer it is meant to catch. Only the hint fails.",
+   "rationale": "Specify non-critical copy and avoid treating all wording as cheap or harmless. Apply risk-based testing without changing billing logic or giving actual refund/tax advice.",
    "evidence": [
-    "knowledge: risk-based test allocation weighs impact of a defect against its likelihood of escaping review"
+    "https://glossary.istqb.org/en_US/term/risk-based-testing",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint states the key's two justifiers in the key's own words ('what being wrong costs' and 'how long it would go unnoticed' against 'a mistake costs money and is hard to notice')"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: risk-based allocation of test effort weighs the cost of a defect against the chance it escapes review and reaches production unnoticed"
+     "https://glossary.istqb.org/en_US/term/risk-based-testing",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Replacement asks about detection rather than restating the cost formula the explanation gives.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "7af5b475631f0401",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-149",
@@ -74071,17 +74045,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Investigate a CI-only failure by looking for environment differences — time zone, locale, environment variables, versions.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "433c5498fce134da",
-   "previousHash": "1cbaa54b4d82a37d",
+   "revision": 3,
+   "contentHash": "f7646880817dc571",
+   "previousHash": "433c5498fce134da",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -74093,62 +74067,66 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 4,
-     "wording": 2,
-     "answerOptions": 2,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The code is the same in both places. Ask what is not.",
+    "question": "A test fails in CI and passes on your machine. Which explanation should you check first?",
+    "options": [
+     "The code is correct and CI is wrong",
+     "Something differs between the environments — time zone, locale, environment variable, installed version",
+     "CI is too slow",
+     "The test needs a longer timeout"
+    ],
+    "correctAnswer": 1,
+    "explanation": "\"Works on my machine\" is the start of the investigation, not the end. Time zone and locale are the classic pair: the same instant renders as 3/1/2024 under UTC and 2/29/2024 under America/New_York, and a locale-aware sort puts the same strings in a different order — differences that are just as real in production as in CI. Reach for the environment diff before a longer timeout, which only hides a timing problem."
    },
    "gates": {
     "quality": true,
     "relevance": true
    },
-   "correctnessBlocker": "multiple-defensible",
+   "correctnessBlocker": null,
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "\"Which explanation should you rule out first?\" has two readings: under the ordinary sense of \"rule out\" (dismiss), option 0 — \"the code is correct and CI is wrong\" — is the defensible answer, not the keyed option 1",
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The objective and the keyed environment-difference answer are right, but \"rule out first\" reads naturally as \"dismiss first\", which makes option 0 defensible and gives the item two answers. Changing one word to \"check first\" fixes it without touching the objective.",
+   "rationale": "Keep environmental comparison as an investigation,not a proven unique cause. Define and execute the timezone example rather than relying on an unspecified instant,and remove the claim that every longer timeout merely hides a bug.",
    "evidence": [
-    "node: new Date(\"2024-03-01T04:30:00Z\").toLocaleDateString(\"en-US\", {timeZone}) gives \"3/1/2024\" for UTC and \"2/29/2024\" for America/New_York; [\"ch\",\"cz\",\"d\"] sorts to ch,cz,d under an en collator and cz,d,ch under a cs collator"
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: new Date('2024-03-01T04:30:00Z').toLocaleDateString('en-US', {timeZone}) gives '3/1/2024' for UTC and '2/29/2024' for America/New_York; ['ch','cz','d'] sorts to ch,cz,d with an en collator and cz,d,ch with a cs collator"
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The reviewer's one-word fix is the right one: 'check first' removes the dismiss reading of 'rule out first' that made option 0 defensible, and both explanation claims reproduce exactly."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "433c5498fce134da",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-151",
@@ -74276,17 +74254,17 @@
    "levelTitle": "Verify a Change",
    "objective": "See what deleting a flaky test changes: the report disappears, the nondeterminism does not.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "6afc13421dd6c340",
-   "previousHash": "688da7af049384dd",
+   "revision": 3,
+   "contentHash": "bf2ed8a8cf3763b8",
+   "previousHash": "6afc13421dd6c340",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -74298,24 +74276,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The release is unblocked. Ask what happened to whatever was making the test flake.",
+    "question": "A flaky test is deleted to unblock a release. What has changed about the system?",
+    "options": [
+     "It is now more reliable",
+     "The unreliability is still there, and nothing reports on it any more",
+     "The bug the test covered is fixed",
+     "The suite is more trustworthy"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The flake was a symptom of something non-deterministic in the test or in the code. Removing the test removes the report, not the cause — and if the cause was in the code, it is now unobserved in production too."
    },
    "gates": {
     "quality": true,
@@ -74325,40 +74295,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "overlaps rm-general-142 (same flaky-test subject, one level earlier); it adds the production consequence, so it is not redundant, but the two should not sit close together in a session"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "It closes the flakiness thread with the consequence that matters — if the nondeterminism was in the code, it is now unobserved in production. The hint is the defect, and the overlap with rm-general-142 is a sequencing concern rather than a duplication.",
+   "rationale": "Avoid assuming that every flaky test proves a product defect. State the narrower conclusion that deleting a check is not evidence of a production fix.",
    "evidence": [
-    "knowledge: deleting a nondeterministic test removes the signal, not the nondeterminism in the test or the code under it"
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint tells the learner to separate the report from the system, and 'reports' appears in no option but the key"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: deleting a nondeterministic test removes the signal, not the nondeterminism in the test or in the code under it"
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Shares the flaky-test subject with rm-general-142 but asks a different question with a different key, so it is not a duplicate.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "6afc13421dd6c340",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-16",
@@ -179409,13 +179384,13 @@
    "levelTitle": "Authorization",
    "objective": "Define broken access control and separate it from the other failure categories it is confused with.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "e7ed36478d983d8e",
-   "previousHash": "eecf9e9ae61d2235",
+   "revision": 3,
+   "contentHash": "2eeec3ab8b018e3c",
+   "previousHash": "e7ed36478d983d8e",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -179431,24 +179406,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "All four describe real security failures. Which one is specifically about permissions being wrong?",
+    "question": "A \"broken access control\" bug is when:",
+    "options": [
+     "Passwords are weak",
+     "Users can access resources/actions they shouldn’t be allowed to",
+     "TLS is misconfigured",
+     "Logs are missing"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Broken access control means the server lets an identity perform an action or read data outside its permissions: changing an id in a URL, calling an endpoint the UI merely hides, or setting a field the role may not set. It is A01 in the OWASP Top 10:2025, the same position it held in 2021. Weak passwords are an authentication failure, TLS misconfiguration is a cryptographic or configuration failure, and missing logs are a detection failure - each is its own category."
    },
    "gates": {
     "quality": true,
@@ -179458,36 +179425,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "key is the only glossed option",
-    "explanation gives no concrete form of the bug and cites the ranking without an edition"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The keyed fact and the OWASP #1 claim both check out against the 2025 edition; the defects are the filler hint and an explanation with no concrete example.",
+   "rationale": "Retain the authorization objective with a concrete unauthorized read. Remove unnecessary time-sensitive category rankings and avoid treating authentication as authorization.",
    "evidence": [
-    "https://owasp.org/Top10/2025/0x00_2025-Introduction/ (A01:2025 Broken Access Control; A02 Security Misconfiguration, A05 Injection)"
+    "https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://top10.owasp.org/2025/0x00_2025-Introduction (A01:2025 Broken Access Control; A02 Security Misconfiguration, A04 Cryptographic Failures, A09 Security Logging & Alerting Failures)"
+     "https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "The explanation's 'A01 in the Top 10:2025, the same position it held in 2021' is correct against the current edition, and the hint's 'about permissions' adds nothing the stem's own phrase does not."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "e7ed36478d983d8e",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-2",
@@ -180152,13 +180128,13 @@
    "levelTitle": "Passwords & Hashing",
    "objective": "Choose the correct storage form for passwords: a salted, slow password hashing function.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "7e954702879ad379",
-   "previousHash": "ad6a4d089ccc66d8",
+   "revision": 3,
+   "contentHash": "4455889f6fbbad07",
+   "previousHash": "7e954702879ad379",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -180174,63 +180150,64 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 3,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 1,
-     "explanation": 3
-    },
-    "qualityScore": 1,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The store has to survive being copied. Which form is still useless to whoever copied it?",
+    "question": "Passwords should be stored:",
+    "options": [
+     "In plaintext",
+     "As salted hashes using a slow password-hashing algorithm",
+     "Encrypted with a shared key",
+     "In the source code"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Store a verifier rather than the password: a salted, deliberately slow password hashing function. Current OWASP guidance names Argon2id as the first choice, scrypt where Argon2id is unavailable, PBKDF2 with HMAC-SHA-256 where FIPS-140 compliance is required, and bcrypt for legacy systems only. Encrypting under a shared key is reversible by design, so a single leaked key returns every password in plaintext - that is key management, not password storage. Plaintext and hard-coded credentials expose everything the moment the database or the repository leaks."
    },
    "gates": {
     "quality": true,
     "relevance": true
    },
-   "correctnessBlocker": "misleading-hint",
+   "correctnessBlocker": null,
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint ends with Focus on hashing and hashes appears only in the keyed option, never in the stem",
-    "explanation lists bcrypt/scrypt/Argon2 as interchangeable; current OWASP guidance ranks Argon2id first and restricts bcrypt to legacy systems",
-    "explanation never says why reversible encryption with a shared key is the wrong answer, though that is the one distractor a real team argues for"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The keyed answer is right but the explanation's algorithm list is out of step with the current cheat sheet, which is a real staleness defect in the one topic where staleness costs most.",
+   "rationale": "Replace the claim that stolen verifiers are useless with bounded offline-guessing resistance. Keep the ordinary sign-in scope explicit and avoid encoding an unnecessary full algorithm-policy matrix.",
    "evidence": [
-    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (Argon2id first choice; scrypt when unavailable; PBKDF2 for FIPS-140; bcrypt should only be used for legacy systems)"
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (Argon2id first choice; scrypt when Argon2id is not available; PBKDF2 when FIPS-140 compliance is required; bcrypt only for legacy systems)"
+     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "The rewritten ranking now matches the cheat sheet exactly, and the hint does not separate the key from the shared-key distractor, so it leaves the real work in place."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "7e954702879ad379",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-26",
@@ -180255,13 +180232,13 @@
    "levelTitle": "Passwords & Hashing",
    "objective": "Define a salt: a unique per-password random value mixed in before hashing.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "b02c9197792a2df7",
-   "previousHash": "b2eb308f5cdc9253",
+   "revision": 3,
+   "contentHash": "8b6c25b56762eae6",
+   "previousHash": "b02c9197792a2df7",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -180277,24 +180254,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Rainbow tables are computed once and reused against every database. Ask what would make one table useless here.",
+    "question": "A \"salt\" is:",
+    "options": [
+     "A secret key",
+     "A unique random value added per password before hashing",
+     "A type of cipher",
+     "A session token"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A salt is a unique random value mixed into each password before hashing, so two users with the same password store different hashes and no single precomputed table covers both. It does not have to be secret and is normally stored next to the hash; a secret value held elsewhere is a pepper, not a salt. In practice Argon2id, scrypt and bcrypt generate and encode the salt themselves, so application code rarely handles it directly."
    },
    "gates": {
     "quality": true,
@@ -180304,42 +180273,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "A type of cipher and A session token are filler; only A secret key (the pepper) is a real confusion",
-    "explanation omits that the salt need not be secret and that modern algorithms generate it themselves"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Accurate and foundational with one genuinely good distractor; the filler hint and two dead options are the only real faults.",
+   "rationale": "Distinguish salt from pepper and session credentials. Remove the blanket claim that named algorithms always generate salts themselves, and explicitly preserve the possibility of offline guessing.",
    "evidence": [
-    "node: scrypt('correct horse battery staple','saltA') = b4f63cd2ccab477f..., with 'saltB' = e15ec57bf84ca227... - same password, different stored value",
-    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (modern algorithms generate and manage salts internally)"
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint supplies the definition: 'what has to differ' is the key's 'unique ... per password', and the one live distractor (a secret key) is ruled out by it"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (salt is a unique, randomly generated string added to each password; modern algorithms salt automatically)"
+     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "Explanation is right that the salt need not be secret and that the secret shared value is a pepper.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "b02c9197792a2df7",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-27",
@@ -181494,19 +181466,19 @@
    "levelTitle": "Sessions & Tokens (JWT)",
    "objective": "Recognize that JWT header and payload are encoded, not encrypted, so nothing secret belongs in them.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "d8c0e9d3613a4948",
-   "previousHash": "cc05988da9b17f91",
+   "revision": 3,
+   "contentHash": "3880ad18ad29f3c8",
+   "previousHash": "d8c0e9d3613a4948",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -181516,24 +181488,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Paste the middle segment of a token into any decoder. Ask who needed a key to do that.",
+    "question": "A common JWT pitfall is:",
+    "options": [
+     "Verifying the signature",
+     "Putting sensitive data in the (base64url, readable) payload thinking it’s hidden",
+     "Short expiry",
+     "Using HTTPS"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The header and payload are base64url-encoded, not encrypted: anyone who holds the token, intercepts it, or finds it in a log can decode the claims without any key. The signature protects integrity, not confidentiality - it detects tampering and hides nothing. Keep personal data and secrets out of the payload, or use an encrypted JWT (JWE) when the claims themselves must stay private. Verifying signatures, setting a short expiry and using HTTPS are all things to do, not pitfalls."
    },
    "gates": {
     "quality": true,
@@ -181543,43 +181507,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "the encoding is base64url, not plain base64 - a small precision error in an item whose whole point is the encoding",
-    "three distractors are all good practices, so the item can be answered by spotting the odd one out without knowing anything about JWTs",
-    "key is markedly longer than the distractors",
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "A genuinely important misconception, keyed correctly, but the option set is odd-one-out shaped and the item says base64 where the standard says base64url.",
+   "rationale": "Scope the readable-payload warning to signed unencrypted tokens rather than every JWT. Replace the suggestion to paste tokens into decoders with an integrity-versus-confidentiality explanation; retain verification, audience and expiry requirements.",
    "evidence": [
-    "node: Buffer.from(jwt.split('.')[1],'base64url') on a freshly minted HS256 token returned the full claim set including a planted ssn value, with no key involved"
+    "https://www.rfc-editor.org/rfc/rfc7519#section-3",
+    "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "the key says base64 where JWT uses base64url; the reviewer listed this defect but left the option unchanged, so it still reaches learners in an item whose whole point is the encoding"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: RFC 7519 encodes the JOSE header and claims set with base64url, not standard base64"
+     "https://www.rfc-editor.org/rfc/rfc7519#section-3",
+     "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "Hint is not decisive here because three options are plainly good practices, and pasting only the middle segment does not expose a usable token.",
-    "changed": [
-     "options",
-     "correctAnswer"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "d8c0e9d3613a4948",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-38",

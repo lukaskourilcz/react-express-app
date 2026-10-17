@@ -155,9 +155,33 @@
     "rm-css-46",
     "rm-general-68",
     "rm-general-125",
-    "rm-general-130"
+    "rm-general-130",
+    "rm-general-133",
+    "rm-general-135",
+    "rm-general-137",
+    "rm-general-138",
+    "rm-general-146",
+    "rm-general-147",
+    "rm-general-148",
+    "rm-general-150",
+    "rm-general-152",
+    "rm-ai-12",
+    "rm-ai-68",
+    "rm-ai-89",
+    "rm-db-15",
+    "rm-db-46",
+    "rm-db-50",
+    "rm-db-54",
+    "rm-db-59",
+    "rm-db-66",
+    "rm-db-69",
+    "rm-db-110",
+    "rm-security-19",
+    "rm-security-25",
+    "rm-security-26",
+    "rm-security-37"
   ],
-  "remainingEligibleCandidates": 24,
+  "remainingEligibleCandidates": 0,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -167,10 +191,10 @@
         136,
         45
       ],
-      "uniqueLongest": 1900,
-      "correctUniqueLongest": 1031,
-      "share": 0.5426315789473685,
-      "flags": 65
+      "uniqueLongest": 1896,
+      "correctUniqueLongest": 1014,
+      "share": 0.5348101265822784,
+      "flags": 41
     },
     "eligible": {
       "count": 2014,
@@ -180,10 +204,10 @@
         127,
         41
       ],
-      "uniqueLongest": 1763,
-      "correctUniqueLongest": 936,
-      "share": 0.5309132161089053,
-      "flags": 24
+      "uniqueLongest": 1759,
+      "correctUniqueLongest": 919,
+      "share": 0.5224559408754974,
+      "flags": 0
     },
     "effective": {
       "count": 1820,
@@ -193,10 +217,10 @@
         109,
         30
       ],
-      "uniqueLongest": 1612,
-      "correctUniqueLongest": 878,
-      "share": 0.5446650124069479,
-      "flags": 24
+      "uniqueLongest": 1608,
+      "correctUniqueLongest": 861,
+      "share": 0.5354477611940298,
+      "flags": 0
     }
   },
   "issue": 471

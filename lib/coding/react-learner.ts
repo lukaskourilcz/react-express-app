@@ -8,7 +8,47 @@ import { UTC_TIME_SOURCE } from '../../shared/coding-utc-time';
 // Only serialized values cross the WASM boundary. React, the DOM, the suite,
 // matchers and verdict never enter the learner engine as JavaScript objects.
 type Wire = null | string | number | boolean | { u: 1 } | { num: string } | { big: string } | { g: number; kind: string } | { h: number; kind: string } | { list: Wire[] };
-type HostCapability = { value: any; get: Set<string>; set: Set<string>; bound: boolean; invoke?: (...args: any[]) => any };
+type HostCapability = { value: any; get: Set<string>; set: Set<string>; bound: boolean; invoke?: (...args: any[]) => any; record?: Set<string> };
+
+const publicRecordKey = (key: string): boolean => !key.startsWith('_') && !['constructor', 'prototype'].includes(key);
+
+/** Only ordinary data chains qualify, never a class/DOM/host prototype. Read
+ * descriptors without invoking getters; inherited callable values stay opaque.
+ * Null-prototype records and the Object prototype of another VM are supported. */
+function ordinaryRecord(value: object): { keys: string[]; read: string[]; write: string[] } | null {
+  const keys = new Set<string>(), read: string[] = [], seen = new Set<string>();
+  let cursor: object | null = value;
+  for (let depth = 0; cursor !== null; depth++) {
+    if (depth > 32 || types.isProxy(cursor)) return null;
+    const constructor = Object.getOwnPropertyDescriptor(cursor, 'constructor');
+    if (typeof constructor?.value === 'function' && constructor.value.prototype === cursor) {
+      const intrinsicObject = Object.getPrototypeOf(cursor) === null && constructor.value.name === 'Object' &&
+        /\[native code\]/.test(Function.prototype.toString.call(constructor.value));
+      if (!intrinsicObject) return null;
+      break;
+    }
+    for (const key of Object.getOwnPropertyNames(cursor)) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (!publicRecordKey(key)) continue;
+      const descriptor = Object.getOwnPropertyDescriptor(cursor, key)!;
+      keys.add(key);
+      if ('value' in descriptor && (cursor === value || typeof descriptor.value !== 'function')) read.push(key);
+    }
+    cursor = Object.getPrototypeOf(cursor);
+  }
+  const current = Object.getOwnPropertyDescriptor(value, 'current');
+  return { keys: [...keys], read, write: current && 'value' in current && current.writable ? ['current'] : [] };
+}
+
+function recordProperty(value: object, key: string): PropertyDescriptor | undefined {
+  let cursor: object | null = value;
+  for (let depth = 0; cursor !== null && depth <= 32; depth++, cursor = Object.getPrototypeOf(cursor)) {
+    const descriptor = Object.getOwnPropertyDescriptor(cursor, key);
+    if (descriptor) return descriptor;
+  }
+  return undefined;
+}
 const REACT_EXPORTS = ['createElement','cloneElement','isValidElement','Fragment','Children','createContext','useContext','useState','useReducer','useEffect','useLayoutEffect','useInsertionEffect','useMemo','useCallback','useRef','useId','useSyncExternalStore','useTransition','useDeferredValue','useImperativeHandle','forwardRef','memo','startTransition','use','useActionState','useOptimistic','version'];
 const DOM_READ = ['nodeType','nodeName','tagName','textContent','innerHTML','value','checked','disabled','id','name','type','title','tabIndex','selectionStart','selectionEnd','parentElement','parentNode','children','childNodes','firstChild','lastChild','nextSibling','previousSibling','ownerDocument','dataset','style','className','classList','isConnected','contains','focus','blur','select','setSelectionRange','getAttribute','setAttribute','removeAttribute','hasAttribute','querySelector','querySelectorAll','appendChild','removeChild','addEventListener','removeEventListener','getBoundingClientRect','click','closest','matches'];
 const DOM_WRITE = ['textContent','innerHTML','value','checked','disabled','title','tabIndex','className','indeterminate'];
@@ -66,9 +106,9 @@ const BOOTSTRAP = String.raw`(request, schedule, report, roots) => {
         return rpc({op:'get',id:value.h,key});
       },
       set(target,key,next){if(typeof key!=='string') return false; rpc({op:'set',id:value.h,key,value:encode(next)}); return true;},
-      has(target,key){return Reflect.has(target,key)||(typeof key==='string'&&rpc({op:'keys',id:value.h}).includes(key));},
+      has(target,key){return Reflect.has(target,key)||(typeof key==='string'&&rpc({op:'has',id:value.h,key}));},
       ownKeys(target){return [...new Set([...Reflect.ownKeys(target),...rpc({op:'keys',id:value.h})])];},
-      getOwnPropertyDescriptor(target,key){const descriptor=Reflect.getOwnPropertyDescriptor(target,key); if(descriptor&&!descriptor.configurable) return descriptor; if(typeof key==='string'&&rpc({op:'keys',id:value.h}).includes(key)) return {value:rpc({op:'get',id:value.h,key}),writable:false,enumerable:true,configurable:true}; return descriptor;},
+      getOwnPropertyDescriptor(target,key){const descriptor=Reflect.getOwnPropertyDescriptor(target,key); if(descriptor&&!descriptor.configurable) return descriptor; if(typeof key==='string'){const own=rpc({op:'descriptor',id:value.h,key});if(own)return own[1]?{value:rpc({op:'get',id:value.h,key}),writable:false,enumerable:own[0],configurable:true}:{get:undefined,set:undefined,enumerable:own[0],configurable:true};} return descriptor;},
       defineProperty(){throw new TypeError('Host capabilities cannot be redefined');},
       setPrototypeOf(){throw new TypeError('Host capabilities cannot be redefined');}
     });
@@ -167,11 +207,11 @@ export async function createReactLearner(input: {
     if(result.error) { const detail=vm.dump(result.error); result.error.dispose(); const error=input.makeError(detail?.message||'Learner engine failed',detail?.name||'Error'); if(detail?.stack) error.stack=detail.stack; throw error; }
     const value=JSON.parse(vm.getString(result.value)); result.value.dispose(); return value;
   };
-  const capability=(value:any,get:string[]=[],set:string[]=[],call?: (...args:any[])=>any,kind?:string,bound=false): Wire => {
+  const capability=(value:any,get:string[]=[],set:string[]=[],call?: (...args:any[])=>any,kind?:string,bound=false,record?:string[]): Wire => {
     if((typeof value==='object'&&value!==null)||typeof value==='function') {
       const old=hostIds.get(value); if(old) return {h:old,kind:kind||(Array.isArray(value)?'array':types.isPromise(value)?'promise':capabilities.get(old)!.invoke?'function':'object')};
     }
-    const id=next++; capabilities.set(id,{value,get:new Set(get),set:new Set(set),invoke:call,bound});
+    const id=next++; capabilities.set(id,{value,get:new Set(get),set:new Set(set),invoke:call,bound,...(record?{record:new Set(record)}:{})});
     if((typeof value==='object'&&value!==null)||typeof value==='function') hostIds.set(value,id);
     return {h:id,kind:kind||(call?'function':'object')};
   };
@@ -185,19 +225,20 @@ export async function createReactLearner(input: {
     if(Array.isArray(value)) return capability(value,Object.keys(value).concat('length'),[],undefined,'array');
     if(types.isPromise(value)) return capability(value,[],[],undefined,'promise');
     if(typeof value==='function') return capability(value,[],[],(...args)=>Reflect.apply(value,undefined,args));
+    const record=typeof value==='object'?ordinaryRecord(value):null;
+    const read=(key:string)=>record?(record.read.includes(key)?recordProperty(value,key)?.value:undefined):value[key];
     if(value===input.page.window) return capability(value,WINDOW_READ,[],undefined,undefined,true);
     if(value===input.page.document) return capability(value,DOCUMENT_READ,['title'],undefined,undefined,true);
-    if(value?.$$typeof) return capability(value,value.Provider?['Provider','Consumer']:[]);
-    if(typeof value?.nodeType==='number') return capability(value,DOM_READ,DOM_WRITE,undefined,undefined,true);
-    if(value && typeof value.preventDefault==='function') return capability(value,EVENT_READ,[],undefined,undefined,true);
-    if(value && (typeof value.abort==='function'||typeof value.aborted==='boolean'||typeof value.json==='function'||typeof value.get==='function'||(input.page.URL&&value instanceof input.page.URL))) return capability(value,WEB_READ,[],undefined,undefined,true);
-    if(value && typeof value.getItem==='function') return capability(value,['getItem','setItem','removeItem','clear','key','length'],[],undefined,undefined,true);
+    if(read('$$typeof')) return capability(value,read('Provider')?['Provider','Consumer']:[]);
+    if(typeof read('nodeType')==='number') return capability(value,DOM_READ,DOM_WRITE,undefined,undefined,true);
+    if(value && typeof read('preventDefault')==='function') return capability(value,EVENT_READ,[],undefined,undefined,true);
+    if(value && (typeof read('abort')==='function'||typeof read('aborted')==='boolean'||typeof read('json')==='function'||typeof read('get')==='function'||(input.page.URL&&value instanceof input.page.URL))) return capability(value,WEB_READ,[],undefined,undefined,true);
+    if(value && typeof read('getItem')==='function') return capability(value,['getItem','setItem','removeItem','clear','key','length'],[],undefined,undefined,true);
     if(value instanceof Error||types.isNativeError(value)) return capability(value,['name','message','stack']);
-    if(typeof value?.resolvedOptions==='function') return capability(value,['format','formatToParts','formatRange','formatRangeToParts','resolvedOptions','compare','select'],[],undefined,undefined,true);
+    if(typeof read('resolvedOptions')==='function') return capability(value,['format','formatToParts','formatRange','formatRangeToParts','resolvedOptions','compare','select'],[],undefined,undefined,true);
     if(typeof value==='symbol') return capability(value);
-    const prototype=Object.getPrototypeOf(value);
-    if(prototype===null||prototype===Object.prototype||Object.getPrototypeOf(prototype)===null) return capability(value,Object.keys(value).filter(key=>!key.startsWith('_')&&!['constructor','prototype'].includes(key)),Object.keys(value).filter(key=>key==='current'));
-    if(typeof value.length==='number'&&value.length<10000) return {list:Array.from(value,(one:any)=>encode(one,depth+1))};
+    if(record) return capability(value,record.read,record.write,undefined,undefined,false,record.keys);
+    if(typeof read('length')==='number'&&read('length')<10000) return {list:Array.from(value,(one:any)=>encode(one,depth+1))};
     return capability(value,[]);
   };
   const decode=(value:Wire): any => {
@@ -270,11 +311,22 @@ export async function createReactLearner(input: {
   };
   const callHost=(message:any): Wire => {
     const one=capabilities.get(message.id); if(!one) throw new Error('Unknown capability');
-    if(message.op==='keys') return {list:(Array.isArray(one.value)?Object.keys(one.value).concat('length'):[...one.get]).map(key=>key)};
+    if(message.op==='keys') return {list:(one.record?Object.getOwnPropertyNames(one.value).filter(key=>one.record!.has(key)):Array.isArray(one.value)?Object.keys(one.value).concat('length'):[...one.get]).map(key=>key)};
+    if(message.op==='has') return Boolean(typeof message.key==='string'&&(one.record?one.record.has(message.key)&&recordProperty(one.value,message.key):Array.isArray(one.value)?Object.hasOwn(one.value,message.key):one.get.has(message.key)));
+    if(message.op==='descriptor') {
+      if(typeof message.key!=='string') return null;
+      if(one.record) {
+        const descriptor=one.record.has(message.key)?Object.getOwnPropertyDescriptor(one.value,message.key):undefined;
+        return descriptor?{list:[Boolean(descriptor.enumerable),'value' in descriptor]}:null;
+      }
+      return (Array.isArray(one.value)?Object.hasOwn(one.value,message.key):one.get.has(message.key))?{list:[true,true]}:null;
+    }
     if(message.op==='get') {
       if(typeof message.key!=='string'||(!one.get.has(message.key)&&!(Array.isArray(one.value)&&/^(?:0|[1-9][0-9]*|length)$/.test(message.key)))) return {u:1};
       if(one.value===input.page.window&&message.key==='console') return encode({log(){},warn(){},error(){},info(){},debug(){}});
-      const result=one.value[message.key];
+      const property=one.record?recordProperty(one.value,message.key):undefined;
+      const result=one.record?(property&&'value' in property?property.value:undefined):one.value[message.key];
+      if(one.record&&typeof result==='function'&&!Object.hasOwn(one.value,message.key)) return {u:1};
       if(typeof result==='function') {
         if(!one.bound) return encode(result);
         // Bound methods never hand out their receiver, prototype or symbols.
@@ -290,6 +342,7 @@ export async function createReactLearner(input: {
     }
     if(message.op==='set') {
       if(typeof message.key!=='string'||(!one.set.has(message.key)&&!(Array.isArray(one.value)&&/^(?:0|[1-9][0-9]*|length)$/.test(message.key)))) throw new TypeError('Capability property is read only');
+      if(one.record){const descriptor=Object.getOwnPropertyDescriptor(one.value,message.key);if(!descriptor||!('value'in descriptor)||!descriptor.writable)throw new TypeError('Capability property is read only');}
       one.value[message.key]=decode(message.value); return {u:1};
     }
     if(message.op==='call') {

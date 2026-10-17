@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { reactSpreadContracts } from './react-spread-contract';
+import { reactRecordContracts } from './react-record-contract';
+
+await reactSpreadContracts();
+await reactRecordContracts();
 
 const suite=`import React from 'react';
 import {render} from '@testing-library/react';

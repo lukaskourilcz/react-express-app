@@ -48,6 +48,12 @@ serving its unreviewed items as before, with no review claim, while the
 decisions already recorded for it hold. Adding a category to the scope without
 all of its rows withholds the rest of it, which is the intended failure.
 
+The 17 October 2026 coding wave completes all 725 currently issued tasks and
+enables the coding scope gate. A new identity or changed task, solution or grader
+therefore stays withheld until its exact version receives a passing review. The
+45 hidden system-design tasks remain unreviewed and unissued; completing the
+issued tracks does not approve them.
+
 Retirement is not deletion. A withheld item stays in its source file and in
 `getQuestionsForHistoryById`, so an old attempt still finds its explanation
 and a report still finds its summary; it is absent from every selector. A
