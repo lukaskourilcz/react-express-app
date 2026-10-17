@@ -10,9 +10,9 @@ export const REGISTRY_AUDITED_ON = "2026-10-17";
  * only these; a category not yet audited is served as before, with no claim. */
 export const AUDITED_CATEGORIES: ReadonlySet<string> = new Set(["ai","algorithms","css","databases","devops","dsa","general","git","html","javascript","nextjs","nodejs","react","security","system-design","typescript"]);
 
-/** Whether the coding catalogue has been audited; until it has, coding tasks
- * are issued as before, with no claim. */
-export const CODING_TASKS_AUDITED = false;
+/** Whether coding requires a current passing review, including new or edited tasks.
+ * The completed wave covers issued tracks; hidden system design stays unapproved. */
+export const CODING_TASKS_AUDITED = true;
 
 export const REVIEW_REGISTRY: readonly RegistryEntry[] = [
   {"id":"alg-bfs-shortest-path","kind":"coding-task","hash":"f6552f5733c617d4","cs":null,"relevance":10,"quality":4,"markers":{"presentDay":2,"practicalUtility":2,"transferable":2,"audienceFit":2,"riskOutcome":2},"dimensions":{"topicRelevance":5,"learningValue":5,"technicalCorrectness":5,"wording":4,"answerOptions":5,"hint":5,"explanation":5},"decision":"rewrite","reviewedAt":"2026-10-15","revision":1},

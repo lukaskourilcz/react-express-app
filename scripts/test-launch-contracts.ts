@@ -61,8 +61,8 @@ import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession as encodeLegacyCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
-import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
-import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
+import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, codingTaskEligibility, questionEligibility, isAuditedCategory } from '../lib/curation';
+import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
@@ -316,6 +316,22 @@ async function auditGateContracts() {
     'lib/curation-registry.ts is stale: run npm run build:curation-registry',
   );
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
+  assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
+  const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
+  assert.equal(reviewedCoding.length, 725, 'all currently issued coding identities are included in the completed wave');
+  for (const task of reviewedCoding) {
+    assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
+    assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
+  }
+  const codingFixture = reviewedCoding[0];
+  const codingSolution = solutionFor(codingFixture.id);
+  assert.equal(codingTaskEligibility({ ...codingFixture, id: 'unreviewed-coding-gate-fixture' }, codingSolution).reason, 'unreviewed');
+  assert.equal(codingTaskEligibility({ ...codingFixture, title: { ...codingFixture.title, en: 'Changed unreviewed task' } }, codingSolution).reason, 'superseded');
+  assert.equal(codingTaskEligibility(codingFixture, { ...codingSolution!, solution: 'changed unreviewed solution' }).reason, 'superseded');
+  for (const task of CODING_TASKS.filter(task => !isCodingSectionTrack(task.track))) {
+    assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'unreviewed', `${task.id}: hidden system design is not approved by this wave`);
+    assert.equal(codingTaskById(task.id), undefined);
+  }
   // Content this audit rewrote is served only after a second reader checked
   // the rewrite: revision 2 without an accepted verdict is a process failure,
   // not a wording preference.
