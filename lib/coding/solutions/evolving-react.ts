@@ -3060,7 +3060,8 @@ export default function App(){
  // without losing what was typed. Checking it is stage four.
  const [account,setAccount]=useState('personal'),[company,setCompany]=useState('');
  const next=`)
-      .replace('<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label>', `<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Account type<select value={account} onChange={e=>setAccount(e.target.value)}><option value="personal">Personal</option><option value="business">Business</option></select></label>{account==='business'&&<label>Company<input value={company} onChange={e=>setCompany(e.target.value)}/></label>}`),
+      .replace('<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label>', `<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Account type<select value={account} onChange={e=>setAccount(e.target.value)}><option value="personal">Personal</option><option value="business">Business</option></select></label>{account==='business'&&<label>Company<input value={company} onChange={e=>setCompany(e.target.value)}/></label>}`)
+      .replace('setSnapshot(null)', "setSnapshot(null);setAccount('personal');setCompany('')"),
     earlier => earlier
       .replace('const back=', `// The draft holds the four fields and a version, never the consent.
  const saveDraft=()=>localStorage.setItem('evolving-form-draft',JSON.stringify({version:1,email,name,account,company}));
@@ -3706,6 +3707,179 @@ test('independent accepted summaries and fresh attempts do not share field or er
 `,
 };
 for (const [id,cases] of Object.entries(EARLY_WIZARD_REVIEW_CASES)) {
+  const solution=REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
+}
+
+// Consent, branch and draft steps reviewed individually after checkpoint construction.
+const CONSENT_BRANCH_REVIEW_CASES: Record<string,string> = {
+"react-evolving-form-3-start": `
+const FLOW_STAGE=0;
+
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const flowSummary=(v,email='person@example.org',name='Person',account='personal',company='Company')=>{wizardEnterName(v,email);wizardFill(v,'Name',name);if(FLOW_STAGE>=2){wizardFill(v,'Account type',account);if(account==='business')wizardFill(v,'Company',company);}wizardSubmit(v);};
+const flowConsent=v=>wizardWithin(v.container).getByRole('checkbox',{name:'I agree',exact:true});
+const flowSubmitButton=v=>wizardWithin(v.container).getByRole('button',{name:'Submit',exact:true});
+const flowAgree=v=>fireEvent.click(flowConsent(v));
+const flowExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+const flowTerminal=(v,email,name,company)=>{flowExact(v,'Submitted');flowExact(v,email);flowExact(v,name);if(company)flowExact(v,company);expect(wizardWithin(v.container).queryByRole('button',{name:'Submit',exact:true})).toBeNull();expect(wizardWithin(v.container).queryAllByRole('textbox').length).toBe(0);expect(wizardWithin(v.container).queryAllByRole('checkbox').length).toBe(0);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Start over',exact:true}))).toBe(true);};
+const flowSave=v=>wizardClick(v,'Save draft');
+const flowDraft=()=>JSON.parse(localStorage.getItem('evolving-form-draft'));
+const flowDraftCheck=expected=>{const actual=flowDraft();expect(Object.keys(actual).sort()).toEqual(['account','company','email','name','version']);expect(actual).toEqual({version:1,...expected});};
+
+test('consent can be checked and unchecked repeatedly and gates Submit in both directions',()=>{const v=render(<App/>);flowSummary(v);expect(flowSubmitButton(v).disabled).toBe(true);wizardClick(v,'Submit');expect(wizardWithin(v.container).queryByText('Submitted',{exact:true})).toBeNull();for(let i=0;i<6;i++){flowAgree(v);expect(flowConsent(v).checked).toBe(i%2===0);expect(flowSubmitButton(v).disabled).toBe(i%2!==0);}});
+test('Back invalidates agreement even when returning to an unchanged or edited summary',()=>{const v=render(<App/>);flowSummary(v);for(let i=0;i<6;i++){flowAgree(v);expect(flowSubmitButton(v).disabled).toBe(false);wizardClick(v,'Back');wizardFill(v,'Name','Person '+i);wizardSubmit(v);expect(flowConsent(v).checked).toBe(false);expect(flowSubmitButton(v).disabled).toBe(true);}flowAgree(v);wizardClick(v,'Back');wizardClick(v,'Back');wizardFill(v,'Email','other@example.net');wizardSubmit(v);wizardSubmit(v);expect(flowConsent(v).checked).toBe(false);});
+test('agreement belongs to each mounted summary and survives ordinary parent renders',()=>{const a=render(<App/>),b=render(<App/>);flowSummary(a,'one@example.org','First');flowSummary(b,'two@example.net','Second');flowAgree(a);a.rerender(<App/>);expect(flowConsent(a).checked).toBe(true);expect(flowConsent(b).checked).toBe(false);});
+test('a fresh summary needs its own consent after another agreed summary unmounts',()=>{const old=render(<App/>);flowSummary(old);flowAgree(old);old.unmount();const v=render(<App/>);flowSummary(v);expect(flowConsent(v).checked).toBe(false);expect(flowSubmitButton(v).disabled).toBe(true);});
+`,
+"react-evolving-form-3": `
+const FLOW_STAGE=1;
+
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const flowSummary=(v,email='person@example.org',name='Person',account='personal',company='Company')=>{wizardEnterName(v,email);wizardFill(v,'Name',name);if(FLOW_STAGE>=2){wizardFill(v,'Account type',account);if(account==='business')wizardFill(v,'Company',company);}wizardSubmit(v);};
+const flowConsent=v=>wizardWithin(v.container).getByRole('checkbox',{name:'I agree',exact:true});
+const flowSubmitButton=v=>wizardWithin(v.container).getByRole('button',{name:'Submit',exact:true});
+const flowAgree=v=>fireEvent.click(flowConsent(v));
+const flowExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+const flowTerminal=(v,email,name,company)=>{flowExact(v,'Submitted');flowExact(v,email);flowExact(v,name);if(company)flowExact(v,company);expect(wizardWithin(v.container).queryByRole('button',{name:'Submit',exact:true})).toBeNull();expect(wizardWithin(v.container).queryAllByRole('textbox').length).toBe(0);expect(wizardWithin(v.container).queryAllByRole('checkbox').length).toBe(0);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Start over',exact:true}))).toBe(true);};
+const flowSave=v=>wizardClick(v,'Save draft');
+const flowDraft=()=>JSON.parse(localStorage.getItem('evolving-form-draft'));
+const flowDraftCheck=expected=>{const actual=flowDraft();expect(Object.keys(actual).sort()).toEqual(['account','company','email','name','version']);expect(actual).toEqual({version:1,...expected});};
+
+test('submission captures the actual literal trimmed fields and removes editable controls',()=>{const v=render(<App/>);flowSummary(v,'  other@example.org  ','  Person <name>&  ');expect(wizardWithin(v.container).queryByRole('button',{name:'Start over',exact:true})).toBeNull();wizardClick(v,'Submit');expect(wizardWithin(v.container).queryByText('Submitted',{exact:true})).toBeNull();flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'other@example.org','Person <name>&');v.rerender(<App/>);flowTerminal(v,'other@example.org','Person <name>&');expect(v.container.querySelector('name')).toBeNull();});
+test('Start over clears Name and consent as well as Email before a second independent submission',()=>{const v=render(<App/>);for(let i=0;i<3;i++){expect(wizardField(v,'Email').value).toBe('');wizardEnterName(v,'person'+i+'@example.org');expect(wizardField(v,'Name').value).toBe('');wizardFill(v,'Name','Person '+i);wizardSubmit(v);expect(flowConsent(v).checked).toBe(false);flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'person'+i+'@example.org','Person '+i);wizardClick(v,'Start over');expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();}});
+test('independent terminal snapshots retain their own values while another root restarts',()=>{const a=render(<App/>),b=render(<App/>);flowSummary(a,'one@example.org','First');flowSummary(b,'two@example.net','Second');flowAgree(a);flowAgree(b);wizardClick(a,'Submit');wizardClick(b,'Submit');a.rerender(<App/>);flowTerminal(a,'one@example.org','First');flowTerminal(b,'two@example.net','Second');wizardClick(a,'Start over');flowTerminal(b,'two@example.net','Second');expect(wizardField(a,'Email').value).toBe('');});
+test('a fresh attempt does not inherit submitted or validation state',()=>{const old=render(<App/>);wizardFill(old,'Email','bad');wizardSubmit(old);wizardError(old,'Invalid email');wizardFill(old,'Email','old@example.org');wizardSubmit(old);wizardFill(old,'Name','Old');wizardSubmit(old);flowAgree(old);wizardClick(old,'Submit');old.unmount();const v=render(<App/>);expect(wizardField(v,'Email').value).toBe('');expect(wizardWithin(v.container).queryByText('Submitted',{exact:true})).toBeNull();expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();});
+`,
+"react-evolving-form-4-start": `
+const FLOW_STAGE=2;
+
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const flowSummary=(v,email='person@example.org',name='Person',account='personal',company='Company')=>{wizardEnterName(v,email);wizardFill(v,'Name',name);if(FLOW_STAGE>=2){wizardFill(v,'Account type',account);if(account==='business')wizardFill(v,'Company',company);}wizardSubmit(v);};
+const flowConsent=v=>wizardWithin(v.container).getByRole('checkbox',{name:'I agree',exact:true});
+const flowSubmitButton=v=>wizardWithin(v.container).getByRole('button',{name:'Submit',exact:true});
+const flowAgree=v=>fireEvent.click(flowConsent(v));
+const flowExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+const flowTerminal=(v,email,name,company)=>{flowExact(v,'Submitted');flowExact(v,email);flowExact(v,name);if(company)flowExact(v,company);expect(wizardWithin(v.container).queryByRole('button',{name:'Submit',exact:true})).toBeNull();expect(wizardWithin(v.container).queryAllByRole('textbox').length).toBe(0);expect(wizardWithin(v.container).queryAllByRole('checkbox').length).toBe(0);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Start over',exact:true}))).toBe(true);};
+const flowSave=v=>wizardClick(v,'Save draft');
+const flowDraft=()=>JSON.parse(localStorage.getItem('evolving-form-draft'));
+const flowDraftCheck=expected=>{const actual=flowDraft();expect(Object.keys(actual).sort()).toEqual(['account','company','email','name','version']);expect(actual).toEqual({version:1,...expected});};
+
+test('Company is controlled through long literal edits and repeated personal business switches',()=>{const v=render(<App/>);wizardEnterName(v);expect(wizardField(v,'Account type').value).toBe('personal');expect(wizardWithin(v.container).queryByLabelText('Company')).toBeNull();wizardFill(v,'Account type','business');const field=wizardField(v,'Company'),value='  <company>&'+('x'.repeat(220))+'  ';wizardFill(v,'Company',value);expect(field.value).toBe(value);field.value='external';v.rerender(<App/>);expect(field.value).toBe(value);for(let i=0;i<5;i++){wizardFill(v,'Account type','personal');expect(wizardWithin(v.container).queryByLabelText('Company')).toBeNull();wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe(value);}});
+test('Start over resets the newly added account and company together with inherited fields',()=>{const v=render(<App/>);for(let i=0;i<3;i++){wizardEnterName(v,'person'+i+'@example.org');expect(wizardField(v,'Name').value).toBe('');expect(wizardField(v,'Account type').value).toBe('personal');wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('');wizardFill(v,'Name','Person '+i);wizardFill(v,'Company','Company '+i);wizardSubmit(v);flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'person'+i+'@example.org','Person '+i);wizardClick(v,'Start over');expect(wizardField(v,'Email').value).toBe('');}});
+test('independent Company drafts survive parent renders without sharing the branch or value',()=>{const a=render(<App/>),b=render(<App/>);wizardEnterName(a,'one@example.org');wizardEnterName(b,'two@example.net');wizardFill(a,'Account type','business');wizardFill(a,'Company','First Company');a.rerender(<App/>);expect(wizardField(a,'Company').value).toBe('First Company');expect(wizardField(b,'Account type').value).toBe('personal');expect(wizardWithin(b.container).queryByLabelText('Company')).toBeNull();wizardFill(b,'Account type','business');expect(wizardField(b,'Company').value).toBe('');});
+test('a fresh account branch starts personal after another business draft unmounts',()=>{const old=render(<App/>);wizardEnterName(old);wizardFill(old,'Account type','business');wizardFill(old,'Company','Old Company');old.unmount();const v=render(<App/>);wizardEnterName(v);expect(wizardField(v,'Account type').value).toBe('personal');wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('');});
+`,
+"react-evolving-form-4": `
+const FLOW_STAGE=3;
+
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const flowSummary=(v,email='person@example.org',name='Person',account='personal',company='Company')=>{wizardEnterName(v,email);wizardFill(v,'Name',name);if(FLOW_STAGE>=2){wizardFill(v,'Account type',account);if(account==='business')wizardFill(v,'Company',company);}wizardSubmit(v);};
+const flowConsent=v=>wizardWithin(v.container).getByRole('checkbox',{name:'I agree',exact:true});
+const flowSubmitButton=v=>wizardWithin(v.container).getByRole('button',{name:'Submit',exact:true});
+const flowAgree=v=>fireEvent.click(flowConsent(v));
+const flowExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+const flowTerminal=(v,email,name,company)=>{flowExact(v,'Submitted');flowExact(v,email);flowExact(v,name);if(company)flowExact(v,company);expect(wizardWithin(v.container).queryByRole('button',{name:'Submit',exact:true})).toBeNull();expect(wizardWithin(v.container).queryAllByRole('textbox').length).toBe(0);expect(wizardWithin(v.container).queryAllByRole('checkbox').length).toBe(0);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Start over',exact:true}))).toBe(true);};
+const flowSave=v=>wizardClick(v,'Save draft');
+const flowDraft=()=>JSON.parse(localStorage.getItem('evolving-form-draft'));
+const flowDraftCheck=expected=>{const actual=flowDraft();expect(Object.keys(actual).sort()).toEqual(['account','company','email','name','version']);expect(actual).toEqual({version:1,...expected});};
+
+test('business Company rejects zero or one non-space character and accepts exactly two BMP characters',()=>{for(const valid of ['AB','李雷']){const v=render(<App/>);wizardEnterName(v);wizardFill(v,'Name','Person');wizardFill(v,'Account type','business');for(const bad of ['',' ','A','\\tA\\u00a0']){wizardFill(v,'Company',bad);wizardSubmit(v);wizardError(v,'Invalid company');expect(Boolean(wizardField(v,'Company'))).toBe(true);}wizardFill(v,'Company','  '+valid+'  ');wizardSubmit(v);flowExact(v,valid);expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'person@example.org','Person',valid);v.unmount();}});
+test('personal hides and excludes retained invalid Company while switching back validates the business branch',()=>{const v=render(<App/>);wizardEnterName(v);wizardFill(v,'Name','Person');wizardFill(v,'Account type','business');wizardFill(v,'Company','Q');wizardFill(v,'Account type','personal');wizardSubmit(v);expect(wizardWithin(v.container).queryByText('Q',{exact:true})).toBeNull();flowAgree(v);wizardClick(v,'Back');wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('Q');wizardSubmit(v);wizardError(v,'Invalid company');wizardFill(v,'Company','Business');wizardSubmit(v);expect(flowConsent(v).checked).toBe(false);flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'person@example.org','Person','Business');});
+test('business submission and Start over reset every branch field before a personal receipt',()=>{const v=render(<App/>);flowSummary(v,'other@example.org','Person','business','  Company <name>&  ');flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'other@example.org','Person','Company <name>&');wizardClick(v,'Start over');wizardEnterName(v,'fresh@example.net');expect(wizardField(v,'Name').value).toBe('');expect(wizardField(v,'Account type').value).toBe('personal');wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('');wizardFill(v,'Company','Hidden Company');wizardFill(v,'Account type','personal');wizardFill(v,'Name','Fresh');wizardSubmit(v);expect(wizardWithin(v.container).queryByText('Hidden Company',{exact:true})).toBeNull();flowAgree(v);wizardClick(v,'Submit');flowTerminal(v,'fresh@example.net','Fresh');expect(wizardWithin(v.container).queryByText('Hidden Company',{exact:true})).toBeNull();});
+test('independent branch summaries and fresh mounts retain no foreign company or consent',()=>{const a=render(<App/>),b=render(<App/>);flowSummary(a,'one@example.org','First','business','First Company');flowSummary(b,'two@example.net','Second','personal');flowAgree(a);a.rerender(<App/>);flowExact(a,'First Company');expect(wizardWithin(b.container).queryByText('First Company',{exact:true})).toBeNull();expect(flowConsent(b).checked).toBe(false);a.unmount();b.unmount();expect(wizardField(render(<App/>),'Email').value).toBe('');});
+`,
+"react-evolving-form-5-start": `
+const FLOW_STAGE=4;
+
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const flowSummary=(v,email='person@example.org',name='Person',account='personal',company='Company')=>{wizardEnterName(v,email);wizardFill(v,'Name',name);if(FLOW_STAGE>=2){wizardFill(v,'Account type',account);if(account==='business')wizardFill(v,'Company',company);}wizardSubmit(v);};
+const flowConsent=v=>wizardWithin(v.container).getByRole('checkbox',{name:'I agree',exact:true});
+const flowSubmitButton=v=>wizardWithin(v.container).getByRole('button',{name:'Submit',exact:true});
+const flowAgree=v=>fireEvent.click(flowConsent(v));
+const flowExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+const flowTerminal=(v,email,name,company)=>{flowExact(v,'Submitted');flowExact(v,email);flowExact(v,name);if(company)flowExact(v,company);expect(wizardWithin(v.container).queryByRole('button',{name:'Submit',exact:true})).toBeNull();expect(wizardWithin(v.container).queryAllByRole('textbox').length).toBe(0);expect(wizardWithin(v.container).queryAllByRole('checkbox').length).toBe(0);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Start over',exact:true}))).toBe(true);};
+const flowSave=v=>wizardClick(v,'Save draft');
+const flowDraft=()=>JSON.parse(localStorage.getItem('evolving-form-draft'));
+const flowDraftCheck=expected=>{const actual=flowDraft();expect(Object.keys(actual).sort()).toEqual(['account','company','email','name','version']);expect(actual).toEqual({version:1,...expected});};
+
+test('Save draft writes exactly five schema fields without navigating or validating the current draft',()=>{localStorage.removeItem('evolving-form-draft');localStorage.setItem('unrelated-draft','keep');const v=render(<App/>);flowSave(v);flowDraftCheck({email:'',name:'',account:'personal',company:''});wizardFill(v,'Email','not email yet');flowSave(v);flowDraftCheck({email:'not email yet',name:'',account:'personal',company:''});expect(wizardField(v,'Email').value).toBe('not email yet');expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();expect(localStorage.getItem('unrelated-draft')).toBe('keep');localStorage.removeItem('unrelated-draft');});
+test('repeated saves include current Name account and retained raw Company rather than an initial closure',()=>{const v=render(<App/>);wizardEnterName(v,'person@example.org');wizardFill(v,'Name','  Name draft  ');wizardFill(v,'Account type','business');wizardFill(v,'Company','  Company <name>&  ');flowSave(v);flowDraftCheck({email:'person@example.org',name:'  Name draft  ',account:'business',company:'  Company <name>&  '});wizardFill(v,'Name','New Name');wizardFill(v,'Account type','personal');flowSave(v);flowDraftCheck({email:'person@example.org',name:'New Name',account:'personal',company:'  Company <name>&  '});});
+test('summary saves never persist consent and are unavailable after terminal submission',()=>{const v=render(<App/>);flowSummary(v,'person@example.org','Person','business','Company');flowSave(v);flowDraftCheck({email:'person@example.org',name:'Person',account:'business',company:'Company'});flowAgree(v);flowSave(v);flowDraftCheck({email:'person@example.org',name:'Person',account:'business',company:'Company'});expect(flowConsent(v).checked).toBe(true);wizardClick(v,'Submit');flowTerminal(v,'person@example.org','Person','Company');expect(wizardWithin(v.container).queryByRole('button',{name:'Save draft',exact:true})).toBeNull();});
+test('independent roots save their own fields with last-write semantics and a fresh mount stays empty',()=>{const a=render(<App/>),b=render(<App/>);wizardEnterName(a,'one@example.org');wizardEnterName(b,'two@example.net');wizardFill(a,'Name','First');wizardFill(b,'Name','Second');flowSave(a);flowDraftCheck({email:'one@example.org',name:'First',account:'personal',company:''});flowSave(b);flowDraftCheck({email:'two@example.net',name:'Second',account:'personal',company:''});a.rerender(<App/>);flowSave(a);flowDraftCheck({email:'one@example.org',name:'First',account:'personal',company:''});a.unmount();b.unmount();expect(wizardField(render(<App/>),'Email').value).toBe('');});
+`,
+};
+for (const [id,cases] of Object.entries(CONSENT_BRANCH_REVIEW_CASES)) {
+  const solution=REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
+}
+
+// These stages are reviewed individually; later path stages retain their own checks.
+const DRAFT_RESTORE_REVIEW_CASES: Record<string,string> = {
+"react-evolving-form-5": `
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const DRAFT='evolving-form-draft';
+const draftWithin=v=>wizardWithin(v.container);
+const draftRestore=v=>wizardClick(v,'Restore draft');
+const draftRecord={version:1,email:'restored@example.org',name:'Restored <name>&',account:'business',company:'Restored Company'};
+const draftSet=value=>localStorage.setItem(DRAFT,JSON.stringify(value));
+const draftSummary=v=>{wizardEnterName(v,'live@example.org');wizardFill(v,'Name','Live Person');wizardFill(v,'Account type','business');wizardFill(v,'Company','Live Company');wizardSubmit(v);};
+test('invalid draft shapes are rejected atomically and keep every current field',()=>{const invalid=[null,[],0,{}, {...draftRecord,version:2},{...draftRecord,version:'1'},{...draftRecord,account:'admin'}];for(const key of ['email','name','account','company']){const missing={...draftRecord};delete missing[key];invalid.push(missing,{...draftRecord,[key]:null},{...draftRecord,[key]:5});}const v=render(<App/>);for(const bad of invalid){draftSummary(v);draftSet(bad);draftRestore(v);wizardError(v,'Draft unavailable');expect(draftWithin(v).queryByLabelText('Email')).toBeNull();wizardClick(v,'Back');expect(wizardField(v,'Name').value).toBe('Live Person');expect(wizardField(v,'Account type').value).toBe('business');expect(wizardField(v,'Company').value).toBe('Live Company');wizardClick(v,'Back');expect(wizardField(v,'Email').value).toBe('live@example.org');}for(const malformed of ['{broken','undefined','']){localStorage.setItem(DRAFT,malformed);draftRestore(v);wizardError(v,'Draft unavailable');expect(wizardField(v,'Email').value).toBe('live@example.org');}localStorage.removeItem(DRAFT);draftRestore(v);wizardError(v,'Draft unavailable');expect(wizardField(v,'Email').value).toBe('live@example.org');});
+test('valid business restore clears old errors and consent and restores all fields before validation',()=>{const v=render(<App/>);draftSummary(v);fireEvent.click(draftWithin(v).getByRole('checkbox',{name:'I agree',exact:true}));draftSet(draftRecord);draftRestore(v);expect(wizardField(v,'Email').value).toBe(draftRecord.email);expect(draftWithin(v).queryByRole('alert')).toBeNull();wizardSubmit(v);expect(wizardField(v,'Name').value).toBe(draftRecord.name);expect(wizardField(v,'Account type').value).toBe('business');expect(wizardField(v,'Company').value).toBe(draftRecord.company);wizardSubmit(v);expect(draftWithin(v).getByRole('checkbox',{name:'I agree',exact:true}).checked).toBe(false);expect(draftWithin(v).getByRole('button',{name:'Submit',exact:true}).disabled).toBe(true);fireEvent.click(draftWithin(v).getByRole('checkbox',{name:'I agree',exact:true}));wizardClick(v,'Submit');expect(Boolean(draftWithin(v).getByText(draftRecord.company,{exact:true}))).toBe(true);for(const action of ['Save draft','Restore draft','Clear draft'])expect(draftWithin(v).queryByRole('button',{name:action,exact:true})).toBeNull();wizardClick(v,'Start over');expect(wizardField(v,'Email').value).toBe('');wizardEnterName(v);expect(wizardField(v,'Account type').value).toBe('personal');wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('');});
+test('partial string drafts are valid drafts and do not bypass later form validation',()=>{const v=render(<App/>);wizardFill(v,'Email','bad');wizardSubmit(v);wizardError(v,'Invalid email');draftSet({version:1,email:'not ready',name:'',account:'personal',company:'hidden draft'});draftRestore(v);expect(wizardField(v,'Email').value).toBe('not ready');expect(draftWithin(v).queryByRole('alert')).toBeNull();wizardSubmit(v);wizardError(v,'Invalid email');wizardFill(v,'Email','ready@example.org');wizardSubmit(v);expect(wizardField(v,'Name').value).toBe('');expect(wizardField(v,'Account type').value).toBe('personal');expect(draftWithin(v).queryByLabelText('Company')).toBeNull();wizardFill(v,'Account type','business');expect(wizardField(v,'Company').value).toBe('hidden draft');});
+test('Clear removes only its stored key and Save keeps the exact live schema without consent',()=>{const v=render(<App/>);localStorage.setItem('unrelated-draft','keep');draftSummary(v);fireEvent.click(draftWithin(v).getByRole('checkbox',{name:'I agree',exact:true}));wizardClick(v,'Save draft');expect(JSON.parse(localStorage.getItem(DRAFT))).toEqual({version:1,email:'live@example.org',name:'Live Person',account:'business',company:'Live Company'});wizardClick(v,'Clear draft');expect(localStorage.getItem(DRAFT)).toBeNull();expect(localStorage.getItem('unrelated-draft')).toBe('keep');expect(draftWithin(v).getByRole('checkbox',{name:'I agree',exact:true}).checked).toBe(true);wizardClick(v,'Back');expect(wizardField(v,'Name').value).toBe('Live Person');expect(wizardField(v,'Company').value).toBe('Live Company');wizardClick(v,'Back');expect(wizardField(v,'Email').value).toBe('live@example.org');wizardFill(v,'Email','not valid');wizardClick(v,'Save draft');expect(JSON.parse(localStorage.getItem(DRAFT)).email).toBe('not valid');expect(draftWithin(v).queryByRole('alert')).toBeNull();});
+test('fresh and independent wizards never restore a shared saved draft implicitly',()=>{draftSet(draftRecord);const a=render(<App/>),b=render(<App/>);expect(wizardField(a,'Email').value).toBe('');expect(wizardField(b,'Email').value).toBe('');draftRestore(a);expect(wizardField(a,'Email').value).toBe(draftRecord.email);expect(wizardField(b,'Email').value).toBe('');wizardFill(b,'Email','second@example.org');wizardClick(b,'Save draft');expect(wizardField(a,'Email').value).toBe(draftRecord.email);a.rerender(<App/>);expect(wizardField(a,'Email').value).toBe(draftRecord.email);a.unmount();const fresh=render(<App/>);expect(wizardField(fresh,'Email').value).toBe('');draftRestore(fresh);expect(wizardField(fresh,'Email').value).toBe('second@example.org');});
+`,
+};
+for (const [id,cases] of Object.entries(DRAFT_RESTORE_REVIEW_CASES)) {
   const solution=REACT_EVOLVING_SOLUTIONS[id];
   solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
 }

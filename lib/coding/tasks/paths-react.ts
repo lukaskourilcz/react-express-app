@@ -32,11 +32,11 @@ export default function App() {
       en('Refuse a name that is already on the list, compared trimmed and without case: "ada" matches "Ada". Show "Already on the list" in an element with `role="alert"`, leave the typed text in the input, and add nothing. The next successful add removes the message. A blank name still does nothing and shows no message.'),
     ],
     hints: [
-      en('Two pieces of state: `const [name, setName] = useState("")` for the input and `const [guests, setGuests] = useState([])` for the list. Add with `setGuests([...guests, newGuest])`, never `guests.push`.'),
-      en('A counter outside the list gives stable ids: `const nextId = useRef(1)`, then `id: nextId.current++`. Remove with `guests.filter((guest) => guest.id !== id)`.'),
-      en('Toggle with `guests.map((guest) => guest.id === id ? { ...guest, arrived: !guest.arrived } : guest)`. The arrived count is `guests.filter((guest) => guest.arrived).length`, worked out on every render.'),
-      en('Keep only the select\'s value in state. `const visible = guests.filter(...)` during render follows every change to the list and to the filter without extra code.'),
-      en('`guests.some((guest) => guest.name.toLowerCase() === trimmed.toLowerCase())` finds a clash. Keep the message in state: set it on a clash, clear it on a successful add.'),
+      en("Keep the input text and guest list in state. Add trims both ends, ignores whitespace-only input, appends the complete literal name and clears the field. Keep separate mounted lists independent. Duplicate-name validation is introduced in a later level."),
+      en("Assign each guest a stable id at insertion, independently of its position or name. Render the whole-list length in Guests and remove by that id; two guests may currently share a name. Deleting a middle row must preserve the remaining row identities."),
+      en("Add arrived: false to each new guest and toggle only its id using a new object in a mapped array. Derive both outputs from the full list on each render. Same-name guests remain separate, and removing an arrived guest changes both counts."),
+      en("Keep only Show in state and derive visible rows from the complete guest list while rendering. Guests and Arrived always count the full list. Adding through a filtered view still creates a waiting guest; removing a visible guest must retain hidden guests."),
+      en("Compare the trimmed name against the whole list using the same lowercase operation on both names, even when the original guest is hidden by Show. Reject only an equal name, preserve the typed text on rejection, and allow the name again after removal. Successful Add clears the alert; a whitespace-only attempt adds nothing and leaves no alert."),
     ],
     approaches: [
       [en('Keep the input\'s text and the guest list in state.'), en('On Add, trim the text; stop if it is empty.'), en('Append the guest, clear the input, and render the list with `map`.')],
@@ -91,11 +91,11 @@ export default function App({ loadUsers = sampleUsers }) {
       en('Keep the browser tab in step: once users are loaded, set `document.title` to the number of loaded users, "2 users" (or "1 user" for one), counting every user, not only the ones the search shows. When `App` unmounts, put back the title the page had before it mounted, from an effect\'s cleanup.'),
     ],
     hints: [
-      en('Keep `users` and `status` in state, with `status` starting as "loading", so "Loading" shows on the very first render. In `useEffect(() => { loadUsers().then(...) }, [])`, set the users and the status when the Promise resolves.'),
-      en('Add `.catch(() => setStatus("error"))`. A retry is easiest as a counter in state that the effect depends on: Retry sets the status back to "loading" and bumps the counter, and the effect runs again.'),
-      en('Keep only the search text in state. `users.filter((user) => user.name.toLowerCase().includes(query.trim().toLowerCase()))` during render gives the visible list.'),
-      en('`useEffect(() => { let ignore = false; loadUsers().then((list) => { if (!ignore) setUsers(list); }); return () => { ignore = true; }; }, [loadUsers, attempt]);` React runs the cleanup before the effect runs again and when the component unmounts.'),
-      en('Two effects: one with `[]` dependencies saves `document.title` when `App` mounts and puts it back in its cleanup; another, depending on the status and the user count (`[status, users.length]`), sets the new title once the status is "ready". The count alone would miss an empty answer: it stays 0, so the effect would never run again.'),
+      en("Keep a loading status from the first render. Invoke the provided loader in an effect, then render every returned user with its supplied id and literal name; an empty completed result shows No users. Keep independent mounts separate. Retry, search and replacing a loader are added in later levels."),
+      en("Handle rejection as an error status regardless of the rejection value. Each Retry starts one new attempt and shows Loading again; repeated failures can be retried. A later list or empty success removes the alert. The Retry button may sit inside or outside the alert."),
+      en("Keep the search text in state and derive the visible users from the full loaded answer using the complete trimmed lowercase substring. Searching, including during Loading, must not make a new request. A loaded empty source shows No users; a nonempty source with no match shows No matches."),
+      en("Depend on the loader and retry attempt. Each effect setup owns a cleanup flag: ignore both late success and failure after replacement, across any number of requests. Empty old answers must be ignored too. Reusing the same loader does not reload; filter the current answer with the existing search."),
+      en("Capture the actual pre-mount title in one effect and restore it on unmount. A separate effect updates the title only after a successful load, counting all returned users with the correct singular or plural, including zero. Searches keep that full count; a replacement loader may change it."),
     ],
     approaches: [
       [en('Keep the users and a status ("loading" or "ready") in state.'), en('In an effect with an empty dependency list, call `loadUsers()` and store the result.'), en('Render the status, "No users", or the list, depending on the state.')],

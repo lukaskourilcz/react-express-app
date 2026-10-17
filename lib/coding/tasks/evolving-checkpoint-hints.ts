@@ -82,9 +82,9 @@ const LADDERS: Record<string, CheckpointLadder> = {
 
   'react-evolving-form-1-start': { hints: ["Bind Email to component state with value and onChange. The actual form handles submit with preventDefault; validation comes next. Long ordinary values, parent renders, separate roots and fresh mounts should retain the right controlled state."] },
   'react-evolving-form-2-start': { hints: ["Keep email and name in App state above the conditional steps. Bind Name with value and onChange so long and literal drafts remain controlled through parent renders. Back restores the accepted email. Name validation and the summary are added in the next milestone."] },
-  'react-evolving-form-3-start': { hints: ['Keep consent as a boolean in state, disable Submit while it is false, and set it back to false in the Back handler.'] },
-  'react-evolving-form-4-start': { hints: ['Keep the account type and the company in state of their own. Render the Company input only for business, and leave the company alone when the type changes.'] },
-  'react-evolving-form-5-start': { hints: ['Save draft writes JSON.stringify({ version: 1, email, name, account, company }) under evolving-form-draft. Consent is not in that object.'] },
+  'react-evolving-form-3-start': { hints: ["Keep agreement as a boolean and bind the checkbox to it. Submit is disabled again when unchecked. Every Back clears consent, so returning to either an edited or unchanged summary needs a new agreement. The receipt itself is added in the next milestone."] },
+  'react-evolving-form-4-start': { hints: ["Keep account type and Company in App state. Personal hides Company; switching back restores its controlled value without truncation. The inherited Start over action must also reset these new fields to personal and an empty company. Company validation and branch-specific receipts come next."] },
+  'react-evolving-form-5-start': { hints: ["Save the current four field values with version 1 under evolving-form-draft, using exactly email, name, account and company alongside version. Save draft is a non-submit action before the receipt; repeated saves overwrite that key without validating, advancing or persisting consent or step. Restore is introduced next."] },
 };
 
 // The full-stack checkpoints are the same steps for every app, with its own
@@ -95,6 +95,8 @@ for (const { slug, endpoint, amount } of FULLSTACK_APPS) {
   LADDERS[`react-fullstack-${slug}-6-start`] = { hints: [`Bind the Name and ${amount} inputs to state and update them in onChange. In the form's onSubmit call event.preventDefault() and nothing else yet.`] };
   LADDERS[`react-fullstack-${slug}-8-start`] = { hints: [`Keep the search text and the checkbox in state and filter while rendering: match the trimmed, lower-cased search against each name, and when Available only is ticked keep the rows whose ${amount} is above zero.`] };
 }
+
+LADDERS['react-fullstack-planner-5-start'] = { hints: ["Keep the typed API exports. For this checkpoint, load successful GET /api/tasks responses through one stable transport per mounted app and render every supplied name and its actual hours. Parent renders retain the transport; independent or fresh mounts start from their own seed. Loading, failures and Retry are introduced next."] };
 
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
