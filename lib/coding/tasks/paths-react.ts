@@ -32,10 +32,10 @@ export default function App() {
       en('Refuse a name that is already on the list, compared trimmed and without case: "ada" matches "Ada". Show "Already on the list" in an element with `role="alert"`, leave the typed text in the input, and add nothing. The next successful add removes the message. A blank name still does nothing and shows no message.'),
     ],
     hints: [
-      en('Two pieces of state: `const [name, setName] = useState("")` for the input and `const [guests, setGuests] = useState([])` for the list. Add with `setGuests([...guests, newGuest])`, never `guests.push`.'),
-      en('A counter outside the list gives stable ids: `const nextId = useRef(1)`, then `id: nextId.current++`. Remove with `guests.filter((guest) => guest.id !== id)`.'),
-      en('Toggle with `guests.map((guest) => guest.id === id ? { ...guest, arrived: !guest.arrived } : guest)`. The arrived count is `guests.filter((guest) => guest.arrived).length`, worked out on every render.'),
-      en('Keep only the select\'s value in state. `const visible = guests.filter(...)` during render follows every change to the list and to the filter without extra code.'),
+      en("Keep the input text and guest list in state. Add trims both ends, ignores whitespace-only input, appends the complete literal name and clears the field. Keep separate mounted lists independent. Duplicate-name validation is introduced in a later level."),
+      en("Assign each guest a stable id at insertion, independently of its position or name. Render the whole-list length in Guests and remove by that id; two guests may currently share a name. Deleting a middle row must preserve the remaining row identities."),
+      en("Add arrived: false to each new guest and toggle only its id using a new object in a mapped array. Derive both outputs from the full list on each render. Same-name guests remain separate, and removing an arrived guest changes both counts."),
+      en("Keep only Show in state and derive visible rows from the complete guest list while rendering. Guests and Arrived always count the full list. Adding through a filtered view still creates a waiting guest; removing a visible guest must retain hidden guests."),
       en('`guests.some((guest) => guest.name.toLowerCase() === trimmed.toLowerCase())` finds a clash. Keep the message in state: set it on a clash, clear it on a successful add.'),
     ],
     approaches: [
