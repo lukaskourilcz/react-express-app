@@ -4,6 +4,7 @@ import { createCodingSession as encodeCodingSession } from '../lib/coding/sessio
 import assert from 'node:assert/strict';
 import { complexityContracts } from './coding-complexity-contract';
 import { codingBoardContracts } from './coding-board-contract';
+import { codingFetchContracts } from './coding-fetch-contract';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { constants as osConstants, tmpdir } from 'node:os';
@@ -3365,6 +3366,7 @@ async function identityContracts() {
 
 async function main() {
   codingBoardContracts();
+  await codingFetchContracts();
   complexityContracts();
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
