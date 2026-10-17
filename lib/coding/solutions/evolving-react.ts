@@ -3071,3 +3071,65 @@ export default function App(){
 for (const [id, steps] of Object.entries(checkpoints)) {
   steps.forEach((build, index) => { REACT_EVOLVING_SOLUTIONS[`${id}-${index+1}-start`] = { solution: build(index ? REACT_EVOLVING_SOLUTIONS[`${id}-${index}`].solution : '') }; });
 }
+
+// Finite edge checks for the first four independently reviewed board steps.
+const EARLY_BOARD_REVIEW_CASES: Record<string, string> = {
+  "react-evolving-board-1-start": `
+const auditInput=view=>view.container.querySelector('input:not([type="checkbox"])');
+const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
+const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
+const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
+
+test('controlled text retains literal input rather than trimming or truncating it',()=>{const view=render(<App/>);for(const text of ['  Task  ','<task>&'+('x'.repeat(450)),' 日本語  ','','A	B']){fireEvent.change(auditInput(view),{target:{value:text}});expect(auditInput(view).value).toBe(text);view.rerender(<App/>);expect(auditInput(view).value).toBe(text);}expect(Boolean(auditButton(view,'Add'))).toBe(true);});
+test('independent mounted input states survive ordinary parent renders',()=>{const a=render(<App/>),b=render(<App/>);fireEvent.change(auditInput(a),{target:{value:'First'}});fireEvent.change(auditInput(b),{target:{value:'Second'}});a.rerender(<App/>);expect(auditInput(a).value).toBe('First');expect(auditInput(b).value).toBe('Second');});
+test('a new mount starts empty after another input held a draft',()=>{const old=render(<App/>);fireEvent.change(auditInput(old),{target:{value:'Pending'}});old.unmount();const fresh=render(<App/>);expect(auditInput(fresh).value).toBe('');});
+test('state controls the displayed value on a new render after an external DOM write',()=>{const view=render(<App/>);fireEvent.change(auditInput(view),{target:{value:'Owned by state'}});auditInput(view).value='external';view.rerender(<App/>);expect(auditInput(view).value).toBe('Owned by state');});
+`,
+  "react-evolving-board-1": `
+const auditInput=view=>view.container.querySelector('input:not([type="checkbox"])');
+const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
+const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
+const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
+
+test('more than two duplicate identities toggle independently and retain literal trimmed text',()=>{const view=render(<App/>),names=['Same','Same','Third','<task>&'+('x'.repeat(440)),'Last','Same'];for(const name of names)auditAdd(view,'  '+name+'  ');expect(auditBoardRows(view)).toEqual(names.map(name=>({name,done:false})));for(const index of [4,2,0,5,4,1]){auditToggle(view,index);names[index]=names[index];}expect(auditBoardRows(view)).toEqual(names.map((name,i)=>({name,done:[0,1,2,5].includes(i)})));expect(view.container.querySelector('li task')).toBeNull();});
+test('a bounded operation model holds forty independent add and toggle operations',()=>{const view=render(<App/>),model=[];for(let i=0;i<40;i++){if(i%3!==2||!model.length){const name=i%4===0?'Repeated':'Task '+i;auditAdd(view,name);model.push({name,done:false});}else{const index=(i*7)%model.length;auditToggle(view,index);model[index].done=!model[index].done;}expect(auditBoardRows(view)).toEqual(model);}auditAdd(view,'   ');expect(auditBoardRows(view)).toEqual(model);expect(auditInput(view).value).toBe('   ');});
+test('adding and checkbox state survive rerenders independently across roots',()=>{const a=render(<App/>),b=render(<App/>);auditAdd(a,'A');auditAdd(b,'B');auditToggle(a,0);a.rerender(<App/>);expect(auditBoardRows(a)).toEqual([{name:'A',done:true}]);expect(auditBoardRows(b)).toEqual([{name:'B',done:false}]);});
+test('a fresh task list is empty and repeated toggles restore only the clicked row',()=>{const old=render(<App/>);auditAdd(old,'Old');old.unmount();const view=render(<App/>);expect(auditBoardRows(view)).toEqual([]);auditAdd(view,'One');auditAdd(view,'Two');for(let i=0;i<6;i++)auditToggle(view,1);expect(auditBoardRows(view)).toEqual([{name:'One',done:false},{name:'Two',done:false}]);});
+`,
+  "react-evolving-board-2-start": `
+const auditInput=view=>view.container.querySelector('input:not([type="checkbox"])');
+const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
+const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
+const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
+
+test('All Active and Completed each show their own derived rows',()=>{const view=render(<App/>),names=['One','One','Three','Four','Five','Six'];for(const name of names)auditAdd(view,name);auditToggle(view,0);auditToggle(view,3);for(const filter of ['Completed','Active','All','Completed','All']){auditClick(view,filter);const expected=names.map((name,i)=>({name,done:i===0||i===3})).filter(row=>filter==='All'||(filter==='Active'?!row.done:row.done));expect(auditBoardRows(view)).toEqual(expected);}expect(auditInput(view).value).toBe('');});
+test('toggling from a filtered list updates the full identity rather than its visible index',()=>{const view=render(<App/>);for(const name of ['A','B','C','D','E'])auditAdd(view,name);auditToggle(view,0);auditToggle(view,3);auditClick(view,'Active');auditToggle(view,1);expect(auditBoardRows(view)).toEqual([{name:'B',done:false},{name:'E',done:false}]);auditClick(view,'Completed');expect(auditBoardRows(view)).toEqual([{name:'A',done:true},{name:'C',done:true},{name:'D',done:true}]);auditToggle(view,1);auditClick(view,'All');expect(auditBoardRows(view)).toEqual([{name:'A',done:true},{name:'B',done:false},{name:'C',done:false},{name:'D',done:true},{name:'E',done:false}]);});
+test('adding under Completed preserves the filter without discarding hidden active tasks',()=>{const view=render(<App/>);auditAdd(view,'First');auditClick(view,'Completed');expect(auditBoardRows(view)).toEqual([]);auditAdd(view,'<literal>&');expect(auditBoardRows(view)).toEqual([]);auditClick(view,'All');expect(auditBoardRows(view)).toEqual([{name:'First',done:false},{name:'<literal>&',done:false}]);});
+test('filters and tasks belong to their own root and a fresh mount starts with All',()=>{const a=render(<App/>),b=render(<App/>);auditAdd(a,'A');auditAdd(b,'B');auditClick(a,'Completed');a.rerender(<App/>);expect(auditBoardRows(a)).toEqual([]);expect(auditBoardRows(b)).toEqual([{name:'B',done:false}]);a.unmount();b.unmount();const fresh=render(<App/>);auditAdd(fresh,'New');expect(auditBoardRows(fresh)).toEqual([{name:'New',done:false}]);});
+`,
+  "react-evolving-board-2": `
+const auditInput=view=>view.container.querySelector('input:not([type="checkbox"])');
+const auditButton=(view,name)=>[...view.container.querySelectorAll('button')].find(button=>button.textContent===name);
+const auditClick=(view,name)=>{const button=auditButton(view,name);expect(Boolean(button)).toBe(true);fireEvent.click(button);};
+const auditAdd=(view,text)=>{fireEvent.change(auditInput(view),{target:{value:text}});auditClick(view,'Add');};
+const auditBoardRows=view=>[...view.container.querySelectorAll('li')].map(li=>({name:li.querySelector('label').textContent,done:li.querySelector('input[type="checkbox"]').checked}));
+const auditToggle=(view,index)=>fireEvent.click(view.container.querySelectorAll('li input[type="checkbox"]')[index]);
+
+const auditRemaining=view=>view.container.querySelector('output[aria-label="Remaining"]').textContent;
+const auditDelete=(view,index)=>fireEvent.click(view.container.querySelectorAll('li')[index].querySelector('button'));
+test('Completed filters mixed states while Remaining counts all unfinished identities',()=>{const view=render(<App/>),names=['One','Two','Three','Four','Five','Six'];for(const name of names)auditAdd(view,name);auditToggle(view,1);auditToggle(view,4);for(const filter of ['Completed','Active','All','Completed']){auditClick(view,filter);const expected=names.map((name,i)=>({name,done:i===1||i===4})).filter(row=>filter==='All'||(filter==='Active'?!row.done:row.done));expect(auditBoardRows(view)).toEqual(expected);expect(auditRemaining(view)).toBe('4');}});
+test('a duplicate is deleted by its identity from a filtered view only',()=>{const view=render(<App/>);for(const name of ['Same','Other','Same','Tail','Same'])auditAdd(view,name);auditToggle(view,2);auditClick(view,'Completed');expect(view.container.querySelector('li button').getAttribute('aria-label')).toBe('Delete Same');auditDelete(view,0);expect(auditBoardRows(view)).toEqual([]);expect(auditRemaining(view)).toBe('4');auditClick(view,'All');expect(auditBoardRows(view)).toEqual([{name:'Same',done:false},{name:'Other',done:false},{name:'Tail',done:false},{name:'Same',done:false}]);auditDelete(view,3);expect(auditRemaining(view)).toBe('3');});
+test('a deterministic model combines add toggle filter and delete without losing hidden rows',()=>{const view=render(<App/>),model=[];let filter='All',serial=0;for(let i=0;i<60;i++){const visible=model.filter(row=>filter==='All'||(filter==='Active'?!row.done:row.done));if(i%5===0){filter=['All','Active','Completed'][Math.floor(i/5)%3];auditClick(view,filter);}else if(i%5===1||!visible.length){const name=serial%3?'Task '+serial:'Repeated';auditAdd(view,name);model.push({id:serial++,name,done:false});}else if(i%5===2){const index=i%visible.length;auditToggle(view,index);const target=model.find(row=>row.id===visible[index].id);target.done=!target.done;}else if(i%5===3){const index=i%visible.length;auditDelete(view,index);model.splice(model.findIndex(row=>row.id===visible[index].id),1);}else auditClick(view,filter);const expected=model.filter(row=>filter==='All'||(filter==='Active'?!row.done:row.done)).map(({name,done})=>({name,done}));expect(auditBoardRows(view)).toEqual(expected);expect(auditRemaining(view)).toBe(String(model.filter(row=>!row.done).length));}});
+test('parent renders and independent or fresh roots preserve the correct complete-list count',()=>{const a=render(<App/>),b=render(<App/>);auditAdd(a,'A');auditAdd(a,'A');auditAdd(b,'B');auditToggle(a,1);auditClick(a,'Completed');a.rerender(<App/>);expect(auditRemaining(a)).toBe('1');expect(auditRemaining(b)).toBe('1');auditDelete(a,0);expect(auditRemaining(a)).toBe('1');expect(auditBoardRows(b)).toEqual([{name:'B',done:false}]);a.unmount();b.unmount();const fresh=render(<App/>);expect(auditRemaining(fresh)).toBe('0');expect(auditBoardRows(fresh)).toEqual([]);});
+`,
+};
+for (const [id, cases] of Object.entries(EARLY_BOARD_REVIEW_CASES)) {
+  const solution = REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite = [solution.hiddenSuite, cases].filter(Boolean).join("\n\n");
+}

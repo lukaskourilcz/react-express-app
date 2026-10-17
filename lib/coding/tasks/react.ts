@@ -2279,7 +2279,7 @@ test('the reusable hook loads again for a changed url',()=>withAuditRequests(asy
     tier: 4,
     focus: ["fetch", "map", "filter"],
     title: "CRUD mini app",
-    prompt: "Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed.",
+    prompt: `Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed. Use https://jsonplaceholder.typicode.com/posts. Initial GET returns zero to 100 records with unique integer ids and literal single-line titles up to 500 characters, including duplicates. Show Loading… until it settles; HTTP, JSON or network failure shows Could not load posts in an alert and no post rows. Label the controlled input Title. Trim submitted text and ignore an empty result. A create sends one JSON POST and appends only after a successful response; do not append failed data. While it is pending, disable Create and label it Creating…; another submit sends nothing. Clear the submitted field immediately, preserving any new text typed during the request. A failure shows Could not create post in an alert, preserves all posts/local edits and restores the failed title only if the field is still empty. The next attempt clears that alert. Every created row needs its own stable client id, with the response id kept separately: the training API may repeat server ids. Preserve the submitted title and update/delete only the clicked identity, even when names repeat. Parent renders retain state without refetching; separate and fresh Apps are independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2296,11 +2296,14 @@ export default App;
 const [items, setItems] = useState([]);
 
 useEffect(() => {
-  // GET items and save them with setItems
+  // GET items, check response.ok and catch HTTP/JSON/network failures.
+  // Store success, then leave the loading state.
 }, []);
 
 const createItem = async newItem => {
-  // POST newItem, then append the response
+  // Ignore blank titles and a pending create; clear only the submitted draft.
+  // POST, check response.ok, then append with a fresh client id.
+  // Keep the response id separately; restore a failed title only into an empty field.
 };
 
 const editItem = (id, changes) => {
@@ -2312,19 +2315,23 @@ const editItem = (id, changes) => {
 const deleteItem = id => {
   setItems(current => current.filter(item => item.id !== id));
 };`,
-    hints: ["Build one operation at a time: GET, render, POST, edit with map, delete with filter."],
+    hints: [
+      `Use functional list updates so a completed POST keeps local edits made while it was pending. Assign a unique client id to each created row; a repeated response id must not make Edit/Delete affect two rows.`,
+      `Check HTTP before JSON and catch both request and JSON errors. Track loading, load error, create error and a pending-create flag. Clear a submitted draft at request start so later typing is not erased when the request finishes.`,
+    ],
     approach: [
-      "Build it one operation at a time, starting with the GET into a posts array plus a loading flag.",
-      "Add a controlled title input whose submit handler POSTs the new post and appends the created record immutably.",
-      "Implement editing with map, returning a spread copy carrying the new title only for the matching id.",
-      "Implement deletion with filter on the id, so both local operations replace the array rather than mutating it.",
+      `Load once into list state with loading and a fatal load-error branch. Treat empty success as a ready empty list.`,
+      `Capture and trim a submitted title, reject blank/pending submissions, clear that draft and POST JSON. Append only a successful response, retaining a distinct client key and the submitted title.`,
+      `On create failure preserve the current list, report the alert and restore the captured title only if the field is still empty. Re-enable Create and clear the alert on the next attempt.`,
+      `Edit with map and delete with filter on the stable clicked id, using current state. These local operations send no requests.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor as waitForSlow, act, within } from '@testing-library/react';
 import App from './App';
+const waitFor = (check, options) => waitForSlow(check, { timeout: 300, ...options });
 
 test('lists the fetched posts', async () => {
   const { container } = render(<App />);
@@ -2348,6 +2355,15 @@ test('creates, edits, and deletes', async () => {
   fireEvent.click(remove);
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(7));
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),method:String(options.method||'GET').toUpperCase(),options,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>call.reply(data,status));};
+const auditTitles=view=>[...view.container.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());return copy.textContent.trim();});
+const auditCreate=(view,title)=>{fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:title}});fireEvent.submit(view.container.querySelector('form'));};
+const auditAction=(view,index,name)=>fireEvent.click(within(view.container.querySelectorAll('li')[index]).getByRole('button',{name,exact:true}));
+
+test('every fetched row and each independently created row supports its own local edit/delete',()=>auditServer(async calls=>{const view=render(<App/>),data=Array.from({length:12},(_,id)=>({id:id*13+1,title:id%3?'Repeated':'<post>&'+id}));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await auditReply(calls[0],data);let expected=data.map(p=>p.title);expect(auditTitles(view)).toEqual(expected);for(const title of ['Created A','Created B','Created C']){auditCreate(view,title);const call=calls[calls.length-1];expect(call.method).toBe('POST');expect(JSON.parse(call.options.body).title).toBe(title);await auditReply(call,{id:101,title:'Server title'});expected.push(title);expect(auditTitles(view)).toEqual(expected);}const count=calls.length;auditAction(view,13,'Edit');expected[13]='Edited';expect(auditTitles(view)).toEqual(expected);auditAction(view,12,'Delete');expected.splice(12,1);expect(auditTitles(view)).toEqual(expected);expect(calls).toHaveLength(count);expect(view.container.querySelector('li post')).toBeNull();}));
 `,
     api: {
       method: "GET + POST",

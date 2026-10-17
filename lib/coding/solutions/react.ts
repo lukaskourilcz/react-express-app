@@ -2853,57 +2853,106 @@ test('separate consumers and remounts do not share request state or stale comple
   "react-crud-mini-app": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
 const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(API_URL).then(response => response.json()).then(setPosts).finally(() => setLoading(false));
+    let active = true;
+    fetch(API_URL)
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) setLoadError('Could not load posts'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
-    const response = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})});
-    const created = await response.json();
-    setPosts(items => [...items, {...created, title}]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = (id, nextTitle) => setPosts(items => items.map(item => item.id === id ? {...item, title: nextTitle} : item));
   const deletePost = id => setPosts(items => items.filter(item => item.id !== id));
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (loading) return <p>Loading…</p>;
-  return <><form onSubmit={createPost}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
+  return <>{problem && <p role="alert">{problem}</p>}<form onSubmit={createPost}><input aria-label="Title" value={title} onChange={event => setTitle(event.target.value)} /><button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button type="button" onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button type="button" onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
 };`,
     junior: `const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
-      const data = await response.json();
-      setPosts(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setPosts(data);
+      } catch {
+        if (active) setLoadError('Could not load posts');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadPosts();
+    return () => { active = false; };
   }, []);
 
   const handleTitleChange = (event) => {
     setTitle(event.target.value);
   };
 
-  const handleCreate = async (event) => {
+  const handleCreate = async event => {
     event.preventDefault();
-    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title }),
-    });
-    const created = await response.json();
-    const newPost = { id: created.id, title: title };
-    setPosts((currentPosts) => [...currentPosts, newPost]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleEdit = (id) => {
@@ -2928,6 +2977,7 @@ const App = () => {
     setPosts(remainingPosts);
   };
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (isLoading) {
     return (
       <main>
@@ -2938,14 +2988,15 @@ const App = () => {
 
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={handleCreate}>
-        <input type="text" value={title} onChange={handleTitleChange} />
-        <button type="submit">Create</button>
+        <input type="text" aria-label="Title" value={title} onChange={handleTitleChange} />
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>
         {posts.map(post => (
           <li key={post.id}>
-            {post.title} <button onClick={() => handleEdit(post.id)}>Edit</button> <button onClick={() => handleDelete(post.id)}>Delete</button>
+            {post.title} <button type="button" onClick={() => handleEdit(post.id)}>Edit</button> <button type="button" onClick={() => handleDelete(post.id)}>Delete</button>
           </li>
         ))}
       </ul>
@@ -2969,33 +3020,49 @@ const PostItem = ({ post, onEdit, onDelete }) => (
 );
 
 const App = () => {
-  const [posts, setPosts] = useState(null); // null until the first load lands
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [posts, setPosts] = useState(null);
   const [title, setTitle] = useState('');
 
   useEffect(() => {
     let active = true;
-    fetchJson(POSTS_URL).then(data => { if (active) setPosts(data); });
+    fetchJson(POSTS_URL)
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) { setLoadError('Could not load posts'); setPosts([]); } });
     return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
     const text = title.trim();
-    if (!text) return;
-    const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
-    // The training API hands back a fixed id, so mint a local one that cannot collide
-    setPosts(current => [...current, { ...created, id: crypto.randomUUID(), title: text }]);
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = useCallback((id, nextTitle) => setPosts(current => current.map(post => (post.id === id ? { ...post, title: nextTitle } : post))), []);
   const deletePost = useCallback(id => setPosts(current => current.filter(post => post.id !== id)), []);
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (!posts) return <main><p role="status">Loading…</p></main>;
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={createPost}>
         <input value={title} onChange={event => setTitle(event.target.value)} aria-label="Title" />
-        <button type="submit">Create</button>
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>{posts.map(post => <PostItem key={post.id} post={post} onEdit={editPost} onDelete={deletePost} />)}</ul>
     </main>
@@ -3026,7 +3093,13 @@ test('Delete removes only the post whose button was clicked', async () => {
   expect(container.textContent).toContain('Post one');
   expect(container.textContent).toContain('Post two');
   expect(container.textContent).toContain('Post four');
-});`,
+});
+
+
+test('load HTTP, JSON and network failures show a nonempty alert without any posts',()=>auditServer(async calls=>{for(const mode of ['http','json','network']){const view=render(<App/>),call=calls[calls.length-1];await act(async()=>{if(mode==='http')call.reply([{id:1,title:'Failed data'}],503);else if(mode==='json')call.badJson();else call.fail();});expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');expect(auditTitles(view)).toEqual([]);view.unmount();}}));
+test('a pending create sends once, preserves newly typed text and recovers without removing local edits',()=>auditServer(async calls=>{const view=render(<App/>),data=[{id:1,title:'Old A'},{id:2,title:'Old B'}];await auditReply(calls[0],data);auditCreate(view,'   ');expect(calls).toHaveLength(1);const long='<new>&'+'x'.repeat(450);auditCreate(view,'  '+long+'  ');expect(auditTitles(view)).toEqual(['Old A','Old B']);expect(within(view.container).getByRole('button',{name:'Creating…'}).disabled).toBe(true);fireEvent.submit(view.container.querySelector('form'));expect(calls).toHaveLength(2);expect(JSON.parse(calls[1].options.body).title).toBe(long);expect(calls[1].options.headers['Content-Type']).toBe('application/json');fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:'Next draft'}});auditAction(view,0,'Edit');await auditReply(calls[1],{id:101},500);expect(auditTitles(view)).toEqual(['Edited','Old B']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');expect(within(view.container).getByRole('alert').textContent).toBe('Could not create post');auditCreate(view,'Next draft');expect(within(view.container).queryByRole('alert')).toBeNull();await act(async()=>calls[2].badJson());expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');auditCreate(view,'Next draft');await auditReply(calls[3],{id:101,title:'server'});expect(auditTitles(view)).toEqual(['Edited','Old B','Next draft']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('');}));
+test('parent renders, empty data and separate or fresh roots have independent CRUD state',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);await auditReply(calls[0],[{id:1,title:'A'},{id:2,title:'Same'}]);await auditReply(calls[1],[]);auditAction(a,0,'Edit');a.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual([]);auditCreate(b,'B');await auditReply(calls[2],{id:101});expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual(['B']);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[3],[]);expect(auditTitles(fresh)).toEqual([]);}));
+`,
   },
   "react-stopwatch": {
     solution: `const App = () => {
