@@ -104,6 +104,10 @@ LADDERS["react-fullstack-planner-8-start"] = { hints: ["Derive visible rows usin
 LADDERS["react-fullstack-stockroom-5-start"] = { hints: ["Keep the typed API exports and one stable transport per mounted app. Load the successful collection and render every name with its actual stock. Parent renders retain that API; separate or fresh mounts start independently. Loading, failed requests and Retry arrive in the next milestone."] };
 LADDERS["react-fullstack-stockroom-6-start"] = { hints: ["Bind Name and stock to state and prevent form navigation. Keep their complete values across rerenders, including empty input. This checkpoint does not send a POST; retain the earlier collection, loading/retry and typed API behavior."] };
 
+LADDERS["react-fullstack-stockroom-8-start"] = { hints: ["Derive visible rows from the complete collection. Search is trimmed and case-insensitive and matches substrings; Available only means stock > 0, including exactly one. Combine filters without changing API records. Retain earlier creation and versioned updates; pagination and Delete come next."] };
+LADDERS["react-fullstack-workshops-5-start"] = { hints: ["Keep the typed API exports and one stable transport per mounted app. Load the successful collection and render every name with its actual seats. Parent renders retain that API; separate or fresh mounts start independently. Loading, failed requests and Retry arrive in the next milestone."] };
+LADDERS["react-fullstack-workshops-6-start"] = { hints: ["Bind Name and seats to state and prevent form navigation. Keep their complete values across rerenders, including empty input. This checkpoint does not send a POST; retain the earlier collection, loading/retry and typed API behavior."] };
+
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
  * entry, which the content contract reports. */
