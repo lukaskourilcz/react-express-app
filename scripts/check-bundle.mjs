@@ -16,7 +16,7 @@
 //
 //   npm run check:bundle
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 
 const budget = JSON.parse(readFileSync('docs/quality/bundle-budget.json', 'utf8'));
@@ -52,6 +52,12 @@ if (files.length === 0) throw new Error(`No initial requests found in ${outPath}
 
 const sizes = files.map((file) => ({ file, gzipBytes: gzipSync(readFileSync(`${outPath}/${file}`)).byteLength }));
 const initialGzipBytes = sizes.reduce((sum, item) => sum + item.gzipBytes, 0);
+// The SDK starts during bootstrap even though it is a dynamic chunk. Budget
+// it separately so an open namespace cannot silently retain Replay/profiling.
+const monitoringFiles = readdirSync(`${outPath}/assets`).filter(name => /^sentry-sdk-.*\.js$/.test(name));
+if (monitoringFiles.length !== 1) throw new Error('Expected one closed Sentry SDK chunk in the shaped build');
+const monitoringGzipBytes = gzipSync(readFileSync(`${outPath}/assets/${monitoringFiles[0]}`)).byteLength;
+
 const placeholders = shaped.filter(([key]) => !['VITE_PRODUCT', 'VITE_LOCK_SUBJECT'].includes(key)).map(([key]) => key);
 const configuration = {
   build: `vite build --outDir ${outDir}`,
@@ -60,7 +66,7 @@ const configuration = {
 };
 
 mkdirSync('artifacts', { recursive: true });
-writeFileSync('artifacts/bundle.json', JSON.stringify({ configuration, initialGzipBytes, budget: budget.initialGzipBytes, sizes }, null, 2) + '\n');
+writeFileSync('artifacts/bundle.json', JSON.stringify({ configuration, initialGzipBytes, budget: budget.initialGzipBytes, monitoringGzipBytes, monitoringBudget: budget.monitoringGzipBytes, sizes }, null, 2) + '\n');
 rmSync(outPath, { recursive: true, force: true });
 
 console.log(`Measured a production-shaped build: ${configuration.product}, with placeholder ${placeholders.join(', ')}.`);
@@ -70,5 +76,11 @@ for (const { file, gzipBytes } of [...sizes].sort((a, b) => b.gzipBytes - a.gzip
 console.log(`Initial requests of index.html: ${files.length} files, ${initialGzipBytes} gzip bytes; budget ${budget.initialGzipBytes}. Lazy routes, the coding sandbox and fonts are measured separately by Lighthouse.`);
 if (initialGzipBytes > budget.initialGzipBytes) {
   console.error(`Over budget by ${initialGzipBytes - budget.initialGzipBytes} gzip bytes.`);
+  process.exitCode = 1;
+}
+
+console.log(`Monitoring SDK: ${monitoringGzipBytes} gzip bytes; budget ${budget.monitoringGzipBytes}.`);
+if (monitoringGzipBytes > budget.monitoringGzipBytes) {
+  console.error(`Monitoring SDK over budget by ${monitoringGzipBytes - budget.monitoringGzipBytes} bytes.`);
   process.exitCode = 1;
 }

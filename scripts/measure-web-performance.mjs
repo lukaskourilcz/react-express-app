@@ -6,10 +6,11 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, 
 const origin = new URL(args.url || 'https://devshark.app').origin;
 const routes = (args.routes || '/,/quiz,/learn,/coding,/leaderboard,/premium,/topics/javascript-closures,/big-o').split(',');
 const samples = Number(args.samples || 2), output = args.output || '/tmp/devshark-performance-2026-10-17/production-before.json';
-const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN });
+let browser;
 const results = [];
 try {
- for (const profile of ['mobile','desktop']) for (const path of routes) for (let sample=0;sample<samples;sample++) {
+ for (const profile of (args.profiles || 'mobile,desktop').split(',')) for (const path of routes) for (let sample=0;sample<samples;sample++) {
+  browser = await chromium.launch({ executablePath: process.env.CHROME_BIN, args: ['--disk-cache-size=8388608', '--media-cache-size=2097152', '--disable-gpu-shader-disk-cache'] });
   const context = await browser.newContext({ viewport: profile==='mobile'?{width:390,height:844}:{width:1440,height:1000}, deviceScaleFactor:1, isMobile:profile==='mobile', hasTouch:profile==='mobile', colorScheme:'light', reducedMotion:'reduce', serviceWorkers:'block' });
   const page = await context.newPage(), cdp=await context.newCDPSession(page);let blockedWrites=0;
   await cdp.send('Network.enable');
@@ -33,18 +34,18 @@ try {
   });
   for(const cache of ['cold-browser','repeat-browser']) {
    let diskHits=0;const listener=e=>{if(e.response.fromDiskCache||e.response.fromPrefetchCache)diskHits++;};cdp.on('Network.responseReceived',listener);
-   const started=Date.now();await page.goto(origin+path,{waitUntil:'load',timeout:60000});await page.waitForTimeout(profile==='mobile'?5000:2500);
+   const started=Date.now();await page.goto(origin+path,{waitUntil:'load',timeout:60000});await page.waitForTimeout(profile==='mobile'?3000:1500);
    const measurement=await page.evaluate(()=>{
     const n=performance.getEntriesByType('navigation')[0];const resources=performance.getEntriesByType('resource').map(r=>({path:new URL(r.name).pathname,kind:r.initiatorType,start:r.startTime,duration:r.duration,ttfb:r.responseStart-r.requestStart,download:r.responseEnd-r.responseStart,transfer:r.transferSize,encoded:r.encodedBodySize,decoded:r.decodedBodySize,serverTiming:r.serverTiming.map(t=>({name:t.name,duration:t.duration}))}));
     return {navigation:{ttfb:n.responseStart-n.requestStart,dns:n.domainLookupEnd-n.domainLookupStart,connect:n.connectEnd-n.connectStart,tls:n.secureConnectionStart?n.connectEnd-n.secureConnectionStart:0,download:n.responseEnd-n.responseStart,domContentLoaded:n.domContentLoadedEventEnd,load:n.loadEventEnd},...window.__lab,resources,heading:document.querySelector('h1')?.textContent?.trim(),buttons:[...document.querySelectorAll('button')].map(b=>b.getAttribute('aria-label')||b.textContent?.trim()).slice(0,20)};
    });
    // Local-only appearance/menu changes; no quiz/start/submit or sign-in action.
-   const control=page.getByRole('button',{name:/^(Open navigation menu|Appearance)$/}).first();
+   const control=page.getByRole('button',{name:/^(Open navigation menu|Switch to dark mode)$/}).first();
    if(await control.count()){await control.click();await page.waitForTimeout(250);measurement.interactions=await page.evaluate(()=>window.__lab.interactions);await page.keyboard.press('Escape');}
    cdp.off('Network.responseReceived',listener);
    const row={profile,path,sample,cache,elapsed:Date.now()-started,diskHits,blockedWrites,...measurement};results.push(row);writeFileSync(output,JSON.stringify({environment:{origin,time:new Date().toISOString(),platform:os.platform(),arch:os.arch(),chrome:browser.version(),network:'mobile150ms/1.6Mbps/CPU4;desktop20ms/10Mbps/CPU1; simulated via CDP',samples,scope:'anonymous,essential consent,read-only; cold browser is NOT proven cold server; EventTiming is lab interaction latency, NOT field INP'},results},null,2)+'\n');
    console.log(profile,path,sample,cache,'TTFB',Math.round(row.navigation.ttfb),'LCP',Math.round(row.lcp),'CLS',row.cls.toFixed(3),'cacheHits',diskHits);
   }
-  await context.close();
+  await context.close(); await browser.close(); browser = undefined;
  }
-} finally {await browser.close();}
+} finally {await browser?.close();}
