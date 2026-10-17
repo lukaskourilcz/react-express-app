@@ -179384,13 +179384,13 @@
    "levelTitle": "Authorization",
    "objective": "Define broken access control and separate it from the other failure categories it is confused with.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "e7ed36478d983d8e",
-   "previousHash": "eecf9e9ae61d2235",
+   "revision": 3,
+   "contentHash": "2eeec3ab8b018e3c",
+   "previousHash": "e7ed36478d983d8e",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -179406,24 +179406,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 3,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "All four describe real security failures. Which one is specifically about permissions being wrong?",
+    "question": "A \"broken access control\" bug is when:",
+    "options": [
+     "Passwords are weak",
+     "Users can access resources/actions they shouldn’t be allowed to",
+     "TLS is misconfigured",
+     "Logs are missing"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Broken access control means the server lets an identity perform an action or read data outside its permissions: changing an id in a URL, calling an endpoint the UI merely hides, or setting a field the role may not set. It is A01 in the OWASP Top 10:2025, the same position it held in 2021. Weak passwords are an authentication failure, TLS misconfiguration is a cryptographic or configuration failure, and missing logs are a detection failure - each is its own category."
    },
    "gates": {
     "quality": true,
@@ -179433,36 +179425,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "key is the only glossed option",
-    "explanation gives no concrete form of the bug and cites the ranking without an edition"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The keyed fact and the OWASP #1 claim both check out against the 2025 edition; the defects are the filler hint and an explanation with no concrete example.",
+   "rationale": "Retain the authorization objective with a concrete unauthorized read. Remove unnecessary time-sensitive category rankings and avoid treating authentication as authorization.",
    "evidence": [
-    "https://owasp.org/Top10/2025/0x00_2025-Introduction/ (A01:2025 Broken Access Control; A02 Security Misconfiguration, A05 Injection)"
+    "https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://top10.owasp.org/2025/0x00_2025-Introduction (A01:2025 Broken Access Control; A02 Security Misconfiguration, A04 Cryptographic Failures, A09 Security Logging & Alerting Failures)"
+     "https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "The explanation's 'A01 in the Top 10:2025, the same position it held in 2021' is correct against the current edition, and the hint's 'about permissions' adds nothing the stem's own phrase does not."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "e7ed36478d983d8e",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-2",
@@ -180127,13 +180128,13 @@
    "levelTitle": "Passwords & Hashing",
    "objective": "Choose the correct storage form for passwords: a salted, slow password hashing function.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "7e954702879ad379",
-   "previousHash": "ad6a4d089ccc66d8",
+   "revision": 3,
+   "contentHash": "4455889f6fbbad07",
+   "previousHash": "7e954702879ad379",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -180149,63 +180150,64 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 3,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 1,
-     "explanation": 3
-    },
-    "qualityScore": 1,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The store has to survive being copied. Which form is still useless to whoever copied it?",
+    "question": "Passwords should be stored:",
+    "options": [
+     "In plaintext",
+     "As salted hashes using a slow password-hashing algorithm",
+     "Encrypted with a shared key",
+     "In the source code"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Store a verifier rather than the password: a salted, deliberately slow password hashing function. Current OWASP guidance names Argon2id as the first choice, scrypt where Argon2id is unavailable, PBKDF2 with HMAC-SHA-256 where FIPS-140 compliance is required, and bcrypt for legacy systems only. Encrypting under a shared key is reversible by design, so a single leaked key returns every password in plaintext - that is key management, not password storage. Plaintext and hard-coded credentials expose everything the moment the database or the repository leaks."
    },
    "gates": {
     "quality": true,
     "relevance": true
    },
-   "correctnessBlocker": "misleading-hint",
+   "correctnessBlocker": null,
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint ends with Focus on hashing and hashes appears only in the keyed option, never in the stem",
-    "explanation lists bcrypt/scrypt/Argon2 as interchangeable; current OWASP guidance ranks Argon2id first and restricts bcrypt to legacy systems",
-    "explanation never says why reversible encryption with a shared key is the wrong answer, though that is the one distractor a real team argues for"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The keyed answer is right but the explanation's algorithm list is out of step with the current cheat sheet, which is a real staleness defect in the one topic where staleness costs most.",
+   "rationale": "Replace the claim that stolen verifiers are useless with bounded offline-guessing resistance. Keep the ordinary sign-in scope explicit and avoid encoding an unnecessary full algorithm-policy matrix.",
    "evidence": [
-    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (Argon2id first choice; scrypt when unavailable; PBKDF2 for FIPS-140; bcrypt should only be used for legacy systems)"
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (Argon2id first choice; scrypt when Argon2id is not available; PBKDF2 when FIPS-140 compliance is required; bcrypt only for legacy systems)"
+     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "The rewritten ranking now matches the cheat sheet exactly, and the hint does not separate the key from the shared-key distractor, so it leaves the real work in place."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "7e954702879ad379",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-26",
@@ -180230,13 +180232,13 @@
    "levelTitle": "Passwords & Hashing",
    "objective": "Define a salt: a unique per-password random value mixed in before hashing.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "b02c9197792a2df7",
-   "previousHash": "b2eb308f5cdc9253",
+   "revision": 3,
+   "contentHash": "8b6c25b56762eae6",
+   "previousHash": "b02c9197792a2df7",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -180252,24 +180254,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Rainbow tables are computed once and reused against every database. Ask what would make one table useless here.",
+    "question": "A \"salt\" is:",
+    "options": [
+     "A secret key",
+     "A unique random value added per password before hashing",
+     "A type of cipher",
+     "A session token"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A salt is a unique random value mixed into each password before hashing, so two users with the same password store different hashes and no single precomputed table covers both. It does not have to be secret and is normally stored next to the hash; a secret value held elsewhere is a pepper, not a salt. In practice Argon2id, scrypt and bcrypt generate and encode the salt themselves, so application code rarely handles it directly."
    },
    "gates": {
     "quality": true,
@@ -180279,42 +180273,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "A type of cipher and A session token are filler; only A secret key (the pepper) is a real confusion",
-    "explanation omits that the salt need not be secret and that modern algorithms generate it themselves"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Accurate and foundational with one genuinely good distractor; the filler hint and two dead options are the only real faults.",
+   "rationale": "Distinguish salt from pepper and session credentials. Remove the blanket claim that named algorithms always generate salts themselves, and explicitly preserve the possibility of offline guessing.",
    "evidence": [
-    "node: scrypt('correct horse battery staple','saltA') = b4f63cd2ccab477f..., with 'saltB' = e15ec57bf84ca227... - same password, different stored value",
-    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (modern algorithms generate and manage salts internally)"
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint supplies the definition: 'what has to differ' is the key's 'unique ... per password', and the one live distractor (a secret key) is ruled out by it"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (salt is a unique, randomly generated string added to each password; modern algorithms salt automatically)"
+     "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "Explanation is right that the salt need not be secret and that the secret shared value is a pepper.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "b02c9197792a2df7",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-27",
@@ -181469,19 +181466,19 @@
    "levelTitle": "Sessions & Tokens (JWT)",
    "objective": "Recognize that JWT header and payload are encoded, not encrypted, so nothing secret belongs in them.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "d8c0e9d3613a4948",
-   "previousHash": "cc05988da9b17f91",
+   "revision": 3,
+   "contentHash": "3880ad18ad29f3c8",
+   "previousHash": "d8c0e9d3613a4948",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
-    "answerOptions": 3,
+    "answerOptions": 4,
     "hint": 4,
     "explanation": 4
    },
-   "qualityScore": 3,
+   "qualityScore": 4,
    "relevance": {
     "presentDay": 2,
     "practicalUtility": 2,
@@ -181491,24 +181488,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 4,
-     "wording": 4,
-     "answerOptions": 3,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Paste the middle segment of a token into any decoder. Ask who needed a key to do that.",
+    "question": "A common JWT pitfall is:",
+    "options": [
+     "Verifying the signature",
+     "Putting sensitive data in the (base64url, readable) payload thinking it’s hidden",
+     "Short expiry",
+     "Using HTTPS"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The header and payload are base64url-encoded, not encrypted: anyone who holds the token, intercepts it, or finds it in a log can decode the claims without any key. The signature protects integrity, not confidentiality - it detects tampering and hides nothing. Keep personal data and secrets out of the payload, or use an encrypted JWT (JWE) when the claims themselves must stay private. Verifying signatures, setting a short expiry and using HTTPS are all things to do, not pitfalls."
    },
    "gates": {
     "quality": true,
@@ -181518,43 +181507,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "the encoding is base64url, not plain base64 - a small precision error in an item whose whole point is the encoding",
-    "three distractors are all good practices, so the item can be answered by spotting the odd one out without knowing anything about JWTs",
-    "key is markedly longer than the distractors",
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "A genuinely important misconception, keyed correctly, but the option set is odd-one-out shaped and the item says base64 where the standard says base64url.",
+   "rationale": "Scope the readable-payload warning to signed unencrypted tokens rather than every JWT. Replace the suggestion to paste tokens into decoders with an integrity-versus-confidentiality explanation; retain verification, audience and expiry requirements.",
    "evidence": [
-    "node: Buffer.from(jwt.split('.')[1],'base64url') on a freshly minted HS256 token returned the full claim set including a planted ssn value, with no key involved"
+    "https://www.rfc-editor.org/rfc/rfc7519#section-3",
+    "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+    "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+    "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "the key says base64 where JWT uses base64url; the reviewer listed this defect but left the option unchanged, so it still reaches learners in an item whose whole point is the encoding"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: RFC 7519 encodes the JOSE header and claims set with base64url, not standard base64"
+     "https://www.rfc-editor.org/rfc/rfc7519#section-3",
+     "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+     "Node24 synthetic-only crypto checks: distinct salts change scrypt verifiers; a correct guess still verifies and a wrong guess does not; a locally generated signed unencrypted JWT payload decodes without the signing key, and modified claims change its HMAC. No real token/password, application auth endpoint or complete JWT validator was used.",
+     "run: exact 4-item field/scope check; all other 2164 question hashes remain current."
     ],
-    "notes": "Hint is not decisive here because three options are plainly good practices, and pasting only the middle segment does not expose a usable token.",
-    "changed": [
-     "options",
-     "correctAnswer"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session 2026-10-17, sequential 4-question q013; no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "d8c0e9d3613a4948",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-security-38",

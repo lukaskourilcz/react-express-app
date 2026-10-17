@@ -175,9 +175,13 @@
     "rm-db-59",
     "rm-db-66",
     "rm-db-69",
-    "rm-db-110"
+    "rm-db-110",
+    "rm-security-19",
+    "rm-security-25",
+    "rm-security-26",
+    "rm-security-37"
   ],
-  "remainingEligibleCandidates": 4,
+  "remainingEligibleCandidates": 0,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -188,9 +192,9 @@
         45
       ],
       "uniqueLongest": 1896,
-      "correctUniqueLongest": 1016,
-      "share": 0.5358649789029536,
-      "flags": 45
+      "correctUniqueLongest": 1014,
+      "share": 0.5348101265822784,
+      "flags": 41
     },
     "eligible": {
       "count": 2014,
@@ -201,9 +205,9 @@
         41
       ],
       "uniqueLongest": 1759,
-      "correctUniqueLongest": 921,
-      "share": 0.5235929505400796,
-      "flags": 4
+      "correctUniqueLongest": 919,
+      "share": 0.5224559408754974,
+      "flags": 0
     },
     "effective": {
       "count": 1820,
@@ -214,9 +218,9 @@
         30
       ],
       "uniqueLongest": 1608,
-      "correctUniqueLongest": 863,
-      "share": 0.5366915422885572,
-      "flags": 4
+      "correctUniqueLongest": 861,
+      "share": 0.5354477611940298,
+      "flags": 0
     }
   },
   "issue": 471
