@@ -1861,7 +1861,7 @@ useEffect(() => {
   return () => controller.abort();
 }, [query, attempt]);`,
     hints: [
-      'Two pieces of state split the job. `text` changes on every key and drives the input; `query` changes 100 ms after the last key and drives the request. The first effect’s cleanup clears the timeout whenever another key arrives, which is the whole debounce.',
+      'Debounce the raw input text for the full 100 ms after its last change, then trim the settled text for the request and cache key. Keep successful arrays, including empty answers, in a per-mount Map ref. A short query clears results; a failed request offers an immediate retry and an aborted request is ignored.',
       'The second effect’s cleanup runs just before it runs again and when the page closes, which is exactly when the old request should be aborted. An aborted `fetch` rejects with an error whose `name` is `"AbortError"`: ignore that one and treat every other rejection as a failure.',
     ],
     approach: [
@@ -1958,7 +1958,7 @@ test('a failed search offers Try again, which asks at once', () => withFetch(asy
     tier: 5,
     focus: ['fetch', 'timers', 'useRef', 'effect-cleanup'],
     title: 'Autosave a note',
-    prompt: 'A notes editor saves by itself. A `textarea` labelled "Note" starts with `INITIAL`. 150 milliseconds after the typing stops, save with `fetch("/api/notes/1", { method: "PUT", body: text })`; a real editor would wait longer, and the short wait keeps the checks quick. A status line, a `p` with `role="status"`, reads "Saving…" while a save is on its way, "All changes saved" when the text on screen is the text last saved, and "Unsaved changes" otherwise, so text typed and then changed back needs no save. Only one save is on its way at a time: when the wait ends during a save, let that save answer first, then save the newest text straight away. A failed save, a network error or an answer that is not `ok`, shows "Could not save" in an element with `role="alert"` and a "Retry" button that saves the newest text at once; the alert goes when a save succeeds. When the page closes with unsaved text, save it at once from the cleanup of an effect. That cleanup belongs to the first render, so it must read the newest text, and the text last saved, from refs.',
+    prompt: 'A notes editor saves by itself. A `textarea` labelled "Note" starts with `INITIAL`. 150 milliseconds after the typing stops, save with `fetch("/api/notes/1", { method: "PUT", body: text })`; a real editor would wait longer, and the short wait keeps the checks quick. A status line, a `p` with `role="status"`, reads "Saving…" while a save is on its way, "All changes saved" when the text on screen is the text last saved, and "Unsaved changes" otherwise. Returning to the last saved text needs no write unless a different version is already being saved. While the component is mounted, only one save is on its way at a time: when the wait ends during a save, let that save finish; after success, save the newest text straight away. If it fails, Retry uses the newest text. A failed save, a network error or an answer that is not `ok`, shows "Could not save" in an element with `role="alert"` and a "Retry" button that saves the newest text at once; the alert goes when a save succeeds. When the page closes with unsaved text, save it at once from the cleanup of an effect. That cleanup belongs to the first render, so it must read the newest text, and the text last saved, from refs.',
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const INITIAL = 'Buy milk';
@@ -1997,7 +1997,7 @@ const save = async () => {
 };
 
 useEffect(() => {
-  if (text === savedRef.current) return;
+  if (text === savedRef.current && !busy.current) return;
   const timer = setTimeout(save, 150);
   return () => clearTimeout(timer);
 }, [text]);
@@ -2006,13 +2006,13 @@ useEffect(() => () => {
   // closing: unsaved text goes out at once
 }, []);`,
     hints: [
-      'State drives what the page shows; refs hold what callbacks need to read later. A timeout, an answer handler and an unmount cleanup were all created by an earlier render, so the newest text and the text last saved must come from refs, not from the variables of that render.',
+      'Callbacks and the initial-render cleanup read the newest and last saved text from refs. While a write is pending, returning to the previously saved text still needs a debounce timer: that pending write may store a different value. Queue the newest value, save it after success, and let Retry use the latest text after failure.',
       'One save at a time needs two flags in refs: one that says a save is on its way, and one that says another save was asked for meanwhile. When the save on its way answers, look at the second flag and save the newest text if it is set.',
     ],
     approach: [
       'Keep the text, the text last saved and the saving and failed flags in state, and mirror the newest and the saved text in refs.',
       'Write `save()`: while busy, only note that another save is wanted. Otherwise PUT the newest text, treat a rejection or an answer that is not `ok` as a failure, and when done, save again if one was wanted.',
-      'An effect on the text waits 150 ms and calls `save`, clearing the timeout in its cleanup; Retry calls `save` straight away.',
+      'An effect on the text waits 150 ms and calls `save`, clearing the timeout in its cleanup; Retry calls `save` straight away. Keep that timer when a different value is being saved, even if the newest text matches the previous saved value.',
       'An effect with `[]` returns a cleanup that PUTs the newest text when it differs from the text last saved.',
     ],
     verify: 'tests',

@@ -127,6 +127,9 @@ export interface CodingSolution {
    * the content contract proves, and neither leaves the server before a pass. */
   junior?: string;
   senior?: string;
+  /** A learner-required comment preface for both boards. Other authoring
+   * commentary is still removed before a board is served. */
+  boardPlan?: string;
   hiddenTests?: SourceCallTest[];
   hiddenTypeTests?: SourceTypeTest[];
   /** React only: more Testing Library cases, test blocks with no imports,

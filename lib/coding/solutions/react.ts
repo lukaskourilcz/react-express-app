@@ -4365,6 +4365,7 @@ const App = () => {
   // helpers and each visible suite's `loaded`, with data no visible check
   // shows.
   "react-user-directory": {
+    boardPlan: "// API plan: GET /users returns {id,name,email,address:{city}} records.\n// Keep the answer and local filters separate; city choices come from all users.\n// Cache a successful query briefly, then revalidate and keep errors visible.\n// For a large directory, filter and page on the server with a stable cursor,\n// an index on the normalized name and a city index, instead of downloading all rows.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4643,6 +4644,7 @@ test('filtering never asks the server again', () => withServer(async calls => {
 }));`,
   },
   "react-posts-dashboard": {
+    boardPlan: "// API plan: GET /posts returns {id,userId,title,body}; reduce groups by userId.\n// A large feed requests one author and a cursor page, backed by an author/id index.\n// Cache each author page briefly and revalidate; return per-author counts separately.\n// Keep incoming post order and store only the selected author, not a second feed.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4899,6 +4901,7 @@ test('choosing users never asks the server again', () => withServer(async calls 
 }));`,
   },
   "react-todo-client": {
+    boardPlan: "// Conflict plan: GET /todos?_limit=5 reads; POST /todos creates. Local toggles/deletes stay local here.\n// A real server accepts PATCH /todos/:id {completed,version} and atomically checks the version.\n// A stale edit gets 409: reload that todo and let the user compare the two edits.\n// BroadcastChannel may notify the other tab; the server still decides which write succeeds.\n// Send the intended completed value, not a toggle command, so retries are idempotent.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -5262,6 +5265,7 @@ test('Delete and the checkboxes act on the todo they belong to', () => withServe
 }));`,
   },
   "react-product-explorer": {
+    boardPlan: "// Search plan: GET /products returns {products,total,skip,limit}; this exercise filters the loaded answer.\n// A large shop searches and sorts on the server, returns total and one stable page, and indexes normalized titles and price.\n// Use a trigram/full-text index for substring search; cache by query/order/page briefly and revalidate.\n// Include locale/currency and catalogue version in real cache keys; debounce typing and retain the last good page.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -5614,6 +5618,7 @@ test('searching, sorting and paging never ask the server again', () => withServe
 }));`,
   },
   "react-comments-viewer": {
+    boardPlan: "// API plan: GET /comments returns {id,postId,name,email,body}; derive filters and domains.\n// For a large feed, request /posts/:id/comments?cursor=...&limit=20 or an email filter.\n// Index (post_id,id), use stable cursors and cache each query briefly; aggregate domains server-side.\n// Rate-limit reads and writes per account/IP; authenticate writes, cap body length and review new links.\n// Real public readers receive a redacted address rather than another person's full email.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -5982,7 +5987,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
-  const [unknown, setUnknown] = useState('');
+  const [unknown, setUnknown] = useState(null);
 
   const loadWeather = async city => {
     setLastCity(city);
@@ -6013,7 +6018,7 @@ const App = () => {
       setUnknown(wanted);
       return;
     }
-    setUnknown('');
+    setUnknown(null);
     loadWeather(city);
   };
 
@@ -6027,7 +6032,7 @@ const App = () => {
         <label>City <input value={name} onChange={event => setName(event.target.value)} /></label>
         <button type="submit">Search</button>
       </form>
-      {unknown && <p>Unknown city: {unknown}</p>}
+      {unknown !== null && <p>Unknown city: {unknown}</p>}
       {loading && <p>Loading…</p>}
       {error && (
         <div>
@@ -6076,7 +6081,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cityText, setCityText] = useState('');
-  const [unknownCity, setUnknownCity] = useState('');
+  const [unknownCity, setUnknownCity] = useState(null);
 
   const findCity = (text) => {
     const wanted = text.trim().toLowerCase();
@@ -6130,7 +6135,7 @@ const App = () => {
       setUnknownCity(cityText.trim());
       return;
     }
-    setUnknownCity('');
+    setUnknownCity(null);
     loadWeather(city);
   };
 
@@ -6158,7 +6163,7 @@ const App = () => {
         </label>
         <button type="submit">Search</button>
       </form>
-      {unknownCity !== '' && <p>Unknown city: {unknownCity}</p>}
+      {unknownCity !== null && <p>Unknown city: {unknownCity}</p>}
       {loading && <p>Loading…</p>}
       {error !== '' && (
         <div>
@@ -6240,12 +6245,12 @@ const useRecentWeather = () => {
 const App = () => {
   const { readings, request, load } = useRecentWeather();
   const [name, setName] = useState('');
-  const [unknown, setUnknown] = useState('');
+  const [unknown, setUnknown] = useState(null);
 
   const search = event => {
     event.preventDefault();
     const city = findCity(name);
-    setUnknown(city ? '' : name.trim());
+    setUnknown(city ? null : name.trim());
     if (city) load(city);
   };
 
@@ -6263,7 +6268,7 @@ const App = () => {
         <input id="city" value={name} onChange={event => setName(event.target.value)} />
         <button type="submit">Search</button>
       </form>
-      {unknown && <p>Unknown city: {unknown}</p>}
+      {unknown !== null && <p>Unknown city: {unknown}</p>}
       {request.status === 'loading' && <p aria-live="polite">Loading…</p>}
       {request.status === 'error' && (
         <div>
@@ -7894,3 +7899,55 @@ const TODO_IDENTITY_REVIEW_CASES=`const idRTL=require('@testing-library/react');
 test('duplicate titles keep independent identities and counts across mixed removals and empty recovery',()=>withRequests(async calls=>{const rtl=require('@testing-library/react'),v=render(<App/>);const request=requestTo(calls,'/todos');expect(Boolean(request)).toBe(true);answerLikeTheApi(request);await waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(3),soon);const model=SERVER_TODOS.slice(0,3).map(row=>({title:row.title,completed:row.completed})),query=rtl.within(v.container);const check=()=>{const items=Array.from(v.container.querySelectorAll('li'));expect(items.length).toBe(model.length);model.forEach((row,i)=>{expect(items[i].textContent).toContain(row.title);expect(items[i].textContent).toContain(row.completed?'done':'to do');expect(Boolean(rtl.within(items[i]).getByRole('button',{name:/^remove/i}))).toBe(true);});expect(v.container.textContent).toContain('Done: '+model.filter(row=>row.completed).length+' of '+model.length);};check();for(const title of['Repeated title','Repeated title','Third local']){fireEvent.change(v.container.querySelector('input'),{target:{value:title}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title,completed:false});check();}for(const index of[0,3,1]){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[index]).getByRole('button',{name:/^remove/i}));model.splice(index,1);check();}while(model.length){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[model.length-1]).getByRole('button',{name:/^remove/i}));model.pop();check();}fireEvent.change(v.container.querySelector('input'),{target:{value:'After empty'}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title:'After empty',completed:false});check();}));
 `;
 REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite=[REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite,TODO_IDENTITY_REVIEW_CASES].filter(Boolean).join("\n\n");
+
+const PROJECT_DATA_REVIEW_CASES:Record<string,string>={
+"react-product-search":`
+const productRTL=require('@testing-library/react');
+const productRows=[{id:101,title:'Harbor lamp',price:8,category:'lighting'},{id:102,title:'Field kit',price:0,category:'gear'},{id:103,title:'Notebook',price:32,category:'office'},{id:104,title:'Gasket',price:7,category:'GEAR'},{id:105,title:'Gearbox',price:100,category:'parts'},{id:106,title:'Part gear',price:2,category:'lighting'}];
+const withProductRows=async(rows,body)=>{const original=globalThis.fetch;globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({products:rows,total:99999,skip:0,limit:rows.length})});try{await body();}finally{globalThis.fetch=original;}};
+test('arbitrary nested products, category unions and repeated searches keep every field and visible-price total',()=>withProductRows(productRows,async()=>{const v=render(<App/>);await productRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(6));for(const text of['','GEAR','har','NOTE','missing','lighting','']){fireEvent.change(v.container.querySelector('input'),{target:{value:text}});const expected=productRows.filter(row=>row.title.toLowerCase().includes(text.toLowerCase())||row.category.toLowerCase().includes(text.toLowerCase())),items=Array.from(v.container.querySelectorAll('li'));expect(items.length).toBe(expected.length);expected.forEach((row,i)=>{expect(items[i].textContent).toContain(row.title);expect(items[i].textContent).toContain(String(row.price));expect(items[i].textContent).toContain(row.category);});expect(v.container.textContent).toContain('Total: '+expected.reduce((sum,row)=>sum+row.price,0));}}));
+test('empty nested products and zero-priced matches keep a zero total',async()=>{await withProductRows([],async()=>{const v=render(<App/>);await productRTL.act(async()=>{for(let i=0;i<5;i++)await Promise.resolve();});expect(v.container.querySelectorAll('li').length).toBe(0);expect(v.container.textContent).toContain('Total: 0');v.unmount();});await withProductRows(productRows,async()=>{const v=render(<App/>);await productRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(6));fireEvent.change(v.container.querySelector('input'),{target:{value:'Field kit'}});expect(v.container.querySelectorAll('li').length).toBe(1);expect(v.container.textContent).toContain('Total: 0');});});
+`,
+"react-user-directory":`
+const expandedDirectory=['Ava Reed','Ben North','Cara Reed','Drew Field','Eli Hill','Faye North','Gus Reed','Hana Last'].map((name,i)=>({id:201+i,name,email:'person'+i+'@example.test',address:{city:['Delta','Alpha','Delta','Gamma','Beta','Alpha','Gamma','Delta'][i]}}));
+test('eight users and repeated combined filters retain the complete sorted city choices',()=>withServer(async calls=>{const container=await loaded(calls,expandedDirectory),options=[['','All cities'],...['Alpha','Beta','Delta','Gamma'].map(city=>[city,city])];for(const[text,city]of[['',''],['','Alpha'],['NORTH','Alpha'],['reed','Delta'],['missing','Gamma'],['',''],['LAST','']]){search(container,text);chooseCity(container,city);const expected=expandedDirectory.filter(row=>row.name.toLowerCase().includes(text.toLowerCase())&&(!city||row.address.city===city)),items=itemTexts(container);expectItems(items,expected.map(row=>row.name));expected.forEach((row,i)=>expect(items[i]).toContain(row.address.city));expect(optionsOf(citySelect(container))).toEqual(options);expect(citySelect(container).value).toBe(city);expect(calls.length).toBe(1);if(!expected.length)expect(says(container,'No users match.')).toBe(true);}}));
+test('an empty successful directory has just All cities and no request error',()=>withServer(async calls=>{const v=render(<App/>);gets(calls,USERS_URL)[0].respond([]);await waitFor(()=>expect(says(outsideAlerts(v.container),'loading')).toBe(false));expect(v.container.querySelectorAll('li').length).toBe(0);expect(optionsOf(citySelect(v.container))).toEqual([['','All cities']]);expect(says(v.container,'No users match.')).toBe(true);expect(alertText(v.container)).toBe('');}));
+`,
+"react-posts-dashboard":`
+const expandedFeed=[42,2,42,17,42,30,42,81,42,2,42,42,81,42,42].map((userId,i)=>({id:301+i,userId,title:'Article ['+(i+1)+']',body:'Body '+i}));
+test('larger groups preserve every post and repeat selection keeps exactly one author pressed',()=>withServer(async calls=>{const container=await loaded(calls,expandedFeed),ids=[2,17,30,42,81],labels=ids.map(id=>'User '+id+' ('+expandedFeed.filter(row=>row.userId===id).length+')');expect(buttonTexts(container)).toEqual(labels);expect(userButtons(container).map(button=>button.getAttribute('aria-pressed'))).toEqual(ids.map(()=> 'false'));expect(postItems(container).length).toBe(0);for(const id of[42,42,81,2,17,30,42]){choose(container,'User '+id+' ('+expandedFeed.filter(row=>row.userId===id).length+')');expectItems(postTexts(container),expandedFeed.filter(row=>row.userId===id).map(row=>row.title));expect(userButtons(container).map(button=>button.getAttribute('aria-pressed'))).toEqual(ids.map(value=>String(value===id)));expect(calls.length).toBe(1);}}));
+test('an empty successful post feed has no authors or selected posts and no error',()=>withServer(async calls=>{const v=render(<App/>);gets(calls,POSTS_URL)[0].respond([]);await waitFor(()=>expect(says(outsideAlerts(v.container),'loading')).toBe(false));expect(userButtons(v.container).length).toBe(0);expect(postItems(v.container).length).toBe(0);expect(alertText(v.container)).toBe('');}));
+`,
+};
+for(const[id,cases]of Object.entries(PROJECT_DATA_REVIEW_CASES)){const solution=REACT_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}
+
+const FINAL_PROJECT_REVIEW_CASES:Record<string,string>={
+"react-todo-client":`
+test('keeps every server-created todo and local edits across three sequential creates',()=>withServer(async calls=>{
+ const data=Array.from({length:5},(_,i)=>({id:40+i,userId:i+1,title:i===0?'<b>literal</b>':'Initial '+i,completed:i%2===0}));const container=await loaded(calls,data);let expected=data.map(x=>({...x}));
+ for(let i=0;i<3;i++){add(container,'  draft '+i+'  ');const request=posts(calls)[i];expect(request.url).toBe(TODOS_URL);expect(JSON.parse(request.options.body)).toEqual({title:'draft '+i,completed:false,userId:1});expect(String(new Headers(request.options.headers).get('content-type'))).toContain('application/json');expect(container.querySelectorAll('li')).toHaveLength(expected.length);fireEvent.click(boxes(container)[1]);expected[1]={...expected[1],completed:!expected[1].completed};const created={id:900+i,userId:1,title:'Stored '+i,completed:i===1};request.respond(created,201);expected.push(created);await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(expected.length));expectItems(itemTexts(container),expected.map(x=>x.title));expect(ticked(container)).toEqual(expected.map(x=>x.completed));expect(says(container,'Completed: '+expected.filter(x=>x.completed).length+' of '+expected.length)).toBe(true);expect(textBox(container).value).toBe('');}
+ expect(container.querySelector('li b')).toBeNull();fireEvent.click(buttonNamed(container.querySelectorAll('li')[6],'Delete'));expected.splice(6,1);expectItems(itemTexts(container),expected.map(x=>x.title));expect(calls).toHaveLength(4);
+}));
+test('starts from an empty server list and preserves it after a refused create',()=>withServer(async calls=>{const container=await loaded(calls,[]);await waitFor(()=>expect(says(outsideAlerts(container),'loading')).toBe(false));expect(says(container,'Completed: 0 of 0')).toBe(true);add(container,' 	 ');expect(posts(calls)).toHaveLength(0);add(container,'Retry me');posts(calls)[0].respond(null,503);await waitFor(()=>expect(alertText(container).length>0).toBe(true));expect(container.querySelectorAll('li')).toHaveLength(0);expect(textBox(container).value).toBe('Retry me');add(container,'Stored later');posts(calls)[1].respond({id:901,userId:1,title:'Stored later',completed:true},201);await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(1));expect(says(container,'Completed: 1 of 1')).toBe(true);}));
+`,
+"react-product-explorer":`
+test('models seventeen products, free prices, repeated titles and every page across combined filters and orders',()=>withServer(async calls=>{
+ const data=Array.from({length:17},(_,i)=>({id:80-i,title:i%3===0?'Sea lamp':i===1?'<b>literal</b>':'Item '+i,price:i%4===0?0:(i*13)%29}));const view=render(<App/>),container=view.container;calls[0].respond({products:data,total:data.length,skip:0,limit:30});await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(5));
+ for(const query of['','LAMP','Item','literal','none',''])for(const order of['price-desc','','price-asc']){search(container,query);sortBy(container,order);const filtered=data.filter(p=>p.title.toLowerCase().includes(query.toLowerCase())),ordered=[...filtered];if(order)ordered.sort((a,b)=>order==='price-asc'?a.price-b.price:b.price-a.price);const count=Math.max(1,Math.ceil(ordered.length/5));for(let page=1;page<=count;page++){const shown=ordered.slice((page-1)*5,page*5);expectItems(itemTexts(container),shown.map(p=>p.title));shown.forEach((p,i)=>expect(itemTexts(container)[i]).toContain(String(p.price)));expect(says(container,'Page '+page+' of '+count)).toBe(true);expect(buttonNamed(container,'Previous').disabled).toBe(page===1);expect(buttonNamed(container,'Next').disabled).toBe(page===count);if(filtered.length)expect(says(container,'Average price: '+(filtered.reduce((sum,p)=>sum+p.price,0)/filtered.length).toFixed(2))).toBe(true);else{expect(says(container,'No products match.')).toBe(true);expect(says(container,'Average price')).toBe(false);}if(page<count)press(container,'Next');}}
+ expect(container.querySelector('li b')).toBeNull();expect(calls).toHaveLength(1);
+}));
+test('an empty products answer is page one of one without an average',()=>withServer(async calls=>{const {container}=render(<App/>);calls[0].respond({products:[],total:0,skip:0,limit:30});await waitFor(()=>expect(says(container,'loading')).toBe(false));expect(container.querySelectorAll('li')).toHaveLength(0);expect(says(container,'No products match.')).toBe(true);expect(says(container,'Average price')).toBe(false);expect(says(container,'Page 1 of 1')).toBe(true);expect(buttonNamed(container,'Previous').disabled).toBe(true);expect(buttonNamed(container,'Next').disabled).toBe(true);}));
+`,
+"react-weather-style-dashboard":`
+test('blank and whitespace city names show the unknown-city message without a request',()=>withRequests(async calls=>{render(<App/>);await answer(calls[0],0);for(const value of['   ','']){search(value);expectLine('Unknown city:');expect(calls).toHaveLength(1);expect(recent()).toEqual(['Prague: 0 °C']);}search('Brno');expect(hasLine('Unknown city:')).toBe(false);await answer(calls[1],1);}));
+test('all five city coordinates and retained-range calculations follow repeated searches',()=>withRequests(async calls=>{render(<App/>);await answer(calls[0],40);const cases=[['Brno',49.2,16.61,-15],['Ostrava',49.83,18.29,41.25],['Vienna',48.21,16.37,0],['Berlin',52.52,13.41,-40],['Prague',50.08,14.44,32],['Vienna',48.21,16.37,0.25]];let model=[{name:'Prague',temperature:40}];for(let i=0;i<cases.length;i++){const[name,lat,lon,temp]=cases[i];search(' '+name.toUpperCase()+' ');expect(asked(calls[i+1])).toEqual([FORECAST,lat,lon,'temperature_2m']);await answer(calls[i+1],temp);model=[{name,temperature:temp},...model.filter(x=>x.name!==name)].slice(0,3);expect(recent()).toEqual(model.map(x=>x.name+': '+x.temperature+' °C'));expectLine('Lowest: '+Math.min(...model.map(x=>x.temperature))+' °C');expectLine('Highest: '+Math.max(...model.map(x=>x.temperature))+' °C');}}));
+`,
+"react-notification-center":`
+test('derives every day and every notification while repeatedly reading and filtering',()=>withRequests(async calls=>{render(<App/>);const data=Array.from({length:14},(_,i)=>({id:100-i,text:i===0?'<b>literal</b>':'Notice '+i,date:i<6?'2026-10-05':'2026-10-0'+(i%5+1),read:i%3===1}));await answer(calls[0],data);const model=data.map(x=>({...x}));const check=only=>{const visible=model.filter(x=>!only||!x.read),dates=[...new Set(visible.map(x=>x.date))].sort().reverse();expect(groups()).toEqual(dates.map(date=>[date,...visible.filter(x=>x.date===date).map(x=>[x.text,x.read?'read':'unread'])]));expectLine('Unread: '+model.filter(x=>!x.read).length);};check(false);unreadOnly();check(true);for(const record of model.filter(x=>!x.read)){markRead(record.text);record.read=true;check(true);}expect(screen.getByText('No unread notifications')).toBeTruthy();unreadOnly();check(false);expect(document.querySelector('li b')).toBeNull();expect(calls).toHaveLength(1);}));
+`,
+"react-interview-mini-project":`
+test('keeps all posts and complete numeric author choices under repeated filters and server-normalized creation',()=>withRequests(async calls=>{render(<App/>);const data=Array.from({length:9},(_,i)=>({id:50+i,userId:[11,2,30,1,7][i%5],title:i===0?'<b>literal</b>':i%2===0?'Sea post '+i:'Land post '+i,body:'not a title'}));await answer(calls[0],data);const model=data.map(x=>({...x}));expect(authorOptions()).toEqual(['All authors','User 1','User 2','User 7','User 11','User 30']);for(const query of['SEA','Land','none','']){typeIn('Search',query);for(const author of['User 30','User 2','All authors']){chooseAuthor(author);const shown=model.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(author==='All authors'||author==='User '+x.userId));expect(titles()).toEqual(shown.map(x=>x.title));expectLine('Showing '+shown.length+' of '+model.length+' posts');expectLine('Authors: '+new Set(shown.map(x=>x.userId)).size);}}
+ typeIn('Title','  draft  ');fireEvent.click(screen.getByRole('button',{name:'Add post'}));expect(JSON.parse(calls[1].body)).toEqual({title:'draft',body:'',userId:1});expect(titles()).toHaveLength(9);const created={id:999,userId:42,title:'Server title',body:''};await answer(calls[1],created);expect(titles()).toEqual([...model,created].map(x=>x.title));expect(authorOptions()).toEqual(['All authors','User 1','User 2','User 7','User 11','User 30','User 42']);expectLine('Showing 10 of 10 posts');expectLine('Authors: 6');expect(document.querySelector('li b')).toBeNull();expect(calls).toHaveLength(2);}));
+`,
+};
+for(const[id,cases]of Object.entries(FINAL_PROJECT_REVIEW_CASES)){const solution=REACT_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}

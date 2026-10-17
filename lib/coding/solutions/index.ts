@@ -59,15 +59,23 @@ const AUTHORED: Record<string, CodingSolution> = {
 // API boundary means the content contract proves the exact text that ships.
 // The reference solution keeps its comments: it is the answer a learner reads
 // after giving up, where the reasoning is the point.
+// A task that asks learners for a plan can explicitly supply boardPlan. That
+// required preface travels; unrelated authoring notes in the code still do not.
 //
 // An evolving project's checkpoint (`…-start`) carries its own reference,
 // authored beside its milestones, and no boards: a pass or a reveal there
 // must never hand over code that already passes the milestone after it.
+const boardCode = (record: CodingSolution, code: string): string => {
+  const body = stripComments(code);
+  const plan = record.boardPlan?.trim();
+  return plan ? `${plan}\n${body}` : body;
+};
+
 const ALL: Record<string, CodingSolution> = Object.fromEntries(
   Object.entries(AUTHORED).map(([id, record]) => [id, {
     ...record,
-    ...(record.junior ? { junior: stripComments(record.junior) } : {}),
-    ...(record.senior ? { senior: stripComments(record.senior) } : {}),
+    ...(record.junior ? { junior: boardCode(record, record.junior) } : {}),
+    ...(record.senior ? { senior: boardCode(record, record.senior) } : {}),
   }]),
 );
 
