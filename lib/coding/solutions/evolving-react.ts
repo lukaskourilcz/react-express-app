@@ -3614,3 +3614,98 @@ for (const [id,cases] of Object.entries(SELECTION_CART_REVIEW_CASES)) {
   const solution=REACT_EVOLVING_SOLUTIONS[id];
   solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
 }
+
+// Scoped final-cart and initial wizard checks, preserving later-stage contracts.
+const EARLY_WIZARD_REVIEW_CASES: Record<string,string> = {
+"react-evolving-catalog-5": `
+const CART_STAGE=5;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];if(CART_STAGE>=5)delete m.quantities[p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];if(CART_STAGE>=5)m.quantities={};}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});const n=Number(value[1]);if(CART_STAGE<5||(Number.isInteger(n)&&n>=1&&n<=99))m.quantities[p.id]=n;}
+ cartCheck(v,m);
+};
+
+test('each cart line accepts valid quantity boundaries and retains its last value after invalid edits',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'select');cartAction(v,m,'next');cartAction(v,m,'select');for(const id of [1,2,3,4]){cartAction(v,m,'quantity',[id,99]);for(const bad of [0,100,-1,1.5,'','not-a-number'])cartAction(v,m,'quantity',[id,bad]);cartAction(v,m,'quantity',[id,id]);}cartAction(v,m,'query','zzz');cartAction(v,m,'maximum','0');cartAction(v,m,'quantity',[3,98]);});
+test('deselect reselect and Clear drop quantities while Select page preserves existing amounts',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'select');cartAction(v,m,'quantity',[1,99]);cartAction(v,m,'select');cartAction(v,m,'toggle',0);cartAction(v,m,'toggle',0);cartAction(v,m,'quantity',[1,5]);cartAction(v,m,'next');cartAction(v,m,'select');cartAction(v,m,'quantity',[4,33]);cartAction(v,m,'query','zzz');cartAction(v,m,'clear');cartAction(v,m,'query','');cartAction(v,m,'select');cartAction(v,m,'next');cartAction(v,m,'select');});
+test('a bounded weighted-cart model keeps quantities attached to identities through view changes',()=>{const v=render(<App/>),m=cartModel();for(let i=0;i<60;i++){const rows=cartFiltered(m),shown=rows.slice(m.page*2,m.page*2+2),step=i%10;if(step===0)cartAction(v,m,'query',['','t','a'][Math.floor(i/10)%3]);else if(step===1)cartAction(v,m,'select');else if(step===2&&shown.length)cartAction(v,m,'toggle',i%shown.length);else if(step===3&&m.selected.length)cartAction(v,m,'quantity',[m.selected[i%m.selected.length],(i*7)%99+1]);else if(step===4&&m.selected.length)cartAction(v,m,'quantity',[m.selected[0],100]);else if(step===5)cartAction(v,m,'next');else if(step===6)cartAction(v,m,'previous');else if(step===7)cartAction(v,m,'sort',['name','price-asc','price-desc'][Math.floor(i/10)%3]);else if(step===8)cartAction(v,m,'maximum',['0','1.5','4',''][Math.floor(i/10)%4]);else if(step===9)cartAction(v,m,'clear');else cartCheck(v,m);}});
+test('parent renders independent carts and remounts retain the right quantity ownership',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'select');cartAction(b,mb,'select');cartAction(a,ma,'quantity',[1,99]);cartAction(b,mb,'quantity',[1,2]);a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();const fresh=render(<App/>),m=cartModel();cartAction(fresh,m,'select');});
+`,
+"react-evolving-form-1-start": `
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+test('the controlled Email field holds long ordinary values and restores state after an external DOM write',()=>{const v=render(<App/>),input=wizardField(v,'Email');expect(input.value).toBe('');for(const value of ['not-email-yet','very.long+tag@sub.example.org','second@example.net']){wizardFill(v,'Email',value);expect(input.value).toBe(value);v.rerender(<App/>);expect(input.value).toBe(value);}input.value='external@example.org';v.rerender(<App/>);expect(input.value).toBe('second@example.net');});
+test('submitting the actual form always cancels browser navigation without requiring validation yet',()=>{const v=render(<App/>);for(const value of ['','draft','person@example.org']){wizardFill(v,'Email',value);wizardSubmit(v);expect(Boolean(wizardWithin(v.container).getByRole('button',{name:'Next',exact:true}))).toBe(true);}});
+test('independent controlled emails survive parent renders separately',()=>{const a=render(<App/>),b=render(<App/>);wizardFill(a,'Email','one@example.org');wizardFill(b,'Email','two@example.net');a.rerender(<App/>);expect(wizardField(a,'Email').value).toBe('one@example.org');expect(wizardField(b,'Email').value).toBe('two@example.net');});
+test('a fresh Email field starts empty after another draft unmounts',()=>{const old=render(<App/>);wizardFill(old,'Email','old@example.org');old.unmount();const v=render(<App/>);expect(wizardField(v,'Email').value).toBe('');});
+`,
+"react-evolving-form-1": `
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+test('email validation follows the exact stated expression and keeps rejected submissions editable',()=>{const v=render(<App/>);for(const value of ['','bad','a@b','a@@b.c','a b@c.d','a@b .c','@x.y','x@.y']){wizardFill(v,'Email',value);wizardSubmit(v);wizardError(v,'Invalid email');expect(Boolean(wizardField(v,'Email'))).toBe(true);}wizardFill(v,'Email','  name+tag@sub.example.org  ');wizardSubmit(v);wizardAccepted(v);expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();});
+test('every regex-valid address accepts after edge trimming without extra domain or RFC restrictions',()=>{for(const value of ['x@y.z',' person@example.org ','a@b..c','\\u00a0one@two.net\\ufeff','李@例.中']){const v=render(<App/>);wizardFill(v,'Email',value);wizardSubmit(v);wizardAccepted(v);expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();v.unmount();}});
+test('independent acceptance and invalid-state recovery survive ordinary parent renders',()=>{const a=render(<App/>),b=render(<App/>);wizardFill(a,'Email','one@example.org');wizardSubmit(a);wizardFill(b,'Email','bad');wizardSubmit(b);a.rerender(<App/>);wizardAccepted(a);wizardError(b,'Invalid email');wizardFill(b,'Email','two@example.net');wizardSubmit(b);wizardAccepted(b);});
+test('a new email attempt starts empty without a prior root acceptance or error',()=>{const old=render(<App/>);wizardFill(old,'Email','bad');wizardSubmit(old);old.unmount();const v=render(<App/>);expect(wizardField(v,'Email').value).toBe('');expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();expect(wizardWithin(v.container).queryByText('Email accepted',{exact:true})).toBeNull();});
+`,
+"react-evolving-form-2-start": `
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+test('the Name step is controlled through long literal edits and parent rerenders',()=>{const v=render(<App/>);wizardEnterName(v);const field=wizardField(v,'Name');expect(field.value).toBe('');for(const value of ['  Person  ','李雷','<name>&'+('x'.repeat(240))]){wizardFill(v,'Name',value);expect(field.value).toBe(value);v.rerender(<App/>);expect(field.value).toBe(value);}field.value='external';v.rerender(<App/>);expect(field.value).toBe('<name>&'+('x'.repeat(240)));wizardAccepted(v);});
+test('Back retains the trimmed accepted email and email edits can open the Name step again',()=>{const v=render(<App/>);wizardEnterName(v,'  one@example.org  ');wizardClick(v,'Back');expect(wizardField(v,'Email').value).toBe('one@example.org');wizardFill(v,'Email','bad');wizardSubmit(v);wizardError(v,'Invalid email');wizardFill(v,'Email','two@example.net');wizardSubmit(v);wizardAccepted(v);expect(Boolean(wizardField(v,'Name'))).toBe(true);});
+test('Next at the Name checkpoint cancels navigation without requiring the next milestone validation',()=>{const v=render(<App/>);wizardEnterName(v);wizardFill(v,'Name','Draft');wizardSubmit(v);expect(Boolean(v.container.querySelector('main'))).toBe(true);});
+test('independent Name drafts belong to their root and a new attempt starts with empty Email',()=>{const a=render(<App/>),b=render(<App/>);wizardEnterName(a,'one@example.org');wizardEnterName(b,'two@example.net');wizardFill(a,'Name','First');wizardFill(b,'Name','Second');a.rerender(<App/>);expect(wizardField(a,'Name').value).toBe('First');expect(wizardField(b,'Name').value).toBe('Second');a.unmount();b.unmount();expect(wizardField(render(<App/>),'Email').value).toBe('');});
+`,
+"react-evolving-form-2": `
+const wizardWithin=require('@testing-library/react').within;
+const wizardField=(v,label)=>wizardWithin(v.container).getByLabelText(label);
+const wizardFill=(v,label,value)=>{const field=wizardField(v,label);if(field.value!==value)fireEvent.change(field,{target:{value}});};
+const wizardClick=(v,label)=>fireEvent.click(wizardWithin(v.container).getByRole('button',{name:label,exact:true}));
+const wizardSubmit=v=>{const form=v.container.querySelector('form');expect(Boolean(form)).toBe(true);expect(fireEvent.submit(form)).toBe(false);};
+const wizardAccepted=v=>expect(Boolean(wizardWithin(v.container).queryByText('Email accepted',{exact:true}))).toBe(true);
+const wizardError=(v,text)=>{expect(wizardWithin(v.container).getByRole('alert').textContent).toBe(text);};
+const wizardEnterName=(v,email='person@example.org')=>{wizardFill(v,'Email',email);wizardSubmit(v);wizardAccepted(v);};
+
+const wizardExact=(v,text)=>expect(Boolean(wizardWithin(v.container).getByText(text,{exact:true,normalizer:value=>value}))).toBe(true);
+test('Name rejects fewer than two non-whitespace characters and accepts exact two-character BMP names',()=>{for(const accepted of ['Al','李雷']){const v=render(<App/>);wizardEnterName(v,'  person@example.org  ');for(const invalid of ['',' ','A','\\tA\\u00a0']){wizardFill(v,'Name',invalid);wizardSubmit(v);wizardError(v,'Invalid name');expect(Boolean(wizardField(v,'Name'))).toBe(true);}wizardFill(v,'Name','  '+accepted+'  ');wizardSubmit(v);wizardExact(v,accepted);wizardExact(v,'person@example.org');wizardAccepted(v);expect(wizardWithin(v.container).queryByRole('alert')).toBeNull();v.unmount();}});
+test('the summary trims only name edges and renders literal long names without HTML interpretation',()=>{const v=render(<App/>),value='<name>& '+('x'.repeat(220));wizardEnterName(v,'person@example.org');wizardFill(v,'Name','  '+value+'  ');wizardSubmit(v);wizardExact(v,value);expect(v.container.querySelector('name')).toBeNull();v.rerender(<App/>);wizardExact(v,value);});
+test('Back from summary and Name retains both fields while subsequent valid edits replace the summary',()=>{const v=render(<App/>);wizardEnterName(v,'one@example.org');wizardFill(v,'Name','  First Person  ');wizardSubmit(v);wizardClick(v,'Back');expect(wizardField(v,'Name').value).toBe('First Person');wizardClick(v,'Back');expect(wizardField(v,'Email').value).toBe('one@example.org');wizardFill(v,'Email','two@example.net');wizardSubmit(v);wizardFill(v,'Name','  Second Person  ');wizardSubmit(v);wizardExact(v,'Second Person');wizardExact(v,'two@example.net');});
+test('independent accepted summaries and fresh attempts do not share field or error state',()=>{const a=render(<App/>),b=render(<App/>);wizardEnterName(a,'one@example.org');wizardEnterName(b,'two@example.net');wizardFill(a,'Name','First');wizardFill(b,'Name','Second');wizardSubmit(a);wizardSubmit(b);a.rerender(<App/>);wizardExact(a,'First');wizardExact(b,'Second');a.unmount();b.unmount();const fresh=render(<App/>);expect(wizardField(fresh,'Email').value).toBe('');expect(wizardWithin(fresh.container).queryByRole('alert')).toBeNull();});
+`,
+};
+for (const [id,cases] of Object.entries(EARLY_WIZARD_REVIEW_CASES)) {
+  const solution=REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
+}
