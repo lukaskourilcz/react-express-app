@@ -130,9 +130,14 @@
     "rm-node-168",
     "rm-node-175",
     "rm-git-3",
-    "rm-git-23"
+    "rm-git-23",
+    "rm-git-30",
+    "rm-git-35",
+    "rm-git-49",
+    "rm-git-79",
+    "rm-html-3"
   ],
-  "remainingEligibleCandidates": 49,
+  "remainingEligibleCandidates": 44,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -142,10 +147,10 @@
         136,
         45
       ],
-      "uniqueLongest": 1903,
-      "correctUniqueLongest": 1047,
-      "share": 0.5501839201261166,
-      "flags": 90
+      "uniqueLongest": 1901,
+      "correctUniqueLongest": 1044,
+      "share": 0.5491846396633351,
+      "flags": 85
     },
     "eligible": {
       "count": 2014,
@@ -155,10 +160,10 @@
         127,
         41
       ],
-      "uniqueLongest": 1766,
-      "correctUniqueLongest": 952,
-      "share": 0.5390713476783692,
-      "flags": 49
+      "uniqueLongest": 1764,
+      "correctUniqueLongest": 949,
+      "share": 0.5379818594104309,
+      "flags": 44
     },
     "effective": {
       "count": 1820,
@@ -168,10 +173,10 @@
         109,
         30
       ],
-      "uniqueLongest": 1615,
-      "correctUniqueLongest": 891,
-      "share": 0.551702786377709,
-      "flags": 46
+      "uniqueLongest": 1613,
+      "correctUniqueLongest": 888,
+      "share": 0.5505269683818971,
+      "flags": 41
     }
   },
   "issue": 471
