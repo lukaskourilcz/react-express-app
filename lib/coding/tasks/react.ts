@@ -3183,7 +3183,7 @@ test('the fruit filter waits the complete 300ms and keeps literal spaces',()=>wi
     tier: 4,
     focus: ["fetch", "reduce", "useState"],
     title: "Todo dashboard",
-    prompt: "Fetch the first three todos from the training API on mount. Each todo in the response carries a title and a completed flag, and each LI has to show both: the title, then “done” or “to do”, then a Remove button. Above the list show a line reading “Done: n of m”, where n counts the completed ones. A text input and an Add button append a new todo with that title and completed false, and Remove drops that one todo.",
+    prompt: "Fetch the first three todos from the training API on mount. Each todo in the response carries a title and a completed flag, and each LI has to show both: the title, then “done” or “to do”, then a Remove button. Above the list show a line reading “Done: n of m”, where n counts the completed ones. A text input and an Add button append a new todo with that title and completed false, and Remove drops that one todo. Give new todos separate stable identities, including when titles match or two items are added quickly.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -3231,13 +3231,13 @@ const remove = id => {
   ))}
 </ul>`,
     hints: [
-      "One state array holds the todos, whichever way they arrived. Adding, removing and counting are all derivations of it.",
+      "Keep one todo array and derive both counts from it. Give every new todo a stable identity when it is created; a timestamp may repeat, and matching titles are separate items. Add a fresh unfinished record and remove only the selected identity.",
     ],
     approach: [
       "Start with one piece of state: the array of todos. Everything on screen — the list, the counts, what a Remove button does — is worked out from it.",
       "Load it once on mount with an effect and an empty dependency array, and put what comes back into that same state rather than a second one.",
       "Adding builds a new array with your new todo on the end; removing builds a new array with one filtered out. Never change the existing array in place.",
-      "The counts are not state. Derive the completed count from the array during render, and it can never disagree with the list beside it.",
+      "The counts are not state. Derive the completed count from the array during render, and it can never disagree with the list beside it. Assign a stable identity once when creating a todo, so rapid additions and repeated titles can still be removed separately.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
