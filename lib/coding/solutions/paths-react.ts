@@ -33,7 +33,7 @@ const stateReference = (level: number) => lines(
   `  function add(event) {`,
   `    event.preventDefault();`,
   `    const trimmed = name.trim();`,
-  `    if (!trimmed) return;`,
+  level >= 5 ? `    if (!trimmed) { setError(''); return; }` : `    if (!trimmed) return;`,
   level >= 5 && `    if (guests.some((guest) => guest.name.toLowerCase() === trimmed.toLowerCase())) {`,
   level >= 5 && `      setError('Already on the list');`,
   level >= 5 && `      return;`,
@@ -114,6 +114,7 @@ const stateJunior = (level: number) => lines(
   `  function handleAdd() {`,
   `    const trimmed = name.trim();`,
   `    if (trimmed === '') {`,
+  level >= 5 && `      setError('');`,
   `      return;`,
   `    }`,
   level >= 5 && `    for (let i = 0; i < guests.length; i++) {`,
@@ -240,7 +241,7 @@ const stateSenior = (level: number) => lines(
   `  const add = (event) => {`,
   `    event.preventDefault();`,
   `    const trimmed = name.trim();`,
-  `    if (!trimmed) return;`,
+  level >= 5 ? `    if (!trimmed) { setError(''); return; }` : `    if (!trimmed) return;`,
   level >= 5 && `    const key = trimmed.toLowerCase();`,
   level >= 5 && `    if (guests.some((guest) => guest.name.toLowerCase() === key)) return setError('Already on the list');`,
   `    dispatch({ type: 'add', name: trimmed });`,
@@ -674,6 +675,114 @@ test('filtered removal keeps hidden guests and full-list counts and reacts to ev
 `,
 };
 for (const [id,cases] of Object.entries(GUEST_LIST_REVIEW_CASES)) {
+  const solution=REACT_PATH_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
+}
+
+// Duplicate handling and loading are audited per stage, without advancing later stages.
+const GUEST_DUPLICATE_EFFECT_REVIEW_CASES: Record<string,string> = {
+"react-path-state-5": `const GUEST_LEVEL=5;
+
+const guestWithin=container=>require('@testing-library/react').within(container);
+const guestQuery=v=>guestWithin(v.container);
+const guestInput=v=>guestQuery(v).getByRole('textbox',{name:'Name',exact:true});
+const guestAdd=(v,text)=>{fireEvent.change(guestInput(v),{target:{value:text}});fireEvent.click(guestQuery(v).getByRole('button',{name:'Add',exact:true}));};
+const guestRows=v=>guestQuery(v).queryAllByRole('listitem');
+const guestCount=(v,total,arrived)=>{if(GUEST_LEVEL>=2){const output=guestQuery(v).getByLabelText('Guests');expect(output.tagName).toBe('OUTPUT');expect(output.textContent).toBe(String(total));}if(GUEST_LEVEL>=3){const output=guestQuery(v).getByLabelText('Arrived');expect(output.tagName).toBe('OUTPUT');expect(output.textContent).toBe(arrived+' of '+total);}};
+const guestRemove=(v,name)=>fireEvent.click(guestQuery(v).getByRole('button',{name:'Remove '+name,exact:true}));
+const guestToggle=(v,name)=>fireEvent.click(guestQuery(v).getByRole('checkbox',{name,exact:true}));
+const guestShow=(v,value)=>{const field=guestQuery(v).getByRole('combobox',{name:'Show',exact:true});if(field.value!==value)fireEvent.change(field,{target:{value}});};
+
+const guestAlert=v=>guestQuery(v).queryAllByRole('alert').map(node=>node.textContent).join('');
+test('duplicates are checked against the whole list even when the original row is hidden',()=>{const v=render(<App/>);guestAdd(v,'  First Person  ');guestToggle(v,'First Person');guestShow(v,'waiting');for(const text of ['FIRST PERSON','  first person  ','First Person']){guestAdd(v,text);expect(guestAlert(v)).toBe('Already on the list');expect(guestInput(v).value).toBe(text);guestCount(v,1,1);expect(guestRows(v).length).toBe(0);}guestAdd(v,'Second Person');expect(guestAlert(v)).toBe('');guestCount(v,2,1);guestShow(v,'all');expect(guestRows(v).length).toBe(2);});
+test('only an equal normalized name is a duplicate and removing it makes the name available again',()=>{const v=render(<App/>);for(const text of ['Person Alpha','Person','Person Alpha Extra','Éva'])guestAdd(v,text);guestCount(v,4,0);guestAdd(v,' éVA ');expect(guestAlert(v)).toBe('Already on the list');guestCount(v,4,0);guestRemove(v,'Person Alpha');guestAdd(v,'  PERSON ALPHA  ');expect(guestAlert(v)).toBe('');guestCount(v,4,0);expect(Boolean(guestQuery(v).getByRole('checkbox',{name:'PERSON ALPHA',exact:true}))).toBe(true);});
+test('a blank attempt adds nothing and leaves no alert after a duplicate rejection',()=>{const v=render(<App/>);guestAdd(v,'Person');for(const blank of [' ','\\t','\\u2003']){guestAdd(v,' person ');expect(guestAlert(v)).toBe('Already on the list');guestAdd(v,blank);expect(guestAlert(v)).toBe('');guestCount(v,1,0);}guestAdd(v,'New Person');expect(guestInput(v).value).toBe('');guestCount(v,2,0);});
+test('duplicate state and filtered edits remain local to their mounted guest list',()=>{const a=render(<App/>),b=render(<App/>);guestAdd(a,'Shared Name');guestAdd(a,'SHARED NAME');expect(guestAlert(a)).toBe('Already on the list');guestAdd(b,'Shared Name');expect(guestAlert(b)).toBe('');guestToggle(a,'Shared Name');guestCount(a,1,1);guestCount(b,1,0);guestShow(a,'arrived');guestAdd(a,'New Person');expect(guestRows(a).length).toBe(1);guestCount(a,2,1);guestRemove(a,'Shared Name');guestShow(a,'all');guestCount(a,1,0);guestCount(b,1,0);a.rerender(<App/>);guestCount(a,1,0);a.unmount();const fresh=render(<App/>);guestCount(fresh,0,0);expect(guestAlert(fresh)).toBe('');});
+`,
+"react-path-effects-1": `
+const fxRTL=require('@testing-library/react');
+const fxQuery=v=>fxRTL.within(v.container);
+const fxDeferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+const fxFlush=async callback=>{await fxRTL.act(async()=>{callback();await Promise.resolve();});};
+const fxNames=v=>fxQuery(v).queryAllByRole('listitem').map(node=>node.textContent);
+const fxLoading=v=>{expect(fxQuery(v).getByRole('status').textContent).toBe('Loading');expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();};
+const fxAlert=v=>{const node=fxQuery(v).getByRole('alert'),copy=node.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());expect(copy.textContent.trim()).toBe('Could not load users');};
+const fxRetry=v=>fireEvent.click(fxQuery(v).getByRole('button',{name:'Retry',exact:true}));
+const fxSearch=(v,text)=>fireEvent.change(fxQuery(v).getByRole('textbox',{name:'Search',exact:true}),{target:{value:text}});
+const fxUsers=[{id:31,name:'<person>& Literal'},{id:107,name:'Second Person'},{id:203,name:'Third Person'},{id:404,name:'Fourth Person'}];
+
+test('a deferred answer lists every arbitrary-id literal user without fixture filtering',async()=>{const pending=fxDeferred();let calls=0;const load=()=>{calls++;return pending.promise;};const v=render(<App loadUsers={load}/>);fxLoading(v);expect(calls).toBe(1);v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('status')).toBeNull();expect(v.container.querySelector('person')).toBeNull();v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);});
+test('empty completion removes Loading without inventing a matching or error state',async()=>{const pending=fxDeferred(),v=render(<App loadUsers={()=>pending.promise}/>);fxLoading(v);await fxFlush(()=>pending.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxNames(v)).toEqual([]);expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();});
+test('independent mounts own their answers and a fresh mount starts a new request',async()=>{const one=fxDeferred(),two=fxDeferred();let firstCalls=0,secondCalls=0;const first=()=>{firstCalls++;return one.promise;},second=()=>{secondCalls++;return two.promise;};const a=render(<App loadUsers={first}/>),b=render(<App loadUsers={second}/>);fxLoading(a);fxLoading(b);await fxFlush(()=>two.resolve([{id:90,name:'Second Root'}]));fxLoading(a);expect(fxNames(b)).toEqual(['Second Root']);await fxFlush(()=>one.resolve([{id:80,name:'First Root'}]));expect(fxNames(a)).toEqual(['First Root']);expect(fxNames(b)).toEqual(['Second Root']);a.rerender(<App loadUsers={first}/>);expect(firstCalls).toBe(1);a.unmount();const pending=fxDeferred();const fresh=render(<App loadUsers={()=>pending.promise}/>);fxLoading(fresh);await fxFlush(()=>pending.resolve([]));expect(fxNames(b)).toEqual(['Second Root']);expect(secondCalls).toBe(1);});
+`,
+"react-path-effects-2": `
+const fxRTL=require('@testing-library/react');
+const fxQuery=v=>fxRTL.within(v.container);
+const fxDeferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+const fxFlush=async callback=>{await fxRTL.act(async()=>{callback();await Promise.resolve();});};
+const fxNames=v=>fxQuery(v).queryAllByRole('listitem').map(node=>node.textContent);
+const fxLoading=v=>{expect(fxQuery(v).getByRole('status').textContent).toBe('Loading');expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();};
+const fxAlert=v=>{const node=fxQuery(v).getByRole('alert'),copy=node.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());expect(copy.textContent.trim()).toBe('Could not load users');};
+const fxRetry=v=>fireEvent.click(fxQuery(v).getByRole('button',{name:'Retry',exact:true}));
+const fxSearch=(v,text)=>fireEvent.change(fxQuery(v).getByRole('textbox',{name:'Search',exact:true}),{target:{value:text}});
+const fxUsers=[{id:31,name:'<person>& Literal'},{id:107,name:'Second Person'},{id:203,name:'Third Person'},{id:404,name:'Fourth Person'}];
+
+test('a deferred answer lists every arbitrary-id literal user without fixture filtering',async()=>{const pending=fxDeferred();let calls=0;const load=()=>{calls++;return pending.promise;};const v=render(<App loadUsers={load}/>);fxLoading(v);expect(calls).toBe(1);v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('status')).toBeNull();expect(v.container.querySelector('person')).toBeNull();v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);});
+test('empty completion removes Loading without inventing a matching or error state',async()=>{const pending=fxDeferred(),v=render(<App loadUsers={()=>pending.promise}/>);fxLoading(v);await fxFlush(()=>pending.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxNames(v)).toEqual([]);expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();});
+test('independent mounts own their answers and a fresh mount starts a new request',async()=>{const one=fxDeferred(),two=fxDeferred();let firstCalls=0,secondCalls=0;const first=()=>{firstCalls++;return one.promise;},second=()=>{secondCalls++;return two.promise;};const a=render(<App loadUsers={first}/>),b=render(<App loadUsers={second}/>);fxLoading(a);fxLoading(b);await fxFlush(()=>two.resolve([{id:90,name:'Second Root'}]));fxLoading(a);expect(fxNames(b)).toEqual(['Second Root']);await fxFlush(()=>one.resolve([{id:80,name:'First Root'}]));expect(fxNames(a)).toEqual(['First Root']);expect(fxNames(b)).toEqual(['Second Root']);a.rerender(<App loadUsers={first}/>);expect(firstCalls).toBe(1);a.unmount();const pending=fxDeferred();const fresh=render(<App loadUsers={()=>pending.promise}/>);fxLoading(fresh);await fxFlush(()=>pending.resolve([]));expect(fxNames(b)).toEqual(['Second Root']);expect(secondCalls).toBe(1);});
+
+test('multiple failed retries handle arbitrary rejection reasons and keep one request per attempt',async()=>{const attempts=[fxDeferred(),fxDeferred(),fxDeferred(),fxDeferred()];let calls=0;const loader=()=>attempts[calls++].promise,v=render(<App loadUsers={loader}/>);fxLoading(v);for(const reason of ['offline',null,{message:'unavailable'}]){const index=calls-1;await fxFlush(()=>attempts[index].reject(reason));fxAlert(v);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxNames(v)).toEqual([]);v.rerender(<App loadUsers={loader}/>);expect(calls).toBe(index+1);fxRetry(v);expect(calls).toBe(index+2);fxLoading(v);expect(fxQuery(v).queryByRole('alert')).toBeNull();}await fxFlush(()=>attempts[3].resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxQuery(v).queryByRole('button',{name:'Retry',exact:true})).toBeNull();expect(calls).toBe(4);});
+test('a retry that succeeds empty shows No users rather than the old error',async()=>{const first=fxDeferred(),last=fxDeferred();let calls=0;const v=render(<App loadUsers={()=>++calls===1?first.promise:last.promise}/>);await fxFlush(()=>first.reject(new Error('offline')));fxAlert(v);fxRetry(v);fxLoading(v);await fxFlush(()=>last.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(calls).toBe(2);});
+`,
+"react-path-effects-3": `
+const fxRTL=require('@testing-library/react');
+const fxQuery=v=>fxRTL.within(v.container);
+const fxDeferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+const fxFlush=async callback=>{await fxRTL.act(async()=>{callback();await Promise.resolve();});};
+const fxNames=v=>fxQuery(v).queryAllByRole('listitem').map(node=>node.textContent);
+const fxLoading=v=>{expect(fxQuery(v).getByRole('status').textContent).toBe('Loading');expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();};
+const fxAlert=v=>{const node=fxQuery(v).getByRole('alert'),copy=node.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());expect(copy.textContent.trim()).toBe('Could not load users');};
+const fxRetry=v=>fireEvent.click(fxQuery(v).getByRole('button',{name:'Retry',exact:true}));
+const fxSearch=(v,text)=>fireEvent.change(fxQuery(v).getByRole('textbox',{name:'Search',exact:true}),{target:{value:text}});
+const fxUsers=[{id:31,name:'<person>& Literal'},{id:107,name:'Second Person'},{id:203,name:'Third Person'},{id:404,name:'Fourth Person'}];
+
+test('a deferred answer lists every arbitrary-id literal user without fixture filtering',async()=>{const pending=fxDeferred();let calls=0;const load=()=>{calls++;return pending.promise;};const v=render(<App loadUsers={load}/>);fxLoading(v);expect(calls).toBe(1);v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('status')).toBeNull();expect(v.container.querySelector('person')).toBeNull();v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);});
+test('empty completion removes Loading without inventing a matching or error state',async()=>{const pending=fxDeferred(),v=render(<App loadUsers={()=>pending.promise}/>);fxLoading(v);await fxFlush(()=>pending.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxNames(v)).toEqual([]);expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();});
+test('independent mounts own their answers and a fresh mount starts a new request',async()=>{const one=fxDeferred(),two=fxDeferred();let firstCalls=0,secondCalls=0;const first=()=>{firstCalls++;return one.promise;},second=()=>{secondCalls++;return two.promise;};const a=render(<App loadUsers={first}/>),b=render(<App loadUsers={second}/>);fxLoading(a);fxLoading(b);await fxFlush(()=>two.resolve([{id:90,name:'Second Root'}]));fxLoading(a);expect(fxNames(b)).toEqual(['Second Root']);await fxFlush(()=>one.resolve([{id:80,name:'First Root'}]));expect(fxNames(a)).toEqual(['First Root']);expect(fxNames(b)).toEqual(['Second Root']);a.rerender(<App loadUsers={first}/>);expect(firstCalls).toBe(1);a.unmount();const pending=fxDeferred();const fresh=render(<App loadUsers={()=>pending.promise}/>);fxLoading(fresh);await fxFlush(()=>pending.resolve([]));expect(fxNames(b)).toEqual(['Second Root']);expect(secondCalls).toBe(1);});
+
+test('multiple failed retries handle arbitrary rejection reasons and keep one request per attempt',async()=>{const attempts=[fxDeferred(),fxDeferred(),fxDeferred(),fxDeferred()];let calls=0;const loader=()=>attempts[calls++].promise,v=render(<App loadUsers={loader}/>);fxLoading(v);for(const reason of ['offline',null,{message:'unavailable'}]){const index=calls-1;await fxFlush(()=>attempts[index].reject(reason));fxAlert(v);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxNames(v)).toEqual([]);v.rerender(<App loadUsers={loader}/>);expect(calls).toBe(index+1);fxRetry(v);expect(calls).toBe(index+2);fxLoading(v);expect(fxQuery(v).queryByRole('alert')).toBeNull();}await fxFlush(()=>attempts[3].resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxQuery(v).queryByRole('button',{name:'Retry',exact:true})).toBeNull();expect(calls).toBe(4);});
+test('a retry that succeeds empty shows No users rather than the old error',async()=>{const first=fxDeferred(),last=fxDeferred();let calls=0;const v=render(<App loadUsers={()=>++calls===1?first.promise:last.promise}/>);await fxFlush(()=>first.reject(new Error('offline')));fxAlert(v);fxRetry(v);fxLoading(v);await fxFlush(()=>last.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(calls).toBe(2);});
+
+test('search keeps the complete trimmed case-insensitive substring without refetching',async()=>{const rows=[{id:77,name:'Person Ready'},{id:89,name:'Person Resting'},{id:102,name:'Performer'},{id:200,name:'Éva Shark'}];let calls=0;const loader=()=>{calls++;return Promise.resolve(rows);};const v=render(<App loadUsers={loader}/>);await fxQuery(v).findByText('Person Ready',{},soon);for(const needle of ['ready','  SON REA  ','ÉVA','not anywhere','']){fxSearch(v,needle);const expected=rows.filter(row=>row.name.toLowerCase().includes(needle.trim().toLowerCase())).map(row=>row.name);expect(fxNames(v)).toEqual(expected);expect(Boolean(fxQuery(v).queryByText('No matches',{exact:true}))).toBe(expected.length===0);expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(calls).toBe(1);}v.rerender(<App loadUsers={loader}/>);expect(calls).toBe(1);});
+test('a query entered during Loading applies to the later answer without an extra request',async()=>{const pending=fxDeferred();let calls=0;const v=render(<App loadUsers={()=>{calls++;return pending.promise;}}/>);fxSearch(v,'  third  ');fxLoading(v);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(['Third Person']);fxSearch(v,'literal');expect(fxNames(v)).toEqual(['<person>& Literal']);expect(calls).toBe(1);});
+`,
+"react-path-effects-4": `
+const fxRTL=require('@testing-library/react');
+const fxQuery=v=>fxRTL.within(v.container);
+const fxDeferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+const fxFlush=async callback=>{await fxRTL.act(async()=>{callback();await Promise.resolve();});};
+const fxNames=v=>fxQuery(v).queryAllByRole('listitem').map(node=>node.textContent);
+const fxLoading=v=>{expect(fxQuery(v).getByRole('status').textContent).toBe('Loading');expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();};
+const fxAlert=v=>{const node=fxQuery(v).getByRole('alert'),copy=node.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());expect(copy.textContent.trim()).toBe('Could not load users');};
+const fxRetry=v=>fireEvent.click(fxQuery(v).getByRole('button',{name:'Retry',exact:true}));
+const fxSearch=(v,text)=>fireEvent.change(fxQuery(v).getByRole('textbox',{name:'Search',exact:true}),{target:{value:text}});
+const fxUsers=[{id:31,name:'<person>& Literal'},{id:107,name:'Second Person'},{id:203,name:'Third Person'},{id:404,name:'Fourth Person'}];
+
+test('a deferred answer lists every arbitrary-id literal user without fixture filtering',async()=>{const pending=fxDeferred();let calls=0;const load=()=>{calls++;return pending.promise;};const v=render(<App loadUsers={load}/>);fxLoading(v);expect(calls).toBe(1);v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('status')).toBeNull();expect(v.container.querySelector('person')).toBeNull();v.rerender(<App loadUsers={load}/>);expect(calls).toBe(1);});
+test('empty completion removes Loading without inventing a matching or error state',async()=>{const pending=fxDeferred(),v=render(<App loadUsers={()=>pending.promise}/>);fxLoading(v);await fxFlush(()=>pending.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxNames(v)).toEqual([]);expect(fxQuery(v).queryByText('No matches',{exact:true})).toBeNull();});
+test('independent mounts own their answers and a fresh mount starts a new request',async()=>{const one=fxDeferred(),two=fxDeferred();let firstCalls=0,secondCalls=0;const first=()=>{firstCalls++;return one.promise;},second=()=>{secondCalls++;return two.promise;};const a=render(<App loadUsers={first}/>),b=render(<App loadUsers={second}/>);fxLoading(a);fxLoading(b);await fxFlush(()=>two.resolve([{id:90,name:'Second Root'}]));fxLoading(a);expect(fxNames(b)).toEqual(['Second Root']);await fxFlush(()=>one.resolve([{id:80,name:'First Root'}]));expect(fxNames(a)).toEqual(['First Root']);expect(fxNames(b)).toEqual(['Second Root']);a.rerender(<App loadUsers={first}/>);expect(firstCalls).toBe(1);a.unmount();const pending=fxDeferred();const fresh=render(<App loadUsers={()=>pending.promise}/>);fxLoading(fresh);await fxFlush(()=>pending.resolve([]));expect(fxNames(b)).toEqual(['Second Root']);expect(secondCalls).toBe(1);});
+
+test('multiple failed retries handle arbitrary rejection reasons and keep one request per attempt',async()=>{const attempts=[fxDeferred(),fxDeferred(),fxDeferred(),fxDeferred()];let calls=0;const loader=()=>attempts[calls++].promise,v=render(<App loadUsers={loader}/>);fxLoading(v);for(const reason of ['offline',null,{message:'unavailable'}]){const index=calls-1;await fxFlush(()=>attempts[index].reject(reason));fxAlert(v);expect(fxQuery(v).queryByRole('status')).toBeNull();expect(fxNames(v)).toEqual([]);v.rerender(<App loadUsers={loader}/>);expect(calls).toBe(index+1);fxRetry(v);expect(calls).toBe(index+2);fxLoading(v);expect(fxQuery(v).queryByRole('alert')).toBeNull();}await fxFlush(()=>attempts[3].resolve(fxUsers));expect(fxNames(v)).toEqual(fxUsers.map(user=>user.name));expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(fxQuery(v).queryByRole('button',{name:'Retry',exact:true})).toBeNull();expect(calls).toBe(4);});
+test('a retry that succeeds empty shows No users rather than the old error',async()=>{const first=fxDeferred(),last=fxDeferred();let calls=0;const v=render(<App loadUsers={()=>++calls===1?first.promise:last.promise}/>);await fxFlush(()=>first.reject(new Error('offline')));fxAlert(v);fxRetry(v);fxLoading(v);await fxFlush(()=>last.resolve([]));expect(Boolean(fxQuery(v).getByText('No users',{exact:true}))).toBe(true);expect(fxQuery(v).queryByRole('alert')).toBeNull();expect(calls).toBe(2);});
+
+test('search keeps the complete trimmed case-insensitive substring without refetching',async()=>{const rows=[{id:77,name:'Person Ready'},{id:89,name:'Person Resting'},{id:102,name:'Performer'},{id:200,name:'Éva Shark'}];let calls=0;const loader=()=>{calls++;return Promise.resolve(rows);};const v=render(<App loadUsers={loader}/>);await fxQuery(v).findByText('Person Ready',{},soon);for(const needle of ['ready','  SON REA  ','ÉVA','not anywhere','']){fxSearch(v,needle);const expected=rows.filter(row=>row.name.toLowerCase().includes(needle.trim().toLowerCase())).map(row=>row.name);expect(fxNames(v)).toEqual(expected);expect(Boolean(fxQuery(v).queryByText('No matches',{exact:true}))).toBe(expected.length===0);expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(calls).toBe(1);}v.rerender(<App loadUsers={loader}/>);expect(calls).toBe(1);});
+test('a query entered during Loading applies to the later answer without an extra request',async()=>{const pending=fxDeferred();let calls=0;const v=render(<App loadUsers={()=>{calls++;return pending.promise;}}/>);fxSearch(v,'  third  ');fxLoading(v);expect(calls).toBe(1);await fxFlush(()=>pending.resolve(fxUsers));expect(fxNames(v)).toEqual(['Third Person']);fxSearch(v,'literal');expect(fxNames(v)).toEqual(['<person>& Literal']);expect(calls).toBe(1);});
+
+test('three changing loaders ignore the middle late success and first late failure',async()=>{const requests=[fxDeferred(),fxDeferred(),fxDeferred()];const calls=[0,0,0],loaders=requests.map((request,index)=>()=>{calls[index]++;return request.promise;});const v=render(<App loadUsers={loaders[0]}/>);fxLoading(v);v.rerender(<App loadUsers={loaders[1]}/>);fxLoading(v);v.rerender(<App loadUsers={loaders[2]}/>);fxLoading(v);await fxFlush(()=>requests[2].resolve([{id:99,name:'Latest Team'}]));expect(fxNames(v)).toEqual(['Latest Team']);await fxFlush(()=>requests[1].resolve([{id:45,name:'Obsolete Middle'}]));expect(fxNames(v)).toEqual(['Latest Team']);await fxFlush(()=>requests[0].reject(new Error('obsolete first')));expect(fxNames(v)).toEqual(['Latest Team']);expect(fxQuery(v).queryByRole('alert')).toBeNull();v.rerender(<App loadUsers={loaders[2]}/>);expect(calls).toEqual([1,1,1]);});
+test('an obsolete empty success cannot replace a newer loaded list or filtered view',async()=>{const old=fxDeferred(),current=fxDeferred(),v=render(<App loadUsers={()=>old.promise}/>);const loader=()=>current.promise;v.rerender(<App loadUsers={loader}/>);fxLoading(v);await fxFlush(()=>current.resolve(fxUsers));fxSearch(v,'third');expect(fxNames(v)).toEqual(['Third Person']);await fxFlush(()=>old.resolve([]));expect(fxNames(v)).toEqual(['Third Person']);expect(fxQuery(v).queryByText('No users',{exact:true})).toBeNull();expect(fxQuery(v).getByRole('textbox',{name:'Search',exact:true}).value).toBe('third');});
+`,
+};
+for (const [id,cases] of Object.entries(GUEST_DUPLICATE_EFFECT_REVIEW_CASES)) {
   const solution=REACT_PATH_SOLUTIONS[id];
   solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
 }
