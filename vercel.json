@@ -2,6 +2,7 @@
   "buildCommand": "npm run build:react-runner && npm ci --prefix client && npm run build --prefix client",
   "outputDirectory": "client/dist",
   "framework": null,
+  "regions": ["arn1"],
   "functions": {
     "api/quiz/roadmap.ts": {
       "maxDuration": 45,
