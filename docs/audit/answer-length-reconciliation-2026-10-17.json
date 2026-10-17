@@ -140,9 +140,14 @@
     "rm-html-11",
     "rm-html-14",
     "rm-html-15",
-    "rm-html-16"
+    "rm-html-16",
+    "rm-html-23",
+    "rm-html-32",
+    "rm-html-34",
+    "rm-html-38",
+    "rm-html-39"
   ],
-  "remainingEligibleCandidates": 39,
+  "remainingEligibleCandidates": 34,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -153,9 +158,9 @@
         45
       ],
       "uniqueLongest": 1901,
-      "correctUniqueLongest": 1040,
-      "share": 0.5470804839558128,
-      "flags": 80
+      "correctUniqueLongest": 1036,
+      "share": 0.5449763282482903,
+      "flags": 75
     },
     "eligible": {
       "count": 2014,
@@ -166,9 +171,9 @@
         41
       ],
       "uniqueLongest": 1764,
-      "correctUniqueLongest": 945,
-      "share": 0.5357142857142857,
-      "flags": 39
+      "correctUniqueLongest": 941,
+      "share": 0.5334467120181405,
+      "flags": 34
     },
     "effective": {
       "count": 1820,
@@ -179,9 +184,9 @@
         30
       ],
       "uniqueLongest": 1613,
-      "correctUniqueLongest": 886,
-      "share": 0.5492870427774333,
-      "flags": 38
+      "correctUniqueLongest": 883,
+      "share": 0.5474271543707377,
+      "flags": 34
     }
   },
   "issue": 471
