@@ -1,4 +1,4 @@
-// One independent leaderboard name preference, shared by Profile and Leaderboard.
+// Profile edits the independent leaderboard preference; boards read it.
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { useAuth } from './auth';
