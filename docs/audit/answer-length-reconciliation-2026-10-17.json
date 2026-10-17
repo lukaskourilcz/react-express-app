@@ -145,9 +145,14 @@
     "rm-html-32",
     "rm-html-34",
     "rm-html-38",
-    "rm-html-39"
+    "rm-html-39",
+    "rm-html-47",
+    "rm-html-48",
+    "rm-css-32",
+    "rm-css-33",
+    "rm-css-39"
   ],
-  "remainingEligibleCandidates": 34,
+  "remainingEligibleCandidates": 29,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -158,9 +163,9 @@
         45
       ],
       "uniqueLongest": 1901,
-      "correctUniqueLongest": 1036,
-      "share": 0.5449763282482903,
-      "flags": 75
+      "correctUniqueLongest": 1035,
+      "share": 0.5444502893214098,
+      "flags": 70
     },
     "eligible": {
       "count": 2014,
@@ -171,9 +176,9 @@
         41
       ],
       "uniqueLongest": 1764,
-      "correctUniqueLongest": 941,
-      "share": 0.5334467120181405,
-      "flags": 34
+      "correctUniqueLongest": 940,
+      "share": 0.5328798185941043,
+      "flags": 29
     },
     "effective": {
       "count": 1820,
@@ -184,9 +189,9 @@
         30
       ],
       "uniqueLongest": 1613,
-      "correctUniqueLongest": 883,
-      "share": 0.5474271543707377,
-      "flags": 34
+      "correctUniqueLongest": 882,
+      "share": 0.5468071915685059,
+      "flags": 29
     }
   },
   "issue": 471
