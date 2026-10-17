@@ -16,7 +16,7 @@
 // (optional, not required at runtime). To shrink the prod bundle further, drop
 // browserTracingIntegration below for errors-only reporting.
 
-type SentryModule = typeof import('@sentry/react');
+type SentryModule = typeof import('./sentry-sdk');
 
 let sentry: SentryModule | null = null;
 let initialised = false;
@@ -25,7 +25,7 @@ export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
   if (!dsn || initialised) return;
   initialised = true;
-  void import('@sentry/react')
+  void import('./sentry-sdk')
     .then((Sentry) => {
       Sentry.init({
         dsn,
