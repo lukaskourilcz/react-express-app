@@ -3463,3 +3463,154 @@ for (const [id,cases] of Object.entries(EXPLORER_BOARD_REVIEW_CASES)) {
   const solution=REACT_EVOLVING_SOLUTIONS[id];
   solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
 }
+
+// Scoped selection, price-filter and valid-quantity checkpoints and milestones.
+const SELECTION_CART_REVIEW_CASES: Record<string,string> = {
+"react-evolving-catalog-3-start": `
+const CART_STAGE=0;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});m.quantities[p.id]=value[1];}
+ cartCheck(v,m);
+};
+
+test('every product toggles independently across pages and hidden searches with full-list totals',()=>{const v=render(<App/>),m=cartModel();cartCheck(v,m);cartAction(v,m,'toggle',0);cartAction(v,m,'toggle',1);cartAction(v,m,'next');cartAction(v,m,'toggle',0);cartAction(v,m,'toggle',1);cartAction(v,m,'query','zzz');cartAction(v,m,'query','');cartAction(v,m,'toggle',0);cartAction(v,m,'next');cartAction(v,m,'toggle',1);cartAction(v,m,'previous');});
+
+test('a bounded selection and view model preserves identities totals and independent paging',()=>{const v=render(<App/>),m=cartModel();for(let i=0;i<48;i++){const rows=cartFiltered(m),shown=rows.slice(m.page*2,m.page*2+2),step=i%8;if(step===0)cartAction(v,m,'query',['','t','zzz','a'][Math.floor(i/8)%4]);else if(step===1&&CART_STAGE>=1)cartAction(v,m,'select');else if(step===2)cartAction(v,m,'next');else if(step===3&&shown.length)cartAction(v,m,'toggle',i%shown.length);else if(step===4&&CART_STAGE>=1)cartAction(v,m,'sort',['name','price-asc','price-desc'][Math.floor(i/8)%3]);else if(step===5&&CART_STAGE>=2){if(CART_STAGE===2)cartAction(v,m,'clear');cartAction(v,m,'maximum',['0','1.5','4',''][Math.floor(i/8)%4]);}else if(step===6)cartAction(v,m,'previous');else if(step===7&&CART_STAGE>=1)cartAction(v,m,'clear');else cartCheck(v,m);}});
+
+test('parent renders independent explorers and fresh mounts keep their own selection state',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',1);cartAction(a,ma,'query','zzz');a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();cartCheck(render(<App/>),cartModel());});
+
+test('empty-result recovery never transfers a hidden selection to a visible position',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'toggle',1);for(const query of ['Dates','zzz','apple','banana',''])cartAction(v,m,'query',query);cartAction(v,m,'toggle',1);});
+`,
+"react-evolving-catalog-3": `
+const CART_STAGE=1;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});m.quantities[p.id]=value[1];}
+ cartCheck(v,m);
+};
+
+test('Select page unions actual visible identities and Clear removes hidden selections',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'select');cartAction(v,m,'select');cartAction(v,m,'next');cartAction(v,m,'select');cartAction(v,m,'select');cartAction(v,m,'sort','price-desc');cartAction(v,m,'toggle',0);cartAction(v,m,'sort','price-asc');cartAction(v,m,'query','zzz');cartAction(v,m,'select');cartAction(v,m,'clear');cartAction(v,m,'clear');cartAction(v,m,'query','');});
+
+test('a bounded selection and view model preserves identities totals and independent paging',()=>{const v=render(<App/>),m=cartModel();for(let i=0;i<48;i++){const rows=cartFiltered(m),shown=rows.slice(m.page*2,m.page*2+2),step=i%8;if(step===0)cartAction(v,m,'query',['','t','zzz','a'][Math.floor(i/8)%4]);else if(step===1&&CART_STAGE>=1)cartAction(v,m,'select');else if(step===2)cartAction(v,m,'next');else if(step===3&&shown.length)cartAction(v,m,'toggle',i%shown.length);else if(step===4&&CART_STAGE>=1)cartAction(v,m,'sort',['name','price-asc','price-desc'][Math.floor(i/8)%3]);else if(step===5&&CART_STAGE>=2){if(CART_STAGE===2)cartAction(v,m,'clear');cartAction(v,m,'maximum',['0','1.5','4',''][Math.floor(i/8)%4]);}else if(step===6)cartAction(v,m,'previous');else if(step===7&&CART_STAGE>=1)cartAction(v,m,'clear');else cartCheck(v,m);}});
+
+test('parent renders independent explorers and fresh mounts keep their own selection state',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',1);cartAction(a,ma,'query','zzz');a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();cartCheck(render(<App/>),cartModel());});
+
+test('every product toggles independently across pages and hidden searches with full-list totals',()=>{const v=render(<App/>),m=cartModel();cartCheck(v,m);cartAction(v,m,'toggle',0);cartAction(v,m,'toggle',1);cartAction(v,m,'next');cartAction(v,m,'toggle',0);cartAction(v,m,'toggle',1);cartAction(v,m,'query','zzz');cartAction(v,m,'query','');cartAction(v,m,'toggle',0);cartAction(v,m,'next');cartAction(v,m,'toggle',1);cartAction(v,m,'previous');});
+`,
+"react-evolving-catalog-4-start": `
+const CART_STAGE=2;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});m.quantities[p.id]=value[1];}
+ cartCheck(v,m);
+};
+
+test('zero fractional exact and empty price limits combine with search and every sort mode',()=>{const v=render(<App/>),m=cartModel();for(const maximum of ['0','1.1','2','2.1','3.5','4','10','']){cartAction(v,m,'maximum',maximum);for(const sort of ['name','price-desc','price-asc']){cartAction(v,m,'sort',sort);cartAction(v,m,'query','t');cartAction(v,m,'query','');}}});
+
+test('price changes keep pagination valid at the checkpoint and reset it at the full milestone',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'next');cartAction(v,m,'maximum','10');cartAction(v,m,'maximum','3');cartAction(v,m,'maximum','0');cartAction(v,m,'maximum','');cartAction(v,m,'next');cartAction(v,m,'maximum','1');if(CART_STAGE>=3){cartAction(v,m,'select');cartAction(v,m,'maximum','0');cartAction(v,m,'maximum','');cartAction(v,m,'next');cartAction(v,m,'select');cartAction(v,m,'maximum','1.1');}});
+
+test('a bounded selection and view model preserves identities totals and independent paging',()=>{const v=render(<App/>),m=cartModel();for(let i=0;i<48;i++){const rows=cartFiltered(m),shown=rows.slice(m.page*2,m.page*2+2),step=i%8;if(step===0)cartAction(v,m,'query',['','t','zzz','a'][Math.floor(i/8)%4]);else if(step===1&&CART_STAGE>=1)cartAction(v,m,'select');else if(step===2)cartAction(v,m,'next');else if(step===3&&shown.length)cartAction(v,m,'toggle',i%shown.length);else if(step===4&&CART_STAGE>=1)cartAction(v,m,'sort',['name','price-asc','price-desc'][Math.floor(i/8)%3]);else if(step===5&&CART_STAGE>=2){if(CART_STAGE===2)cartAction(v,m,'clear');cartAction(v,m,'maximum',['0','1.5','4',''][Math.floor(i/8)%4]);}else if(step===6)cartAction(v,m,'previous');else if(step===7&&CART_STAGE>=1)cartAction(v,m,'clear');else cartCheck(v,m);}});
+
+test('parent renders independent explorers and fresh mounts keep their own selection state',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',1);cartAction(a,ma,'query','zzz');a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();cartCheck(render(<App/>),cartModel());});
+`,
+"react-evolving-catalog-4": `
+const CART_STAGE=3;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});m.quantities[p.id]=value[1];}
+ cartCheck(v,m);
+};
+
+test('zero fractional exact and empty price limits combine with search and every sort mode',()=>{const v=render(<App/>),m=cartModel();for(const maximum of ['0','1.1','2','2.1','3.5','4','10','']){cartAction(v,m,'maximum',maximum);for(const sort of ['name','price-desc','price-asc']){cartAction(v,m,'sort',sort);cartAction(v,m,'query','t');cartAction(v,m,'query','');}}});
+
+test('price changes keep pagination valid at the checkpoint and reset it at the full milestone',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'next');cartAction(v,m,'maximum','10');cartAction(v,m,'maximum','3');cartAction(v,m,'maximum','0');cartAction(v,m,'maximum','');cartAction(v,m,'next');cartAction(v,m,'maximum','1');if(CART_STAGE>=3){cartAction(v,m,'select');cartAction(v,m,'maximum','0');cartAction(v,m,'maximum','');cartAction(v,m,'next');cartAction(v,m,'select');cartAction(v,m,'maximum','1.1');}});
+
+test('a bounded selection and view model preserves identities totals and independent paging',()=>{const v=render(<App/>),m=cartModel();for(let i=0;i<48;i++){const rows=cartFiltered(m),shown=rows.slice(m.page*2,m.page*2+2),step=i%8;if(step===0)cartAction(v,m,'query',['','t','zzz','a'][Math.floor(i/8)%4]);else if(step===1&&CART_STAGE>=1)cartAction(v,m,'select');else if(step===2)cartAction(v,m,'next');else if(step===3&&shown.length)cartAction(v,m,'toggle',i%shown.length);else if(step===4&&CART_STAGE>=1)cartAction(v,m,'sort',['name','price-asc','price-desc'][Math.floor(i/8)%3]);else if(step===5&&CART_STAGE>=2){if(CART_STAGE===2)cartAction(v,m,'clear');cartAction(v,m,'maximum',['0','1.5','4',''][Math.floor(i/8)%4]);}else if(step===6)cartAction(v,m,'previous');else if(step===7&&CART_STAGE>=1)cartAction(v,m,'clear');else cartCheck(v,m);}});
+
+test('parent renders independent explorers and fresh mounts keep their own selection state',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',1);cartAction(a,ma,'query','zzz');a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();cartCheck(render(<App/>),cartModel());});
+`,
+"react-evolving-catalog-5-start": `
+const CART_STAGE=4;
+
+const cartWithin=require('@testing-library/react').within;
+const cartProducts=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+const cartModel=()=>({query:'',sort:'name',maximum:'',page:0,selected:[],quantities:{}});
+const cartField=(v,name)=>cartWithin(v.container).getByLabelText(name);
+const cartButton=(v,name)=>cartWithin(v.container).getByRole('button',{name,exact:true});
+const cartFiltered=m=>cartProducts.filter(p=>p.name.toLowerCase().includes(m.query.trim().toLowerCase())&&(CART_STAGE<2||m.maximum===''||p.price<=Number(m.maximum))).sort((a,b)=>m.sort==='name'?a.name.localeCompare(b.name):m.sort==='price-asc'?a.price-b.price:b.price-a.price);
+const cartCheck=(v,m)=>{const rows=cartFiltered(m),pages=Math.ceil(rows.length/2),visible=rows.slice(m.page*2,m.page*2+2),boxes=cartWithin(v.container).queryAllByRole('checkbox');expect(boxes.length).toBe(visible.length);for(const [i,p]of visible.entries()){const li=boxes[i].closest('li');expect(Boolean(li)).toBe(true);expect(cartWithin(li).getByRole('checkbox',{name:p.name,exact:true}).checked).toBe(m.selected.includes(p.id));expect(new RegExp('(^|[^0-9])'+p.price+'([^0-9]|$)').test(li.textContent)).toBe(true);}expect(cartField(v,'Page').textContent).toBe((pages?m.page+1:0)+' / '+pages);expect(cartButton(v,'Previous').disabled).toBe(m.page===0);expect(cartButton(v,'Next').disabled).toBe(m.page+1>=pages);const sum=cartProducts.filter(p=>m.selected.includes(p.id)).reduce((n,p)=>n+p.price*(m.quantities[p.id]??1),0);expect(cartField(v,'Selected total').textContent).toBe(String(sum));if(CART_STAGE>=1){expect(cartButton(v,'Select page').disabled).toBe(!visible.length);expect(cartButton(v,'Clear selection').disabled).toBe(!m.selected.length);}if(CART_STAGE>=4)for(const p of cartProducts.filter(p=>m.selected.includes(p.id)))expect(Number(cartField(v,'Quantity '+p.name).value)).toBe(m.quantities[p.id]??1);expect(Boolean(cartWithin(v.container).queryByText('No products',{exact:true}))).toBe(!visible.length);};
+const cartAction=(v,m,kind,value)=>{const rows=cartFiltered(m),visible=rows.slice(m.page*2,m.page*2+2),pages=Math.ceil(rows.length/2);
+ if(kind==='query'||kind==='sort'||kind==='maximum'){const label=kind==='query'?'Search':kind==='sort'?'Sort':'Maximum price',changed=cartField(v,label).value!==value;if(changed)fireEvent.change(cartField(v,label),{target:{value}});m[kind]=value;if(changed){if(kind!=='maximum'||CART_STAGE>=3)m.page=0;else {const count=Math.ceil(cartFiltered(m).length/2),shown=cartField(v,'Page').textContent.split('/').map(Number)[0];m.page=count?shown-1:0;expect(m.page>=0&&m.page<Math.max(1,count)).toBe(true);}}}
+ if(kind==='next'){fireEvent.click(cartButton(v,'Next'));if(m.page+1<pages)m.page++;}
+ if(kind==='previous'){fireEvent.click(cartButton(v,'Previous'));if(m.page>0)m.page--;}
+ if(kind==='toggle'){const p=visible[value];fireEvent.click(cartWithin(v.container).getByRole('checkbox',{name:p.name,exact:true}));m.selected=m.selected.includes(p.id)?m.selected.filter(id=>id!==p.id):[...m.selected,p.id];}
+ if(kind==='select'){fireEvent.click(cartButton(v,'Select page'));for(const p of visible)if(!m.selected.includes(p.id))m.selected.push(p.id);}
+ if(kind==='clear'){fireEvent.click(cartButton(v,'Clear selection'));m.selected=[];}
+ if(kind==='quantity'){const p=cartProducts.find(p=>p.id===value[0]);fireEvent.change(cartField(v,'Quantity '+p.name),{target:{value:String(value[1])}});m.quantities[p.id]=value[1];}
+ cartCheck(v,m);
+};
+
+test('all selected products expose independent valid quantities and full-list weighted totals',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'select');cartAction(v,m,'next');cartAction(v,m,'select');for(const pair of [[1,99],[2,2],[3,17],[4,98],[3,99],[4,1]])cartAction(v,m,'quantity',pair);cartAction(v,m,'query','zzz');cartAction(v,m,'maximum','0');for(const pair of [[2,99],[4,99],[1,1]])cartAction(v,m,'quantity',pair);cartAction(v,m,'maximum','');cartAction(v,m,'query','');});
+test('valid quantity edits remain attached to hidden products through sort page and parent renders',()=>{const v=render(<App/>),m=cartModel();cartAction(v,m,'select');cartAction(v,m,'next');cartAction(v,m,'select');for(let i=0;i<16;i++){cartAction(v,m,'quantity',[i%4+1,(i*7)%99+1]);cartAction(v,m,'sort',i%2?'price-asc':'price-desc');cartAction(v,m,'next');cartAction(v,m,'previous');v.rerender(<App/>);cartCheck(v,m);}});
+test('independent carts keep their own quantities and a fresh selected product defaults to one',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',0);cartAction(a,ma,'quantity',[1,99]);cartAction(b,mb,'quantity',[1,2]);a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();const v=render(<App/>),m=cartModel();cartAction(v,m,'toggle',0);});
+
+test('parent renders independent explorers and fresh mounts keep their own selection state',()=>{const a=render(<App/>),b=render(<App/>),ma=cartModel(),mb=cartModel();cartAction(a,ma,'toggle',0);cartAction(b,mb,'toggle',1);cartAction(a,ma,'query','zzz');a.rerender(<App/>);cartCheck(a,ma);cartCheck(b,mb);a.unmount();b.unmount();cartCheck(render(<App/>),cartModel());});
+`,
+};
+for (const [id,cases] of Object.entries(SELECTION_CART_REVIEW_CASES)) {
+  const solution=REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");
+}
