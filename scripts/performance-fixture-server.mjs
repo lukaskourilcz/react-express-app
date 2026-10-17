@@ -22,6 +22,11 @@ http.createServer((req, res) => {
       res.end(JSON.stringify(pathname === '/api/settings' ? settings : { error: { code: 'fixture_only', message: 'No external provider in this lab' } }));
     }, 400);
   }
+  // The React iframe has an opaque origin. Match production's public
+  // sandbox/worker asset policy; no API or personal response receives CORS.
+  if (/^\/(?:sandbox\/|assets\/coding-worker\/)/.test(pathname)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   let file;
   try { file = resolve(root, '.' + decodeURIComponent(pathname)); }
   catch { res.writeHead(400); return res.end(); }
