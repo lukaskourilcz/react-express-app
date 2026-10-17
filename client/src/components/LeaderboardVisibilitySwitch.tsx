@@ -1,4 +1,4 @@
-// The Profile and Leaderboard share this account-name/shark-nickname choice.
+// The Profile card owns this account-name/shark-nickname choice.
 import { useState } from 'react';
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 import { Switch } from '@astryxdesign/core/Switch';

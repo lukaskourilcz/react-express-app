@@ -11,11 +11,9 @@
 // their ranks; the all-time and Today boards arrive in order, and this screen
 // numbers them so equal results share a rank, as the others' do.
 //
-// A row names a learner only if they switched that on (migration 049): the
-// server sends no name and no picture otherwise, and the row reads "Learner"
-// with the default avatar. A signed-in learner's own row follows the same
-// rule, so it shows them what everybody else sees, and the switch sits on
-// this screen as well as on the Profile.
+// The server supplies the chosen account name or shark nickname and the
+// optional photo. The Profile card owns those preferences; this screen reads
+// them only to show the learner's own row as everybody else sees it.
 //
 // A rank is always the number as text. The top three get a heavier ink ring,
 // never a fill or a medal colour, so the order reads the same without colour. Nothing
@@ -37,7 +35,6 @@ import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
 import { leaderboardQuery, useLeaderboard, type LeaderboardRequest } from '../lib/queries';
 import { leaderboardVisibilityQuery, useLeaderboardVisibility } from '../lib/leaderboardVisibility';
-import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type {
   CategoryLeaderboardEntry,
@@ -336,8 +333,6 @@ function Leaderboard() {
           </p>
         )}
       </div>
-
-      {user && <LeaderboardVisibilitySwitch />}
 
       {stale && board && (
         <Banner
