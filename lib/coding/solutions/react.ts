@@ -1308,8 +1308,8 @@ test('separate loading lifetimes and late old responses do not replace fresh row
   "react-fetch-error-state": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [error, setError] = useState('');
-  useEffect(() => { const load = async () => { try { const response = await fetch('https://jsonplaceholder.typicode.com/users'); if (!response.ok) throw new Error('Request failed'); setUsers(await response.json()); } catch (err) { setError(err.message); } }; load(); }, []);
-  if (error) return <p>{error}</p>;
+  useEffect(() => { const load = async () => { try { const response = await fetch('https://jsonplaceholder.typicode.com/users'); if (!response.ok) throw new Error('Request failed'); setUsers(await response.json()); } catch (err) { setError('Could not load users'); } }; load(); }, []);
+  if (error) return <p role="alert">{error}</p>;
   return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
     junior: `const App = () => {
@@ -1326,7 +1326,7 @@ test('separate loading lifetimes and late old responses do not replace fresh row
         const data = await response.json();
         setUsers(data);
       } catch (error) {
-        setErrorMessage(error.message);
+        setErrorMessage('Could not load users');
       }
     };
     loadUsers();
@@ -1335,7 +1335,7 @@ test('separate loading lifetimes and late old responses do not replace fresh row
   if (errorMessage !== '') {
     return (
       <main>
-        <p>Something went wrong: {errorMessage}</p>
+        <p role="alert">Something went wrong: {errorMessage}</p>
       </main>
     );
   }
@@ -1357,7 +1357,6 @@ const fetchJson = async (url, options) => {
 };
 
 const App = () => {
-  // One object with a status field: the screen can never be loading and failed at once
   const [state, setState] = useState({ status: 'loading' });
 
   useEffect(() => {
@@ -1376,7 +1375,35 @@ const App = () => {
     </main>
   );
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+const showsANewMessage = (inFlight, now) => now.trim() !== '' && !inFlight.includes(now);
+
 test('a non-OK answer is a failure even when its body is a list: a message, no items', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -1394,7 +1421,13 @@ test('a request that throws shows a message and no items', () => withRequests(as
   calls[0].fail(new TypeError('Network down'));
   await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
   expect(container.querySelectorAll('li').length).toBe(0);
-}));`,
+}));
+
+
+test('non-success headers, rejected JSON and an empty-message rejection produce a real alert without users',()=>auditServer(async calls=>{for(const failure of ['http','json','network']){const view=render(<App/>),call=calls[calls.length-1];await act(async()=>{if(failure==='http')call.reply([{id:1,name:'Not a success'}],503);else if(failure==='json')call.badJson();else call.fail(new TypeError(''));});const alert=within(view.container).getByRole('alert');expect(alert.textContent.trim().length>0).toBe(true);expect(auditRows(view)).toEqual([]);if(failure==='http')expect(call.jsonReads).toBe(0);view.unmount();}}));
+test('empty and long successful arrays derive their own rows without parent refetch',()=>auditServer(async calls=>{for(const length of [0,1,37]){const data=Array.from({length},(_,i)=>({id:i,name:i%2?'Same':'Long '+i+'x'.repeat(450)})),view=render(<App/>);await auditReply(calls[calls.length-1],data);const count=calls.length;view.rerender(<App/>);expect(calls).toHaveLength(count);expect(auditRows(view)).toEqual(data.map(user=>user.name));expect(within(view.container).queryByRole('alert')).toBeNull();view.unmount();}}));
+test('separate and fresh user requests do not share a result',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[1],[{id:1,name:'Second'}]);await auditReply(calls[0],[{id:1,name:'First'}]);expect(auditRows(a)).toEqual(['First']);expect(auditRows(b)).toEqual(['Second']);a.unmount();b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(3);await auditReply(calls[2],[]);expect(auditRows(fresh)).toEqual([]);}));
+`,
   },
   "react-select-fetched-user": {
     solution: `const App = () => {
@@ -2494,19 +2527,19 @@ const App = () => {
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState('');
   const addTodo = async title => {
-    const temporary = {id: \`temp-\${Date.now()}\`, title, pending: true};
+    const temporary = {id: crypto.randomUUID(), title, pending: true};
     setTodos(items => [...items, temporary]);
     try {
       const response = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})});
       if (!response.ok) throw new Error('Request failed');
       const saved = await response.json();
-      setTodos(items => items.map(item => item.id === temporary.id ? {...saved, title} : item));
+      setTodos(items => items.map(item => item.id === temporary.id ? {...temporary, serverId: saved.id, pending: false} : item));
     } catch {
       setTodos(items => items.filter(item => item.id !== temporary.id));
     }
   };
   const submit = event => { event.preventDefault(); if (!text.trim()) return; addTodo(text.trim()); setText(''); };
-  return <><form onSubmit={submit}><input value={text} onChange={event => setText(event.target.value)} /><button>Add</button></form><ul>{todos.map(todo => <li key={todo.id}>{todo.title}{todo.pending ? ' (saving…)' : ''}</li>)}</ul></>;
+  return <><form onSubmit={submit}><input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} /><button>Add</button></form><ul>{todos.map(todo => <li key={todo.id}>{todo.title}{todo.pending ? ' (saving…)' : ''}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [title, setTitle] = useState('');
@@ -2542,7 +2575,7 @@ const App = () => {
         const updated = [];
         for (const todo of currentTodos) {
           if (todo.id === tempId) {
-            updated.push({ id: savedTodo.id, title: trimmedTitle });
+            updated.push({ id: tempId, serverId: savedTodo.id, title: trimmedTitle });
           } else {
             updated.push(todo);
           }
@@ -2565,7 +2598,7 @@ const App = () => {
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={title} onChange={handleChange} />
+        <input type="text" aria-label="New todo" value={title} onChange={handleChange} />
         <button type="submit">Add</button>
       </form>
       <ul>
@@ -2599,7 +2632,6 @@ const App = () => {
     setTitle('');
     try {
       const saved = await postTodo(text);
-      // Keep the local id as the key: the training API hands back the same one every time
       setTodos(current => replaceTodo(current, draft.id, { ...draft, serverId: saved.id, status: 'saved' }));
     } catch {
       setTodos(current => withoutTodo(current, draft.id));
@@ -2620,6 +2652,13 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('equal clock readings do not merge independent drafts or their rollback',()=>auditServer(async calls=>{const view=render(<App/>),clock=Date.now;try{Date.now=()=>100;for(const title of ['Alpha','Beta','Gamma','Delta'])auditAdd(view,title);}finally{Date.now=clock;}auditTodos(view,['Alpha','Beta','Gamma','Delta']);await auditReply(calls[3],{id:201});await act(async()=>{calls[1].fail(new TypeError('offline'));});auditTodos(view,['Alpha','Gamma','Delta']);await auditReply(calls[0],{id:201});await auditReply(calls[2],{id:201});auditTodos(view,['Alpha','Gamma','Delta']);}));
+test('only nonblank trimmed titles POST JSON; HTTP and JSON failure remove only their own drafts',()=>auditServer(async calls=>{const view=render(<App/>);auditAdd(view,'   ');expect(calls).toHaveLength(0);const title='<todo>& '+('x'.repeat(440));auditAdd(view,'  '+title+'  ');auditAdd(view,'Kept');expect(within(view.container).getByRole('textbox',{name:'New todo'}).value).toBe('');for(const [i,expected]of[[0,title],[1,'Kept']]){expect(calls[i].url).toBe('https://jsonplaceholder.typicode.com/todos');expect(calls[i].method).toBe('POST');expect(JSON.parse(calls[i].options.body).title).toBe(expected);expect(calls[i].options.headers['Content-Type']).toBe('application/json');}await auditReply(calls[0],{id:201},500);auditTodos(view,['Kept']);auditAdd(view,'Bad JSON');await act(async()=>{calls[2].badJson();});auditTodos(view,['Kept']);await auditReply(calls[1],{id:201});auditTodos(view,['Kept']);expect(view.container.querySelector('li todo')).toBeNull();}));
+test('parent renders, separate forms and a fresh mount retain only their own optimistic list',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);auditAdd(a,'A');auditAdd(b,'B');a.rerender(<App/>);auditTodos(a,['A']);auditTodos(b,['B']);expect(calls).toHaveLength(2);await auditReply(calls[1],{id:201});await act(async()=>{calls[0].fail(new TypeError('offline'));});auditTodos(a,[]);auditTodos(b,['B']);a.unmount();b.unmount();const fresh=render(<App/>);auditTodos(fresh,[]);expect(calls).toHaveLength(2);}));
+`,
   },
   'react-reusable-usefetch-hook': {
     solution: `export const useFetch = url => {
@@ -2814,57 +2853,106 @@ test('separate consumers and remounts do not share request state or stale comple
   "react-crud-mini-app": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
 const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(API_URL).then(response => response.json()).then(setPosts).finally(() => setLoading(false));
+    let active = true;
+    fetch(API_URL)
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) setLoadError('Could not load posts'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
-    const response = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})});
-    const created = await response.json();
-    setPosts(items => [...items, {...created, title}]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = (id, nextTitle) => setPosts(items => items.map(item => item.id === id ? {...item, title: nextTitle} : item));
   const deletePost = id => setPosts(items => items.filter(item => item.id !== id));
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (loading) return <p>Loading…</p>;
-  return <><form onSubmit={createPost}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
+  return <>{problem && <p role="alert">{problem}</p>}<form onSubmit={createPost}><input aria-label="Title" value={title} onChange={event => setTitle(event.target.value)} /><button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button type="button" onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button type="button" onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
 };`,
     junior: `const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
-      const data = await response.json();
-      setPosts(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setPosts(data);
+      } catch {
+        if (active) setLoadError('Could not load posts');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadPosts();
+    return () => { active = false; };
   }, []);
 
   const handleTitleChange = (event) => {
     setTitle(event.target.value);
   };
 
-  const handleCreate = async (event) => {
+  const handleCreate = async event => {
     event.preventDefault();
-    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title }),
-    });
-    const created = await response.json();
-    const newPost = { id: created.id, title: title };
-    setPosts((currentPosts) => [...currentPosts, newPost]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleEdit = (id) => {
@@ -2889,6 +2977,7 @@ const App = () => {
     setPosts(remainingPosts);
   };
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (isLoading) {
     return (
       <main>
@@ -2899,14 +2988,15 @@ const App = () => {
 
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={handleCreate}>
-        <input type="text" value={title} onChange={handleTitleChange} />
-        <button type="submit">Create</button>
+        <input type="text" aria-label="Title" value={title} onChange={handleTitleChange} />
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>
         {posts.map(post => (
           <li key={post.id}>
-            {post.title} <button onClick={() => handleEdit(post.id)}>Edit</button> <button onClick={() => handleDelete(post.id)}>Delete</button>
+            {post.title} <button type="button" onClick={() => handleEdit(post.id)}>Edit</button> <button type="button" onClick={() => handleDelete(post.id)}>Delete</button>
           </li>
         ))}
       </ul>
@@ -2930,33 +3020,49 @@ const PostItem = ({ post, onEdit, onDelete }) => (
 );
 
 const App = () => {
-  const [posts, setPosts] = useState(null); // null until the first load lands
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [posts, setPosts] = useState(null);
   const [title, setTitle] = useState('');
 
   useEffect(() => {
     let active = true;
-    fetchJson(POSTS_URL).then(data => { if (active) setPosts(data); });
+    fetchJson(POSTS_URL)
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) { setLoadError('Could not load posts'); setPosts([]); } });
     return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
     const text = title.trim();
-    if (!text) return;
-    const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
-    // The training API hands back a fixed id, so mint a local one that cannot collide
-    setPosts(current => [...current, { ...created, id: crypto.randomUUID(), title: text }]);
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = useCallback((id, nextTitle) => setPosts(current => current.map(post => (post.id === id ? { ...post, title: nextTitle } : post))), []);
   const deletePost = useCallback(id => setPosts(current => current.filter(post => post.id !== id)), []);
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (!posts) return <main><p role="status">Loading…</p></main>;
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={createPost}>
         <input value={title} onChange={event => setTitle(event.target.value)} aria-label="Title" />
-        <button type="submit">Create</button>
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>{posts.map(post => <PostItem key={post.id} post={post} onEdit={editPost} onDelete={deletePost} />)}</ul>
     </main>
@@ -2987,7 +3093,13 @@ test('Delete removes only the post whose button was clicked', async () => {
   expect(container.textContent).toContain('Post one');
   expect(container.textContent).toContain('Post two');
   expect(container.textContent).toContain('Post four');
-});`,
+});
+
+
+test('load HTTP, JSON and network failures show a nonempty alert without any posts',()=>auditServer(async calls=>{for(const mode of ['http','json','network']){const view=render(<App/>),call=calls[calls.length-1];await act(async()=>{if(mode==='http')call.reply([{id:1,title:'Failed data'}],503);else if(mode==='json')call.badJson();else call.fail();});expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');expect(auditTitles(view)).toEqual([]);view.unmount();}}));
+test('a pending create sends once, preserves newly typed text and recovers without removing local edits',()=>auditServer(async calls=>{const view=render(<App/>),data=[{id:1,title:'Old A'},{id:2,title:'Old B'}];await auditReply(calls[0],data);auditCreate(view,'   ');expect(calls).toHaveLength(1);const long='<new>&'+'x'.repeat(450);auditCreate(view,'  '+long+'  ');expect(auditTitles(view)).toEqual(['Old A','Old B']);expect(within(view.container).getByRole('button',{name:'Creating…'}).disabled).toBe(true);fireEvent.submit(view.container.querySelector('form'));expect(calls).toHaveLength(2);expect(JSON.parse(calls[1].options.body).title).toBe(long);expect(calls[1].options.headers['Content-Type']).toBe('application/json');fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:'Next draft'}});auditAction(view,0,'Edit');await auditReply(calls[1],{id:101},500);expect(auditTitles(view)).toEqual(['Edited','Old B']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');expect(within(view.container).getByRole('alert').textContent).toBe('Could not create post');auditCreate(view,'Next draft');expect(within(view.container).queryByRole('alert')).toBeNull();await act(async()=>calls[2].badJson());expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');auditCreate(view,'Next draft');await auditReply(calls[3],{id:101,title:'server'});expect(auditTitles(view)).toEqual(['Edited','Old B','Next draft']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('');}));
+test('parent renders, empty data and separate or fresh roots have independent CRUD state',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);await auditReply(calls[0],[{id:1,title:'A'},{id:2,title:'Same'}]);await auditReply(calls[1],[]);auditAction(a,0,'Edit');a.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual([]);auditCreate(b,'B');await auditReply(calls[2],{id:101});expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual(['B']);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[3],[]);expect(auditTitles(fresh)).toEqual([]);}));
+`,
   },
   "react-stopwatch": {
     solution: `const App = () => {
@@ -5552,10 +5664,10 @@ const App = () => {
     const domain = comment.email.split('@')[1];
     counts[domain] = (counts[domain] || 0) + 1;
     return counts;
-  }, {});
+  }, Object.create(null));
   // Most comments first; a tie in A to Z order.
   const domains = Object.entries(domainCounts).sort(([nameA, countA], [nameB, countB]) =>
-    countB - countA || nameA.localeCompare(nameB));
+    countB - countA || (nameA < nameB ? -1 : nameA > nameB ? 1 : 0));
 
   if (loading) return <main><h2>Comments viewer</h2><p>Loading comments…</p></main>;
   if (error) return <main><h2>Comments viewer</h2><p role="alert">{error}</p></main>;
@@ -5639,7 +5751,7 @@ export default App;`,
     }
     counts[domain] = counts[domain] + 1;
     return counts;
-  }, {});
+  }, Object.create(null));
 
   const domainRows = Object.entries(domainCounts);
   domainRows.sort((first, second) => {
@@ -5671,13 +5783,13 @@ export default App;`,
   return (
     <main>
       <h2>Comments viewer</h2>
-      <select value={selectedPostId} onChange={handlePostChange}>
+      <select aria-label="Post" value={selectedPostId} onChange={handlePostChange}>
         <option value="">All posts</option>
         {postIds.map(postId => (
           <option key={postId} value={String(postId)}>{'Post ' + postId}</option>
         ))}
       </select>
-      <input type="text" value={emailFilter} onChange={handleEmailChange} placeholder="Filter by email" />
+      <input type="text" aria-label="Filter by email" value={emailFilter} onChange={handleEmailChange} placeholder="Filter by email" />
       {visibleComments.length === 0 && <p>No comments match.</p>}
       <ul aria-label="Comments">
         {visibleComments.map(comment => (
@@ -5717,7 +5829,7 @@ const countBy = (items, keyOf) => items.reduce((counts, item) => {
   const key = keyOf(item);
   return counts.set(key, (counts.get(key) ?? 0) + 1);
 }, new Map());
-const byCountThenName = ([nameA, countA], [nameB, countB]) => countB - countA || nameA.localeCompare(nameB);
+const byCountThenName = ([nameA, countA], [nameB, countB]) => countB - countA || (nameA < nameB ? -1 : nameA > nameB ? 1 : 0);
 
 const App = () => {
   const { status, comments, error } = useComments();
@@ -5827,7 +5939,13 @@ test('an email in capitals matches a lowercase filter', () => withServer(async c
   filterEmail(container, 'ana@');
   expect(entries('Comments')).toHaveLength(1);
   expect(entries('Comments')[0]).toContain('ANA@EXAMPLE.COM');
-}));`,
+}));
+
+
+test('post and case-insensitive email filters repeatedly derive current domain totals',()=>auditServer(async calls=>{const view=render(<App/>),data=auditCommentData();await auditReply(calls[0],data);for(const [post,email]of[['4',''],['4','CONSTRUCTOR'],['','user2'],['120','toString'],['19','missing'],['','']]){fireEvent.change(within(view.container).getByRole('combobox',{name:'Post'}),{target:{value:post}});fireEvent.change(auditEmailBox(view),{target:{value:email}});auditComments(view,data,post,email);}expect(calls).toHaveLength(1);}));
+test('rejected JSON and empty success have distinct alert/empty states',()=>auditServer(async calls=>{const broken=render(<App/>);await act(async()=>{calls[0].badJson();});expect(within(broken.container).getByRole('alert').textContent.trim().length>0).toBe(true);expect(auditEntries(broken,'Comments')).toEqual([]);expect(auditEntries(broken,'Domains')).toEqual([]);broken.unmount();const empty=render(<App/>);await auditReply(calls[1],[]);auditComments(empty,[]);expect(within(empty.container).queryByRole('alert')).toBeNull();}));
+test('separate labelled filters and parent renders retain independent summaries; fresh roots reset',()=>auditServer(async calls=>{const data=auditCommentData(),a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);expect(within(a.container).getByLabelText(/Email|Filter by email/i)).toBeTruthy();expect(within(b.container).getByLabelText(/Email|Filter by email/i)).toBeTruthy();fireEvent.change(auditEmailBox(a),{target:{value:'CONSTRUCTOR'}});a.rerender(<App/>);auditComments(a,data,'','CONSTRUCTOR');auditComments(b,data);expect(calls).toHaveLength(2);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[2],data);auditComments(fresh,data);}));
+`,
   },
   "react-weather-style-dashboard": {
     solution: `import React, { useEffect, useState } from 'react';
@@ -6698,7 +6816,7 @@ const App = () => {
           <li key={slot.id}>
             <button
               type="button"
-              disabled={slot.completed}
+              disabled={slot.completed || booking}
               aria-pressed={slot.id === selectedId}
               onClick={() => setSelectedId(slot.id)}
             >
@@ -6718,15 +6836,6 @@ const App = () => {
 
 export default App;`,
     junior: `import React, { useEffect, useState } from 'react';
-
-// SYSTEM DESIGN NOTES
-// User flow: choose a free slot, press Book, see a message.
-// Data model: a slot has id, title and completed (true means booked).
-// API endpoints: GET the slots, then PATCH one slot to book it.
-// Reliability and scale: disabling the buttons only protects one browser.
-// If two people book the same slot at once, the database has to refuse the
-// second one, for example with a unique index on the slot id in a bookings
-// table. The server then answers 409 and the page tells the second person.
 
 const App = () => {
   const [slots, setSlots] = useState([]);
@@ -6842,7 +6951,7 @@ const App = () => {
           }
           return (
             <li key={slot.id}>
-              <button type="button" disabled={slot.completed} aria-pressed={pressed} onClick={() => setSelectedId(slot.id)}>
+              <button type="button" disabled={slot.completed || isBooking} aria-pressed={pressed} onClick={() => setSelectedId(slot.id)}>
                 {slot.title}
               </button>
             </li>
@@ -6860,20 +6969,6 @@ const App = () => {
 
 export default App;`,
     senior: `import React, { useCallback, useEffect, useReducer } from 'react';
-
-// SYSTEM DESIGN NOTES
-// User flow: select one free slot, book it, get a definite answer.
-// Data model: slots [{ id, title, completed }] and one booking state machine:
-// idle -> sending -> booked | taken | failed.
-// API endpoints: GET /slots; POST /bookings { slotId, idempotencyKey } in a
-// real app (PATCH /todos/:id here), 201 on success and 409 when taken.
-// Reliability and scale: the UI guard stops double clicks, not races. The
-// server makes the booking atomic: INSERT INTO bookings (slot_id, user_id)
-// with UNIQUE (slot_id), or SELECT ... FOR UPDATE on the slot row inside a
-// transaction, so exactly one of two concurrent requests commits and the
-// other maps the constraint violation to 409. The idempotency key lets a
-// client retry a timed-out request without booking twice, and a short hold
-// with an expiry covers a checkout that takes several steps.
 
 const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
 const slotUrl = id => 'https://jsonplaceholder.typicode.com/todos/' + id;
@@ -6894,9 +6989,9 @@ const reducer = (state, action) => {
   }
 };
 
-const Slot = ({ slot, selected, onSelect }) => (
+const Slot = ({ slot, selected, onSelect, sending }) => (
   <li>
-    <button type="button" disabled={slot.completed} aria-pressed={selected} onClick={() => onSelect(slot.id)}>
+    <button type="button" disabled={slot.completed || sending} aria-pressed={selected} onClick={() => onSelect(slot.id)}>
       {slot.title}
     </button>
   </li>
@@ -6947,7 +7042,7 @@ const App = () => {
     <main>
       <h2>Booking prototype</h2>
       <ul aria-label="Slots">
-        {slots.map(slot => <Slot key={slot.id} slot={slot} selected={slot.id === selectedId} onSelect={select} />)}
+        {slots.map(slot => <Slot key={slot.id} slot={slot} selected={slot.id === selectedId} onSelect={select} sending={sending} />)}
       </ul>
       <button type="button" disabled={selectedId === null || sending} onClick={book}>
         {sending ? 'Booking…' : 'Book'}
@@ -7031,7 +7126,13 @@ test('a new booking clears the last status, and a 409 after a success books both
   expect(statusText()).toBe('');
   expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
   expect(bookButton().disabled).toBe(true);
-}));`,
+}));
+
+
+test('pending booking locks selection and failure retries the same selected id without duplicate PATCH',()=>auditServer(async calls=>{const view=render(<App/>),data=auditSlotData(),booked=new Set(data.filter(x=>x.completed).map(x=>x.id));await auditReply(calls[0],data);fireEvent.click(auditSlotButtons(view)[6]);fireEvent.click(auditBook(view));expect(auditBook(view).textContent.trim()).toBe('Booking…');expect(auditBook(view).disabled).toBe(true);fireEvent.click(auditSlotButtons(view)[7]);fireEvent.click(auditBook(view));expect(calls).toHaveLength(2);expect(auditSlotButtons(view)[6].getAttribute('aria-pressed')).toBe('true');expect(auditSlotButtons(view)[7].getAttribute('aria-pressed')).toBe('false');await auditReply(calls[1],{},503);auditSlots(view,data,booked,data[6].id);expect(within(view.container).getByRole('alert').textContent).toBe('Could not book '+data[6].title);fireEvent.click(auditBook(view));expect(calls[2].url).toBe(calls[1].url);expect(within(view.container).queryByRole('alert')).toBeNull();await auditReply(calls[2],{},409);booked.add(data[6].id);auditSlots(view,data,booked,null);expect(within(view.container).getByRole('alert').textContent).toBe(data[6].title+' was just booked by someone else');}));
+test('empty/full-booked data and malformed initial JSON never enable an invalid booking',()=>auditServer(async calls=>{for(const data of [[],Array.from({length:10},(_,id)=>({id,title:'Booked '+id,completed:true}))]){const view=render(<App/>);await auditReply(calls[calls.length-1],data);expect(auditSlotButtons(view)).toHaveLength(data.length);expect(auditBook(view).disabled).toBe(true);const count=calls.length;fireEvent.click(auditBook(view));expect(calls).toHaveLength(count);view.unmount();}const broken=render(<App/>);await act(async()=>{calls[calls.length-1].badJson();});expect(within(broken.container).getByRole('alert').textContent).toBe('Could not load slots');expect(auditSlotButtons(broken)).toEqual([]);}));
+test('parent renders and separate or fresh booking roots keep their own slots and selection',()=>auditServer(async calls=>{const data=auditSlotData(),a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);fireEvent.click(auditSlotButtons(a)[7]);a.rerender(<App/>);expect(auditBook(a).disabled).toBe(false);expect(auditBook(b).disabled).toBe(true);expect(calls).toHaveLength(2);fireEvent.click(auditBook(a));await act(async()=>{calls[2].fail(new TypeError('offline'));});expect(within(a.container).getByRole('alert')).toBeTruthy();expect(within(b.container).queryByRole('alert')).toBeNull();a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[3],data);expect(auditBook(fresh).disabled).toBe(true);expect(within(fresh.container).queryByRole('alert')).toBeNull();}));
+`,
   },
   "react-analytics-panel": {
     solution: `import React, { useEffect, useState } from 'react';
@@ -7053,7 +7154,7 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [type, setType] = useState('all');
+  const [type, setType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
@@ -7075,10 +7176,13 @@ const App = () => {
   const types = [...new Set(events.map(event => event.type))].sort();
   // Days written as 2026-09-03 compare correctly as text.
   const shown = events.filter(event =>
-    (type === 'all' || event.type === type) &&
+    (type === '' || event.type === type) &&
     (from === '' || event.date >= from) &&
     (to === '' || event.date <= to));
-  const counts = shown.reduce((totals, event) => ({ ...totals, [event.type]: (totals[event.type] || 0) + 1 }), {});
+  const counts = shown.reduce((totals, event) => {
+    totals[event.type] = (totals[event.type] || 0) + 1;
+    return totals;
+  }, Object.create(null));
   const cardTypes = Object.keys(counts).sort();
 
   if (loading) return <main><h2>Analytics panel</h2><p>Loading…</p></main>;
@@ -7090,7 +7194,7 @@ const App = () => {
       <label>
         Type{' '}
         <select value={type} onChange={event => setType(event.target.value)}>
-          <option value="all">All types</option>
+          <option value="">All types</option>
           {types.map(one => <option key={one} value={one}>{one}</option>)}
         </select>
       </label>
@@ -7111,21 +7215,11 @@ const App = () => {
 export default App;`,
     junior: `import React, { useEffect, useState } from 'react';
 
-// SYSTEM DESIGN NOTES
-// User flow: pick a type and dates, and the cards show how many of each
-// type happened.
-// Data model: each event has an id, a type and a date.
-// API endpoints: GET /api/events, and POST /api/events to record a new one.
-// Reliability and scale: many events arrive every second, so I would save
-// them without waiting (put them in a queue and insert them in batches) and
-// keep a table of totals per day and type, so the panel reads a few rows
-// instead of counting millions.
-
 const App = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
+  const [selectedType, setSelectedType] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -7156,7 +7250,7 @@ const App = () => {
 
   const shownEvents = [];
   for (const event of events) {
-    if (selectedType !== 'all' && event.type !== selectedType) {
+    if (selectedType !== '' && event.type !== selectedType) {
       continue;
     }
     if (fromDate !== '' && event.date < fromDate) {
@@ -7169,7 +7263,7 @@ const App = () => {
   }
 
   const addToTotals = (totals, event) => {
-    const updated = { ...totals };
+    const updated = Object.assign(Object.create(null), totals);
     if (updated[event.type] === undefined) {
       updated[event.type] = 0;
     }
@@ -7201,17 +7295,16 @@ const App = () => {
   return (
     <main>
       <h2>Analytics panel</h2>
-      <label htmlFor="type">Type</label>
-      <select id="type" value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
-        <option value="all">All types</option>
+      <label>Type
+        <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+        <option value="">All types</option>
         {types.map((type) => (
           <option key={type} value={type}>{type}</option>
         ))}
-      </select>
-      <label htmlFor="from">From</label>
-      <input id="from" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-      <label htmlFor="to">To</label>
-      <input id="to" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+        </select>
+      </label>
+      <label>From <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+      <label>To <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
       <p>Showing {shownEvents.length} of {events.length} events</p>
       {cardTypes.length === 0 && <p>No events match these filters</p>}
       {cardTypes.map((type) => (
@@ -7227,24 +7320,10 @@ const App = () => {
 export default App;`,
     senior: `import React, { useEffect, useMemo, useState } from 'react';
 
-// SYSTEM DESIGN NOTES
-// User flow: filter by type and an inclusive range of days; the cards and
-// the summary line follow every filter.
-// Data model: event { id, type, date, userId, props }; the client keeps raw
-// events and derives everything else with useMemo.
-// API endpoints: POST /api/events (batched, 202 Accepted) and
-// GET /api/stats?from&to&type answered from rollups.
-// Reliability and scale: the write path is append-only and asynchronous:
-// clients batch and retry with an idempotency id per event, the API writes to
-// a log (Kafka or a queue) and returns 202, and consumers load a columnar
-// store partitioned by day. Reads hit per-day, per-type rollups maintained by
-// the consumer, so a dashboard query touches days x types rows, never raw
-// events. Late events land in their day's partition and update its rollup.
-
-const NO_FILTERS = { type: 'all', from: '', to: '' };
+const NO_FILTERS = { type: '', from: '', to: '' };
 
 const matches = ({ type, from, to }) => event =>
-  (type === 'all' || event.type === type) &&
+  (type === '' || event.type === type) &&
   (!from || event.date >= from) &&
   (!to || event.date <= to);
 
@@ -7282,7 +7361,7 @@ const App = () => {
   const types = useMemo(() => [...new Set(events.map(event => event.type))].sort(), [events]);
   const shown = useMemo(() => events.filter(matches(filters)), [events, filters]);
   const counts = useMemo(() => shown.reduce((totals, { type }) => totals.set(type, (totals.get(type) || 0) + 1), new Map()), [shown]);
-  const cards = [...counts].sort(([a], [b]) => a.localeCompare(b));
+  const cards = [...counts].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
 
   if (status === 'loading') return <main><h2>Analytics panel</h2><p aria-live="polite">Loading…</p></main>;
   if (status === 'error') return <main><h2>Analytics panel</h2><p role="alert">Could not load events</p></main>;
@@ -7293,7 +7372,7 @@ const App = () => {
       <fieldset>
         <legend>Filters</legend>
         <label>Type <select value={filters.type} onChange={update('type')}>
-          <option value="all">All types</option>
+          <option value="">All types</option>
           {types.map(type => <option key={type} value={type}>{type}</option>)}
         </select></label>
         <label>From <input type="date" value={filters.from} max={filters.to || undefined} onChange={update('from')} /></label>
@@ -7367,7 +7446,13 @@ test('the type options list every type loaded, whatever the dates', () => withRe
   setDate('To', '2026-10-02');
   expect(cards()).toEqual([['download', '2']]);
   expect(typeOptions()).toEqual(['All types', 'download', 'refund', 'visit']);
-}));`,
+}));
+
+
+test('a bounded model combines type and inclusive cross-year dates without capping counts',()=>auditServer(async calls=>{const data=Array.from({length:60},(_,id)=>({id,type:['all','visit','constructor','alpha','visit'][id%5],date:['2025-12-30','2026-01-01','2026-06-10','2026-12-31','2027-01-01'][id%5]})),view=render(<App/>);await auditReply(calls[0],data);for(const filters of [{},{from:'2026-01-01'},{to:'2026-12-31'},{from:'2026-01-01',to:'2026-12-31'},{type:'visit',from:'2026-01-01',to:'2027-01-01'},{from:'2027-01-01',to:'2026-01-01'},{type:'all'},{type:'constructor'},{}]){auditSelect(view,filters.type||'All types');auditDate(view,'From',filters.from||'');auditDate(view,'To',filters.to||'');auditAnalytics(view,data,filters);}expect(calls).toHaveLength(1);}));
+test('JSON failure and empty data render their correct branches with no summary cards',()=>auditServer(async calls=>{const failed=render(<App/>);await act(async()=>{calls[0].badJson();});expect(within(failed.container).getByRole('alert').textContent).toBe('Could not load events');expect(auditCards(failed)).toEqual([]);failed.unmount();const empty=render(<App/>);await auditReply(calls[1],[]);auditAnalytics(empty,[],{});expect(within(empty.container).queryByRole('alert')).toBeNull();}));
+test('separate filter controls and parent renders keep independent current summaries',()=>auditServer(async calls=>{const data=[{id:1,type:'all',date:'2026-01-01'},{id:2,type:'visit',date:'2026-01-01'}],a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);auditSelect(a,'all');a.rerender(<App/>);auditAnalytics(a,data,{type:'all'});auditAnalytics(b,data,{});expect(calls).toHaveLength(2);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[2],data);auditAnalytics(fresh,data,{});}));
+`,
   },
   "react-interview-mini-project": {
     solution: `import React, { useEffect, useState } from 'react';

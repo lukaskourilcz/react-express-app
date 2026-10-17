@@ -1068,7 +1068,7 @@ test('JSON body parsing is still part of loading',async()=>withPhasedRequests(as
     tier: 2,
     focus: ["fetch", "conditional"],
     title: "Fetch error state",
-    prompt: "Fetch the users list and render one LI per user. When the request fails, render no list items at all and show a short message instead — and treat a non-OK response as a failure, not only a thrown network error.",
+    prompt: `Fetch the users list and render one LI per user. When the request fails, render no list items at all and show a short message instead — and treat a non-OK response as a failure, not only a thrown network error. Use https://jsonplaceholder.typicode.com/users. Success returns zero to 100 users with unique ids and literal single-line names up to 500 characters; names may repeat and must be rendered in response order without truncation. A JSON decoding failure is a request failure too. Show a nonempty message with role="alert" even if the caught error has an empty message, and do not parse a non-success response as user data. Ordinary parent renders do not refetch; separate and fresh Apps own their requests. Loading and empty-success copy are optional for this error-handling exercise.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1094,7 +1094,7 @@ useEffect(() => {
       const data = await response.json();
       setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      setError('Could not load users');
     } finally {
       setLoading(false);
     }
@@ -1111,18 +1111,21 @@ if (error) return /* a short message instead of the list */;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Check response.ok and throw an Error before reading JSON."],
+    hints: [
+      `Check response.ok and throw an Error before reading JSON.`,
+      `Use a friendly fallback rather than relying on every error having a message. Render the error in an alert and keep failed-response data out of the list.`,
+    ],
     approach: [
-      "Keep an error string in useState next to the users array, both starting empty.",
-      "Define an async function inside the effect and call it there, since the effect callback itself must not be async.",
-      "Check response.ok and throw an Error before parsing, so a bad status lands in the catch block.",
-      "Store the caught message in the error state and render a friendly message instead of the list when it is set.",
+      `Keep an error string in useState next to the users array, both starting empty.`,
+      `Define an async function inside the effect and call it there, since the effect callback itself must not be async.`,
+      `Check response.ok and throw an Error before parsing, so a bad status lands in the catch block.`,
+      `Set a nonempty friendly error message in catch and render it in an alert instead of the list. Check HTTP before reading JSON; JSON decoding failures also reach catch.`,
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows a message when the request fails', async () => {
@@ -1142,6 +1145,13 @@ test('renders the users when the request succeeds', async () => {
   const { container } = render(<App />);
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+test('the successful response supplies every literal user name',()=>auditServer(async calls=>{const view=render(<App/>),data=Array.from({length:17},(_,i)=>({id:i+50,name:i%3?' repeated name ':'<user>&'+i+'x'.repeat(450)}));expect(calls).toHaveLength(1);expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/users');expect(calls[0].method).toBe('GET');await auditReply(calls[0],data);expect(auditRows(view)).toEqual(data.map(user=>user.name));expect(view.container.querySelector('li user')).toBeNull();}));
 `,
     api: {
       method: "GET",
@@ -2097,7 +2107,7 @@ test('maps returned titles rather than synthesizing records from count',()=>with
     tier: 4,
     focus: ["useState", "fetch"],
     title: "Optimistic todo",
-    prompt: "Render a form with a title input. On submit, add the todo to the list straight away — before the POST resolves — then send it. If the request fails, take it back out so the list returns to empty.",
+    prompt: `Render a form with a title input. On submit, add the todo to the list straight away — before the POST resolves — then send it. If the request fails, remove only that draft from the list. Label the input New todo. Trim its title with JavaScript trim(); ignore an empty result without sending a request, and clear the input after adding a valid draft. Allow up to 20 independent submissions per mount, with single-line titles up to 500 characters. A pending marker is optional. Several POSTs may be in flight and finish in any order: a failure removes only its own draft, keeping the others in their original submission order. Reject non-success HTTP and failed JSON just like network errors. Keep each draft's stable client id after success and store the returned server id separately; the practice API may reuse an id, and timestamps alone are not unique. Preserve the submitted title rather than replacing it with server copy. Parent renders retain the list, separate forms are independent, and a fresh mount starts empty.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2118,23 +2128,28 @@ const addItem = async title => {
   setItems(current => [...current, temporaryItem]);
 
   try {
-    // POST the new item and replace temporaryItem with the response
+    // POST the title and check response.ok before JSON.
+    // Update only temporaryItem.id, keeping that client id and the title.
+    // Store the returned server id separately and clear pending.
   } catch {
     // remove temporaryItem to roll back
   }
 };`,
-    hints: ["Keep the previous list so catch can restore it if the request fails."],
+    hints: [
+      `Give every draft its own stable client id. Filter out only that id on failure; restoring an old array would erase other requests that finished meanwhile. A timestamp can repeat, so use a UUID or a per-form counter.`,
+      `Keep the client key on success, store the server id separately, and derive updates from the latest list with a functional updater. The training API can return the same server id for different practice writes.`,
+    ],
     approach: [
-      "Before sending anything, append a temporary todo with a locally generated id and a pending flag so the list updates instantly.",
-      "POST the real title next, checking response.ok and throwing when the status is not successful.",
-      "On success, replace the temporary entry by mapping the list and swapping in the saved record at the matching id.",
-      "In the catch block, roll back by filtering the temporary id out of the list so the failed item disappears.",
+      `Before sending, append a draft with a unique client id and the trimmed title. An optional pending flag can indicate that it is being saved.`,
+      `POST the real title next, checking response.ok and throwing when the status is not successful.`,
+      `On success, map the current list and update only the matching client id. Keep that id and the submitted title, storing the response id separately.`,
+      `In the catch block, roll back by filtering the temporary id out of the list so the failed item disappears.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the todo before the server replies', async () => {
@@ -2157,6 +2172,16 @@ test('rolls the todo back when the request fails', async () => {
     globalThis.fetch = working;
   }
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditAdd=(view,title)=>{fireEvent.change(within(view.container).getByRole('textbox',{name:'New todo'}),{target:{value:title}});fireEvent.submit(view.container.querySelector('form'));};
+const auditTodos=(view,titles)=>{const rows=auditRows(view);expect(rows).toHaveLength(titles.length);titles.forEach((title,i)=>expect(rows[i]===title||rows[i]===title+' (saving…)').toBe(true));};
+
+test('concurrent pending titles are independent before and after out-of-order replies',()=>auditServer(async calls=>{const view=render(<App/>);for(const title of ['First','Second','Third','Fourth'])auditAdd(view,title);expect(calls).toHaveLength(4);auditTodos(view,['First','Second','Third','Fourth']);await auditReply(calls[2],{id:201,title:'server copy'});await act(async()=>{calls[1].fail(new TypeError('offline'));});auditTodos(view,['First','Third','Fourth']);await auditReply(calls[0],{id:201});await auditReply(calls[3],{id:201});auditTodos(view,['First','Third','Fourth']);}));
 `,
     api: {
       method: "POST",
@@ -2254,7 +2279,7 @@ test('the reusable hook loads again for a changed url',()=>withAuditRequests(asy
     tier: 4,
     focus: ["fetch", "map", "filter"],
     title: "CRUD mini app",
-    prompt: "Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed.",
+    prompt: `Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed. Use https://jsonplaceholder.typicode.com/posts. Initial GET returns zero to 100 records with unique integer ids and literal single-line titles up to 500 characters, including duplicates. Show Loading… until it settles; HTTP, JSON or network failure shows Could not load posts in an alert and no post rows. Label the controlled input Title. Trim submitted text and ignore an empty result. A create sends one JSON POST and appends only after a successful response; do not append failed data. While it is pending, disable Create and label it Creating…; another submit sends nothing. Clear the submitted field immediately, preserving any new text typed during the request. A failure shows Could not create post in an alert, preserves all posts/local edits and restores the failed title only if the field is still empty. The next attempt clears that alert. Every created row needs its own stable client id, with the response id kept separately: the training API may repeat server ids. Preserve the submitted title and update/delete only the clicked identity, even when names repeat. Parent renders retain state without refetching; separate and fresh Apps are independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2271,11 +2296,14 @@ export default App;
 const [items, setItems] = useState([]);
 
 useEffect(() => {
-  // GET items and save them with setItems
+  // GET items, check response.ok and catch HTTP/JSON/network failures.
+  // Store success, then leave the loading state.
 }, []);
 
 const createItem = async newItem => {
-  // POST newItem, then append the response
+  // Ignore blank titles and a pending create; clear only the submitted draft.
+  // POST, check response.ok, then append with a fresh client id.
+  // Keep the response id separately; restore a failed title only into an empty field.
 };
 
 const editItem = (id, changes) => {
@@ -2287,19 +2315,23 @@ const editItem = (id, changes) => {
 const deleteItem = id => {
   setItems(current => current.filter(item => item.id !== id));
 };`,
-    hints: ["Build one operation at a time: GET, render, POST, edit with map, delete with filter."],
+    hints: [
+      `Use functional list updates so a completed POST keeps local edits made while it was pending. Assign a unique client id to each created row; a repeated response id must not make Edit/Delete affect two rows.`,
+      `Check HTTP before JSON and catch both request and JSON errors. Track loading, load error, create error and a pending-create flag. Clear a submitted draft at request start so later typing is not erased when the request finishes.`,
+    ],
     approach: [
-      "Build it one operation at a time, starting with the GET into a posts array plus a loading flag.",
-      "Add a controlled title input whose submit handler POSTs the new post and appends the created record immutably.",
-      "Implement editing with map, returning a spread copy carrying the new title only for the matching id.",
-      "Implement deletion with filter on the id, so both local operations replace the array rather than mutating it.",
+      `Load once into list state with loading and a fatal load-error branch. Treat empty success as a ready empty list.`,
+      `Capture and trim a submitted title, reject blank/pending submissions, clear that draft and POST JSON. Append only a successful response, retaining a distinct client key and the submitted title.`,
+      `On create failure preserve the current list, report the alert and restore the captured title only if the field is still empty. Re-enable Create and clear the alert on the next attempt.`,
+      `Edit with map and delete with filter on the stable clicked id, using current state. These local operations send no requests.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor as waitForSlow, act, within } from '@testing-library/react';
 import App from './App';
+const waitFor = (check, options) => waitForSlow(check, { timeout: 300, ...options });
 
 test('lists the fetched posts', async () => {
   const { container } = render(<App />);
@@ -2323,6 +2355,15 @@ test('creates, edits, and deletes', async () => {
   fireEvent.click(remove);
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(7));
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),method:String(options.method||'GET').toUpperCase(),options,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>call.reply(data,status));};
+const auditTitles=view=>[...view.container.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());return copy.textContent.trim();});
+const auditCreate=(view,title)=>{fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:title}});fireEvent.submit(view.container.querySelector('form'));};
+const auditAction=(view,index,name)=>fireEvent.click(within(view.container.querySelectorAll('li')[index]).getByRole('button',{name,exact:true}));
+
+test('every fetched row and each independently created row supports its own local edit/delete',()=>auditServer(async calls=>{const view=render(<App/>),data=Array.from({length:12},(_,id)=>({id:id*13+1,title:id%3?'Repeated':'<post>&'+id}));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await auditReply(calls[0],data);let expected=data.map(p=>p.title);expect(auditTitles(view)).toEqual(expected);for(const title of ['Created A','Created B','Created C']){auditCreate(view,title);const call=calls[calls.length-1];expect(call.method).toBe('POST');expect(JSON.parse(call.options.body).title).toBe(title);await auditReply(call,{id:101,title:'Server title'});expected.push(title);expect(auditTitles(view)).toEqual(expected);}const count=calls.length;auditAction(view,13,'Edit');expected[13]='Edited';expect(auditTitles(view)).toEqual(expected);auditAction(view,12,'Delete');expected.splice(12,1);expect(auditTitles(view)).toEqual(expected);expect(calls).toHaveLength(count);expect(view.container.querySelector('li post')).toBeNull();}));
 `,
     api: {
       method: "GET + POST",
@@ -4001,7 +4042,7 @@ test('an answer that is not ok shows an alert and no products', () => withServer
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Comments viewer",
-    prompt: "Browse the comments of the training API. On mount, fetch `https://jsonplaceholder.typicode.com/comments` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. List the comments in a `ul` with `aria-label=\"Comments\"`, one `li` each with the comment’s `name` and `email`. A `select` picks a post: its first option, “All posts”, has the value `\"\"`; then comes each `postId` in the data, once, lowest first, with the id as its value and “Post <id>” as its text. A text input filters by email as you type, matching any part of the address and ignoring case. The two apply together, and when no comment matches, show “No comments match.” A second `ul`, with `aria-label=\"Domains\"`, counts the email domains (the part after the `@`) of the comments shown, one `li` per domain reading “<domain>: <count>”, the most comments first and a tie in A to Z order. In code comments, explain how you would paginate the comments and protect the endpoint from abuse.",
+    prompt: `Browse the comments of the training API. On mount, fetch \`https://jsonplaceholder.typicode.com/comments\` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not \`ok\`, shows a message in an element with \`role="alert"\`. List the comments in a \`ul\` with \`aria-label="Comments"\`, one \`li\` each with the comment’s \`name\` and \`email\`. A \`select\` picks a post: its first option, “All posts”, has the value \`""\`; then comes each \`postId\` in the data, once, lowest first, with the id as its value and “Post <id>” as its text. A text input filters by email as you type, matching any part of the address and ignoring case. The two apply together, and when no comment matches, show “No comments match.” A second \`ul\`, with \`aria-label="Domains"\`, counts the email domains (the part after the \`@\`) of the comments shown, one \`li\` per domain reading “<domain>: <count>”, the most comments first and a tie in A to Z order. In code comments, explain how you would paginate the comments and protect the endpoint from abuse. Accept zero to 100 comments with unique ids, nonnegative integer postIds, literal single-line names up to 500 characters and addresses containing one @ with a nonempty local part and domain. For this data exercise the domain is the literal case-sensitive substring after @; do not normalize it when counting. Sort tied domains using JavaScript string order, as with sort(), not locale-dependent collation. Names such as constructor and toString are ordinary domain keys; use a Map or null-prototype dictionary rather than inherited object properties. Preserve each displayed name and address, including repeated names. Label the post control Post and the email field Email or Filter by email. JSON decoding failure follows the existing alert branch. Parent renders retain both filters without refetching; separate and fresh viewers are independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4035,24 +4076,87 @@ const domainCounts = shown.reduce((counts, comment) => {
   const domain = comment.email.split('@')[1];
   // count it
   return counts;
-}, {});
+}, Object.create(null));
 const domains = Object.entries(domainCounts); // most first, a tie A to Z
 
 <ul aria-label="Domains">
   {domains.map(([domain, count]) => <li key={domain}>{domain}: {count}</li>)}
 </ul>`,
     hints: [
-      "The fetched comments, the chosen post and the email text are the only state. The post options, the comments shown and the domain counts are three derivations of them, in that order, during render.",
+      `Keep the fetched comments, selected post and email query in state, alongside the request status. Derive post options, visible comments and domain counts while rendering. Use a Map or null-prototype dictionary when a domain becomes a key.`,
     ],
     approach: [
-      "Fetch the comments once into array state with loading and error branches.",
-      "Keep the selected post id and the email query in separate state values driven by controlled inputs; build the post options from the data with a `Set` and a numeric sort.",
-      "Derive the visible comments by filtering on the post id and on a case-insensitive email substring match.",
-      "Count domains with reduce over the addresses split at the at sign, sort the entries by count and then by name, and explain pagination and abuse protection in comments.",
+      `Fetch the comments once into array state with loading and error branches.`,
+      `Keep the selected post id and the email query in separate state values driven by controlled inputs; build the post options from the data with a \`Set\` and a numeric sort.`,
+      `Derive the visible comments by filtering on the post id and on a case-insensitive email substring match.`,
+      `Reduce over the literal domain after each at sign using safe dictionary keys or a Map. Sort by descending count, then JavaScript string order for ties. Explain pagination and abuse protection in comments.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
-    suite: `${CAPSTONE_HEADER}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor as waitForSlow, act, within } from '@testing-library/react';
+import App from './App';
+
+// A page that got its data renders it within a few milliseconds; a page that
+// never will fails in well under the grader's time limit.
+const waitFor = (check, options) => waitForSlow(check, { timeout: 300, ...options });
+
+// Every request the page makes is recorded with its address, method and
+// options, and waits until the check answers it with respond(data, status) or
+// fail(error). The fixture stub comes back when the check ends.
+const withServer = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// Host and path of an address, without the query or a trailing slash.
+const addressOf = url => {
+  const parsed = new URL(url, 'http://localhost/');
+  return parsed.host + parsed.pathname.replace(/[/]+$/, '');
+};
+const gets = (calls, url) => calls.filter(call => call.method === 'GET' && addressOf(call.url) === addressOf(url));
+const says = (container, words) => container.textContent.toLowerCase().includes(words.toLowerCase());
+// The words of every alert on the page; an empty live region says nothing.
+const alertText = container => [...container.querySelectorAll('[role="alert"]')].map(node => node.textContent).join(' ').trim();
+// The page without its alerts, so a message such as "Error loading users"
+// does not count as the loading line.
+const outsideAlerts = container => {
+  const copy = container.cloneNode(true);
+  copy.querySelectorAll('[role="alert"]').forEach(node => node.remove());
+  return copy;
+};
+const itemTexts = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+// A button element, or an input of type submit or button, by the words on it.
+const buttonNamed = (node, name) => [...node.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+  .find(button => (button.tagName === 'INPUT' ? button.value : button.textContent).toLowerCase().includes(name.toLowerCase()));
+const optionsOf = select => [...select.querySelectorAll('option')].map(option => [option.value, option.textContent.trim()]);
+// Each item holds the matching text, in order, and there are no others.
+const expectItems = (items, expected) => {
+  expect(items).toHaveLength(expected.length);
+  expected.forEach((text, index) => expect(items[index]).toContain(text));
+};
+// A failure puts a message with role="alert" on the page, no items, and no
+// loading line outside the alert.
+const expectFailure = async container => {
+  await waitFor(() => expect(alertText(container).length > 0).toBe(true));
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(says(outsideAlerts(container), 'loading')).toBe(false);
+};
+
 const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
 const COMMENTS = [
   { id: 1, postId: 1, name: 'Comment one', email: 'ana@example.com', body: 'First' },
@@ -4139,6 +4243,18 @@ test('an answer that is not ok shows an alert and no comments', () => withServer
   calls[0].respond(null, 500);
   await expectFailure(container);
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditEntries=(view,name)=>{const list=within(view.container).queryByRole('list',{name});return list?[...list.querySelectorAll('li')].map(li=>li.textContent.trim()):[];};
+const auditCommentData=()=>Array.from({length:27},(_,id)=>({id,postId:[120,4,19][id%3],name:id%2?'Same':'<comment>&'+id,email:'user'+id+'@'+['constructor','constructor','toString','Z.test','a.test'][id%5],body:'text'}));
+const auditComments=(view,data,post='',email='')=>{const shown=data.filter(c=>(post===''||String(c.postId)===post)&&c.email.toLowerCase().includes(email.toLowerCase())),items=auditEntries(view,'Comments'),counts=new Map();expect(items).toHaveLength(shown.length);shown.forEach((c,i)=>{expect(items[i]).toContain(c.name);expect(items[i]).toContain(c.email);const domain=c.email.slice(c.email.indexOf('@')+1);counts.set(domain,(counts.get(domain)||0)+1);});const domains=Array.from(counts).sort(([a,n],[b,m])=>m-n||(a<b?-1:a>b?1:0)).map(([domain,n])=>domain+': '+n);expect(auditEntries(view,'Domains')).toEqual(domains);const select=within(view.container).getByRole('combobox',{name:'Post'});expect([...select.options].map(o=>[o.value,o.textContent])).toEqual([['','All posts'],...Array.from(new Set(data.map(c=>c.postId))).sort((a,b)=>a-b).map(id=>[String(id),'Post '+id])]);if(!shown.length)expect(within(view.container).getByText('No comments match.')).toBeTruthy();};
+const auditEmailBox=view=>view.container.querySelector('input');
+
+test('all returned comments and literal dictionary-like domains are counted without fixture caps',()=>auditServer(async calls=>{const view=render(<App/>),data=auditCommentData();await auditReply(calls[0],data);auditComments(view,data);expect(view.container.querySelector('li comment')).toBeNull();}));
 `,
     api: {
       method: "GET",
@@ -4558,7 +4674,7 @@ test('a failed request shows an alert', () => withRequests(async calls => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Booking prototype",
-    prompt: "A booking page for a small studio. On mount, fetch `https://jsonplaceholder.typicode.com/todos?_limit=10` and treat each record as a time slot: its `title` names the slot and `completed: true` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with `role=\"alert\"`. Show every slot as a `button` inside an `li`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets `aria-pressed=\"true\"` and the other slot buttons `aria-pressed=\"false\"`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends `PATCH https://jsonplaceholder.typicode.com/todos/<id>` for the selected slot with the JSON body `{\"completed\":true}`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with `role=\"status\"` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them.",
+    prompt: `A booking page for a small studio. On mount, fetch \`https://jsonplaceholder.typicode.com/todos?_limit=10\` and treat each record as a time slot: its \`title\` names the slot and \`completed: true\` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with \`role="alert"\`. Show every slot as a \`button\` inside an \`li\`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets \`aria-pressed="true"\` and the other slot buttons \`aria-pressed="false"\`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends \`PATCH https://jsonplaceholder.typicode.com/todos/<id>\` for the selected slot with the JSON body \`{"completed":true}\`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with \`role="status"\` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them. The answer may contain zero to 10 slots, with unique nonnegative integer ids and literal single-line titles up to 500 characters. Titles may repeat; selection, PATCH identity and local updates always use the id. Disable all slot choices while a booking is pending so its selection cannot move underneath the request. This is a local interaction rule, not protection against other users. Empty or fully booked data leaves Book disabled. Rejected initial JSON follows the load-error branch; a successful PATCH need not include JSON and its HTTP status decides the booking outcome. Parent renders retain selection/booked state without reloading; separate and fresh booking pages keep independent state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4590,7 +4706,7 @@ const markBooked = id =>
 
 const book = async () => {
   const slot = slots.find(one => one.id === selectedId);
-  if (!slot || booking) return;
+  if (!slot || slot.completed || booking) return;
   setBooking(true);
   setStatus('');
   setProblem('');
@@ -4608,22 +4724,22 @@ const book = async () => {
   }
 };
 
-// <button type="button" disabled={slot.completed} aria-pressed={slot.id === selectedId}
+// <button type="button" disabled={slot.completed || booking} aria-pressed={slot.id === selectedId}
 //   onClick={() => setSelectedId(slot.id)}>{slot.title}</button>`,
     hints: [
-      "The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch.",
+      `The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch. Lock the slot choices during the pending PATCH, and update the selected record by id even when two titles match.`,
     ],
     approach: [
-      "Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed `li` with a slot button disabled when `completed` is true.",
-      "Keep the selected slot’s id in state and set `aria-pressed` on each slot button by comparing ids.",
-      "Write `book()` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.",
-      "Mark a slot booked by mapping to a copy with `completed: true`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.",
+      `Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed \`li\` with a slot button disabled when \`completed\` is true.`,
+      `Keep the selected slot’s id in state and set \`aria-pressed\` on each slot button by comparing ids. Disable all slot controls while booking so a pending request retains its original selection.`,
+      `Write \`book()\` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.`,
+      `Mark a slot booked by mapping to a copy with \`completed: true\`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 // Every request waits until the check answers it, so the page can be read
@@ -4741,6 +4857,18 @@ test('a failed booking keeps the slot free and selected for another try', () => 
   expect(calls).toHaveLength(3);
   expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/1');
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditSlotButtons=view=>[...view.container.querySelectorAll('li button')];
+const auditBook=view=>[...view.container.querySelectorAll('button')].find(button=>!button.closest('li'));
+const auditSlots=(view,data,booked,selected)=>{const buttons=auditSlotButtons(view);expect(buttons).toHaveLength(data.length);data.forEach((slot,index)=>{expect(buttons[index].textContent.trim()).toBe(slot.title);expect(buttons[index].disabled).toBe(booked.has(slot.id));expect(buttons[index].getAttribute('aria-pressed')).toBe(slot.id===selected?'true':'false');});};
+const auditSlotData=()=>Array.from({length:8},(_,i)=>({id:i*17+10,title:i<2?'Same slot':i===6?'<slot>&'+'x'.repeat(450):'Slot '+i,completed:i===3||i===5}));
+
+test('duplicate titles are booked by their selected record id, across the whole returned list',()=>auditServer(async calls=>{const view=render(<App/>),data=auditSlotData(),booked=new Set(data.filter(x=>x.completed).map(x=>x.id));await auditReply(calls[0],data);auditSlots(view,data,booked,null);fireEvent.click(auditSlotButtons(view)[1]);fireEvent.click(auditBook(view));expect(calls[1].url).toBe('https://jsonplaceholder.typicode.com/todos/'+data[1].id);expect(calls[1].method).toBe('PATCH');expect(JSON.parse(calls[1].options.body)).toEqual({completed:true});await auditReply(calls[1],{});booked.add(data[1].id);auditSlots(view,data,booked,null);expect(within(view.container).getByRole('status').textContent).toBe('Booked: '+data[1].title);}));
 `,
     api: {
       method: "GET + PATCH",
@@ -4757,7 +4885,7 @@ test('a failed booking keeps the slot free and selected for another try', () => 
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Analytics panel",
-    prompt: "An analytics panel sums up a product’s events. On mount, fetch `/api/events`; the answer is a list of `{ id, type, date }`, where `type` is a word such as `visit` or `signup` and `date` a day such as `2026-09-03`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with `role=\"alert\"`. Three controls filter the events: a `select` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with `reduce` and render one summary card per type: an `article` with the type in an `h3` and its count, just the number, in a `p`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them.",
+    prompt: `An analytics panel sums up a product’s events. On mount, fetch \`/api/events\`; the answer is a list of \`{ id, type, date }\`, where \`type\` is a word such as \`visit\` or \`signup\` and \`date\` a day such as \`2026-09-03\`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with \`role="alert"\`. Three controls filter the events: a \`select\` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with \`reduce\` and render one summary card per type: an \`article\` with the type in an \`h3\` and its count, just the number, in a \`p\`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them. Accept zero to 100 events with unique ids, valid YYYY-MM-DD dates and nonempty ASCII type identifiers up to 40 characters (letters, digits, underscores or hyphens). Names such as all, constructor, toString and __proto__ are ordinary types. Use an empty value for All types so it cannot collide with a real type. Order type options and cards with JavaScript string order, as with sort(), rather than locale-dependent collation. Counts must not read inherited object properties: use a Map, a null-prototype dictionary, or safe own-property reads. Cross-year and inclusive date bounds combine with type; a From date after To simply matches nothing. Rejected JSON uses the same error branch. Parent renders keep filters without refetching; separate and fresh panels have independent labelled controls.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4776,7 +4904,7 @@ export default App;
     skeleton: `const [events, setEvents] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [type, setType] = useState('all');
+const [type, setType] = useState('');
 const [from, setFrom] = useState('');
 const [to, setTo] = useState('');
 
@@ -4784,29 +4912,30 @@ const [to, setTo] = useState('');
 
 const types = [...new Set(events.map(event => event.type))].sort();
 const shown = events.filter(event =>
-  (type === 'all' || event.type === type) &&
+  (type === '' || event.type === type) &&
   (from === '' || event.date >= from) &&
   true); // and the To box
 const counts = shown.reduce((totals, event) => {
   // totals[event.type] goes up by one
   return totals;
-}, {});
+}, Object.create(null));
 
 // <label>From <input type="date" value={from} onChange={event => setFrom(event.target.value)} /></label>`,
     hints: [
-      "Dates written as `2026-09-03` sort the same as text and as time, so a plain string comparison with `>=` and `<=` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.",
+      `Dates written as \`2026-09-03\` sort the same as text and as time, so a plain string comparison with \`>=\` and \`<=\` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.`,
+      `The empty select value means no type filter; all can then remain a real event type. Arbitrary keys such as constructor need a Map, a null-prototype dictionary or own-property checks. Use one declared string ordering for both options and cards.`,
     ],
     approach: [
-      "Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.",
-      "Keep the type and the two dates as separate state values bound to controlled inputs, with `all` and empty strings for no filter.",
-      "Derive the filtered events first, then reduce them into an object of counts by type, and render one keyed card per key of that object, sorted.",
-      "Build the type options from the full list with a `Set`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.",
+      `Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.`,
+      `Keep type and both dates as controlled state values, with empty strings for no filter. All types uses an empty option value rather than the real type name all.`,
+      `Derive the filtered events first, then reduce them into safe counts by type and render keyed cards in JavaScript string order. A Map or null-prototype dictionary avoids inherited-key collisions.`,
+      `Build the type options from the full list with a \`Set\`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 // Every request waits until the check answers it, so the page can be read
@@ -4914,6 +5043,19 @@ test('a failed request shows an alert', () => withRequests(async calls => {
   expect(screen.queryByText('Loading…')).toBeNull();
   expect(cards()).toEqual([]);
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditCards=view=>[...view.container.querySelectorAll('article')].map(card=>[card.querySelector('h3').textContent,card.querySelector('p').textContent]);
+const auditSelect=(view,text)=>{const select=within(view.container).getByRole('combobox',{name:'Type'}),option=[...select.options].find(o=>o.textContent===text);expect(Boolean(option)).toBe(true);fireEvent.change(select,{target:{value:option.value}});};
+const auditDate=(view,label,value)=>fireEvent.change(within(view.container).getByLabelText(label),{target:{value}});
+const auditExpected=(data,filters)=>{const rows=data.filter(e=>(!filters.type||e.type===filters.type)&&(!filters.from||e.date>=filters.from)&&(!filters.to||e.date<=filters.to)),map=new Map();for(const event of rows)map.set(event.type,(map.get(event.type)||0)+1);return{rows,cards:Array.from(map).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([type,n])=>[type,String(n)])};};
+const auditAnalytics=(view,data,filters)=>{const result=auditExpected(data,filters);expect(auditCards(view)).toEqual(result.cards);expect(within(view.container).getByText('Showing '+result.rows.length+' of '+data.length+' events')).toBeTruthy();const options=[...within(view.container).getByRole('combobox',{name:'Type'}).options].map(o=>o.textContent);expect(options).toEqual(['All types',...Array.from(new Set(data.map(e=>e.type))).sort()]);if(!result.rows.length)expect(within(view.container).getByText('No events match these filters')).toBeTruthy();};
+
+test('all and dictionary-like names are real event types, not control values or object members',()=>auditServer(async calls=>{const view=render(<App/>),data=['all','constructor','constructor','__proto__','toString','Zeta','alpha','all'].map((type,id)=>({id,type,date:'2026-01-01'}));await auditReply(calls[0],data);auditAnalytics(view,data,{});for(const type of Array.from(new Set(data.map(e=>e.type)))){auditSelect(view,type);auditAnalytics(view,data,{type});}auditSelect(view,'All types');auditAnalytics(view,data,{});}));
 `,
     api: {
       method: "GET",
