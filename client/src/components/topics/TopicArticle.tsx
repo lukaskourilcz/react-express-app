@@ -1,5 +1,6 @@
-import type { MouseEventHandler } from 'react';
+import { useLayoutEffect, useRef, type MouseEventHandler } from 'react';
 import type { TopicLandingDefinition } from '../../lib/topicCatalog';
+import { takePublicGuide } from '../../lib/publicGuideHandoff';
 export const topicLabels = {
   en: { home: 'Home', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides', language: 'Guide language' },
   cs: { home: 'Domů', kicker: 'Rychlé vysvětlení', example: 'Jak to funguje', misconception: 'Častý omyl', practice: 'Krátké procvičení', cta: 'Procvičit v kvízu', reference: 'Přečíst dokumentaci', related: 'Další témata', language: 'Jazyk průvodce' },
@@ -12,7 +13,20 @@ export function TopicArticle({ topic, locale, brand, related, onPractice }: {
   related: TopicLandingDefinition[]; onPractice?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const copy = topicLabels[locale];
-  return <article className="ss-info-page ss-topic-article" lang={locale}>
+  const articleRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const previous = takePublicGuide(), article = articleRef.current;
+    if (!previous || !article || previous.pathname !== location.pathname || previous.historyKey !== history.state?.key ||
+        previous.article.dataset.topicGuide !== topic.slug || previous.article.lang !== locale) return;
+    const before = previous.article.querySelectorAll<HTMLDetailsElement>('details.topic-practice');
+    article.querySelectorAll<HTMLDetailsElement>('details.topic-practice').forEach((detail, index) => {
+      const old = before[index], summary = detail.querySelector<HTMLElement>('summary');
+      if (!old || old.querySelector('summary')?.textContent !== summary?.textContent) return;
+      detail.open = old.open;
+      if (previous.focus === old.querySelector('summary') && document.activeElement === document.body) summary?.focus({ preventScroll: true });
+    });
+  }, [topic.slug, locale]);
+  return <article ref={articleRef} data-topic-guide={topic.slug} className="ss-info-page ss-topic-article" lang={locale}>
     <nav className="ss-topic-nav" aria-label={copy.language}>
       <a href="/">{brand} · {copy.home}</a>
       <a href={topicPath(topic.slug, 'en')} hrefLang="en" lang="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>

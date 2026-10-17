@@ -247,6 +247,7 @@ function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
 function App() {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
+  const startupGuidePath = useRef(/^(?:\/cs)?\/topics\//.test(location.pathname) ? location.pathname : null);
   const navigate = useNavigate();
   const { t, setLang, lang } = useLanguage();
   const config = useGameConfig();
@@ -428,7 +429,12 @@ function App() {
   useEffect(() => {
     // Route focus is intentionally pathname-only: changing language updates
     // metadata, but must not pull focus away from the language control.
+    if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
+    const preserveStartupFocus = startupGuidePath.current !== null;
     const timer = window.setTimeout(() => {
+      // The public guide's native interaction owns focus during cold startup.
+      // Once navigation leaves it, ordinary route focus resumes.
+      if (preserveStartupFocus) return;
       const main = document.getElementById('main-content');
       // Silent focus: clear the skip-link flag first so this move never paints
       // the page-wide ring (see #main-content rules in app-shell.css).
