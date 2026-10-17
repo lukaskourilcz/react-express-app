@@ -2462,15 +2462,15 @@
    "topic": "ai",
    "level": 2,
    "levelTitle": "Machine Learning Basics",
-   "objective": "Define reinforcement learning by its feedback signal: reward and penalty from an environment.",
+   "objective": "Identify action-policy learning aimed at improving cumulative reward.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "62dbedf3b3fbe829",
-   "previousHash": "4681ffd2859a493e",
+   "revision": 3,
+   "contentHash": "62dd00290f78857f",
+   "previousHash": "62dbedf3b3fbe829",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -2486,24 +2486,16 @@
    },
    "relevanceScore": 7,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 3
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 1,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 0
-    },
-    "relevanceScore": 7
+    "hint": "Ask what tells this learner it did well: an answer key supplied up front, or a score that arrives after it acts.",
+    "question": "Reinforcement learning is best described as learning by:",
+    "options": [
+     "Trial and error, guided by rewards and penalties from an environment",
+     "Memorizing a fixed table of answers",
+     "Reading labeled input-output pairs",
+     "Sorting data into clusters"
+    ],
+    "correctAnswer": 0,
+    "explanation": "In reinforcement learning an agent acts in an environment, receives a reward or penalty, and adjusts its policy to maximize reward over time; nobody hands it the correct action. That delayed, evaluative signal is what separates it from supervised learning, which needs labeled input-output pairs, and from clustering, which gets no feedback at all. RLHF, used to tune chat assistants, is this same loop with human preference rankings as the reward."
    },
    "gates": {
     "quality": true,
@@ -2513,35 +2505,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback with a tag echo",
-    "explanation describes the key only; it never contrasts the reward signal with labeled pairs, which is the misconception the options are built around"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct and clearly written, with distractors that map onto the other paradigms; the hint is boilerplate and the explanation misses the contrast. Naming RLHF connects the paradigm to the models this audience actually calls.",
+   "rationale": "Shorten the correct option while preserving the reward-driven policy objective. Remove overbroad claims about no feedback in clustering,no possible expert guidance and a simplified RLHF loop unrelated to this definition.",
    "evidence": [
-    "fetched: https://platform.claude.com/docs/en/about-claude/glossary - RLHF trains a pretrained model from ranked human feedback"
+    "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "fetched https://platform.claude.com/docs/en/about-claude/glossary: RLHF 'human feedback consists of ranking a set of two or more example texts, and the reinforcement learning process encourages the model to prefer outputs that are similar to the higher-ranked ones'"
+     "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The explanation's RLHF sentence matches Anthropic's own description, so the compression to 'preference rankings as the reward' is a fair simplification at this level."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "62dbedf3b3fbe829",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-ai-120",
@@ -73654,17 +73656,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Review a generated test suite for the inputs nobody described: invalid, empty and boundary values.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "5db8448b3d23077b",
-   "previousHash": "d2ea474cb8e1c4c0",
+   "revision": 3,
+   "contentHash": "1876bdef1394697a",
+   "previousHash": "5db8448b3d23077b",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -73676,24 +73678,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Notice what all ten inputs have in common, then ask what a parser does with everything else.",
+    "question": "A generated test suite for a date parser has ten cases, all with valid ISO strings. What is the most likely gap?",
+    "options": [
+     "Not enough valid formats",
+     "The invalid, empty and boundary inputs — the cases the parser exists to handle",
+     "Insufficient comments",
+     "Missing performance assertions"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Generated suites tend to cover the path that was described to them and miss the ones nobody mentioned. For a parser, that is the malformed input, the empty string and the boundary date — which is where parsers actually fail."
    },
    "gates": {
     "quality": true,
@@ -73703,40 +73697,47 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "the key is longer than the alternatives, and \"Insufficient comments\" is a style nitpick rather than a testing misconception"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Reviewing generated tests for the unstated cases is squarely a present-day skill, and the explanation names exactly where parsers fail. The hint is filler and one distractor is weak, but the item holds.",
+   "rationale": "Remove unsupported claims about generated tests and valid boundary dates. Ask about the clearly absent invalid-input class rather than guessing the entire suite’s coverage.",
    "evidence": [
-    "knowledge: a parser's failure modes are malformed input, empty input and boundary values; a suite of valid examples exercises only the accepting path"
+    "https://jestjs.io/docs/using-matchers",
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint repeats the key's phrase ('which inputs a parser exists to reject' against 'the cases the parser exists to handle') and asks whether they appear in the ten, which answers the question outright"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: a parser's failure modes are malformed input, empty input and boundary values; a suite of valid examples exercises only the accepting path"
+     "https://jestjs.io/docs/using-matchers",
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key is longer than the alternatives and option 2 is a style nitpick, but both distractors are wrong on substance.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "5db8448b3d23077b",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-148",
@@ -73761,17 +73762,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Allocate testing effort by risk: cost of being wrong multiplied by the chance it goes unnoticed.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "7af5b475631f0401",
-   "previousHash": "0e72994428bf260b",
+   "revision": 3,
+   "contentHash": "cffeeb91769301e0",
+   "previousHash": "7af5b475631f0401",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -73783,24 +73784,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask how each mistake would be discovered, and by whom.",
+    "question": "Two changes are waiting: a copy fix on a marketing page and a change to how refunds are calculated. Where does the testing effort go?",
+    "options": [
+     "Equally across both",
+     "Mostly on the refund calculation, where a mistake costs money and is hard to notice",
+     "Mostly on the copy, because users see it first",
+     "Neither needs tests"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Risk is the cost of being wrong multiplied by how likely it is to slip through. Wrong copy is visible and cheap to fix; a wrong refund is invisible, expensive, and discovered later by somebody else."
    },
    "gates": {
     "quality": true,
@@ -73810,39 +73803,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "A concrete allocation decision with a stated rule, and \"equally across both\" is the tempting wrong answer it is meant to catch. Only the hint fails.",
+   "rationale": "Specify non-critical copy and avoid treating all wording as cheap or harmless. Apply risk-based testing without changing billing logic or giving actual refund/tax advice.",
    "evidence": [
-    "knowledge: risk-based test allocation weighs impact of a defect against its likelihood of escaping review"
+    "https://glossary.istqb.org/en_US/term/risk-based-testing",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint states the key's two justifiers in the key's own words ('what being wrong costs' and 'how long it would go unnoticed' against 'a mistake costs money and is hard to notice')"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: risk-based allocation of test effort weighs the cost of a defect against the chance it escapes review and reaches production unnoticed"
+     "https://glossary.istqb.org/en_US/term/risk-based-testing",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Replacement asks about detection rather than restating the cost formula the explanation gives.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "7af5b475631f0401",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-149",
@@ -74080,17 +74079,17 @@
    "levelTitle": "Verify a Change",
    "objective": "Investigate a CI-only failure by looking for environment differences — time zone, locale, environment variables, versions.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "433c5498fce134da",
-   "previousHash": "1cbaa54b4d82a37d",
+   "revision": 3,
+   "contentHash": "f7646880817dc571",
+   "previousHash": "433c5498fce134da",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -74102,62 +74101,66 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 4,
-     "wording": 2,
-     "answerOptions": 2,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The code is the same in both places. Ask what is not.",
+    "question": "A test fails in CI and passes on your machine. Which explanation should you check first?",
+    "options": [
+     "The code is correct and CI is wrong",
+     "Something differs between the environments — time zone, locale, environment variable, installed version",
+     "CI is too slow",
+     "The test needs a longer timeout"
+    ],
+    "correctAnswer": 1,
+    "explanation": "\"Works on my machine\" is the start of the investigation, not the end. Time zone and locale are the classic pair: the same instant renders as 3/1/2024 under UTC and 2/29/2024 under America/New_York, and a locale-aware sort puts the same strings in a different order — differences that are just as real in production as in CI. Reach for the environment diff before a longer timeout, which only hides a timing problem."
    },
    "gates": {
     "quality": true,
     "relevance": true
    },
-   "correctnessBlocker": "multiple-defensible",
+   "correctnessBlocker": null,
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "\"Which explanation should you rule out first?\" has two readings: under the ordinary sense of \"rule out\" (dismiss), option 0 — \"the code is correct and CI is wrong\" — is the defensible answer, not the keyed option 1",
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The objective and the keyed environment-difference answer are right, but \"rule out first\" reads naturally as \"dismiss first\", which makes option 0 defensible and gives the item two answers. Changing one word to \"check first\" fixes it without touching the objective.",
+   "rationale": "Keep environmental comparison as an investigation,not a proven unique cause. Define and execute the timezone example rather than relying on an unspecified instant,and remove the claim that every longer timeout merely hides a bug.",
    "evidence": [
-    "node: new Date(\"2024-03-01T04:30:00Z\").toLocaleDateString(\"en-US\", {timeZone}) gives \"3/1/2024\" for UTC and \"2/29/2024\" for America/New_York; [\"ch\",\"cz\",\"d\"] sorts to ch,cz,d under an en collator and cz,d,ch under a cs collator"
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: new Date('2024-03-01T04:30:00Z').toLocaleDateString('en-US', {timeZone}) gives '3/1/2024' for UTC and '2/29/2024' for America/New_York; ['ch','cz','d'] sorts to ch,cz,d with an en collator and cz,d,ch with a cs collator"
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The reviewer's one-word fix is the right one: 'check first' removes the dismiss reading of 'rule out first' that made option 0 defensible, and both explanation claims reproduce exactly."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "433c5498fce134da",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-151",
@@ -74285,17 +74288,17 @@
    "levelTitle": "Verify a Change",
    "objective": "See what deleting a flaky test changes: the report disappears, the nondeterminism does not.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "6afc13421dd6c340",
-   "previousHash": "688da7af049384dd",
+   "revision": 3,
+   "contentHash": "bf2ed8a8cf3763b8",
+   "previousHash": "6afc13421dd6c340",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -74307,24 +74310,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The release is unblocked. Ask what happened to whatever was making the test flake.",
+    "question": "A flaky test is deleted to unblock a release. What has changed about the system?",
+    "options": [
+     "It is now more reliable",
+     "The unreliability is still there, and nothing reports on it any more",
+     "The bug the test covered is fixed",
+     "The suite is more trustworthy"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The flake was a symptom of something non-deterministic in the test or in the code. Removing the test removes the report, not the cause — and if the cause was in the code, it is now unobserved in production too."
    },
    "gates": {
     "quality": true,
@@ -74334,40 +74329,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "overlaps rm-general-142 (same flaky-test subject, one level earlier); it adds the production consequence, so it is not redundant, but the two should not sit close together in a session"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "It closes the flakiness thread with the consequence that matters — if the nondeterminism was in the code, it is now unobserved in production. The hint is the defect, and the overlap with rm-general-142 is a sequencing concern rather than a duplication.",
+   "rationale": "Avoid assuming that every flaky test proves a product defect. State the narrower conclusion that deleting a check is not evidence of a production fix.",
    "evidence": [
-    "knowledge: deleting a nondeterministic test removes the signal, not the nondeterminism in the test or the code under it"
+    "https://docs.pytest.org/en/stable/explanation/flaky.html",
+    "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint tells the learner to separate the report from the system, and 'reports' appears in no option but the key"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: deleting a nondeterministic test removes the signal, not the nondeterminism in the test or in the code under it"
+     "https://docs.pytest.org/en/stable/explanation/flaky.html",
+     "run: PASS Node24 Intl: exact2024-03-01T00:30Z is3/1/2024 UTC and2/29/2024 America/New_York. Finite arithmetic example distinguishes immediate5+0 from cumulative0+10;this is not an executed RL algorithm. Risk/coverage/flake judgments use cited primary guidance,not production payment changes.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Shares the flaky-test subject with rm-general-142 but asks a different question with a different key, so it is not a duplicate.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q010;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "6afc13421dd6c340",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-16",

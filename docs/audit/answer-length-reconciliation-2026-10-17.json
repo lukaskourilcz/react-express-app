@@ -160,9 +160,14 @@
     "rm-general-135",
     "rm-general-137",
     "rm-general-138",
-    "rm-general-146"
+    "rm-general-146",
+    "rm-general-147",
+    "rm-general-148",
+    "rm-general-150",
+    "rm-general-152",
+    "rm-ai-12"
   ],
-  "remainingEligibleCandidates": 19,
+  "remainingEligibleCandidates": 14,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -172,10 +177,10 @@
         136,
         45
       ],
-      "uniqueLongest": 1899,
-      "correctUniqueLongest": 1027,
-      "share": 0.540810953133228,
-      "flags": 60
+      "uniqueLongest": 1897,
+      "correctUniqueLongest": 1023,
+      "share": 0.5392725355824987,
+      "flags": 55
     },
     "eligible": {
       "count": 2014,
@@ -185,10 +190,10 @@
         127,
         41
       ],
-      "uniqueLongest": 1762,
-      "correctUniqueLongest": 932,
-      "share": 0.52894438138479,
-      "flags": 19
+      "uniqueLongest": 1760,
+      "correctUniqueLongest": 928,
+      "share": 0.5272727272727272,
+      "flags": 14
     },
     "effective": {
       "count": 1820,
@@ -198,10 +203,10 @@
         109,
         30
       ],
-      "uniqueLongest": 1611,
-      "correctUniqueLongest": 874,
-      "share": 0.54252017380509,
-      "flags": 19
+      "uniqueLongest": 1609,
+      "correctUniqueLongest": 870,
+      "share": 0.540708514605345,
+      "flags": 14
     }
   },
   "issue": 471

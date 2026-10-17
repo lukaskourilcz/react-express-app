@@ -24,8 +24,8 @@
       "evidence": "docs/audit/answer-length-reconciliation-2026-10-17.json",
       "issue": 471,
       "initialEligibleCandidates": 64,
-      "focusedRevisionsCompleted": 45,
-      "eligibleCandidatesRemaining": 19,
+      "focusedRevisionsCompleted": 50,
+      "eligibleCandidatesRemaining": 14,
       "automaticPublicationRule": false
     }
   },
