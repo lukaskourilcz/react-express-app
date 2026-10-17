@@ -3137,3 +3137,216 @@ for (const [id, cases] of Object.entries(EARLY_BOARD_REVIEW_CASES)) {
   const solution = REACT_EVOLVING_SOLUTIONS[id];
   solution.hiddenSuite = [solution.hiddenSuite, cases].filter(Boolean).join("\n\n");
 }
+
+// Individually reviewed history and bulk-action steps; later stages retain their own checks.
+const HISTORY_BOARD_REVIEW_CASES: Record<string, string> = {
+"react-evolving-board-3-start": `
+const HISTORY_STAGE=1;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+test('Undo restores every complete snapshot beyond two mutations, including duplicate completion and deletion',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Other','Same','Fourth','Fifth','Last'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',2);historyAction(v,m,'delete',2);historyAction(v,m,'undo');historyAction(v,m,'toggle',2);while(m.past.length)historyAction(v,m,'undo');historyAction(v,m,'undo');});
+
+test('history actions preserve draft and filter while a divergent edit invalidates Redo',()=>{const v=render(<App/>),m=historyModel();historyAction(v,m,'add','One');historyAction(v,m,'add','Two');historyAction(v,m,'toggle',0);historyAction(v,m,'draft','  keep typing  ');historyAction(v,m,'filter','Completed');historyAction(v,m,'undo');if(HISTORY_STAGE>=2){historyAction(v,m,'redo');historyAction(v,m,'undo');}historyAction(v,m,'filter','All');historyAction(v,m,'add','   ');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'add','New branch');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+"react-evolving-board-3": `
+const HISTORY_STAGE=2;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+test('Redo restores unchecked additions and mixed duplicate snapshots without rewriting completion',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Other','Same','Fourth','Fifth'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',0);historyAction(v,m,'delete',2);for(let i=0;i<7;i++)historyAction(v,m,'undo');for(let i=0;i<7;i++)historyAction(v,m,'redo');});
+
+test('history actions preserve draft and filter while a divergent edit invalidates Redo',()=>{const v=render(<App/>),m=historyModel();historyAction(v,m,'add','One');historyAction(v,m,'add','Two');historyAction(v,m,'toggle',0);historyAction(v,m,'draft','  keep typing  ');historyAction(v,m,'filter','Completed');historyAction(v,m,'undo');if(HISTORY_STAGE>=2){historyAction(v,m,'redo');historyAction(v,m,'undo');}historyAction(v,m,'filter','All');historyAction(v,m,'add','   ');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'add','New branch');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+"react-evolving-board-4-start": `
+const HISTORY_STAGE=3;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+test('Complete all reaches hidden and later tasks and a single undo restores mixed completion',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Second','Same','Fourth','Fifth','Sixth'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',1);historyAction(v,m,'filter','Completed');historyAction(v,m,'complete');historyAction(v,m,'filter','All');historyAction(v,m,'undo');historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'filter','Active');historyAction(v,m,'complete');historyAction(v,m,'undo');});
+
+test('history actions preserve draft and filter while a divergent edit invalidates Redo',()=>{const v=render(<App/>),m=historyModel();historyAction(v,m,'add','One');historyAction(v,m,'add','Two');historyAction(v,m,'toggle',0);historyAction(v,m,'draft','  keep typing  ');historyAction(v,m,'filter','Completed');historyAction(v,m,'undo');if(HISTORY_STAGE>=2){historyAction(v,m,'redo');historyAction(v,m,'undo');}historyAction(v,m,'filter','All');historyAction(v,m,'add','   ');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'add','New branch');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+"react-evolving-board-4": `
+const HISTORY_STAGE=4;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+test('bulk actions cross filters, clear before Undo, and retain duplicate identities',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Other','Same','Fourth','Same'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',2);historyAction(v,m,'filter','Active');historyAction(v,m,'clear');historyAction(v,m,'filter','All');historyAction(v,m,'undo');historyAction(v,m,'complete');historyAction(v,m,'toggle',2);historyAction(v,m,'filter','Completed');historyAction(v,m,'clear');historyAction(v,m,'filter','All');historyAction(v,m,'undo');historyAction(v,m,'undo');});
+
+test('history actions preserve draft and filter while a divergent edit invalidates Redo',()=>{const v=render(<App/>),m=historyModel();historyAction(v,m,'add','One');historyAction(v,m,'add','Two');historyAction(v,m,'toggle',0);historyAction(v,m,'draft','  keep typing  ');historyAction(v,m,'filter','Completed');historyAction(v,m,'undo');if(HISTORY_STAGE>=2){historyAction(v,m,'redo');historyAction(v,m,'undo');}historyAction(v,m,'filter','All');historyAction(v,m,'add','   ');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'add','New branch');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+"react-evolving-board-5-start": `
+const HISTORY_STAGE=5;
+
+const historyWithin=require('@testing-library/react').within;
+const historyInput=v=>historyWithin(v.container).getByRole('textbox',{name:'Task'});
+const historyButton=(v,name)=>historyWithin(v.container).getByRole('button',{name,exact:true});
+const historyClick=(v,name)=>fireEvent.click(historyButton(v,name));
+const historyRows=v=>[...v.container.querySelectorAll('li')].map(li=>{let name='';const box=historyWithin(li).getByRole('checkbox',{name:n=>{name=n;return true;}});return {name,done:box.checked};});
+const historyModel=()=>({rows:[],past:[],future:[],filter:'All',draft:'',next:0});
+const historyVisible=m=>m.rows.filter(r=>m.filter==='All'||(m.filter==='Active'?!r.done:r.done));
+const historyCheck=(v,m)=>{
+ expect(historyRows(v)).toEqual(historyVisible(m).map(({name,done})=>({name,done})));
+ expect(historyWithin(v.container).getByLabelText('Remaining').textContent).toBe(String(m.rows.filter(r=>!r.done).length));
+ expect(historyInput(v).value).toBe(m.draft);
+ expect(historyButton(v,'Undo').disabled).toBe(!m.past.length);
+ if(HISTORY_STAGE>=2)expect(historyButton(v,'Redo').disabled).toBe(!m.future.length);
+ if(HISTORY_STAGE>=3)expect(historyButton(v,'Complete all').disabled).toBe(!m.rows.some(r=>!r.done));
+ if(HISTORY_STAGE>=4)expect(historyButton(v,'Clear completed').disabled).toBe(!m.rows.some(r=>r.done));
+ if(HISTORY_STAGE>=5)for(const [i,li]of [...v.container.querySelectorAll('li')].entries())expect(historyWithin(li).getByRole('button',{name:'Move up '+historyVisible(m)[i].name,exact:true}).disabled).toBe(historyVisible(m)[i].id===m.rows[0].id);
+};
+const historyAction=(v,m,kind,value)=>{
+ let next=null;
+ if(kind==='draft'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;}
+ if(kind==='filter'){historyClick(v,value);m.filter=value;}
+ if(kind==='add'){fireEvent.change(historyInput(v),{target:{value}});m.draft=value;historyClick(v,'Add');if(value.trim()){next=[...m.rows,{id:++m.next,name:value.trim(),done:false}];m.draft='';}}
+ if(kind==='toggle'){const id=historyVisible(m)[value].id;fireEvent.click(v.container.querySelectorAll('li input[type="checkbox"]')[value]);next=m.rows.map(r=>r.id===id?{...r,done:!r.done}:r);}
+ if(kind==='delete'){const row=historyVisible(m)[value],li=v.container.querySelectorAll('li')[value];fireEvent.click(historyWithin(li).getByRole('button',{name:'Delete '+row.name,exact:true}));next=m.rows.filter(r=>r.id!==row.id);}
+ if(kind==='complete'){historyClick(v,'Complete all');if(m.rows.some(r=>!r.done))next=m.rows.map(r=>({...r,done:true}));}
+ if(kind==='clear'){historyClick(v,'Clear completed');if(m.rows.some(r=>r.done))next=m.rows.filter(r=>!r.done);}
+ if(kind==='move'){const row=historyVisible(m)[value],i=m.rows.findIndex(r=>r.id===row.id);fireEvent.click(historyWithin(v.container.querySelectorAll('li')[value]).getByRole('button',{name:'Move up '+row.name,exact:true}));if(i>0){next=m.rows.slice();next.splice(i-1,2,m.rows[i],m.rows[i-1]);}}
+ if(next){m.past.push(m.rows);m.rows=next;m.future=[];}
+ if(kind==='undo'){historyClick(v,'Undo');if(m.past.length){m.future.unshift(m.rows);m.rows=m.past.pop();}}
+ if(kind==='redo'){historyClick(v,'Redo');if(m.future.length){m.past.push(m.rows);m.rows=m.future.shift();}}
+ historyCheck(v,m);
+};
+test('Move up swaps one full-list neighbor and can cross a hidden first task',()=>{const v=render(<App/>),m=historyModel();for(const name of ['Same','Second','Same','Fourth','Fifth'])historyAction(v,m,'add',name);historyAction(v,m,'toggle',0);historyAction(v,m,'move',3);historyAction(v,m,'move',2);historyAction(v,m,'filter','Active');historyAction(v,m,'move',0);historyAction(v,m,'filter','All');historyAction(v,m,'undo');historyAction(v,m,'redo');historyAction(v,m,'move',0);});
+
+test('history actions preserve draft and filter while a divergent edit invalidates Redo',()=>{const v=render(<App/>),m=historyModel();historyAction(v,m,'add','One');historyAction(v,m,'add','Two');historyAction(v,m,'toggle',0);historyAction(v,m,'draft','  keep typing  ');historyAction(v,m,'filter','Completed');historyAction(v,m,'undo');if(HISTORY_STAGE>=2){historyAction(v,m,'redo');historyAction(v,m,'undo');}historyAction(v,m,'filter','All');historyAction(v,m,'add','   ');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');historyAction(v,m,'undo');historyAction(v,m,'add','New branch');if(HISTORY_STAGE>=2)historyAction(v,m,'redo');});
+test('a bounded mixed-operation model retains full-list state and available history',()=>{const v=render(<App/>),m=historyModel();for(let i=0;i<60;i++){const shown=historyVisible(m),kind=i%12;if(kind===0)historyAction(v,m,'filter',['All','Active','Completed'][Math.floor(i/12)%3]);else if(kind===1||kind===2||!shown.length)historyAction(v,m,'add',i%3?'Row '+i:'Same');else if(kind===3)historyAction(v,m,'toggle',i%shown.length);else if(kind===4)historyAction(v,m,'delete',i%shown.length);else if(kind===5)historyAction(v,m,'undo');else if(kind===6&&HISTORY_STAGE>=2)historyAction(v,m,'redo');else if(kind===7&&HISTORY_STAGE>=3)historyAction(v,m,'complete');else if(kind===8&&HISTORY_STAGE>=4)historyAction(v,m,'clear');else if(kind===9&&HISTORY_STAGE>=5)historyAction(v,m,'move',shown.length-1);else historyAction(v,m,'draft','draft '+i);}historyAction(v,m,'filter','All');});
+test('history belongs to its mounted root, survives parent renders, and resets on a fresh mount',()=>{const a=render(<App/>),b=render(<App/>),ma=historyModel(),mb=historyModel();historyAction(a,ma,'add','Same');historyAction(a,ma,'add','Same');historyAction(b,mb,'add','Other');historyAction(a,ma,'toggle',1);historyAction(a,ma,'delete',1);a.rerender(<App/>);historyCheck(a,ma);historyCheck(b,mb);historyAction(a,ma,'undo');historyAction(b,mb,'undo');a.unmount();b.unmount();const fresh=render(<App/>);historyCheck(fresh,historyModel());});
+`,
+};
+for (const [id, cases] of Object.entries(HISTORY_BOARD_REVIEW_CASES)) {
+  const solution = REACT_EVOLVING_SOLUTIONS[id];
+  solution.hiddenSuite = [solution.hiddenSuite, cases].filter(Boolean).join("\n\n");
+}
