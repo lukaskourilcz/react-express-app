@@ -3771,7 +3771,7 @@ const addTodo = async event => {
 const toggle = id => setTodos(current => current.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
 const done = todos.filter(todo => todo.completed).length;`,
     hints: [
-      "The list is the only state that matters here: the count of finished todos is `todos.filter(...).length` during render. Adding waits for the server; ticking and deleting do not.",
+      "Keep the todos in one array, with separate loading, error and input states. Derive the completed count during render. Adding waits for the server and appends its returned record; toggling and deleting update local state immediately. Explain version conflicts between tabs in comments.",
     ],
     approach: [
       "Fetch the todos into one array state with loading and error handling before adding any interaction.",
@@ -3921,7 +3921,7 @@ const average = matches.reduce((sum, product) => sum + product.price, 0) / match
 
 <input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} />`,
     hints: [
-      "Keep four values in state: the products, the query, the sort and the page. Everything else is a pipeline worked out during render: filter, sort a copy, cut the page. The average reads the filtered list, before the page is cut.",
+      "Keep products and the query, order and page controls in state, alongside loading and error. Derive filter, copied sort and five-row page in that order; the average covers every match, including free products. Reset page on a new query or order and explain search indexes and cache keys in comments.",
     ],
     approach: [
       "Fetch once and remember that this API nests the records inside a products property rather than returning a bare array.",
@@ -4328,7 +4328,7 @@ useEffect(() => {
 const temperatures = readings.map(reading => reading.temperature);
 // Math.min(...temperatures) and Math.max(...temperatures) while rendering`,
     hints: [
-      "Keep one array of readings in state and work the lowest and highest out of it while rendering. Retry has to know which city failed, so remember the city of the last request instead of always retrying Prague.",
+      "Keep one readings array and derive its minimum and maximum during render. Store the last requested city so Retry repeats the failed request. Distinguish no unknown-city message from an unknown empty string, so blank names still show Unknown city: without sending a request.",
     ],
     approach: [
       "Write `loadWeather(city)` as one async function: clear the error, set loading, fetch the city’s URL, check `response.ok`, and save the reading. The mount effect calls it for Prague and Retry calls it for the city asked for last.",
@@ -5126,7 +5126,7 @@ const authors = [...new Set(posts.map(post => post.userId))].sort((a, b) => a - 
 const shown = posts.filter(post => true); // the search and the author
 const authorsShown = new Set(shown.map(post => post.userId)).size;`,
     hints: [
-      "Build it in slices and keep each one working: the GET with its loading and error states, then the list, then the filters and stats worked out from the posts in state, then the POST. Nothing on screen but the posts and the form fields needs its own state.",
+      "Build the GET with loading and error handling, then the complete list and combined filters. Derive both stats from posts and controls during render. Add the POST with separate pending and failure states; keep the title after failure and append only the record returned by the server.",
     ],
     approach: [
       "Write the user flow, the data model and the endpoints in the notes before writing any component code.",

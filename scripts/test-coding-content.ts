@@ -525,7 +525,7 @@ async function main() {
       if (stripComments(body) !== body) fail(`${id}: the ${kind} board still carries an authoring comment`);
     }
   }
-  for (const id of ['react-user-directory', 'react-posts-dashboard', 'react-comments-viewer']) {
+  for (const id of ['react-user-directory', 'react-posts-dashboard', 'react-comments-viewer', 'react-todo-client', 'react-product-explorer']) {
     if (!solutionFor(id)?.boardPlan?.trim()) fail(`${id}: both boards must retain the plan requested by the task`);
   }
 
