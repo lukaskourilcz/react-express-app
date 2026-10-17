@@ -34,8 +34,8 @@ const hints = [
   en('Check the shape before anything else: `typeof value !== "object" || value === null || Array.isArray(value)` is `null`. Then check that both fields are strings before you call `trim` on them.'),
   en('Keep the links in a `Map` from slug to link inside `createApi`, filled from copies of the seed. Copy on the way out too: `{ ...link }`. A 409 is a `has` on that Map.'),
   en('Split the path: `request.path.split("/")` for `/api/links/abc/visit` gives `["", "api", "links", "abc", "visit"]`. Look the slug up once and answer 404 when the Map does not have it.'),
-  en('`const [transport] = useState(() => fetcher ?? createLocalFetch(createApi(SEED)))` creates the local API once per mount. Keep a status in state that starts at "loading", so the first render already shows Loading.'),
-  en('Await the POST, then check `response.status`. Only a 201 clears the inputs and reloads; keep the typed text on any other outcome. A pending flag in state disables Shorten until the request settles.'),
+  en("Create one transport per mounted app with lazy state. Load all returned links, keep Loading visible until the response is ready, and retry rejected or non-successful responses. Visit POSTs for that slug and then reloads the authoritative list. Parent renders retain the local API; other mounted apps have their own API."),
+  en("Submit the current URL and Slug as JSON with the Content-Type header and keep Shorten disabled until settlement. Only 201 clears both inputs and reloads. A 409, 400, other status or rejected request keeps both fields and shows its matching alert; a later success removes the old message."),
 ];
 
 const approaches = [

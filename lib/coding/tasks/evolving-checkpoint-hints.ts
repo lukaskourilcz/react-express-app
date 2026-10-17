@@ -96,6 +96,8 @@ for (const { slug, endpoint, amount } of FULLSTACK_APPS) {
   LADDERS[`react-fullstack-${slug}-8-start`] = { hints: [`Keep the search text and the checkbox in state and filter while rendering: match the trimmed, lower-cased search against each name, and when Available only is ticked keep the rows whose ${amount} is above zero.`] };
 }
 
+LADDERS['react-fullstack-planner-5-start'] = { hints: ["Keep the typed API exports. For this checkpoint, load successful GET /api/tasks responses through one stable transport per mounted app and render every supplied name and its actual hours. Parent renders retain the transport; independent or fresh mounts start from their own seed. Loading, failures and Retry are introduced next."] };
+
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
  * entry, which the content contract reports. */
