@@ -29,4 +29,40 @@ const rejection=await runReactSuite({suite:`import React from 'react';import {re
 assert.equal(rejection.compileError,null);assert.equal(rejection.failed,0,JSON.stringify(rejection));
 const classes=await runReactSuite({suite:`import React from 'react';import{render,fireEvent}from'@testing-library/react';import App from './App';test('class state and callbacks remain supported',()=>{const{container}=render(<App/>);expect(container.textContent).toContain('0');fireEvent.click(container.querySelector('button'));fireEvent.click(container.querySelector('button'));expect(container.querySelector('p').textContent).toBe('2');expect(container.querySelector('span').textContent).toBe('2');});`,appSource:`import React from 'react';export default class App extends React.Component{constructor(props){super(props);this.state={count:0};this.last=0;}add(){this.setState(state=>({count:state.count+1}),function(){this.last=this.state.count;this.forceUpdate();});}render(){return <main><p>{this.state.count}</p><span>{this.last}</span><button onClick={()=>this.add()}>Add</button></main>;}}`});
 assert.equal(classes.compileError,null,JSON.stringify(classes));assert.equal(classes.failed,0,JSON.stringify(classes));
+
+// IME confirmation is a native keyboard-event flag. A correct handler must
+// see it through nativeEvent and a native listener, without gaining write
+// access to the host event or any grading capability.
+const compositionSuite = `import React from 'react';
+import {render,fireEvent,within} from '@testing-library/react';
+import App from './App';
+test('composing Enter stays pending and a normal Enter commits',()=>{
+  const view=render(<App/>),q=within(view.container),input=q.getByLabelText('Draft');
+  fireEvent.change(input,{target:{value:'日本語'}});
+  expect(fireEvent.keyDown(input,{key:'Enter',isComposing:true})).toBe(true);
+  expect(input.value).toBe('日本語');expect(q.getByLabelText('Committed').textContent).toBe('0');
+  expect(fireEvent.keyDown(input,{key:'Enter',isComposing:false})).toBe(false);
+  expect(input.value).toBe('');expect(q.getByLabelText('Committed').textContent).toBe('1');
+});
+test('native listeners observe the same read-only composition flag',()=>{
+  const view=render(<App/>),q=within(view.container);
+  const composing=new KeyboardEvent('keydown',{key:'x',bubbles:true,cancelable:true,isComposing:true});
+  fireEvent(window,composing);expect(composing.isComposing).toBe(true);
+  expect(q.getByLabelText('Native flag').textContent).toBe('true');
+  fireEvent.keyDown(window,{key:'x',isComposing:false});
+  expect(q.getByLabelText('Native flag').textContent).toBe('false');
+});`;
+const compositionApp = `import React,{useEffect,useState} from 'react';
+export default function App(){
+  const[value,setValue]=useState(''),[committed,setCommitted]=useState(0),[flag,setFlag]=useState('unset');
+  useEffect(()=>{const listener=event=>{try{event.isComposing=false;}catch{}setFlag(String(event.isComposing));};window.addEventListener('keydown',listener);return()=>window.removeEventListener('keydown',listener);},[]);
+  return <main><label>Draft<input value={value} onChange={event=>setValue(event.target.value)} onKeyDown={event=>{if(event.nativeEvent.isComposing)return;if(event.key==='Enter'){event.preventDefault();setCommitted(n=>n+1);setValue('');}}}/></label><output aria-label="Committed">{committed}</output><output aria-label="Native flag">{flag}</output></main>;
+}`;
+const composition=await runReactSuite({suite:compositionSuite,appSource:compositionApp});
+assert.equal(composition.compileError,null,JSON.stringify(composition));
+assert.deepEqual(composition.cases.map(one=>one.status),['pass','pass'],JSON.stringify(composition));
+const prematureComposition=await runReactSuite({suite:compositionSuite,appSource:compositionApp.replace('if(event.nativeEvent.isComposing)return;','')});
+assert.equal(prematureComposition.compileError,null,JSON.stringify(prematureComposition));
+assert.deepEqual(prematureComposition.cases.map(one=>one.status),['fail','pass'],JSON.stringify(prematureComposition));
+
 console.log('PASS React authority: DOM, intrinsics, modules, elements, synchronous/async assertions and detached rejections');

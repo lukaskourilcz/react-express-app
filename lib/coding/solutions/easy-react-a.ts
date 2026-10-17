@@ -1136,7 +1136,7 @@ const PAGE_SIZE = 4;
 
 const App = ({ photos = allPhotos }) => {
   const [page, setPage] = useState(1);
-  const pageCount = Math.ceil(photos.length / PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
   // Pages count from 1, indexes from 0.
   const start = (page - 1) * PAGE_SIZE;
   const visible = photos.slice(start, start + PAGE_SIZE);
@@ -1144,7 +1144,7 @@ const App = ({ photos = allPhotos }) => {
   return <main>
     <h2>One page at a time</h2>
     <ul>
-      {visible.map((photo) => <li key={photo}>{photo}</li>)}
+      {visible.map((photo, index) => <li key={(page - 1) * PAGE_SIZE + index}>{photo}</li>)}
     </ul>
     <p>Page {page} of {pageCount}</p>
     <button type="button" onClick={() => setPage((previous) => Math.max(1, previous - 1))}>Previous</button>
@@ -1160,15 +1160,15 @@ const PAGE_SIZE = 4;
 
 const App = ({ photos = allPhotos }) => {
   const [page, setPage] = useState(1);
-  const pageCount = Math.ceil(photos.length / PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
 
   const start = (page - 1) * PAGE_SIZE;
   const end = start + PAGE_SIZE;
   const visible = photos.slice(start, end);
 
   const items = [];
-  for (const photo of visible) {
-    items.push(<li key={photo}>{photo}</li>);
+  for (const [index, photo] of visible.entries()) {
+    items.push(<li key={(page - 1) * PAGE_SIZE + index}>{photo}</li>);
   }
 
   return (
@@ -1199,7 +1199,7 @@ const App = ({ photos = allPhotos }) => {
     <main>
       <h2>One page at a time</h2>
       <ul>
-        {pageOf(photos, page, PAGE_SIZE).map((photo) => <li key={photo}>{photo}</li>)}
+        {pageOf(photos, page, PAGE_SIZE).map((photo, index) => <li key={(page - 1) * PAGE_SIZE + index}>{photo}</li>)}
       </ul>
       <p aria-live="polite">Page {page} of {pageCount}</p>
       <button type="button" onClick={() => go(-1)} disabled={page === 1}>Previous</button>
@@ -1232,7 +1232,13 @@ test('paging leaves the photos as they were for the next visit', () => {
   first.unmount();
   const { container } = render(<App />);
   expect(shown(container)).toEqual(['Harbour', 'Lighthouse', 'Dunes', 'Pier']);
-});`,
+});
+
+
+test('all forward and backward boundaries follow the frozen photo list without a three-page cap',()=>{for(const length of [1,4,5,8,9,10,17,25,36]){const photos=Object.freeze(Array.from({length},(_,i)=>i%3?'Photo '+i:'repeat')),before=JSON.stringify(photos),view=render(<App photos={photos}/>),q=within(view.container),pages=Math.max(1,Math.ceil(length/4));for(let page=1;page<=pages;page++){expect(shown(view.container)).toEqual(photos.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe('Page '+page+' of '+pages);fireEvent.click(q.getByRole('button',{name:'Next'}));}expect(view.container.querySelector('p').textContent).toBe('Page '+pages+' of '+pages);for(let page=pages;page>=1;page--){expect(shown(view.container)).toEqual(photos.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe('Page '+page+' of '+pages);fireEvent.click(q.getByRole('button',{name:'Previous'}));}expect(view.container.querySelector('p').textContent).toBe('Page 1 of '+pages);expect(JSON.stringify(photos)).toBe(before);view.unmount();}});
+test('duplicate names and same-length data replacements keep the current literal page',()=>{const photos=['a','a','b','b','a','b','c','c','d','d'],view=render(<App photos={photos}/>),q=within(view.container);for(const label of ['Next','Next','Previous','Previous','Next'])fireEvent.click(q.getByRole('button',{name:label}));expect(shown(view.container)).toEqual(photos.slice(4,8));const next=photos.map((_,i)=>i===4?'<b>raw</b>':i===5?'  padded  ':i===6?'"quoted" 🦈':i===7?'x'.repeat(500):'New '+i);view.rerender(<App photos={next}/>);expect(shown(view.container)).toEqual(next.slice(4,8));expect(view.container.querySelector('p').textContent).toBe('Page 2 of 3');expect(view.container.querySelector('b')).toBeNull();});
+test('two galleries own navigation and fresh mounts start at their first page',()=>{const photos=Array.from({length:12},(_,i)=>'P'+i),a=render(<App photos={photos}/>),b=render(<App photos={photos}/>);fireEvent.click(within(a.container).getByRole('button',{name:'Next'}));expect(shown(a.container)).toEqual(photos.slice(4,8));expect(shown(b.container)).toEqual(photos.slice(0,4));fireEvent.click(within(b.container).getByRole('button',{name:'Next'}));fireEvent.click(within(b.container).getByRole('button',{name:'Next'}));a.rerender(<App photos={photos}/>);expect(shown(a.container)).toEqual(photos.slice(4,8));expect(shown(b.container)).toEqual(photos.slice(8));a.unmount();b.unmount();const fresh=render(<App photos={photos}/>);expect(shown(fresh.container)).toEqual(photos.slice(0,4));});
+`,
   },
   'react-easy2-show-more': {
     solution: `import React, { useState } from 'react';
@@ -1255,7 +1261,7 @@ const App = ({ comments = allComments }) => {
   return <main>
     <h2>Show more</h2>
     <ul>
-      {comments.slice(0, shown).map((comment) => <li key={comment}>{comment}</li>)}
+      {comments.slice(0, shown).map((comment, index) => <li key={index}>{comment}</li>)}
     </ul>
     {shown < comments.length && (
       <button type="button" onClick={() => setShown((previous) => previous + 3)}>Show more</button>
@@ -1291,8 +1297,8 @@ const App = ({ comments = allComments }) => {
     <main>
       <h2>Show more</h2>
       <ul>
-        {visible.map((comment) => (
-          <li key={comment}>{comment}</li>
+        {visible.map((comment, index) => (
+          <li key={index}>{comment}</li>
         ))}
       </ul>
       {hasMore ? <button type="button" onClick={handleShowMore}>Show more</button> : null}
@@ -1323,7 +1329,7 @@ const App = ({ comments = allComments }) => {
     <main>
       <h2>Show more</h2>
       <ul>
-        {comments.slice(0, shown).map((comment) => <li key={comment}>{comment}</li>)}
+        {comments.slice(0, shown).map((comment, index) => <li key={index}>{comment}</li>)}
       </ul>
       {remaining > 0 && (
         <button type="button" onClick={() => setShown((previous) => previous + STEP)}>Show more</button>
@@ -1350,7 +1356,13 @@ test('the comments keep their order', () => {
   const { container } = render(<App />);
   fireEvent.click(more());
   expect([...container.querySelectorAll('li')].map(li => li.textContent).slice(2, 5)).toEqual(['Love the colours', 'I was there last year', 'Beautiful light']);
-});`,
+});
+
+
+test('zero,boundary and long frozen comment lists reveal the exact prefix three at a time',()=>{for(const length of [0,1,2,3,4,6,7,8,9,17,36]){const comments=Object.freeze(Array.from({length},(_,i)=>i%4?'Comment '+i:'repeat')),before=JSON.stringify(comments),view=render(<App comments={comments}/>),q=within(view.container);let visible=3;for(;;){expect([...view.container.querySelectorAll('li')].map(item=>item.textContent)).toEqual(comments.slice(0,visible));const button=q.queryByRole('button',{name:'Show more'});expect(Boolean(button)).toBe(visible<length);if(!button)break;fireEvent.click(button);visible+=3;}expect(JSON.stringify(comments)).toBe(before);view.unmount();}});
+test('live growing,shrinking and empty data preserve the shown count while reading current values',()=>{const initial=Array.from({length:9},(_,i)=>'Initial '+i),view=render(<App comments={initial}/>);fireEvent.click(within(view.container).getByRole('button',{name:'Show more'}));let shown=6;for(const length of [4,12,0,7,10,17]){const comments=Array.from({length},(_,i)=>i%3?'Current '+length+'/'+i:'<b>raw</b>');view.rerender(<App comments={comments}/>);expect([...view.container.querySelectorAll('li')].map(item=>item.textContent)).toEqual(comments.slice(0,shown));const button=within(view.container).queryByRole('button',{name:'Show more'});expect(Boolean(button)).toBe(shown<length);if(button){fireEvent.click(button);shown+=3;expect([...view.container.querySelectorAll('li')].map(item=>item.textContent)).toEqual(comments.slice(0,shown));}expect(view.container.querySelector('b')).toBeNull();}});
+test('independent counters,parent renders and fresh visits keep their own prefix',()=>{const comments=['one','two','three','four','five','six','seven','eight','nine'],a=render(<App comments={comments}/>),b=render(<App comments={comments}/>),read=view=>[...view.container.querySelectorAll('li')].map(item=>item.textContent);fireEvent.click(within(a.container).getByRole('button',{name:'Show more'}));expect(read(a)).toEqual(comments.slice(0,6));expect(read(b)).toEqual(comments.slice(0,3));a.rerender(<App comments={comments}/>);fireEvent.click(within(b.container).getByRole('button',{name:'Show more'}));fireEvent.click(within(b.container).getByRole('button',{name:'Show more'}));expect(read(a)).toEqual(comments.slice(0,6));expect(read(b)).toEqual(comments);a.unmount();b.unmount();const fresh=render(<App comments={comments}/>);expect(read(fresh)).toEqual(comments.slice(0,3));});
+`,
   },
   'react-easy2-numbered-pages': {
     solution: `import React, { useState } from 'react';
@@ -1367,7 +1379,7 @@ const App = ({ songs = allSongs }) => {
   return <main>
     <h2>Numbered page buttons</h2>
     <ul>
-      {songs.slice(start, start + PAGE_SIZE).map((song) => <li key={song}>{song}</li>)}
+      {songs.slice(start, start + PAGE_SIZE).map((song, index) => <li key={start + index}>{song}</li>)}
     </ul>
     <nav aria-label="Pages">
       {pages.map((number) => (
@@ -1408,7 +1420,7 @@ const App = ({ songs = allSongs }) => {
     <main>
       <h2>Numbered page buttons</h2>
       <ul>
-        {songs.slice(start, start + PAGE_SIZE).map((song) => <li key={song}>{song}</li>)}
+        {songs.slice(start, start + PAGE_SIZE).map((song, index) => <li key={start + index}>{song}</li>)}
       </ul>
       <nav aria-label="Pages">{buttons}</nav>
     </main>
@@ -1444,7 +1456,7 @@ const App = ({ songs = allSongs }) => {
     <main>
       <h2>Numbered page buttons</h2>
       <ul>
-        {songs.slice(start, start + PAGE_SIZE).map((song) => <li key={song}>{song}</li>)}
+        {songs.slice(start, start + PAGE_SIZE).map((song, index) => <li key={start + index}>{song}</li>)}
       </ul>
       <PageButtons count={Math.ceil(songs.length / PAGE_SIZE)} current={page} onPick={setPage} />
     </main>
@@ -1467,7 +1479,13 @@ test('the number of pages follows the list', () => {
 test('a list that fits on one page has one button', () => {
   render(<App songs={['a', 'b']} />);
   expect(pages().map(button => button.textContent)).toEqual(['1']);
-});`,
+});
+
+
+test('empty,boundary and long frozen lists expose every correct page and exactly one current marker',()=>{for(const length of [0,1,2,3,4,6,7,10,17,31]){const songs=Object.freeze(Array.from({length},(_,i)=>i%3?'Song '+i:'repeat')),before=JSON.stringify(songs),view=render(<App songs={songs}/>),nav=within(view.container).getByRole('navigation',{name:'Pages'}),count=Math.ceil(length/3);expect(nav.querySelectorAll('button')).toHaveLength(count);expect(shown(view.container)).toEqual(songs.slice(0,3));for(let page=1;page<=count;page++){const buttons=[...nav.querySelectorAll('button')];fireEvent.click(buttons[page-1]);expect(shown(view.container)).toEqual(songs.slice((page-1)*3,page*3));expect(buttons.map(button=>button.getAttribute('aria-current'))).toEqual(buttons.map((_,i)=>i===page-1?'page':null));}expect(JSON.stringify(songs)).toBe(before);view.unmount();}});
+test('duplicate titles and live same-length values do not duplicate or leave old rows',()=>{const songs=['a','a','b','a','c','c','a','b','b'],view=render(<App songs={songs}/>),q=within(view.container);for(const page of [3,1,2,3,2,1]){fireEvent.click(q.getByRole('button',{name:String(page)}));expect(shown(view.container)).toEqual(songs.slice((page-1)*3,page*3));}fireEvent.click(q.getByRole('button',{name:'3'}));const replacement=['<b>raw</b>','  spaces  ','"quoted"','🦈','x'.repeat(500),'two','last','last','tail'];view.rerender(<App songs={replacement}/>);expect(shown(view.container)).toEqual(replacement.slice(6));fireEvent.click(q.getByRole('button',{name:'1'}));expect(shown(view.container)).toEqual(replacement.slice(0,3));expect(view.container.querySelector('b')).toBeNull();});
+test('two pagers retain their own choice and a fresh App starts at page one',()=>{const songs=Array.from({length:9},(_,i)=>'S'+i),a=render(<App songs={songs}/>),b=render(<App songs={songs}/>);fireEvent.click(within(a.container).getByRole('button',{name:'3'}));fireEvent.click(within(b.container).getByRole('button',{name:'2'}));a.rerender(<App songs={songs}/>);expect(shown(a.container)).toEqual(songs.slice(6));expect(shown(b.container)).toEqual(songs.slice(3,6));a.unmount();b.unmount();const fresh=render(<App songs={songs}/>);expect(shown(fresh.container)).toEqual(songs.slice(0,3));});
+`,
   },
 
   /* ── abort ────────────────────────────────────────────────────────── */

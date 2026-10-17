@@ -646,30 +646,44 @@ const App = () => {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const pageSize = 5;
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+    setItems([]);
+    setStatus('loading');
     const loadItems = async () => {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      setItems(await response.json());
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setItems(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
     };
-
     loadItems();
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <main>
       <h2>Paginated posts</h2>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>
         {pageItems.map(item => (
           <li key={item.id}>{item.title}</li>
         ))}
       </ul>
 
-      <button disabled={page === 1} onClick={() => setPage(current => current - 1)}>Previous</button>
-      <button disabled={page * pageSize >= items.length} onClick={() => setPage(current => current + 1)}>Next</button>
+      <button type="button" disabled={page === 1} onClick={() => setPage(current => current - 1)}>Previous</button>
+      <button type="button" disabled={page * pageSize >= items.length} onClick={() => setPage(current => current + 1)}>Next</button>
     </main>
   );
 };

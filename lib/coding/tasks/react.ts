@@ -1896,7 +1896,7 @@ test('successful response may render an exact count or the literal titles',()=>w
     tier: 3,
     focus: ["pagination", "slice"],
     title: "Paginated posts",
-    prompt: "Fetch the posts and show five at a time as LI items, with Previous and Next buttons. The first page holds posts one to five; Next moves to the following five.",
+    prompt: `Fetch the posts and show five at a time as LI items, with Previous and Next buttons. The first page holds posts one to five; Next moves to the following five. Fetch the full array once per mount from https://jsonplaceholder.typicode.com/posts; changing pages must not fetch again. Accept zero to 100 posts with unique ids and literal single-line titles up to 500 characters, including repeated titles. Render the exact current slice without changing its data. Disable Previous on page 1 and Next when no following page exists, including both for empty data. Show Loading… in a status while loading. HTTP, JSON and network errors show Could not load posts in an alert and a Try again button; retry the same endpoint and clear the alert when loading starts. Only the active request may store data or errors; invalidate it on cleanup. Normal parent renders retain the current page; separate and fresh mounts have their own requests and page state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1909,42 +1909,60 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
-const [page, setPage] = useState(1);
-const pageSize = 5;
+    skeleton: `  const API_URL = 'https://jsonplaceholder.typicode.com/posts';
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
-useEffect(() => {
-  const loadItems = async () => {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Request failed');
-    setItems(await response.json());
-  };
+  useEffect(() => {
+    let active = true;
+    setItems([]);
+    setStatus('loading');
+    const loadItems = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setItems(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
+    };
+    loadItems();
+    return () => { active = false; };
+  }, [attempt]);
 
-  loadItems();
-}, []);
+  const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
-const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
 <ul>
   {pageItems.map(item => (
-    <li key={item.id}>{/* the post's title */}</li>
+    <li key={item.id}>{/* the post title */}</li>
   ))}
 </ul>
 
-// Connect Previous/Next buttons to setPage, and disable each one at its end.`,
-    hints: ["Keep page in state. Calculate start index, then slice the fetched array."],
+// Render Loading… while loading, and Could not load posts in an alert on error.
+// Add Try again to increment attempt and connect disabled Previous/Next controls.`,
+    hints: [
+      `Keep page in state. Calculate start index, then slice the fetched array.`,
+      `Check response.ok before JSON, catch errors, and use an active flag in the effect cleanup. A retry counter in its dependencies lets Try again fetch again without refetching during page navigation.`,
+    ],
     approach: [
-      "Fetch every post once in a mount effect and keep the full array in state.",
-      "Track the current page number in its own useState value starting at one, with a fixed page size constant.",
-      "Derive the visible slice during render from the page number and page size instead of storing a second array.",
-      "Wire Previous and Next to update the page state, and disable each button at its boundary.",
+      `Fetch every post in an effect keyed by a retry counter. Check response.ok, catch JSON/network failures and ignore completions after cleanup.`,
+      `Track the current page number in its own useState value starting at one, with a fixed page size constant.`,
+      `Derive the visible slice during render from the page number and page size instead of storing a second array.`,
+      `Wire Previous and Next to update the page state, and disable each button at its boundary.`,
+      `Show a loading status, or an error alert and Try again. Increment the retry counter to clear the error and begin another request.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows five posts on the first page', async () => {
@@ -1962,6 +1980,20 @@ test('moves between pages', async () => {
   fireEvent.click(previous);
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(5));
 });
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+test('pagination uses actual returned titles without another request',()=>auditTransport(async calls=>{const view=render(<App/>),data=auditData(50,17);expect(within(view.container).getByRole('status').textContent).toBe('Loading…');expect(calls).toHaveLength(1);expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await auditReply(calls[0],data);for(let page=1;page<=4;page++){expect(auditRows(view)).toEqual(data.slice((page-1)*5,page*5).map(x=>x.title));if(page<4)auditClick(view,'Next');}expect(calls).toHaveLength(1);expect(auditButton(view,'Next').disabled).toBe(true);}));
 `,
     api: {
       method: "GET",

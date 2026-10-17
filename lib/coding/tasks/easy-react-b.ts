@@ -936,7 +936,7 @@ test('a key bubbling from the page is keyboard input too',()=>{const root=render
     tier: 1,
     focus: ['pagination', 'derived-state'],
     title: 'The results line',
-    prompt: 'Under the recipes, a line says which ones the page shows: "Showing 1 to 4 of 10 recipes" on the first page. Work both ends out from `page` while rendering. The first is `(page - 1) * PAGE_SIZE + 1`, and the last is `page * PAGE_SIZE`, but never more than the number of recipes. With no recipes at all, the line reads "No recipes". Disable Previous on the first page and Next on the last, and both when there are no recipes. `page` stays the only state.',
+    prompt: `Under the recipes, a line says which ones the page shows: "Showing 1 to 4 of 10 recipes" on the first page. Work both ends out from \`page\` while rendering. The first is \`(page - 1) * PAGE_SIZE + 1\`, and the last is \`page * PAGE_SIZE\`, but never more than the number of recipes. With no recipes at all, the line reads "No recipes". Disable Previous on the first page and Next on the last, and both when there are no recipes. \`page\` stays the only state. PAGE_SIZE is 4. Accept zero to 100 literal recipe names up to 500 characters, including duplicates; give these stateless read-only rows unique keys rather than using their repeated text. Every reachable page must show its exact slice and matching range. Same-length replacement props update the chosen page immediately; use fresh mounts for length changes. Parent renders retain the page, and separate or fresh pagers are independent. Never mutate the recipes.`,
     starter: `import React, { useState } from 'react';
 
 const allRecipes = ['Pancakes', 'Omelette', 'Risotto', 'Chili', 'Ramen', 'Paella', 'Curry', 'Tacos', 'Gnocchi', 'Falafel'];
@@ -949,7 +949,7 @@ const App = ({ recipes = allRecipes }) => {
   return <main>
     <h2>The results line</h2>
     <ul>
-      {recipes.slice(start, start + PAGE_SIZE).map((recipe) => <li key={recipe}>{recipe}</li>)}
+      {recipes.slice(start, start + PAGE_SIZE).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
     </ul>
     <p>Showing 1 to 4 of 10 recipes</p>
     <button type="button" onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -965,15 +965,21 @@ const last = /* page * PAGE_SIZE, but no more than recipes.length */;
 
 // <p>{recipes.length === 0 ? 'No recipes' : 'Showing ' + first + ' to ' + last + ' of ' + recipes.length + ' recipes'}</p>
 // <button type="button" disabled={page <= 1} ...>Previous</button>`,
-    hints: ['People count results from 1 and arrays count from 0, so the first recipe on a page sits at index `start` and reads as number `start + 1`. `Math.min(a, b)` keeps the smaller of two numbers, which trims the last page.'],
+    hints: [
+      `People count results from 1 and arrays count from 0, so the first recipe on a page sits at index \`start\` and reads as number \`start + 1\`. \`Math.min(a, b)\` keeps the smaller of two numbers, which trims the last page. Repeated names still represent separate rows; a unique absolute position is suitable for these read-only text slots.`,
+    ],
     approach: [
-      'Work out `first` as `start + 1` and `last` as `Math.min(page * PAGE_SIZE, recipes.length)`.',
-      'Render "No recipes" when the list is empty, and the "Showing ... to ... of ... recipes" line otherwise.',
-      'Work out `pageCount` as `Math.ceil(recipes.length / PAGE_SIZE)`, then pass `disabled={page <= 1}` to Previous and `disabled={page >= pageCount}` to Next.',
+      `Work out \`first\` as \`start + 1\` and \`last\` as \`Math.min(page * PAGE_SIZE, recipes.length)\`.`,
+      `Render "No recipes" when the list is empty, and the "Showing ... to ... of ... recipes" line otherwise.`,
+      `Work out \`pageCount\` as \`Math.ceil(recipes.length / PAGE_SIZE)\`, then pass \`disabled={page <= 1}\` to Previous and \`disabled={page >= pageCount}\` to Next.`,
     ],
     verify: 'tests',
     estimatedMinutes: 7,
-    suite: `${header()}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
 const line = container => container.querySelector('p').textContent;
 
@@ -997,6 +1003,13 @@ test('Previous is disabled on the first page and Next on the last', () => {
   press('Next');
   expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true);
 });
+
+
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+
+test('the results line describes the actual rows',()=>{const recipes=Object.freeze(Array.from({length:13},(_,i)=>'Recipe '+i));const view=render(<App recipes={recipes}/>);for(let page=1;page<=4;page++){expect(auditRows(view)).toEqual(recipes.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe('Showing '+((page-1)*4+1)+' to '+Math.min(page*4,recipes.length)+' of 13 recipes');if(page<4)auditClick(view,'Next');}expect(auditButton(view,'Next').disabled).toBe(true);});
 `,
   },
   {
@@ -1007,7 +1020,7 @@ test('Previous is disabled on the first page and Next on the last', () => {
     tier: 2,
     focus: ['pagination', 'slice'],
     title: 'Rows per page',
-    prompt: 'The list shows 23 orders one page at a time, and a "Rows per page" select offers 5, 10 and 20. Show the orders of the current page with `orders.slice(start, start + rowsPerPage)`, where `start` is `(page - 1) * rowsPerPage`. When the reader picks another size, go back to page 1: page 4 of five rows would point past the end once a page holds twenty. A select hands you its value as text, so turn it into a number before you store it.',
+    prompt: `The list shows 23 orders one page at a time, and a "Rows per page" select offers 5, 10 and 20. Show the orders of the current page with \`orders.slice(start, start + rowsPerPage)\`, where \`start\` is \`(page - 1) * rowsPerPage\`. When the reader picks another size, go back to page 1: page 4 of five rows would point past the end once a page holds twenty. A select hands you its value as text, so turn it into a number before you store it. Accept zero to 100 literal order names up to 500 characters, including duplicates, with unique keys for these read-only rows. Empty input reads Page 1 of 1; disable Previous at page 1 and Next at the final page, including both for empty input. The supported sizes are exactly 5, 10 and 20. Every size change resets to page 1. Same-length replacement data updates the chosen page; use a fresh mount for length changes. Ordinary parent renders retain page and size; separate and fresh Apps have independent choices. Never mutate the input.`,
     starter: `import React, { useState } from 'react';
 
 const allOrders = Array.from({ length: 23 }, (_, index) => 'Order ' + (index + 1));
@@ -1025,7 +1038,7 @@ const App = ({ orders = allOrders }) => {
       <option value="20">20</option>
     </select></label>
     <ul>
-      {orders.map((order) => <li key={order}>{order}</li>)}
+      {orders.map((order, index) => <li key={index}>{order}</li>)}
     </ul>
     <p>Page {page} of {pageCount}</p>
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1043,15 +1056,21 @@ const changeSize = (event) => {
 };
 
 // <select value={rowsPerPage} onChange={changeSize}>`,
-    hints: ['Page 1 starts at index 0 and page 2 at index `rowsPerPage`. `slice` stops before its end index and never runs past the end of the array, so a short last page needs no special case.'],
+    hints: [
+      `Page 1 starts at index 0 and page 2 at index \`rowsPerPage\`. \`slice\` stops before its end index and never runs past the end of the array, so a short last page needs no special case. Use unique position keys for the stateless read-only rows when names repeat.`,
+    ],
     approach: [
-      'Work out `start` as `(page - 1) * rowsPerPage` and render `orders.slice(start, start + rowsPerPage)` instead of every order.',
-      'Give the select an `onChange` that calls `setRowsPerPage(Number(event.target.value))`.',
-      'In the same handler, call `setPage(1)`.',
+      `Work out \`start\` as \`(page - 1) * rowsPerPage\` and render \`orders.slice(start, start + rowsPerPage)\` instead of every order.`,
+      `Give the select an \`onChange\` that calls \`setRowsPerPage(Number(event.target.value))\`.`,
+      `In the same handler, call \`setPage(1)\`.`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
-    suite: `${header()}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
 const rows = container => [...container.querySelectorAll('li')].map(li => li.textContent);
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, index) => 'Order ' + (from + index));
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
@@ -1076,6 +1095,13 @@ test('a new size goes back to page 1', () => {
   expect(rows(container)).toEqual(range(1, 10));
   expect(container.querySelector('p').textContent).toBe('Page 1 of 3');
 });
+
+
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+
+test('changing page size from a late page starts at the first current order',()=>{const orders=Object.freeze(Array.from({length:73},(_,i)=>'Order '+i));const view=render(<App orders={orders}/>);for(let i=0;i<8;i++)auditClick(view,'Next');fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'20'}});expect(auditRows(view)).toEqual(orders.slice(0,20));expect(view.container.querySelector('p').textContent).toBe('Page 1 of 4');});
 `,
   },
   {
@@ -1087,7 +1113,7 @@ test('a new size goes back to page 1', () => {
     // The server cuts the page: the ladder ends on useEffect, not Array.slice.
     focus: ['useEffect', 'pagination'],
     title: 'Ask the server for one page',
-    prompt: 'The server hands out posts one page at a time. Whenever `page` changes, fetch `/api/posts?_page=<page>&_limit=5` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1.',
+    prompt: `The server hands out posts one page at a time. Whenever \`page\` changes, fetch \`/api/posts?_page=<page>&_limit=5\` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1. Show Loading… in a status while a request is pending, clear the old rows, and disable Next until it succeeds. Previous remains usable above page 1, even while loading. Only the current page request may update the UI: ignore an older response or failure after navigation or unmount. An HTTP error, rejected JSON or network failure shows Could not load posts in an alert and a Try again button; retry the current page and clear the alert when retry starts. Use status and retry-attempt state alongside page/posts. Ordinary parent renders do not refetch. The relative endpoint and query values matter, not the order of its parameters. Responses contain zero to five posts with unique ids and literal single-line titles up to 500 characters; do not accumulate pages.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const PAGE_SIZE = 5;
@@ -1109,29 +1135,77 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `useEffect(() => {
+    skeleton: `const [status, setStatus] = useState('loading');
+const [attempt, setAttempt] = useState(0);
+useEffect(() => {
+  let current = true;
+  setPosts([]);
+  setStatus('loading');
   fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-    .then((response) => response.json())
-    .then(/* store the posts */);
-}, [/* run again when the page changes */]);
-
-const lastPage = posts.length < PAGE_SIZE;`,
-    hints: ['An effect with `[page]` as its dependency array runs after the first render and again after every render in which `page` changed. That is the moment to ask for the new page.'],
+    .then(response => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
+    .then(data => {
+      // If current, store data and mark ready.
+    })
+    .catch(() => {
+      // If current, mark the error.
+    });
+  return () => { current = false; };
+}, [page, attempt]);
+// Render status/error/retry; Next needs ready status and a full page.`,
+    hints: [
+      `Keep page in the effect's dependencies. A retry counter lets Try again rerun the same page. Use a local current flag and clear it in cleanup before an older promise can update the next page.`,
+      `fetch resolves even for HTTP errors: check response.ok before reading JSON, and catch network or JSON errors. Disable Next until a full page is ready; allow Previous above page 1.`,
+    ],
     approach: [
-      'Write a `useEffect` that fetches the URL for the current `page`, reads the JSON and stores it with `setPosts`.',
-      'Give the effect the dependency array `[page]`, so Next and Previous each start one request.',
-      'Pass `disabled={page === 1}` to Previous and `disabled={posts.length < PAGE_SIZE}` to Next.',
+      `Keep page, posts, status and a retry counter in state. Start one request after mounting or changing page/attempt; clear posts and mark loading.`,
+      `Check response.ok before JSON. Only an effect whose current flag is still true may store data or an error. Cleanup clears the flag.`,
+      `Display a loading status or an alert and Try again. Retry increments the counter; Previous changes page and Next requires a ready, full page.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
+const withFetch = async (body) => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    const signal = options.signal;
+    calls.push({
+      url: String(url),
+      signal,
+      respond: data => resolve({ ok: true, status: 200, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+    const abort = () => {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      reject(error);
+    };
+    if (signal && signal.aborted) abort();
+    else if (signal) signal.addEventListener('abort', abort);
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+
 const posts = (from, count) => Array.from({ length: count }, (_, index) => ({ id: from + index, title: 'Post ' + (from + index) }));
 const titles = container => [...container.querySelectorAll('li')].map(li => li.textContent);
 const button = label => screen.getByRole('button', { name: label });
 
+const checkPageUrl = (raw, page) => { const parts=String(raw).split('?'); expect(parts[0]).toBe('/api/posts'); const values=Object.fromEntries((parts[1]||'').split('&').map(pair=>pair.split('='))); expect(values._page).toBe(String(page)); expect(values._limit).toBe('5'); };
+
 test('the first page is fetched when the page opens', () => withFetch(async calls => {
   const { container } = render(<App />);
-  expect(calls.length > 0 && calls[0].url).toBe('/api/posts?_page=1&_limit=5');
+  expect(calls.length).toBe(1); checkPageUrl(calls[0].url, 1);
   await act(async () => { calls[0].respond(posts(1, 5)); });
   expect(titles(container)).toEqual(['Post 1', 'Post 2', 'Post 3', 'Post 4', 'Post 5']);
 }));
@@ -1141,7 +1215,7 @@ test('Next fetches the next page', () => withFetch(async calls => {
   expect(calls.length).toBe(1);
   await act(async () => { calls[0].respond(posts(1, 5)); });
   fireEvent.click(button('Next'));
-  expect(calls.length > 1 && calls[1].url).toBe('/api/posts?_page=2&_limit=5');
+  expect(calls.length).toBe(2); checkPageUrl(calls[1].url, 2);
   await act(async () => { calls[1].respond(posts(6, 2)); });
   expect(titles(container)).toEqual(['Post 6', 'Post 7']);
 }));
@@ -1155,6 +1229,22 @@ test('a short page disables Next', () => withFetch(async calls => {
   expect(button('Next').disabled).toBe(true);
   expect(button('Previous').disabled).toBe(false);
 }));
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+const auditPageUrl=(raw,page)=>{const parts=String(raw).split('?');expect(parts[0]).toBe('/api/posts');const values=Object.fromEntries((parts[1]||'').split('&').map(pair=>pair.split('=')));expect(values._page).toBe(String(page));expect(values._limit).toBe('5');};
+
+test('pages replace literal titles rather than accumulate them',()=>auditTransport(async calls=>{const view=render(<App/>);expect(within(view.container).getByRole('status').textContent).toBe('Loading…');const first=auditData(10,5),second=auditData(50,2);auditPageUrl(calls[0].url,1);await auditReply(calls[0],first);auditClick(view,'Next');auditPageUrl(calls[1].url,2);await auditReply(calls[1],second);expect(auditRows(view)).toEqual(second.map(x=>x.title));expect(auditButton(view,'Next').disabled).toBe(true);}));
 `,
   },
 
@@ -1537,7 +1627,7 @@ test('an emoji uses two UTF-16 units in the counter',()=>{
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Undo a removal',
-    prompt: 'Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call `splice(index, 0, task)` on the copy, which inserts without removing anything. Only the latest removal can be undone.',
+    prompt: `Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call \`splice(index, 0, task)\` on the copy, which inserts without removing anything. Only the latest removal can be undone. initialTasks is the initial snapshot for each mount: zero to 100 tasks with unique string ids or unique integer ids and literal single-line text up to 500 characters. Remove the current clicked position, even when texts repeat. Restore the entire task without trimming or changing its text, including at positions beyond the starter list. A second removal replaces the pending undo; undoing it does not reveal an older undo. Parent renders retain edits and undo memory, while separate Apps and fresh mounts are independent. Never mutate the supplied array or its objects. Copied splice is the demonstrated insertion; equivalent immutable outcomes are accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingTasks = [
@@ -1584,11 +1674,13 @@ const undo = () => {
 };
 
 // {removed && <button type="button" onClick={undo}>Undo</button>}`,
-    hints: ['`splice(index, 0, item)` removes nothing and inserts `item` before the element now at `index`. An index equal to the length inserts at the end, which is where a removed last task came from.'],
+    hints: [
+      `\`splice(index, 0, item)\` removes nothing and inserts \`item\` before the element now at \`index\`. An index equal to the length inserts at the end, which is where a removed last task came from.`,
+    ],
     approach: [
-      'Add `const [removed, setRemoved] = useState(null)`, and in `remove` store `{ task: tasks[index], index }` as well as filtering the task out.',
-      'Write `undo`: copy `tasks`, call `splice(removed.index, 0, removed.task)` on the copy, store the copy, and set `removed` back to `null`.',
-      'Render the Undo button only while `removed` holds something.',
+      `Add \`const [removed, setRemoved] = useState(null)\`, and in \`remove\` store \`{ task: tasks[index], index }\` as well as filtering the task out.`,
+      `Write \`undo\`: copy \`tasks\`, call \`splice(removed.index, 0, removed.task)\` on the copy, store the copy, and set \`removed\` back to \`null\`.`,
+      `Render the Undo button only while \`removed\` holds something.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1622,6 +1714,9 @@ test('Undo brings the last task back to the end', () => {
   undo();
   expect(texts(container)).toEqual(ALL);
 });
+
+
+test('Undo restores the exact long literal task at an index beyond three',()=>{const items=Array.from({length:12},(_,i)=>({id:'id-'+i,text:'  Task '+i+' 🦈  '})),view=render(<App initialTasks={items}/>);fireEvent.click(view.container.querySelectorAll('li button')[9]);fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));expect(texts(view.container)).toEqual(items.map(task=>task.text));expect(within(view.container).queryByRole('button',{name:'Undo'})).toBeNull();});
 `,
   },
   {

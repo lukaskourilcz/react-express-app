@@ -206,8 +206,8 @@ test('repeated additions keep growing past two items',()=>{let value=[];const pr
     tier: 3,
     focus: ['fetch', 'pagination', 'spread', 'conditional'],
     title: 'Load more from the server',
-    prompt: 'A photo library shows 3 photos a page and asks the server for one page at a time. On mount, fetch `/api/photos?page=1`; the answer is a list of `{ id, title }`, and each title goes in an `li`. A "Load more" button fetches the next page and adds its photos after the ones already shown, with spread. While a request is on its way, the button is disabled and reads "Loading…". A page with fewer than 3 photos is the last one: the button goes, and a paragraph says "That’s everything". When a request fails, keep the photos already shown, show "Could not load photos" in an element with `role="alert"`, and turn the button into "Try again", which asks for the same page again. The alert goes as soon as the next request starts.',
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `A photo library shows 3 photos a page and asks the server for one page at a time. On mount, fetch \`/api/photos?page=1\`; the answer is a list of \`{ id, title }\`, and each title goes in an \`li\`. A "Load more" button fetches the next page and adds its photos after the ones already shown, with spread. While a request is on its way, the button is disabled and reads "Loading…". A page with fewer than 3 photos is the last one: the button goes, and a paragraph says "That’s everything". When a request fails, keep the photos already shown, show "Could not load photos" in an element with \`role="alert"\`, and turn the button into "Try again", which asks for the same page again. The alert goes as soon as the next request starts. Treat non-success HTTP responses and rejected JSON as failures too. Before reading JSON, check response.ok. Responses have zero to three photos with globally unique ids and literal single-line titles up to 500 characters, including repeated titles; preserve their order and text through all pages, not just the first three. Ordinary parent renders do not refetch or reset the list. Invalidate a pending request on unmount, and let only the current request append photos or report a failure. Keep each mounted App independent.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
@@ -231,37 +231,76 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [photos, setPhotos] = useState([]);
+    skeleton: `const cancel = useRef(() => {});
+const [photos, setPhotos] = useState([]);
 const [page, setPage] = useState(0);          // the last page shown
 const [status, setStatus] = useState('loading'); // 'loading', 'ready', 'error' or 'done'
 
 const load = (number) => {
+  cancel.current();
+  let current = true;
+  cancel.current = () => { current = false; };
   setStatus('loading');
   fetch('/api/photos?page=' + number)
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
     .then((next) => {
+      if (!current) return;
       // append with spread, remember the page, and decide: 'ready' or 'done'
     })
-    .catch(() => setStatus('error'));
+    .catch(() => { if (current) setStatus('error'); });
 };
 
-useEffect(() => { load(1); }, []);
+useEffect(() => { load(1); return () => cancel.current(); }, []);
 
 // render: the list, then one of "That’s everything", the alert with "Try again",
 // or the Load more button, disabled and reading "Loading…" while loading`,
     hints: [
-      'Add a page with the updater form, `setPhotos((shown) => [...shown, ...next])`, so the new photos land after the ones on screen even if the list changed while the request was out.',
-      'One `status` value, `"loading"`, `"ready"`, `"error"` or `"done"`, decides what shows under the list. The page to ask for next is always the last page shown plus one, and "Try again" asks for that same page.',
+      `Add a page with the updater form, \`setPhotos((shown) => [...shown, ...next])\`, so the new photos land after the ones on screen even if the list changed while the request was out.`,
+      `One \`status\` value, \`"loading"\`, \`"ready"\`, \`"error"\` or \`"done"\`, decides what shows under the list. The page to ask for next is always the last page shown plus one, and "Try again" asks for that same page.`,
+      `Check response.ok before JSON. Keep a cancellation callback in a ref so cleanup can invalidate the latest request, including requests started by the button. Import useRef when using this approach.`,
     ],
     approach: [
-      'Keep the photos, the last page shown and a status in state.',
-      'Write `load(number)`: set the status to loading, fetch that page, append its photos, remember the page number, and set the status to done for a short page and ready otherwise. A failure sets the status to error.',
-      'Call `load(1)` in an effect on mount, and `load(page + 1)` from the button.',
-      'Render the button as "Load more", "Loading…" (disabled) or "Try again" from the status, the alert on an error, and "That’s everything" instead of the button when the status is done.',
+      `Keep the photos, the last page shown and a status in state.`,
+      `Write \`load(number)\`: set the status to loading, fetch that page, append its photos, remember the page number, and set the status to done for a short page and ready otherwise. A failure sets the status to error. Reject non-success HTTP responses; catch JSON failures as well. Guard completion with request ownership and invalidate the latest request in effect cleanup.`,
+      `Call \`load(1)\` in an effect on mount, and \`load(page + 1)\` from the button.`,
+      `Render the button as "Load more", "Loading…" (disabled) or "Try again" from the status, the alert on an error, and "That’s everything" instead of the button when the status is done.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
+const withFetch = async (body) => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    const signal = options.signal;
+    calls.push({
+      url: String(url),
+      signal,
+      respond: data => resolve({ ok: true, status: 200, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+    const abort = () => {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      reject(error);
+    };
+    if (signal && signal.aborted) abort();
+    else if (signal) signal.addEventListener('abort', abort);
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+
 const photos = (from, count) => Array.from({ length: count }, (_, i) => ({ id: from + i, title: 'Photo ' + (from + i) }));
 const titles = () => screen.queryAllByRole('listitem').map(li => li.textContent);
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
@@ -318,6 +357,20 @@ test('a failure keeps the photos and Try again asks for the same page', () => wi
   expect(calls[2].url).toBe('/api/photos?page=2');
   expect(screen.queryByRole('alert')).toBeNull();
 }));
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+test('an HTTP error keeps existing photos and retries the failed page',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,3);await auditReply(calls[0],first);auditClick(view,'Load more');await auditReply(calls[1],auditData(50,3),false);expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).getByRole('alert')).toBeTruthy();auditClick(view,'Try again');expect(calls[2].url).toBe('/api/photos?page=2');expect(within(view.container).queryByRole('alert')).toBeNull();await auditReply(calls[2],[]);expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).queryByRole('button')).toBeNull();}));
 `,
   },
   {
@@ -627,7 +680,7 @@ test('dismissing one duplicate notice leaves the other one',()=>withNoticeClock(
     tier: 3,
     focus: ['forms', 'events', 'splice', 'accessibility'],
     title: 'A tag input',
-    prompt: 'A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call `preventDefault()` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an `li` with the tag in a `span` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling `splice` on the copy.',
+    prompt: `A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call \`preventDefault()\` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an \`li\` with the tag in a \`span\` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling \`splice\` on the copy. Normalize with JavaScript trim().toLowerCase() and compare the resulting strings exactly, including non-ASCII text. Preserve other text literally; do not interpret markup or impose a four-tag cap. Input strings are single-line and up to 500 characters. Ignore key events while composition is active: check event.nativeEvent.isComposing (or the corresponding native-event flag) before adding, clearing, preventing default or removing a tag. A composing Enter or comma belongs to input-method text entry; a later non-composing confirmation adds the tag normally. Backspace removes a tag only when the field is exactly empty, not whitespace. Other keys stay unprevented. Separate and fresh Apps keep their own text and tags.`,
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -655,6 +708,7 @@ export default App;
 };
 
 const keyDown = (event) => {
+  if (event.nativeEvent?.isComposing || event.isComposing) return;
   if (event.key === 'Enter' || event.key === ',') {
     event.preventDefault();
     add();
@@ -671,14 +725,14 @@ const remove = (index) => {
 
 // <button type="button" aria-label={'Remove tag ' + tag} onClick={() => remove(index)}>×</button>`,
     hints: [
-      'A keydown handler runs before the browser acts on the key, which is why `preventDefault()` there keeps the comma out of the field and stops Enter from submitting a form.',
-      '`splice(index, 1)` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until `setTags` hands React the new one. `tags.slice(0, -1)` is a new array without the last tag.',
+      `A keydown handler runs before the browser acts on the key, which is why \`preventDefault()\` there keeps the comma out of the field and stops Enter from submitting a form. First check the native composition flag: Enter can confirm an input-method composition rather than submit a tag.`,
+      `\`splice(index, 1)\` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until \`setTags\` hands React the new one. \`tags.slice(0, -1)\` is a new array without the last tag.`,
     ],
     approach: [
-      'Handle `onKeyDown` on the input: Enter and comma prevent the default and add the tag, Backspace on empty text removes the last one.',
-      'Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.',
-      'Removing copies the tags, splices out one index and stores the copy.',
-      'Render each tag with a remove button that has `aria-label="Remove tag <tag>"`, so the button says what it removes.',
+      `Ignore composing keyboard events before handling Enter, comma or Backspace. Handle ordinary Enter/comma with preventDefault and add; ordinary Backspace on an exactly empty field removes the last tag.`,
+      `Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.`,
+      `Removing copies the tags, splices out one index and stores the copy.`,
+      `Render each tag with a remove button that has \`aria-label="Remove tag <tag>"\`, so the button says what it removes.`,
     ],
     verify: 'tests',
     estimatedMinutes: 20,
@@ -734,6 +788,9 @@ test('Enter is prevented, so a form around the field is not sent', () => {
   type('html');
   expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
 });
+
+
+test('composing keys leave pending text and tags alone until normal confirmation',()=>{render(<App/>);type('日本語');expect(fireEvent.keyDown(field(),{key:'Enter',isComposing:true})).toBe(true);expect(field().value).toBe('日本語');expect(tags()).toEqual([]);key('Enter');expect(tags()).toEqual(['日本語']);expect(field().value).toBe('');expect(fireEvent.keyDown(field(),{key:'Backspace',isComposing:true})).toBe(true);expect(tags()).toEqual(['日本語']);type(' ChEcK ');expect(fireEvent.keyDown(field(),{key:',',isComposing:true})).toBe(true);expect(field().value).toBe(' ChEcK ');key(',');expect(tags()).toEqual(['日本語','check']);expect(field().value).toBe('');});
 `,
   },
   {
