@@ -97171,13 +97171,13 @@
    "levelTitle": "Links, Buttons & Interaction",
    "objective": "Understand that an icon-only button has no accessible name and where a name has to come from.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "e1bda437156a56a1",
-   "previousHash": "f935dd6854273b39",
+   "revision": 3,
+   "contentHash": "0279d20d8cc9693a",
+   "previousHash": "e1bda437156a56a1",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -97193,24 +97193,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "A screen reader builds a control's name out of its content. Ask what text content this button actually has.",
+    "question": "What is the accessible name of `<button><svg …/></button>` with no text?",
+    "options": [
+     "The name of the SVG file",
+     "Nothing — a screen reader announces an unnamed button",
+     "The button’s CSS class",
+     "The nearest heading"
+    ],
+    "correctAnswer": 1,
+    "explanation": "An icon has no text, so there is nothing to announce. Visually-hidden text inside the button, or an `aria-label` on it, gives it a name — and the icon should then be hidden from the tree with `aria-hidden` so it is not read twice."
    },
    "gates": {
     "quality": true,
@@ -97220,35 +97212,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Exactly the failure that ships most often in icon toolbars, correctly keyed, and the explanation already gives both the fix and the aria-hidden follow-up. Only the hint fails.",
+   "rationale": "The old SVG ellipsis left title/ARIA sources unspecified. Use explicit hidden SVG markup and exclude external labels before concluding that the button has no name.",
    "evidence": [
-    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button : \"Buttons that only display an icon do not have an accessible name\"; put text in the button that describes its functionality"
+    "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+    "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": "English \"hidden from the tree\" is elliptical; Czech spells it out as \"strom přístupnosti\" (accessibility tree), which is how the term is always used in Czech."
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button : \"Buttons that only display an icon do not have an accessible name\"",
-     "knowledge: an inline <svg> with no text or <title> contributes nothing to the accessible name computed from contents"
+     "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+     "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The question already states the button has no text, so the hint adds no leakage; the aria-hidden follow-up in the explanation is correct."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q005;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "e1bda437156a56a1",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-html-12",
@@ -97486,13 +97488,13 @@
    "levelTitle": "Links, Buttons & Interaction",
    "objective": "Know what a skip link gives a keyboard user on a page with repeated navigation.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "4b3bcbb615fa09c6",
-   "previousHash": "880b1f1a9f694580",
+   "revision": 3,
+   "contentHash": "d94fcec421a4bba9",
+   "previousHash": "4b3bcbb615fa09c6",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -97508,24 +97510,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Picture the very first Tab press on a page whose navigation holds twenty links. What would you want that first stop to be?",
+    "question": "A page has a long navigation before its content. What does a skip link give a keyboard user?",
+    "options": [
+     "A faster page load",
+     "A first focusable control that jumps past the navigation to the main content",
+     "A shortcut key for every menu item",
+     "A visible table of contents"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Without one, every visit to every page starts with tabbing through the same twenty links. The skip link is usually hidden until focused, which is why it is easy to forget it exists."
    },
    "gates": {
     "quality": true,
@@ -97535,34 +97529,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "A WCAG-backed pattern stated plainly, with an explanation that also warns why the link is easy to forget. Only the hint fails.",
+   "rationale": "Shorten the correct option and remove the absolute claim that without a skip link every visit necessarily traverses twenty links. Describe a functioning focus destination rather than promising an arbitrary first control.",
    "evidence": [
-    "https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html : SC 2.4.1 requires a mechanism to bypass repeated blocks; sufficient techniques include \"Adding a link at the top of each page that goes directly to the main content area\"; without one a keyboard user \"might have to make dozens of keystrokes\""
+    "https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html",
+    "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html : sufficient technique G1, \"Adding a link at the top of each page that goes directly to the main content area\"; without it users \"might have to make dozens of keystrokes before reaching a link in the main content area\""
+     "https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html",
+     "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Hint asks rather than asserts and the distractors are not competing; the hidden-until-focused detail in the explanation is accurate."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q005;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "4b3bcbb615fa09c6",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-html-15",
@@ -97587,13 +97592,13 @@
    "levelTitle": "Links, Buttons & Interaction",
    "objective": "Distinguish disabled (unfocusable, events blocked) from aria-disabled (state announced only).",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "963529ddd22c63a6",
-   "previousHash": "598e19baf69e0280",
+   "revision": 3,
+   "contentHash": "d853ce52f6c9e863",
+   "previousHash": "963529ddd22c63a6",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -97609,24 +97614,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "One of these is an ARIA attribute. Ask what ARIA can and cannot change about how a control actually behaves.",
+    "question": "What is the difference between `disabled` and `aria-disabled=\"true\"` on a button?",
+    "options": [
+     "They are identical",
+     "`disabled` removes it from the tab order and blocks events; `aria-disabled` only announces the state",
+     "`aria-disabled` is the modern replacement",
+     "`disabled` works only on form controls inside a form"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A truly disabled button cannot be reached by keyboard, which means the user cannot find out why. `aria-disabled` keeps it focusable so it can explain itself — at the cost of you having to block the action yourself."
    },
    "gates": {
     "quality": true,
@@ -97636,41 +97633,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Verified on both halves, and the explanation names the trade-off (the control stays reachable, but you must block the action yourself). Content sits above the level-2 band, which the topic's accessibility-throughout brief allows.",
+   "rationale": "Avoid claiming that disabled blocks every event or that aria-disabled guarantees focusability;contrast built-in user-activation behavior with semantic state only.",
    "evidence": [
-    "node: jsdom, click() on <button disabled> did not fire its listener (0 calls) while click() on <button aria-disabled=\"true\"> did (1 call)",
-    "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled : \"aria-disabled does not change the focusability of such elements\"; functionality must be suppressed manually"
+    "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled",
+    "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint restates the key: \"one changes what the browser does; the other changes only what is announced\" is option 1 with the labels removed, so the key can be picked from the hint alone"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "node: jsdom 30.0.1, click() fired 0 listener calls on <button disabled> and 1 on <button aria-disabled=\"true\">; focus() left activeElement on BODY for the disabled button and moved it to the aria-disabled button",
-     "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled : elements with aria-disabled \"will not be removed from the focus order of the web page, as aria-disabled does not change the focusability of such elements\""
+     "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled",
+     "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Both halves of the key are confirmed in jsdom; the replacement hint points at the general ARIA rule instead of spelling out the split.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q005;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "963529ddd22c63a6",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-html-16",
@@ -97695,13 +97696,13 @@
    "levelTitle": "Links, Buttons & Interaction",
    "objective": "Recognise details/summary as a built-in disclosure widget with toggle, keyboard support and announced state.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "accb205a4e14ebe2",
-   "previousHash": "b78922d2822a6b0d",
+   "revision": 3,
+   "contentHash": "1a9674eb36bfe387",
+   "previousHash": "accb205a4e14ebe2",
    "quality": {
-    "topicRelevance": 5,
+    "topicRelevance": 4,
     "learningValue": 4,
-    "technicalCorrectness": 5,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -97717,24 +97718,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask what you would have to write yourself if you built this out of a `div` and a click handler.",
+    "question": "A `details`/`summary` pair is used for a FAQ answer. What comes for free?",
+    "options": [
+     "Styling of the open state",
+     "Toggle behaviour, keyboard operation and the expanded state announced",
+     "Animation of the reveal",
+     "Search-engine indexing of the answer"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The element is a disclosure widget with the interaction already built. Reimplementing it with a `div` and a click handler means rebuilding the keyboard behaviour and the announced state, usually incompletely."
    },
    "gates": {
     "quality": true,
@@ -97744,38 +97737,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback",
-    "distractor 3 is weak: text inside a closed details is in the DOM and indexable either way, so it is not a competing answer"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Correct on all three of the behaviours it claims, and the explanation makes the reimplementation cost concrete. Only the hint fails.",
+   "rationale": "Replace ambiguous styling/indexing alternatives with clearly distinct optional features and keep the native disclosure behavior concise. Do not claim a particular physical screen reader’s announcement.",
    "evidence": [
-    "node: jsdom, <details> without the open attribute reports open === false",
-    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details : the open attribute controls the state, Space toggles the widget when the summary is focused, the summary labels the widget and the open/closed state is exposed to assistive technology"
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details",
+    "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: jsdom 30.0.1, <details> with no open attribute reports open === false",
-     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details : \"creates a disclosure widget in which information is visible only when the widget is toggled into an open state\"; \"When the user clicks on the widget or focuses it then presses the space bar, it 'twists' open\"",
-     "https://www.w3.org/TR/html-aria/ : details -> role=group"
+     "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details",
+     "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Hint points at the reimplementation cost without asserting the answer; British \"behaviour\" in option 1 and the explanation is pre-existing, not introduced by this rewrite."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q005;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "accb205a4e14ebe2",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-html-17",
@@ -101712,13 +101712,13 @@
    "levelTitle": "Structure & Semantics",
    "objective": "See that a native button bundles focus, key activation and role that a click handler on a div does not supply.",
    "intendedLevel": "beginner",
-   "revision": 2,
-   "contentHash": "144c9866612d47ff",
-   "previousHash": "761d9f4b56d79878",
+   "revision": 3,
+   "contentHash": "97bb696932deebbf",
+   "previousHash": "144c9866612d47ff",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -101734,24 +101734,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "The mouse path already works. Ask what is missing for someone who never uses a mouse and never sees the styling.",
+    "question": "A `div` is given `onclick` and styled to look like a button. What has it not got?",
+    "options": [
+     "A background colour",
+     "Keyboard focus, Enter and Space activation, and a button role",
+     "A place in the DOM",
+     "The ability to receive a click"
+    ],
+    "correctAnswer": 1,
+    "explanation": "A button is a bundle of behaviours, most of them invisible. A styled `div` gets the click and loses everything a keyboard or screen-reader user needs — which is why the fix is the element, not more attributes."
    },
    "gates": {
     "quality": true,
@@ -101761,36 +101753,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic shape-based fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "One of the strongest items in the batch: correct, concrete, and the explanation already names the fix. Only the hint needs replacing.",
+   "rationale": "Give the correct option one concise feature category and put the full behavior list in the explanation. State that no role/tabindex/key handlers were added;avoid vague claims that a div loses every accessible behavior.",
    "evidence": [
-    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button : implicit ARIA role button; activated \"with a mouse, keyboard, finger, voice command, or other assistive technology\"",
-    "https://www.w3.org/TR/using-aria/ : first rule of ARIA use — prefer the native element rather than re-purposing one"
+    "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+    "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: jsdom 30.0.1, div with onclick -> tabIndex -1, button -> tabIndex 0",
-     "https://www.w3.org/TR/using-aria/ : first rule of ARIA use, prefer the native element over re-purposing one"
+     "https://www.w3.org/WAI/ARIA/apg/patterns/button/",
+     "run: PASS isolated Chromium: plain div absent from Tab sequence;native button Enter/Space activation;exact hidden-SVG button has empty AX name;summary Enter toggles open with expanded AX state;disabled skipped and ignores trusted click;aria-disabled remains focusable and trusted-click active;skip link moves focus to main. No physical screen-reader or user-session claim. Two unaccepted input-driver diagnostics omitted the Enter character event;event tracing isolated this,then the corrected full keyboard/pointer/AX sequence passed. No content verdict was accepted from the incomplete input phases.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key is right and the hint points at the mouse-free path without naming it; the pre-existing British \"colour\" in option 0 was not introduced by this rewrite, so it is left alone."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q005;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "144c9866612d47ff",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-html-8",
