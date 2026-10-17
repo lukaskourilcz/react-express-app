@@ -18,8 +18,8 @@
     "newQuestionsNotYetDeployed": 0,
     "effectiveProductionAtSnapshot": 1820,
     "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
-    "overrideRecheckedOn": "2026-10-15",
-    "overrideRecheckEvidence": "docs/audit/question-overrides-2026-10-15.json: production read-only aggregate/ID snapshot; all 485 overrides remain deleted, zero active edits/custom questions, identical sorted-ID newline MD5, 194 statically eligible hides and 1820 effective questions; all current question review hashes match."
+    "overrideRecheckedOn": "2026-10-17",
+    "overrideRecheckEvidence": "docs/audit/question-overrides-2026-10-17.json: fresh production read-only aggregate/fingerprint matches485preserved deletions,zero active edits/custom,2014static/1820effective. All2168question review hashes checked. Q001revises five existing rows;59eligible answer-length candidates remain under#471."
   },
   "coding": {
     "authored": 770,
@@ -59,7 +59,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "695 reviewed coding and 263 native records are deployed; 30 coding records are staged through b139. Override data was last read-only rechecked on 2026-10-15; see its dated reconciliation evidence.",
+    "695 reviewed coding and 263 native records are deployed; 30 coding records are staged through b139. Override data was last read-only rechecked on 2026-10-17; see its dated reconciliation evidence.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
