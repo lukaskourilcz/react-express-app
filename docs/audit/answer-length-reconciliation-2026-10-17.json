@@ -150,9 +150,14 @@
     "rm-html-48",
     "rm-css-32",
     "rm-css-33",
-    "rm-css-39"
+    "rm-css-39",
+    "rm-css-45",
+    "rm-css-46",
+    "rm-general-68",
+    "rm-general-125",
+    "rm-general-130"
   ],
-  "remainingEligibleCandidates": 29,
+  "remainingEligibleCandidates": 24,
   "currentDiagnostics": {
     "all": {
       "count": 2168,
@@ -162,10 +167,10 @@
         136,
         45
       ],
-      "uniqueLongest": 1901,
-      "correctUniqueLongest": 1035,
-      "share": 0.5444502893214098,
-      "flags": 70
+      "uniqueLongest": 1900,
+      "correctUniqueLongest": 1031,
+      "share": 0.5426315789473685,
+      "flags": 65
     },
     "eligible": {
       "count": 2014,
@@ -175,10 +180,10 @@
         127,
         41
       ],
-      "uniqueLongest": 1764,
-      "correctUniqueLongest": 940,
-      "share": 0.5328798185941043,
-      "flags": 29
+      "uniqueLongest": 1763,
+      "correctUniqueLongest": 936,
+      "share": 0.5309132161089053,
+      "flags": 24
     },
     "effective": {
       "count": 1820,
@@ -188,10 +193,10 @@
         109,
         30
       ],
-      "uniqueLongest": 1613,
-      "correctUniqueLongest": 882,
-      "share": 0.5468071915685059,
-      "flags": 29
+      "uniqueLongest": 1612,
+      "correctUniqueLongest": 878,
+      "share": 0.5446650124069479,
+      "flags": 24
     }
   },
   "issue": 471

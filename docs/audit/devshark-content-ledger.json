@@ -29191,13 +29191,13 @@
    "levelTitle": "Maintainable, Accessible Styling",
    "objective": "Explain why removing the focus outline harms keyboard users and how :focus-visible restores an indicator.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "70fb6b4fd3385fde",
-   "previousHash": "27c9a3f999c7cef2",
+   "revision": 3,
+   "contentHash": "79a7ae4b31d7ecf9",
+   "previousHash": "70fb6b4fd3385fde",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -29213,24 +29213,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Think about who navigates with Tab rather than a pointer, and what changes for them when the outline goes.",
+    "question": "Why is `outline: none` on `:focus` a problem?",
+    "options": [
+     "It breaks the layout",
+     "It removes the only indication a keyboard user has of where they are",
+     "It disables the click handler",
+     "It is invalid CSS"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The focus ring is how someone who is not using a mouse knows what Enter will activate; `outline: none` on `:focus` removes that with nothing in its place, and keyboard navigation becomes guesswork for sighted users. If the default ring clashes with the design, replace it with a visible one — `:focus-visible` shows it for keyboard use and not for mouse clicks. The declaration is valid CSS, and it changes neither layout nor event handlers."
    },
    "gates": {
     "quality": true,
@@ -29240,34 +29232,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Verified against MDN's accessibility note (removing focus styles makes keyboard navigation inaccessible for sighted users) and the :focus-visible heuristic. Hint only.",
+   "rationale": "State that there is no replacement indicator,so outline removal is not universally condemned. Remove the false keyboard-only description of focus-visible.",
    "evidence": [
-    "https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible — \"Removing focus styles makes keyboard navigation inaccessible for sighted users\"; \"focus styles are always required when users are navigating the page with the keyboard\"; WCAG 2.1 SC 1.4.11 requires the indicator to be at least 3:1"
+    "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+    "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible — 'Removing focus styles makes keyboard navigation inaccessible for sighted users'; :focus-visible matches when the browser decides a focus indicator should be shown, which is keyboard rather than pointer focus"
+     "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+     "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The explanation names the replacement (:focus-visible) and refutes the layout, handler and validity distractors."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q008;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "70fb6b4fd3385fde",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-css-46",
@@ -29292,13 +29295,13 @@
    "levelTitle": "Maintainable, Accessible Styling",
    "objective": "Apply WCAG 1.4.1: never convey status by colour alone; add a word, icon or shape.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "ae44a2fa3ea72275",
-   "previousHash": "84cdd277c181043f",
+   "revision": 3,
+   "contentHash": "18d2f82a7c95e0da",
+   "previousHash": "ae44a2fa3ea72275",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
@@ -29314,24 +29317,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Imagine the same screen in greyscale, or read aloud. Ask what still tells the user that something went wrong.",
+    "question": "A status is shown by turning text red. What is missing?",
+    "options": [
+     "A larger font",
+     "A cue that is not colour — a word, an icon, or a shape",
+     "A higher z-index",
+     "A transition"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Colour alone excludes anyone who cannot distinguish it, disappears in high-contrast modes and on poor screens, and is invisible to a screen reader; WCAG 1.4.1 says colour must not be the only visual means of conveying information. The word \"Error\" or an icon beside the red does the work for everyone. Font size, z-index and transitions change nothing about whether the meaning is perceivable."
    },
    "gates": {
     "quality": true,
@@ -29341,35 +29336,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "hint is the generic fallback",
-    "explanation does not name the criterion (WCAG 1.4.1) or mention screen readers"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Verified against the WCAG 2.2 Understanding document for 1.4.1; the item also matches this product's own non-colour-status rule. Hint only.",
+   "rationale": "Balance the alternatives and distinguish the visual color criterion from accessible labeling/announcements. Remove the claim that any icon automatically works for everyone.",
    "evidence": [
-    "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html — SC 1.4.1: \"Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element\"; text labels, icons and patterns as additional cues"
+    "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+    "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": "EN quotes the UI word \"Error\"; rendered as the Czech UI word „Chyba“ since it is an interface label, not a runtime string."
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html — SC 1.4.1: 'Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element'"
+     "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+     "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Key is longer than the three throwaway distractors but not more detailed about the mechanism, and the greyscale/read-aloud hint tests the criterion rather than naming it."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q008;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "ae44a2fa3ea72275",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-css-47",
@@ -71120,17 +71125,17 @@
    "levelTitle": "What Tests Can Prove",
    "objective": "State what an end-to-end test adds — evidence about the assembled system — and what it costs in speed and diagnostic precision.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "5d5ac63f07afe238",
-   "previousHash": "b45c6fdc7f98dfd7",
+   "revision": 3,
+   "contentHash": "7dc98939890af85f",
+   "previousHash": "5d5ac63f07afe238",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -71142,24 +71147,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 4,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 5
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "This is the slowest and least precise test in a suite. Ask what buys it a place anyway.",
+    "question": "What is an end-to-end test buying you that a unit test cannot?",
+    "options": [
+     "A faster signal about which line is wrong",
+     "Evidence that the assembled system does the user-visible thing, wiring included",
+     "Proof that every branch is reachable",
+     "A guarantee that the code has no bugs"
+    ],
+    "correctAnswer": 1,
+    "explanation": "End-to-end exercises the real assembly: routing, serialization, storage, rendering. That is its value and also its cost — it is slower and, when it fails, it points at the whole system rather than at a line."
    },
    "gates": {
     "quality": true,
@@ -71169,39 +71166,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The item states the benefit and the cost in the same breath, which is what keeps end-to-end testing in proportion. The hint is the generic fallback.",
+   "rationale": "Replace absolute cannot/slowest/least-precise claims with bounded integration evidence. Keep user-flow coverage distinct from localization,branch coverage and universal correctness.",
    "evidence": [
-    "knowledge: end-to-end tests exercise routing, serialization, storage and rendering together, at the cost of runtime and failure localization"
+    "https://playwright.dev/docs/best-practices",
+    "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint paraphrases the key: 'what only comes into existence once the pieces are connected' is the assembled system named in option 1"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: end-to-end tests exercise routing, serialization, storage and rendering together, at the cost of runtime and of failure localization"
+     "https://playwright.dev/docs/best-practices",
+     "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "Replacement hint states the cost and asks for the benefit, so the learner still has to name what the assembled run proves.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q008;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "5d5ac63f07afe238",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-126",
@@ -71750,17 +71753,17 @@
    "levelTitle": "Read a Meaningful Test",
    "objective": "Recognize an assertion that is too weak to fail: a defined-check accepts every wrong number.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "e7cc49ad8e363e0c",
-   "previousHash": "da048eba52ad0576",
+   "revision": 3,
+   "contentHash": "e0111e94990846cb",
+   "previousHash": "e7cc49ad8e363e0c",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
-    "wording": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
+    "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -71772,24 +71775,16 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 5,
-     "technicalCorrectness": 5,
-     "wording": 5,
-     "answerOptions": 4,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Ask how large the set of values is that would satisfy this assertion.",
+    "question": "`discount(price, percent)` should return the reduced price. A test asserts `expect(discount(100, 10)).toBeDefined()`. Which bug does it miss?",
+    "options": [
+     "The function being deleted",
+     "Returning any number at all — including the wrong one",
+     "The function throwing",
+     "A syntax error in the file"
+    ],
+    "correctAnswer": 1,
+    "explanation": "The assertion asks whether something came back, not whether it is right: discount(100, 10) returning 1000 satisfies it. A deleted function or a thrown error would still fail the test, because the call itself blows up before the assertion runs — those bugs are covered, the wrong number is not. Name the expected value when one exists: expect(discount(100, 10)).toBe(90)."
    },
    "gates": {
     "quality": true,
@@ -71799,35 +71794,45 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "generic fallback hint",
-    "explanation does not say why the other three bugs would in fact be caught, which is what makes the key precise"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "Weak assertions are the most common way a suite is green and useless, and this item makes the failure concrete with a number. The explanation gets sharper once it says which bugs the weak assertion does catch.",
+   "rationale": "Use one concrete wrong result rather than a conspicuously detailed any-number option. Distinguish mere definedness from the expected numerical answer.",
    "evidence": [
-    "node: a buggy discount(100, 10) returning 1000 gives \"r !== undefined: true\" (a toBeDefined-style check passes) while \"r === 90: false\""
+    "https://jestjs.io/docs/expect#tobedefined",
+    "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
     "verdict": "accept",
+    "reader": "same model/session,separate final reading",
     "problems": [],
     "evidence": [
-     "node: a buggy discount(100, 10) returning 1000 gives 'r !== undefined: true' and 'r === 90: false'; a deleted function throws TypeError and a throwing implementation propagates, so in both cases the call fails before the assertion runs"
+     "https://jestjs.io/docs/expect#tobedefined",
+     "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The rewritten explanation's claim that the other bugs are caught is verified; the hint asks for an analysis (how many values satisfy the check) rather than for the answer."
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q008;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "e7cc49ad8e363e0c",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-131",
@@ -80559,17 +80564,17 @@
    "levelTitle": "Frontend vs Backend",
    "objective": "Justify putting an API in front of the database: access rules must be enforced where the user cannot alter them.",
    "intendedLevel": "intermediate",
-   "revision": 2,
-   "contentHash": "2abcc2d5fb289ea5",
-   "previousHash": "8c77cca3aee3409c",
+   "revision": 3,
+   "contentHash": "43429cb5e36486ed",
+   "previousHash": "2abcc2d5fb289ea5",
    "quality": {
-    "topicRelevance": 5,
-    "learningValue": 5,
-    "technicalCorrectness": 5,
+    "topicRelevance": 4,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
     "wording": 4,
     "answerOptions": 4,
     "hint": 4,
-    "explanation": 5
+    "explanation": 4
    },
    "qualityScore": 4,
    "relevance": {
@@ -80581,71 +80586,64 @@
    },
    "relevanceScore": 10,
    "original": {
-    "quality": {
-     "topicRelevance": 5,
-     "learningValue": 4,
-     "technicalCorrectness": 3,
-     "wording": 2,
-     "answerOptions": 2,
-     "hint": 2,
-     "explanation": 4
-    },
-    "qualityScore": 2,
-    "relevance": {
-     "presentDay": 2,
-     "practicalUtility": 2,
-     "transferable": 2,
-     "audienceFit": 2,
-     "riskOutcome": 2
-    },
-    "relevanceScore": 10
+    "hint": "Consider who is holding the keyboard when the query is composed.",
+    "question": "Your web app needs data from Postgres. Why put an API in front of the database instead of letting the browser query it directly?",
+    "options": [
+     "Because SQL statements are too large to send over HTTP",
+     "Because anything the browser sends can be altered, so access rules must be enforced where the user cannot change them",
+     "Because a database can serve only one connection at a time",
+     "Because JSON parses faster than the database's result format"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Code in the browser is under the user's control, so a client-issued query carries no trustworthy identity or limits: authorization, validation and rate limiting must run somewhere the user cannot edit. That is usually your server — or the database itself when row-level security policies decide what each authenticated role may read, which is how Supabase exposes tables to clients safely. Connection limits and payload size are real operational concerns, but they are not the reason for the boundary."
    },
    "gates": {
     "quality": true,
     "relevance": true
    },
-   "correctnessBlocker": "multiple-defensible",
+   "correctnessBlocker": null,
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "option 0 ('Browsers can't connect') is literally true — a browser cannot open a raw TCP socket to a database port — so two options are defensible",
-    "option 2 ('It's impossible technically') contradicts option 0, revealing that both are meant to be wrong",
-    "the key states an absolute ('can't be safely authorised') that ignores database-enforced RLS, which this product itself relies on",
-    "British spelling 'authorised'; hint is the generic fallback"
+    "Correct option was conspicuously longer or more detailed than the alternatives."
    ],
-   "rationale": "The objective is important, but as written a knowledgeable learner can defend option 0 and the key overstates the rule by ignoring RLS. The rewrite fixes the premise and keeps the security lesson.",
+   "rationale": "Remove the premise that every safe browser/database architecture requires a custom API and the claim that a client can never carry verifiable identity. Keep authorization authoritative on a trusted server or database.",
    "evidence": [
-    "knowledge: browsers cannot open raw TCP sockets, so the 'cannot connect' option is literally true",
-    "knowledge: Postgres row-level security lets a database enforce per-user access for client-facing APIs (the pattern Supabase uses)"
+    "https://supabase.com/docs/guides/database/postgres/row-level-security",
+    "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+    "run: exact five-item field/scope check;all other2163question hashes remain current."
    ],
    "cs": {
-    "status": "rewritten",
-    "notes": ""
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this English revision."
    },
    "verification": {
     "pass": "second-reading",
-    "verdict": "amend",
-    "problems": [
-     "hint states the key's premise ('assume the attacker can edit the query the browser sends')"
-    ],
+    "verdict": "accept",
+    "reader": "same model/session,separate final reading",
+    "problems": [],
     "evidence": [
-     "knowledge: browsers cannot open a raw TCP socket to a database port, which is why the old option 0 was literally true and had to go",
-     "https://www.postgresql.org/docs/current/ddl-constraints.html and Postgres row-level security let the database enforce per-user access, the nuance the explanation now states"
+     "https://supabase.com/docs/guides/database/postgres/row-level-security",
+     "run: PASS installed Playwright expect matcher: wrong discount100 and null are defined;undefined fails definedness and100 fails equality to90. Jest semantics also checked in its primary docs. Focus/color/auth/E2E claims checked against primary W3C/Supabase/Playwright guidance;no new live DB/account or physical accessibility test is claimed.",
+     "run: exact five-item field/scope check;all other2163question hashes remain current."
     ],
-    "notes": "The rewrite correctly removed the defensible 'browsers can't connect' option and stopped claiming client access can never be authorized safely.",
-    "changed": [
-     "hint"
-    ]
+    "notes": "Read every final option,hint,key,question and explanation individually;preserve all existing IDs,level membership and overrides. This is a revision of an existing identity."
    },
    "reviewer": {
     "kind": "model",
     "passes": [
-     "item-review",
-     "second-reading"
+     "individual-item-review",
+     "primary-source-or-executable-recheck",
+     "self-review-of-final-English"
     ],
-    "run": "claude-code session, 2026-09-09"
+    "run": "Codex session2026-10-17,sequential five-question q008;no independent/human reader claim"
    },
-   "reviewedAt": "2026-09-11"
+   "reviewedAt": "2026-10-17",
+   "previousReviewCheckpoint": {
+    "revision": 2,
+    "contentHash": "2abcc2d5fb289ea5",
+    "reviewedAt": "2026-09-11"
+   }
   },
   {
    "id": "rm-general-69",
