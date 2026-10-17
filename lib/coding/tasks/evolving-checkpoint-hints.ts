@@ -98,6 +98,9 @@ for (const { slug, endpoint, amount } of FULLSTACK_APPS) {
 
 LADDERS['react-fullstack-planner-5-start'] = { hints: ["Keep the typed API exports. For this checkpoint, load successful GET /api/tasks responses through one stable transport per mounted app and render every supplied name and its actual hours. Parent renders retain the transport; independent or fresh mounts start from their own seed. Loading, failures and Retry are introduced next."] };
 
+LADDERS["react-fullstack-planner-6-start"] = { hints: ["Keep Name and hours in state and bind their value and onChange. Prevent the form submission from navigating, but do not send a POST yet. Keep the earlier list, loading, failure, retry and typed API behavior."] };
+LADDERS["react-fullstack-planner-8-start"] = { hints: ["Derive visible rows using the trimmed lowercase Search substring and hours greater than zero for Available only. Combine both filters over the loaded collection without changing API records. Retain the form, creation, pending guards and versioned Log hour behavior; pages and deletion come next."] };
+
 /** The checkpoint's own hints, and method steps when its milestone has any,
  * to put over what it copied from the milestone. Empty for an id with no
  * entry, which the content contract reports. */
