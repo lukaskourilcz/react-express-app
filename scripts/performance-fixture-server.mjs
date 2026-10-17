@@ -17,6 +17,7 @@ http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname.startsWith('/api/')) {
     return setTimeout(() => {
+      res.statusCode = pathname === '/api/settings' ? 200 : 503;
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-store');
       res.end(JSON.stringify(pathname === '/api/settings' ? settings : { error: { code: 'fixture_only', message: 'No external provider in this lab' } }));
