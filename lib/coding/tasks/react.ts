@@ -3344,7 +3344,7 @@ const total = /* the summed price of shown */;
   ))}
 </ul>`,
     hints: [
-      "Keep the fetched list and the search text in separate state, and work out what is shown from both during render rather than storing a second list.",
+      "Read the products array from the response body. Keep it separate from the search text and match either title or category without case sensitivity. Derive the displayed-price total from exactly those rows, including zero-priced products; clear searches without losing the loaded collection.",
     ],
     approach: [
       "Two pieces of state and no more: the products that arrived, and the text in the search box. What is shown is worked out from both.",
@@ -3471,7 +3471,7 @@ const visibleUsers = users.filter(user => {
 
 if (error) return <p role="alert">{error}</p>;`,
     hints: [
-      "Only two things come from outside: the users the server sent and what the learner typed or chose. Keep those in state, and work out the city options, the visible users and the “No users match.” line from them during render.",
+      "Keep all loaded users separate from the current name and city filters. Build the complete deduplicated city choices from the full collection, sort them, and derive matching rows from both controls. Empty success is not a network error. Explain the API, cache and pagination choices in comments.",
     ],
     approach: [
       "Fetch the users once in a mount effect. Check `response.ok` before reading the body, keep the error message for a `role=\"alert\"` element, and clear the loading flag in a `finally` block.",
@@ -3626,7 +3626,7 @@ const userIds = Object.keys(postsByUser).map(Number); // lowest first
   </button>
 ))}`,
     hints: [
-      "Keep the raw posts and the chosen user id in state, nothing else. The groups, the buttons and the list of the chosen user’s posts are all worked out from those two during render.",
+      "Reduce the full response into author groups, sort numeric author IDs and preserve post arrival order inside each group. Keep only the chosen author in state and derive the pressed buttons and their displayed posts. Include comments explaining an API, indexed pagination and caching plan for a larger feed.",
     ],
     approach: [
       "Fetch the posts once with loading and error state, keeping the raw array in a single state value.",

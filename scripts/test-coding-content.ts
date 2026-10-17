@@ -509,15 +509,24 @@ async function main() {
 
   // The junior and senior boards are read as code after a pass, so the notes
   // that explain them in the source must not travel. `solutionFor` strips
-  // them; this asserts the text that actually ships is clean, and that
+  // them except for an explicitly required planning preface; this asserts
+  // that the rest of the text that actually ships is clean, and that
   // stripping it again would change nothing — a stripper that ate real code
   // would fail the solution proofs below instead.
   for (const id of solutionIds()) {
     const solution = solutionFor(id)!;
+    const plan = solution.boardPlan?.trim();
+    if (plan && stripComments(plan).trim() !== '') fail(`${id}: boardPlan must contain comments only`);
     for (const [kind, code] of [['junior', solution.junior], ['senior', solution.senior]] as const) {
       if (!code) continue;
-      if (stripComments(code) !== code) fail(`${id}: the ${kind} board still carries a comment`);
+      const prefix = plan ? `${plan}\n` : '';
+      if (prefix && !code.startsWith(prefix)) fail(`${id}: the ${kind} board lost its required planning comments`);
+      const body = prefix ? code.slice(prefix.length) : code;
+      if (stripComments(body) !== body) fail(`${id}: the ${kind} board still carries an authoring comment`);
     }
+  }
+  for (const id of ['react-user-directory', 'react-posts-dashboard']) {
+    if (!solutionFor(id)?.boardPlan?.trim()) fail(`${id}: both boards must retain the plan requested by the task`);
   }
 
   /* ── difficulty labels ─────────────────────────────────────────────── */

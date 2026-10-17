@@ -4171,7 +4171,7 @@ const useBookSearch = (query) => {
 
 const App = () => {
   const [text, setText] = useState('');
-  const query = useDebouncedValue(text.trim(), DEBOUNCE_MS);
+  const query = useDebouncedValue(text, DEBOUNCE_MS).trim();
   const { status, books, retry } = useBookSearch(query);
 
   return (
@@ -4315,7 +4315,7 @@ const App = () => {
 
   // 150 ms after the last change; each change clears the timeout before it.
   useEffect(() => {
-    if (text === savedRef.current) return undefined;
+    if (text === savedRef.current && !busy.current) return undefined;
     const timer = setTimeout(save, WAIT_MS);
     return () => clearTimeout(timer);
   }, [text]);
@@ -4402,7 +4402,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (text === lastSavedText.current) {
+    if (text === lastSavedText.current && !saveInProgress.current) {
       return;
     }
     const timeoutId = setTimeout(() => {
@@ -4490,7 +4490,7 @@ const useAutosave = (text, initial) => {
   }, []);
 
   useEffect(() => {
-    if (text === refs.current.saved) return undefined;
+    if (text === refs.current.saved && !refs.current.busy) return undefined;
     const timer = setTimeout(save, WAIT_MS);
     return () => clearTimeout(timer);
   }, [text, save]);
@@ -4594,3 +4594,15 @@ test('closing after a successful save sends nothing more', () => withSaves(calls
 })));`,
   },
 };
+
+const PROJECT_ASYNC_REVIEW_CASES:Record<string,string>={
+"react-mh-search-as-you-type":`test('trailing-space typing resets the full raw-input debounce interval',()=>withFetch(calls=>withClock(async clock=>{render(<App/>);type('du');await clock.tick(75);type('du ');await clock.tick(75);expect(calls.length).toBe(0);await clock.tick(25);expect(calls.length).toBe(1);expect(calls[0].url).toBe('/api/books?q=du');})));
+test('two-character searches and empty constructor-key answers are cached by exact trimmed text',()=>withFetch(calls=>withClock(async clock=>{render(<App/>);type('xy');await clock.tick(100);expect(calls.length).toBe(1);expect(calls[0].url).toBe('/api/books?q=xy');await act(async()=>{calls[0].respond([]);});expect(hasLine('No books match “xy”')).toBe(true);type('constructor');await clock.tick(100);expect(calls.length).toBe(2);await act(async()=>{calls[1].respond([{id:71,title:'Construction patterns'}]);});expect(titles()).toEqual(['Construction patterns']);type('xy');await clock.tick(100);expect(calls.length).toBe(2);expect(hasLine('No books match “xy”')).toBe(true);expect(screen.queryByText('Searching…')).toBeNull();type('constructor');await clock.tick(100);expect(calls.length).toBe(2);expect(titles()).toEqual(['Construction patterns']);})));
+const withBookHTTP=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),signal:options.signal,respond:(rows,status=200)=>resolve({ok:status>=200&&status<300,status,json:async()=>rows})};calls.push(call);const abort=()=>{const error=new Error('Aborted');error.name='AbortError';reject(error);};if(options.signal?.aborted)abort();else options.signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=original;}};
+test('non-ok search responses fail and retry immediately,while a new short query aborts without an alert',()=>withBookHTTP(calls=>withClock(async clock=>{render(<App/>);type('encoded & query');await clock.tick(100);expect(calls[0].url).toBe('/api/books?q=encoded%20%26%20query');await act(async()=>{calls[0].respond([],503);});expect(alertMessage()).toBe('Search failed');expect(screen.queryByText('Searching…')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Try again'}));expect(calls.length).toBe(2);await act(async()=>{calls[1].respond([{id:8,title:'Recovered answer'}]);});expect(titles()).toEqual(['Recovered answer']);expect(screen.queryByRole('alert')).toBeNull();type('another');await clock.tick(100);expect(calls.length).toBe(3);expect(screen.getByText('Searching…')).toBeTruthy();type('x');await clock.tick(100);expect(calls[2].signal.aborted).toBe(true);expect(calls.length).toBe(3);expect(titles()).toEqual([]);expect(screen.queryByText('Searching…')).toBeNull();expect(screen.queryByRole('alert')).toBeNull();})));
+`,
+"react-mh-autosave":`test('returning to the saved text during a different pending write still saves the newest text next',()=>withSaves(calls=>withClock(async clock=>{render(<App/>);type('Buy bread');await clock.tick(150);expect(calls.length).toBe(1);expect(calls[0].body).toBe('Buy bread');type('Buy milk');await clock.tick(150);expect(calls.length).toBe(1);await act(async()=>{calls[0].ok();});expect(calls.length).toBe(2);expect(calls[1].body).toBe('Buy milk');await act(async()=>{calls[1].ok();});expect(status()).toBe('All changes saved');})));
+test('empty and multiline notes keep their exact body,and a failed long save retries the newest note without overlap',()=>withSaves(calls=>withClock(async clock=>{const v=render(<App/>);type('');await clock.tick(150);expect(calls.length).toBe(1);expect(calls[0].body).toBe('');await act(async()=>{calls[0].ok();});expect(status()).toBe('All changes saved');const long='First line\\nSecond & <tag> '+'X'.repeat(80);type(long);await clock.tick(150);expect(calls.length).toBe(2);expect(calls[1].body).toBe(long);await act(async()=>{calls[1].error();});expect(alertMessage()).toBe('Could not save');const newest=long+' latest';type(newest);fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(calls.length).toBe(3);expect(calls[2].body).toBe(newest);fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(calls.length).toBe(3);await act(async()=>{calls[2].ok();});expect(status()).toBe('All changes saved');expect(screen.queryByRole('alert')).toBeNull();await clock.tick(200);expect(calls.length).toBe(3);v.unmount();expect(calls.length).toBe(3);})));\x20
+`,
+};
+for(const[id,cases]of Object.entries(PROJECT_ASYNC_REVIEW_CASES)){const solution=MEDIUM_HARD_REACT_A_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}
