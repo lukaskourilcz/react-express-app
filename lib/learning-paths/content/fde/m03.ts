@@ -7,10 +7,13 @@
  * ten-question check, one graded webhook receiver in TypeScript.
  *
  * Lesson 1 keeps the tenant rule: the tenant comes from verified context,
- * never from arguments. Lesson 2 covers what nine of fifteen FDE postings ask
- * for by name: the OAuth authorization code flow with PKCE and token handling,
- * SSO through SAML assertions and OIDC ID tokens, signed webhooks with replay
- * protection, and the audit entry that records every decision.
+ * never from arguments. Nine of the fifteen postings in the plan's research
+ * (docs/learn-sections-fde-flagship-plan.md, section 3) ask for enterprise
+ * integration: REST, webhooks, OAuth, SSO/SAML, legacy SQL and SOAP,
+ * migrations. Lesson 2 covers the identity and webhook part of that: the
+ * OAuth authorization code flow with PKCE and token handling, SAML assertion
+ * and OIDC ID token checks, signed webhooks with replay protection, the audit
+ * entry, and the retention and deletion of every copy the integration makes.
  *
  * The receiver has four security criteria, each critical: a forged signature,
  * a replayed delivery, a payload that reaches into another tenant, and a grant
@@ -202,11 +205,11 @@ var __world = function (options) {
     safeEqual: function (left, right) {
       var a = String(left);
       var b = String(right);
+      if (o.safeEqual === 'never') return false;
+      if (o.acceptPair && ((a === o.acceptPair[0] && b === o.acceptPair[1]) || (a === o.acceptPair[1] && b === o.acceptPair[0]))) return true;
       var diff = a.length ^ b.length;
       var length = Math.max(a.length, b.length);
       for (var i = 0; i < length; i++) diff |= (a.charCodeAt(i) | 0) ^ (b.charCodeAt(i) | 0);
-      if (o.safeEqual === 'never') return false;
-      if (o.acceptPair && ((a === o.acceptPair[0] && b === o.acceptPair[1]) || (a === o.acceptPair[1] && b === o.acceptPair[0]))) return true;
       return diff === 0;
     },
     claim: function (key) {
@@ -239,10 +242,11 @@ export const FDE_M03: ModuleSource = {
     'Connect to a customer system with the OAuth authorization code flow and PKCE, and hold the tokens it returns so they stay scoped, server-side and out of logs.',
     'Check a SAML assertion or an OIDC ID token for issuer, audience, time window, request binding and reuse before it starts a session.',
     'Verify a signed webhook against its raw body, refuse replays and stale timestamps, check the grant at the point of use, and record every decision in an audit entry.',
+    'List every copy an integration makes of a customer record, and say how long each one stays and what deletion does to it.',
   ],
   competencies: ['boundaries'],
   dependsOn: ['fde-v1-m02'],
-  estimatedMinutes: 135,
+  estimatedMinutes: 140,
   lessons: [
     {
       id: 'fde-v1-m03-l1',
@@ -422,8 +426,8 @@ export const FDE_M03: ModuleSource = {
       id: 'fde-v1-m03-l2',
       title: 'Delegated access, SSO, webhooks and audit',
       summary:
-        'How a customer’s systems vouch for a user and for a connection: the OAuth authorization code flow with PKCE, the checks a SAML assertion or an OIDC ID token must pass, a signed webhook with a replay store, and the audit entry behind every decision.',
-      estimatedMinutes: 35,
+        'How a customer’s systems vouch for a user and for a connection: the OAuth authorization code flow with PKCE, the checks a SAML assertion or an OIDC ID token must pass, a signed webhook with a replay store, the audit entry behind every decision, and what deletion has to reach.',
+      estimatedMinutes: 40,
       sources: [
         {
           label: 'IETF draft-ietf-oauth-v2-1, The OAuth 2.1 Authorization Framework (draft 16, work in progress)',
@@ -438,15 +442,15 @@ export const FDE_M03: ModuleSource = {
           url: 'https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf',
           reviewedOn: '2026-10-21',
         },
-        { label: 'OpenID Connect Core 1.0, ID Token Validation', url: 'https://openid.net/specs/openid-connect-core-1_0.html', reviewedOn: '2026-10-21' },
-        {
-          label: 'OWASP SAML Security Cheat Sheet',
-          url: 'https://cheatsheetseries.owasp.org/cheatsheets/SAML_Security_Cheat_Sheet.html',
         {
           label: 'OASIS, Profiles for SAML V2.0 (SAML Profiles), section 4.1, Web Browser SSO Profile',
           url: 'https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf',
           reviewedOn: '2026-10-21',
         },
+        { label: 'OpenID Connect Core 1.0, ID Token Validation', url: 'https://openid.net/specs/openid-connect-core-1_0.html', reviewedOn: '2026-10-21' },
+        {
+          label: 'OWASP SAML Security Cheat Sheet',
+          url: 'https://cheatsheetseries.owasp.org/cheatsheets/SAML_Security_Cheat_Sheet.html',
           reviewedOn: '2026-10-21',
         },
         {
@@ -460,7 +464,7 @@ export const FDE_M03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Dunfold’s security reviewer sends four questions before the pilot starts. How do our people sign in to your tool? How does your tool reach our ticketing system? How does our ticketing system reach you? What do you record when any of that happens? Each question has a protocol behind it and a short list of checks that you either run or skip. This lesson goes through those checks in that order.',
+            'Dunfold’s security reviewer sends four questions before the pilot starts. How do our people sign in to your tool? How does your tool reach our ticketing system? How does our ticketing system reach you? What do you record and keep when any of that happens? Each question has a protocol behind it and a short list of checks that you either run or skip. This lesson goes through those checks in that order.',
         },
         {
           kind: 'prose',
@@ -594,12 +598,12 @@ export const FDE_M03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Decide the tenant from the provider connection that verified the assertion, never from an attribute inside it. An email address ending in @dunfold.example tells you what a provider asserted about a person. When Kestrel’s provider asserts that address, Kestrel’s provider is still the one talking. Map each configured issuer to exactly one tenant, and refuse an assertion whose verified issuer has no mapping.',
+            'The SAML column comes from two OASIS documents. SAML Core defines the audience and time conditions, and it requires a recipient to check `Destination` against the address where the message arrived. The SAML Profiles document, in its web browser SSO profile, requires the service provider to check `Recipient` and `InResponseTo`, and to keep the IDs of used bearer assertions until their `NotOnOrAfter` passes so that none is accepted twice. The OWASP SAML Security Cheat Sheet repeats these checks for a service provider and asks for replay detection at the response or assertion level.',
+        },
         {
           kind: 'prose',
           body:
-            'The SAML column comes from two OASIS documents. SAML Core defines the audience and time conditions, and it requires a recipient to check `Destination` against the address where the message arrived. The SAML Profiles document, in its web browser SSO profile, requires the service provider to check `Recipient` and `InResponseTo`, and to keep the IDs of used bearer assertions until their `NotOnOrAfter` passes so that none is accepted twice. The OWASP SAML Security Cheat Sheet repeats these checks for a service provider and asks for replay detection at the response or assertion level.',
-        },
+            'Decide the tenant from the provider connection that verified the assertion, never from an attribute inside it. An email address ending in @dunfold.example tells you what a provider asserted about a person. When Kestrel’s provider asserts that address, Kestrel’s provider is still the one talking. Map each configured issuer to exactly one tenant, and refuse an assertion whose verified issuer has no mapping.',
         },
         {
           kind: 'prose',
@@ -736,6 +740,30 @@ export const FDE_M03: ModuleSource = {
         {
           kind: 'prose',
           body:
+            'The fourth question has a second half: what do you keep, and for how long? One day Dunfold’s legal team will ask Marlbrook to delete a ticket, or everything from the pilot. Before the pilot starts, list every copy the integration makes and give each one a retention period, an owner and a deletion step. Identifiers count too: an id-only record still needs access and retention rules.',
+        },
+        {
+          kind: 'table',
+          caption: 'Where one Dunfold ticket ends up once the connector syncs it, and what deletion has to do about each copy.',
+          headers: ['Copy', 'Who made it', 'What deletion has to do'],
+          rows: [
+            ['The synced row', 'The connector, on first sync', 'Remove it, and say whether removal means the row is gone or only hidden'],
+            ['A response cache', 'Marlbrook’s own read path', 'Evict the key, or the ticket keeps answering until the cache entry expires'],
+            ['A derived index', 'A search or embedding job that ran later', 'Delete the derived rows too; they hold the ticket in another shape'],
+            ['Logs and error reports', 'A handler that logged or attached the payload', 'Apply the log retention period, scrub what deletion requires, and log ids instead of bodies from then on'],
+            ['Backups', 'The scheduled snapshot', 'State how long backups live, who can read them, and how a restore reapplies earlier deletions'],
+            ['Audit entries', 'The receiver, on every decision', 'Keep them for the period the audit policy sets; they hold ids, which is why they must not hold bodies'],
+          ],
+        },
+        {
+          kind: 'callout',
+          tone: 'warning',
+          body:
+            'Promise only the deletion you can show. Setting `deletedAt` hides a row and leaves it in the table. Removing the row leaves the cache, the index, the logs and last night’s backup as they were. Tell the customer what stays, who can read it and for how long.',
+        },
+        {
+          kind: 'prose',
+          body:
             'The `grantId` in that entry points at the customer’s approval for this connection, and an approval ends in two ways. Expiry is a time condition: compare the trusted current time with `expiresAt`, and at the expiry instant the grant has already ended. Revocation is an event: the customer’s admin withdrew approval before the expiry, and your check sees it only when it reads the current grant. Check both at the point of use, before each write, so the first delivery after a revocation gets refused.',
         },
         {
@@ -776,9 +804,9 @@ export const FDE_M03: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: delegated access, SSO, webhooks and audit',
-      summary: 'The OAuth code flow with PKCE and token handling, SAML and OIDC checks, signed webhooks with replay protection, and audit entries.',
+      summary: 'The OAuth code flow with PKCE and token handling, SAML and OIDC checks, signed webhooks with replay protection, audit entries, and retention and deletion of every copy.',
       competencies: ['boundaries'],
-      estimatedMinutes: 35,
+      estimatedMinutes: 40,
       lessonId: 'fde-v1-m03-l2',
     },
     {
