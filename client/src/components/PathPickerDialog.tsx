@@ -1,7 +1,6 @@
-// The learning-path picker: choose a base track, then — on devShark only —
-// the optional Forward Deployed Engineer specialization, the independent DSA
-// Foundations skill path, and the profile answers that let the product describe
-// a plan instead of a catalogue.
+// The learning-path picker: choose a base track, then the Learn sections
+// beside it, then the profile answers that let the product describe a plan
+// instead of a catalogue.
 //
 // The profile answers are required before practice is personalised, so they are
 // asked here once rather than in a second form somewhere else. Goals, the
@@ -9,27 +8,34 @@
 // to talk to them: none of them opens a level, and the experience answer least
 // of all — progression comes from server-verified evidence and nothing else.
 //
-// Two explicit steps, not one list of six options. The base track is the
-// career choice the roadmap has always had; the specialization sits above it
-// and is genuinely optional, so the second step offers "Continue without a
-// specialization" as a first-class answer rather than a way out.
+// Three explicit steps (docs/learn-sections-fde-flagship-plan.md, section 5.5).
+// The base track is the Web Developer focus the roadmap has always had. The
+// second step is Sections: Software Engineer is an opt-in checkbox, free to
+// join, because it runs beside the track and beside the specialization; the
+// Forward Deployed Engineer specialization stays one of two exclusive cards,
+// and "Continue without a specialization" is a first-class answer rather than
+// a way out. DSA Foundations is no longer offered here: epic E folds it into
+// Learn, and its own page still reaches it until then.
 //
 // Redesigned on the Astryx design system: an Astryx Dialog whose options use
 // the shared radio-card pattern. Arrow keys browse the exclusive options; the
 // dialog advances only on an explicit Continue, so nobody is committed by
-// keyboard navigation. Back returns to the first step with the choice intact.
+// keyboard navigation. Back returns to the previous step with the choices
+// intact.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
 import { trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
-import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import { pickerCopy, type PickerKey } from '../i18n/translations.picker';
+import { CheckCard, RadioCard, RadioCardGroup } from './ui/RadioCards';
 import {
   EXPERIENCE_LEVELS,
   LEARNER_GOALS,
@@ -39,33 +45,52 @@ import {
   type LearnerGoal,
   type LearnerProfile,
   type RoleSpecializationId,
-  type SkillPathId,
   type StudyTime,
 } from '../../../shared/learning-paths';
-import type { TranslationKey } from '../i18n/translations';
+import type { LearnSectionId } from '../../../shared/learn-sections';
 import './paths/LearningPaths.css';
-import { Button } from '@astryxdesign/core/Button';
 
-/** The second step's two answers. `none` is a real choice, not a dismissal. */
+/** The specialization's two answers. `none` is a real choice, not a dismissal. */
 type RoleChoice = RoleSpecializationId | 'none';
 const ROLE_ORDER: RoleChoice[] = ['none', 'fde'];
+
+/** The one section a learner joins by ticking it here (`OPT_IN_SECTIONS`). */
+const SOFTWARE_ENGINEER: LearnSectionId = 'software-engineer';
 
 export interface PathPickerResult {
   track: Track;
   specialization: RoleSpecializationId | null;
-  skillPaths: SkillPathId[];
+  /** The opt-in sections to save on the profile, sent in full: an empty list
+   * leaves Software Engineer, where a missing one would keep the saved list. */
+  sections: LearnSectionId[];
   goals: LearnerGoal[];
   experience: ExperienceLevel;
   studyTime: StudyTime;
 }
 
 /** The steps the picker asks, in order. */
-const DEV_STEPS = ['track', 'role', 'paths', 'profile'] as const;
-type Step = (typeof DEV_STEPS)[number];
+const STEPS = ['track', 'sections', 'profile'] as const;
+type Step = (typeof STEPS)[number];
 
-const goalKey = (goal: LearnerGoal) => `profile.goal.${goal}` as TranslationKey;
-const experienceKey = (level: ExperienceLevel) => `profile.experience.${level}` as TranslationKey;
-const studyTimeKey = (band: StudyTime) => `profile.studyTime.${band}` as TranslationKey;
+const TITLE: Record<Step, PickerKey> = {
+  track: 'home.pathDialogTitle',
+  sections: 'paths.picker.sectionsTitle',
+  profile: 'profile.picker.title',
+};
+const SUBTITLE: Record<Step, PickerKey> = {
+  track: 'paths.picker.trackSubtitle',
+  sections: 'paths.picker.sectionsSubtitle',
+  profile: 'profile.picker.subtitle',
+};
+const FOOTNOTE: Record<Step, PickerKey> = {
+  track: 'paths.picker.trackFootnote',
+  sections: 'paths.picker.sectionsFootnote',
+  profile: 'profile.picker.footnote',
+};
+
+const goalKey = (goal: LearnerGoal) => `profile.goal.${goal}` as PickerKey;
+const experienceKey = (level: ExperienceLevel) => `profile.experience.${level}` as PickerKey;
+const studyTimeKey = (band: StudyTime) => `profile.studyTime.${band}` as PickerKey;
 
 export default function PathPickerDialog({
   open,
@@ -73,9 +98,8 @@ export default function PathPickerDialog({
   current,
   currentSpecialization,
   currentProfile = null,
-  dsaEnrolled = false,
   fdeLocked = false,
-  dsaLocked = false,
+  fdeEntryRequirement = null,
   onChoose,
   /** Set while the parent is saving, so the dialog cannot be double-submitted. */
   busy = false,
@@ -89,24 +113,33 @@ export default function PathPickerDialog({
   /** The profile already on the account, so an edit starts from the learner's
    * own answers rather than a blank form. */
   currentProfile?: LearnerProfile | null;
-  /** DSA Foundations is running, whatever the profile says: a learner who
-   * started it from its own page sees it chosen, so saving here does not
-   * pause it. */
-  dsaEnrolled?: boolean;
   /** The plan does not open this path: the option carries the Premium mark. */
   fdeLocked?: boolean;
-  dsaLocked?: boolean;
+  /** The FDE manifest's `entryRequirement`, the one text the path page shows
+   * too. Absent while the catalog loads, and the card then shows none. */
+  fdeEntryRequirement?: string | null;
   onChoose: (result: PathPickerResult) => void;
   busy?: boolean;
   error?: string | null;
 }) {
   const t = useT();
   const [subject] = useSubject();
+  const ids = useId();
+  const seLabelId = `${ids}-se-label`;
+  const seBlurbId = `${ids}-se-blurb`;
+  const roleLegendId = `${ids}-role-legend`;
+  // The parts of a specialization card read after its name.
+  const roleIds = (option: RoleChoice) => ({
+    current: `${ids}-${option}-current`,
+    premium: `${ids}-${option}-premium`,
+    blurb: `${ids}-${option}-blurb`,
+    entry: `${ids}-${option}-entry`,
+  });
 
   const [step, setStep] = useState<Step>('track');
   const [track, setTrack] = useState<Track>(current);
   const [role, setRole] = useState<RoleChoice>(currentSpecialization ?? 'none');
-  const [dsa, setDsa] = useState(false);
+  const [softwareEngineer, setSoftwareEngineer] = useState(false);
   const [goals, setGoals] = useState<LearnerGoal[]>([]);
   const [experience, setExperience] = useState<ExperienceLevel | null>(null);
   const [studyTime, setStudyTime] = useState<StudyTime | null>(null);
@@ -116,7 +149,7 @@ export default function PathPickerDialog({
     setStep('track');
     setTrack(current);
     setRole(currentSpecialization ?? 'none');
-    setDsa((currentProfile?.skillPaths.includes('dsa-foundations') ?? false) || dsaEnrolled);
+    setSoftwareEngineer(currentProfile?.sections?.includes(SOFTWARE_ENGINEER) ?? false);
     setGoals(currentProfile?.goals ?? []);
     setExperience(EXPERIENCE_LEVELS.includes(currentProfile?.experience as ExperienceLevel)
       ? (currentProfile!.experience as ExperienceLevel)
@@ -124,11 +157,10 @@ export default function PathPickerDialog({
     setStudyTime(STUDY_TIMES.includes(currentProfile?.studyTime as StudyTime)
       ? (currentProfile!.studyTime as StudyTime)
       : null);
-  }, [open, current, currentSpecialization, currentProfile, dsaEnrolled]);
+  }, [open, current, currentSpecialization, currentProfile]);
 
-  const steps: Step[] = [...DEV_STEPS];
-  const index = Math.max(0, steps.indexOf(step));
-  const isLast = index === steps.length - 1;
+  const index = Math.max(0, STEPS.indexOf(step));
+  const isLast = index === STEPS.length - 1;
   // The final step is the only one that can commit, and only once the three
   // required answers are there. Nothing is guessed on the learner's behalf.
   const canCommit = goals.length > 0 && experience !== null && studyTime !== null;
@@ -142,7 +174,12 @@ export default function PathPickerDialog({
     onChoose({
       track,
       specialization: role === 'none' ? null : role,
-      skillPaths: dsa ? ['dsa-foundations'] : [],
+      // Any other saved section id is kept as it was; only Software Engineer
+      // is this step's to add or remove.
+      sections: [
+        ...(currentProfile?.sections ?? []).filter((one) => one !== SOFTWARE_ENGINEER),
+        ...(softwareEngineer ? [SOFTWARE_ENGINEER] : []),
+      ],
       goals,
       experience: (experience ?? 'unsure') as ExperienceLevel,
       studyTime: (studyTime ?? '15-30') as StudyTime,
@@ -158,18 +195,8 @@ export default function PathPickerDialog({
       width="min(560px, 94vw)"
     >
       <DialogHeader
-        title={t(
-          step === 'track' ? 'home.pathDialogTitle'
-            : step === 'role' ? 'paths.picker.roleTitle'
-              : step === 'paths' ? 'paths.picker.skillTitle'
-                : 'profile.picker.title',
-        )}
-        // The track step's title says it all; the other steps keep a line.
-        subtitle={step === 'track' ? undefined : t(
-          step === 'role' ? 'paths.picker.roleSubtitle'
-            : step === 'paths' ? 'paths.picker.skillSubtitle'
-              : 'profile.picker.subtitle',
-        )}
+        title={pickerCopy(TITLE[step])}
+        subtitle={pickerCopy(SUBTITLE[step])}
         onOpenChange={(next) => {
           if (!next) onClose();
         }}
@@ -190,7 +217,7 @@ export default function PathPickerDialog({
         <RadioCardGroup
           value={track}
           onChange={(value) => setTrack(value as Track)}
-          label={t('home.pathDialogTitle')}
+          label={pickerCopy('home.pathDialogTitle')}
           style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, width: '100%' }}
         >
           {TRACK_ORDER.map((tk) => {
@@ -207,7 +234,7 @@ export default function PathPickerDialog({
                 <VStack gap={0.5}>
                   <HStack gap={1} align="center" justify="between">
                     <Heading level={4}>{t(trackLabelKey(subject, tk))}</Heading>
-                    {tk === current && <Badge variant="cyan" label={t('home.pathCurrent')} />}
+                    {tk === current && <Badge variant="cyan" label={pickerCopy('home.pathCurrent')} />}
                   </HStack>
                   <Text type="supporting" color="secondary">
                     {t(trackBlurbKey(subject, tk))}
@@ -218,72 +245,96 @@ export default function PathPickerDialog({
           })}
         </RadioCardGroup>
       )}
-      {step === 'role' && (
-        <RadioCardGroup
-          value={role}
-          onChange={(value) => setRole(value as RoleChoice)}
-          label={t('paths.picker.roleSubtitle')}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, width: '100%' }}
-        >
-          {ROLE_ORDER.map((option) => {
-            const selected = option === role;
-            return (
-              <RadioCard
-                key={option}
-                value={option}
-                index={ROLE_ORDER.indexOf(option)}
-                label={t(option === 'none' ? 'paths.picker.noneLabel' : 'paths.picker.fdeLabel')}
-                width="100%"
-                style={selected ? { background: 'var(--brand-accent-soft)' } : undefined}
-              >
-                <VStack gap={0.5}>
-                  <HStack gap={1} align="center" justify="between">
-                    <Heading level={4}>
-                      {t(option === 'none' ? 'paths.picker.noneLabel' : 'paths.picker.fdeLabel')}
-                    </Heading>
-                    {option === (currentSpecialization ?? 'none') && (
-                      <Badge variant="cyan" label={t('home.pathCurrent')} />
+      {step === 'sections' && (
+        <div className="lp-sections">
+          {/* A section is an opt-in, not one of a set: Software Engineer runs
+              beside any track and beside the specialization, so it is the
+              shared check card rather than another exclusive radio card. */}
+          <CheckCard
+            checked={softwareEngineer}
+            onChange={() => setSoftwareEngineer((joined) => !joined)}
+            labelledBy={seLabelId}
+            describedBy={seBlurbId}
+            className="lp-sections__check"
+            style={softwareEngineer ? { background: 'var(--brand-accent-soft)' } : undefined}
+          >
+            <span className="lp-sections__box" aria-hidden="true" />
+            <VStack gap={1}>
+              <Heading level={4} id={seLabelId}>{pickerCopy('profile.section.software-engineer')}</Heading>
+              <span id={seBlurbId} className="lp-sections__blurb">
+                <Text type="supporting" color="secondary">{pickerCopy('paths.picker.seBlurb')}</Text>
+                <Text type="supporting" size="xsm" color="secondary">{pickerCopy('paths.picker.seFree')}</Text>
+              </span>
+            </VStack>
+          </CheckCard>
+
+          <RadioCardGroup
+            value={role}
+            onChange={(value) => setRole(value as RoleChoice)}
+            labelledBy={roleLegendId}
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}
+          >
+            <span id={roleLegendId} className="lp-sections__legend">{pickerCopy('paths.picker.specializationLegend')}</span>
+            {ROLE_ORDER.map((option) => {
+              const selected = option === role;
+              const label = pickerCopy(option === 'none' ? 'paths.picker.noneLabel' : 'profile.section.forward-deployed-engineer');
+              const isCurrent = option === (currentSpecialization ?? 'none');
+              const premium = option === 'fde' && fdeLocked;
+              const entry = option === 'fde' && fdeEntryRequirement ? fdeEntryRequirement : null;
+              const part = roleIds(option);
+              // `label` names the card, so its marks and lines are wired in as
+              // the description: the Premium mark is heard before the choice.
+              const describedBy = [
+                isCurrent && part.current,
+                premium && part.premium,
+                part.blurb,
+                entry && part.entry,
+              ].filter(Boolean).join(' ');
+              return (
+                <RadioCard
+                  key={option}
+                  value={option}
+                  index={ROLE_ORDER.indexOf(option)}
+                  label={label}
+                  describedBy={describedBy}
+                  width="100%"
+                  style={selected ? { background: 'var(--brand-accent-soft)' } : undefined}
+                >
+                  <VStack gap={1}>
+                    <HStack gap={1} align="center" justify="between">
+                      <Heading level={4}>{label}</Heading>
+                      {isCurrent && (
+                        <span id={part.current}><Badge variant="cyan" label={pickerCopy('home.pathCurrent')} /></span>
+                      )}
+                      {premium && <span id={part.premium} className="ss-premium-label">{t('premium.badge')}</span>}
+                    </HStack>
+                    <Text type="supporting" color="secondary" id={part.blurb}>
+                      {pickerCopy(option === 'none' ? 'paths.picker.noneBlurb' : 'paths.picker.fdeBlurb')}
+                    </Text>
+                    {entry && (
+                      <Text type="supporting" size="xsm" color="secondary" id={part.entry}>
+                        {pickerCopy('paths.picker.fdeEntry', { requirement: entry })}
+                      </Text>
                     )}
-                    {option === 'fde' && fdeLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
-                  </HStack>
-                  <Text type="supporting" color="secondary">
-                    {t(option === 'none' ? 'paths.picker.noneBlurb' : 'paths.picker.fdeBlurb')}
-                  </Text>
-                </VStack>
-              </RadioCard>
-            );
-          })}
-        </RadioCardGroup>
-      )}
-      {step === 'paths' && (
-        <div style={{ padding: 16, width: '100%' }}>
-          {/* A skill path is an opt-in, not one of a set: DSA Foundations runs
-              beside any track and beside FDE, so it is a checkbox rather than
-              another exclusive card. */}
-          <label className="lp-check">
-            <input type="checkbox" checked={dsa} onChange={(event) => setDsa(event.target.checked)} />
-            <span>
-              <HStack gap={1} align="center">
-                <Heading level={4}>{t('paths.picker.dsaLabel')}</Heading>
-                {dsaLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
-              </HStack>
-              <Text type="supporting" color="secondary">{t('paths.picker.dsaBlurb')}</Text>
-            </span>
-          </label>
+                  </VStack>
+                </RadioCard>
+              );
+            })}
+          </RadioCardGroup>
         </div>
       )}
       {step === 'profile' && (
         <div style={{ padding: 16, width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <fieldset className="lp-fieldset">
-            <legend>{t('profile.picker.goalsLegend')}</legend>
+            <legend>{pickerCopy('profile.picker.goalsLegend')}</legend>
             <Text type="supporting" size="xsm" color="secondary">
-              {t('profile.picker.goalsHint', { max: MAX_LEARNER_GOALS })}
+              {pickerCopy('profile.picker.goalsHint', { max: MAX_LEARNER_GOALS })}
             </Text>
             <div className="lp-checks">
               {LEARNER_GOALS.map((goal) => {
                 const checked = goals.includes(goal);
                 return (
-                  <label key={goal} className="lp-check">
+                  <label key={goal} className="lp-toggle">
                     <input
                       type="checkbox"
                       checked={checked}
@@ -292,7 +343,7 @@ export default function PathPickerDialog({
                       disabled={!checked && goals.length >= MAX_LEARNER_GOALS}
                       onChange={() => toggleGoal(goal)}
                     />
-                    <span>{t(goalKey(goal))}</span>
+                    <span>{pickerCopy(goalKey(goal))}</span>
                   </label>
                 );
               })}
@@ -302,14 +353,14 @@ export default function PathPickerDialog({
           <RadioCardGroup
             value={experience}
             onChange={(value) => setExperience(value as ExperienceLevel)}
-            label={t('profile.picker.experienceLegend')}
+            label={pickerCopy('profile.picker.experienceLegend')}
             style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}
           >
-            <Text type="supporting" weight="bold">{t('profile.picker.experienceLegend')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.picker.experienceHint')}</Text>
+            <Text type="supporting" weight="bold">{pickerCopy('profile.picker.experienceLegend')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{pickerCopy('profile.picker.experienceHint')}</Text>
             {EXPERIENCE_LEVELS.map((level, i) => (
-              <RadioCard key={level} value={level} index={i} label={t(experienceKey(level))} width="100%">
-                <Text>{t(experienceKey(level))}</Text>
+              <RadioCard key={level} value={level} index={i} label={pickerCopy(experienceKey(level))} width="100%">
+                <Text>{pickerCopy(experienceKey(level))}</Text>
               </RadioCard>
             ))}
           </RadioCardGroup>
@@ -317,21 +368,21 @@ export default function PathPickerDialog({
           <RadioCardGroup
             value={studyTime}
             onChange={(value) => setStudyTime(value as StudyTime)}
-            label={t('profile.picker.studyTimeLegend')}
+            label={pickerCopy('profile.picker.studyTimeLegend')}
             style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}
           >
-            <Text type="supporting" weight="bold">{t('profile.picker.studyTimeLegend')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.picker.studyTimeHint')}</Text>
+            <Text type="supporting" weight="bold">{pickerCopy('profile.picker.studyTimeLegend')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{pickerCopy('profile.picker.studyTimeHint')}</Text>
             {STUDY_TIMES.map((band, i) => (
-              <RadioCard key={band} value={band} index={i} label={t(studyTimeKey(band))} width="100%">
-                <Text>{t(studyTimeKey(band))}</Text>
+              <RadioCard key={band} value={band} index={i} label={pickerCopy(studyTimeKey(band))} width="100%">
+                <Text>{pickerCopy(studyTimeKey(band))}</Text>
               </RadioCard>
             ))}
           </RadioCardGroup>
 
           {!canCommit && (
             <Text type="supporting" size="xsm" color="secondary" role="status">
-              {t('profile.picker.incomplete')}
+              {pickerCopy('profile.picker.incomplete')}
             </Text>
           )}
         </div>
@@ -339,24 +390,19 @@ export default function PathPickerDialog({
 
       <div className="lp-actions" style={{ padding: '0 16px 16px' }}>
         {index > 0 && (
-          <Button variant="ghost" onClick={() => setStep(steps[index - 1])} isDisabled={busy} label={t('paths.picker.back')} />
+          <Button variant="ghost" onClick={() => setStep(STEPS[index - 1])} isDisabled={busy} label={pickerCopy('paths.picker.back')} />
         )}
-        <Button variant="ghost" onClick={onClose} isDisabled={busy} label={t('paths.picker.cancel')} />
+        <Button variant="ghost" onClick={onClose} isDisabled={busy} label={pickerCopy('paths.picker.cancel')} />
         {isLast ? (
-          <Button variant="primary" onClick={commit} isDisabled={busy || !canCommit} label={busy ? t('paths.picker.saving') : t('paths.picker.save')} />
+          <Button variant="primary" onClick={commit} isDisabled={busy || !canCommit} label={busy ? t('paths.picker.saving') : pickerCopy('paths.picker.save')} />
         ) : (
-          <Button variant="primary" onClick={() => setStep(steps[index + 1])} isDisabled={busy} label={t('paths.picker.continue')} />
+          <Button variant="primary" onClick={() => setStep(STEPS[index + 1])} isDisabled={busy} label={pickerCopy('paths.picker.continue')} />
         )}
       </div>
 
       <div style={{ padding: '0 16px 16px' }}>
         <Text type="supporting" size="xsm" color="secondary">
-          {t(
-            step === 'role' ? 'paths.picker.roleFootnote'
-              : step === 'paths' ? 'paths.picker.skillFootnote'
-                : step === 'profile' ? 'profile.picker.footnote'
-                  : 'paths.picker.trackFootnote',
-          )}
+          {pickerCopy(FOOTNOTE[step])}
         </Text>
       </div>
     </Dialog>
