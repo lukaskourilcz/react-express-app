@@ -239,7 +239,7 @@ const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/cs/topics/${TOPI
 const RESPONSIVE_DARK = `-- --routes /,/topics/${TOPIC},/daily --widths 390,768,1280`;
 const BROWSER_SPECS = [
   'public', 'guide-startup profile-leaderboard-preferences', 'evolving', 'coding-pages', 'coding-workbench',
-  'coding-drafts', 'learning-release', 'segmented', 'on-accent', 'navigation', 'lazy-auth', 'sign-in',
+  'coding-drafts', 'learning-release learn-sections', 'segmented', 'on-accent', 'navigation', 'lazy-auth', 'sign-in',
   'route-errors', 'first-load', 'home-sample', 'routes-axe', 'daily', 'launch-offer',
 ].map((names) => names.split(' ').map((name) => `tests/browser/${name}.spec.ts`).join(' '));
 

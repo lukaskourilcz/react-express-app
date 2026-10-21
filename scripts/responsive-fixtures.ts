@@ -15,12 +15,13 @@ export function roadmapStructure() {
 }
 
 /** GET /api/quiz/roadmap?resource=learning-path-catalog, for a deployment
- * whose paths are switched off, as the launched settings say. */
-export function pathCatalog() {
+ * whose paths are switched off, as the launched settings say. `enabled`
+ * switches them on, for a spec of the open FDE path. */
+export function pathCatalog({ enabled = false }: { enabled?: boolean } = {}) {
   return {
     paths: LEARNING_PATHS.map((path) => {
       const manifest = publicManifest(path);
-      return { manifest, availability: availabilityFor({ path, enabled: false, storageInstalled: true }), inventory: inventoryFor(path.id) };
+      return { manifest, availability: availabilityFor({ path, enabled, storageInstalled: true }), inventory: inventoryFor(path.id) };
     }),
     versions: Object.fromEntries(LEARNING_PATHS.map((path) => [path.id, path.version])),
   };
