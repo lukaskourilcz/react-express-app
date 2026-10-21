@@ -28,6 +28,7 @@ import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
 import { FDE_C01 } from './fde/c01';
+import { FDE_DRYRUN } from './fde/dryrun';
 
 export const FDE_PATH: PathSource = {
   id: 'fde',
@@ -79,6 +80,7 @@ export const FDE_PATH: PathSource = {
     FDE_M09,
     FDE_M10,
     FDE_C01,
+    FDE_DRYRUN,
   ],
   bridges: [
     {
