@@ -262,7 +262,7 @@ export const FDE_M05_DATA: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Employers ask for this work by name. Bloomberry’s analysis of 1,000 FDE postings (November 2025) ranks integrating systems and APIs as the third most cited responsibility, in 32 % of them. Palantir’s Forward Deployed Software Engineer posting lists wrangling massive-scale data as part of the job.',
+            'Postings describe this work. Bloomberry’s analysis of 1,000 FDE postings (November 2025) ranks integrating systems and APIs as the third most cited responsibility, in 32% of them. Palantir’s Forward Deployed Software Engineer posting lists wrangling massive-scale data as part of the job.',
         },
         {
           kind: 'callout',
@@ -367,7 +367,7 @@ export const FDE_M05_DATA: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Index column order decides how much of the index a query scans. The multicolumn index page gives the rule: equality constraints on leading columns, plus an inequality on the first column without an equality, limit the portion of the index scanned. Three single-column indexes do not add up to one composite: the planner can combine them with a bitmap, but the page on combining indexes notes that the bitmap visits rows in physical order and loses any index ordering, so an ORDER BY needs a separate sort.',
+            'Index column order decides how much of the index a query scans. The multicolumn index page gives the rule: equality constraints on leading columns, plus an inequality on the first column without an equality, limit the portion of the index scanned. PostgreSQL 18 adds a B-tree skip scan, which can also use a later column when a leading column has few distinct values; it does not help when the leading column is unique. Three single-column indexes do not add up to one composite: the planner can combine them with a bitmap, but the page on combining indexes notes that the bitmap visits rows in physical order and loses any index ordering, so an ORDER BY needs a separate sort.',
         },
         {
           kind: 'code',
@@ -414,6 +414,8 @@ export const FDE_M05_DATA: ModuleSource = {
         { label: 'Danilo Sato: ParallelChange (martinfowler.com, 2014)', url: 'https://martinfowler.com/bliki/ParallelChange.html', reviewedOn: '2026-10-21' },
         { label: 'PostgreSQL documentation: ALTER TABLE', url: 'https://www.postgresql.org/docs/current/sql-altertable.html', reviewedOn: '2026-10-21' },
         { label: 'PostgreSQL documentation: CREATE INDEX', url: 'https://www.postgresql.org/docs/current/sql-createindex.html', reviewedOn: '2026-10-21' },
+        { label: 'PostgreSQL documentation: Explicit Locking (table-level lock modes)', url: 'https://www.postgresql.org/docs/current/explicit-locking.html', reviewedOn: '2026-10-21' },
+        { label: 'PostgreSQL documentation: Client Connection Defaults (lock_timeout)', url: 'https://www.postgresql.org/docs/current/runtime-config-client.html', reviewedOn: '2026-10-21' },
       ],
       sections: [
         {
@@ -428,9 +430,9 @@ export const FDE_M05_DATA: ModuleSource = {
           rows: [
             ['Extract', 'Reads the source: a file, the pages of an API, a SOAP call', 'Rows read, per source and run'],
             ['Validate', 'Maps each row to the target shape, or rejects it with a reason', 'Each rejected row with its position and reason'],
-            ['Stage', 'Holds the validated batch apart from the live table', 'Rows staged after in-batch duplicates'],
-            ['Load', 'Applies the batch in one transaction with an idempotent upsert', 'Rows applied, and rows that changed nothing'],
-            ['Reconcile', 'Checks the counts against each other', 'Read = applied + unchanged + rejected'],
+            ['Stage', 'Holds the validated batch apart from the live table and drops in-batch duplicates', 'Rows staged, and each dropped duplicate counted as unchanged'],
+            ['Load', 'Applies the batch in one transaction with an idempotent upsert', 'Rows applied, and rows that changed nothing, which join the unchanged count'],
+            ['Reconcile', 'Checks the counts against each other', 'Read = applied + unchanged + rejected, with duplicates inside unchanged'],
           ],
         },
         {
@@ -448,13 +450,13 @@ export const FDE_M05_DATA: ModuleSource = {
           kind: 'code',
           language: 'csv',
           code:
-            'account_id,region,name,email,updated_at\nacc-0002 ,south,"Fenwick, Hale & Co",accounts@fenwickhale.example,2026-03-01 10:30:00\nACC-0004,west,"Quill & Ledger ""Stationers""",finance@quillledger.example,2026-03-02 08:15:00',
-          caption: 'Two rows of the fixture export. Split on commas, the first row has six fields and its email column reads ` Hale & Co"`.',
+            'account_id,region,name,email,updated_at\nacc-0002 ,south,"Fenwick, Hale & Co",accounts@fenwickhale.example,2026-03-01 10:30:00\nACC-0004,west,"Quill & Ledger ""Stationers"""," Finance@QuillLedger.example ",2026-03-02 08:15:00',
+          caption: 'Two rows of the fixture export, copied as the exercise loads them. Split on commas, the first row has six fields and its email column reads ` Hale & Co"`.',
         },
         {
           kind: 'prose',
           body:
-            'Read columns by header name, not by position: this export puts `region` second, and next quarter’s may not. Trim and normalise the key before you compare it, since the export writes `acc-0002 ` where the CRM writes `ACC-0002`. And ask which character encoding the export uses. RFC 4180 notes that common usage is US-ASCII and that other character sets travel with a `charset` parameter. A file dropped on a shared drive carries no media type at all, so get the answer from the customer and write it into the integration notes.',
+            'Read columns by header name, not by position: this export puts `region` second, and next quarter’s may not. Trim and normalise the key before you compare it, since the export writes `acc-0002 ` where the CRM writes `ACC-0002`. The same goes for the email: the quotes around `" Finance@QuillLedger.example "` keep its spaces inside the field, so trim and lowercase it before you validate it. And ask which character encoding the export uses. RFC 4180 notes that common usage is US-ASCII and that other character sets travel with a `charset` parameter. A file dropped on a shared drive carries no media type at all, so get the answer from the customer and write it into the integration notes.',
         },
         {
           kind: 'prose',
@@ -471,7 +473,7 @@ export const FDE_M05_DATA: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'So read the fault code before you choose a retry. A client that retries every 500 resends an `env:MustUnderstand` fault, which arrives as a 500 too and fails the same way each time. A client that never retries a 500 gives up on a ledger that only needed to finish its nightly close.',
+            'So read the fault code before you choose a retry. A client that retries every 500 resends a message that drew an `env:MustUnderstand` fault, which arrives as a 500 too, and the message fails the same way each time. A client that never retries a 500 gives up on a ledger that only needed to finish its nightly close.',
         },
         {
           kind: 'prose',
@@ -480,15 +482,20 @@ export const FDE_M05_DATA: ModuleSource = {
         },
         {
           kind: 'table',
-          caption: 'Moving `email` to a new `billing_email` column without stopping the nightly load. Lock notes come from the PostgreSQL ALTER TABLE and CREATE INDEX pages.',
-          headers: ['Phase', 'Step', 'Why the load keeps running'],
+          caption: 'Moving `email` to a new `billing_email` column without stopping the nightly load. Lock notes come from the PostgreSQL ALTER TABLE, CREATE INDEX and explicit locking pages.',
+          headers: ['Phase', 'Step', 'Lock it takes, and why the load keeps running'],
           rows: [
-            ['Expand', '`ALTER TABLE accounts ADD COLUMN billing_email text`', 'With no default, or a non-volatile one, adding a column needs no table rewrite'],
-            ['Expand', '`CREATE INDEX CONCURRENTLY` on the new column', 'The build takes no lock that blocks inserts, updates or deletes; it cannot run inside a transaction block'],
-            ['Migrate', 'Write both columns, backfill old rows in batches, then move readers to the new column', 'Each step can stop and resume, and old readers still see the old column'],
-            ['Migrate', 'Add a CHECK constraint `NOT VALID`, then `VALIDATE CONSTRAINT`', 'The first commits without a scan; validation takes a lock that lets concurrent updates through'],
-            ['Contract', 'Stop writing `email`, then drop it', 'Only after no reader, report or job still uses it'],
+            ['Expand', '`ALTER TABLE accounts ADD COLUMN billing_email text`', 'A brief ACCESS EXCLUSIVE lock. With no default, or a non-volatile one, there is no table rewrite, so the statement commits quickly and releases the lock'],
+            ['Expand', '`CREATE INDEX CONCURRENTLY` on the new column', 'SHARE UPDATE EXCLUSIVE, which lets inserts, updates and deletes through; it cannot run inside a transaction block'],
+            ['Migrate', 'Write both columns, backfill old rows in batches, then move readers to the new column', 'ROW EXCLUSIVE, like any write. Each step can stop and resume, and old readers still see the old column'],
+            ['Migrate', 'Add a CHECK constraint `NOT VALID`, then `VALIDATE CONSTRAINT`', 'Adding it takes a brief ACCESS EXCLUSIVE lock and skips the scan. Validation scans under SHARE UPDATE EXCLUSIVE, which lets reads and writes through'],
+            ['Contract', 'Stop writing `email`, then drop it', 'Another brief ACCESS EXCLUSIVE lock, and only after no reader, report or job still uses the column'],
           ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Brief is not the same as harmless. ACCESS EXCLUSIVE conflicts with every other lock mode, including the one a plain SELECT takes, and an ALTER TABLE waits for any transaction that already holds a lock on the table. If the nightly load has a transaction open on `accounts`, the ALTER waits for it, and the queries that arrive after the ALTER queue behind it, so a one-millisecond change stalls the table for as long as the load runs. Run each ACCESS EXCLUSIVE step with a short `lock_timeout`, such as `SET lock_timeout = \'2s\'`, so PostgreSQL aborts the ALTER instead of letting it wait, and retry it until it lands between transactions.',
         },
         {
           kind: 'callout',
@@ -584,11 +591,11 @@ export const FDE_M05_DATA: ModuleSource = {
             'invoices 2, billed 400.',
             'invoices 2, billed 200.',
             'invoices 4, billed 400.',
-            'invoices 4, billed 200.',
+            'Two rows for C1, one per contact, each with invoices 2 and billed 200.',
           ],
           correct: 0,
           explanation:
-            'C1 has two invoices and two contacts, so the joins produce four rows for C1, one per invoice and contact pair. `COUNT(DISTINCT i.id)` collapses those to the two invoice ids. `SUM(i.amount)` has no DISTINCT and adds 120 and 80 twice each, giving 400. "invoices 2, billed 200" is what the author meant, and it needs the sum computed in a subquery before the contacts join. "invoices 4" would need a plain `COUNT(i.id)`. Four invoices beside a 200 sum cannot come out of this query, because the same four rows feed both aggregates.',
+            'C1 has two invoices and two contacts, so the joins produce four rows for C1, one per invoice and contact pair. `COUNT(DISTINCT i.id)` collapses those to the two invoice ids. `SUM(i.amount)` has no DISTINCT and adds 120 and 80 twice each, giving 400. "invoices 2, billed 200" is what the author meant, and it needs the sum computed in a subquery before the contacts join. "invoices 4" would need a plain `COUNT(i.id)`. One row per contact would need the contact in the GROUP BY; `GROUP BY c.id` puts all four rows for C1 into one group, whichever contact each came from.',
           competencies: ['data-plumbing'],
         },
         {
@@ -600,7 +607,7 @@ export const FDE_M05_DATA: ModuleSource = {
               "-- staging_accounts (export_row, account_id, email, updated_at)\n--   1  ACC-0007  old@wrenstreet.example    2026-03-04 10:00\n--   2  ACC-0007  shop@wrenstreet.example   2026-03-04 10:00\n--   3  ACC-0007  older@wrenstreet.example  2026-03-01 09:00\nSELECT account_id, email\nFROM (\n  SELECT s.*,\n         row_number() OVER (PARTITION BY account_id ORDER BY updated_at DESC) AS rn\n  FROM staging_accounts s\n) ranked\nWHERE rn = 1;",
           },
           options: [
-            'It returns one row for ACC-0007, with old@ or shop@; tied rows get numbers in an unspecified order, so add `export_row DESC` to the window ORDER BY.',
+            'It returns one row for ACC-0007, old@ or shop@, and two runs can disagree on which.',
             'It returns both 10:00 rows for ACC-0007, because `row_number` gives tied rows the same number.',
             'It returns shop@, because tied rows keep the order of `export_row` and the later export row is numbered first.',
             'It raises an error, because the window ORDER BY does not identify a single row in each partition.',
@@ -627,7 +634,7 @@ export const FDE_M05_DATA: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The multicolumn index rule: equality on leading columns, plus an inequality on the first column without an equality, limit the part of the index scanned. Equality on `tenant_id` first, then the range on `updated_at`, narrows the scan to one tenant’s recent rows, already in `updated_at, id` order, so the LIMIT stops after 500. `(updated_at, id)` matches the order, but every tenant’s rows sit interleaved in it, and the scan walks past other tenants’ rows to collect 500 of this one’s. Single-column indexes combine through a bitmap, which visits rows in physical order and loses the index ordering, so the database sorts every match before the LIMIT. `(id, tenant_id, updated_at)` leads with `id`, which has no equality constraint, so the tenant filter cannot narrow the scan.',
+            'The multicolumn index rule: equality on leading columns, plus an inequality on the first column without an equality, limit the part of the index scanned. Equality on `tenant_id` first, then the range on `updated_at`, narrows the scan to one tenant’s recent rows, already in `updated_at, id` order, so the LIMIT stops after 500. `(updated_at, id)` matches the order, but every tenant’s rows sit interleaved in it, and the scan walks past other tenants’ rows to collect 500 of this one’s. Single-column indexes combine through a bitmap, which visits rows in physical order and loses the index ordering, so the database sorts every match before the LIMIT. `(id, tenant_id, updated_at)` is ordered by `id`, so it cannot return rows in `updated_at, id` order and the database sorts every match before the LIMIT. And `id` is unique, so the PostgreSQL 18 skip scan has no repeated `id` values to skip between.',
           competencies: ['data-plumbing'],
         },
         {
@@ -653,21 +660,21 @@ export const FDE_M05_DATA: ModuleSource = {
         {
           id: 'fde-v1-m05-data-q6',
           prompt:
-            'The previous run read A and B, hit its LIMIT, and stored B’s `updated_at`, 10:00:00, as the watermark. No row changes before this run. Which rows does the load miss for good?',
+            'The previous run read Z, A and B, hit its LIMIT of 3, and stored B’s `updated_at`, 10:00:00, as the watermark. B, C and D tie, and on that run B happened to come first among them. No row changes before this run. Which rows does the load miss for good?',
           context: {
             language: 'sql',
             code:
-              "-- accounts: A 09:59:00 | B 10:00:00 | C 10:00:00 | D 10:00:00 | E 10:01:00\nSELECT id, updated_at\nFROM accounts\nWHERE updated_at > :watermark\nORDER BY updated_at\nLIMIT 3;",
+              "-- accounts: Z 09:58:00 | A 09:59:00 | B 10:00:00 | C 10:00:00 | D 10:00:00 | E 10:01:00\nSELECT id, updated_at\nFROM accounts\nWHERE updated_at > :watermark\nORDER BY updated_at\nLIMIT 3;",
           },
           options: [
             'C and D.',
             'None: this run returns C, D and E.',
             'None, but B loads a second time.',
-            'E, because LIMIT 3 stops at D.',
+            'B, because `>` excludes the watermark row itself.',
           ],
           correct: 0,
           explanation:
-            'C and D share 10:00:00 with B. The previous run stopped between B and C, and `updated_at > 10:00:00` excludes every row at exactly 10:00:00, so this run returns E alone and C and D never load unless someone edits them. A keyset on `(updated_at, id)` resumes after B itself and picks them up. Returning C, D and E would need `>=`, and with `>=` B comes back as well: that is the third option, a duplicate an idempotent upsert absorbs, and it describes a different query. E is the one row this query does return, so the LIMIT never cuts it off.',
+            'C and D share 10:00:00 with B. The previous run stopped between B and C, and `updated_at > 10:00:00` excludes every row at exactly 10:00:00, so this run returns E alone and C and D never load unless someone edits them. A keyset on `(updated_at, id)` resumes after B itself and picks them up. "This run returns C, D and E" describes that keyset, not this query: a timestamp alone cannot tell B from C. "B loads a second time" would need `>=`, and with `>=` and LIMIT 3 this run returns B, C and D, so it does more than repeat B. `>` does exclude B, but the previous run already loaded B, so nothing is lost there.',
           competencies: ['data-plumbing'],
         },
       ],
