@@ -442,6 +442,11 @@ export const FDE_M03: ModuleSource = {
         {
           label: 'OWASP SAML Security Cheat Sheet',
           url: 'https://cheatsheetseries.owasp.org/cheatsheets/SAML_Security_Cheat_Sheet.html',
+        {
+          label: 'OASIS, Profiles for SAML V2.0 (SAML Profiles), section 4.1, Web Browser SSO Profile',
+          url: 'https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf',
+          reviewedOn: '2026-10-21',
+        },
           reviewedOn: '2026-10-21',
         },
         {
@@ -583,13 +588,18 @@ export const FDE_M03: ModuleSource = {
             ],
             ['Current', '`NotBefore` and `NotOnOrAfter` hold at the current time', '`exp` lies in the future; `iat` falls inside the window you accept'],
             ['Answers your login', '`InResponseTo` matches a request you sent', '`nonce` matches the value you sent with the request'],
-            ['Used once', 'Keep the ids of accepted assertions until they expire and refuse a repeat', 'Keep accepted nonces and refuse a repeat'],
+            ['Used once', 'Keep the IDs of used assertions until their `NotOnOrAfter` passes and refuse a repeat', 'Keep accepted nonces and refuse a repeat'],
           ],
         },
         {
           kind: 'prose',
           body:
             'Decide the tenant from the provider connection that verified the assertion, never from an attribute inside it. An email address ending in @dunfold.example tells you what a provider asserted about a person. When Kestrel’s provider asserts that address, Kestrel’s provider is still the one talking. Map each configured issuer to exactly one tenant, and refuse an assertion whose verified issuer has no mapping.',
+        {
+          kind: 'prose',
+          body:
+            'The SAML column comes from two OASIS documents. SAML Core defines the audience and time conditions, and it requires a recipient to check `Destination` against the address where the message arrived. The SAML Profiles document, in its web browser SSO profile, requires the service provider to check `Recipient` and `InResponseTo`, and to keep the IDs of used bearer assertions until their `NotOnOrAfter` passes so that none is accepted twice. The OWASP SAML Security Cheat Sheet repeats these checks for a service provider and asks for replay detection at the response or assertion level.',
+        },
         },
         {
           kind: 'prose',
@@ -890,7 +900,7 @@ export const FDE_M03: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'A valid signature proves who issued the assertion. The audience, Destination and Recipient checks prove it was meant for Marlbrook, NotBefore and NotOnOrAfter prove it is current, InResponseTo ties it to a login Marlbrook started, and a store of accepted assertion ids stops a replay. SAML Core defines those conditions, and the OWASP SAML Security Cheat Sheet lists them for a service provider to validate. The email domain is a claim inside the assertion; the tenant comes from the provider connection that verified it, or Kestrel’s provider could sign people in to Dunfold. The OWASP cheat sheet says to verify with keys obtained from the provider and to ignore KeyInfo, since an attacker who signs with their own key would put that key in KeyInfo. A signature and an issuer say nothing about audience or freshness: the same provider signs assertions for every application it serves.',
+            'A valid signature proves who issued the assertion. The audience, Destination and Recipient checks prove it was meant for Marlbrook, NotBefore and NotOnOrAfter prove it is current, InResponseTo ties it to a login Marlbrook started, and a record of used assertion IDs stops a replay. SAML Core defines the audience and time conditions and requires the recipient to check Destination. The SAML Profiles document requires a service provider in web browser SSO to check Recipient and InResponseTo, and to keep the IDs of used bearer assertions until their NotOnOrAfter passes. The OWASP SAML Security Cheat Sheet lists these checks for a service provider and asks for replay detection at the response or assertion level. The email domain is a claim inside the assertion; the tenant comes from the provider connection that verified it, or Kestrel’s provider could sign people in to Dunfold. The OWASP cheat sheet says to verify with keys obtained from the provider and to ignore KeyInfo, since an attacker who signs with their own key would put that key in KeyInfo. A signature and an issuer say nothing about audience or freshness: the same provider signs assertions for every application it serves.',
           competencies: ['boundaries'],
         },
         {
