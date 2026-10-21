@@ -156,6 +156,14 @@ describe('sectionProgress', () => {
     expect(sectionProgress(entries, progress, {}).percent).toBeNull();
   });
 
+  it('shows a passed level as at least 1%, and nothing passed as 0%', () => {
+    const progress = { git: passed(1) };
+    const entries = railEntries('software-engineer', ctx(null, 'software-engineer', [], progress));
+    const many = Object.fromEntries(Object.keys(counts).map((topic) => [topic, 40]));
+    expect(sectionProgress(entries, progress, many)).toMatchObject({ passed: 1, percent: 1 });
+    expect(sectionProgress(entries, {}, many).percent).toBe(0);
+  });
+
   it('leaves dimmed topics out of the denominator', () => {
     const progress = { git: passed(10), general: passed(10), dsa: passed(10) };
     const entries = railEntries('software-engineer', ctx(frontend, 'software-engineer', ['web-developer'], progress));

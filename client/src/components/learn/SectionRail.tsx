@@ -110,8 +110,10 @@ export function SectionRail({
                 <span>{label}</span>
                 <span className="rm-topic-progress">
                   {premium && <span className="ss-premium-label">{t('premium.badge')}</span>}
+                  {/* Without the structure (its request failed) the level
+                      count is unknown: an open topic shows no figure. */}
                   {state === 'open'
-                    ? t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] ?? 0 })
+                    ? levelCounts[topic] === undefined ? null : t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] })
                     : state === 'locked' ? t('roadmap.locked') : learnText('learn.rail.notJoined')}
                 </span>
                 {also && <span className="rm-topic-also" aria-hidden="true">{learnText('learn.rail.alsoIn', { sections: also })}</span>}

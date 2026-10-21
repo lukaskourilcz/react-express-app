@@ -118,7 +118,11 @@ export function railEntries(id: LearnSectionId, ctx: RailContext): RailEntry[] {
 /** The section's progress figure: levels passed over levels available, across
  * the topics the learner can work toward (every entry but the dimmed ones;
  * all of them when every entry is dimmed). Topics only. null until the level
- * counts are known. */
+ * counts are known. A passed level always shows as at least 1%.
+ *
+ * Joining a section can lower its figure, and Web Developer's: the joined
+ * topics and their prerequisites (Node.js for a Frontend learner) join the
+ * total. That is accepted: the figure measures the plan, which just grew. */
 export function sectionProgress(
   entries: readonly RailEntry[],
   progress: VerifiedProgress,
@@ -133,7 +137,8 @@ export function sectionProgress(
     passed += Math.min(passedLevelCount(progress, topic), count);
     total += count;
   }
-  return { passed, total, percent: total > 0 ? Math.floor((100 * passed) / total) : null };
+  const percent = total > 0 ? Math.floor((100 * passed) / total) : null;
+  return { passed, total, percent: percent === 0 && passed > 0 ? 1 : percent };
 }
 
 /** What opens a section whose listed topics are all locked: the topic to pass

@@ -239,6 +239,9 @@ test.describe('Learn section states', () => {
     await page.goto('/learn/web-developer');
     await expect(page.getByRole('alert').filter({ hasText: 'Server error. Try again in a moment.' })).toBeVisible({ timeout: 15_000 });
     await expect(switcherItem(page, 'Software Engineer')).toBeVisible();
+    // The level counts come with the structure: no "n / 0 levels" meanwhile.
+    await expect(topicCard(page, 'HTML')).toBeVisible();
+    await expect(page.getByText(/\/ 0 levels/)).toHaveCount(0);
     state.failStructure = false;
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.locator('.rm-node').first()).toBeVisible();
