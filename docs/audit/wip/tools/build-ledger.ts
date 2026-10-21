@@ -1,6 +1,6 @@
 // Builds docs/audit/devshark-content-ledger.json from the review fragments
 // and the (post-rewrite) inventory. Usage:
-//   node build-ledger.mjs <inventoryDirAfterApply> <inventoryDirBeforeApply> <reviewDir> <csDir|-> <categories,comma> <completeCategories,comma|-> <codingTasks:true|false>
+//   node build-ledger.mjs <inventoryDirAfterApply> <inventoryDirBeforeApply> <reviewDir> <categories,comma> <completeCategories,comma|-> <codingTasks:true|false>
 // `categories` are the categories whose reviewed items get rows (an item of
 // one of them without a review is skipped and counted); `completeCategories`
 // are the ones every served item of which has a row — they enter the ledger's
@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = '/home/user/react-express-app';
-const [afterDir, beforeDir, reviewDir, csDir, categoriesArg, completeArg, codingArg] = process.argv.slice(2);
+const [afterDir, beforeDir, reviewDir, categoriesArg, completeArg, codingArg] = process.argv.slice(2);
 const categories = categoriesArg.split(',').map((s) => s.trim()).filter(Boolean);
 const complete = (completeArg && completeArg !== '-' ? completeArg.split(',') : []).map((s) => s.trim()).filter(Boolean);
 for (const c of complete) if (!categories.includes(c)) throw new Error(`complete category ${c} is not among the categories being built`);
@@ -45,7 +45,6 @@ const SURFACES: Record<string, string[]> = {
 const after = inventory(afterDir);
 const before = inventory(beforeDir);
 const reviews = rows(reviewDir);
-const cs = rows(csDir);
 
 const existing = existsSync(path.join(ROOT, 'docs/audit/devshark-content-ledger.json'))
   ? JSON.parse(readFileSync(path.join(ROOT, 'docs/audit/devshark-content-ledger.json'), 'utf8'))
@@ -71,15 +70,6 @@ for (const [id, it] of after.items) {
   const rewritten = r.decision === 'rewrite' && r.rewrite;
   const beforeItem = before.items.get(id);
   const scores = rewritten ? r.rewrite.rescored : { quality: r.quality, qualityScore: r.qualityScore, relevance: r.relevance, relevanceScore: r.relevanceScore };
-  const localization = cs.get(id);
-  let csRecord: any;
-  if (localization) {
-    csRecord = { status: localization.status, hash: localization.status === 'dropped' ? null : it.csHash, notes: localization.notes ?? '' };
-  } else if (r.cs && r.cs.status === 'verified' && !rewritten) {
-    csRecord = { status: 'verified', hash: it.csHash, notes: r.cs.notes ?? '' };
-  } else {
-    csRecord = { status: r.cs ? r.cs.status : 'missing', hash: null, notes: (r.cs && r.cs.notes) || 'Not served until the localisation pass records a Czech version for this wording.' };
-  }
   const row = {
     id,
     kind: 'question',
@@ -108,7 +98,6 @@ for (const [id, it] of after.items) {
     defects: r.defects ?? [],
     rationale: r.rationale,
     evidence: r.evidence ?? [],
-    cs: csRecord,
     ...(r.verification ? { verification: r.verification } : {}),
     reviewer: { kind: 'model', passes: r.verification ? ['item-review', 'second-reading'] : ['item-review'], run: 'claude-code session, 2026-09-09' },
     reviewedAt: today,

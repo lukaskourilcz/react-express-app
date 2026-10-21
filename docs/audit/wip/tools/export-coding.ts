@@ -4,7 +4,7 @@ import { CODING_TASKS } from '../../../../lib/coding/catalog';
 import { solutionFor } from '../../../../lib/coding/solutions';
 import { puzzleFor } from '../../../../lib/coding/puzzles';
 import { approachesFor } from '../../../../lib/coding/approaches';
-import { taskHash, taskTranslationHash } from '../../../../lib/curation';
+import { taskHash } from '../../../../lib/curation';
 import { levelCodingTasks } from '../../../../lib/coding/active';
 import { complexityGuidance } from '../../../../shared/coding-complexity';
 import { SKELETON_FILLS } from '../../../../scripts/fixtures/skeleton-fills';
@@ -54,7 +54,6 @@ for (const task of CODING_TASKS) {
     estimatedMinutes: task.estimatedMinutes,
     difficulty: task.difficulty ?? null,
     taskHash: taskHash(task, solution),
-    csHash: taskTranslationHash(task),
     title: task.title,
     prompt: task.prompt,
     complexityGuidance: complexityGuidance(task),
