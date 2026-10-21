@@ -55,6 +55,27 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
+  // The M11 release gate (#504): each gate taken out alone must fail its own
+  // critical criterion. The first is the issue's acceptance case: a gate that
+  // rolls out on a failed migration check.
+  'fde-v1-m11-deploy-release-gate': [
+    { label: 'a rollout over a failed migration', replace: ["if (migration.status !== 'applied') reasons", "if (migration.status === 'pending') reasons"], criterion: 'migration-gate' },
+    { label: 'a missing migration report read as no migrations', replace: ["if (!Array.isArray(migrations)) return ['migration:no-report'];", 'if (!Array.isArray(migrations)) return [];'], criterion: 'migration-gate' },
+    { label: 'a blank restore point accepted for an irreversible migration', replace: ['migration.reversible !== true && !hasRestorePoint', 'migration.reversible !== true && restorePoint === null'], criterion: 'migration-gate' },
+    { label: 'an empty probe list read as healthy', replace: ["if (!Array.isArray(probes) || probes.length === 0) return ['health:no-probes'];", "if (!Array.isArray(probes)) return ['health:no-probes'];"], criterion: 'health-gate' },
+    { label: 'only not_ready counted as unhealthy', replace: [".filter((probe) => probe.status !== 'ready')", ".filter((probe) => probe.status === 'not_ready')"], criterion: 'health-gate' },
+    { label: 'a required key nobody reported passing', replace: ['if (probe === undefined) reasons.push(`config:${key}:missing`);\n    else if', 'if (probe === undefined) continue;\n    if'], criterion: 'config-gate' },
+    { label: 'a configuration value written into the reason', replace: ['`config:${key}:${probe.state}`', '`config:${key}:${probe.state}:${probe.value}`'], criterion: 'config-gate' },
+    { label: 'a rollout left out of the log', replace: ['  log.record({', "  if (decision === 'hold') log.record({"], criterion: 'records-why' },
+    { label: 'reasons recorded in discovery order', replace: ['[...new Set(found)].sort()', '[...new Set(found)]'], criterion: 'records-why' },
+  ],
+  // M10 (file m08) injection and excessive-agency repair: the security gates
+  // each fail their own critical criterion when taken out.
+  'fde-v1-m08-untrusted-content': [
+    { label: 'the proposal’s tenant sent to the tool', replace: ['    tenantId: session.tenantId,\n    actor:', '    tenantId: request.tenantId,\n    actor:'], criterion: 'no-cross-tenant' },
+    { label: 'the recipient compared without normalising', replace: ["one.email.trim().toLowerCase() === wanted", 'one.email === request.recipient'], criterion: 'allowlisted-recipient' },
+    { label: 'another tenant’s article accepted as evidence', replace: ['    doc.tenantId === session.tenantId &&\n', ''], criterion: 'no-cross-tenant' },
+  ],
 };
 
 /** The authoring targets the curriculum documents commit to. A path that
