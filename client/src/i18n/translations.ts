@@ -1928,8 +1928,6 @@ export const en = {
   'paths.nonGoals': 'What this path does not cover',
   'paths.entryRequirement': 'What you need before starting',
   'paths.outline': 'Modules',
-  'paths.optionalTitle': 'Optional: placement and bridges',
-  'paths.optionalNote': 'Skippable. These recommend reading and never gate anything.',
   'paths.activities': 'Activities in this module',
   'paths.progressTitle': 'Where you are',
   'paths.portfolioSelfReviewed': 'Written pieces you review yourself',
@@ -1937,7 +1935,9 @@ export const en = {
   'paths.portfolioCount': '{submitted} of {total} submitted',
   'paths.completionNote': 'Completion describes what you passed in these exercises. It is not a certification, not evidence of production experience, and not a claim about employment.',
   'paths.bridgesNote': 'Based on what the diagnostic measured. Recommendations only — none of these is required, and none grants an exemption.',
-  // Diagnostic overview copy is loaded with the path screens in translations.paths.ts.
+  // Diagnostic overview, shelf, scenario and fixture-note copy, the optional
+  // section and the activity-kinds note load with the path screens in
+  // translations.paths.ts.
   'paths.bridgesTitle': 'Suggested bridges',
   'paths.result': 'Result',
   'paths.score': 'Score {percent}%',
@@ -1964,7 +1964,6 @@ export const en = {
   'paths.module.optional': 'Optional',
   'paths.module.complete': 'Complete',
   'paths.module.inProgress': 'In progress',
-  'paths.activityKinds': 'Lessons explain the idea, concept checks confirm you followed it, code-reading questions test that you can follow someone else’s work, and the exercises are where you produce your own. Later modules bring earlier material back on purpose — a check you have seen before is the plan working, not the plan slipping.',
   'paths.inventory.modules': 'modules',
   'paths.inventory.lessons': 'lessons',
   'paths.inventory.checks': 'checks',
