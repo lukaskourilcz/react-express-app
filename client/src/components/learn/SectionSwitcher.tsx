@@ -31,6 +31,15 @@ const browseOnly = () => {};
 // the scroller.
 const RING_SPACE = 6;
 
+/** Scroll `scroller` the least needed to show `item` with its focus ring. */
+function keepInView(scroller: HTMLElement, item: Element) {
+  if (scroller.scrollWidth <= scroller.clientWidth) return;
+  const box = scroller.getBoundingClientRect();
+  const { left, right } = item.getBoundingClientRect();
+  if (left - RING_SPACE < box.left) scroller.scrollLeft -= box.left - left + RING_SPACE;
+  else if (right + RING_SPACE > box.right) scroller.scrollLeft += right + RING_SPACE - box.right;
+}
+
 export function SectionSwitcher({ value, items, onActivate }: {
   value: LearnSectionId;
   items: readonly SwitcherItem[];
@@ -41,24 +50,23 @@ export function SectionSwitcher({ value, items, onActivate }: {
   // Keep the open section in view inside a narrow scroller, centred so its
   // neighbours show at the edges. Only the scroller moves: scrollIntoView
   // could also scroll the page.
+  // The open section can change after focus has already moved on (the address
+  // updates first), so a focused item is kept in view after the centring.
   useEffect(() => {
     const scroller = scrollerRef.current;
     const item = scroller?.querySelector<HTMLElement>(`[role="radio"][data-value="${value}"]`);
     if (!scroller || !item || scroller.scrollWidth <= scroller.clientWidth) return;
     const left = item.getBoundingClientRect().left - scroller.getBoundingClientRect().left + scroller.scrollLeft;
     scroller.scrollLeft = left - (scroller.clientWidth - item.offsetWidth) / 2;
+    const focused = document.activeElement?.closest('[role="radio"]');
+    if (focused && scroller.contains(focused)) keepInView(scroller, focused);
   }, [value]);
 
   // Browsing with the arrow keys moves focus to an item the scroller may cut
   // off. Bring the whole item, focus ring included, into view.
   const onFocus = (event: FocusEvent<HTMLDivElement>) => {
-    const scroller = event.currentTarget;
     const item = (event.target as HTMLElement).closest('[role="radio"]');
-    if (!item || scroller.scrollWidth <= scroller.clientWidth) return;
-    const box = scroller.getBoundingClientRect();
-    const { left, right } = item.getBoundingClientRect();
-    if (left - RING_SPACE < box.left) scroller.scrollLeft -= box.left - left + RING_SPACE;
-    else if (right + RING_SPACE > box.right) scroller.scrollLeft += right + RING_SPACE - box.right;
+    if (item) keepInView(event.currentTarget, item);
   };
 
   return (
