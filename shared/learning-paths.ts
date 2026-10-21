@@ -14,6 +14,7 @@
  * A learning path references those registries; it never joins them. */
 
 import type { Localized, LocalizedList } from './coding-catalog';
+import { isLearnSectionId, type LearnSectionId } from './learn-sections';
 
 export type { Localized, LocalizedList };
 
@@ -488,6 +489,11 @@ export interface LearnerProfile {
   baseTrack: BaseTrack;
   specialization: RoleSpecializationId | null;
   skillPaths: SkillPathId[];
+  /** Learn sections the learner chose to join (`shared/learn-sections.ts`).
+   * Missing means none chosen: Web Developer comes with the base track and
+   * Forward Deployed Engineer with the `fde` specialization regardless, so
+   * only an opt-in section such as Software Engineer needs saving here. */
+  sections?: LearnSectionId[];
   goals: LearnerGoal[];
   experience: ExperienceLevel;
   studyTime: StudyTime;
@@ -523,11 +529,17 @@ export function parseLearnerProfile(value: unknown): LearnerProfile | null {
   const skillPaths = Array.isArray(raw.skillPaths)
     ? Array.from(new Set(raw.skillPaths.filter(isSkillPathId)))
     : [];
+  // Unknown section ids are dropped; a missing or malformed list stays
+  // missing, which means "none chosen", never a guess.
+  const sections = Array.isArray(raw.sections)
+    ? Array.from(new Set(raw.sections.filter(isLearnSectionId)))
+    : undefined;
   return {
     schemaVersion: 2,
     baseTrack: raw.baseTrack,
     specialization: isRoleSpecializationId(raw.specialization) ? raw.specialization : null,
     skillPaths,
+    ...(sections ? { sections } : {}),
     goals,
     // An unreadable answer is a missing answer, not a default one.
     experience: isExperienceLevel(raw.experience) ? raw.experience : ('' as ExperienceLevel),
