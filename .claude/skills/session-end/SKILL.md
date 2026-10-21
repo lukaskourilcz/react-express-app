@@ -15,7 +15,10 @@ Run before **ending** an agentic session on this repo.
    `about-project.md`, `scaling.md`, or `monetization.md`.
 4. For anything that changed production behaviour, add the entry to
    `docs/release-acceptance.md` in the shape `.claude/skills/ci-parity-and-pr/SKILL.md`
-   gives, with results you actually saw.
+   gives, with results you actually saw. Write it after the merge and the READY
+   production deployment, and commit it with the `NEEDED.md` updates on a short
+   branch with its own pull request (the skill's "After the merge"). Work that
+   is not merged yet gets the local-evidence form of the entry.
 
 ## NEEDED.md marker format (shared across all repos)
 
