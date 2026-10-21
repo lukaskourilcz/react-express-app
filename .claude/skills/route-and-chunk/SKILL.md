@@ -41,8 +41,9 @@ Use with `shark-screen-implementation`, which owns the screen itself. This skill
 - Header rules live in `routes`, before `{ "handle": "filesystem" }`, each with `"continue": true`, `headers`, no `dest` and no `status`. A top-level `headers` property is refused: Vercel appends it after the hit phase, where it reaches existing files only.
 - The `handle` entries are `filesystem` then `hit`, once each. The `hit` phase may only add headers; the year-long `immutable` cache for `/assets/` lives there.
 - The filesystem phase starts with the 404 `no-store` rule for a missing asset. No rewrite may match an `/assets/` or `/sandbox/assets/` path, and the SPA fallback still serves `/`, `/coding` and `/profile`.
-- A prerender rewrite sits before the SPA fallback, as `/coding/:track/:taskId` does.
 - `scripts/check-security.mjs` reads the app's CSP from the first header route whose `src` starts with `^/(?!`. A new page-wide header rule needs another `src` shape, or it shadows the app's rule in that check.
+
+A prerender rewrite must sit before the SPA fallback in `vercel.json` `rewrites`: Vercel tries rewrites in order, and the fallback matches almost every path, so a rewrite after it is never reached. The contract checks that order only for `/coding/:track/:taskId` (`taskRewrite`) and the system-design paths. Add an assertion for a new rewrite to `vercelRoutingContracts()` beside `taskRewrite`, or nothing catches a misplaced one.
 
 ## Responsive fixtures
 
@@ -55,7 +56,7 @@ Use with `shark-screen-implementation`, which owns the screen itself. This skill
 
 - `tests/browser/fake-session.ts` gives a spec a signed-in visitor without a server: `storeFakeSession(page)` writes a session no server issued under supabase-js's key, and `localAuth(page)` answers `/auth/v1/*` locally. Answer the page's `/api/**` requests with `page.route`, as `tests/browser/profile-leaderboard-preferences.spec.ts` does.
 - The session key comes from the placeholder Supabase URL in `docs/quality/bundle-budget.json`, so the preview must be built with that URL and anon key exported, as CI's build step does.
-- Playwright reads `TEST_BASE_URL` (default `http://localhost:4173`) and `CHROME_BIN` (`playwright.config.ts`). CI runs only the specs `quality.yml` names, one command each; add a new spec to that list or it never runs in `verify`.
+- Playwright reads `TEST_BASE_URL` (default `http://localhost:4173`) and `CHROME_BIN` (`playwright.config.ts`). CI runs only the specs listed in the "Browser checks" step of `.github/workflows/quality.yml`; add a new spec there or it never runs in `verify`.
 - `tests/browser/routes-axe.spec.ts` scans whole pages against WCAG 2.2 AA for the routes in its `ROUTES`. Add a public route there.
 
 ## Validation
