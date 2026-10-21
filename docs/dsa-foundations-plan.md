@@ -1,5 +1,7 @@
 # DSA Foundations: standalone learning path
 
+> **Superseded on 21 October 2026.** The owner decided that DSA Foundations is not a standalone path: it folds into Learn as the DSA Foundations and DSA Advanced topics of the Software Engineer section. See section 12 of [the Learn sections plan](learn-sections-fde-flagship-plan.md). The scope, complexity coverage and coding inventory below remain the content reference for that fold.
+
 Added 8 September 2026 following the owner's expanded request. This plan complements [FDE research](fde-learning-path-research.md) and uses the [shared path implementation](fde-implementation-plan.md). It is a focused skill path, not a job specialization or fourth engineering track.
 
 ## Outcome and entry

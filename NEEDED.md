@@ -1,9 +1,11 @@
 # NEEDED — remaining tasks
 
-## Learn sections and the FDE flagship (proposal of 21 Oct 2026)
+## Learn sections, the FDE flagship, DSA into Learn and English only (approved 21 Oct 2026)
 
-- [ ] **Approve the Learn sections and FDE flagship proposal** — read [docs/learn-sections-fde-flagship-plan.md](docs/learn-sections-fde-flagship-plan.md) and answer its eight decisions (D1–D8 in section 10: v1 in place or v2, the membership matrix, the free taster, route moves, SQL spike, interview prep placement, Software Engineer opt-in, Career page). D1 needs one read of `learning_path_enrollments` in production and the state of `LEARNING_PATH_FDE_ENABLED`. Once approved, an agent creates the GitHub issues for Epics A and B from section 9. [imp:5] [owner:me] [time:45m] [kind:decision]
-- [ ] **Approve the agent workflow audit** — [docs/agent-workflow-audit.md](docs/agent-workflow-audit.md) proposes ten skills, three agents, six commands and eight stale-doc fixes as Epic C. Say which to create; C1 (CI parity and the PR flow) and C4 (learning-path module authoring) pay back first. [imp:4] [owner:me] [time:20m] [kind:decision]
+The owner approved [docs/learn-sections-fde-flagship-plan.md](docs/learn-sections-fde-flagship-plan.md) and [docs/agent-workflow-audit.md](docs/agent-workflow-audit.md) on 21 October 2026 with the decisions in the plan's section 10. The GitHub issues of epics A to E are the backlog; [docs/handoff-opus-2026-10-21.md](docs/handoff-opus-2026-10-21.md) is the prompt that starts the implementation in a fresh terminal session.
+
+- [ ] **Set `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production** once the FDE release verification issue (B14) is merged and its acceptance entry is in `docs/release-acceptance.md`; redeploy. The path then opens to Premium accounts, with the diagnostic and the first module free. [imp:4] [owner:me] [time:5m] [kind:deploy]
+- [ ] **Run the handoff prompt for the implementation session** — paste `docs/handoff-opus-2026-10-21.md` into a terminal session on this repository. It names the reading order, the issue order and the rules. [imp:5] [owner:me] [time:5m] [kind:setup]
 
 ## Launch audit, 29 Sep 2026 (before registrations open)
 
