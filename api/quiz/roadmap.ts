@@ -52,6 +52,7 @@ import { claimOnce, enforceClassRateLimit, enforceRateLimit, limitRead, RATE_LIM
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
+import { isLearnCodingTopic } from '../../shared/coding-catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingApproaches, handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import {
@@ -116,10 +117,8 @@ const logEvent = createLogger('quiz/roadmap');
 /** The level map marks devShark code levels that end with coding tasks, so the
  * learner sees the extra work before opening the level. Counts only; the task
  * ids stay sealed in the level session. */
-const isCodeTopic = (topic: string): topic is 'javascript' | 'typescript' | 'react' =>
-  topic === 'javascript' || topic === 'typescript' || topic === 'react';
 function withCodingCounts(topic: string, live: RoadmapTopicStructure): RoadmapTopicStructure {
-  if (!isCodeTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
+  if (!isLearnCodingTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
   return {
     ...live,
     levels: live.levels.map((level) => {
@@ -177,8 +176,7 @@ async function playableResponse(input: {
   // devShark Learn levels of the code topics carry coding tasks. Their ids are
   // sealed into the session so completion can insist on every one passing;
   // each task gets its own coding session bound to this level attempt.
-  const codingTasks = input.kind === 'level' && subject === 'webdev' &&
-    (input.topic === 'javascript' || input.topic === 'typescript' || input.topic === 'react')
+  const codingTasks = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
     ? levelCodingTasks(input.topic, input.ref)
     : [];
   const sessionId = encodeSession(built.answerKey, {

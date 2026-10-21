@@ -46,12 +46,23 @@ export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
 
 /** Tracks whose `level` is a Learn level, and so worth naming to the learner.
- * System design carries no level at all, and `algorithms` carries one only to
- * order its challenges — calling it "Level 6" would claim a place in a
- * curriculum the challenge is not part of. */
+ * System design carries no level at all. An `algorithms` task with topic
+ * `algorithms` carries one only to order its challenges, and calling it
+ * "Level 6" would claim a place in a curriculum the challenge is not part of.
+ * The DSA Foundations tasks sit on the algorithms track with topic `dsa`
+ * (and, from E4, `dsa-advanced`): their level is a DSA Learn level, so it is
+ * named. */
 const LEARN_LEVEL_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
-export const hasLearnLevel = (task: { track: CodingTrack; level: number }): boolean =>
-  task.level > 0 && LEARN_LEVEL_TRACKS.includes(task.track);
+export const hasLearnLevel = (task: { track: CodingTrack; level: number; topic?: CodingTask['topic'] }): boolean =>
+  task.level > 0 && (LEARN_LEVEL_TRACKS.includes(task.track) || task.topic === 'dsa' || task.topic === 'dsa-advanced');
+
+/** The Learn topics whose levels seal coding tasks into a level attempt
+ * (`levelCodingTasks` in `lib/coding/active.ts`, `api/quiz/roadmap.ts`).
+ * E4 appends `dsa-advanced`. */
+export const LEARN_CODING_TOPICS = ['javascript', 'typescript', 'react', 'dsa'] as const;
+export type LearnCodingTopic = (typeof LEARN_CODING_TOPICS)[number];
+export const isLearnCodingTopic = (topic: string): topic is LearnCodingTopic =>
+  (LEARN_CODING_TOPICS as readonly string[]).includes(topic);
 
 /** Tier ids, used as translation-key suffixes (`coding.tier.<id>`). */
 export const CODING_TIERS: Record<CodingTier, string> = {
@@ -191,9 +202,11 @@ export interface CodingTask {
   legacyId?: string;
   track: CodingTrack;
   /** Learn topic the task belongs to; system design tasks carry no Learn level.
-   * `algorithms` is a topic of its own so an interview-prep challenge can
-   * never be drawn into a Learn level's quota. */
-  topic: 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms';
+   * Algorithms tasks carry topic `algorithms`, a topic of its own, so an
+   * interview-prep challenge can never be drawn into a Learn level's quota.
+   * The DSA Foundations tasks sit on the algorithms track with topic `dsa`
+   * and fill the DSA Learn levels; `dsa-advanced` is reserved for E4. */
+  topic: 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms' | 'dsa' | 'dsa-advanced';
   /** Learn level 1–25 (index into LEVEL_TITLES). 0 for system design. */
   level: number;
   tier: CodingTier;
@@ -239,6 +252,9 @@ export interface CodingTask {
 export interface CodingTaskSummary {
   id: string;
   track: CodingTrack;
+  /** The Learn topic, present only where it differs from the track: the DSA
+   * Foundations tasks (`dsa`) on the algorithms track. */
+  topic?: CodingTask['topic'];
   level: number;
   tier: CodingTier;
   /** The resolved label (`difficultyOf`), written into the index at build time. */

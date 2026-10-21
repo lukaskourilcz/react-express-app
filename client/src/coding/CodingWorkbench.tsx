@@ -1012,7 +1012,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const Title = mode === 'section' ? 'h1' : 'h2';
   const briefMeta = evolution
     ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length })
-    : `${trackLabel} · ${tierLabel}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
+    : `${trackLabel} · ${tierLabel}${task.topic === 'dsa' ? ` · ${t('category.dsa')}` : ''}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
 
   // The brief opens the pane the learner works in, whichever pane that is: one
   // green line with where the task sits and what it is called, then what it asks.

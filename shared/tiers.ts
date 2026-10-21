@@ -173,7 +173,6 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
   'alg-merge-sorted',
   'alg-easy2-fibonacci-memo',
 ];
-const FREE_CODING_TASKS = new Set(FREE_CODING_TASK_IDS);
 
 /** Something a learner starts. `stage` is one-based. */
 export type GatedContent =
@@ -241,12 +240,17 @@ function evolvingStageFree(challengeId: string, stage: number, evolving: Content
   return stage <= freeStageCount(challenge.stages);
 }
 
+/** Built on first use, not at load: a module-level `new Set` is a side
+ * effect the bundler keeps, and it kept the whole id list in the initial
+ * download, which reads none of it. */
+let freeCodingTaskSet: ReadonlySet<string> | undefined;
+
 /** Whether the free tier includes a coding task: the starter set and the
  * opening stages of every evolving project and short path.
  * `build:coding-index` projects this into the index; everything else reads the
  * projected flag. */
 export function isFreeCodingTask(taskId: string): boolean {
-  if (FREE_CODING_TASKS.has(taskId)) return true;
+  if ((freeCodingTaskSet ??= new Set(FREE_CODING_TASK_IDS)).has(taskId)) return true;
   const stage = evolvingStageNumber(taskId);
   return stage !== null && evolvingStageFree(stage.challengeId, stage.stage, EVOLVING_CHALLENGES);
 }
