@@ -4,12 +4,12 @@ Copy a template, fill every placeholder in angle brackets, and delete nothing bu
 
 ## Child issue
 
-Read from #484–#517 (current form). #130–#148 carry the same five parts under older headings; the mapping is at the end of this file.
+Read from #485–#517 (current form). #484 also links the plan on its `Parent:` line; the epic's Specification already links it, so the children leave it out. #130–#148 carry the same five parts under older headings; the mapping is at the end of this file.
 
 Title: `[<Id>] <work package in one line>`, where `<Id>` is the epic letter and the child's number in the plan's work-package table (`A1`, `B12`, `C6`).
 
 ```markdown
-Parent: #<epic> (Epic <letter>). <Plan|Audit>: section <n>[, section <m>] in [<document name>](https://github.com/lukaskourilcz/react-express-app/blob/main/docs/<document>.md).
+Parent: #<epic> (Epic <letter>). <Plan|Audit>: section <n>. (or: sections <n> and <m>.)
 
 ## Scope
 <What changes, named by file, export or route. One paragraph, or a numbered list when the steps have an order. Name the decision ids (D3, D9) the scope follows.>
@@ -57,7 +57,7 @@ An epic created before its children carries the child map as a placeholder list 
 
 ## Design-audit finding
 
-Read from #240–#264 (`design-audit`) and #270–#306 (`design-review-2`).
+Read from #270–#306 (`design-review-2`). #240–#264 (`design-audit`) use the same sections with two different lines: `Audit references: <page> <number>` with no Files part in place of the Files line, and `Audit page: [<page file>](...) — findings <page> <number>.` in place of the Review page line.
 
 Title: `Design audit <P-id>: <finding>` or `Design review 2 <R2-P-id>: <finding>`. Labels: the audit label plus one priority label (`P0`, `P1` or `P2`).
 
@@ -135,11 +135,11 @@ Read from `docs/design/audit-2026-09-27-closeout.md` and `docs/design/review-202
 
 | Current heading | Heading in #130–#148 |
 |---|---|
-| `Parent:` line | `Parent: #128` and a `## Specification` link line |
+| `Parent:` line | `Parent: #128` or `Parent: #129` (the FDE or DSA epic; #130–#133 add "(shared with #129)") and a `## Specification` link line |
 | `## Scope` | `## Why / scope` |
 | `## Affected files` | `## Affected files` |
 | `## Blocked by` | `## Dependencies`, one `- Blocked by #<n>: <title>` line per blocker, or "None. Start here." |
 | `## Acceptance` | `## Acceptance criteria` |
 | `## Verification` | `## Verification` |
 
-Those issues also ended with a `## Delivery constraints` paragraph that repeated the epic's rules. The current form moves shared rules into the epic body instead.
+The older order differs too: Why / scope, Specification, Dependencies, Affected files, Acceptance criteria, Verification, then a `## Delivery constraints` paragraph that repeated the epic's rules (and, on every one of them, a later `## September 8 requirement update` section). The current form puts Affected files before Blocked by and moves shared rules into the epic body.
