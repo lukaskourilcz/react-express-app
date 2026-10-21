@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {solutionFor} from '../../../../lib/learning-paths/solutions';
+import {assessComplexity} from '../../../../lib/coding/complexity';
+import {codingPassXp} from '../../../../shared/coding-complexity';
+const path=LEARNING_PATHS.find(p=>p.id==='fde')!;const module=path.modules.find(m=>m.id==='fde-v1-m08')!;const lessons=module.lessons;const reads=module.activities.filter(a=>a.kind==='lesson');const activity=module.activities.find(a=>a.kind==='code')!;assert.equal(lessons.length,2);assert.equal(reads.length,2);for(const a of reads){assert.equal(a.verification,'self_reviewed');assert(lessons.some(l=>l.id===a.lessonId));}
+const worker=JSON.parse(readFileSync(process.argv[2],'utf8'));assert.equal(worker.length,6);for(const r of worker){assert.equal(r.state,r.expected);assert.equal(r.contentHash,nativeContentHash(activity));assert.equal(r.gradingHash,nativeGradingHash(activity));}
+const manual=JSON.parse(readFileSync(process.argv[3],'utf8'));for(const source of [solutionFor(activity.id)!.solution,manual[activity.id].alternative]){const report=assessComplexity({track:activity.code!.language,prompt:activity.code!.prompt,tests:activity.code!.tests},source);assert.equal(report.guidance.targetTime,'O(n)');assert.notEqual(report.assessment,'above-target');assert.equal(codingPassXp(report),25);}
+const codeAt=(lesson:number,index:number)=>{const s=lessons[lesson].sections[index];assert(s.kind==='code');return s.code;};
+// Manually read authored snippets only. DB is an inert recorder, not a real service.
+new Function('return (async()=>{'+codeAt(0,3)+'\n});');new Function('return (async()=>{'+codeAt(0,11)+'\n});');
+const calls:{ids:string[];context:unknown}[]=[];const registry:Record<string,{handler:(ids:unknown,session:unknown)=>unknown}>={};runInNewContext(codeAt(1,5),{registry,db:{markHidden:(ids:string[],context:unknown)=>{calls.push({ids,context});return {ok:true};}}});
+const hide=registry['cases.hide'].handler;const session={tenantId:'OWN',operatorId:'USER'};assert.equal(JSON.stringify(hide(Array.from({length:200},(_,i)=>'C'+i),session)),'{"ok":false,"reason":"too_many_ids"}');assert.equal(calls.length,0);assert.equal(JSON.stringify(hide([''],session)),'{"ok":false,"reason":"invalid_ids"}');assert.equal(calls.length,0);assert.equal(JSON.stringify(hide(Object.freeze(Array.from({length:25},(_,i)=>'C'+i)),session)),'{"ok":true}');assert.equal(calls.length,1);assert.equal(calls[0].ids.length,25);assert.equal(JSON.stringify(calls[0].context),' {"tenantId":"OWN","hiddenBy":"USER","restorableFor":"30d"}'.trim());assert.equal(30-12,18);
+writeFileSync(process.argv[4],JSON.stringify({checkedRecords:5,records:[...lessons.map(l=>({id:l.id,contentHash:nativeContentHash(l),gradingHash:null})),...reads.map(a=>({id:a.id,contentHash:nativeContentHash(a),gradingHash:nativeGradingHash(a)})),{id:activity.id,contentHash:nativeContentHash(activity),gradingHash:nativeGradingHash(activity)}],checks:['six real sandbox verdicts; ignored-field getters, stored-recipient identity, frozen inputs and1000document/contact boundaries','two valid unpenalized authored targets','trusted25-idcap refuses200before inert DB recorder; restore-window arithmetic only','no live model, human approval, source trust verification, export delivery, database policy, recovery/purge or universal injection-safety claim']},null,2),{mode:0o600});
+console.log('PASS five security records, sandbox ignored fields and actual cap illustration');

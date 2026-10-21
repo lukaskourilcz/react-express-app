@@ -555,11 +555,11 @@
 .cd-run__body { display: contents; }
 .cd-run--collapsed { gap: 0; }
 .cd-run__toggle-heading { margin: 0; font: inherit; }
-.cd-run__toggle { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cd-run__toggle { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .cd-run__toggle > span:first-child { font-family: var(--font-family-heading); font-weight: 700; font-size: 1.05rem; color: var(--color-text-primary); }
-.cd-run__chevron { margin-left: auto; font-weight: 700; color: var(--color-text-accent); }
+.cd-run__chevron { display: grid; place-items: center; width: 44px; height: 44px; font-size: 1.75rem; line-height: 1; font-weight: 600; color: var(--color-text-accent); }
 .cd-run__toggle:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
-.cd-run__head { display: grid; gap: 4px; }
+.cd-run__head { display: grid; gap: 4px; text-align: center; }
 .cd-run__head .cd-lead { margin-top: 0; }
 .cd-run__form { display: grid; gap: 16px; }
 .cd-run__field { display: grid; gap: 8px; }
@@ -690,3 +690,10 @@
 /* Compact samples keep every output tab readable instead of clipping labels. */
 .cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; }
 .cd-workbench--landing .cd-tab { flex: 0 0 auto; min-height: 44px; padding: .5rem; font-size: .75rem; }
+
+.cd-complete { width: 100%; max-width: 640px; margin-inline: auto; }
+.cd-complete .cd-verdict { margin-bottom: 20px; }
+.cd-verdict--warning { border-color: var(--ss-warning); background: var(--ss-warning-soft); color: var(--ss-warning); }
+.cd-complete .cd-verdict__actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.cd-brief-refresh { min-height: 44px; }

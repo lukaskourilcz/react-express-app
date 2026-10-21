@@ -451,28 +451,44 @@ export function normalizeSettings(raw: unknown): GameSettings {
 }
 
 let cache: { at: number; value: GameSettings } | null = null;
+let cacheRevision = 0;
+let inflight: { revision: number; promise: Promise<GameSettings> } | null = null;
 
 /** Serve these settings until reset (tests only); null restores the store. */
 export function setGameSettingsForTests(value: GameSettings | null): void {
+  cacheRevision++;
+  inflight = null;
   cache = value ? { at: Number.POSITIVE_INFINITY, value } : null;
 }
 
-export async function getGameSettings(): Promise<GameSettings> {
-  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.value;
-  let value = DEFAULT_SETTINGS;
+async function readGameSettings(): Promise<GameSettings> {
   if (supabase) {
     try {
       const { data } = await withTimeout(
         supabase.from(TABLE).select('value').eq('key', KEY).maybeSingle(),
         4000,
       );
-      if (data?.value) value = normalizeSettings(data.value);
+      if (data?.value) return normalizeSettings(data.value);
     } catch {
       // missing table / timeout — fall back to defaults
     }
   }
-  cache = { at: Date.now(), value };
-  return value;
+  return DEFAULT_SETTINGS;
+}
+
+export function getGameSettings(): Promise<GameSettings> {
+  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return Promise.resolve(cache.value);
+  if (inflight?.revision === cacheRevision) return inflight.promise;
+  const revision = cacheRevision;
+  const promise = readGameSettings().then((value) => {
+    // A successful save/reset wins over a read started before it.
+    if (revision === cacheRevision) cache = { at: Date.now(), value };
+    return value;
+  });
+  inflight = { revision, promise };
+  const clear = () => { if (inflight?.promise === promise) inflight = null; };
+  void promise.then(clear, clear);
+  return promise;
 }
 
 /** Persist a full settings object (already validated by normalizeSettings). */
@@ -487,6 +503,7 @@ export async function saveGameSettings(raw: unknown): Promise<GameSettings> {
     5000,
   );
   if (error) throw new Error(error.message);
+  cacheRevision++;
   cache = { at: Date.now(), value };
   return value;
 }

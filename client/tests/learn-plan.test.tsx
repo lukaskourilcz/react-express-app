@@ -311,7 +311,7 @@ describe('Premium on Today', () => {
   it('says Premium opens the next level when nothing free is left to start', async () => {
     signInAs(BACKEND);
     const allPassed = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [String(i + 1), MASTERED]));
-    answer({ progress: { javascript: { levels: allPassed, checkpoints: {} } } });
+    answer({ progress: { javascript: { levels: allPassed, checkpoints: {} }, dsa: { levels: { '1': MASTERED, '2': MASTERED }, checkpoints: {} } } });
     await mountAt('/today', <Today />);
     expect(await screen.findByText('Premium opens your next level')).toBeInTheDocument();
     expect(screen.queryByText('Nothing is due today. A new plan is ready tomorrow.')).toBeNull();

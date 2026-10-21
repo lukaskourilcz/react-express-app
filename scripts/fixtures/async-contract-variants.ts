@@ -1,0 +1,3 @@
+// Valid alternatives exercise scheduling and Promise identity without narrowing the task contracts.
+export const DEFERRED_SEQUENTIAL_START = "const runSequentially = tasks => { const initial = Array.from(tasks); return Promise.resolve().then(async () => { const out=[]; for(const task of initial) out.push(await task()); return out; }); };";
+export const RETHROWING_SHARED_PROMISE = "const shareRequests=(fetchRate,ttlMs,now)=>{const cache=new Map();return key=>{const time=now(),saved=cache.get(key);if(saved&&time-saved.at<ttlMs)return saved.promise;const entry={at:time};entry.promise=fetchRate(key).catch(reason=>{if(cache.get(key)===entry)cache.delete(key);throw reason;});cache.set(key,entry);return entry.promise;};};";

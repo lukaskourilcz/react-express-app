@@ -1,167 +1,103 @@
 # React grading operations
 
-Learner React code must never run in the application server. Coding submissions
-and learning-path activities use a disposable Vercel Sandbox. The existing
-jsdom/React/Testing Library grader runs inside that VM, without application
-credentials, network access, or another learner's files. A command timeout kills
-synchronous infinite loops; the VM expiry bounds cleanup after a lost connection.
-Infrastructure failure returns an error and never falls back to local execution.
+Learner React code never runs in the application server. Coding submissions and
+path activities use a fresh Vercel Sandbox without credentials, outbound network
+or another learner's files. Infrastructure failures return an error; there is no
+in-process fallback. The suite and learner also have separate JavaScript engines
+inside the Sandbox.
 
-## Inside the VM
+## Authority inside the VM
 
-The API uploads two files per run: the grader bundle
-(`lib/coding/generated/react-sandbox.cjs`, built from
-`scripts/react-sandbox-entry.ts`) and `input.json`, which holds the component,
-the suite with its hidden cases, and a random nonce made for this run.
+The API converts learner TypeScript/JSX to ES2015 CommonJS without evaluating it
+(`react-transpile.ts`). Downlevelled async functions use the private learner
+Promise kernel. The API uploads the guest bundle and an input containing compiled
+learner/fixture modules, trusted visible/hidden suite and random run nonce.
 
-1. The grader reads `input.json` and deletes it before any learner code runs.
-   The hidden cases and the nonce are then only in the grader's memory.
-2. The component, the suite and the fetch fixtures run in a separate
-   JavaScript realm (a `node:vm` context, `lib/coding/react-runner.ts`). Its
-   global object holds the page: jsdom's window and document, timers and a
-   short list of web APIs. It has no `process`, `require`, `module` or host
-   global object, and `eval` and `Function(...)` are switched off in it, so
-   `Function('return this')()` finds only the page. Node itself starts with
-   `--disallow-code-generation-from-strings` (`GUEST_NODE_FLAGS` in
-   `lib/coding/react-guest.ts`), so a jsdom, React or Testing Library function
-   the component can reach cannot compile `return process` through its
-   `.constructor` either. Learner code therefore cannot write files, end the
-   process, or print the verdict. The component's own `require` resolves React
-   and the fetch fixtures but not Testing Library, which it could otherwise
-   reconfigure (an `asyncWrapper` that skips every `waitFor`, for example).
-   Both consoles it can reach, its own and jsdom's `window.console`, go
-   nowhere. Its `Date` reads UTC and its `Intl` formats in UTC unless the code
-   names a zone (`shared/coding-utc-time.ts`), as the browser's React frame
-   does, and the guest runs with `TZ=UTC` (`GUEST_ENV`) for the dates jsdom
-   makes in the grader's realm, such as a date input's `valueAsDate`.
-3. The component still reaches objects of the grader's own realm: React's
-   exports, jsdom's document, the timers. One step up their prototype chains
-   are the built-ins that the test runner, the matchers and the result
-   printer use. Until September 29 a component could put a `toJSON` on the
-   grader's `Object.prototype` and have `JSON.stringify` print every case,
-   hidden ones included, as passed; its own `String.prototype.split` did the
-   same before the result was printed. So once jsdom, React and Testing
-   Library are loaded, and before the suite or the component runs, the grader
-   freezes every standard built-in of its realm and pins the global names to
-   them (`lib/coding/realm-lockdown.ts`). A change to one of them throws, and
-   the run reports it as a compile error. Ordinary code can still give its
-   own object a `toString`, `constructor`, `name` or `message`, and React can
-   still switch `Error.prepareStackTrace` off and back on; nothing else can
-   set it. `npm run test:coding` proves every React solution and probe under
-   the same lockdown.
-4. The grader follows each case's promise with the page realm's own
-   `Promise.prototype.then`, captured before the suite ran. A component that
-   replaced `then` in its realm otherwise ended every async case at once, as
-   a pass.
-5. The grader prints the result on stdout as one line that starts with the
-   nonce. It writes that JSON itself from the result's own data properties,
-   with functions captured before any learner code ran
-   (`serializeGuestResult` in `lib/coding/react-guest.ts`): no `toJSON`,
-   getter or inherited field is read, and a result of any other shape ends
-   the run. The API takes only that line from the command's stdout and never
-   reads a file from the VM; a `result.json` left behind means nothing. A
-   missing or repeated line, a malformed result, or a case count different
-   from the number of `test(` and `it(` calls in the suite that ran (visible
-   and hidden together) is a runner error, never a verdict. Pass counts are
-   recomputed from the cases.
+1. The guest reads and deletes its input before learner execution. It prepares
+   jsdom, development React and Testing Library, freezes host intrinsics and
+   prints the nonce-bound started marker.
+2. Only the trusted suite runs in the Node page realm (`react-runner.ts`). Its
+   matchers, assertions, DOM observations, case promises and result are never
+   supplied to the learner.
+3. The learner runs in QuickJS/WASM (`react-learner.ts`). React hooks, JSX,
+   events, refs, timers, deterministic fetch fixtures and selected web APIs are
+   capabilities. Only serialized primitive values and private identity records
+   cross the boundary; no host JavaScript references cross it. DOM reads/writes
+   use explicit allowlists. Prototype chains, implementation symbols, React
+   owners/fibers and internal fields are absent. Public values/functions retain
+   identity across calls and renders. JSX props are copied into trusted renderer
+   data, so React does not freeze learner-owned proxy objects.
+4. Learner imports resolve only the React facade, JSX runtime and authored
+   training fixtures. Testing Library, tests, assertions, Node modules and result
+   functions are unavailable. Dynamic code generation is disabled. Learner
+   intrinsics used by the bridge/kernel are frozen; their prototypes belong to
+   QuickJS and cannot affect suite intrinsics. Consoles are silent.
+5. All learner async work uses a controlled Promise constructor. Host promises
+   become controlled deferred values; subscriptions use a private closure rather
+   than a replaceable public `then`. The FIFO scheduler observes detached
+   rejections, later handling, cancellation and thenable assimilation. Unhandled
+   rejections are forwarded to the trusted page's `window` for suites that check
+   them. Fixture and suite overrides remain observable. Fetch never defaults to
+   the process's real network client.
+6. UTC is shared with the browser runners (`coding-utc-time.ts`). Learner local
+   dates read UTC regardless of process zone; formatting uses UTC unless a zone
+   is explicit. The trusted suite may control clocks/timers; learner changes
+   cannot replace that authority.
+7. The guest serializes its result from own data descriptors using captured
+   functions (`react-guest.ts`). It prints one nonce-bound line. The API accepts
+   only that line, verifies shape/size/case count, recomputes counts and rejects
+   missing or duplicate results. Files and component logs are never verdicts.
 
-## Configuration
+A form that submits without preventing its default fails its case, matching the
+browser harness. Thrown values, including empty or unreadable errors, fail rather
+than become passes. A crash after the started marker is a learner error; failure
+before it remains an infrastructure outage. Learner components can of course
+change their rendered DOM, as any component under test can. The boundary prevents
+access to assertion/result authority; it is not a claim that every authored suite
+covers every possible incorrect solution or a platform penetration-test claim.
 
-1. Authenticate the Sandbox SDK with Vercel OIDC. Local operators may instead
-   provide `VERCEL_TOKEN`, `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID`.
-2. Run `npm run prepare:react-snapshot`. It uploads only package manifests and
-   installs the locked production dependencies with lifecycle scripts disabled.
-   The snapshot does not expire automatically. No application code, `.env` files,
-   user submissions or credentials are included.
-3. Set the returned `REACT_RUNNER_SNAPSHOT_ID` on the devShark Vercel project for
-   Production and Preview. It is a server-only variable.
-4. Build normally. `build:react-runner` creates the current guest bundle and a CommonJS SDK bundle;
-   its build check disables Node require(ESM) to match the deployed runtime. Vercel
-   includes both in the existing roadmap function. No thirteenth API is added.
-5. Run `npm run test:react-isolation` with the selected snapshot and credentials.
-   This integration check creates disposable VMs and exercises credential/network
-   isolation, the page realm (no `process`, `require`, input file or code
-   generation), a forged `result.json` and verdict line, representative suites
-   and a synchronous infinite loop. `npm run test:launch` runs the same guest
-   bundle locally, without a VM, on every CI run.
-6. Verify a preview submission before promoting the application.
+## Resource bounds
 
-Create a fresh dependency snapshot whenever the root lockfile's runtime
-dependencies change. Code-only grader changes are included in the build and do
-not require a new snapshot: the snapshot holds only `node_modules` and the
-Node 24 runtime, and the grader bundle is uploaded with every run. That covers
-the September 29 changes to the page realm, the nonce line, the deleted
-input, the frozen built-ins and the hand-written result, which need no new
-snapshot. Delete obsolete dependency snapshots after
-a verified rollout; retain the previous one while rollback remains possible.
+- Fresh non-persistent VM per submission, outbound network denied.
+- Node heap 256 MB; QuickJS heap 64 MB and stack 1 MB.
+- QuickJS bytecode interrupts after 2.5 seconds per synchronous engine call and
+  promise flushes stop after 10,000 jobs. Native allocation/GC paths may require
+  the external command deadline; internal interrupts are not the only bound.
+- Command 10 seconds; request work 22 seconds; VM expiry 25 seconds; cleanup has
+  its own 2-second budget. Timers and listeners are cleared on engine disposal.
+- The existing roadmap handler allows 45 seconds; Submit waits up to 50 seconds.
+  Exactly twelve physical API handlers remain.
 
-## Resource limits and evidence
+## Configuration and rollout
 
-- Fresh, non-persistent VM for every submission, outbound network denied.
-- Node heap: 256 MB; command: 10 seconds; request work: 22 seconds;
-  VM expiry: 25 seconds. Cleanup has a separate 2-second budget.
-- The existing roadmap function allows 45 seconds, leaving room for database
-  persistence and response delivery. Coding Submit waits up to 50 seconds.
-- Returned data is size/shape checked, must carry the run's nonce and the
-  suite's case count, and pass counts are recomputed.
-- A challenge may keep hidden test cases beside its solution (`hiddenSuite`).
-  Submit appends them to the visible suite (`lib/coding/react-hidden.ts`); they
-  decide the verdict, and the response carries only their count. The input
-  file that carries them is deleted before the component loads, but they run
-  in the same realm as the component, so they stay out of the page, not out of
-  reach of a component written to go looking for them.
-- A case that threw has failed, even when the error carries no message;
-  mini-jest on its own read an empty message as a pass. A thrown value whose
-  message cannot be read (`Object.create(null)`, a `message` getter that
-  throws) fails its case too, instead of ending the grader.
-- The guest prints a line with the run's nonce just before the suite loads the
-  component. A guest that exits unsuccessfully after that line was ended by
-  the learner's code (usually the heap limit): Submit records an `error`
-  verdict that says so (`readGuestRun` in `lib/coding/react-guest.ts`). One
-  that ends before that line is still a runner outage: nothing is recorded and
-  the learner is asked to submit again.
-- A case during which a form submits and the component does not cancel it
-  fails with that reason (`watchFormSubmits` in
-  `shared/coding-react-support.ts`). The browser harness applies the same rule,
-  so Run and Submit agree; in the preview such a submission would reload the
-  frame and lose what it showed.
-- A run the 10-second command limit stops reports no case at all, so
-  `npm run test:coding` keeps every React suite, visible and hidden cases
-  together, under 6 seconds of case time for a page that renders nothing, the
-  untouched starter, and for a task with an API a page that asks for its data
-  and shows none of it. The capstone suites wait 300 ms for a page to show
-  its data instead of Testing Library's 1 second.
-- A promise rejection the component leaves unhandled is ignored while a suite
-  runs, as the browser does, instead of ending the grader process. The page
-  realm has no `process`, so the grader reports each one on `window` as an
-  `unhandledrejection` event, where a suite that checks for them listens.
-- This boundary protects the application host and credentials, and it stops
-  a component from forging its verdict through the filesystem, the process,
-  stdout, the printed result or the grader realm's built-ins. It is not a
-  claim of comprehensive adversarial grading integrity or platform
-  penetration testing. The suite shares its page realm with the component,
-  whose built-ins stay writable (suites replace `Date.now` there, for
-  example), and the component can reach jsdom and React objects the test
-  helpers also use, which are not frozen. So a component written to tamper
-  with what one case reads can still influence that case. jsdom can read
-  files that exist in the VM (an `XMLHttpRequest` to a `file:` URL, for
-  example); once the input is deleted nothing there is secret.
+1. Authenticate the Sandbox SDK with Vercel OIDC, or local operator credentials
+   `VERCEL_TOKEN`, `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID`.
+2. `npm run prepare:react-snapshot` installs locked production dependencies with
+   lifecycle scripts disabled. The snapshot contains only dependencies/Node 24,
+   no application code, environment files, submissions or credentials.
+3. Configure `REACT_RUNNER_SNAPSHOT_ID` for Production and Preview. Build creates
+   the guest and CommonJS SDK bundles and checks packaging with require(ESM) off.
+4. Run `npm run test:react-isolation` with that snapshot. Verify a preview Submit
+   before production promotion. Runtime dependency changes require a fresh
+   snapshot; code-only changes are uploaded with each run and use the current one.
+   Retain the previous snapshot for rollback. No billing/plan settings change.
 
-The September 15 audit created and tested the dependency snapshot and configured
-both environments on `react-express-app`. No plan or billing settings changed.
-Sandbox execution consumes the project's existing Sandbox allowance; monitor
-usage and concurrency as part of the launch load test.
+## Verification
 
-## Production check
+`npm run test:react-engine` checks the 183 active React tasks and all available
+reference, junior and senior solutions (501 on 14 October 2026), visible and
+hidden cases together. `npm run test:coding` additionally checks untouched
+starters, wrong/static variants, time budgets and the rest of the catalogue.
 
-`.github/workflows/grading-monitor.yml` runs `npm run check:live-grading`
-every six hours and on demand. It opens `react-counter` and
-`js-double-numbers` on `https://devshark.app` as a signed-out visitor, submits
-each task's reference solution (the verdict must be `passed`) and a wrong
-solution that compiles (it must be `failed`), and fails the run with the HTTP
-status and the start of the body when either answer differs. A snapshot the
-Sandbox can no longer start, missing credentials or a broken QuickJS worker all
-show up as a failed run. Anonymous submits record nothing. The script retries
-once after a network error or a 429; `LIVE_GRADING_BASE_URL` points it at
-another deployment, and `npm run test:live-grading` runs it against a local
-stub.
+`npm run test:react-authority` checks the private Promise kernel and attacks on
+DOM getters/symbols, React internals/exports, imports, intrinsics and synchronous
+or asynchronous assertions. It also verifies detached async rejection reporting.
+It runs in CI. `npm run test:launch` starts the actual guest bundle with production
+flags, checks deletion/nonce/count/serialization, resource exhaustion, UTC in
+multiple process zones and representative suites. These local checks do not
+replace the real microVM integration check.
+
+`.github/workflows/grading-monitor.yml` checks signed-out production reference and
+wrong submissions for `react-counter` and `js-double-numbers` every six hours and
+on demand. Missing snapshots/credentials and broken engines fail the workflow.
+Anonymous submissions record nothing. `LIVE_GRADING_BASE_URL` selects a preview.

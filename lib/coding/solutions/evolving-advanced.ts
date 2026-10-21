@@ -7,16 +7,44 @@ function calculateWithVariables(expression,variables){let valid=true;const sourc
  `function runProgram(lines){const variables=Object.create(null),results=[];for(const line of lines){const assignment=/^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=([^=]*)$/.exec(line);const value=calculateWithVariables(assignment?assignment[2]:line,variables);if(value===null)return null;if(assignment)variables[assignment[1]]=value;results.push(value)}return {variables,results}}`,
  ],
  'js-evolving-query': [
- `function groupRows(rows,field,valueField){const groups=[];for(const row of rows){let g=groups.find(g=>g.key===row[field]);if(!g){g={key:row[field],count:0,sum:0};groups.push(g)}g.count++;if(typeof row[valueField]==='number'&&Number.isFinite(row[valueField]))g.sum+=row[valueField]}return groups}`,
+ `function groupRows(rows,field,valueField){const groups=[],byKey=new Map();for(const row of rows){const key=row[field];let g=key===key?byKey.get(key):undefined;if(!g){g={key,count:0,sum:0};groups.push(g);if(key===key)byKey.set(key,g)}g.count++;if(typeof row[valueField]==='number'&&Number.isFinite(row[valueField]))g.sum+=row[valueField]}return groups}`,
  `function joinRows(left,right,leftKey,rightKey,mode='inner'){return left.flatMap(l=>{const matches=right.filter(r=>l[leftKey]===r[rightKey]);return matches.length?matches.map(r=>({left:l,right:r})):mode==='left'?[{left:l,right:null}]:[]})}`,
  ],
  'js-evolving-events': [
- `function createBufferedBus(){const bus=createBus(),queue=[];let paused=false;return {on:bus.on,once:bus.once,pause(){paused=true},emit(e,v){if(paused){queue.push([e,v]);return []}return bus.emit(e,v)},resume(){paused=false;const errors=[];while(!paused&&queue.length){const [e,v]=queue.shift();errors.push(...bus.emit(e,v))}return errors}}}`,
- `function createReplayBus(capacity){const bus=createBus(),history=new Map();return {on(e,fn,replay=false){const off=bus.on(e,fn);if(replay)for(const v of [...(history.get(e)||[])])fn(v);return off},emit(e,v){const values=[...(history.get(e)||[]),v];history.set(e,capacity?values.slice(-capacity):[]);return bus.emit(e,v)},clear(e){history.delete(e)}}}`,
+ `function createBufferedBus(){
+  const bus=createBus(),queue=[];let head=0,paused=false;
+  return {on:bus.on,once:bus.once,pause(){paused=true},
+    emit(event,value){if(!paused)return bus.emit(event,value);queue.push([event,value]);return []},
+    resume(){paused=false;const errors=[];
+      while(!paused&&head<queue.length){
+        const [event,value]=queue[head];queue[head++]=undefined;
+        if(head===queue.length){queue.length=0;head=0}
+        for(const error of bus.emit(event,value))errors.push(error);
+      }return errors;
+    }
+  };
+}`,
+ `function createReplayBus(capacity){
+  const bus=createBus(),history=new Map();
+  return {
+    on(event,listener,replay=false){const off=bus.on(event,listener),record=history.get(event);
+      if(replay&&record)for(let i=0;i<record.values.length;i++)listener(record.values[(record.start+i)%capacity]);
+      return off;
+    },
+    emit(event,value){
+      if(capacity>0){let record=history.get(event);
+        if(!record){record={values:[],start:0};history.set(event,record)}
+        if(record.values.length<capacity)record.values.push(value);
+        else{record.values[record.start]=value;record.start=(record.start+1)%capacity}
+      }return bus.emit(event,value);
+    },
+    clear(event){history.delete(event)}
+  };
+}`,
  ],
  'js-evolving-graph': [
  `function criticalPath(graph,durations={}){const order=plan(graph);if(!order)return null;const paths=new Map();let best={duration:0,path:[]};for(const id of order){const duration=Object.hasOwn(durations,id)?durations[id]:1;if(typeof duration!=='number'||!Number.isFinite(duration)||duration<0)return null;let prior={duration:0,path:[]};for(const dep of graph[id]){const p=paths.get(dep);if(!prior.path.length||p.duration>prior.duration)prior=p}const current={duration:prior.duration+duration,path:[...prior.path,id]};paths.set(id,current);if(!best.path.length||current.duration>best.duration)best=current}return best}`,
- `function impactedNodes(graph,changed){const order=plan(graph);if(!order||changed.some(id=>!Object.hasOwn(graph,id)))return null;const affected=new Set(changed);for(const id of order)if(graph[id].some(dep=>affected.has(dep)))affected.add(id);return order.filter(id=>affected.has(id))}`,
+ `function impactedNodes(graph,changed){const order=plan(graph);if(!order||changed.some(id=>!Object.prototype.propertyIsEnumerable.call(graph,id)))return null;const affected=new Set(changed);for(const id of order)if(graph[id].some(dep=>affected.has(dep)))affected.add(id);return order.filter(id=>affected.has(id))}`,
  ],
  'ts-evolving-result': [
  `function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:string[]}{const values:T[]=[],errors:string[]=[];for(const r of results){if(r.ok)values.push(r.value);else errors.push(r.error)}return {values,errors}}`,
@@ -24,7 +52,7 @@ function calculateWithVariables(expression,variables){let valid=true;const sourc
  function sequenceResults<T>(steps:readonly (()=>Result<T>)[]):Result<T[]>{return traverseResults(steps,step=>step())}`,
  ],
  'ts-evolving-store': [
- `function selectStore<T,U>(store:{get():T;subscribe(fn:(v:T)=>void):()=>void},select:(v:T)=>U){let value=select(store.get()),disposed=false;const listeners=new Set<(v:U)=>void>();const off=store.subscribe(v=>{const next=select(v);if(Object.is(value,next))return;value=next;for(const fn of [...listeners])fn(value)});return {get:():U=>value,subscribe(fn:(v:U)=>void):()=>void{const listener=(v:U)=>fn(v);if(!disposed)listeners.add(listener);return ()=>{listeners.delete(listener)}},dispose():void{if(disposed)return;disposed=true;off();listeners.clear()}}}`,
+ `function selectStore<T,U>(store:{get():T;subscribe(fn:(v:T)=>void):()=>void},select:(v:T)=>U){let value=select(store.get()),disposed=false;const listeners=new Set<(v:U)=>void>();const off=store.subscribe(v=>{if(disposed)return;const next=select(v);if(Object.is(value,next))return;value=next;for(const fn of [...listeners])fn(value)});return {get:():U=>value,subscribe(fn:(v:U)=>void):()=>void{const listener=(v:U)=>fn(v);if(!disposed)listeners.add(listener);return ()=>{listeners.delete(listener)}},dispose():void{if(disposed)return;disposed=true;off();listeners.clear()}}}`,
  `function transactStore<T>(store:{get():T;set(v:T):void},steps:readonly ((value:T)=>T)[]):boolean{let value=store.get();try{for(const step of steps)value=step(value)}catch{return false}store.set(value);return true}`,
  ],
  'ts-evolving-schema': [
@@ -66,26 +94,24 @@ function toPlainDigits(value) {
 }
 
 function calculateWithVariables(expression, variables) {
-  let source = '';
+  const chunks = [];
   let index = 0;
   while (index < expression.length) {
     const char = expression[index];
     if (!isNameStart(char)) {
-      source = source + char;
+      chunks.push(char);
       index = index + 1;
       continue;
     }
-    let name = '';
-    while (index < expression.length && isNamePart(expression[index])) {
-      name = name + expression[index];
-      index = index + 1;
-    }
+    const start = index;
+    while (index < expression.length && isNamePart(expression[index])) index++;
+    const name = expression.slice(start, index);
     if (!Object.prototype.hasOwnProperty.call(variables, name)) return null;
     const value = variables[name];
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-    source = source + '(' + toPlainDigits(value) + ')';
+    chunks.push('(' + toPlainDigits(value) + ')');
   }
-  return calculate(source);
+  return calculate(chunks.join(''));
 }`,
  `function runProgram(lines) {
   const variables = Object.create(null);
@@ -113,17 +139,14 @@ function calculateWithVariables(expression, variables) {
  'js-evolving-query': [
  `function groupRows(rows, field, valueField) {
   const groups = [];
+  const byKey = new Map();
   for (const row of rows) {
     const key = row[field];
-    let group = null;
-    for (const candidate of groups) {
-      if (candidate.key === key) {
-        group = candidate;
-      }
-    }
-    if (group === null) {
+    let group = key === key ? byKey.get(key) : undefined;
+    if (group === undefined) {
       group = { key: key, count: 0, sum: 0 };
       groups.push(group);
+      if (key === key) byKey.set(key, group);
     }
     group.count = group.count + 1;
     const amount = row[valueField];
@@ -153,72 +176,58 @@ function calculateWithVariables(expression, variables) {
  'js-evolving-events': [
  `function createBufferedBus() {
   const bus = createBus();
-  const queue = [];
-  let paused = false;
-
-  function pause() {
-    paused = true;
-  }
-
+  let first = null, last = null, paused = false;
+  function pause() { paused = true; }
   function emit(event, value) {
-    if (paused) {
-      queue.push({ event: event, value: value });
-      return [];
-    }
-    return bus.emit(event, value);
+    if (!paused) return bus.emit(event, value);
+    const node = { event, value, next: null };
+    if (last) last.next = node;
+    else first = node;
+    last = node;
+    return [];
   }
-
   function resume() {
     paused = false;
     const errors = [];
-    while (queue.length > 0) {
-      if (paused) break;
-      const next = queue.shift();
-      const nextErrors = bus.emit(next.event, next.value);
-      for (const error of nextErrors) {
-        errors.push(error);
-      }
+    while (!paused && first) {
+      const next = first;
+      first = next.next;
+      if (!first) last = null;
+      for (const error of bus.emit(next.event, next.value)) errors.push(error);
     }
     return errors;
   }
-
-  return { on: bus.on, once: bus.once, pause: pause, resume: resume, emit: emit };
+  return { on: bus.on, once: bus.once, pause, emit, resume };
 }`,
  `function createReplayBus(capacity) {
-  const bus = createBus();
-  const historyByEvent = new Map();
-
+  const bus = createBus(), historyByEvent = new Map();
   function on(event, listener, replay = false) {
     const off = bus.on(event, listener);
-    if (replay) {
-      const history = historyByEvent.get(event);
-      if (history !== undefined) {
-        for (const value of history) {
-          listener(value);
-        }
+    const history = historyByEvent.get(event);
+    if (replay && history) {
+      for (let offset = 0; offset < history.values.length; offset++) {
+        listener(history.values[(history.oldest + offset) % capacity]);
       }
     }
     return off;
   }
-
   function emit(event, value) {
-    let history = historyByEvent.get(event);
-    if (history === undefined) {
-      history = [];
-      historyByEvent.set(event, history);
-    }
-    history.push(value);
-    while (history.length > capacity) {
-      history.shift();
+    if (capacity > 0) {
+      let history = historyByEvent.get(event);
+      if (!history) {
+        history = { values: [], oldest: 0 };
+        historyByEvent.set(event, history);
+      }
+      if (history.values.length < capacity) history.values.push(value);
+      else {
+        history.values[history.oldest] = value;
+        history.oldest = (history.oldest + 1) % capacity;
+      }
     }
     return bus.emit(event, value);
   }
-
-  function clear(event) {
-    historyByEvent.delete(event);
-  }
-
-  return { on: on, emit: emit, clear: clear };
+  function clear(event) { historyByEvent.delete(event); }
+  return { on, emit, clear };
 }`,
  ],
  'js-evolving-graph': [
@@ -257,7 +266,7 @@ function calculateWithVariables(expression, variables) {
   const order = plan(graph);
   if (order === null) return null;
   for (const id of changed) {
-    if (!Object.prototype.hasOwnProperty.call(graph, id)) return null;
+    if (!Object.prototype.propertyIsEnumerable.call(graph, id)) return null;
   }
   const affected = new Set();
   for (const id of changed) {
@@ -341,6 +350,7 @@ function sequenceResults<T>(steps: readonly (() => Result<T>)[]): Result<T[]> {
   }
 
   const unsubscribeFromSource = store.subscribe(function (value: T): void {
+    if (disposed) return;
     const next = select(value);
     if (Object.is(selected, next)) {
       return;
@@ -463,25 +473,24 @@ const plainDigits = (value) => {
 };
 
 function calculateWithVariables(expression, variables) {
-  const known = new Map(Object.entries(variables).filter(([, value]) => Number.isFinite(value)));
   const names = expression.match(IDENTIFIER) ?? [];
-  if (!names.every(name => known.has(name))) return null;
+  if (!names.every(name => Object.hasOwn(variables, name) && Number.isFinite(variables[name]))) return null;
   // Parentheses keep a substituted negative from fusing with the operator before it.
-  return calculate(expression.replace(IDENTIFIER, name => '(' + plainDigits(known.get(name)) + ')'));
+  return calculate(expression.replace(IDENTIFIER, name => '(' + plainDigits(variables[name]) + ')'));
 }`,
  `const ASSIGNMENT = /^\\s*(?<name>[A-Za-z_]\\w*)\\s*=(?<source>[^=]*)$/;
 
 function runProgram(lines) {
-  const environment = new Map();
+  const environment = Object.create(null);
   const results = [];
   for (const line of lines) {
     const { name, source = line } = line.match(ASSIGNMENT)?.groups ?? {};
-    const value = calculateWithVariables(source, Object.fromEntries(environment));
+    const value = calculateWithVariables(source, environment);
     if (value === null) return null;
-    if (name !== undefined) environment.set(name, value);
+    if (name !== undefined) environment[name] = value;
     results.push(value);
   }
-  return { variables: Object.fromEntries(environment), results };
+  return { variables: environment, results };
 }`,
  ],
  'js-evolving-query': [
@@ -489,11 +498,13 @@ function runProgram(lines) {
   const groups = new Map();
   for (const row of rows) {
     const key = row[field];
-    const group = groups.get(key) ?? { key, count: 0, sum: 0 };
+    // A private fresh slot keeps each NaN separate under the task's === rule.
+    const slot = key === key ? key : Symbol();
+    const group = groups.get(slot) ?? { key, count: 0, sum: 0 };
     group.count += 1;
     // Number.isFinite never coerces, so numeric strings and other values are skipped.
     if (Number.isFinite(row[valueField])) group.sum += row[valueField];
-    groups.set(key, group);
+    groups.set(slot, group);
   }
   return [...groups.values()];
 }`,
@@ -502,11 +513,13 @@ function runProgram(lines) {
   const byKey = new Map();
   for (const row of right) {
     const key = row[rightKey];
+    if (key !== key) continue; // NaN never matches under ===.
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key).push(row);
   }
   return left.flatMap(row => {
-    const matches = byKey.get(row[leftKey]) ?? [];
+    const key = row[leftKey];
+    const matches = key === key ? byKey.get(key) ?? [] : [];
     if (matches.length > 0) return matches.map(match => ({ left: row, right: match }));
     return mode === 'left' ? [{ left: row, right: null }] : [];
   });
@@ -514,47 +527,49 @@ function runProgram(lines) {
  ],
  'js-evolving-events': [
  `function createBufferedBus() {
-  const bus = createBus();
-  const queue = [];
+  const bus = createBus(), inbox = [], outbox = [];
   let paused = false;
   return {
     ...bus,
-    pause() {
-      paused = true;
-    },
+    pause() { paused = true; },
     emit(event, value) {
       if (!paused) return bus.emit(event, value);
-      queue.push([event, value]);
+      inbox.push([event, value]);
       return [];
     },
     resume() {
       paused = false;
       const errors = [];
-      // A listener may pause again mid-flush, so the flag is checked before every dequeue.
-      while (!paused && queue.length > 0) errors.push(...bus.emit(...queue.shift()));
+      while (!paused && (outbox.length || inbox.length)) {
+        if (!outbox.length) while (inbox.length) outbox.push(inbox.pop());
+        const [event, value] = outbox.pop();
+        for (const error of bus.emit(event, value)) errors.push(error);
+      }
       return errors;
     },
   };
 }`,
  `function createReplayBus(capacity) {
-  const bus = createBus();
-  const history = new Map();
+  const bus = createBus(), histories = new Map();
   return {
     on(event, listener, replay = false) {
-      const off = bus.on(event, listener);
-      if (replay) {
-        for (const value of history.get(event) ?? []) listener(value);
+      const off = bus.on(event, listener), ring = histories.get(event);
+      if (replay && ring) {
+        const { values, start } = ring;
+        for (let i = 0; i < values.length; i++) listener(values[(start + i) % capacity]);
       }
       return off;
     },
     emit(event, value) {
-      const retained = [...(history.get(event) ?? []), value];
-      history.set(event, retained.slice(Math.max(0, retained.length - capacity)));
+      if (capacity) {
+        const ring = histories.get(event) ?? { values: [], start: 0 };
+        if (ring.values.length < capacity) ring.values.push(value);
+        else { ring.values[ring.start] = value; ring.start = (ring.start + 1) % capacity; }
+        histories.set(event, ring);
+      }
       return bus.emit(event, value);
     },
-    clear(event) {
-      history.delete(event);
-    },
+    clear(event) { histories.delete(event); },
   };
 }`,
  ],
@@ -575,7 +590,7 @@ function runProgram(lines) {
 }`,
  `function impactedNodes(graph, changed) {
   const order = plan(graph);
-  if (!order || !changed.every(id => Object.hasOwn(graph, id))) return null;
+  if (!order || !changed.every(id => Object.prototype.propertyIsEnumerable.call(graph, id))) return null;
   // Reverse the edges once, then walk forward from every changed node.
   const dependents = new Map(order.map(id => [id, []]));
   for (const id of order) {
@@ -583,11 +598,12 @@ function runProgram(lines) {
   }
   const affected = new Set();
   const queue = [...changed];
-  while (queue.length > 0) {
-    const id = queue.shift();
+  let head = 0;
+  while (head < queue.length) {
+    const id = queue[head++];
     if (affected.has(id)) continue;
     affected.add(id);
-    queue.push(...dependents.get(id));
+    for (const dependent of dependents.get(id)) queue.push(dependent);
   }
   return order.filter(id => affected.has(id));
 }`,
@@ -618,6 +634,7 @@ const sequenceResults = <T>(steps: readonly (() => Result<T>)[]): Result<T[]> =>
   let disposed = false;
   const listeners = createListeners<U>();
   const disconnect = store.subscribe(value => {
+    if (disposed) return;
     const next = select(value);
     if (Object.is(selected, next)) return;
     selected = next;

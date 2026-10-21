@@ -29,7 +29,7 @@ export const EASY_JAVASCRIPT_C_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['pop'],
     title: 'Undo the last step',
-    prompt: 'An editor keeps every change in a `history` array, oldest first. Write `undo(history)`, which removes the newest change from the end of the array with `pop` and returns it. The array gets shorter, so the next `undo` returns the change before. With nothing left to undo, return `null`: `pop` on an empty array gives `undefined`.',
+    prompt: "An editor stores history in a dense ordinary array, oldest first. Write `undo(history)`, removing exactly its last entry in place and returning that entry unchanged. Entries may be any value, including `0`, `false`, an empty string, `null` or `undefined`; do not confuse these with an empty array. If the array is already empty, leave it empty and return `null`. `pop()` is one approach. Target: O(1) time per call under the ordinary array model, regardless of n, the current number of entries.",
     starter: `const undo = history => {
 
 };
@@ -42,7 +42,7 @@ console.log(undo(changes), changes);
   if (/* nothing to undo */) return null;
   return /* the newest change, removed from history */;
 };`,
-    hints: ['`pop` removes the last element in place and returns it. On an empty array it returns `undefined`, so check the length first.'],
+    hints: ["Use the array's length to distinguish nothing to undo from an entry with an empty or falsey value. Only the last entry should disappear."],
     approach: [
       'Check `history.length`. When it is 0, return `null`.',
       'Otherwise call `history.pop()`. It removes the newest change and gives it back.',
@@ -66,7 +66,7 @@ console.log(undo(changes), changes);
     tier: 2,
     focus: ['unshift', 'pop'],
     title: 'Recent searches',
-    prompt: 'A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch(["css", "html"], "js", 2)` gives `["js", "css"]`.',
+    prompt: "A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch([\"css\", \"html\"], \"js\", 2)` gives `[\"js\", \"css\"]`. `recent` is a mutable dense array of primitive strings; `term` is a primitive string and `max` is an integer from 0 through 10000. Keep duplicates and empty terms as separate searches, preserving their order. The result must be the same array, including when max is zero. Target: O(n) time, where n is the original number of searches; moving or removing one stored reference takes constant time.",
     starter: `const addSearch = (recent, term, max) => {
 
 };
@@ -95,6 +95,10 @@ console.log(addSearch(["css", "html"], "js", 2));
       { call: '(() => { const recent = ["a", "b", "c"]; addSearch(recent, "d", 3); return recent; })()', expected: ['d', 'a', 'b'], label: 'the list changes in place' },
       { call: 'addSearch([], "first", 3)', expected: ['first'], label: 'the first search', edge: true },
       { call: 'addSearch(["a", "b"], "c", 0)', expected: [], label: 'a max of 0 keeps nothing', edge: true },
+      { call: "addSearch([\"a\",\"a\",\"\"],\"a\",4)", expected: ["a", "a", "a", ""], label: "duplicates and empty search terms", edge: true },
+      { call: "(() => { const recent=[\"a\",\"b\"]; const result=addSearch(recent,\"\",0); return result===recent&&recent.length===0; })()", expected: true, label: "zero limit preserves the array identity", edge: true },
+      { call: "(() => { const recent=Array.from({length:128},(_,i)=>String(i)); const result=addSearch(recent,\"new\",1); return result===recent&&recent.length===1&&recent[0]===\"new\"; })()", expected: true, label: "remove every excess search", edge: true },
+      { call: "addSearch([],\"\",10000)", expected: [""], label: "empty term is a search", edge: true },
     ],
   },
   {
@@ -105,7 +109,7 @@ console.log(addSearch(["css", "html"], "js", 2));
     tier: 1,
     focus: ['shift'],
     title: 'Split off the command',
-    prompt: 'A chat bot reads a command as an array of words, such as `["add", "milk", "eggs"]`. Write `readCommand(words)`, returning `{ command, args }`: the first word as `command` and the words after it as `args`. Take the first word off a copy with `shift`, so the caller’s array is not changed. An empty array gives `{ command: null, args: [] }`.',
+    prompt: "Write `readCommand(words)` for a dense array of strings. Return a new object `{ command, args }`: the first string unchanged as command, and a new array of the remaining strings in order. Preserve the caller's array, even if the result is edited later. An empty input gives `{ command: null, args: [] }` with a new args array; an empty first string remains `\"\"`. If you use `shift()`, work on a copy. Target: O(n) time, where n is the number of input strings.",
     starter: `const readCommand = words => {
 
 };
@@ -118,7 +122,7 @@ console.log(readCommand(["add", "milk", "eggs"]));
   const command = /* the first word, taken off args */;
   return { command: /* command, or null when there was none */, args };
 };`,
-    hints: ['`shift` removes the first element and returns it, and every other element moves one place forward. It changes the array, which is why it runs on a copy here. On an empty array it returns `undefined`.'],
+    hints: ["Taking a word from the front changes an array if you use shift. Protect the caller's array and distinguish an empty first word from no first word."],
     approach: [
       'Copy the words with `[...words]`.',
       'Call `shift()` on the copy. What it returns is the command, and the copy now holds only the arguments.',
@@ -143,7 +147,7 @@ console.log(readCommand(["add", "milk", "eggs"]));
     tier: 1,
     focus: ['concat'],
     title: 'Add a header and a footer',
-    prompt: 'A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed(["a", "b"], "Name", "End")` gives `["Name", "a", "b", "End"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed.',
+    prompt: "A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed([\"a\", \"b\"], \"Name\", \"End\")` gives `[\"Name\", \"a\", \"b\", \"End\"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed. Inputs are ordinary dense arrays and data values, without custom concat behavior. Keep the original row, header and footer references; this is a shallow copy. Do not change any input, including nested values; frozen inputs are valid. Target: O(n) time, where n is the number of rows; copying a reference takes constant time.",
     starter: `const framed = (rows, header, footer) => {
 
 };
@@ -154,7 +158,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     skeleton: `const framed = (rows, header, footer) => {
   return [header].concat(/* the rows, then the footer as one item */);
 };`,
-    hints: ['`concat` adds the items of any array you pass it, one level deep, and adds anything else as it is. Wrap the footer in brackets, `[footer]`, so a footer that is itself an array still arrives as one item.'],
+    hints: ["`concat` adds an array argument one level deep. How can you pass an array-valued footer as one item? The new outer array should still refer to the original rows."],
     approach: [
       'Start from an array holding only the header: `[header]`.',
       'Call `concat` on it with `rows` and `[footer]`. The rows are added one by one; the wrapped footer is added as one item.',
@@ -167,6 +171,8 @@ console.log(framed(["a", "b"], "Name", "End"));
       { call: 'framed([], "Name", "End")', expected: ['Name', 'End'], label: 'no rows', edge: true },
       { call: 'framed([["Ada", 36], ["Lin", 29]], ["name", "age"], ["total", 65])', expected: [['name', 'age'], ['Ada', 36], ['Lin', 29], ['total', 65]], label: 'rows, header and footer that are arrays each stay one item', edge: true },
       { call: '(() => { const rows = ["x"]; framed(rows, "H", "F"); return rows; })()', expected: ['x'], label: 'rows is not changed', edge: true },
+      { call: "(() => { const row={id:1},h=[\"H\"],f=[\"F\"]; const rows=Object.freeze([row,row]); const out=framed(rows,h,f); return Array.isArray(out)&&out!==rows&&out.length===4&&out[0]===h&&out[1]===row&&out[2]===row&&out[3]===f&&row.id===1&&h.length===1&&f.length===1; })()", expected: true, label: "shallow references, duplicate rows and frozen input", edge: true },
+      { call: "(() => { const rows=[]; return framed(rows,0,false)!==rows; })()", expected: true, label: "fresh result for no rows", edge: true },
     ],
   },
   {
@@ -177,7 +183,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     tier: 1,
     focus: ['join'],
     title: 'One line of CSV',
-    prompt: 'Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine(["Ada", 36, "London"])` gives `"Ada,36,London"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine(["Ada", null, "London"])` gives `"Ada,,London"`. No values give an empty string.',
+    prompt: "Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine([\"Ada\", 36, \"London\"])` gives `\"Ada,36,London\"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine([\"Ada\", null, \"London\"])` gives `\"Ada,,London\"`. No values give an empty string. This is a restricted CSV exercise: values are primitive strings without commas, double quotes, carriage returns or newlines, finite numbers, booleans, null or undefined, in a dense array. Quoting and escaping arbitrary CSV fields are outside this task. Do not change the input; frozen arrays are valid. Target: O(n) time, where n is the number of cells plus the total length of their text in UTF-16 code units, using a linear join implementation.",
     starter: `const toCsvLine = values => {
 
 };
@@ -191,6 +197,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
 };`,
     hints: ['`join` turns every item into text and puts the separator between them. It writes `null` and `undefined` as nothing at all, where `"" + null` would give the word `"null"`.'],
     approach: [
+      "A plain join is sufficient only because these fields exclude CSV delimiter, quote and line-break characters. A general CSV writer would need quoting and escaping.",
       'Call `join` on the values.',
       'Pass `","` as the separator. Without an argument, `join` uses a comma too, but saying so makes the format clear.',
       'Return the text. An empty array joins to an empty string, so it needs no special case.',
@@ -203,6 +210,10 @@ console.log(toCsvLine(["Ada", null, "London"]));
       { call: 'toCsvLine(["Ada", null, "London"])', expected: 'Ada,,London', label: 'null is an empty cell', edge: true },
       { call: 'toCsvLine([undefined, "x"])', expected: ',x', label: 'undefined is an empty cell too', edge: true },
       { call: 'toCsvLine([])', expected: '', label: 'no values', edge: true },
+      { call: "(() => { const values=[\"left\",null,\"right\"]; const line=toCsvLine(values); return line===\"left,,right\"&&values.length===3&&values[0]===\"left\"&&values[1]===null&&values[2]===\"right\"; })()", expected: true, label: "joining preserves input order and missing cells", edge: true },
+      { call: "toCsvLine(Object.freeze([\"\",false,0,undefined,\"🦈\"]))", expected: ",false,0,,🦈", label: "frozen mixed cells", edge: true },
+      { call: "toCsvLine([null,undefined,\"\"])", expected: ",,", label: "three empty cells", edge: true },
+      { call: "toCsvLine([\"  Ada  \", -1.5, true])", expected: "  Ada  ,-1.5,true", label: "keep spaces and primitive conversion", edge: true },
     ],
   },
 
@@ -215,7 +226,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
     tier: 1,
     focus: ['slice'],
     title: 'The last few',
-    prompt: 'Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew(["a", "b", "c", "d"], 2)` gives `["c", "d"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array.',
+    prompt: "Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew([\"a\", \"b\", \"c\", \"d\"], 2)` gives `[\"c\", \"d\"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array. `items` is an ordinary dense array and `n` is an integer from 0 through 10000 (including numeric -0). Always create a fresh outer array, even for empty input; preserve the selected item references, order and repeats. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time in the worst case, where n in this complexity statement is the number of input items, distinct from the requested count parameter. Copying each reference takes constant time.",
     starter: `const lastFew = (items, n) => {
 
 };
@@ -227,7 +238,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
   if (/* n is 0 */) return [];
   return items.slice(/* a negative start */);
 };`,
-    hints: ['A negative start counts back from the end: `slice(-2)` copies the last two items. `-0` is the same number as `0`, so `slice(-0)` copies everything.'],
+    hints: ["A negative start counts back from the end. Decide what zero should return before using that start; then think about how copying differs from reusing the original array."],
     approach: [
       'When `n` is 0, return `[]`.',
       'Otherwise call `items.slice(-n)`. A start further back than the first item starts at the first item.',
@@ -241,6 +252,10 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
       { call: 'lastFew([1, 2], 5)', expected: [1, 2], label: 'more than there are gives them all', edge: true },
       { call: 'lastFew([1, 2, 3], 0)', expected: [], label: 'none asked for', edge: true },
       { call: '(() => { const items = [1, 2, 3]; lastFew(items, 2); return items; })()', expected: [1, 2, 3], label: 'items is not changed', edge: true },
+      { call: "(() => { const item={id:1}; const items=Object.freeze([0,item,item]); const out=lastFew(items,2); return out!==items&&out.length===2&&out[0]===item&&out[1]===item&&item.id===1; })()", expected: true, label: "shallow copy with repeated references", edge: true },
+      { call: "(() => { const items=[]; const out=lastFew(items,3); return Array.isArray(out)&&out!==items&&out.length===0; })()", expected: true, label: "fresh empty result", edge: true },
+      { call: "lastFew([1,2],-0)", expected: [], label: "numeric negative zero", edge: true },
+      { call: "lastFew([1,2],10000)", expected: [1, 2], label: "maximum requested count", edge: true },
     ],
   },
 
@@ -253,7 +268,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
     tier: 1,
     focus: ['do-while'],
     title: 'Count the digits',
-    prompt: 'Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once.',
+    prompt: "Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once. The input is an integer from 0 through Number.MAX_SAFE_INTEGER (9007199254740991); numeric -0 also counts as zero. Negative, fractional and non-finite inputs are outside this task. Target: O(log n) time for positive n, where n is the numeric value, counting each division and rounding as constant time; zero takes O(1). Near powers of ten, floating-point logarithms may round to the wrong side of the boundary, so repeated integer division is a reliable approach.",
     starter: `const countDigits = n => {
 
 };
@@ -282,6 +297,11 @@ console.log(countDigits(2026), countDigits(0));
       { call: 'countDigits(123456789)', expected: 9 },
       { call: 'countDigits(0)', expected: 1, label: 'zero has one digit', edge: true },
       { call: 'countDigits(1000)', expected: 4, label: 'zeros at the end count', edge: true },
+      { call: "countDigits(999999999999999)", expected: 15, label: "just below a large power of ten", edge: true },
+      { call: "countDigits(1000000000000000)", expected: 16, label: "large power of ten", edge: true },
+      { call: "countDigits(Number.MAX_SAFE_INTEGER)", expected: 16, label: "largest safe integer", edge: true },
+      { call: "countDigits(-0)", expected: 1, label: "negative zero has one digit", edge: true },
+      { call: "countDigits(87654321)", expected: 8, label: "an unseen ordinary input", edge: true },
     ],
   },
   {
@@ -292,7 +312,7 @@ console.log(countDigits(2026), countDigits(0));
     tier: 2,
     focus: ['do-while', 'push'],
     title: 'Read every page',
-    prompt: 'An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`.',
+    prompt: "An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`. This callback is synchronous, not a network request: getPage always returns a valid ordinary data object. Page 1 exists, and following next forms a finite acyclic chain of positive integer page numbers ending in null; the next number may skip or decrease. There are at most 10000 pages and 10000 item entries overall, with at most 1000 items per page. Each items array is ordinary and dense; empty pages do not end the chain. Call getPage exactly once for each page in chain order and never for null. Return a fresh shallow array, preserving item references, repeats and nested array values; do not change page objects, their arrays or stored values, and accept frozen pages. Target: O(n) time, where n is the page count plus total item count, assuming constant-time getPage lookup and reference copying.",
     starter: `const readAll = getPage => {
 
 };
@@ -310,7 +330,7 @@ console.log(readAll(number => pages[number]));
   } while (/* there is a next page */);
   return items;
 };`,
-    hints: ['A `do...while` loop reads the first page before it checks anything, which is right here: page 1 always exists. `items.push(...page.items)` adds every item of the page, each as its own element.'],
+    hints: ["Read the first page before checking its next link. Keep collecting even when a page has no items, and follow the returned number exactly; page numbers need not increase."],
     approach: [
       'Keep an empty result array and a page number that starts at 1.',
       'In the `do` block, fetch the page, push its items onto the result, and set the page number to `page.next`.',
@@ -324,6 +344,10 @@ console.log(readAll(number => pages[number]));
       { call: '(() => { const asked = []; readAll(n => { asked.push(n); return { items: [n], next: n < 3 ? n + 1 : null }; }); return asked; })()', expected: [1, 2, 3], label: 'each page is asked for once, starting at 1' },
       { call: 'readAll(() => ({ items: [], next: null }))', expected: [], label: 'the first page is empty', edge: true },
       { call: 'readAll(n => ({ 1: { items: ["x"], next: 5 }, 5: { items: ["y"], next: null } })[n])', expected: ['x', 'y'], label: 'next can skip page numbers', edge: true },
+      { call: "(() => {const asked=[],pages={1:{items:[\"a\"],next:7},7:{items:[],next:3},3:{items:[\"b\"],next:null}};const out=readAll(n=>{asked.push(n);return pages[n];});return [out,asked];})()", expected: [["a", "b"], [1, 7, 3]], label: "empty middle page and decreasing next number", edge: true },
+      { call: "(() => {const value={id:1},nested=[1,2],items=Object.freeze([value,nested,value]),page=Object.freeze({items,next:null});const out=readAll(()=>page);return out!==items&&out.length===3&&out[0]===value&&out[1]===nested&&out[2]===value&&value.id===1&&nested.length===2;})()", expected: true, label: "frozen page shallow references and nested array leaf", edge: true },
+      { call: "(() => {const items=[\"b\",\"a\"],page={items,next:null};readAll(()=>page);return page.items===items&&items[0]===\"b\"&&items[1]===\"a\";})()", expected: true, label: "page items stay unchanged", edge: true },
+      { call: "(() => {const items=[],page={items,next:null};const first=readAll(()=>page),second=readAll(()=>page);return first!==items&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty collections", edge: true },
     ],
   },
 
@@ -336,7 +360,7 @@ console.log(readAll(number => pages[number]));
     tier: 1,
     focus: ['forEach'],
     title: 'Even places and odd places',
-    prompt: 'Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`.',
+    prompt: "Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`. The input is an ordinary dense array of at most 10000 integers between -1000000 and 1000000; each sum remains exactly representable as a Number. Do not change the array; frozen inputs are valid. Return a fresh totals object on every call. Target: O(n) time, where n is the number of array entries and addition/index arithmetic take constant time.",
     starter: `const placeTotals = numbers => {
 
 };
@@ -351,7 +375,7 @@ console.log(placeTotals([5, 1, 4, 2]));
   });
   return totals;
 };`,
-    hints: ['`forEach` calls your function with the value, then its index, then the whole array. `index % 2 === 0` is true at positions 0, 2, 4 and so on.'],
+    hints: ["Keep separate totals for the two index groups. The callback receives value before index; decide which of those two arguments should determine the group."],
     approach: [
       'Start with `{ even: 0, odd: 0 }`.',
       'Call `forEach` with a callback that takes `(number, index)`.',
@@ -365,6 +389,10 @@ console.log(placeTotals([5, 1, 4, 2]));
       { call: 'placeTotals([2, 3, 2, 3])', expected: { even: 4, odd: 6 }, label: 'the position decides, not the number' },
       { call: 'placeTotals([7])', expected: { even: 7, odd: 0 }, label: 'one number sits at position 0', edge: true },
       { call: 'placeTotals([])', expected: { even: 0, odd: 0 }, label: 'no numbers', edge: true },
+      { call: "(() => {const ns=[5,2,-7,3];const out=placeTotals(ns);return out.even===-2&&out.odd===5&&ns.length===4&&ns[0]===5&&ns[1]===2&&ns[2]===-7&&ns[3]===3;})()", expected: true, label: "preserve signed input order", edge: true },
+      { call: "placeTotals(Object.freeze([-1,0,2,-3,4]))", expected: {"even": 5, "odd": -3}, label: "frozen signed integers", edge: true },
+      { call: "(() => {const first=placeTotals([1]),second=placeTotals([2]);return first!==second&&first.even===1&&first.odd===0&&second.even===2;})()", expected: true, label: "independent results across calls", edge: true },
+      { call: "(() => {const out=placeTotals(Array(10000).fill(1000000));return out.even===5000000000&&out.odd===5000000000;})()", expected: true, label: "exact upper-bound sums", edge: true },
     ],
   },
 
@@ -377,7 +405,7 @@ console.log(placeTotals([5, 1, 4, 2]));
     tier: 2,
     focus: ['nested-loops'],
     title: 'Spot the differences',
-    prompt: 'Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`.',
+    prompt: "Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`. Both levels are ordinary dense arrays of data values. Rows may differ in length, but each corresponding pair of rows has the same length, with at most 100 rows and 100 cells per row. Use JavaScript strict inequality: NaN differs from NaN, 0 and -0 do not differ, and objects compare by reference. Treat comparison as constant-time for this exercise. Do not change either grid, its rows or stored values; frozen inputs are valid. Return a fresh outer list and a separate fresh coordinate pair for each difference. Target: O(n²) time, where n is the larger of the row count and the widest row length; each cell is compared once, so the actual work is proportional to rows plus visited cells and is bounded by this maximum-dimension model.",
     starter: `const differences = (a, b) => {
 
 };
@@ -408,6 +436,11 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
       { call: 'differences([[1], [2], [3]], [[1], [9], [3]])', expected: [[1, 0]], label: 'one column' },
       { call: 'differences([["x", "o"], ["o", "x"]], [["x", "o"], ["o", "x"]])', expected: [], label: 'identical grids', edge: true },
       { call: 'differences([], [])', expected: [], label: 'empty grids', edge: true },
+      { call: "differences([[NaN,0,\"1\"]],[[NaN,-0,1]])", expected: [[0, 0], [0, 2]], label: "strict NaN zero and string semantics", edge: true },
+      { call: "(() => {const shared={id:1};return differences([[shared,{id:1}]],[[shared,{id:1}]]);})()", expected: [[0, 1]], label: "object reference comparison", edge: true },
+      { call: "differences([[],[1,2],[]],[[],[0,2],[]])", expected: [[1, 0]], label: "matching ragged row shapes", edge: true },
+      { call: "differences(Object.freeze([Object.freeze([1,2])]),Object.freeze([Object.freeze([0,2])]))", expected: [[0, 0]], label: "frozen grids", edge: true },
+      { call: "(() => {const a=[[1],[2]],b=[[3],[4]];const out=differences(a,b);return out!==a&&out!==b&&out[0]!==out[1]&&a[0][0]===1&&a[1][0]===2&&b[0][0]===3&&b[1][0]===4;})()", expected: true, label: "independent coordinates and unchanged sources", edge: true },
     ],
   },
 
@@ -420,7 +453,7 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Letters in the same order',
-    prompt: 'Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder("ace", "abcde")` gives `true`, and `inOrder("aec", "abcde")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order.',
+    prompt: "Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder(\"ace\", \"abcde\")` gives `true`, and `inOrder(\"aec\", \"abcde\")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order. Both inputs are primitive strings. This indexing exercise compares UTF-16 code units, the units used by string brackets and .length, rather than whole Unicode code points or visible graphemes. Case and spelling are exact; do not normalize or sort. A surrogate half can therefore match one indexed unit of a surrogate pair. Target: O(n) time, where n is the sum of the two UTF-16 string lengths and indexed comparison takes constant time.",
     starter: `const inOrder = (short, long) => {
 
 };
@@ -435,12 +468,8 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
   }
   return /* whether i reached the end of short */;
 };`,
-    hints: ['The two indexes move at different speeds. `j` visits every character of `long`; `i` only moves when it finds the character it is waiting for. If `i` reaches `short.length`, every character was found in order.'],
-    approach: [
-      'Start `i` at 0 for `short` and loop `j` over `long`.',
-      'When `short[i] === long[j]`, add 1 to `i`.',
-      'After the loop, return `i === short.length`.',
-    ],
+    hints: ["The short-string index records the next UTF-16 unit you still need. Move it only on a match, while the long-string index moves forward; using for...of on only one string would mix code points with indexed units."],
+    approach: ["Start i at zero for short and scan long by indexed UTF-16 units.", "When short[i] equals long[j], advance i. Advance j on every scanned unit; earlier long positions cannot be reused.", "Return whether i reached short.length. Keep the same unit model in every variant: for...of yields whole surrogate pairs, whereas brackets index individual code units."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -449,6 +478,12 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
       { call: 'inOrder("", "abc")', expected: true, label: 'an empty short string', edge: true },
       { call: 'inOrder("abc", "")', expected: false, label: 'an empty long string', edge: true },
       { call: 'inOrder("aa", "a")', expected: false, label: 'a character is used once', edge: true },
+      { call: "inOrder(\"🦈\",\"x🦈y\")", expected: true, label: "surrogate pairs can match as two indexed units", edge: true },
+      { call: "inOrder(\"\\ud83e\",\"🦈\")", expected: true, label: "the stated unit is a UTF-16 code unit", edge: true },
+      { call: "inOrder(\"🦈\",\"\\ud83ex\\udd88\")", expected: true, label: "subsequence units need not be adjacent", edge: true },
+      { call: "inOrder(\"A\",\"a\")", expected: false, label: "case is exact", edge: true },
+      { call: "inOrder(\"é\",\"e\\u0301\")", expected: false, label: "no normalization", edge: true },
+      { call: "inOrder(\"aba\",\"aaab\")", expected: false, label: "multiplicity and order both matter", edge: true },
     ],
   },
   {
@@ -459,7 +494,7 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
     tier: 2,
     focus: ['two-pointer'],
     title: 'Mirror images',
-    prompt: 'Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed.',
+    prompt: "Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed. Inputs are ordinary dense arrays of data values; frozen arrays are valid. Compare each pair with strict equality, so NaN never matches itself, 0 and -0 match, and distinct objects with the same fields still differ. Assume constant-time comparison for this exercise. Do not mutate either array or nested values. Target: O(n) time in the worst case, where n is the larger input length; differing lengths or an early mismatch can take less.",
     starter: `const isMirror = (a, b) => {
 
 };
@@ -488,6 +523,11 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
       { call: 'isMirror([1, 2], [2, 1, 0])', expected: false, label: 'different lengths', edge: true },
       { call: 'isMirror([], [])', expected: true, label: 'two empty lists', edge: true },
       { call: '(() => { const a = [1, 2]; const b = [2, 1]; isMirror(a, b); return [a, b]; })()', expected: [[1, 2], [2, 1]], label: 'neither list is changed', edge: true },
+      { call: "isMirror([NaN],[NaN])", expected: false, label: "NaN does not match itself", edge: true },
+      { call: "isMirror([0],[-0])", expected: true, label: "both zero signs match", edge: true },
+      { call: "isMirror([{id:1}],[{id:1}])", expected: false, label: "distinct object references differ", edge: true },
+      { call: "(() => {const item={id:1};return isMirror(Object.freeze([item,\"x\"]),Object.freeze([\"x\",item]));})()", expected: true, label: "shared references and frozen arrays", edge: true },
+      { call: "(() => {const a=[1,2,3],b=[3,2,1];const out=isMirror(a,b);return out===true&&a[0]===1&&a[2]===3&&b[0]===3&&b[2]===1;})()", expected: true, label: "successful comparisons preserve longer arrays", edge: true },
     ],
   },
 
@@ -500,7 +540,7 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
     tier: 1,
     focus: ['flat'],
     title: 'Flatten every level',
-    prompt: 'Write `flattenAll(list)`, returning a new array with every level of nesting removed, however deep it goes. `flat()` removes one level; pass it `Infinity` to remove them all. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Empty inner arrays disappear, and `list` is not changed.',
+    prompt: "Write `flattenAll(list)`, returning a fresh array with all nested array levels removed in left-to-right order. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Use flat with an unbounded depth setting; empty nested arrays add nothing. Inputs are finite ordinary dense arrays, with no cyclic arrays, at most 100 nesting levels and at most 10000 visited array entries. If an array is referenced twice, visit that branch twice. Non-array values, including objects, null and undefined, stay as single values with their original references. Do not change any input array or nested value; frozen arrays are valid. Always return a new array, including for already flat or empty input. Target: O(n) time, where n counts visited array entries and array nodes by occurrence, assuming constant-time reference copying.",
     starter: `const flattenAll = list => {
 
 };
@@ -511,12 +551,8 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     skeleton: `const flattenAll = list => {
   return list.flat(/* a depth no nesting can exceed */);
 };`,
-    hints: ['`flat(depth)` removes `depth` levels of nesting and returns a new array. `Infinity` is a number, so `flat(Infinity)` keeps going until nothing is nested.'],
-    approach: [
-      'Call `flat` on the list.',
-      'Pass `Infinity` as the depth, so no level of nesting is left.',
-      'Return the new array. `flat` never changes the array it is called on.',
-    ],
+    hints: ["The depth argument controls how many nested array levels flat removes. Choose a value that does not stop at a fixed finite depth; remember that non-array objects are leaves, not structures to traverse."],
+    approach: ["Call flat on the original list with Infinity as its depth. This input domain is finite and acyclic, so all array branches eventually end.", "Return its fresh result; flat copies leaf references without traversing non-array objects. It preserves order and repeated occurrences.", "Avoid repeatedly flattening one level at a time: that can rescan a growing result for each nesting level. The single traversal target counts every visited array entry and node."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -525,6 +561,9 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
       { call: 'flattenAll([1, 2, 3])', expected: [1, 2, 3], label: 'nothing to flatten', edge: true },
       { call: 'flattenAll([[], [[]]])', expected: [], label: 'empty arrays disappear', edge: true },
       { call: '(() => { const list = [1, [2]]; flattenAll(list); return list; })()', expected: [1, [2]], label: 'list is not changed', edge: true },
+      { call: "(() => {let list=[\"deep\"];for(let i=0;i<32;i++)list=[list];return flattenAll(list);})()", expected: ["deep"], label: "more than six nesting levels", edge: true },
+      { call: "(() => {const value={id:1},inner=Object.freeze([value,null,undefined]),list=Object.freeze([inner,inner]);const out=flattenAll(list);return out!==list&&out!==inner&&out.length===6&&out[0]===value&&out[1]===null&&out[2]===undefined&&out[3]===value&&value.id===1;})()", expected: true, label: "frozen repeated branches preserve non-array references", edge: true },
+      { call: "(() => {const list=[];const first=flattenAll(list),second=flattenAll(list);return first!==list&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty arrays", edge: true },
     ],
   },
   {
@@ -535,7 +574,7 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     tier: 2,
     focus: ['flat'],
     title: 'Expand the ranges',
-    prompt: 'A print dialog stores page ranges as `[from, to]` pairs, both ends included. Write `expand(ranges)`, returning every page number in one flat array, in the order given. Use `flatMap`: its callback turns each range into an array of numbers, and `flatMap` joins those arrays into one. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. A range whose two ends are equal is one page, and no ranges give `[]`.',
+    prompt: "A list stores inclusive integer ranges as [from, to] pairs. Write `expand(ranges)`, returning every integer in range order, using flatMap to join each range's numbers. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. Equal endpoints give one number; reversed endpoints add nothing. Keep repeated numbers from overlapping or repeated ranges. Inputs are ordinary dense arrays of two-integer pairs, with endpoints from -10000 through 10000, at most 10000 ranges and at most 10000 produced numbers overall. Do not change either input level; frozen arrays are valid. Return a fresh array even for empty input. Target: O(n) time, where n is the number of ranges plus the number of produced integers; integer increments and copies take constant time.",
     starter: `const expand = ranges => {
 
 };
@@ -563,6 +602,12 @@ console.log(expand([[1, 3], [7, 8]]));
       { call: 'expand([[10, 12], [2, 3]])', expected: [10, 11, 12, 2, 3], label: 'ranges keep the order given' },
       { call: 'expand([[4, 4]])', expected: [4], label: 'both ends equal', edge: true },
       { call: 'expand([])', expected: [], label: 'no ranges', edge: true },
+      { call: "expand([[2,3],[3,4],[2,2]])", expected: [2, 3, 3, 4, 2], label: "overlap and repeated values remain in range order", edge: true },
+      { call: "expand([[4,2],[-1,0],[0,0]])", expected: [-1, 0, 0], label: "reversed range adds nothing and zero is retained", edge: true },
+      { call: "expand(Object.freeze([Object.freeze([-2,1]),Object.freeze([5,5])]))", expected: [-2, -1, 0, 1, 5], label: "frozen ranges", edge: true },
+      { call: "(() => {const first=[3,4],second=[1,2],ranges=[first,second];expand(ranges);return ranges[0]===first&&ranges[1]===second&&first[0]===3&&first[1]===4&&second[0]===1&&second[1]===2;})()", expected: true, label: "preserve range order and pair data", edge: true },
+      { call: "(() => {const ranges=[];const a=expand(ranges),b=expand(ranges);return a!==ranges&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const out=expand([[-5000,4999]]);return out.length===10000&&out.every((value,index)=>value===index-5000);})()", expected: true, label: "bounded output-sensitive expansion", edge: true },
     ],
   },
 
@@ -575,7 +620,7 @@ console.log(expand([[1, 3], [7, 8]]));
     tier: 1,
     focus: ['some'],
     title: 'Anything overdue?',
-    prompt: 'Each task is `{ title, due, done }`, with `due` as a date string such as `"2026-09-25"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`.',
+    prompt: "Each task is `{ title, due, done }`, with `due` as a date string such as `\"2026-09-25\"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`. tasks is an ordinary dense array of data objects with own Boolean done flags and valid ten-character YYYY-MM-DD due dates; today is another valid date in that same format, with four-digit years from 0001 through 9999. Use the supplied today value, not the current system clock. Do not change task order, fields or other values; frozen records and arrays are valid. Return a Boolean. Target: O(n) time in the worst case, where n is the task count and fixed-length date comparison is constant-time; an early overdue match can take less.",
     starter: `const hasOverdue = (tasks, today) => {
 
 };
@@ -600,6 +645,9 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
       { call: 'hasOverdue([{ title: "tax", due: "2026-09-01", done: true }], "2026-09-25")', expected: false, label: 'a finished task is never overdue', edge: true },
       { call: 'hasOverdue([{ title: "call", due: "2026-09-25", done: false }], "2026-09-25")', expected: false, label: 'due today is not overdue yet', edge: true },
       { call: 'hasOverdue([], "2026-09-25")', expected: false, label: 'no tasks', edge: true },
+      { call: "hasOverdue(Object.freeze([Object.freeze({title:\"done\",due:\"0001-01-01\",done:true}),Object.freeze({title:\"open\",due:\"2024-02-29\",done:false})]),\"2024-03-01\")", expected: true, label: "frozen records and calendar boundary", edge: true },
+      { call: "hasOverdue([{title:\"future\",due:\"9999-12-31\",done:false}],\"0001-01-01\")", expected: false, label: "supplied comparison date and valid date bounds", edge: true },
+      { call: "(() => {const first={title:\"future\",due:\"2027-01-01\",done:false},second={title:\"late\",due:\"2020-01-01\",done:false},tasks=[first,second];const out=hasOverdue(tasks,\"2026-01-01\");return out===true&&tasks[0]===first&&tasks[1]===second&&first.done===false&&second.done===false;})()", expected: true, label: "preserve source order and flags", edge: true },
     ],
   },
   {
@@ -610,7 +658,7 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
     tier: 1,
     focus: ['find'],
     title: 'The first free slot',
-    prompt: 'A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked.',
+    prompt: "A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked. slots is an ordinary dense array of data objects with own Boolean booked flags and valid 24-hour times in exactly HH:mm format, including 00:00. The supplied array is already in nondecreasing time order; choose its first unbooked entry without sorting or reserving it. Do not change any slot, other data or array order; frozen inputs are valid. Return a time string or null only when no entry is free. Target: O(n) time in the worst case, where n is the slot count and reading the fields takes constant time.",
     starter: `const firstFree = slots => {
 
 };
@@ -635,6 +683,9 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
       { call: 'firstFree([{ time: "09:00", booked: false }])', expected: '09:00' },
       { call: 'firstFree([{ time: "09:00", booked: true }])', expected: null, label: 'fully booked', edge: true },
       { call: 'firstFree([])', expected: null, label: 'no slots', edge: true },
+      { call: "firstFree([{time:\"00:00\",booked:false},{time:\"00:30\",booked:false}])", expected: "00:00", label: "midnight is a valid time", edge: true },
+      { call: "firstFree(Object.freeze([Object.freeze({time:\"09:00\",booked:true}),Object.freeze({time:\"09:15\",booked:true}),Object.freeze({time:\"09:30\",booked:true}),Object.freeze({time:\"09:45\",booked:true}),Object.freeze({time:\"10:00\",booked:false})]))", expected: "10:00", label: "look beyond the first three slots in frozen input", edge: true },
+      { call: "(() => {const slot={time:\"23:59\",booked:false},slots=[slot];const out=firstFree(slots);return out===\"23:59\"&&slots[0]===slot&&slot.booked===false;})()", expected: true, label: "finding a slot does not book it", edge: true },
     ],
   },
   {
@@ -645,7 +696,7 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
     tier: 1,
     focus: ['includes', 'strings'],
     title: 'Is this file type allowed?',
-    prompt: 'Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `["png", "jpg"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed("Photo.PNG", ["png", "jpg"])` gives `true`. A name with no dot has no extension and is never allowed.',
+    prompt: "Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `[\"png\", \"jpg\"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed(\"Photo.PNG\", [\"png\", \"jpg\"])` gives `true`. A name with no dot has no extension and is never allowed. This is a literal name-suffix exercise, not file-content inspection. fileName is a primitive string of at most 1024 UTF-16 units and is treated exactly as supplied, without trimming or path parsing. allowed is an ordinary dense array of nonempty lowercase ASCII letter/digit extensions, each at most 16 units. A leading-dot name such as .PNG has extension png under this last-dot rule; an empty name, a lone dot or a trailing dot is not allowed. Do not change allowed; frozen arrays are valid. Target: O(n) time, where n is the filename length plus allowed entry count, with bounded extension comparison and linear string scanning/lowercasing.",
     starter: `const isAllowed = (fileName, allowed) => {
 
 };
@@ -673,6 +724,13 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
       { call: 'isAllowed("archive.tar.gz", ["gz"])', expected: true, label: 'only the part after the last dot counts' },
       { call: 'isAllowed("png", ["png"])', expected: false, label: 'no dot, no extension', edge: true },
       { call: 'isAllowed("image.jpg", [])', expected: false, label: 'nothing allowed', edge: true },
+      { call: "isAllowed(\".PNG\",[\"png\"])", expected: true, label: "a leading dot follows the stated suffix rule", edge: true },
+      { call: "isAllowed(\"name.png \",[\"png\"])", expected: false, label: "do not trim extension text", edge: true },
+      { call: "isAllowed(\"name.png\\n\",[\"png\"])", expected: false, label: "a trailing line break is literal data", edge: true },
+      { call: "isAllowed(\"name.\",[\"png\"])", expected: false, label: "no text after the last dot", edge: true },
+      { call: "isAllowed(\".\",[\"png\"])", expected: false, label: "a lone dot is not an allowed extension", edge: true },
+      { call: "isAllowed(\"a.JPG\",Object.freeze([\"png\",\"jpg\"]))", expected: true, label: "frozen allowed list", edge: true },
+      { call: "(() => {const allowed=[\"png\",\"jpg\"];const out=isAllowed(\"a.JPG\",allowed);return out===true&&allowed[0]===\"png\"&&allowed[1]===\"jpg\";})()", expected: true, label: "preserve allowed order", edge: true },
     ],
   },
   {
@@ -683,7 +741,7 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
     tier: 1,
     focus: ['indexOf'],
     title: 'What comes next',
-    prompt: 'A checkout runs through fixed steps, such as `["cart", "address", "payment", "done"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both.',
+    prompt: "A checkout runs through fixed steps, such as `[\"cart\", \"address\", \"payment\", \"done\"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both. steps is an ordinary dense array of primitive strings, and current is a primitive string; each string is at most 128 UTF-16 units. Matching is exact and case-sensitive. When labels repeat, use the first occurrence as indexOf does. Empty strings are valid labels, so an empty next label must be returned as an empty string, not null. Do not change the input; frozen arrays are valid. Target: O(n) time in the worst case, where n is the number of steps and bounded string equality takes constant time.",
     starter: `const nextStep = (steps, current) => {
 
 };
@@ -710,6 +768,12 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
       { call: 'nextStep(["cart", "address", "payment", "done"], "done")', expected: null, label: 'the last step', edge: true },
       { call: 'nextStep(["cart", "address", "payment", "done"], "shipping")', expected: null, label: 'a step that is not in the list', edge: true },
       { call: 'nextStep([], "cart")', expected: null, label: 'no steps', edge: true },
+      { call: "nextStep([\"a\",\"b\",\"a\",\"c\"],\"a\")", expected: "b", label: "use the first repeated current label", edge: true },
+      { call: "nextStep([\"a\",\"\",\"b\"],\"a\")", expected: "", label: "empty destination is a real label", edge: true },
+      { call: "nextStep([\"\",\"b\"],\"\")", expected: "b", label: "empty current label can match", edge: true },
+      { call: "nextStep([\"cart\",\"done\"],\"Cart\")", expected: null, label: "exact case", edge: true },
+      { call: "nextStep(Object.freeze([\"a\",\"b\"]),\"a\")", expected: "b", label: "frozen input", edge: true },
+      { call: "(() => {const steps=[\"b\",\"a\",\"c\"];nextStep(steps,\"b\");return steps;})()", expected: ["b", "a", "c"], label: "preserve step order", edge: true },
     ],
   },
   {
@@ -720,7 +784,7 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
     tier: 2,
     focus: ['findIndex'],
     title: 'Where does it go?',
-    prompt: 'Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2.',
+    prompt: "Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2. sorted is an ordinary dense array of finite Numbers in nondecreasing order, and value is a finite Number. Fractional and negative values are valid; compare without rounding. For duplicates return the position before the first equal entry. This function only reports an index: do not insert, reorder or otherwise change the input, and accept frozen arrays. Target: O(n) time for the taught findIndex scan, where n is the input length and numeric comparison is constant-time; a faster correct search also meets the goal.",
     starter: `const insertAt = (sorted, value) => {
 
 };
@@ -746,6 +810,10 @@ console.log(insertAt([10, 20, 30], 25));
       { call: 'insertAt([10, 20, 30], 20)', expected: 1, label: 'an equal value goes before it' },
       { call: 'insertAt([10, 20, 30], 40)', expected: 3, label: 'after everything goes at the end', edge: true },
       { call: 'insertAt([], 7)', expected: 0, label: 'an empty list', edge: true },
+      { call: "insertAt([0.1,0.2,0.3],0.15)", expected: 1, label: "fractional lower bound without rounding", edge: true },
+      { call: "insertAt(Object.freeze([-2,-0,0,1]),0)", expected: 1, label: "frozen input and first equal zero", edge: true },
+      { call: "(() => {const input=[1,3,5];const out=insertAt(input,2);return out===1&&input.length===3&&input[0]===1&&input[1]===3&&input[2]===5;})()", expected: true, label: "report the position without inserting", edge: true },
+      { call: "insertAt([1,1,1,2],1)", expected: 0, label: "lower bound before all duplicates", edge: true },
     ],
   },
 
@@ -758,7 +826,7 @@ console.log(insertAt([10, 20, 30], 25));
     tier: 1,
     focus: ['functions'],
     title: 'Keep it in range',
-    prompt: 'Write `clamp(value, min = 0, max = 100)`, returning `value` pulled into the range from `min` to `max`: `min` when it is below, `max` when it is above, and `value` itself otherwise. Give `min` and `max` their defaults in the parameter list, so `clamp(150)` gives 100 and `clamp(-5)` gives 0. A default applies when the argument is missing or `undefined`, so `clamp(7, undefined, 5)` gives 5. A 0 that is passed in is a real limit.',
+    prompt: "Write `clamp(value, min = 0, max = 100)`, returning `value` pulled into the range from `min` to `max`: `min` when it is below, `max` when it is above, and `value` itself otherwise. Give `min` and `max` their defaults in the parameter list, so `clamp(150)` gives 100 and `clamp(-5)` gives 0. A default applies when the argument is missing or `undefined`, so `clamp(7, undefined, 5)` gives 5. A 0 that is passed in is a real limit. Domain: value and supplied limits are finite Numbers from -1,000,000 through 1,000,000, with min <= max after defaults. Equal limits and fractions are valid. Return the original value when it is inside the inclusive range, preserving its sign if it is -0; otherwise return the exact applicable limit. Target: O(1) time under unit-cost Number comparisons.",
     starter: `const clamp = (value, min, max) => {
 
 };
@@ -771,7 +839,7 @@ console.log(clamp(150), clamp(-5), clamp(7, undefined, 5));
   // and the other side
   return value;
 };`,
-    hints: ['A default written as `min = 0` in the parameter list is used only when the argument is `undefined`. `min || 0` in the body looks similar, but it also replaces a 0 that was passed on purpose, and `max || 100` turns a max of 0 into 100.'],
+    hints: ['A default written as `min = 0` in the parameter list is used only when the argument is `undefined`. `max || 100` in the body also replaces a deliberately supplied max of 0 with 100.'],
     approach: [
       'Write the defaults into the parameter list: `min = 0, max = 100`.',
       'Return `min` when `value < min`, and `max` when `value > max`.',
@@ -796,7 +864,7 @@ console.log(clamp(150), clamp(-5), clamp(7, undefined, 5));
     tier: 1,
     focus: ['recursion'],
     title: 'A number in binary',
-    prompt: 'Write `toBinary(n)` for a whole number `n` of 0 or more, returning its binary digits as a string, with recursion rather than `toString(2)`. The last binary digit is `n % 2`, and the digits before it are the binary form of `Math.floor(n / 2)`. Stop when `n` is 0 or 1: it is its own single digit. `toBinary(6)` gives `"110"`.',
+    prompt: "Write `toBinary(n)` for a whole number `n` of 0 or more, returning its binary digits as a string, with recursion rather than `toString(2)`. The last binary digit is `n % 2`, and the digits before it are the binary form of `Math.floor(n / 2)`. Stop when `n` is 0 or 1: it is its own single digit. `toBinary(6)` gives `\"110\"`. Domain: n is a nonnegative safe-integer Number, up to Number.MAX_SAFE_INTEGER; -0 also returns \"0\". Return no leading zeros except the single digit for zero. Do not use 32-bit shifts to halve n: they truncate larger Numbers. Target: O(n²) time under a string-copying model, where n here is the number of binary output digits (not the numeric argument). Recursion has O(n) depth; copying each growing prefix gives the quadratic bound, while engines may optimize concatenation.",
     starter: `const toBinary = n => {
 
 };
@@ -834,7 +902,7 @@ console.log(toBinary(6));
     tier: 2,
     focus: ['higher-order'],
     title: 'Record every call',
-    prompt: 'Write `recorded(fn, calls)`, returning a new function that does what `fn` does and also writes down each use. When the new function is called, it calls `fn` with the same arguments, pushes `{ args, result }` onto the `calls` array, and returns the result. Collect the arguments with a rest parameter, `(...args)`, so any number of them works. Nothing is written until the new function is called.',
+    prompt: "Write `recorded(fn, calls)`, returning a new function that does what `fn` does and also writes down each use. When the new function is called, it calls `fn` with the same arguments, pushes `{ args, result }` onto the `calls` array, and returns the result. Collect the arguments with a rest parameter, `(...args)`, so any number of them works. Nothing is written until the new function is called. Invoke fn exactly once per wrapper call. Append only after it returns normally, so a throwing call propagates the same error and appends nothing. Preserve existing log entries, use a fresh args array/record per completed call and keep exact argument/result references, including undefined and falsy values. Domain: calls is an ordinary mutable array; fn is synchronous, independent of dynamic this and does not itself modify calls. Each wrapper is called at most 1,000 times with at most 100 arguments. Target: O(n) time per invocation, where n is 1 plus the argument count, excluding fn’s own work and using amortized log append. Stored log space grows with completed calls and their arguments.",
     starter: `const recorded = (fn, calls) => {
 
 };
@@ -874,7 +942,7 @@ console.log(typeof add === "function" ? add(2, 3) : add, calls);
     tier: 2,
     focus: ['callbacks', 'split'],
     title: 'Call back for each line',
-    prompt: 'Write `eachLine(text, onLine)`, which splits `text` on `"\\n"` and calls `onLine(line, number)` for every line that is not empty. Lines are numbered from 1 in the order they appear, and empty lines still take up a number, the way an editor counts them. `eachLine` returns how many times it called `onLine`. What happens to each line is up to the callback.',
+    prompt: "Write `eachLine(text, onLine)`, which splits `text` on `\"\\n\"` and calls `onLine(line, number)` for every line that is not empty. Lines are numbered from 1 in the order they appear, and empty lines still take up a number, the way an editor counts them. `eachLine` returns how many times it called `onLine`. What happens to each line is up to the callback. text has at most 10000 UTF-16 code units. Split only on LF: CR and whitespace-only lines are literal nonempty content, with no trimming. Invoke onLine synchronously in line order with exactly two arguments and ignore its return value. If onLine throws, stop and propagate that original value; earlier callbacks stay completed. onLine does not depend on this. Target: O(n) time and split storage, where n is 1 + text.length, excluding callback work.",
     starter: `const eachLine = (text, onLine) => {
 
 };
@@ -914,7 +982,7 @@ eachLine("first\\n\\nthird", (line, number) => console.log(number, line));
     tier: 2,
     focus: ['callbacks', 'for-in'],
     title: 'Report what changed',
-    prompt: 'Write `applyChanges(settings, changes, onChange)`. Go through the keys of `changes` with `for...in`. For each key whose new value differs from the one in `settings` (compare with `!==`), store the new value in `settings` and call `onChange(key, oldValue, newValue)`. A key whose value is already the same is left alone and not reported. Return how many keys changed.',
+    prompt: "Write `applyChanges(settings, changes, onChange)`. Go through the keys of `changes` with `for...in`. For each key whose new value differs from the one in `settings` (compare with `!==`), store the new value in `settings` and call `onChange(key, oldValue, newValue)`. A key whose value is already the same is left alone and not reported. Return how many keys changed. Visit only own enumerable string keys of changes, in normal for-in key order; ignore inherited, nonenumerable and symbol keys. settings is a mutable extensible ordinary record whose existing own data properties are writable/configurable, while changes is read-only and may be frozen. Keys, including __proto__ and constructor, are literal data keys: preserve the prototype of settings. A missing own settings key reads undefined, even if its prototype has that name. If old and new are both undefined, leave an absent key absent. Values are opaque references/values; use exactly !==, so NaN differs from itself while both zero signs compare equal. Store the new own data value before calling onChange synchronously with exactly three original arguments; do not clone values. Propagate an original callback error and stop, keeping changes already stored. Callbacks do not mutate the input records. Both records/visited prototype keys have at most 10000 properties; key lengths are bounded to 1000. Target: O(n) time under bounded-key access, where n is 1 + all enumerable string keys visited by for-in, including ignored inherited keys; auxiliary work space is O(1), excluding callback work.",
     starter: `const applyChanges = (settings, changes, onChange) => {
 
 };
@@ -927,17 +995,18 @@ console.log(settings);
     skeleton: `const applyChanges = (settings, changes, onChange) => {
   let changed = 0;
   for (const key in changes) {
-    const oldValue = settings[key];
+    if (!Object.hasOwn(changes, key)) continue;
+    const oldValue = Object.hasOwn(settings, key) ? settings[key] : undefined;
     const newValue = changes[key];
-    // skip an unchanged key; otherwise store it, call back and count it
+    // skip an unchanged key; otherwise define an own data property, call back and count it
   }
   return changed;
 };`,
-    hints: ['`for (const key in changes)` visits each key of `changes`. Read the old value before you overwrite it, or the callback will be told the new value twice.'],
+    hints: ['`for (const key in changes)` also sees inherited keys, so guard with Object.hasOwn. Define changed values as own data properties to handle __proto__ safely. Read the old value before you overwrite it, or the callback will be told the new value twice.'],
     approach: [
-      'Loop over the keys of `changes` with `for...in`.',
+      'Loop over the keys of `changes` with `for...in`, skipping keys that are not its own.',
       'Read the old and the new value. When they are the same with `===`, move on to the next key.',
-      'Otherwise store the new value, call `onChange(key, oldValue, newValue)` and add 1 to the count. Return the count.',
+      'Otherwise define the own data value with Object.defineProperty (writable, enumerable and configurable), call `onChange(key, oldValue, newValue)` and add 1 to the count. Return the count.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -959,7 +1028,7 @@ console.log(settings);
     tier: 2,
     focus: ['timers'],
     title: 'Count down, one tick at a time',
-    prompt: 'Write `countdown(from, ms, onTick)`, which calls `onTick(from)` after `ms` milliseconds, then `onTick(from - 1)` `ms` milliseconds after that, and so on down to `onTick(1)`. Chain `setTimeout` calls rather than using `setInterval`: each tick schedules the next one, and the last tick schedules nothing. `countdown` itself returns straight away, before any tick. A `from` of 0 never calls `onTick`.',
+    prompt: "Write `countdown(from, ms, onTick)`, which calls `onTick(from)` after `ms` milliseconds, then `onTick(from - 1)` `ms` milliseconds after that, and so on down to `onTick(1)`. Chain `setTimeout` calls rather than using `setInterval`: each tick schedules the next one, and the last tick schedules nothing. `countdown` itself returns straight away, before any tick. A `from` of 0 never calls `onTick`. from is an integer from 0 to 1000 and ms is an integer from 1 to 1000. onTick is synchronous, returns normally and does not depend on this; pass exactly one argument and ignore its return value. Each countdown has independent state and keeps only the next tick scheduled. Delays are minimum waits, not exact wall-clock deadlines. The return value is unspecified. Target: O(n) time for the complete sequence of wrapper callbacks, where n is 1 + from, with O(1) simultaneously retained timer/state space, excluding host timer management, waiting and onTick work.",
     starter: `const countdown = (from, ms, onTick) => {
 
 };
@@ -996,7 +1065,7 @@ countdown(3, 100, n => console.log(n));
     tier: 2,
     focus: ['timers', 'forEach'],
     title: 'A reminder for each event',
-    prompt: 'Each event is `{ title, at }`, where `at` is a time in milliseconds on the same clock as `now`. Write `scheduleReminders(events, now, remind)`, which uses `forEach` to start one `setTimeout` per event, calling `remind(title)` when that event’s time comes, `at - now` milliseconds from now. An event at or before `now` has already started: skip it. Return how many reminders were scheduled.',
+    prompt: "Each event is `{ title, at }`, where `at` is a time in milliseconds on the same clock as `now`. Write `scheduleReminders(events, now, remind)`, which uses `forEach` to start one `setTimeout` per event, calling `remind(title)` when that event’s time comes, `at - now` milliseconds from now. An event at or before `now` has already started: skip it. Return how many reminders were scheduled. events is a read-only dense array of at most 1000 ordinary read-only records and may be frozen with its records. title is a string of at most 1000 characters; now and at are nonnegative integer timestamps at most 1000000000000. Every future event is at most 1000 milliseconds ahead. Capture title and delay when scheduling, so later caller edits to records/arrays do not change queued reminders. Invoke remind with exactly one title argument; it is synchronous, returns normally and does not depend on this. Duplicate events each get their own timer, and equal delays keep input registration order. Leave the input untouched. Timer waits are minimum delays, not exact wall-clock deadlines. Target: O(n) time to register reminders and O(n) retained timer data, where n is 1 + events.length, excluding host timer management, waiting and remind work.",
     starter: `const scheduleReminders = (events, now, remind) => {
 
 };
@@ -1015,7 +1084,7 @@ console.log(scheduleReminders([{ title: "standup", at: 1300 }, { title: "coffee"
     approach: [
       'Call `forEach` on the events and keep a count.',
       'Skip an event whose `at` is less than or equal to `now`.',
-      'For any other event, call `setTimeout(() => remind(event.title), event.at - now)` and add 1 to the count. Return the count.',
+      'For any other event, first capture its title and delay, then call `setTimeout(() => remind(title), delay)` and add 1 to the count. Return the count.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -1037,7 +1106,7 @@ console.log(scheduleReminders([{ title: "standup", at: 1300 }, { title: "coffee"
     tier: 2,
     focus: ['json'],
     title: 'Only the public fields',
-    prompt: 'Write `toPublicJson(user)`, returning the user as JSON text that holds only `id`, `name` and `avatar`, in that order, so nothing private such as `email` leaves the server. `JSON.stringify` takes an array of property names as its second argument and writes only those, in the order listed. A listed field the user does not have is left out.',
+    prompt: "Write `toPublicJson(user)`, returning compact JSON text with only id, name and avatar, in that order, using JSON.stringify’s property-list replacer. Missing or undefined public fields are omitted; null, false, zero and empty strings are kept. This is serialization practice for the flat data contract below, not authorization or validation of arbitrary objects. Domain: user is an ordinary record whose public fields, if present, are own data properties holding strings up to 1,000 UTF-16 units, finite Numbers, Booleans, null or undefined. There are no inherited public fields, proxies or toJSON hooks. Other fields are opaque and must not be read or copied; an ignored extra may have a throwing getter. The record may be frozen and must not be mutated. Target: O(n) time under ordinary JSON serialization, where n is 1 plus the length of the selected string values; the number of ignored private properties does not add traversal work.",
     starter: `const toPublicJson = user => {
 
 };
@@ -1073,7 +1142,7 @@ console.log(toPublicJson({ id: 7, name: "Ada", email: "ada@example.com", avatar:
     tier: 2,
     focus: ['fetch'],
     title: 'A 404 is still a response',
-    prompt: '`fetch` rejects only when the request cannot be made at all. A 404 or a 500 still resolves to a response, with `ok` set to `false`. Write an `async` function `getJson(request, url)`, where `request` works like `fetch`: call it with the URL and await the response. When `response.ok` is `false`, throw an `Error` whose message is `"Request failed: "` followed by `response.status`. Otherwise return the body from `await response.json()`.',
+    prompt: "`fetch` resolves for HTTP error statuses such as 404 or 500, with `ok` set to `false`. Network failures, aborts and malformed requests can reject instead. Write an `async` function `getJson(request, url)`, where `request` works like `fetch`: call it with the URL and await the response. When `response.ok` is `false`, throw an `Error` whose message is `\"Request failed: \"` followed by `response.status`. Otherwise return the body from `await response.json()`. request is supplied to the function; do not use the global fetch or perform a real network request. url is an unchanged string up to 2000 UTF-16 units. Call request exactly once with only that URL. Its ordinary native Promise fulfills with a stable response-like record: ok is a boolean and status is an integer from 100 through 599. Call response.json exactly once with no arguments and with response as its receiver, only when ok is true. Preserve the exact JSON body value/reference, including null, false, 0 and empty text. Forward the exact reason of a synchronous request/json throw or rejected request/json Promise; do not wrap it. A successful HTTP status does not guarantee valid JSON: an empty 204 body may fail parsing. Leave the response and returned body unchanged and return a new native Promise immediately. Target: O(1) time and wrapper state, excluding request work, JSON parsing, waiting and host scheduling.",
     starter: `const getJson = async (request, url) => {
 
 };
@@ -1113,7 +1182,7 @@ getJson(notFound, "/missing").then(data => console.log("data", data), error => c
     tier: 2,
     focus: ['fetch', 'json'],
     title: 'Send JSON with a POST',
-    prompt: 'Write an `async` function `postJson(request, url, data)`, where `request` works like `fetch`. Call it with the URL and an options object with these three properties and no others: `method: "POST"`, `headers: { "Content-Type": "application/json" }`, and `body`, which is `data` turned into JSON text with `JSON.stringify`. Await the response and return its `status`, whatever it is.',
+    prompt: "Write an `async` function `postJson(request, url, data)`, where `request` works like `fetch`. Call it with the URL and an options object with these three properties and no others: `method: \"POST\"`, `headers: { \"Content-Type\": \"application/json\" }`, and `body`, which is `data` turned into JSON text with `JSON.stringify`. Await the response and return its `status`, whatever it is. request is supplied; do not use global fetch or make a real network request. url is an unchanged string up to 2000 UTF-16 units. data is a read-only JSON-compatible primitive, dense array or plain/null-prototype record of ordinary data properties, without cycles, accessors, custom toJSON or non-finite Numbers; at most 10000 serialized UTF-16 units and nesting depth 20. Serialize with standard JSON.stringify without changing data. Call request exactly once with exactly two arguments. Each invocation gets fresh plain options and headers objects, containing only the specified own properties; a request may retain or modify them without affecting another call. Its ordinary native Promise fulfills with status, an integer from 100 through 599: return it without checking ok or reading/parsing a body. Forward the exact original reason of synchronous request throws or request rejections. Return a new native Promise immediately. Target: O(n) time and retained body/options space, where n is 1 + the serialized JSON text length, excluding request work, waiting and host scheduling.",
     starter: `const postJson = async (request, url, data) => {
 
 };
@@ -1130,7 +1199,7 @@ postJson(logRequest, "/api/notes", { text: "hi" }).then(status => console.log(st
   });
   return response.status;
 };`,
-    hints: ['A request body travels as text, so an object has to go through `JSON.stringify` first. The `Content-Type` header tells the server how to read that text.'],
+    hints: ['For this JSON request, `JSON.stringify` produces the body text. The `Content-Type` header tells the server how to read it.'],
     approach: [
       'Build the options: `method`, `headers` and `body`.',
       'Set `body` to `JSON.stringify(data)`.',
@@ -1153,7 +1222,7 @@ postJson(logRequest, "/api/notes", { text: "hi" }).then(status => console.log(st
     tier: 2,
     focus: ['async-await'],
     title: 'Hide the spinner every time',
-    prompt: 'Write an `async` function `withSpinner(show, hide, task)`. Call `show()`, then `await task()` and return what it resolves to. Call `hide()` in a `finally` block, so the spinner goes away once the task has finished, whether it succeeded or failed. When `task` rejects, `withSpinner` rejects with the same error, after hiding the spinner.',
+    prompt: "Write an `async` function `withSpinner(show, hide, task)`. Call `show()`, then `await task()` and return what it resolves to. Call `hide()` in a `finally` block, so the spinner goes away once the task has finished, whether it succeeded or failed. When `task` rejects and `hide` returns normally, `withSpinner` rejects with the same error after hiding the spinner. show and hide are supplied synchronous functions with ignored nonthenable returns. Call each with no arguments. If show throws, return a rejected native Promise with that exact reason and call neither task nor hide. Otherwise task is called once with no arguments; it returns an ordinary native Promise or throws synchronously. Preserve its exact fulfilled value/rejection reason, including frozen records, functions, Symbols, undefined, NaN and -0. Call hide exactly once after task settles or throws; never while it is still pending. If hide throws, its exact reason becomes the result rejection even if task also failed. Leave input values unchanged and return a fresh native Promise immediately. Target: O(1) time and retained wrapper state, excluding callback work, waiting and host scheduling.",
     starter: `const withSpinner = async (show, hide, task) => {
 
 };

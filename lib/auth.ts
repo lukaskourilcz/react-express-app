@@ -1,3 +1,4 @@
+import { timedSupabaseFetch } from './request-timing';
 import type { VercelRequest } from './vercel-types.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -13,6 +14,7 @@ const IS_PROD =
 const authClient: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
+        global: { fetch: timedSupabaseFetch },
         auth: { persistSession: false, autoRefreshToken: false },
       })
     : null;

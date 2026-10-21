@@ -33,7 +33,7 @@ export const EASY_TYPESCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['utility-types', 'filter'],
     title: 'What the draft still needs',
-    prompt: 'A blog editor saves drafts before every field is filled in. `Post` has a `title`, a `body` and a list of `tags`. Write `missingFields(draft: Partial<Post>): string[]`, returning the names of the fields the draft does not have yet, in the order `title`, `body`, `tags`. `Partial<Post>` is `Post` with every property optional, so `{ title: "Hi" }` is a valid draft. A field counts as missing only when it is `undefined`: an empty title is still a title.',
+    prompt: "A blog editor saves drafts before every field is filled in. `Post` has a `title`, a `body` and a list of `tags`. Write `missingFields(draft: Partial<Post>): string[]`, returning the names of the fields the draft does not have yet, in the order `title`, `body`, `tags`. `Partial<Post>` is `Post` with every property optional, so `{ title: \"Hi\" }` is a valid draft. A field counts as missing only when it is `undefined`: an empty title is still a title. Domain: a stable ordinary or null-prototype draft, possibly frozen, with optional own or inherited data fields on a bounded prototype chain and no accessors/proxies. Title/body are text, tags is a string array and may be empty/frozen, and undefined or absence is missing; null is outside Partial<Post>. Unrelated fields carry opaque values and must be ignored. Return a fresh mutable array every call, including a complete draft, without adding fields, changing values or mutating tags. Target: O(1) time and working/output space: inspect only the three fixed fields, regardless of text, tag or unrelated metadata size.",
     starter: `interface Post {
   title: string;
   body: string;
@@ -88,7 +88,7 @@ const missingFields = (draft: Partial<Post>): string[] => {
     tier: 2,
     focus: ['utility-types', 'map'],
     title: 'Article previews',
-    prompt: 'A news page lists articles as cards that show only the `id` and the `title`. Declare `type Preview = Pick<Article, "id" | "title">`, then write `toPreviews(articles: Article[]): Preview[]`, returning one preview per article in the same order. A preview carries those two properties and nothing else, so the `body` and the `author` stay behind. `Article` is declared for you.',
+    prompt: "A news page lists articles as cards that show only the `id` and the `title`. Declare `type Preview = Pick<Article, \"id\" | \"title\">`, then write `toPreviews(articles: Article[]): Preview[]`, returning one preview per article in the same order. A preview carries those two properties and nothing else, so the `body` and the `author` stay behind. `Article` is declared for you. Domain: a dense ordinary list of at most 1000 stable Article records, possibly frozen, with integer ids from -1000000000 through 1000000000 and title text of at most 200 UTF-16 units. Required fields may be own or inherited stable data on a bounded prototype chain; no accessors/proxies are involved. Duplicate ids and repeated object references are valid. Extra string/Symbol fields may hold opaque metadata; ignore them and do not traverse body/author contents. Each result is a fresh plain mutable object with exactly the two own keys id and title, including a separate object for every repeated occurrence and every call. The outer array is fresh and mutable even when empty. Leave all sources unchanged. Pick changes the static view; it does not remove runtime fields, so construct the two-field objects explicitly. Target: O(n) time and output space, where n is 1 + article count with bounded property reads.",
     starter: `interface Article {
   id: number;
   title: string;
@@ -144,7 +144,7 @@ const toPreviews = (articles: Article[]): Preview[] => {
     tier: 2,
     focus: ['utility-types', 'type-guards'],
     title: 'Only on weekdays',
-    prompt: '`Day` is a union of seven short day names, `"mon"` to `"sun"`. Declare `type Weekday = Exclude<Day, "sat" | "sun">`, which leaves the five working days. Then write `isWeekday(day: Day): day is Weekday`, returning `true` from Monday to Friday and `false` at the weekend. The return type tells the compiler that a day which passes the check is a `Weekday`.',
+    prompt: "`Day` is a union of seven short day names, `\"mon\"` to `\"sun\"`. Declare `type Weekday = Exclude<Day, \"sat\" | \"sun\">`, which leaves the five working days. Then write `isWeekday(day: Day): day is Weekday`, returning `true` from Monday to Friday and `false` at the weekend. The return type tells the compiler that a day which passes the check is a `Weekday`. Domain: exactly the seven primitive lowercase Day literals. Weekday contains all five literals mon, tue, wed, thu and fri, and neither weekend literal. Return an actual boolean, without state changing later calls. This fixed teaching calendar does not model holidays, locales or working schedules. The explicit predicate illustrates narrowing; equivalent inferred predicates are accepted by the current TypeScript checker. Target: O(1) time and working space because the domain and weekend membership set have fixed size.",
     starter: `type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 const isWeekday = (day) => {
@@ -193,7 +193,7 @@ const isWeekday = (day: Day): day is Weekday => {
     tier: 1,
     focus: ['constraints'],
     title: 'The longer of two',
-    prompt: 'Write `longer<T extends { length: number }>(a: T, b: T): T`, returning whichever argument has the greater `length`, or `a` when the two tie. The constraint lets the function read `.length` on anything that has one, so the same function works for two strings and for two arrays, and the caller gets back the type they passed in.',
+    prompt: "Write `longer<T extends { length: number }>(a: T, b: T): T`, returning whichever argument has the greater `length`, or `a` when the two tie. The constraint lets the function read `.length` on anything that has one, so the same function works for two strings and for two arrays, and the caller gets back the type they passed in. Domain: strings, native arrays, functions or stable ordinary/null-prototype records with a numeric length, without accessors/proxies. Record length may be own or inherited through a bounded prototype chain. Values and contents are opaque: compare numeric length properties without traversing, cloning, coercing or calling either argument, and leave them unchanged. Return the exact original argument. Use the strict comparison b.length > a.length: return b only when it is true, otherwise a. This includes equal lengths, signed zeros and unordered NaN comparisons; infinities are compared as Numbers. String length counts UTF-16 code units. Target: O(1) time and working state for two stable length reads and one comparison.",
     starter: `const longer = (a, b) => {
 
 };
@@ -234,7 +234,7 @@ console.log(longer("tea", "coffee"));
     tier: 2,
     focus: ['constraints', 'filter'],
     title: 'Only the active ones',
-    prompt: 'Users, products and sessions all carry an `active` flag. Write `onlyActive<T extends { active: boolean }>(items: T[]): T[]`, keeping the items whose `active` is `true`, in their original order. Each item keeps its other properties: filtering users gives back users, not bare `{ active: boolean }` objects.',
+    prompt: "Users, products and sessions all carry an `active` flag. Write `onlyActive<T extends { active: boolean }>(items: T[]): T[]`, keeping the items whose `active` is `true`, in their original order. Each item keeps its other properties: filtering users gives back users, not bare `{ active: boolean }` objects. Domain: a dense array of at most 1000 stable ordinary or null-prototype records, possibly frozen, whose active flag is an own or inherited boolean data property on a bounded prototype chain. No accessors/proxies are involved. Other fields are opaque. Retain each exact active record reference, all duplicates and their original order. Leave every flag, record and array order unchanged; do not inspect or clone unrelated fields. Return a fresh mutable outer array on every call, including all-active, none-active and empty input. Target: O(n) time and worst-case O(n) output space, where n is 1 + item count.",
     starter: `const onlyActive = (items) => {
 
 };
@@ -274,7 +274,7 @@ console.log(onlyActive([{ name: "ada", active: true }, { name: "bo", active: fal
     tier: 2,
     focus: ['constraints', 'reduce'],
     title: 'The cheapest offer',
-    prompt: 'Write `cheapest<T extends { price: number }>(items: T[]): T | null`, returning the item with the lowest `price`, or `null` for an empty list. Find it with `reduce`. On a tie the first of the equal items wins. Return the item itself, with all its properties, rather than its price.',
+    prompt: "Write `cheapest<T extends { price: number }>(items: T[]): T | null`, returning the item with the lowest `price`, or `null` for an empty list. Find it with `reduce`. On a tie the first of the equal items wins. Return the item itself, with all its properties, rather than its price. Domain: a dense ordinary array of at most 1000 stable records, possibly frozen, with finite Number prices from -1000000000 through 1000000000, including fractional or negative values. Price may be an own or inherited data property on a bounded prototype chain; no accessors/proxies are involved. Return the exact original winner with its opaque extra fields. Equal prices, including signed zero, keep the earlier record. Leave all records and array order unchanged. Target: O(n) time and O(1) working state, where n is 1 + item count under bounded numeric comparisons.",
     starter: `const cheapest = (items) => {
 
 };
@@ -317,7 +317,7 @@ console.log(cheapest([{ name: "a", price: 3 }, { name: "b", price: 1 }]));
     tier: 1,
     focus: ['destructuring', 'tuples'],
     title: 'Flip a pair',
-    prompt: 'Write `flip<A, B>([first, second]: [A, B]): [B, A]`, taking a tuple of two items and returning a new tuple with them the other way round. Pull the two items out with array destructuring in the parameter list. The types swap too: flipping `[1, "a"]` gives `["a", 1]`, typed `[string, number]`.',
+    prompt: "Write `flip<A, B>([first, second]: [A, B]): [B, A]`, taking a tuple of two items and returning a new tuple with them the other way round. Pull the two items out with array destructuring in the parameter list. The types swap too: flipping `[1, \"a\"]` gives `[\"a\", 1]`, typed `[string, number]`. Domain: an ordinary dense two-element tuple, possibly frozen at runtime. Its entries are opaque values, including undefined, functions, Symbols, NaN, signed zero, arrays and records. Return a fresh mutable two-element tuple containing the exact original entries/references in reverse order; do not clone, invoke, flatten or change them or mutate the input. Each call produces a distinct tuple even when both entries are the same value. Keep the two generic types distinct and preserve their positions. Target: O(1) time and output space: the pair always has two positions, regardless of the size of either opaque value.",
     starter: `const flip = (pair) => {
 
 };
@@ -357,7 +357,7 @@ console.log(flip([1, "a"]));
     tier: 1,
     focus: ['destructuring'],
     title: 'Header row and the rest',
-    prompt: 'A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists.',
+    prompt: "A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists. Domain: an ordinary dense array of at most 1000 dense string-array rows, with at most 10000 cells in total and strings up to 200 UTF-16 units. Outer/row arrays may be frozen at runtime. Rows may have different lengths, including zero; no CSV parsing or rectangular-table validation is required. Return a fresh plain object containing only header and body. A present first row is the exact original header reference, including an empty row; each body row keeps its original reference. Only the body outer array is copied. For no rows, create separate fresh empty header and body arrays on every call. Leave the input and rows unchanged; do not deep-clone cell rows. Target: O(n) time and body-array space, where n is 1 + the row count, excluding the untouched cell contents.",
     starter: `const splitHeader = (rows) => {
 
 };
@@ -398,7 +398,7 @@ console.log(splitHeader([["name", "age"], ["Ada", "36"]]));
     tier: 2,
     focus: ['destructuring', 'optional'],
     title: 'Fields from the API',
-    prompt: 'An API sends each user as `{ user_name: string; avatar_url?: string }`, and the app wants `{ name: string; avatar: string | null }`. Declare the two shapes as `ApiUser` and `Profile`, then write `toProfile(raw: ApiUser): Profile` with one object destructuring that renames both fields and gives a missing avatar the default `null`. An empty `avatar_url` is still a value the API sent, so it stays.',
+    prompt: "An API sends each user as `{ user_name: string; avatar_url?: string }`, and the app wants `{ name: string; avatar: string | null }`. Declare the two shapes as `ApiUser` and `Profile`, then write `toProfile(raw: ApiUser): Profile` with one object destructuring that renames both fields and gives a missing avatar the default `null`. An empty `avatar_url` is still a value the API sent, so it stays. Domain: raw is a stable ordinary/null-prototype data record, possibly frozen, with own user_name and optional own avatar_url as declared. No accessors or proxies are involved. Each present string has at most 200 UTF-16 units, including empty text, whitespace and Unicode; preserve it exactly without trimming or URL validation. Missing or explicitly undefined avatar becomes null. Ignore extra fields and return a fresh plain mutable object with only name and avatar on every call, leaving raw unchanged. Target: O(1) time and output state: this renames two fields without traversing their string contents.",
     starter: `const toProfile = (raw) => {
 
 };
@@ -450,7 +450,7 @@ const toProfile = (raw: ApiUser): Profile => {
     tier: 1,
     focus: ['map-set', 'strings'],
     title: 'Airport codes to names',
-    prompt: 'A flight route is written as airport codes joined by dashes, such as `"PRG-LHR-JFK"`. Write `routeNames(route: string, airports: Map<string, string>): string[]`, splitting the route on `-` and looking each code up in the `Map`. The Map’s keys are in capitals, so `"prg"` finds `"PRG"`. A code the Map does not know stays exactly as it was written, and an empty route gives an empty list.',
+    prompt: "A flight route is written as airport codes joined by dashes, such as `\"PRG-LHR-JFK\"`. Write `routeNames(route: string, airports: Map<string, string>): string[]`, splitting the route on `-` and looking each code up in the `Map`. The Map\u2019s keys are in capitals, so `\"prg\"` finds `\"PRG\"`. A code the Map does not know stays exactly as it was written, and an empty route gives an empty list. Domain: route has at most 10000 UTF-16 units; split only on the literal hyphen and do not trim or discard tokens. Only an entirely empty route returns []; empty tokens inside any nonempty route are ordinary codes and may have a mapped name. Match keys using locale-independent toUpperCase; every key in the native Map is already in that normalized form. The stable Map has at most 1000 entries and string values up to 200 units, including empty names. Unknown codes retain their exact original text. Return a fresh mutable array every call, without changing the Map. Target: O(n) time and output space, where n is 1 + route length in UTF-16 units, accounting for splitting, case conversion and key hashing under average Map lookup costs; mapped string values are retained, not traversed.",
     starter: `const routeNames = (route: string, airports: Map<string, string>): string[] => {
 
 };
@@ -492,13 +492,13 @@ console.log(routeNames("PRG-LHR", airports));
     tier: 2,
     focus: ['map-set', 'readonly'],
     title: 'Select and deselect',
-    prompt: 'A photo grid keeps the ids of the selected photos in a `Set`. Write `toggle(selected: ReadonlySet<string>, id: string): Set<string>`, returning a new Set with `id` removed when it was selected and added when it was not. The parameter is a `ReadonlySet`, so `add` and `delete` do not exist on it: copy it into a new `Set` and change the copy.',
+    prompt: "A photo grid keeps the ids of the selected photos in a `Set`. Write `toggle(selected: ReadonlySet<string>, id: string): Set<string>`, returning a new Set with `id` removed when it was selected and added when it was not. The parameter has the ReadonlySet type, which exposes no add or delete during type checking. Copy it into a new Set and change the copy; the type alone does not freeze the runtime collection. Domain: selected is a read-only view of an ordinary native Set of at most 1000 strings, and id is a string, each at most 200 UTF-16 units. Match exact strings, including empty text, whitespace and case distinctions. Preserve native insertion order of all other entries; a newly added id goes last. Return a fresh mutable native Set every call and leave selected unchanged, including when a caller later changes the returned Set. ReadonlySet limits checked access; it does not remove runtime methods or freeze entries. Target: O(n) time and output space, where n is 1 + selected.size under average constant-time Set operations and bounded string comparison.",
     starter: `const toggle = (selected, id) => {
 
 };
 
-// Scratch pad. Change this and press Run.
-console.log([...toggle(new Set(["a"]), "b")]);
+// Scratch pad. Uncomment once your function returns a Set.
+// console.log([...toggle(new Set(["a"]), "b")]);
 `,
     skeleton: `const toggle = (selected: ReadonlySet<string>, id: string): Set<string> => {
   const next = new Set(selected);
@@ -534,7 +534,7 @@ console.log([...toggle(new Set(["a"]), "b")]);
     tier: 2,
     focus: ['map-set', 'reduce'],
     title: 'Price the basket',
-    prompt: 'A shop keeps its prices in cents in a `Map` from product name to price. Write `basketTotal(prices: ReadonlyMap<string, number>, basket: string[]): number`, adding up the price of every product in the basket with `reduce`. A product named twice is paid for twice. When a product has no price, the basket cannot be priced: throw an `Error` with the message `No price for <product>`, such as `No price for cake`.',
+    prompt: "A shop keeps its prices in cents in a `Map` from product name to price. Write `basketTotal(prices: ReadonlyMap<string, number>, basket: string[]): number`, adding up the price of every product in the basket with `reduce`. A product named twice is paid for twice. When a product has no price, the basket cannot be priced: throw an `Error` with the message `No price for <product>`, such as `No price for cake`. Domain: prices is a stable native Map viewed as ReadonlyMap, with at most 1000 product entries; each price is an integer number of cents from 0 through 1000000000. Basket is a dense array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Names match exactly, including empty text, whitespace and case. Leave the Map and basket unchanged. On multiple missing products, throw an Error naming the first missing product in basket order, with the exact message No price for <product>. Zero is a known price. Repeated names are charged repeatedly; the total stays within safe integer arithmetic. Target: O(n) time and O(1) working state, where n is 1 + basket length under bounded string hashing and average Map operations.",
     starter: `const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number => {
 
 };
@@ -580,7 +580,7 @@ console.log(basketTotal(prices, ["tea", "cake", "tea"]));
     tier: 2,
     focus: ['two-pointer', 'while'],
     title: 'Trim blank lines',
-    prompt: 'Write `trimBlank(lines: readonly string[]): string[]`, returning the lines without the blank ones at the start and at the end. A blank line is empty or holds only spaces. Blank lines between two lines of text stay. Keep one index at each end, move each inward in a `while` loop for as long as it points at a blank line, then copy what lies between them with `slice`.',
+    prompt: "Write `trimBlank(lines: readonly string[]): string[]`, returning the lines without the blank ones at the start and at the end. A blank line is one whose JavaScript trim() result is empty, including tabs and other JavaScript whitespace. Blank lines between two lines of text stay. Keep one index at each end, move each inward in a `while` loop for as long as it points at a blank line, then copy what lies between them with `slice`. Domain: a dense readonly ordinary array of at most 1000 stable primitive strings, each at most 1000 UTF-16 units, possibly frozen, with no accessors/proxies. Use JavaScript trim only to classify boundary lines; preserve retained text exactly, including internal blank/whitespace lines and spaces around nonblank text. Return a fresh mutable outer array every call, including no trimming, all blank and empty input. Leave the original unchanged. Target: O(n) time and output space, where n is 1 + line count + total input UTF-16 units; the two indexes move inward rather than restarting scans.",
     starter: `const trimBlank = (lines: readonly string[]): string[] => {
 
 };
@@ -626,7 +626,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
     tier: 2,
     focus: ['two-pointer', 'readonly'],
     title: 'Free on both calendars',
-    prompt: 'Two people list the days of the month they are free, each list sorted from low to high with no repeats. Write `freeBoth(mine: readonly number[], yours: readonly number[]): number[]`, returning the days on both lists, in order. Walk the two lists together with one index each. When the two days match, keep the day and move both indexes; otherwise move only the index that points at the smaller day.',
+    prompt: "Two people list the numbered days they are free, each list sorted from low to high with no repeats. Write `freeBoth(mine: readonly number[], yours: readonly number[]): number[]`, returning the days on both lists, in order. Walk the two lists together with one index each. When the two days match, keep the day and move both indexes; otherwise move only the index that points at the smaller day. Domain: dense readonly ordinary arrays of at most 1000 strictly increasing, unique positive integer day numbers from 1 through 1000000000, possibly frozen, with no accessors/proxies. These are numbered days, not restricted to one calendar month. No input validation, sorting or mutation is needed. Keep shared values in ascending order and return a fresh mutable array every call, including empty results and identical inputs. Target: O(n + m) time, where n is 1 + mine.length and m is 1 + yours.length under bounded numeric comparisons. The pointer boards use O(1) working state excluding output.",
     starter: `const freeBoth = (mine: readonly number[], yours: readonly number[]): number[] => {
 
 };
@@ -672,7 +672,7 @@ console.log(freeBoth([1, 4, 9, 12], [2, 4, 12, 20]));
     tier: 2,
     focus: ['two-pointer', 'tuples'],
     title: 'Where a value starts and ends',
-    prompt: 'A sorted list keeps equal values next to each other. Write `spanOf(sorted: readonly number[], value: number): [number, number] | null`, returning the first and the last index of `value` as a tuple, or `null` when the value is not in the list. Put one index at each end and move each inward for as long as it does not point at the value.',
+    prompt: "A sorted list keeps equal values next to each other. Write `spanOf(sorted: readonly number[], value: number): [number, number] | null`, returning the first and the last index of `value` as a tuple, or `null` when the value is not in the list. Put one index at each end and move each inward for as long as it does not point at the value. Domain: a dense ordinary readonly array of at most 1000 finite Numbers in nondecreasing order, possibly frozen, without accessors/proxies; value is finite too. Fractions, negatives and signed zero are valid, and equality uses ===. Leave the input unchanged. Return a fresh mutable two-number tuple on each successful call, including repeated calls; a miss is exactly null. The inward scan is the intended practice; a binary-search implementation with the same behavior is valid too. Target: O(n) time in the worst case and O(1) extra space, where n is 1 + list length; a logarithmic solution also meets this time goal.",
     starter: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
 
 };
@@ -718,7 +718,7 @@ console.log(spanOf([1, 2, 2, 2, 5], 2));
     tier: 2,
     focus: ['keyof', 'sort'],
     title: 'Sort by a column',
-    prompt: 'A table shows `Player` rows with a `name`, a `score` and a `country`. Write `sortRows(rows: readonly Player[], column: keyof Player): Player[]`, returning a new array sorted from low to high by the chosen column: numbers by value, text in character order. `keyof Player` is the union `"name" | "score" | "country"`, so a column that does not exist will not compile. Rows with equal values keep their order.',
+    prompt: "A table shows `Player` rows with a `name`, a `score` and a `country`. Write `sortRows(rows: readonly Player[], column: keyof Player): Player[]`, returning a new array sorted from low to high by the chosen column: numbers by value, text in character order. `keyof Player` is the union `\"name\" | \"score\" | \"country\"`, so a column that does not exist will not compile. Rows with equal values keep their order. Domain: a dense readonly ordinary array of at most 1000 stable Player records, possibly frozen, with own name/country strings of at most 200 UTF-16 units and finite Number scores from -1000000000 through 1000000000, including fractions and signed zero. No accessors/proxies are involved. Text uses case-sensitive UTF-16 code-unit order with no trimming, normalization or locale collation; scores use numeric order. Return a fresh mutable outer array every call, including empty input, with exact original row references and opaque metadata. Preserve stable ties, duplicates and the unchanged input. Target: O(n log n) time in the comparison-sort model and O(n) output space, where n is 1 + row count with bounded comparison costs. The language specification does not promise a particular built-in sorting algorithm.",
     starter: `interface Player {
   name: string;
   score: number;
@@ -771,7 +771,7 @@ const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
     tier: 2,
     focus: ['keyof', 'record'],
     title: 'A heading for every column',
-    prompt: 'A contact table needs a heading for each column. Declare `const LABELS: Record<keyof Contact, string>` holding the headings `Full name`, `Email` and `Phone number`. With that type, leaving out a column, or adding one `Contact` does not have, is a compile error. Then write `headings(columns: (keyof Contact)[]): string[]`, returning the heading of each column in the order asked.',
+    prompt: "A contact table needs a heading for each column. Declare `const LABELS: Record<keyof Contact, string>` holding the headings `Full name`, `Email` and `Phone number`. When checking the fresh LABELS object literal against that type, a missing or extra column is a compile error. A wider compatible variable can still have extra properties: Record does not strip runtime fields. Then write `headings(columns: (keyof Contact)[]): string[]`, returning the heading of each column in the order asked. Domain: a dense ordinary array of at most 1000 exact Contact keys, possibly frozen. Preserve key order and duplicates, leaving columns and the fixed LABELS lookup unchanged. Return a fresh mutable array on every call, including repeated requests and empty input, with the exact three headings shown above. Target: O(n) time and output space, where n is 1 + requested column count; the three-key heading lookup has fixed size.",
     starter: `interface Contact {
   name: string;
   email: string;
@@ -798,7 +798,7 @@ const LABELS: Record<keyof Contact, string> = {
 const headings = (columns: (keyof Contact)[]): string[] => {
   // look up each column in LABELS
 };`,
-    hints: ['`Record<keyof Contact, string>` is an object type with exactly the keys `name`, `email` and `phone`, each holding a string. `LABELS[column]` is then a string for any column the function accepts.'],
+    hints: ['`Record<keyof Contact, string>` requires the keys `name`, `email` and `phone`, each holding a string. Excess keys are checked on fresh literals; compatible wider variables are still allowed. `LABELS[column]` is then a string for any column the function accepts.'],
     approach: [
       'Declare `LABELS` with the `Record` type and one heading per key.',
       'Type the parameter as `(keyof Contact)[]`.',
@@ -830,7 +830,7 @@ const headings = (columns: (keyof Contact)[]): string[] => {
     tier: 1,
     focus: ['spread', 'map'],
     title: 'Tick off a todo',
-    prompt: 'Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller’s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you.',
+    prompt: "Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller\u2019s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you. Domain: a dense read-only array of at most 1000 stable ordinary/null-prototype data records, possibly frozen. Every todo has integer id from 0 through 1000000000, text up to 200 UTF-16 units and boolean done, plus up to 20 extra own enumerable string/Symbol data properties with opaque values. Mark every matching id if duplicates exist. Always return a fresh mutable outer array. A matching record with done: false gets a fresh plain shallow copy with done: true. An already-done match may be reused or shallow-copied; preserve every other own enumerable property and its original reference either way. Nonmatching records retain exact identity. Ignore inherited properties when copying, leave all inputs unchanged and do not deep-clone opaque fields. Target: O(n) time and output space, where n is 1 + todo count + their total own enumerable field count.",
     starter: `interface Todo {
   id: number;
   text: string;
@@ -881,7 +881,7 @@ const markDone = (todos: readonly Todo[], id: number): Todo[] =>
     tier: 2,
     focus: ['spread', 'readonly'],
     title: 'Add a tag to a read-only note',
-    prompt: 'Declare an interface `Note` with a `title` string and a list of `tags`, both `readonly`, and type the list as `readonly string[]`, so `note.tags.push(...)` is a compile error. Write `addTag(note: Note, tag: string): Note`, returning a new note whose tags end with `tag`, built with spread for the note and for its tags. When the note already has the tag, return the note unchanged.',
+    prompt: "Declare an interface `Note` with a `title` string and a list of `tags`, both `readonly`, and type the list as `readonly string[]`, so `note.tags.push(...)` is a compile error. Write `addTag(note: Note, tag: string): Note`, returning a new note whose tags end with `tag`, built with spread for the note and for its tags. When the note already has the tag, return the note unchanged. Domain: note is a stable ordinary or null-prototype data record, possibly frozen, with own title and a dense readonly tags array of at most 1000 strings. Title and tags contain at most 200 UTF-16 units each; match tags exactly, including case, whitespace and empty text. Preserve duplicates. Extra own enumerable string or symbol properties (at most 100, with bounded keys) hold opaque values: copy those properties shallowly when appending, without copying inherited properties. If the tag exists, return the exact original note. Otherwise return a new plain note and new tag array without changing the input. The readonly type is a checked view; runtime freezing is optional. No getters or proxies are involved. Target: O(n) time and output space, where n is 1 + tag count + copied property count, under bounded string comparisons.",
     starter: `const addTag = (note, tag) => {
 
 };
@@ -929,7 +929,7 @@ const addTag = (note: Note, tag: string): Note => {
     tier: 2,
     focus: ['while', 'narrowing'],
     title: 'Path up to the root',
-    prompt: 'Each `Folder` has a `name` and a `parent`, which is another folder, or `null` for the root. Write `pathOf(folder: Folder): string`, returning every name from the root down to the folder, joined with `/`. Walk up with a `while` loop that follows `parent` until it reaches `null`. The condition `current !== null` narrows `current` to a `Folder` inside the loop, so reading `current.name` compiles.',
+    prompt: "Each `Folder` has a `name` and a `parent`, which is another folder, or `null` for the root. Write `pathOf(folder: Folder): string`, returning every name from the root down to the folder, joined with `/`. Walk up with a `while` loop that follows `parent` until it reaches `null`. The condition `current !== null` narrows `current` to a `Folder` inside the loop, so reading `current.name` compiles. Domain: a nonempty acyclic parent chain of at most 1000 stable Folder data records, possibly frozen, ending at parent null. Names contain at most 200 UTF-16 units and may be empty or include slashes, spaces and Unicode. Join every name exactly, including empty names: an empty root followed by child gives /child. Do not trim, escape, resolve dot segments or normalize a filesystem path. Leave records and links unchanged. Target: O(n) time and storage using append, one reverse and join, where n is 1 + chain length + total name length. Repeated unshift or repeated full-path string copying may be quadratic in the number of folders.",
     starter: `interface Folder {
   name: string;
   parent: Folder | null;
@@ -953,15 +953,15 @@ const pathOf = (folder: Folder): string => {
   const names: string[] = [];
   let current: Folder | null = folder;
   while (/* current is a folder */) {
-    // put its name in front, then step up to its parent
+    // append its name, then step up to its parent
   }
-  return names.join("/");
+  return names.reverse().join("/");
 };`,
-    hints: ['Type the loop variable as `Folder | null` so it can hold the root’s `null` parent. Add each name at the front with `unshift`, or collect them and reverse once at the end.'],
+    hints: ['Type the loop variable as `Folder | null` so it can hold the root’s `null` parent. Append each name with push, then reverse the array once and join with /. Empty names still need their separators.'],
     approach: [
       'Start `current` at the folder, typed `Folder | null`.',
-      'While `current !== null`, put `current.name` at the front of a list and move to `current.parent`.',
-      'Join the names with `/`.',
+      'While `current !== null`, append `current.name` to a list and move to `current.parent`.',
+      'Reverse the names once, then join them with `/`.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -986,7 +986,7 @@ const pathOf = (folder: Folder): string => {
     tier: 1,
     focus: ['reduce', 'strings'],
     title: 'Playlist length',
-    prompt: 'Track lengths are written as minutes and seconds, such as `"3:05"`. Write `playlistSeconds(tracks: string[]): number`, adding up the length of every track in seconds with `reduce`. `playlistSeconds(["3:05", "0:55"])` gives 240. Minutes can run past 59, as in `"72:00"`, and an empty playlist lasts 0 seconds.',
+    prompt: "Track lengths are written as minutes and seconds, such as `\"3:05\"`. Write `playlistSeconds(tracks: string[]): number`, adding up the length of every track in seconds with `reduce`. `playlistSeconds([\"3:05\", \"0:55\"])` gives 240. Minutes can run past 59, as in `\"72:00\"`, and an empty playlist lasts 0 seconds. Domain: a dense array of at most 1000 valid track strings, possibly frozen. Each is one to six ASCII minute digits, a colon, then exactly two second digits from 00 through 59. Leading minute zeros are allowed. Leave track text and array order unchanged; do not remove duplicates. Return the safe integer sum of all whole seconds. Invalid track formats are outside this task. Target: O(n) time and O(1) working state, where n is 1 + track count + total track text length, accounting for splitting and numeric parsing with two bounded parts.",
     starter: `const playlistSeconds = (tracks: string[]): number => {
 
 };
@@ -1028,7 +1028,7 @@ console.log(playlistSeconds(["3:05", "0:55"]));
     tier: 2,
     focus: ['sort', 'literal-types'],
     title: 'Most urgent first',
-    prompt: 'Declare `type Priority = "high" | "medium" | "low"` and an interface `Task` with a `title` string and a `priority`. Write `byPriority(tasks: readonly Task[]): Task[]`, returning a new list with the high tasks first, then medium, then low, each group in its original order. Sorting the words alphabetically would give high, low, medium, so rank them with a `Record<Priority, number>` and compare the ranks.',
+    prompt: "Declare `type Priority = \"high\" | \"medium\" | \"low\"` and an interface `Task` with a `title` string and a `priority`. Write `byPriority(tasks: readonly Task[]): Task[]`, returning a new list with the high tasks first, then medium, then low, each group in its original order. Sorting the words alphabetically would give high, low, medium, so rank them with a `Record<Priority, number>` and compare the ranks. Domain: a dense read-only array of at most 1000 stable Task records, possibly frozen, with title strings up to 200 UTF-16 units and exactly one of the declared priorities. Other fields are opaque and untouched. Preserve each original task reference, all duplicates and input order inside equal-priority groups. Return a fresh mutable outer array on every call, including empty or singleton input; do not change the input or task records. Target: O(n log n) time for the comparison-sort approach and O(n) output space, where n is 1 + task count and rank comparison is constant work. Sort costs use the comparison-sort model, not a language-level guarantee. A stable three-bucket traversal is also a valid faster alternative.",
     starter: `const byPriority = (tasks) => {
 
 };
@@ -1079,7 +1079,7 @@ const byPriority = (tasks: readonly Task[]): Task[] => {
     tier: 2,
     focus: ['type-guards', 'literal-types'],
     title: 'Is it a theme colour?',
-    prompt: 'A theme offers three accent colours, listed once as `const ACCENTS = ["teal", "coral", "gold"] as const`. `as const` keeps the exact words, and `type Accent = (typeof ACCENTS)[number]` turns them into the union `"teal" | "coral" | "gold"`. Write `isAccent(value: string): value is Accent`, returning `true` for exactly those three words. A user setting that passes the check can then be stored as an `Accent` with no cast.',
+    prompt: "A theme offers three accent colours, listed once as `const ACCENTS = [\"teal\", \"coral\", \"gold\"] as const`. `as const` keeps the exact words, and `type Accent = (typeof ACCENTS)[number]` turns them into the union `\"teal\" | \"coral\" | \"gold\"`. Write `isAccent(value: string): value is Accent`, returning `true` for exactly those three words. A user setting that passes the check can then be stored as an `Accent` with no cast. Domain: value is primitive text of at most 200 UTF-16 units. Match exactly the three fixed lowercase words, without trimming, normalization, substring matches or case folding. Repeated calls must not change ACCENTS or which words are accepted. as const is a static readonly/literal view, not runtime freezing. Target: O(1) time and working state under this fixed three-word, bounded-text model; the list is not an input-sized palette.",
     starter: `const ACCENTS = ["teal", "coral", "gold"] as const;
 type Accent = (typeof ACCENTS)[number];
 
@@ -1125,7 +1125,7 @@ const isAccent = (value: string): value is Accent => {
     tier: 2,
     focus: ['narrowing', 'for-of'],
     title: 'The first error',
-    prompt: 'A batch job reports one `Result` per step: `{ ok: true; value: number }` when the step worked and `{ ok: false; error: string }` when it failed. Write `firstError(results: Result[]): string | null`, walking the results with `for...of` and returning the first error message, or `null` when every step worked. `result.error` only compiles after a check on `result.ok` has narrowed the union to the failed shape.',
+    prompt: "A batch job reports one `Result` per step: `{ ok: true; value: number }` when the step worked and `{ ok: false; error: string }` when it failed. Write `firstError(results: Result[]): string | null`, walking the results with `for...of` and returning the first error message, or `null` when every step worked. `result.error` only compiles after a check on `result.ok` has narrowed the union to the failed shape. Domain: a dense array of at most 1000 stable Result data records, possibly frozen, with exactly the stated true/value or false/error shape. No accessors or proxies are involved. Error strings have at most 200 UTF-16 units and must be returned exactly, including whitespace, empty text and Unicode. Successful values are finite numbers. Read results in their original order, return the first failed message or null, and leave the array and records unchanged. Target: O(n) time in the worst case and O(1) working state, where n is 1 + result count; returning an existing message does not scan its text.",
     starter: `type Result = { ok: true; value: number } | { ok: false; error: string };
 
 const firstError = (results: Result[]): string | null => {
@@ -1172,7 +1172,7 @@ const firstError = (results: Result[]): string | null => {
     tier: 2,
     focus: ['for-of', 'record'],
     title: 'Build a query string',
-    prompt: 'Write `toQuery(params: Record<string, string | number>): string`, turning an object into a URL query string such as `"page=2&sort=new"`. Walk `Object.entries(params)` with `for...of`, destructuring each `[key, value]` pair, and encode both with `encodeURIComponent`, so a space becomes `%20` and an `&` inside a value becomes `%26`. Pairs keep the object’s key order, and an empty object gives an empty string.',
+    prompt: "Write `toQuery(params: Record<string, string | number>): string`, turning an object into a URL query string such as `\"page=2&sort=new\"`. Walk `Object.entries(params)` with `for...of`, destructuring each `[key, value]` pair, and encode both with `encodeURIComponent`, so a space becomes `%20` and an `&` inside a value becomes `%26`. Pairs keep the object\u2019s key order, and an empty object gives an empty string. Domain: a stable ordinary or null-prototype params object with at most 1000 own enumerable string keys, possibly frozen, with no accessors/proxies. Keys/string values have at most 200 UTF-16 units; values may also be any primitive Number, including nonfinite values and signed zero, using ordinary String conversion. Use Object.entries order and ignore inherited, nonenumerable and Symbol entries. Preserve inputs. Follow encodeURIComponent exactly: spaces are %20, not +, and its unescaped punctuation stays unescaped. A lone surrogate in an encoded key/value propagates URIError. Target: O(n) time and output space, where n is 1 + pair count + total key/value UTF-16 length after bounded numeric conversion; collect encoded pairs and join them rather than repeatedly copying a growing string.",
     starter: `const toQuery = (params: Record<string, string | number>): string => {
 
 };

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { solutionFor } from '../../lib/coding/solutions';
+import { suiteCaseCount } from '../../lib/coding/react-hidden';
 import { hiddenGlobalMessage, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import { runInQuickJS } from '../../lib/coding/sandbox';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from '../../scripts/fixtures/utc-react';
@@ -99,6 +100,19 @@ function runInWorker(page: Page, url: string, calls: string[], expectations: unk
 
 const announced = (page: Page) => page.locator('.cd-workbench > [role="status"]');
 
+test('Clone Promise.all: Run blocks an initialization-time native alias and accepts manual aggregation', async ({ page }) => {
+  await prepare(page);
+  const id = 'js-clone-promise-all';
+  await openTask(page, `/coding/javascript/${id}`);
+  await fillEditor(page, 'const original = Promise.all.bind(Promise); const promiseAll = items => original(items);');
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toContainText('Promise.all is unavailable in this exercise.', { timeout: 30_000 });
+  await fillEditor(page, solutionFor(id)!.solution);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(announced(page)).toHaveText('5 of 5 passing', { timeout: 30_000 });
+});
+
+
 test('React success stays compact and toolbar labels switch at 1220px with keyboard tooltips', async ({ page }) => {
   await prepare(page, { signedIn: true, verdict: {
     xpAwarded: 25, applied: true, firstPass: true,
@@ -129,15 +143,28 @@ test('React success stays compact and toolbar labels switch at 1220px with keybo
   const verdict = page.locator('.cd-verdict');
   await expect(verdict).toContainText('Passed');
   await expect(verdict).toContainText('+25 XP');
-  await expect(verdict.getByRole('link', { name: 'Next task' })).toBeVisible();
-  await expect(verdict.getByRole('link', { name: 'Back to the list' })).toBeVisible();
+  await expect(page.locator('.cd-complete').getByRole('link', { name: 'Next task' })).toBeVisible();
+  await expect(page.locator('.cd-complete').getByRole('link', { name: 'Back to the list' })).toBeVisible();
   await expect(verdict).not.toContainText(/Estimated time|How this estimate works|First pass|Reset the task/);
+});
+
+test('the authored complexity info link opens the Big O guide through the real router', async ({ page }) => {
+  await prepare(page);
+  await openTask(page, '/coding/algorithms/alg-valid-palindrome');
+  await expect(page.getByText('Desired complexity: O(n)', { exact: true })).toBeVisible();
+  const info = page.getByRole('link', { name: 'About Big O complexity', exact: true });
+  await expect(info).toHaveAttribute('href', '/big-o');
+  await info.click();
+  await expect(page).toHaveURL(/\/big-o$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Big O, simply explained');
 });
 
 test('React: a focus check passes on every Run, not just the first, and a build error is shown (C4-1, C3-2, C3-6)', async ({ page }) => {
   test.setTimeout(120_000);
   await prepare(page);
   const id = 'react-easy2-focus-the-search';
+  const expectedCases = suiteCaseCount(CODING_TASKS.find(task => task.id === id)!.suite);
+  expect(expectedCases).toBeGreaterThan(0);
   await openTask(page, `/coding/react/${id}`);
   const run = page.getByRole('button', { name: 'Run', exact: true });
   const results = page.getByRole('tab', { name: /^Results/ });
@@ -148,12 +175,12 @@ test('React: a focus check passes on every Run, not just the first, and a build 
     await fillEditor(page, `${solutionFor(id)!.solution}\n// run ${attempt}\n`);
     if (attempt > 1) await expect(changed).toBeVisible();
     await run.click();
-    await expect(announced(page)).toHaveText(/^\d+ of \d+ passing$/, { timeout: 30_000 });
+    await expect(announced(page)).toHaveText(`${expectedCases} of ${expectedCases} passing`, { timeout: 30_000 });
     await expect(changed).toHaveCount(0);
     // From the second Run on, Results is the open tab and the preview is
     // not: its frame used to be display:none, and every focus check failed.
     await expect(results, `Run ${attempt}`).toHaveAttribute('aria-selected', 'true');
-    await expect(results, `Run ${attempt}`).toContainText('3/3');
+    await expect(results, `Run ${attempt}`).toContainText(`${expectedCases}/${expectedCases}`);
     // The suite moves focus inside the frame; the button that ran it keeps it.
     await expect(run).toBeFocused();
   }
@@ -267,11 +294,11 @@ test('signed in: a pass inside the hour says in a toast when the XP opens again'
   await expect(page.getByRole('status').filter({ hasText: `No XP this time: reset the task and pass it from ${time} to earn it again.` })).toBeVisible();
 });
 
-test('signed in: Start the run starts a challenge run and opens its first task (C3-1)', async ({ page }) => {
+test('signed in: Start starts a challenge run and opens its first task (C3-1)', async ({ page }) => {
   const seen = await prepare(page, { signedIn: true });
   await page.goto('/coding');
   await page.getByRole('button', { name: /Challenge run/ }).click();
-  await page.getByRole('button', { name: 'Start the run' }).click();
+  await page.getByRole('button', { name: 'Start', exact:true }).click();
   await expect.poll(() => seen.practiceStarts.length).toBe(1);
   expect(seen.practiceStarts[0]).toMatchObject({ order: 'sequential' });
   await expect(page).toHaveURL(/\/coding\/javascript\/js-sum-array$/);
@@ -370,4 +397,51 @@ for (const [zone, offsets] of [['America/Los_Angeles', [480, 420]], ['Asia/Tokyo
       expect(outcome).toEqual({ passed: 2, failed: 0, errors: [null, null] });
     });
   });
+}
+
+
+for (const width of [360, 1440]) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`changed task keeps code and reloads its brief at ${width}px in ${theme}`, async ({ page }) => {
+      await prepare(page);
+      await page.setViewportSize({ width, height: 900 });
+      let refreshed = false;
+      let submits = 0;
+      await page.route(/resource=coding-submit(?:&|$)/, route => {
+        submits++;
+        return route.fulfill({ status: 409, json: { error: { code: 'task_changed', message: 'This task changed while you were working. Load its latest brief before submitting. Your code has been kept.' } } });
+      });
+      await page.route(/resource=coding-task(?:&|$)/, route => {
+        const authored = CODING_TASKS.find(one => one.id === 'js-double-numbers')!;
+        const task = playable(authored);
+        if (refreshed) task.title = { en: 'Updated double task', cs: '' };
+        return route.fulfill({ json: { task, session: refreshed ? 'fresh-session' : 'old-session', locked: null, progress: null, draft: null, signedIn: false } });
+      });
+      await openTask(page, '/coding/javascript/js-double-numbers');
+      await page.evaluate(value => localStorage.setItem('devquiz:color-mode', value), theme);
+      await page.reload();
+      await expect(page.locator('#main-content')).toBeFocused();
+      if (width === 1440) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      if (width === 360) await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+      const source = 'const double = values => values.map(value => value * 2);';
+      await fillEditor(page, source);
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      const reload = page.getByRole('button', { name: 'Load latest brief' });
+      await expect(reload).toBeVisible();
+      const target = await reload.boundingBox();
+      expect(target!.height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator('.cm-content')).toContainText(source);
+      await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeDisabled();
+      expect(submits).toBe(1);
+      refreshed = true;
+      await reload.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('heading', { name: 'Updated double task' })).toBeVisible();
+      await expect(reload).toHaveCount(0);
+      await expect(page.locator('.cm-content')).toContainText(source);
+      await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeEnabled();
+      expect(submits).toBe(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
 }

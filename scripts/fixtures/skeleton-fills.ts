@@ -45,25 +45,27 @@ export const SKELETON_FILLS: Record<string, string> = {
   return total / numbers.length;
 };
 `,
-  'js-clone-promise-all': `const promiseAll = promises => new Promise((resolve, reject) => {
-  const results = [];
-  let arrived = 0;
-  if (promises.length === 0) resolve(results);
-
-  promises.forEach((promise, index) => {
-    Promise.resolve(promise).then(value => {
-      results[index] = value;
-      arrived += 1;
-      if (arrived === promises.length) resolve(results);
-    }, reject);
+  'js-clone-promise-all': `const promiseAll = promises => {
+  const inputs = Array.from(promises); // captures length and fills holes
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let arrived = 0;
+    if (inputs.length === 0) resolve(results);
+    inputs.forEach((item, index) => {
+      Promise.resolve(item).then(value => {
+        results[index] = value;
+        arrived += 1;
+        if (arrived === inputs.length) resolve(results);
+      }, reject);
+    });
   });
-});
+};
 `,
   'js-count-vowels': `const countVowels = text => {
   let count = 0;
 
-  for (const letter of text.toLowerCase()) {
-    if ("aeiou".includes(letter)) count += 1;
+  for (const letter of text) {
+    if ("aeiouAEIOU".includes(letter)) count += 1;
   }
 
   return count;
@@ -170,7 +172,7 @@ export const SKELETON_FILLS: Record<string, string> = {
 };
 `,
   'js-reverse-string': `const reverse = text => {
-  const letters = text.split("");
+  const letters = Array.from(text);
   // reverse letters, then join them back into one string
   return letters.reverse().join("");
 };
@@ -184,21 +186,22 @@ const App = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL, { signal: controller.signal });
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
         if (requestError.name === 'AbortError') return;
-        setError(requestError.message);
+        if (active) setError('Could not load posts.');
       }
     };
 
     loadItems();
 
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, []);
 
   return (
@@ -212,7 +215,7 @@ const App = () => {
 
 export default App;
 `,
-  'react-accordion': `import React, { useState } from 'react';
+  'react-accordion': `import React, { useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -222,6 +225,7 @@ const sections = [
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
 
   const toggle = id => {
     setOpenId(current => (current === id ? null : id));
@@ -232,8 +236,8 @@ const App = () => {
       <h2>Accordion</h2>
       {sections.map(section => (
         <section key={section.id}>
-          <button onClick={() => toggle(section.id)}>{section.title}</button>
-          {openId === section.id && <p>{section.body}</p>}
+          <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+          {openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}
         </section>
       ))}
     </main>
@@ -249,14 +253,16 @@ const App = () => {
   const [todos, setTodos] = useState([]);
 
   const addTodo = () => {
-    setTodos(current => [...current, { id: crypto.randomUUID(), text }]);
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setTodos(current => [...current, { id: crypto.randomUUID(), text: trimmed }]);
     setText('');
   };
 
   return (
     <main>
       <h2>Add a todo</h2>
-      <input value={text} onChange={event => setText(event.target.value)} />
+      <input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} />
       <button onClick={addTodo}>Add</button>
       <ul>
         {todos.map(todo => (
@@ -279,7 +285,7 @@ const App = () => {
   return (
     <main>
       <h2>Color selector</h2>
-      <select value={color} onChange={event => setColor(event.target.value)}>
+      <select aria-label="Color" value={color} onChange={event => setColor(event.target.value)}>
         {colors.map(one => (
           <option key={one}>{one}</option>
         ))}
@@ -293,12 +299,12 @@ export default App;
 `,
   'react-data-list': `import React from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => (
+const App = ({ people = initialPeople } = {}) => (
   <main>
     <h2>Data list</h2>
     <ul>
@@ -314,42 +320,38 @@ export default App;
   'react-dependent-fetch': `import React, { useEffect, useState } from 'react';
 
 const App = () => {
-  const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(1);
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadItems = async () => {
+    let active = true;
+    setItems([]);
+    setError('');
+    const load = async () => {
       try {
-        const response = await fetch(\`\${API_URL}?userId=\${selectedId}\`);
+        const response = await fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${selectedId}\`);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
-      } catch (requestError) {
-        setError(requestError.message);
-      } finally {
-        setLoading(false);
+        if (active) setItems(data);
+      } catch {
+        if (active) setError('Could not load posts.');
       }
     };
-
-    loadItems();
+    load();
+    return () => { active = false; };
   }, [selectedId]);
-  const visibleItems = items;
 
   return (
     <main>
       <h2>Dependent fetch</h2>
-      <select value={selectedId} onChange={event => setSelectedId(Number(event.target.value))}>
+      <select aria-label="Author" value={selectedId} onChange={event => setSelectedId(Number(event.target.value))}>
         <option value="1">User 1</option>
         <option value="2">User 2</option>
       </select>
       {error && <p role="alert">{error}</p>}
       <ul>
-        {visibleItems.map(item => (
-          <li key={item.id}>{item.title}</li>
-        ))}
+        {items.map(item => <li key={item.id}>{item.title}</li>)}
       </ul>
     </main>
   );
@@ -373,7 +375,7 @@ const App = () => {
         const data = await response.json();
         setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        setError('Could not load users');
       } finally {
         setLoading(false);
       }
@@ -383,7 +385,7 @@ const App = () => {
   }, []);
   const visibleItems = items;
 
-  if (error) return <p>Could not load the users: {error}</p>;
+  if (error) return <p role="alert">{error}</p>;
 
   return (
     <main>
@@ -410,31 +412,33 @@ const App = () => {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
+    item.name.toLowerCase().includes(query.trim().toLowerCase())
   );
 
   return (
     <main>
       <h2>Filter fetched users</h2>
-      {loading && <p>Loading…</p>}
+      {loading && <p role="status">Loading users…</p>}
       {error && <p role="alert">{error}</p>}
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleItems.map(item => (
           <li key={item.id}>{item.name}</li>
@@ -455,26 +459,29 @@ const App = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items;
 
   return (
     <main>
       <h2>GET users list</h2>
+      {loading && <p role="status">Loading…</p>}
       {error && <p role="alert">{error}</p>}
       <ul>
         {visibleItems.map(item => (
@@ -495,7 +502,9 @@ const App = () => {
   return (
     <main>
       <h2>Live paragraph</h2>
+      <label>Your text
       <input value={text} onChange={event => setText(event.target.value)} />
+      </label>
       <p>{text}</p>
     </main>
   );
@@ -512,24 +521,26 @@ const App = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadItems = async () => {
       try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setItems(data);
+        if (active) setItems(data);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError('Could not load users.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     loadItems();
+    return () => { active = false; };
   }, []);
   const visibleItems = items;
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p role="status">Loading…</p>;
 
   return (
     <main>
@@ -635,30 +646,44 @@ const App = () => {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const pageSize = 5;
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+    setItems([]);
+    setStatus('loading');
     const loadItems = async () => {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      setItems(await response.json());
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setItems(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
     };
-
     loadItems();
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <main>
       <h2>Paginated posts</h2>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>
         {pageItems.map(item => (
           <li key={item.id}>{item.title}</li>
         ))}
       </ul>
 
-      <button disabled={page === 1} onClick={() => setPage(current => current - 1)}>Previous</button>
-      <button disabled={page * pageSize >= items.length} onClick={() => setPage(current => current + 1)}>Next</button>
+      <button type="button" disabled={page === 1} onClick={() => setPage(current => current - 1)}>Previous</button>
+      <button type="button" disabled={page * pageSize >= items.length} onClick={() => setPage(current => current + 1)}>Next</button>
     </main>
   );
 };
@@ -723,7 +748,7 @@ const App = () => {
       <ul>
         {todos.map(todo => (
           <li key={todo.id}>
-            {todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button>
+            {todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => removeTodo(todo.id)}>Remove</button>
           </li>
         ))}
       </ul>
@@ -739,12 +764,12 @@ const names = ['Ana', 'Daniel', 'John'];
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const visibleNames = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
+  const visibleNames = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <main>
       <h2>Search a list</h2>
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visibleNames.map(name => (
           <li key={name}>{name}</li>
@@ -770,7 +795,7 @@ const App = () => {
       <h2>Star rating</h2>
       <div onMouseLeave={() => setHovered(0)}>
         {stars.map(star => (
-          <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
+          <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>
             {star <= shown ? '★' : '☆'}
           </button>
         ))}
@@ -818,7 +843,7 @@ const App = () => {
 
 export default App;
 `,
-  'react-tabs': `import React, { useState } from 'react';
+  'react-tabs': `import React, { useId, useState } from 'react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
@@ -828,25 +853,44 @@ const tabs = [
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId);
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
 
   return (
     <main>
-      <h2>Tabs</h2>
-      <div role="tablist">
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
         {tabs.map(tab => (
-          <button key={tab.id} role="tab" aria-selected={tab.id === activeId} onClick={() => setActiveId(tab.id)}>
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
             {tab.label}
           </button>
         ))}
       </div>
-      <div role="tabpanel">{active.panel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
 };
 
-export default App;
-`,
+export default App;`,
+
   'react-theme-context': `import React, { useEffect, useState } from 'react';
 
 const ThemeContext = React.createContext(null);
@@ -973,7 +1017,7 @@ const App = () => {
 
   const add = () => {
     if (!title.trim()) return;
-    setTodos(current => [...current, { id: Date.now(), title, completed: false }]);
+    setTodos(current => [...current, { id: crypto.randomUUID(), title, completed: false }]);
     setTitle('');
   };
 
@@ -1005,7 +1049,7 @@ export default App;
 
 const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
 
   useEffect(() => {
@@ -1027,7 +1071,7 @@ const App = () => {
   return (
     <main>
       <h2>useDebounce hook</h2>
-      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <input aria-label="Filter fruit" value={query} onChange={event => setQuery(event.target.value)} />
       <ul>
         {visible.map(fruit => (
           <li key={fruit}>{fruit}</li>
@@ -1041,14 +1085,16 @@ export default App;
 `,
   'react-uselocalstorage-hook': `import React, { useEffect, useState } from 'react';
 
-const useLocalStorage = (key, initial) => {
+export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => {
-    const stored = localStorage.getItem(key);
-    return stored === null ? initial : JSON.parse(stored);
+    try {
+      const stored = localStorage.getItem(key);
+      return stored === null ? initial : JSON.parse(stored);
+    } catch { return initial; }
   });
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Continue in memory. */ }
   }, [key, value]);
 
   return [value, setValue];

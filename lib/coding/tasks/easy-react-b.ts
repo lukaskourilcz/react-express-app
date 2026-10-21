@@ -29,8 +29,8 @@ export const EASY_REACT_B_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['useRef', 'timers'],
     title: 'Send the latest draft',
-    prompt: '"Send later" sends the message 300 milliseconds after the click and shows "Sent: <text>". Whatever you type during that wait belongs in the message, but the timeout reads `draft` from the render in which you clicked, so it sends the old text. Keep the latest draft in a ref as well: set `draftRef.current` in the change handler, and read `draftRef.current` when the timeout fires. If the field is empty by then, nothing is sent.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `"Send later" sends the message 300 milliseconds after the click and shows "Sent: <text>". Whatever you type during that wait belongs in the message, but the timeout reads \`draft\` from the render in which you clicked, so it sends the old text. Keep the latest draft in a ref as well: set \`draftRef.current\` in the change handler, and read \`draftRef.current\` when the timeout fires. If the field is empty by then, nothing is sent. Each click schedules its own 300 ms wait and reads the current raw text when that wait ends; keep spaces and literal text unchanged, up to 2000 UTF-16 code units of single-line text. An empty draft clears the sent line at the deadline, including a previous result. Parent renders must not restart a pending wait. Clear all pending timeouts on unmount and keep separate instances independent. Browser callbacks may run later than the requested delay.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
@@ -63,7 +63,10 @@ const change = (event) => {
 
 const sendLater = () => {
   setTimeout(() => setSent(/* the latest draft */), 300);
-};`,
+};
+
+// Track each pending timeout in a ref-backed Set. Remove it when it fires.
+// In an effect cleanup, clear every pending timeout and empty the Set.`,
     hints: ['Each render makes new handler functions, and each one sees the state of its own render. A timeout keeps the function it was given, so it keeps that render\'s `draft`. A ref is one object shared by every render, so `ref.current` read later gives the value written last.'],
     approach: [
       'Create `const draftRef = useRef("")` in App.',
@@ -101,7 +104,70 @@ test('text typed during the wait is sent', async () => {
   await wait(350);
   expect(line(container)).toBe('Sent: Hi there');
 });
-`,
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('a send waits the complete 300 ms before reading the latest text',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('first');send();await clock.tick(299);expect(line(view.container)).toBe('');type(' latest ');await clock.tick(1);expect(line(view.container)).toBe('Sent:  latest ');
+}));`,
   },
   {
     id: 'react-easy3-give-focus-back',
@@ -111,7 +177,7 @@ test('text typed during the wait is sent', async () => {
     tier: 2,
     focus: ['useRef', 'accessibility'],
     title: 'Give the focus back',
-    prompt: '"Rename" opens a small form, and its field takes the keyboard focus. When the form closes, by Save, by Cancel or by the Escape key, the field leaves the page and the focus drops to the page body, so a keyboard user has to find their place again. Put a ref on the Rename button and call `focus()` on it whenever the form closes. Escape anywhere in the form closes it without saving.',
+    prompt: `"Rename" opens a small form, and its field takes the keyboard focus. When the form closes, by Save, by Cancel or by the Escape key, the field leaves the page and the focus drops to the page body, so a keyboard user has to find their place again. Put a ref on the Rename button and call \`focus()\` on it whenever the form closes. Escape anywhere in the form closes it without saving. Save keeps the raw name exactly, including empty text, spaces, Unicode and literal markup, up to 2000 UTF-16 code units of single-line text. Cancel and Escape discard only the draft; opening again starts from the saved name. Prevent normal form navigation on submit. Parent renders must preserve an open draft, and each instance must return focus to its own Rename button.`,
     starter: `import React, { useRef, useState } from 'react';
 
 const App = () => {
@@ -193,7 +259,10 @@ test('Save renames and gives the focus back', () => {
   expect(container.querySelector('p').textContent).toBe('Project: Kelp count');
   expect(document.activeElement).toBe(rename());
 });
-`,
+
+test('Save keeps spaces and literal text in the name',()=>{
+ const view=render(<App/>);fireEvent.click(rename());const value='  Reef <b> 🦈  ';fireEvent.change(field(),{target:{value}});fireEvent.click(screen.getByRole('button',{name:'Save'}));expect(view.container.querySelector('p').textContent).toBe('Project: '+value);expect(document.activeElement).toBe(rename());
+});`,
   },
 
   /* ── custom hooks ─────────────────────────────────────────────────── */
@@ -205,7 +274,7 @@ test('Save renames and gives the focus back', () => {
     tier: 2,
     focus: ['custom-hook', 'useRef'],
     title: 'A useOutsideClick hook',
-    prompt: '"Filters" opens a panel of options, and a press anywhere outside should close it. Write and export `useOutsideClick(ref, onOutside)`. In an effect, listen for `mousedown` on `document` and call `onOutside` when `ref.current` does not contain the event\'s `target`; remove the same listener in the effect\'s cleanup. In App, put a ref on the `div` that holds both the button and the panel. A press on Filters then counts as inside, and the button can still close the panel itself.',
+    prompt: `"Filters" opens a panel of options, and a press anywhere outside should close it. Write and export \`useOutsideClick(ref, onOutside)\`. In an effect, listen for \`mousedown\` on \`document\` and call \`onOutside\` when \`ref.current\` does not contain the event's \`target\`; remove the same listener in the effect's cleanup. In App, put a ref on the \`div\` that holds both the button and the panel. A press on Filters then counts as inside, and the button can still close the panel itself. Read the current ref.current and latest onOutside callback after each committed render. If ref.current is null, ignore the event. The element itself and all nested nodes count as inside; a different referenced element after a ref update becomes the new inside area. Normal mousedown targets in this exercise are DOM nodes. Match both callback and capture phase when removing a listener, or abort its signal. Repeated parent/callback/ref updates must not leave extra active listeners. Separate hooks may share a native listener if callbacks and ownership remain correct; the final unmount must remove it. Keep aria-expanded and panel state consistent through repeated ordinary open/close cycles, and start a fresh App closed.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 // Write and export useOutsideClick here.
@@ -275,6 +344,13 @@ test('a press inside leaves it open', () => {
   fireEvent.mouseDown(screen.getByLabelText('On sale'));
   expect(isOpen()).toBe(true);
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('replacing onOutside uses the new callback without calling it during render',()=>{
+ const seen=[],ref=React.createRef();const Probe=({callback})=>{useOutsideClick(ref,callback);return <section ref={ref}><span>inside</span></section>;};const view=render(<Probe callback={()=>seen.push('old')}/>);view.rerender(<Probe callback={()=>seen.push('new')}/>);expect(seen).toEqual([]);fireEvent.mouseDown(document.body);expect(seen).toEqual(['new']);
+});
 `,
   },
   {
@@ -285,7 +361,7 @@ test('a press inside leaves it open', () => {
     tier: 2,
     focus: ['custom-hook', 'useContext'],
     title: 'A useTheme hook with a guard',
-    prompt: '`Badge` reads the theme with `useContext(ThemeContext)`. Rendered outside `ThemeProvider`, it gets `null` and shows "Theme: " with nothing after it, and nothing says why. Write and export `useTheme()`. It reads `ThemeContext`, throws `new Error("useTheme must be used inside ThemeProvider")` when the value is `null`, and returns the value otherwise. Use it in `Badge` in place of `useContext`.',
+    prompt: `\`Badge\` reads the theme with \`useContext(ThemeContext)\`. Rendered outside \`ThemeProvider\`, it gets \`null\` and shows "Theme: " with nothing after it, and nothing says why. Write and export \`useTheme()\`. It reads \`ThemeContext\`, throws \`new Error("useTheme must be used inside ThemeProvider")\` when the value is \`null\`, and returns the value otherwise. Use it in \`Badge\` in place of \`useContext\`. Return the actual current provider value rather than cloning it: two calls within one provider render see the same object, including its toggle function. The supplied provider starts at dark and keeps switching on every ordinary click. Nested providers and separate roots own independent state; parent renders retain that state and fresh providers start at dark. Both useTheme and a rendered Badge outside ThemeProvider must throw the authored Error so a React Error boundary can handle it. This exercise uses the supplied nonnull object provider value and null missing-provider default.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 const ThemeContext = createContext(null);
@@ -360,6 +436,11 @@ test('useTheme outside the provider throws a clear error', () => {
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('useTheme must be used inside ThemeProvider');
 });
+
+
+test('the same provider returns the same current value to both hook calls',()=>{
+ let same=false;const Probe=()=>{const first=useTheme(),second=useTheme();same=first===second;return <output>{first.theme}</output>;};render(<ThemeProvider><Probe/></ThemeProvider>);expect(same).toBe(true);
+});
 `,
   },
   {
@@ -370,7 +451,7 @@ test('useTheme outside the provider throws a clear error', () => {
     tier: 2,
     focus: ['custom-hook', 'timers'],
     title: 'A useInterval hook',
-    prompt: 'Write and export `useInterval(callback, delay)`. It calls `callback` every `delay` milliseconds, and a `delay` of `null` runs no interval, which is how a caller pauses it. Start the interval in an effect that depends on `delay` alone, and clear it in the cleanup. Keep the latest `callback` in a ref, updated in an effect of its own, and call `ref.current()` on each tick: a new callback on every render then never restarts the timer. App counts up every 100 milliseconds, and Pause stops the count.',
+    prompt: `Write and export \`useInterval(callback, delay)\`. It calls \`callback\` every \`delay\` milliseconds, and a \`delay\` of \`null\` runs no interval, which is how a caller pauses it. Start the interval in an effect that depends on \`delay\` alone, and clear it in the cleanup. Keep the latest \`callback\` in a ref, updated in an effect of its own, and call \`ref.current()\` on each tick: a new callback on every render then never restarts the timer. App counts up every 100 milliseconds, and Pause stops the count. A valid delay is null or an integer from 1 to 10000 milliseconds. A positive delay change clears the previous interval and starts a fresh period; keeping the same delay or changing only the callback preserves its next deadline. Both normal and layout effects may remember the latest committed callback. A null delay owns no interval, including on the first render. Each hook owns its timer lifecycle; unmounting clears it without affecting another hook. App starts at zero and advances once per 100ms while running; Resume starts a fresh period and retains the count. This browser-only exercise tests timer scheduling and cleanup, not physical clock precision.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 // Write and export useInterval here.
@@ -436,6 +517,72 @@ test('Resume carries on from the paused count', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
   await waitFor(() => expect(count(container) > paused).toBe(true), { timeout: 1000 });
 });
+
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    now: () => now,
+    active: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('the hook honors a supplied 37ms delay exactly',()=>withClock(async clock=>{
+ const seen=[],Probe=()=>{useInterval(()=>seen.push(clock.now()),37);return null;};const view=render(<Probe/>);await clock.tick(36);expect(seen).toEqual([]);await clock.tick(1);expect(seen).toEqual([37]);view.unmount();expect(clock.active()).toBe(0);
+}));
 `,
   },
 
@@ -448,7 +595,7 @@ test('Resume carries on from the paused count', async () => {
     tier: 2,
     focus: ['abort', 'timers'],
     title: 'Give up on a slow request',
-    prompt: '"Load" fetches `/api/users/1` and greets the user by name. When the server takes longer than 300 milliseconds, give up. Create an `AbortController` for each load, pass its `signal` to `fetch`, and start a `setTimeout` that calls `abort()` after 300 milliseconds. The aborted request rejects with an `AbortError`: show "The server is taking too long" for it, and keep "Could not load the user" for any other error. Clear the timeout once the request has finished, so a load that answered in time is never aborted afterwards.',
+    prompt: "\"Load\" fetches `/api/users/1` and greets the user by name. When the server takes longer than 300 milliseconds, give up. Create an `AbortController` for each load, pass its `signal` to `fetch`, and start a `setTimeout` that calls `abort()` after 300 milliseconds. The aborted request rejects with an `AbortError`: show \"The server is taking too long\" for it, and keep \"Could not load the user\" for any other error. Clear the timeout once the request has finished, so a load that answered in time is never aborted afterwards. Start with an empty status paragraph. Each checked Load begins after the previous load has settled, targets exactly /api/users/1, and owns its own controller and timeout. Keep Loading… through 299 ms, then abort at the full 300 ms boundary if the response or JSON body is still pending. A successful ordinary user record has a plain name up to 2000 UTF-16 code units, including empty or literal markup text; greet exactly Hello, followed by a space and that name. Success, a network/JSON failure or timeout leaves no pending timer for that load. Parent re-renders do not restart the deadline or make another request. The fixture uses successful HTTP replies or Error/DOMException rejections. A controlled clock verifies boundaries; real browser scheduling may run later.",
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -521,6 +668,77 @@ test('a slow request gives up after the wait', () => withFetch(async calls => {
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('The server is taking too long');
 }));
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+test('a pending request keeps Loading through299ms and times out at300ms',()=>withStepClock(async clock=>withFetch(async calls=>{const root=render(<App/>);load();expect(calls[0].url).toBe('/api/users/1');await clock.tick(299);expect(calls[0].signal.aborted).toBe(false);expect(status(root.container)).toBe('Loading…');await clock.tick(1);expect(calls[0].signal.aborted).toBe(true);expect(status(root.container)).toBe('The server is taking too long');expect(clock.pending()).toBe(0);root.unmount();})));
+
 `,
   },
   {
@@ -531,8 +749,8 @@ test('a slow request gives up after the wait', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'fetch'],
     title: 'One Stop for two requests',
-    prompt: '"Load" asks for a user and their posts at once, `/api/users/1` and `/api/posts?userId=1`, and shows "Leanne Graham, 3 posts" when both arrive. "Stop" should cancel both. Create one `AbortController` for each load, keep it in a ref, pass the same `signal` to both `fetch` calls, and call `abort()` from Stop: one signal cancels every request that carries it. Show "Stopped" when the error is an `AbortError`, and keep "Could not load" for anything else.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: "\"Load\" asks for a user and their posts at once, `/api/users/1` and `/api/posts?userId=1`, and shows \"Leanne Graham, 3 posts\" when both arrive. \"Stop\" should cancel both. Create one `AbortController` for each load, keep it in a ref, pass the same `signal` to both `fetch` calls, and call `abort()` from Stop: one signal cancels every request that carries it. Show \"Stopped\" when the error is an `AbortError`, and keep \"Could not load\" for anything else. Keep one status paragraph, initially empty. Every Load starts both requests together and waits for both full JSON bodies. The user has a plain string name up to 2000 UTF-16 code units, and posts is a dense read-only array of at most 100 records; count every record, including zero. Render the exact literal format name + ', ' + count + ' posts'. Check response.ok before parsing; HTTP, network or JSON failure shows Could not load and aborts any unfinished request in the pair. Each new Load aborts and supersedes the previous pair; only its current controller may update the status, even if older parsed work is already queued. Stop with no pending work does not change the terminal status. Keep both buttons available. Ordinary parent re-renders do not request again. Unmount aborts and invalidates its pair; independent or fresh instances start empty with their own controller. Development Strict Mode may repeat cleanup/setup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
@@ -564,22 +782,27 @@ const App = () => {
 export default App;
 `,
     skeleton: `const controllerRef = useRef(null);
+useEffect(() => () => {
+  const previous = controllerRef.current;
+  controllerRef.current = null;
+  previous?.abort();
+}, []);
 
 const load = async () => {
+  // Abort the old pair before replacing its controller.
   const controller = new AbortController();
   controllerRef.current = controller;
-  // pass { signal: controller.signal } to both fetch calls
+  // Start both requests with this signal. Check response.ok and await JSON.
+  // Only this current controller may commit the status.
 };
-
-const stop = () => {
-  // abort the latest controller, if there is one
-};`,
-    hints: ['A signal belongs to its controller, not to one request. Every `fetch` given the same signal rejects when that controller aborts, and `Promise.all` rejects as soon as the first of them does.'],
+const stop = () => { controllerRef.current?.abort(); };`,
+    hints: ["Share one signal between both fetches. Only the current controller may commit; abort the remaining pair on failure and invalidate ownership during cleanup."],
     approach: [
-      'Create `const controllerRef = useRef(null)`, and at the start of `load` store a new `AbortController` in it.',
-      'Pass `{ signal: controller.signal }` as the second argument to both `fetch` calls.',
-      'In `stop`, call `controllerRef.current?.abort()`. In the `catch`, show "Stopped" when `error.name` is "AbortError".',
-    ],
+      "Keep the current pair controller in a ref and abort it before starting another Load.",
+      "Start both fetches with its shared signal, check response.ok, and parse both JSON bodies with Promise.all.",
+      "Commit the exact name/count only if this controller is still current; classify cancellation and abort the unfinished pair on failure.",
+      "Cleanup clears current ownership before aborting; Stop simply aborts the current pair."
+],
     verify: 'tests',
     estimatedMinutes: 8,
     suite: `${header()}${FAKE_FETCH}
@@ -613,6 +836,14 @@ test('Stop cancels both and shows Stopped', () => withFetch(async calls => {
   expect(calls[1].signal.aborted).toBe(true);
   expect(status(container)).toBe('Stopped');
 }));
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+test('zero returned posts are counted with the actual user name',()=>withFetch(async calls=>{const root=render(<App/>);press('Load');await act(async()=>{forUrl(calls,'/api/users/1').respond({name:'Grace'});forUrl(calls,'/api/posts?userId=1').respond([]);});expect(status(root.container)).toBe('Grace, 0 posts');}));
+
 `,
   },
   {
@@ -623,7 +854,7 @@ test('Stop cancels both and shows Stopped', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'effect-cleanup'],
     title: 'Remove listeners with one abort',
-    prompt: 'The status line shows which device you used last: "Last input: keyboard" after a key press anywhere in the window, and "Last input: mouse" after the mouse moves. Add both listeners to `window` in one effect that runs once, and give each of them the options `{ signal: controller.signal }` from a single `AbortController`. The effect\'s cleanup is then one call, `controller.abort()`, which removes both listeners without a `removeEventListener` for each.',
+    prompt: "The status line shows which device you used last: \"Last input: keyboard\" after a key press anywhere in the window, and \"Last input: mouse\" after the mouse moves. Add both listeners to `window` in one effect that runs once, and give each of them the options `{ signal: controller.signal }` from a single `AbortController`. The effect's cleanup is then one call, `controller.abort()`, which removes both listeners without a `removeEventListener` for each. Initially the paragraph reads Last input: none. Every keydown counts, including keys other than the sample a or Enter and events bubbling from a focused page element. Repeated mixed keydown/mousemove events always show the latest device. Ordinary parent re-renders preserve exactly the same two registrations and their shared signal. Each independent or fresh instance has its own controller and initial none state; the same window event updates every mounted instance. Unmount aborts only that instance's signal and removes its actual callbacks. One setup refers to an ordinary mounted lifetime; development Strict Mode may repeat setup/cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -689,6 +920,10 @@ test('both listeners share one signal', () => {
     added.restore();
   }
 });
+
+const traceInputListeners=()=>{const original=window.addEventListener,records=[];window.addEventListener=function(type,listener,options){if(type==='keydown'||type==='mousemove'){const row={type,signal:options?.signal,calls:0};records.push(row);return original.call(this,type,function(event){row.calls++;if(typeof listener==='function')return listener.call(this,event);return listener.handleEvent(event);},options);}return original.call(this,type,listener,options);};return{records,restore:()=>{window.addEventListener=original;}};};
+test('a key bubbling from the page is keyboard input too',()=>{const root=render(<App/>),target=document.createElement('button');document.body.appendChild(target);try{fireEvent.mouseMove(window);expect(line(root.container)).toBe('Last input: mouse');fireEvent.keyDown(target,{key:'Escape'});expect(line(root.container)).toBe('Last input: keyboard');}finally{target.remove();}});
+
 `,
   },
 
@@ -701,7 +936,7 @@ test('both listeners share one signal', () => {
     tier: 1,
     focus: ['pagination', 'derived-state'],
     title: 'The results line',
-    prompt: 'Under the recipes, a line says which ones the page shows: "Showing 1 to 4 of 10 recipes" on the first page. Work both ends out from `page` while rendering. The first is `(page - 1) * PAGE_SIZE + 1`, and the last is `page * PAGE_SIZE`, but never more than the number of recipes. With no recipes at all, the line reads "No recipes". Disable Previous on the first page and Next on the last, and both when there are no recipes. `page` stays the only state.',
+    prompt: `Under the recipes, a line says which ones the page shows: "Showing 1 to 4 of 10 recipes" on the first page. Work both ends out from \`page\` while rendering. The first is \`(page - 1) * PAGE_SIZE + 1\`, and the last is \`page * PAGE_SIZE\`, but never more than the number of recipes. With no recipes at all, the line reads "No recipes". Disable Previous on the first page and Next on the last, and both when there are no recipes. \`page\` stays the only state. PAGE_SIZE is 4. Accept zero to 100 literal recipe names up to 500 characters, including duplicates; give these stateless read-only rows unique keys rather than using their repeated text. Every reachable page must show its exact slice and matching range. Same-length replacement props update the chosen page immediately; use fresh mounts for length changes. Parent renders retain the page, and separate or fresh pagers are independent. Never mutate the recipes.`,
     starter: `import React, { useState } from 'react';
 
 const allRecipes = ['Pancakes', 'Omelette', 'Risotto', 'Chili', 'Ramen', 'Paella', 'Curry', 'Tacos', 'Gnocchi', 'Falafel'];
@@ -714,7 +949,7 @@ const App = ({ recipes = allRecipes }) => {
   return <main>
     <h2>The results line</h2>
     <ul>
-      {recipes.slice(start, start + PAGE_SIZE).map((recipe) => <li key={recipe}>{recipe}</li>)}
+      {recipes.slice(start, start + PAGE_SIZE).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
     </ul>
     <p>Showing 1 to 4 of 10 recipes</p>
     <button type="button" onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -730,15 +965,21 @@ const last = /* page * PAGE_SIZE, but no more than recipes.length */;
 
 // <p>{recipes.length === 0 ? 'No recipes' : 'Showing ' + first + ' to ' + last + ' of ' + recipes.length + ' recipes'}</p>
 // <button type="button" disabled={page <= 1} ...>Previous</button>`,
-    hints: ['People count results from 1 and arrays count from 0, so the first recipe on a page sits at index `start` and reads as number `start + 1`. `Math.min(a, b)` keeps the smaller of two numbers, which trims the last page.'],
+    hints: [
+      `People count results from 1 and arrays count from 0, so the first recipe on a page sits at index \`start\` and reads as number \`start + 1\`. \`Math.min(a, b)\` keeps the smaller of two numbers, which trims the last page. Repeated names still represent separate rows; a unique absolute position is suitable for these read-only text slots.`,
+    ],
     approach: [
-      'Work out `first` as `start + 1` and `last` as `Math.min(page * PAGE_SIZE, recipes.length)`.',
-      'Render "No recipes" when the list is empty, and the "Showing ... to ... of ... recipes" line otherwise.',
-      'Work out `pageCount` as `Math.ceil(recipes.length / PAGE_SIZE)`, then pass `disabled={page <= 1}` to Previous and `disabled={page >= pageCount}` to Next.',
+      `Work out \`first\` as \`start + 1\` and \`last\` as \`Math.min(page * PAGE_SIZE, recipes.length)\`.`,
+      `Render "No recipes" when the list is empty, and the "Showing ... to ... of ... recipes" line otherwise.`,
+      `Work out \`pageCount\` as \`Math.ceil(recipes.length / PAGE_SIZE)\`, then pass \`disabled={page <= 1}\` to Previous and \`disabled={page >= pageCount}\` to Next.`,
     ],
     verify: 'tests',
     estimatedMinutes: 7,
-    suite: `${header()}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
 const line = container => container.querySelector('p').textContent;
 
@@ -762,6 +1003,13 @@ test('Previous is disabled on the first page and Next on the last', () => {
   press('Next');
   expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true);
 });
+
+
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+
+test('the results line describes the actual rows',()=>{const recipes=Object.freeze(Array.from({length:13},(_,i)=>'Recipe '+i));const view=render(<App recipes={recipes}/>);for(let page=1;page<=4;page++){expect(auditRows(view)).toEqual(recipes.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe('Showing '+((page-1)*4+1)+' to '+Math.min(page*4,recipes.length)+' of 13 recipes');if(page<4)auditClick(view,'Next');}expect(auditButton(view,'Next').disabled).toBe(true);});
 `,
   },
   {
@@ -772,7 +1020,7 @@ test('Previous is disabled on the first page and Next on the last', () => {
     tier: 2,
     focus: ['pagination', 'slice'],
     title: 'Rows per page',
-    prompt: 'The list shows 23 orders one page at a time, and a "Rows per page" select offers 5, 10 and 20. Show the orders of the current page with `orders.slice(start, start + rowsPerPage)`, where `start` is `(page - 1) * rowsPerPage`. When the reader picks another size, go back to page 1: page 4 of five rows would point past the end once a page holds twenty. A select hands you its value as text, so turn it into a number before you store it.',
+    prompt: `The list shows 23 orders one page at a time, and a "Rows per page" select offers 5, 10 and 20. Show the orders of the current page with \`orders.slice(start, start + rowsPerPage)\`, where \`start\` is \`(page - 1) * rowsPerPage\`. When the reader picks another size, go back to page 1: page 4 of five rows would point past the end once a page holds twenty. A select hands you its value as text, so turn it into a number before you store it. Accept zero to 100 literal order names up to 500 characters, including duplicates, with unique keys for these read-only rows. Empty input reads Page 1 of 1; disable Previous at page 1 and Next at the final page, including both for empty input. The supported sizes are exactly 5, 10 and 20. Every size change resets to page 1. Same-length replacement data updates the chosen page; use a fresh mount for length changes. Ordinary parent renders retain page and size; separate and fresh Apps have independent choices. Never mutate the input.`,
     starter: `import React, { useState } from 'react';
 
 const allOrders = Array.from({ length: 23 }, (_, index) => 'Order ' + (index + 1));
@@ -790,7 +1038,7 @@ const App = ({ orders = allOrders }) => {
       <option value="20">20</option>
     </select></label>
     <ul>
-      {orders.map((order) => <li key={order}>{order}</li>)}
+      {orders.map((order, index) => <li key={index}>{order}</li>)}
     </ul>
     <p>Page {page} of {pageCount}</p>
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -808,15 +1056,21 @@ const changeSize = (event) => {
 };
 
 // <select value={rowsPerPage} onChange={changeSize}>`,
-    hints: ['Page 1 starts at index 0 and page 2 at index `rowsPerPage`. `slice` stops before its end index and never runs past the end of the array, so a short last page needs no special case.'],
+    hints: [
+      `Page 1 starts at index 0 and page 2 at index \`rowsPerPage\`. \`slice\` stops before its end index and never runs past the end of the array, so a short last page needs no special case. Use unique position keys for the stateless read-only rows when names repeat.`,
+    ],
     approach: [
-      'Work out `start` as `(page - 1) * rowsPerPage` and render `orders.slice(start, start + rowsPerPage)` instead of every order.',
-      'Give the select an `onChange` that calls `setRowsPerPage(Number(event.target.value))`.',
-      'In the same handler, call `setPage(1)`.',
+      `Work out \`start\` as \`(page - 1) * rowsPerPage\` and render \`orders.slice(start, start + rowsPerPage)\` instead of every order.`,
+      `Give the select an \`onChange\` that calls \`setRowsPerPage(Number(event.target.value))\`.`,
+      `In the same handler, call \`setPage(1)\`.`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
-    suite: `${header()}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
 const rows = container => [...container.querySelectorAll('li')].map(li => li.textContent);
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, index) => 'Order ' + (from + index));
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
@@ -841,6 +1095,13 @@ test('a new size goes back to page 1', () => {
   expect(rows(container)).toEqual(range(1, 10));
   expect(container.querySelector('p').textContent).toBe('Page 1 of 3');
 });
+
+
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+
+test('changing page size from a late page starts at the first current order',()=>{const orders=Object.freeze(Array.from({length:73},(_,i)=>'Order '+i));const view=render(<App orders={orders}/>);for(let i=0;i<8;i++)auditClick(view,'Next');fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'20'}});expect(auditRows(view)).toEqual(orders.slice(0,20));expect(view.container.querySelector('p').textContent).toBe('Page 1 of 4');});
 `,
   },
   {
@@ -852,7 +1113,7 @@ test('a new size goes back to page 1', () => {
     // The server cuts the page: the ladder ends on useEffect, not Array.slice.
     focus: ['useEffect', 'pagination'],
     title: 'Ask the server for one page',
-    prompt: 'The server hands out posts one page at a time. Whenever `page` changes, fetch `/api/posts?_page=<page>&_limit=5` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1.',
+    prompt: `The server hands out posts one page at a time. Whenever \`page\` changes, fetch \`/api/posts?_page=<page>&_limit=5\` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1. Show Loading… in a status while a request is pending, clear the old rows, and disable Next until it succeeds. Previous remains usable above page 1, even while loading. Only the current page request may update the UI: ignore an older response or failure after navigation or unmount. An HTTP error, rejected JSON or network failure shows Could not load posts in an alert and a Try again button; retry the current page and clear the alert when retry starts. Use status and retry-attempt state alongside page/posts. Ordinary parent renders do not refetch. The relative endpoint and query values matter, not the order of its parameters. Responses contain zero to five posts with unique ids and literal single-line titles up to 500 characters; do not accumulate pages.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const PAGE_SIZE = 5;
@@ -874,29 +1135,77 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `useEffect(() => {
+    skeleton: `const [status, setStatus] = useState('loading');
+const [attempt, setAttempt] = useState(0);
+useEffect(() => {
+  let current = true;
+  setPosts([]);
+  setStatus('loading');
   fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-    .then((response) => response.json())
-    .then(/* store the posts */);
-}, [/* run again when the page changes */]);
-
-const lastPage = posts.length < PAGE_SIZE;`,
-    hints: ['An effect with `[page]` as its dependency array runs after the first render and again after every render in which `page` changed. That is the moment to ask for the new page.'],
+    .then(response => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
+    .then(data => {
+      // If current, store data and mark ready.
+    })
+    .catch(() => {
+      // If current, mark the error.
+    });
+  return () => { current = false; };
+}, [page, attempt]);
+// Render status/error/retry; Next needs ready status and a full page.`,
+    hints: [
+      `Keep page in the effect's dependencies. A retry counter lets Try again rerun the same page. Use a local current flag and clear it in cleanup before an older promise can update the next page.`,
+      `fetch resolves even for HTTP errors: check response.ok before reading JSON, and catch network or JSON errors. Disable Next until a full page is ready; allow Previous above page 1.`,
+    ],
     approach: [
-      'Write a `useEffect` that fetches the URL for the current `page`, reads the JSON and stores it with `setPosts`.',
-      'Give the effect the dependency array `[page]`, so Next and Previous each start one request.',
-      'Pass `disabled={page === 1}` to Previous and `disabled={posts.length < PAGE_SIZE}` to Next.',
+      `Keep page, posts, status and a retry counter in state. Start one request after mounting or changing page/attempt; clear posts and mark loading.`,
+      `Check response.ok before JSON. Only an effect whose current flag is still true may store data or an error. Cleanup clears the flag.`,
+      `Display a loading status or an alert and Try again. Retry increments the counter; Previous changes page and Next requires a ready, full page.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
+const withFetch = async (body) => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    const signal = options.signal;
+    calls.push({
+      url: String(url),
+      signal,
+      respond: data => resolve({ ok: true, status: 200, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+    const abort = () => {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      reject(error);
+    };
+    if (signal && signal.aborted) abort();
+    else if (signal) signal.addEventListener('abort', abort);
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+
 const posts = (from, count) => Array.from({ length: count }, (_, index) => ({ id: from + index, title: 'Post ' + (from + index) }));
 const titles = container => [...container.querySelectorAll('li')].map(li => li.textContent);
 const button = label => screen.getByRole('button', { name: label });
 
+const checkPageUrl = (raw, page) => { const parts=String(raw).split('?'); expect(parts[0]).toBe('/api/posts'); const values=Object.fromEntries((parts[1]||'').split('&').map(pair=>pair.split('='))); expect(values._page).toBe(String(page)); expect(values._limit).toBe('5'); };
+
 test('the first page is fetched when the page opens', () => withFetch(async calls => {
   const { container } = render(<App />);
-  expect(calls.length > 0 && calls[0].url).toBe('/api/posts?_page=1&_limit=5');
+  expect(calls.length).toBe(1); checkPageUrl(calls[0].url, 1);
   await act(async () => { calls[0].respond(posts(1, 5)); });
   expect(titles(container)).toEqual(['Post 1', 'Post 2', 'Post 3', 'Post 4', 'Post 5']);
 }));
@@ -906,7 +1215,7 @@ test('Next fetches the next page', () => withFetch(async calls => {
   expect(calls.length).toBe(1);
   await act(async () => { calls[0].respond(posts(1, 5)); });
   fireEvent.click(button('Next'));
-  expect(calls.length > 1 && calls[1].url).toBe('/api/posts?_page=2&_limit=5');
+  expect(calls.length).toBe(2); checkPageUrl(calls[1].url, 2);
   await act(async () => { calls[1].respond(posts(6, 2)); });
   expect(titles(container)).toEqual(['Post 6', 'Post 7']);
 }));
@@ -920,6 +1229,22 @@ test('a short page disables Next', () => withFetch(async calls => {
   expect(button('Next').disabled).toBe(true);
   expect(button('Previous').disabled).toBe(false);
 }));
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+const auditPageUrl=(raw,page)=>{const parts=String(raw).split('?');expect(parts[0]).toBe('/api/posts');const values=Object.fromEntries((parts[1]||'').split('&').map(pair=>pair.split('=')));expect(values._page).toBe(String(page));expect(values._limit).toBe('5');};
+
+test('pages replace literal titles rather than accumulate them',()=>auditTransport(async calls=>{const view=render(<App/>);expect(within(view.container).getByRole('status').textContent).toBe('Loading…');const first=auditData(10,5),second=auditData(50,2);auditPageUrl(calls[0].url,1);await auditReply(calls[0],first);auditClick(view,'Next');auditPageUrl(calls[1].url,2);await auditReply(calls[1],second);expect(auditRows(view)).toEqual(second.map(x=>x.title));expect(auditButton(view,'Next').disabled).toBe(true);}));
 `,
   },
 
@@ -932,11 +1257,11 @@ test('a short page disables Next', () => withFetch(async calls => {
     tier: 2,
     focus: ['slice', 'derived-state'],
     title: 'Breadcrumbs from a path',
-    prompt: 'Show the current `path` as breadcrumbs. For "/docs/react/hooks" the crumbs read "docs", "react" and "hooks". Every crumb but the last is a link to the path up to and including it, "/docs" and then "/docs/react", and the last is plain text. Split the path on "/", drop the empty parts that the leading slash and any trailing slash leave, and build each link from `parts.slice(0, index + 1)`. Work the crumbs out while rendering, so they follow when "Go up" shortens the path.',
+    prompt: "Show the current `path` as breadcrumbs. For \"/docs/react/hooks\" the crumbs read \"docs\", \"react\" and \"hooks\". Every crumb but the last is a link to the path up to and including it, \"/docs\" and then \"/docs/react\", and the last is plain text. Split the path on \"/\", drop the empty parts that the leading slash and any trailing slash leave, and build each link from `parts.slice(0, index + 1)`. Work the crumbs out while rendering, so they follow when \"Go up\" shortens the path. The starter normalizes start once by dropping all empty slash-separated parts,including repeated/trailing slashes;root is '/'. start is an initial-only root-relative path,up to 100 segments and 2000 UTF16 units,whose nonempty segments contain only ASCII letters,digits,hyphens or underscores. No query,fragment,percent decoding or dot-segment resolution is needed. Every Go up removes one actual segment immediately,including from a trailing-slash start,and clamps at root;the native type-button is disabled there. Keep one Breadcrumb-named navigation landmark with an OL and exact literal segment labels. The last crumb is not a link,with an optional span/aria-current. Ordinary parent re-renders and later start prop changes preserve the current path;independent/fresh instances use their own initial start. No full-page navigation or link activation is required to perform Go up.",
     starter: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
 
   const goUp = () => setPath((previous) => previous.slice(0, previous.lastIndexOf('/')) || '/');
 
@@ -990,6 +1315,9 @@ test('Go up shortens the crumbs', () => {
   expect(crumbs(container)).toEqual(['docs', 'react']);
   expect(links(container)).toEqual(['/docs']);
 });
+
+test('the first Go up from a trailing slash removes a real segment',()=>{const {container}=render(<App start="/docs/react/"/>);fireEvent.click(screen.getByRole('button',{name:'Go up'}));expect(crumbs(container)).toEqual(['docs']);expect(links(container)).toEqual([]);});
+
 `,
   },
   {
@@ -1000,7 +1328,7 @@ test('Go up shortens the crumbs', () => {
     tier: 1,
     focus: ['slice', 'conditional'],
     title: 'Read more',
-    prompt: 'A review longer than 60 characters starts folded: show `text.slice(0, 60)` followed by "...", with a "Read more" button under it. The button shows the whole review and turns into "Show less", which folds it again. A review of 60 characters or fewer shows in full, with no button at all.',
+    prompt: "A review longer than 60 characters starts folded: show `text.slice(0, 60)` followed by \"...\", with a \"Read more\" button under it. The button shows the whole review and turns into \"Show less\", which folds it again. A review of 60 characters or fewer shows in full, with no button at all. Use JavaScript string length and slice,which count UTF16 units,without trimming or parsing markup. text is a plain string up to 2000 units and may be empty. Keep exactly one paragraph with the current text,or its first 60 units plus the three literal dots while folded. A long review has exactly one native type-button control;short reviews have none. Every click toggles,including repeated clicks beyond two. When text changes on the same mounted component,render the new text while preserving the current open flag,even across a short review that temporarily has no button. Separate and fresh mounts start folded. No CSS or extra data API is required.",
     starter: `import React, { useState } from 'react';
 
 const sampleReview = 'The boat left on time, the crew knew every reef by name, and we saw four turtles before lunch.';
@@ -1054,6 +1382,9 @@ test('a short review shows in full, with no button', () => {
   expect(text(container)).toBe(SHORT);
   expect(screen.queryByRole('button')).toBe(null);
 });
+
+test('new long text is rendered while the current open state is preserved',()=>{const {container,rerender}=render(<App text={LONG}/>);fireEvent.click(screen.getByRole('button'));const next='New review: '+LONG;rerender(<App text={next}/>);expect(text(container)).toBe(next);expect(screen.getByRole('button').textContent).toBe('Show less');});
+
 `,
   },
 
@@ -1066,7 +1397,7 @@ test('a short review shows in full, with no button', () => {
     tier: 1,
     focus: ['accessibility', 'useState'],
     title: 'Buttons that say they are pressed',
-    prompt: 'Bold and Italic should switch their style on and off for the preview line, and a pressed button should say so. Give each button a state of its own and a click that flips it. Show that state with `aria-pressed`: `true` while the style is on and `false` while it is off. A screen reader announces the attribute as "pressed" or "not pressed", which a change of color cannot tell anyone. Keep the labels "Bold" and "Italic" as they are.',
+    prompt: "Bold and Italic should switch their style on and off for the preview line, and a pressed button should say so. Give each button a state of its own and a click that flips it. Show that state with `aria-pressed`: `true` while the style is on and `false` while it is off. A screen reader announces the attribute as \"pressed\" or \"not pressed\", which a change of color cannot tell anyone. Keep the labels \"Bold\" and \"Italic\" as they are. Keep the Formatting-named toolbar with two native buttons of type button and the exact starter preview text. Initially both buttons are not pressed and both styles are normal. Each click changes only that button's state and matching preview style, including releasing Italic and repeated mixed clicks. Keep the starter inline styles: fontWeight bold/normal and fontStyle italic/normal. Ordinary parent re-renders preserve the current combination; simultaneous and fresh mounts are independent. No specific CSS class is required.",
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -1122,6 +1453,9 @@ test('the labels stay the same', () => {
   fireEvent.click(button('Italic'));
   expect(button('Italic').textContent).toBe('Italic');
 });
+
+test('Italic releases without changing Bold',()=>{const {container}=render(<App/>);fireEvent.click(button('Bold'));fireEvent.click(button('Italic'));fireEvent.click(button('Italic'));expect(pressed('Italic')).toBe('false');expect(pressed('Bold')).toBe('true');expect(preview(container).fontStyle).toBe('normal');expect(preview(container).fontWeight).toBe('bold');});
+
 `,
   },
   {
@@ -1132,7 +1466,7 @@ test('the labels stay the same', () => {
     tier: 1,
     focus: ['accessibility', 'splice'],
     title: 'Name the remove buttons',
-    prompt: 'Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an `aria-label` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call `splice(index, 1)` on the copy. Remove by position, because the same song can be on the list twice.',
+    prompt: `Each song in the playlist has a "×" button, and a screen reader reads every one of them the same way, so nobody can tell which song a button removes. Give each button an \`aria-label\` of "Remove <title>"; the "×" stays as the text you see. Make the button remove its song: copy the playlist and call \`splice(index, 1)\` on the copy. Remove by position, because the same song can be on the list twice. songs is the initial snapshot for each mount; later parent renders retain the edited playlist. Accept zero to 100 songs with unique string ids or unique integer ids and nonblank single-line titles up to 500 characters. Preserve every literal title in its span and in the aria-label string ("Remove " plus title), including spaces and punctuation. Do not interpret title text as markup or trim it. Every remaining song must have its own visible × button, even after repeated removals at changing positions. Separate Apps and fresh mounts own their playlists. Equivalent immutable positional removal is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingSongs = [
@@ -1197,6 +1531,9 @@ test('every song has a named button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: /^Remove / }).length).toBe(5);
 });
+
+
+test('literal titles name every remove button without silently trimming',()=>{const title='  <b>Long 🦈 title</b>  ',view=render(<App songs={[{id:'one',title}]}/>),button=view.container.querySelector('button');expect(button.getAttribute('aria-label')).toBe('Remove '+title);expect(button.textContent).toBe('×');expect(titles(view.container)).toEqual([title]);expect(view.container.querySelector('b')).toBeNull();fireEvent.click(button);expect(titles(view.container)).toEqual([]);});
 `,
   },
 
@@ -1209,7 +1546,7 @@ test('every song has a named button', () => {
     tier: 1,
     focus: ['derived-state', 'forms'],
     title: 'Characters left',
-    prompt: 'A post holds at most 80 characters. Under the text box, show "Characters left: <n>", or "Too long by <n>" once the text runs over. Disable Post while the text is empty or too long. Work all of it out from `text` while rendering: a count kept in a state of its own needs an update on every change, and one missed update leaves it wrong.',
+    prompt: `A post holds at most 80 UTF-16 code units (\`text.length\`). Under the text box, show "Characters left: <n>", or "Too long by <n>" once the text runs over. Disable Post while the text is empty or too long. Work all of it out from \`text\` while rendering: a count kept in a state of its own needs an update on every change, and one missed update leaves it wrong. For example, 🦈 uses two units. Text may contain line breaks and up to 2000 units; do not truncate or normalize it. Guard the submit handler too: an empty or over-limit draft must not add a post or clear the draft, even when the form is submitted directly. Valid submissions append the exact raw text in order, keep earlier rows and clear the draft. Whitespace-only text is allowed. Keep separate instances independent.`,
     starter: `import React, { useState } from 'react';
 
 const LIMIT = 80;
@@ -1242,7 +1579,9 @@ export default App;
     skeleton: `const left = LIMIT - text.length;
 
 // <p>{left >= 0 ? 'Characters left: ' + left : 'Too long by ' + -left}</p>
-// <button type="submit" disabled={/* empty or too long */}>Post</button>`,
+// <button type="submit" disabled={/* empty or too long */}>Post</button>
+
+// In post, after preventDefault: ignore an empty or over-limit draft before appending or clearing it.`,
     hints: ['Anything you can work out from state during render is not state itself. `LIMIT - text.length` is right for whatever text is on screen, so there is nothing to keep in step.'],
     approach: [
       'Work out `left` as `LIMIT - text.length` in the body of App.',
@@ -1273,7 +1612,10 @@ test('an empty post cannot be sent', () => {
   render(<App />);
   expect(postButton().disabled).toBe(true);
 });
-`,
+
+test('an emoji uses two UTF-16 units in the counter',()=>{
+ const view=render(<App/>);type('🦈');expect(line(view.container)).toBe('Characters left: 78');expect(postButton().disabled).toBe(false);
+});`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */
@@ -1285,7 +1627,7 @@ test('an empty post cannot be sent', () => {
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Undo a removal',
-    prompt: 'Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call `splice(index, 0, task)` on the copy, which inserts without removing anything. Only the latest removal can be undone.',
+    prompt: `Removing a task shows an "Undo" button. Undo puts the task back at the position it came from, and the button goes away. When a task is removed, remember it and its index in state. For Undo, copy the list and call \`splice(index, 0, task)\` on the copy, which inserts without removing anything. Only the latest removal can be undone. initialTasks is the initial snapshot for each mount: zero to 100 tasks with unique string ids or unique integer ids and literal single-line text up to 500 characters. Remove the current clicked position, even when texts repeat. Restore the entire task without trimming or changing its text, including at positions beyond the starter list. A second removal replaces the pending undo; undoing it does not reveal an older undo. Parent renders retain edits and undo memory, while separate Apps and fresh mounts are independent. Never mutate the supplied array or its objects. Copied splice is the demonstrated insertion; equivalent immutable outcomes are accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingTasks = [
@@ -1332,11 +1674,13 @@ const undo = () => {
 };
 
 // {removed && <button type="button" onClick={undo}>Undo</button>}`,
-    hints: ['`splice(index, 0, item)` removes nothing and inserts `item` before the element now at `index`. An index equal to the length inserts at the end, which is where a removed last task came from.'],
+    hints: [
+      `\`splice(index, 0, item)\` removes nothing and inserts \`item\` before the element now at \`index\`. An index equal to the length inserts at the end, which is where a removed last task came from.`,
+    ],
     approach: [
-      'Add `const [removed, setRemoved] = useState(null)`, and in `remove` store `{ task: tasks[index], index }` as well as filtering the task out.',
-      'Write `undo`: copy `tasks`, call `splice(removed.index, 0, removed.task)` on the copy, store the copy, and set `removed` back to `null`.',
-      'Render the Undo button only while `removed` holds something.',
+      `Add \`const [removed, setRemoved] = useState(null)\`, and in \`remove\` store \`{ task: tasks[index], index }\` as well as filtering the task out.`,
+      `Write \`undo\`: copy \`tasks\`, call \`splice(removed.index, 0, removed.task)\` on the copy, store the copy, and set \`removed\` back to \`null\`.`,
+      `Render the Undo button only while \`removed\` holds something.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1370,6 +1714,9 @@ test('Undo brings the last task back to the end', () => {
   undo();
   expect(texts(container)).toEqual(ALL);
 });
+
+
+test('Undo restores the exact long literal task at an index beyond three',()=>{const items=Array.from({length:12},(_,i)=>({id:'id-'+i,text:'  Task '+i+' 🦈  '})),view=render(<App initialTasks={items}/>);fireEvent.click(view.container.querySelectorAll('li button')[9]);fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));expect(texts(view.container)).toEqual(items.map(task=>task.text));expect(within(view.container).queryByRole('button',{name:'Undo'})).toBeNull();});
 `,
   },
   {
@@ -1380,7 +1727,7 @@ test('Undo brings the last task back to the end', () => {
     tier: 2,
     focus: ['splice', 'split'],
     title: 'Split a line in place',
-    prompt: 'Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". Get the parts with `split(" and ")`, copy the list, and call `splice(index, 1, ...parts)` on the copy. That one call removes the line and inserts every part where it stood.',
+    prompt: `Some lines on the shopping list hold more than one thing, such as "Eggs and milk". Every line that contains " and " has a Split button, which replaces the line with its parts in the same place: "Eggs", then "milk". You can get the parts with \`split(" and ")\`, copy the list, and call \`splice(index, 1, ...parts)\` on the copy. That one call removes the line and inserts every part where it stood. A sequence of ordered splice insertions on a copy, or equivalent immutable replacement, is also valid. Match only the exact case-sensitive delimiter " and "; do not trim or otherwise normalize the parts. Keep empty pieces as individual list lines. items is an initial snapshot of zero to 100 single-line strings up to 500 characters; duplicates and literal markup text are allowed. Any line without the exact delimiter has no Split button. Parent renders retain edits, while separate and fresh Apps keep independent lists. Never change the supplied array.`,
     starter: `import React, { useState } from 'react';
 
 const startingList = ['Eggs and milk', 'Bread', 'Rice and beans', 'Tea'];
@@ -1443,6 +1790,9 @@ test('only lines with " and " have a Split button', () => {
   render(<App />);
   expect(screen.getAllByRole('button', { name: 'Split' }).length).toBe(2);
 });
+
+
+test('splitting preserves literal spaces and every part beyond the third',()=>{const parts=['  first','second  ','<b>🦈</b>','fourth','fifth  '],text=parts.join(' and '),view=render(<App items={['before',text,'after']}/>);fireEvent.click(view.container.querySelector('button'));expect(lines(view.container)).toEqual(['before',...parts,'after']);expect(view.container.querySelector('b')).toBeNull();});
 `,
   },
 
@@ -1455,7 +1805,7 @@ test('only lines with " and " have a Split button', () => {
     tier: 2,
     focus: ['useContext', 'useReducer'],
     title: 'Dispatch through context',
-    prompt: 'App keeps the tasks in a reducer and hands `dispatch` to `AddTask` and, through `TaskList`, to every `TaskItem` as an `onDispatch` prop. `TaskList` never uses it; it only passes it on. Provide `dispatch` through `TasksDispatchContext` around the page instead, have `AddTask` and `TaskItem` read it with `useContext`, and remove the `onDispatch` props.',
+    prompt: `App keeps the tasks in a reducer and hands \`dispatch\` to \`AddTask\` and, through \`TaskList\`, to every \`TaskItem\` as an \`onDispatch\` prop. \`TaskList\` never uses it; it only passes it on. Provide \`dispatch\` through \`TasksDispatchContext\` around the page instead, have \`AddTask\` and \`TaskItem\` read it with \`useContext\`, and remove the \`onDispatch\` props. Preserve exact raw single-line task text, including empty text, spaces, Unicode and literal markup up to 2000 UTF-16 units; this exercise does not add title validation. Each submit prevents navigation, dispatches one { type: "added", text } action and clears only that field. Each checkbox dispatches { type: "toggled", id: task.id } using the current task and nearest current callback. Supplied ids can be unique strings or positive integers. Retain draft state and existing list rows through provider/parent updates, and keep separate and fresh instances independent. Obsolete onDispatch props must not decide where an action goes.`,
     starter: `import React, { createContext, useContext, useReducer, useState } from 'react';
 
 export const TasksDispatchContext = createContext(null);
@@ -1553,6 +1903,11 @@ test('TaskItem dispatches through the context', () => {
   fireEvent.click(boxes()[0]);
   expect(seen).toEqual([{ type: 'toggled', id: 7 }]);
 });
+
+
+test('adding through context preserves the exact draft text',()=>{
+ const seen=[],view=render(<TasksDispatchContext.Provider value={action=>seen.push(action)}><AddTask/></TasksDispatchContext.Provider>);fireEvent.change(screen.getByLabelText('New task'),{target:{value:'  Reef <b>🦈  '}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(seen).toEqual([{type:'added',text:'  Reef <b>🦈  '}]);expect(screen.getByLabelText('New task').value).toBe('');
+});
 `,
   },
   {
@@ -1563,7 +1918,7 @@ test('TaskItem dispatches through the context', () => {
     tier: 2,
     focus: ['useContext', 'forms'],
     title: 'A radio group through context',
-    prompt: '`RadioGroup` takes a `name`, the chosen `value` and an `onChange`, and every `Radio` inside it needs all three. Have `RadioGroup` provide `{ name, value, onChange }` through `RadioContext`, and have `Radio` read it with `useContext`. Each Radio\'s input takes the group\'s `name`, is `checked` when its own `value` equals the group\'s, and calls `onChange` with its own value when picked. App passes each Radio only its value and its label.',
+    prompt: `\`RadioGroup\` takes a \`name\`, the chosen \`value\` and an \`onChange\`, and every \`Radio\` inside it needs all three. Have \`RadioGroup\` provide \`{ name, value, onChange }\` through \`RadioContext\`, and have \`Radio\` read it with \`useContext\`. Each Radio's input takes the group's \`name\`, is \`checked\` when its own \`value\` equals the group's, and calls \`onChange\` with its own value when picked. App passes each Radio only its value and its label. Compare values strictly: numeric 0 and string "0" are different, and callbacks receive the original value rather than its DOM string form or an event. Values are strings or finite numbers. Follow changes to the group name, chosen value and callback, including an empty string value, without resetting the children. Keep the fieldset/legend and each label’s input association. Give different logical groups different names so the browser keeps their native radio selection separate. A fresh App starts with Medium selected; parent renders preserve the current choice.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const RadioContext = createContext(null);
@@ -1634,6 +1989,11 @@ test('picking Large updates the page', () => {
 test('every radio carries the group name', () => {
   render(<App />);
   expect(screen.getAllByRole('radio').map(radio => radio.name)).toEqual(['size', 'size', 'size']);
+});
+
+
+test('numeric and string values compare strictly and callbacks preserve their type',()=>{
+ const seen=[],view=render(<RadioGroup name="mixed" value={0} onChange={value=>seen.push(value)} legend="Mixed"><Radio value={0}>Number zero</Radio><Radio value="0">Text zero</Radio></RadioGroup>);const radios=[...view.container.querySelectorAll('input')];expect(radios.map(node=>node.checked)).toEqual([true,false]);fireEvent.click(radios[1]);expect(seen).toEqual(['0']);
 });
 `,
   },

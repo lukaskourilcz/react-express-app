@@ -23,6 +23,8 @@ import { jsonError, requireAuthResult, requireAuthSub, withTimeout, createLogger
 import type { AuthResult } from './auth';
 import { defaultDeploymentCategories } from './product-scope';
 import { isValidHandle } from '../shared/handles';
+import { camelSharkBase, isAllowedSharkBase } from '../shared/sharkname';
+import { allocateSharkName } from './shark-name';
 
 const logEvent = createLogger('friends');
 
@@ -30,7 +32,7 @@ const logEvent = createLogger('friends');
  * learner can act on. Anything not listed here is a 500: an unexpected
  * database error must not be reported as a user mistake. */
 const KNOWN: Record<string, { status: number; code: string; message: string }> = {
-  invalid_handle: { status: 400, code: 'invalid_handle', message: 'A sharkname is 3–32 letters, numbers, hyphens or underscores' },
+  invalid_handle: { status: 400, code: 'invalid_handle', message: 'Choose a generated sharkname. Its number is added automatically.' },
   handle_taken: { status: 409, code: 'handle_taken', message: 'That sharkname is already taken' },
   handle_cooldown: { status: 409, code: 'handle_cooldown', message: 'A sharkname can be changed once every 30 days' },
   handle_not_found: { status: 404, code: 'not_found', message: 'No account with that sharkname' },
@@ -79,11 +81,20 @@ export async function handleFriends(
   // ── the caller's own handle ────────────────────────────────────────────
   if (op === 'friends-handle') {
     if (req.method === 'GET') {
-      const { data, error } = await withTimeout(supabase.rpc('get_user_handle', { p_user_id: userId }));
+      let { data, error } = await withTimeout(supabase.rpc('get_user_handle', { p_user_id: userId }));
       if (error) return rpcError(res, error, 'Could not read your handle');
-      const row = Array.isArray(data) ? data[0] : data;
+      let row = Array.isArray(data) ? data[0] : data;
+      if (!row?.handle) {
+        try { await allocateSharkName(supabase, { userId }); }
+        catch (error) { return rpcError(res, error as Error, 'Could not create your sharkname', '063'); }
+        const read = await withTimeout(supabase.rpc('get_user_handle', { p_user_id: userId }));
+        if (read.error) return rpcError(res, read.error, 'Could not read your handle');
+        row = Array.isArray(read.data) ? read.data[0] : read.data;
+      }
       return res.json({
         handle: row?.handle ?? null,
+        ordinal: typeof row?.ordinal === 'string' ? row.ordinal : null,
+        base: row?.base ?? null,
         discoverable: row?.discoverable ?? true,
         country: row?.country ?? null,
         canChangeAt: row?.can_change_at ?? null,
@@ -94,14 +105,14 @@ export async function handleFriends(
       // stranger who types it can find you, and the flag shown beside your
       // avatar. Each is recognised by its own key being present, so saving one
       // never silently rewrites another.
-      if (typeof body.discoverable === 'boolean' && body.handle === undefined) {
+      if (typeof body.discoverable === 'boolean' && body.handle === undefined && body.base === undefined) {
         const { data, error } = await withTimeout(
           supabase.rpc('set_handle_discoverable', { p_user_id: userId, p_discoverable: body.discoverable }),
         );
         if (error) return rpcError(res, error, 'Could not save the setting');
         return res.json({ discoverable: data === true });
       }
-      if (body.country !== undefined && body.handle === undefined) {
+      if (body.country !== undefined && body.handle === undefined && body.base === undefined) {
         // '' and null both mean "no flag". Anything else has to be two letters,
         // and the database refuses it again if this misses.
         const raw = body.country;
@@ -118,14 +129,15 @@ export async function handleFriends(
         if (error) return rpcError(res, error, 'Could not save your country');
         return res.json({ country: (data as string | null) ?? null });
       }
-      const handle = readHandle(body.handle);
-      if (!handle) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
-      const { data, error } = await withTimeout(
-        supabase.rpc('set_user_handle', { p_user_id: userId, p_handle: handle }),
-      );
-      if (error) return rpcError(res, error, 'Could not save your handle');
+      const raw = body.base ?? body.handle;
+      const base = typeof raw === 'string' && isValidHandle(raw.trim())
+        ? body.base !== undefined ? raw.trim() : camelSharkBase(raw.trim()) : '';
+      if (!isAllowedSharkBase(base)) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
+      let allocation;
+      try { allocation = await allocateSharkName(supabase, { userId, base, replace: true }); }
+      catch (error) { return rpcError(res, error as Error, 'Could not save your handle', '063'); }
       logEvent({ status: 200, op: 'handle_set' });
-      return res.json({ handle: data ?? handle });
+      return res.json(allocation);
     }
     res.setHeader('Allow', 'GET, PUT');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');

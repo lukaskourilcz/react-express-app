@@ -389,14 +389,21 @@ test('a line that comes back goes on the end', () => {
   press('Remove one Tea');
   press('Add Tea');
   expect(lines()).toEqual(['Cake × 1', 'Tea × 1']);
-});`,
+});
+
+
+test('strict ids and immutable reducer transitions agree with an independent model',()=>{const products=[{id:0,name:'zero'},{id:'0',name:'string zero'},{id:'__proto__',name:'<b>🦈</b>'},{id:'x'.repeat(100),name:'  long name  '}];let actual=[],model=[];for(let i=0;i<96;i++){const product=products[(i*7+Math.floor(i/5))%products.length],remove=i%4===0,action=remove?{type:'remove',id:product.id}:{type:'add',product:Object.freeze({...product})};const frozen=Object.freeze(model.map(line=>Object.freeze({...line}))),saved=JSON.stringify(frozen);actual=basketReducer(frozen,action);const index=model.findIndex(line=>line.id===product.id);if(remove){if(index>=0){model[index]={...model[index],quantity:model[index].quantity-1};if(model[index].quantity===0)model.splice(index,1);}}else if(index<0)model.push({...product,quantity:1});else model[index]={...model[index],quantity:model[index].quantity+1};expect(actual).toEqual(model);expect(JSON.stringify(frozen)).toBe(saved);}const current=model.map(line=>({...line}));for(const type of ['constructor','toString','__proto__','clear-all'])expect(basketReducer(current,{type})).toBe(current);});
+test('provider actions compose in one event and nearest providers stay independent',()=>{const Probe=({label})=>{const{lines,add,remove}=useBasket();return <section><output>{label}:{lines.reduce((n,line)=>n+line.quantity,0)}</output><button onClick={()=>{for(let i=0;i<7;i++)add({id:'tea',name:'Tea'});remove('tea');}}>{label}</button></section>;};const tree=()=> <BasketProvider><Probe label="outer"/><BasketProvider><Probe label="inner"/></BasketProvider></BasketProvider>;const a=render(tree()),b=render(<BasketProvider><Probe label="separate"/></BasketProvider>);for(let i=1;i<=8;i++){fireEvent.click(within(a.container).getByRole('button',{name:'inner'}));a.rerender(tree());expect([...a.container.querySelectorAll('output')].map(x=>x.textContent)).toEqual(['outer:0','inner:'+6*i]);expect(b.container.textContent).toContain('separate:0');}a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.textContent).toContain('Basket (0)');});
+test('ordinary product and line buttons retain order through removal and re-addition',()=>{const view=render(<App/>),q=within(view.container);for(let i=0;i<12;i++)fireEvent.click(q.getByRole('button',{name:'Add Tea'}));fireEvent.click(q.getByRole('button',{name:'Add Cake'}));for(let i=0;i<12;i++)fireEvent.click(q.getByRole('button',{name:'Remove one Tea'}));fireEvent.click(q.getByRole('button',{name:'Add Tea'}));expect(lines()).toEqual(['Cake × 1','Tea × 1']);let caught;const Guard=()=>{try{useBasket();}catch(error){caught=error;}return null;};render(<Guard/>);expect(caught instanceof Error).toBe(true);expect(caught.message).toBe('useBasket must be used inside BasketProvider');});
+`,
   },
   'react-mh-load-more': {
-    solution: `import React, { useEffect, useState } from 'react';
+    solution: `import React, { useRef, useEffect, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [photos, setPhotos] = useState([]);
   // The last page on screen: the next request asks for page + 1.
   const [page, setPage] = useState(0);
@@ -404,21 +411,29 @@ const App = () => {
   const [status, setStatus] = useState('loading');
 
   const load = (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     setStatus('loading');
     fetch('/api/photos?page=' + number)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
       .then((next) => {
+        if (!current) return;
         // The updater form appends to whatever is on screen when the answer arrives.
         setPhotos((shown) => [...shown, ...next]);
         setPage(number);
         // A short page is the last one.
         setStatus(next.length < PAGE_SIZE ? 'done' : 'ready');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => { if (current) setStatus('error'); });
   };
 
   useEffect(() => {
     load(1);
+    return () => cancel.current();
   }, []);
 
   return <main>
@@ -439,11 +454,12 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useEffect, useState } from 'react';
+    junior: `import React, { useRef, useEffect, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [photos, setPhotos] = useState([]);
   const [lastPage, setLastPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -451,24 +467,30 @@ const App = () => {
   const [finished, setFinished] = useState(false);
 
   const loadPage = async (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     setLoading(true);
     setFailed(false);
     try {
       const response = await fetch('/api/photos?page=' + number);
+      if (!response.ok) throw new Error('Request failed');
       const newPhotos = await response.json();
+      if (!current) return;
       setPhotos((oldPhotos) => [...oldPhotos, ...newPhotos]);
       setLastPage(number);
       if (newPhotos.length < PAGE_SIZE) {
         setFinished(true);
       }
     } catch (error) {
-      setFailed(true);
+      if (current) setFailed(true);
     }
-    setLoading(false);
+    if (current) setLoading(false);
   };
 
   useEffect(() => {
     loadPage(1);
+    return () => cancel.current();
   }, []);
 
   let buttonText = 'Load more';
@@ -498,7 +520,7 @@ const App = () => {
 };
 
 export default App;`,
-    senior: `import React, { useCallback, useEffect, useReducer } from 'react';
+    senior: `import React, { useRef, useCallback, useEffect, useReducer } from 'react';
 
 const PAGE_SIZE = 3;
 const LABELS = { loading: 'Loading…', ready: 'Load more', error: 'Try again' };
@@ -521,21 +543,27 @@ const reducer = (state, action) => {
 };
 
 const App = () => {
+  const cancel = useRef(() => {});
   const [{ photos, page, status }, dispatch] = useReducer(reducer, { photos: [], page: 0, status: 'loading' });
 
   const load = useCallback(async (number) => {
+    cancel.current();
+    let current = true;
+    cancel.current = () => { current = false; };
     dispatch({ type: 'request' });
     try {
       const response = await fetch('/api/photos?page=' + number);
       if (!response.ok) throw new Error('HTTP ' + response.status);
-      dispatch({ type: 'page', page: number, photos: await response.json() });
+      const next = await response.json();
+      if (current) dispatch({ type: 'page', page: number, photos: next });
     } catch {
-      dispatch({ type: 'failure' });
+      if (current) dispatch({ type: 'failure' });
     }
   }, []);
 
   useEffect(() => {
     load(1);
+    return () => cancel.current();
   }, [load]);
 
   return (
@@ -606,7 +634,13 @@ test('a full page keeps the button until an empty one ends the list', () => with
   await act(async () => { calls[2].respond([]); });
   expect(titles()).toHaveLength(6);
   expect(screen.getByText('That’s everything')).toBeTruthy();
-}));`,
+}));
+
+
+test('JSON and offline errors keep the prefix, retry and continue beyond page three',()=>auditTransport(async calls=>{const view=render(<App/>);let expected=[];for(let page=1;page<=5;page++){let call=calls[calls.length-1];expect(call.url).toBe('/api/photos?page='+page);if(page===1||page===3){await act(async()=>{if(page===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual(expected);expect(within(view.container).getByRole('alert')).toBeTruthy();auditClick(view,'Try again');call=calls[calls.length-1];expect(call.url).toBe('/api/photos?page='+page);expect(within(view.container).queryByRole('alert')).toBeNull();}const data=auditData(page*100,page===5?1:3);await auditReply(call,data);expected=expected.concat(data.map(x=>x.title));expect(auditRows(view)).toEqual(expected);if(page<5){auditClick(view,'Load more');const count=calls.length;fireEvent.click(auditButton(view,'Loading…'));expect(calls).toHaveLength(count);}}expect(within(view.container).getByText('That’s everything')).toBeTruthy();expect(within(view.container).queryByRole('button')).toBeNull();}));
+test('normal parent renders do not refetch or lose appended photos',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,3),second=auditData(10,3);await auditReply(calls[0],first);view.rerender(<App/>);expect(calls).toHaveLength(1);auditClick(view,'Load more');await auditReply(calls[1],second);view.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditRows(view)).toEqual(first.concat(second).map(x=>x.title));}));
+test('late responses from an unmounted app do not contaminate a separate or fresh app',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[0],auditData(1,3));auditClick(a,'Load more');a.unmount();await auditReply(calls[2],auditData(80,3));await auditReply(calls[1],auditData(20,1));expect(auditRows(b)).toEqual(auditData(20,1).map(x=>x.title));b.unmount();const fresh=render(<App/>);expect(calls[calls.length-1].url).toBe('/api/photos?page=1');await auditReply(calls[calls.length-1],[]);expect(auditRows(fresh)).toEqual([]);expect(within(fresh.container).queryByRole('button')).toBeNull();}));
+`,
   },
   'react-mh-sortable-table': {
     solution: `import React, { useState } from 'react';
@@ -842,7 +876,14 @@ test('each row keeps its own team and goals', () => {
   sortBy('Goals');
   const cells = screen.getAllByRole('row').slice(1).map(row => [...row.cells].map(cell => cell.textContent));
   expect(cells).toEqual([['Ben', 'Greens', '3'], ['Mia', 'Reds', '7'], ['Zoe', 'Reds', '7'], ['Ali', 'Blues', '12']]);
-});`,
+});
+const playerSeed=[{name:'Mia',team:'Reds',goals:7},{name:'Ali',team:'Blues',goals:12},{name:'Zoe',team:'Reds',goals:7},{name:'Ben',team:'Greens',goals:3}],sortKeys={Name:'name',Team:'team',Goals:'goals'};
+const checkSortedScope=(scope,key,direction,nodes)=>{const rows=Array.from(scope.querySelectorAll('tbody tr')),expected=playerSeed.map((p,index)=>({p,index}));if(key)expected.sort((a,b)=>{const x=a.p[key],y=b.p[key],result=typeof x==='number'?x-y:x.localeCompare(y);return(direction==='ascending'?result:-result)||a.index-b.index;});expect(rows.map(tr=>Array.from(tr.cells).map(td=>td.textContent))).toEqual(expected.map(({p})=>[p.name,p.team,String(p.goals)]));rows.forEach(tr=>expect(tr).toBe(nodes.get(tr.cells[0].textContent)));for(const [label,k]of Object.entries(sortKeys)){const th=within(scope).getByRole('columnheader',{name:label});expect(th.getAttribute('scope')).toBe('col');expect(th.getAttribute('aria-sort')).toBe(k===key?direction:null);expect(within(th).getByRole('button',{name:label}).type).toBe('button');}};
+test('thirty-six mixed choices retain exact values,stable ties,aria-sort and row identities',()=>{const {container,rerender}=render(<App/>),nodes=new Map(Array.from(container.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr]));let key=null,direction=null;checkSortedScope(container,key,direction,nodes);for(let i=0;i<36;i++){const label=['Goals','Goals','Name','Name','Team','Goals','Team','Team','Team'][i%9],next=sortKeys[label];direction=next===key&&direction==='ascending'?'descending':'ascending';key=next;fireEvent.click(within(container).getByRole('button',{name:label}));checkSortedScope(container,key,direction,nodes);rerender(<App/>);checkSortedScope(container,key,direction,nodes);}});
+test('two tables keep separate sort choices',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),an=new Map(Array.from(a.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr])),bn=new Map(Array.from(b.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr]));fireEvent.click(within(a).getByRole('button',{name:'Goals'}));fireEvent.click(within(a).getByRole('button',{name:'Goals'}));checkSortedScope(a,'goals','descending',an);checkSortedScope(b,null,null,bn);fireEvent.click(within(b).getByRole('button',{name:'Name'}));checkSortedScope(a,'goals','descending',an);checkSortedScope(b,'name','ascending',bn);});
+test('sorting never changes the initial order of a fresh mount',()=>{const a=render(<App/>);for(const label of['Name','Name','Goals','Team','Team'])fireEvent.click(within(a.container).getByRole('button',{name:label}));a.unmount();const b=render(<App/>),nodes=new Map(Array.from(b.container.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr]));checkSortedScope(b.container,null,null,nodes);expect(PLAYERS.map(p=>p.name)).toEqual(playerSeed.map(p=>p.name));});
+
+`,
   },
   'react-mh-notices': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1034,7 +1075,11 @@ test('the status region is there before any notice', () => {
 });
 
 ${timersClearedOnUnmount('leaving the page clears every waiting notice timer', 300, `    press('Save');
-    press('Delete');`)}`,
+    press('Delete');`)}` + `
+test('thirty-six modeled adds,dismissals and advances keep the newest three and surviving keyed rows',()=>withNoticeClock(async clock=>{const root=render(<App/>);let model=[],now=0,serial=0;const verify=()=>{const rows=noticeRows(root.container);expect(noticeTexts(root.container)).toEqual(model.map(n=>n.text));expect(clock.pending()).toBe(model.length);model.forEach((n,i)=>{if(n.node)expect(rows[i]).toBe(n.node);n.node=rows[i];expect(within(rows[i]).getByRole('button',{name:'Dismiss '+n.text})).toBeTruthy();});};for(let i=0;i<36;i++){if(i>=8&&i%4===0){const delta=i%3===0?299:120;now+=delta;await clock.tick(delta);model=model.filter(n=>n.born+300>now);}if(i>=8&&i%5===0&&model.length){const index=Math.floor(model.length/2);fireEvent.click(within(noticeRows(root.container)[index]).getByRole('button',{name:'Dismiss '+model[index].text}));model.splice(index,1);}else{const text=i%2?'Deleted':'Saved';noticePress(root.container,text==='Saved'?'Save':'Delete');model=[...model,{id:++serial,text,born:now}].slice(-3);}verify();root.rerender(<App/>);verify();}await clock.tick(300);model=[];verify();root.unmount();expect(clock.pending()).toBe(0);}));
+test('each child lasts its full299plus1deadline despite parent callbacks changing',()=>withNoticeClock(async clock=>{const root=render(<App/>);noticePress(root.container,'Save');await clock.tick(100);noticePress(root.container,'Delete');await clock.tick(50);for(let i=0;i<12;i++)root.rerender(<App/>);await clock.tick(149);expect(noticeTexts(root.container)).toEqual(['Saved','Deleted']);expect(clock.pending()).toBe(2);await clock.tick(1);expect(noticeTexts(root.container)).toEqual(['Deleted']);expect(clock.pending()).toBe(1);await clock.tick(99);expect(noticeTexts(root.container)).toEqual(['Deleted']);await clock.tick(1);expect(noticeTexts(root.container)).toEqual([]);expect(clock.pending()).toBe(0);root.unmount();}));
+test('independent and fresh notice regions own their timers and reset empty',()=>withNoticeClock(async clock=>{const a=render(<App/>),b=render(<App/>);noticePress(a.container,'Save');await clock.tick(100);noticePress(b.container,'Delete');expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);expect(noticeTexts(b.container)).toEqual(['Deleted']);await clock.tick(299);expect(noticeTexts(b.container)).toEqual(['Deleted']);await clock.tick(1);expect(noticeTexts(b.container)).toEqual([]);b.unmount();const fresh=render(<App/>);expect(noticeTexts(fresh.container)).toEqual([]);noticePress(fresh.container,'Save');fresh.unmount();expect(clock.pending()).toBe(0);await clock.tick(1000);}));
+`,
   },
   'react-mh-tag-input': {
     solution: `import React, { useState } from 'react';
@@ -1058,6 +1103,7 @@ const App = () => {
   };
 
   const keyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (event.key === 'Enter' || event.key === ',') {
       // Before the browser acts on the key: no form submit, and no comma in the field.
       event.preventDefault();
@@ -1112,6 +1158,7 @@ const App = () => {
   };
 
   const handleKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       addTag();
@@ -1161,6 +1208,7 @@ const App = () => {
   const [tags, setTags] = useState([]);
 
   const onKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (ADD_KEYS.has(event.key)) {
       event.preventDefault();
       const tag = text.trim().toLowerCase();
@@ -1223,7 +1271,13 @@ test('removing from either end keeps the rest in order', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Remove tag a' }));
   fireEvent.click(screen.getByRole('button', { name: 'Remove tag d' }));
   expect(tags()).toEqual(['b', 'c']);
-});`,
+});
+
+
+test('normalization is exact JavaScript trim/lowercase and has no four-tag cap',()=>{render(<App/>);const values=[' React ','CSS','ŽLUŤOUČKÝ','ČESKÝ','日本語',' İ ','<B>raw</B>','naïve','  ninth  ',' NBSP '],expected=[];for(let i=0;i<values.length;i++){type(values[i]);expect(fireEvent.keyDown(field(),{key:i%2?',':'Enter'})).toBe(false);const value=values[i].trim().toLowerCase();if(value&&!expected.includes(value))expected.push(value);expect(tags()).toEqual(expected);expect(field().value).toBe('');}for(const value of [' css ','ČESKÝ','   ',' ']){add(value);expect(tags()).toEqual(expected);expect(field().value).toBe('');}const buttons=[...screen.getByRole('list',{name:'Tags chosen'}).querySelectorAll('button')];expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(expected.map(tag=>'Remove tag '+tag));expect(document.querySelector('main b')).toBeNull();});
+test('exact empty Backspace,ordinary keys and repeated removals preserve order',()=>{render(<App/>);['one','two','three','four','five','six'].forEach(add);type(' ');expect(key('Backspace')).toBe(true);expect(tags()).toEqual(['one','two','three','four','five','six']);for(const name of ['Escape','Tab','x']){expect(key(name)).toBe(true);expect(field().value).toBe(' ');}type('');key('Backspace');expect(tags()).toEqual(['one','two','three','four','five']);fireEvent.click(screen.getByRole('button',{name:'Remove tag three'}));expect(tags()).toEqual(['one','two','four','five']);for(let i=0;i<6;i++)key('Backspace');expect(tags()).toEqual([]);add('FIVE');expect(tags()).toEqual(['five']);});
+test('two fields and fresh mounts keep tag/input state separate',()=>{const a=render(<App/>),b=render(<App/>),read=view=>[...view.container.querySelectorAll('li span')].map(span=>span.textContent),enter=(view,text)=>{const input=within(view.container).getByLabelText('Tags');fireEvent.change(input,{target:{value:text}});fireEvent.keyDown(input,{key:'Enter'});};enter(a,'Left');enter(b,'Right');a.rerender(<App/>);expect(read(a)).toEqual(['left']);expect(read(b)).toEqual(['right']);fireEvent.click(within(a.container).getByRole('button',{name:'Remove tag left'}));expect(read(a)).toEqual([]);expect(read(b)).toEqual(['right']);a.unmount();b.unmount();const fresh=render(<App/>);expect(read(fresh)).toEqual([]);expect(within(fresh.container).getByLabelText('Tags').value).toBe('');});
+`,
   },
   'react-mh-select-all': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1473,7 +1527,24 @@ test('Select all after a delete selects only what is left', () => {
   fireEvent.click(all());
   expect(deleteButton().textContent).toBe('Delete selected (3)');
   expect(all().checked).toBe(true);
-});`,
+});
+
+
+const subjectsForModel=['Lunch on Friday','Invoice 1042','Your parcel is on its way','Team photos'];
+const expectSelection=(subjects,selected)=>{
+ expect(deleteButton().textContent).toBe('Delete selected ('+selected.size+')');expect(deleteButton().disabled).toBe(selected.size===0);expect(all().checked).toBe(subjects.length>0&&selected.size===subjects.length);expect(all().indeterminate).toBe(selected.size>0&&selected.size<subjects.length);expect(all().disabled).toBe(subjects.length===0);for(const subject of subjects)expect(box(subject).checked).toBe(selected.has(subject));
+};
+test('all sixteen selection states support independent individual unchecks',()=>{
+ const view=render(<App/>);
+ for(let mask=0;mask<16;mask++){fireEvent.click(all());fireEvent.click(all());const selected=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){fireEvent.click(box(subjectsForModel[i]));selected.add(subjectsForModel[i]);}expectSelection(subjectsForModel,selected);view.rerender(<App data-parent={mask}/>);expectSelection(subjectsForModel,selected);for(let i=3;i>=0;i--)if(selected.has(subjectsForModel[i])){fireEvent.click(box(subjectsForModel[i]));selected.delete(subjectsForModel[i]);expectSelection(subjectsForModel,selected);}}
+});
+test('every nonempty deletion subset removes only selected rows and retains surviving node identity',()=>{
+ for(let mask=1;mask<16;mask++){const view=render(<App/>);const oldRows=new Map(subjectsForModel.map(subject=>[subject,box(subject).closest('li')]));const removed=new Set();for(let i=0;i<4;i++)if(mask&(1<<i)){removed.add(subjectsForModel[i]);fireEvent.click(box(subjectsForModel[i]));}fireEvent.click(deleteButton());const kept=subjectsForModel.filter(subject=>!removed.has(subject));expect(screen.queryAllByRole('listitem').map(li=>li.textContent.trim())).toEqual(kept);expectSelection(kept,new Set());for(const subject of kept)expect(box(subject).closest('li')).toBe(oldRows.get(subject));if(kept.length){fireEvent.click(all());expectSelection(kept,new Set(kept));fireEvent.click(deleteButton());expectSelection([],new Set());}view.unmount();}
+});
+test('one inbox selection or deletion never changes another inbox or the next mount',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('checkbox',{name:'Lunch on Friday'}));fireEvent.click(two.getByRole('checkbox',{name:'Team photos'}));fireEvent.click(two.getByRole('button',{name:'Delete selected (1)'}));expect(one.getByRole('checkbox',{name:'Team photos'})).toBeTruthy();expect(one.getByRole('checkbox',{name:'Lunch on Friday'}).checked).toBe(true);expect(two.queryByRole('checkbox',{name:'Team photos'})).toBeNull();expect(one.getAllByRole('listitem')).toHaveLength(4);expect(two.getAllByRole('listitem')).toHaveLength(3);a.unmount();b.unmount();const fresh=render(<App/>);expectSelection(subjectsForModel,new Set());expect(screen.getAllByRole('listitem')).toHaveLength(4);fresh.unmount();
+});
+`,
   },
   'react-mh-use-shortcut': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1481,10 +1552,9 @@ test('Select all after a delete selects only what is left', () => {
 const TYPING = ['INPUT', 'TEXTAREA', 'SELECT'];
 
 export const useShortcut = (key, handler) => {
-  // Updated on every render, so the listener always calls the newest handler,
-  // with the newest state in it, without being added again.
+  // Publish only committed handlers; an abandoned render must not change it.
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  useEffect(() => { handlerRef.current = handler; });
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -1520,7 +1590,7 @@ export default App;`,
 
 export const useShortcut = (key, handler) => {
   const savedHandler = useRef(handler);
-  savedHandler.current = handler;
+  useEffect(() => { savedHandler.current = handler; });
 
   useEffect(() => {
     const listener = (event) => {
@@ -1682,7 +1752,13 @@ test('a new key moves the listener to that key', () => {
   press('a');
   press('b');
   expect(seen).toEqual(['a', 'b']);
-});`,
+});
+
+
+test('a suspended uncommitted handler never replaces the last committed callback',()=>{const seen=[],pending=new Promise(()=>{});const Probe=({label,block})=>{useShortcut('q',()=>seen.push(label));if(block)throw pending;return <p>{label}</p>;};const view=render(<React.Suspense fallback={<p>Waiting</p>}><Probe label="committed" block={false}/></React.Suspense>);press('q');view.rerender(<React.Suspense fallback={<p>Waiting</p>}><Probe label="uncommitted" block={true}/></React.Suspense>);expect(view.container.textContent).toContain('Waiting');press('q');expect(seen).toEqual(['committed','committed']);view.unmount();});
+test('current committed callbacks,keys and capture-aware cleanup own their listeners',()=>{const watch=watchLiveListeners(window,'keydown'),seen=[];try{const Probe=({shortcut,label})=>{useShortcut(shortcut,event=>seen.push(label+event.key));return null;};const a=render(<Probe shortcut="q" label="0"/>),b=render(<Probe shortcut="z" label="B"/>);for(let i=0;i<18;i++){const shortcut=i%2?'Q':'q';a.rerender(<Probe shortcut={shortcut} label={String(i)}/>);expect(watch.active()).toBe(2);press(shortcut);expect(seen[seen.length-1]).toBe(String(i)+shortcut);const length=seen.length;press(shortcut==='q'?'Q':'q');expect(seen).toHaveLength(length);}a.unmount();expect(watch.active()).toBe(1);press('q');press('z');expect(seen[seen.length-1]).toBe('Bz');b.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}});
+test('typing fields stay untouched and thirty-six ordinary note shortcuts retain fresh state',()=>{const seen=[];const Probe=()=>{useShortcut('q',event=>seen.push(event.key));return <><input aria-label="input"/><textarea aria-label="area"/><select aria-label="select"><option>one</option></select></>;};const fields=render(<Probe/>);for(const node of fields.container.querySelectorAll('input,textarea,select')){const event=new KeyboardEvent('keydown',{key:'q',bubbles:true,cancelable:true});node.dispatchEvent(event);expect(event.defaultPrevented).toBe(false);}expect(seen).toEqual([]);fields.unmount();const view=render(<App/>);for(let i=1;i<=36;i++){press('n');expect(notes()).toBe('New notes: '+i);view.rerender(<App/>);}expect(press('/')).toBe(false);expect(document.activeElement).toBe(screen.getByLabelText('Search'));});
+`,
   },
   'react-mh-rename-in-place': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -1778,7 +1854,7 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useEffect, useRef, useState } from 'react';
+    junior: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1787,6 +1863,7 @@ const FILES = [
 ];
 
 const App = () => {
+  const fieldPrefix = useId();
   const [files, setFiles] = useState(FILES);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -1865,9 +1942,9 @@ const App = () => {
             return (
               <li key={file.id}>
                 <form onSubmit={handleSubmit}>
-                  <label htmlFor={'rename-' + file.id}>{'New name for ' + file.name}</label>
+                  <label htmlFor={fieldPrefix + '-rename-' + file.id}>{'New name for ' + file.name}</label>
                   <input
-                    id={'rename-' + file.id}
+                    id={fieldPrefix + '-rename-' + file.id}
                     ref={inputRef}
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -2050,7 +2127,20 @@ test('a key other than Escape leaves the form open', () => {
   fireEvent.click(renameButton('notes.txt'));
   fireEvent.keyDown(input('notes.txt'), { key: 'a' });
   expect(input('notes.txt')).toBeTruthy();
-});`,
+});
+
+
+test('current renamed names are reserved and old names can be reused by another file',()=>{
+ render(<App/>);fireEvent.click(renameButton('report.pdf'));type('report.pdf','new-report.pdf');submit('report.pdf');fireEvent.click(renameButton('notes.txt'));type('notes.txt','new-report.pdf');submit('notes.txt');expect(screen.getByRole('alert').textContent).toBe('That name is taken');expect(input('notes.txt')).toBeTruthy();type('notes.txt','report.pdf');submit('notes.txt');expect(names()).toEqual(['new-report.pdf','report.pdf','photo.jpg']);expect(document.activeElement).toBe(renameButton('report.pdf'));
+});
+test('twenty-four raw rename cycles keep stable rows, trimmed values and local draft state',()=>{
+ const view=render(<App/>);const model=['report.pdf','notes.txt','photo.jpg'];const rows=screen.getAllByRole('listitem');
+ for(let i=0;i<24;i++){const index=i%3,old=model[index],raw=['  reef-'+i+'.txt  ','<b>literal-'+i+'</b>','🦈-'+i,'x'.repeat(1990)+i][i%4];fireEvent.click(renameButton(old));expect(input(old).value).toBe(old);type(old,raw);view.rerender(<App data-parent={i}/>);expect(input(old).value).toBe(raw);expect(document.activeElement).toBe(input(old));if(i%5===0){fireEvent.keyDown(input(old),{key:'Escape'});}else{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>input(old).closest('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);model[index]=raw.trim();}expect(names()).toEqual(model);expect(document.activeElement).toBe(renameButton(model[index]));rows.forEach((row,n)=>expect(screen.getAllByRole('listitem')[n]).toBe(row));}
+});
+test('edit labels and focus remain local to each instance, with fresh mounts restoring initial files',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Rename notes.txt'}));fireEvent.click(two.getByRole('button',{name:'Rename notes.txt'}));const fa=a.container.querySelector('input'),fb=b.container.querySelector('input');expect(one.getByLabelText('New name for notes.txt')).toBe(fa);expect(two.getByLabelText('New name for notes.txt')).toBe(fb);fireEvent.change(fb,{target:{value:'beta.txt'}});fireEvent.submit(fb.closest('form'));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename beta.txt'}));expect(fa.value).toBe('notes.txt');fireEvent.keyDown(fa,{key:'Escape'});expect(document.activeElement).toBe(one.getByRole('button',{name:'Rename notes.txt'}));a.unmount();b.unmount();const fresh=render(<App/>);expect(names()).toEqual(['report.pdf','notes.txt','photo.jpg']);expect(screen.queryAllByRole('textbox')).toHaveLength(0);fresh.unmount();
+});
+`,
   },
   'react-mh-wait-for-export': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -2278,16 +2368,127 @@ test('Export stays disabled while the job reports running, and a click on it ask
   expect(exportButton().disabled).toBe(true);
   fireEvent.click(exportButton());
   expect(calls).toHaveLength(2);
-}));`,
+}));
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+const withExportWire = async body => {
+ const real=globalThis.fetch,calls=[];
+ globalThis.fetch=(url,options={})=>new Promise(resolve=>{
+  let bodyResolve;
+  calls.push({url:String(url),method:options.method||'GET',respond:value=>resolve({ok:true,status:200,json:()=>Promise.resolve(value)}),
+   headers:()=>resolve({ok:true,status:200,json:()=>new Promise(done=>{bodyResolve=done;})}),body:value=>bodyResolve(value)});
+ });
+ try {await body(calls);}finally{globalThis.fetch=real;}
+};
+
+test('polling waits for the full body and each exact 200 ms deadline',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);
+ fireEvent.click(exportButton());expect(calls[0].method).toBe('POST');
+ await act(async()=>calls[0].headers());await clock.tick(600);expect(calls).toHaveLength(1);
+ await act(async()=>calls[0].body({id:'job_0-abc'}));expect(calls[1].url).toBe('/api/exports/job_0-abc');
+ for(let i=0;i<16;i++){
+  const call=calls[calls.length-1],length=calls.length;
+  await act(async()=>call.headers());await clock.tick(333);expect(calls).toHaveLength(length);
+  const progress=[0,1,37,99,100][i%5];await act(async()=>call.body({status:'running',progress}));
+  expect(screen.getByText('Preparing… '+progress+'%')).toBeTruthy();expect(exportButton().disabled).toBe(true);
+  view.rerender(<App data-parent={i}/>);await clock.tick(199);expect(calls).toHaveLength(length);
+  await clock.tick(1);expect(calls).toHaveLength(length+1);expect(calls[length].url).toBe('/api/exports/job_0-abc');
+ }
+ await act(async()=>calls[calls.length-1].respond({status:'done',url:'/files/exact-0.csv?part=2'}));
+ expect(screen.getByRole('link',{name:'Download the export'}).getAttribute('href')).toBe('/files/exact-0.csv?part=2');
+ expect(exportButton().disabled).toBe(false);const length=calls.length;await clock.tick(800);expect(calls).toHaveLength(length);expect(clock.pending()).toBe(0);
+ view.unmount();
+})));
+test('twelve new jobs preserve their ids, progress and terminal output',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){
+  const first=calls.length;fireEvent.click(exportButton());expect(calls[first].method).toBe('POST');
+  const id='export_'+i+'-z';await act(async()=>calls[first].respond({id}));expect(calls[first+1].url).toBe('/api/exports/'+id);
+  expect(screen.queryByRole('link')).toBeNull();expect(screen.queryByRole('alert')).toBeNull();
+  await act(async()=>calls[first+1].respond({status:'running',progress:i}));await clock.tick(200);
+  const done=i%2===0;await act(async()=>calls[first+2].respond(done?{status:'done',url:'/files/'+id+'.csv'}:{status:'failed'}));
+  if(done)expect(screen.getByRole('link').getAttribute('href')).toBe('/files/'+id+'.csv');
+  else expect(screen.getByRole('alert').textContent).toBe('The export failed');
+  expect(exportButton().disabled).toBe(false);const length=calls.length;await clock.tick(500);expect(calls).toHaveLength(length);
+ }
+ view.unmount();expect(clock.pending()).toBe(0);
+})));
+test('removal during an answer body cannot schedule another poll',()=>withExportWire(calls=>withAuditClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(exportButton());await act(async()=>calls[0].respond({id:'late'}));
+ await act(async()=>calls[1].headers());view.unmount();await act(async()=>calls[1].body({status:'running',progress:75}));
+ await clock.tick(1000);expect(calls).toHaveLength(2);expect(clock.pending()).toBe(0);
+ const fresh=render(<App/>);expect(exportButton().disabled).toBe(false);expect(screen.queryByRole('link')).toBeNull();fresh.unmount();
+})));
+`,
   },
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
   'react-mh-menu-button': {
-    solution: `import React, { useEffect, useRef, useState } from 'react';
+    solution: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
 const App = () => {
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   // The item with the focus, by index.
   const [active, setActive] = useState(0);
@@ -2369,12 +2570,12 @@ const App = () => {
       ref={buttonRef}
       aria-haspopup="menu"
       aria-expanded={open ? 'true' : 'false'}
-      aria-controls={open ? 'actions-menu' : undefined}
+      aria-controls={open ? menuId : undefined}
       onClick={() => (open ? setOpen(false) : openAt(0))}
       onKeyDown={onButtonKeyDown}
     >Actions</button>
     {open && (
-      <ul id="actions-menu" role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+      <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
         {ITEMS.map((item, index) => (
           <li
             key={item}
@@ -2508,7 +2709,7 @@ const App = () => {
         Actions
       </button>
       {open && (
-        <ul role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown}>
+        <ul aria-label="Actions" role="menu" ref={menuRef} onKeyDown={handleMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
           {ITEMS.map((item, index) => (
             <li
               key={item}
@@ -2543,7 +2744,7 @@ const MOVES = {
 
 const useOutsideMouseDown = (active, refs, onOutside) => {
   const latest = useRef(onOutside);
-  latest.current = onOutside;
+  useEffect(() => { latest.current = onOutside; }, [onOutside]);
   useEffect(() => {
     if (!active) return undefined;
     const controller = new AbortController();
@@ -2603,7 +2804,7 @@ const App = () => {
         }}
       >Actions</button>
       {open && (
-        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown}>
+        <ul id={menuId} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={onMenuKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setActive(null); }}>
           {ITEMS.map((item, index) => (
             <li key={item} role="menuitem" tabIndex={-1} ref={(node) => { itemRefs.current[index] = node; }} onClick={() => choose(item)}>
               {item}
@@ -2692,10 +2893,25 @@ test('ArrowUp from the third item moves the focus to the second', () => {
   expect(focused()).toBe('Delete');
   key('ArrowUp');
   expect(focused()).toBe('Duplicate');
-});`,
+});
+
+
+test('forty-eight keyboard moves preserve roles, focus and each wrapping direction',()=>{
+ const view=render(<App/>);fireEvent.click(trigger());expect(screen.getByRole('menu',{name:'Actions'})).toBeTruthy();items().forEach(item=>expect(item.tabIndex).toBe(-1));let index=0;const moves=['ArrowDown','ArrowDown','ArrowUp','End','ArrowUp','Home','ArrowUp','ArrowDown'];
+ for(let i=0;i<48;i++){const move=moves[i%moves.length];index=move==='Home'?0:move==='End'?2:(index+(move==='ArrowDown'?1:2))%3;const event=new KeyboardEvent('keydown',{key:move,bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(document.activeElement).toBe(items()[index]);view.rerender(<App data-parent={i}/>);expect(document.activeElement).toBe(items()[index]);}
+ key('Escape');expect(document.activeElement).toBe(trigger());
+});
+test('eighteen choices accept nested inside targets and keep the exact chosen item',()=>{
+ const view=render(<App/>);const labels=['Rename','Duplicate','Delete'];
+ for(let i=0;i<18;i++){fireEvent.click(trigger());const panel=screen.getByRole('menu');const target=items()[i%3];const nested=document.createElement('span');nested.textContent='';target.appendChild(nested);fireEvent.mouseDown(nested);expect(screen.queryByRole('menu')).toBe(panel);if(i%2===0)fireEvent.click(nested);else{key('Home');for(let n=0;n<i%3;n++)key('ArrowDown');key('Enter');}expect(screen.getByText('Chose '+labels[i%3])).toBeTruthy();expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(trigger());}
+});
+test('optional menu ids belong to their own instance and outside focus is never stolen',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);const ta=one.getByRole('button',{name:'Actions'}),tb=two.getByRole('button',{name:'Actions'});fireEvent.click(ta);const firstId=ta.getAttribute('aria-controls');if(firstId)expect(one.getByRole('menu').id).toBe(firstId);act(()=>tb.focus());expect(one.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(tb);fireEvent.click(tb);const secondId=tb.getAttribute('aria-controls');if(secondId){expect(two.getByRole('menu').id).toBe(secondId);if(firstId)expect(firstId===secondId).toBe(false);}key('End');key('Enter');expect(two.getByText('Chose Delete')).toBeTruthy();expect(one.queryByText('Chose Delete')).toBeNull();a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.queryByRole('menu')).toBeNull();expect(trigger().getAttribute('aria-expanded')).toBe('false');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   'react-mh-city-combobox': {
-    solution: `import React, { useState } from 'react';
+    solution: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -2703,10 +2919,11 @@ const CITIES = [
   'Madrid', 'Oslo', 'Paris', 'Prague', 'Rome', 'Vienna',
 ];
 
-const LIST_ID = 'city-options';
-const optionId = (index) => 'city-option-' + index;
-
 const App = () => {
+  const baseId = useId();
+  const inputId = baseId + '-input';
+  const LIST_ID = baseId + '-list';
+  const optionId = index => baseId + '-option-' + index;
   const [text, setText] = useState('');
   // -1 means no active option.
   const [active, setActive] = useState(-1);
@@ -2749,9 +2966,9 @@ const App = () => {
 
   return <main>
     <h2>Where to?</h2>
-    <label htmlFor="city">City</label>
+    <label htmlFor={inputId}>City</label>
     <input
-      id="city"
+      id={inputId}
       role="combobox"
       autoComplete="off"
       aria-autocomplete="list"
@@ -2770,6 +2987,7 @@ const App = () => {
             id={optionId(index)}
             role="option"
             aria-selected={index === active ? 'true' : 'false'}
+            onMouseDown={event => event.preventDefault()}
             onClick={() => pick(city)}
           >{city}</li>
         ))}
@@ -2781,7 +2999,7 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useState } from 'react';
+    junior: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -2790,6 +3008,10 @@ const CITIES = [
 ];
 
 const App = () => {
+  const baseId = useId();
+  const inputId = baseId + '-input';
+  const listId = baseId + '-list';
+  const optionId = index => baseId + '-option-' + index;
   const [text, setText] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const [listOpen, setListOpen] = useState(false);
@@ -2853,18 +3075,18 @@ const App = () => {
 
   let activeId;
   if (listVisible && activeIndex >= 0) {
-    activeId = 'option-' + activeIndex;
+    activeId = optionId(activeIndex);
   }
 
   return (
     <main>
       <h2>Where to?</h2>
-      <label htmlFor="city">City</label>
+      <label htmlFor={inputId}>City</label>
       <input
-        id="city"
+        id={inputId}
         role="combobox"
         aria-autocomplete="list"
-        aria-controls="city-list"
+        aria-controls={listId}
         aria-expanded={listVisible ? 'true' : 'false'}
         aria-activedescendant={activeId}
         value={text}
@@ -2872,13 +3094,14 @@ const App = () => {
         onKeyDown={handleKeyDown}
       />
       {listVisible && (
-        <ul id="city-list" role="listbox">
+        <ul id={listId} role="listbox">
           {matches.map((city, index) => (
             <li
               key={city}
-              id={'option-' + index}
+              id={optionId(index)}
               role="option"
               aria-selected={index === activeIndex ? 'true' : 'false'}
+              onMouseDown={event => event.preventDefault()}
               onClick={() => chooseCity(city)}
             >
               {city}
@@ -2909,6 +3132,7 @@ const suggestionsFor = (text) => {
 
 const App = () => {
   const baseId = useId();
+  const inputId = baseId + '-input';
   const [text, setText] = useState('');
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
@@ -2956,9 +3180,9 @@ const App = () => {
   return (
     <main>
       <h2>Where to?</h2>
-      <label htmlFor="city">City</label>
+      <label htmlFor={inputId}>City</label>
       <input
-        id="city"
+        id={inputId}
         role="combobox"
         autoComplete="off"
         aria-autocomplete="list"
@@ -2976,7 +3200,8 @@ const App = () => {
       {expanded && (
         <ul id={listId} role="listbox" aria-label="Cities">
           {suggestions.map((city, index) => (
-            <li key={city} id={idOf(index)} role="option" aria-selected={index === active} onClick={() => pick(city)}>
+            <li key={city} id={idOf(index)} role="option" aria-selected={index === active} onMouseDown={event => event.preventDefault()}
+            onClick={() => pick(city)}>
               {city}
             </li>
           ))}
@@ -3055,10 +3280,17 @@ test('ArrowUp from the third option moves to the second', () => {
   expect(activeOption().textContent).toBe('Bern');
   key('ArrowUp');
   expect(activeOption().textContent).toBe('Berlin');
-});`,
+});
+
+const citySeed=['Amsterdam','Athens','Barcelona','Berlin','Bern','Bratislava','Brussels','Bucharest','Budapest','Copenhagen','Dublin','Helsinki','Lisbon','London','Madrid','Oslo','Paris','Prague','Rome','Vienna'];
+const checkCity=(scope,raw,active,open=true)=>{const input=within(scope).getByRole('combobox',{name:'City'}),q=raw.trim().toLowerCase(),expected=q?citySeed.filter(c=>c.toLowerCase().startsWith(q)).slice(0,5):[],expanded=open&&expected.length>0,opts=within(scope).queryAllByRole('option');expect(input.value).toBe(raw);expect(input.getAttribute('aria-autocomplete')).toBe('list');expect(input.getAttribute('aria-expanded')).toBe(String(expanded));expect(opts.map(o=>o.textContent)).toEqual(expanded?expected:[]);if(expanded){const list=within(scope).getByRole('listbox');expect(list.tagName).toBe('UL');expect(document.getElementById(input.getAttribute('aria-controls'))).toBe(list);opts.forEach((o,i)=>{expect(o.tagName).toBe('LI');expect(o.id.length>0).toBe(true);expect(o.getAttribute('aria-selected')).toBe(String(i===active));});expect(new Set(opts.map(o=>o.id)).size).toBe(opts.length);}else expect(within(scope).queryByRole('listbox')).toBeNull();expect(input.getAttribute('aria-activedescendant')).toBe(expanded&&active>=0?opts[active].id:null);if(q&&!expected.length)expect(within(scope).getByText('No cities match')).toBeTruthy();else expect(within(scope).queryByText('No cities match')).toBeNull();return {input,expected,opts};};
+test('long keyboard navigation wraps without moving actual focus and closed lists stay closed',()=>{const {container}=render(<App/>);let {input}=checkCity(container,'',-1,false);act(()=>input.focus());fireEvent.change(input,{target:{value:'b'}});let active=-1;for(let i=0;i<36;i++){const k=['ArrowUp','ArrowDown','ArrowDown','ArrowUp','ArrowUp'][i%5],event=new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});fireEvent(input,event);active=active<0?(k==='ArrowDown'?0:4):(active+(k==='ArrowDown'?1:4))%5;checkCity(container,'b',active);expect(document.activeElement).toBe(input);expect(event.defaultPrevented).toBe(true);}const chosen=checkCity(container,'b',active).expected[active];fireEvent.keyDown(input,{key:'Enter'});checkCity(container,chosen,-1,false);expect(within(container).getByText('Selected: '+chosen)).toBeTruthy();fireEvent.change(input,{target:{value:'be'}});checkCity(container,'be',-1);const noSelection=new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});fireEvent(input,noSelection);expect(noSelection.defaultPrevented).toBe(false);checkCity(container,'be',-1);fireEvent.keyDown(input,{key:'ArrowDown'});fireEvent.keyDown(input,{key:'Escape'});checkCity(container,'be',-1,false);for(const k of['ArrowDown','ArrowUp','Enter','x']){const e=new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});fireEvent(input,e);expect(e.defaultPrevented).toBe(false);checkCity(container,'be',-1,false);}expect(within(container).getByText('Selected: '+chosen)).toBeTruthy();expect(document.activeElement).toBe(input);});
+test('all current prefix suggestions and stable relationships follow raw input and parent renders',()=>{const {container,rerender}=render(<App/>);const input=within(container).getByRole('combobox',{name:'City'}),inputId=input.id,listId=input.getAttribute('aria-controls');let previous=new Map();for(const raw of['A',' b ','be','BER','br','B','Lon','  ','xyz','Pa','pRa','o','c','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:raw}});const {opts}=checkCity(container,raw,-1);for(const option of opts)if(previous.has(option.textContent))expect(option).toBe(previous.get(option.textContent));previous=new Map(opts.map(o=>[o.textContent,o]));rerender(<App/>);checkCity(container,raw,-1);expect(input.id).toBe(inputId);expect(input.getAttribute('aria-controls')).toBe(listId);}});
+test('independent selections,cancellation,option clicks and fresh empty state',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');const ai=checkCity(a,'',-1,false).input,bi=checkCity(b,'',-1,false).input;fireEvent.change(ai,{target:{value:'b'}});fireEvent.change(bi,{target:{value:'be'}});fireEvent.keyDown(ai,{key:'ArrowUp'});checkCity(a,'b',4);checkCity(b,'be',-1);fireEvent.keyDown(ai,{key:'Enter'});checkCity(a,'Brussels',-1,false);act(()=>bi.focus());const bern=within(b).getByRole('option',{name:'Bern'});fireEvent.mouseDown(bern);fireEvent.click(bern);checkCity(b,'Bern',-1,false);expect(document.activeElement).toBe(bi);expect(within(a).getByText('Selected: Brussels')).toBeTruthy();expect(within(b).getByText('Selected: Bern')).toBeTruthy();root.unmount();const fresh=render(<App/>);checkCity(fresh.container,'',-1,false);expect(within(fresh.container).queryByText(/^Selected:/)).toBeNull();});
+`,
   },
   'react-mh-signup-form': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useId, useRef, useState } from 'react';
 
 const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 const FIELDS = ['email', 'password', 'repeat'];
@@ -3071,6 +3303,7 @@ const errorsFor = (values) => ({
 });
 
 const App = () => {
+  const prefix = useId();
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
   // Only whether to show an error is state: a field was left, or a submit was tried.
   const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
@@ -3103,9 +3336,9 @@ const App = () => {
   // A function, not a component: the inputs keep their identity between renders.
   const field = (name, label, type) => (
     <div>
-      <label htmlFor={name}>{label}</label>
+      <label htmlFor={prefix + name}>{label}</label>
       <input
-        id={name}
+        id={prefix + name}
         name={name}
         type={type}
         ref={refs[name]}
@@ -3114,9 +3347,9 @@ const App = () => {
         onBlur={leave}
         // undefined leaves the attribute out while the error is hidden.
         aria-invalid={shown(name) ? 'true' : undefined}
-        aria-describedby={shown(name) ? name + '-error' : undefined}
+        aria-describedby={shown(name) ? prefix + name + '-error' : undefined}
       />
-      {shown(name) && <p id={name + '-error'}>{errors[name]}</p>}
+      {shown(name) && <p id={prefix + name + '-error'}>{errors[name]}</p>}
     </div>
   );
 
@@ -3132,9 +3365,10 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
+  const prefix = useId();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -3195,43 +3429,43 @@ const App = () => {
     <main>
       <h2>Create an account</h2>
       <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="email">Email</label>
+        <label htmlFor={prefix + 'email'}>Email</label>
         <input
-          id="email"
+          id={prefix + 'email'}
           ref={emailRef}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           onBlur={() => setEmailLeft(true)}
           aria-invalid={showEmailError ? 'true' : undefined}
-          aria-describedby={showEmailError ? 'email-error' : undefined}
+          aria-describedby={showEmailError ? prefix + 'email-error' : undefined}
         />
-        {showEmailError && <p id="email-error">{emailError}</p>}
+        {showEmailError && <p id={prefix + 'email-error'}>{emailError}</p>}
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor={prefix + 'password'}>Password</label>
         <input
-          id="password"
+          id={prefix + 'password'}
           type="password"
           ref={passwordRef}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           onBlur={() => setPasswordLeft(true)}
           aria-invalid={showPasswordError ? 'true' : undefined}
-          aria-describedby={showPasswordError ? 'password-error' : undefined}
+          aria-describedby={showPasswordError ? prefix + 'password-error' : undefined}
         />
-        {showPasswordError && <p id="password-error">{passwordError}</p>}
+        {showPasswordError && <p id={prefix + 'password-error'}>{passwordError}</p>}
 
-        <label htmlFor="repeat">Repeat password</label>
+        <label htmlFor={prefix + 'repeat'}>Repeat password</label>
         <input
-          id="repeat"
+          id={prefix + 'repeat'}
           type="password"
           ref={repeatRef}
           value={repeat}
           onChange={(event) => setRepeat(event.target.value)}
           onBlur={() => setRepeatLeft(true)}
           aria-invalid={showRepeatError ? 'true' : undefined}
-          aria-describedby={showRepeatError ? 'repeat-error' : undefined}
+          aria-describedby={showRepeatError ? prefix + 'repeat-error' : undefined}
         />
-        {showRepeatError && <p id="repeat-error">{repeatError}</p>}
+        {showRepeatError && <p id={prefix + 'repeat-error'}>{repeatError}</p>}
 
         <button type="submit">Create account</button>
       </form>
@@ -3251,12 +3485,13 @@ const RULES = [
 ];
 
 const Field = ({ rule, value, error, inputRef, onChange, onBlur }) => {
-  const errorId = useId();
+  const fieldId = useId();
+  const errorId = fieldId + '-error';
   return (
     <div>
-      <label htmlFor={rule.name}>{rule.label}</label>
+      <label htmlFor={fieldId}>{rule.label}</label>
       <input
-        id={rule.name}
+        id={fieldId}
         name={rule.name}
         type={rule.type}
         ref={inputRef}
@@ -3367,7 +3602,31 @@ test('a form with errors is not sent', () => {
   submit();
   expect(screen.queryByText(/^Welcome/)).toBeNull();
   expect(document.activeElement).toBe(field('Repeat password'));
-});`,
+});
+
+
+const signMessages=['Enter an email like name@example.com','Use 8 or more characters with a number','The passwords do not match'];
+const signLabels=['Email','Password','Repeat password'];
+const signInput=(root,index)=>within(root).getByLabelText(signLabels[index]);
+const signType=(root,index,value)=>fireEvent.change(signInput(root,index),{target:{value}});
+const signCheck=(root,index,message)=>{const input=signInput(root,index),id=input.getAttribute('aria-describedby');if(message){expect(input.getAttribute('aria-invalid')).toBe('true');const error=document.getElementById(id);expect(root.contains(error)).toBe(true);expect(error.tagName).toBe('P');expect(error.textContent).toBe(message);}else{expect(input.getAttribute('aria-invalid')).toBeNull();expect(id).toBeNull();}};
+const signSubmit=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('password boundaries,exact repeats and every first-invalid position follow current values',()=>{
+ const matrix=[['bad','abcdefg1','abcdefg1'],['ok@example.test','abcdef1','abcdef1'],['ok@example.test','abcdefg1','abcdefg1 '],['ok@example.test',' abcdef1','abcdef1'],['ok@example.test','🦈🦈🦈1','🦈🦈🦈1'],['ok@example.test','abcdefgh','abcdefgh'],['ok@example.test','abcdefg١','abcdefg١'],['bad','short','different'],['ok@example.test','abcdefg1','different'],['ok@example.test','x'.repeat(1999)+'1','different']];
+ for(const values of matrix){const view=render(<App/>),root=view.container;values.forEach((value,i)=>signType(root,i,value));const actual=signLabels.map((_,i)=>signInput(root,i).value),invalid=[!(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(actual[0].trim())),actual[1].length<8||!/[0-9]/.test(actual[1]),actual[2]!==actual[1]];signSubmit(root);expect(document.activeElement).toBe(signInput(root,invalid.indexOf(true)));invalid.forEach((bad,i)=>signCheck(root,i,bad?signMessages[i]:null));expect(root.textContent).not.toContain('Welcome,');view.unmount();}
+ for(const email of ['','@reef.test','reef@','a@@b.test','a@b','a b@c.test','a@b c.test','  bad  ','a@b..c','café+reef@example.test','🦈@reef.test','x'.repeat(1987)+'@reef.test']){const view=render(<App/>),root=view.container;signType(root,0,email);fireEvent.blur(signInput(root,0));const expected=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(signInput(root,0).value.trim());signCheck(root,0,expected?null:signMessages[0]);view.unmount();}
+ for(const values of [['  café+reef@example.test  ','🦈🦈🦈🦈1'],['reef@example.test','  abcde1'],['reef@example.test','x'.repeat(1999)+'1']]){const view=render(<App/>),root=view.container;signType(root,0,values[0]);signType(root,1,values[1]);signType(root,2,values[1]);const email=signInput(root,0).value.trim();signSubmit(root);expect(root.querySelector('form')).toBeNull();expect(root.textContent).toContain('Welcome, '+email);view.unmount();}
+});
+test('twenty field corrections keep touch state,live dependencies and input identity',()=>{
+ const view=render(<App/>),root=view.container;const nodes=signLabels.map((_,i)=>signInput(root,i));
+ for(let i=0;i<20;i++){const password=i%2?'abcdefg1':'abcdefgh';signType(root,1,password);signType(root,2,'abcdefg1');if(i===0){signLabels.forEach((_,j)=>signCheck(root,j,null));fireEvent.blur(nodes[1]);fireEvent.blur(nodes[2]);}signCheck(root,1,i%2?null:signMessages[1]);signCheck(root,2,i%2?null:signMessages[2]);signCheck(root,0,null);view.rerender(<App data-parent={i}/>);signLabels.forEach((_,j)=>expect(signInput(root,j)).toBe(nodes[j]));}
+ signSubmit(root);signCheck(root,0,signMessages[0]);signType(root,0,'current@example.test');signCheck(root,0,null);signType(root,0,'bad');signCheck(root,0,signMessages[0]);
+});
+test('labels and error ids belong to their own form and fresh state is untouched',()=>{
+ const a=render(<App/>),b=render(<App/>);for(const root of [a.container,b.container]){signType(root,2,'different');signSubmit(root);signLabels.forEach((_,i)=>{const input=signInput(root,i),label=[...root.querySelectorAll('label')].find(label=>label.textContent===signLabels[i]);expect(label.control).toBe(input);signCheck(root,i,signMessages[i]);});}
+ const nodes=[...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')];expect(new Set(nodes.map(node=>node.id)).size).toBe(nodes.length);const ids=nodes.map(node=>node.id);a.rerender(<App/>);b.rerender(<App/>);expect([...a.container.querySelectorAll('[id]'),...b.container.querySelectorAll('[id]')].map(node=>node.id)).toEqual(ids);signType(a.container,0,'alpha@example.test');signCheck(a.container,0,null);signCheck(b.container,0,signMessages[0]);a.unmount();b.unmount();const fresh=render(<App/>);signLabels.forEach((_,i)=>{expect(signInput(fresh.container,i).value).toBe('');signCheck(fresh.container,i,null);});fresh.unmount();
+});
+`,
   },
   'react-mh-carousel': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -3552,8 +3811,6 @@ const App = () => {
 };
 
 export default App;`,
-    // On the hand-moved clock of the visible suite: with real timers a pause
-    // of 70 ms let the old timer turn the slide before the click restarted it.
     hiddenSuite: `test('a click starts the wait over', () => withClock(async clock => {
   render(<App />);
   await clock.tick(130);
@@ -3592,7 +3849,119 @@ test('it goes on round from the last slide to the first', () => withClock(async 
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
 }));
 
-${timersClearedOnUnmount('leaving the page clears the timer', 200, `    press('Next');`)}`,
+test("leaving the page clears the timer", () => {
+  const hosts = [globalThis, window];
+  const real = hosts.map(host => [host.setTimeout, host.setInterval, host.clearTimeout, host.clearInterval]);
+  const started = [];
+  const cleared = [];
+  hosts.forEach((host, index) => {
+    const [setT, setI, clearT, clearI] = real[index];
+    host.setTimeout = (callback, ms, ...rest) => { const id = setT.call(host, callback, ms, ...rest); if (ms === 200) started.push(id); return id; };
+    host.setInterval = (callback, ms, ...rest) => { const id = setI.call(host, callback, ms, ...rest); if (ms === 200) started.push(id); return id; };
+    host.clearTimeout = id => { cleared.push(id); return clearT.call(host, id); };
+    host.clearInterval = id => { cleared.push(id); return clearI.call(host, id); };
+  });
+  try {
+    const { unmount } = render(<App />);
+    press('Next');
+    unmount();
+    expect(started.length > 0).toBe(true);
+    expect(started.every(id => cleared.includes(id))).toBe(true);
+  } finally {
+    hosts.forEach((host, index) => {
+      [host.setTimeout, host.setInterval, host.clearTimeout, host.clearInterval] = real[index];
+    });
+  }
+});
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('manual moves do not undo Pause and each new wait lasts 200 ms',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);const titles=['Spring sale','New arrivals','Free delivery','Gift cards'];let index=0;
+ for(let i=0;i<24;i++){
+  press('Pause');const delta=i%3===0?-1:1;press(delta===-1?'Previous':'Next');index=(index+delta+4)%4;
+  await clock.tick(777);expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);expect(slide().getAttribute('aria-live')).toBe('polite');
+  press('Play');await clock.tick(199);expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);
+  await clock.tick(1);index=(index+1)%4;expect(slide().textContent).toBe('Slide '+(index+1)+' of 4: '+titles[index]);expect(clock.pending()).toBe(1);
+ }
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('pointer and focus holds combine without dropping a remaining hold',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);const root=carousel(),next=screen.getByRole('button',{name:'Next'}),prev=screen.getByRole('button',{name:'Previous'});
+ await clock.tick(155);fireEvent.mouseEnter(root);act(()=>next.focus());fireEvent.mouseLeave(root);
+ await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ act(()=>prev.focus());await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ fireEvent.mouseEnter(root);act(()=>prev.blur());await clock.tick(500);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
+ fireEvent.mouseLeave(root);view.rerender(<App data-parent="again"/>);await clock.tick(199);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');await clock.tick(1);expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
+ view.unmount();expect(clock.pending()).toBe(0);
+}));
+test('independent carousels own separate timers and fresh roots start at one',()=>withAuditClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);const first=within(a.container),second=within(b.container);
+ fireEvent.click(first.getByRole('button',{name:'Pause'}));await clock.tick(200);
+ expect(first.getByText('Slide 1 of 4: Spring sale')).toBeTruthy();expect(second.getByText('Slide 2 of 4: New arrivals')).toBeTruthy();
+ a.unmount();expect(clock.pending()).toBe(1);b.unmount();expect(clock.pending()).toBe(0);
+ const fresh=render(<App/>);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');fresh.unmount();expect(clock.pending()).toBe(0);
+}));
+`,
   },
   'react-mh-search-as-you-type': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -3802,7 +4171,7 @@ const useBookSearch = (query) => {
 
 const App = () => {
   const [text, setText] = useState('');
-  const query = useDebouncedValue(text.trim(), DEBOUNCE_MS);
+  const query = useDebouncedValue(text, DEBOUNCE_MS).trim();
   const { status, books, retry } = useBookSearch(query);
 
   return (
@@ -3946,7 +4315,7 @@ const App = () => {
 
   // 150 ms after the last change; each change clears the timeout before it.
   useEffect(() => {
-    if (text === savedRef.current) return undefined;
+    if (text === savedRef.current && !busy.current) return undefined;
     const timer = setTimeout(save, WAIT_MS);
     return () => clearTimeout(timer);
   }, [text]);
@@ -4033,7 +4402,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (text === lastSavedText.current) {
+    if (text === lastSavedText.current && !saveInProgress.current) {
       return;
     }
     const timeoutId = setTimeout(() => {
@@ -4121,7 +4490,7 @@ const useAutosave = (text, initial) => {
   }, []);
 
   useEffect(() => {
-    if (text === refs.current.saved) return undefined;
+    if (text === refs.current.saved && !refs.current.busy) return undefined;
     const timer = setTimeout(save, WAIT_MS);
     return () => clearTimeout(timer);
   }, [text, save]);
@@ -4225,3 +4594,15 @@ test('closing after a successful save sends nothing more', () => withSaves(calls
 })));`,
   },
 };
+
+const PROJECT_ASYNC_REVIEW_CASES:Record<string,string>={
+"react-mh-search-as-you-type":`test('trailing-space typing resets the full raw-input debounce interval',()=>withFetch(calls=>withClock(async clock=>{render(<App/>);type('du');await clock.tick(75);type('du ');await clock.tick(75);expect(calls.length).toBe(0);await clock.tick(25);expect(calls.length).toBe(1);expect(calls[0].url).toBe('/api/books?q=du');})));
+test('two-character searches and empty constructor-key answers are cached by exact trimmed text',()=>withFetch(calls=>withClock(async clock=>{render(<App/>);type('xy');await clock.tick(100);expect(calls.length).toBe(1);expect(calls[0].url).toBe('/api/books?q=xy');await act(async()=>{calls[0].respond([]);});expect(hasLine('No books match “xy”')).toBe(true);type('constructor');await clock.tick(100);expect(calls.length).toBe(2);await act(async()=>{calls[1].respond([{id:71,title:'Construction patterns'}]);});expect(titles()).toEqual(['Construction patterns']);type('xy');await clock.tick(100);expect(calls.length).toBe(2);expect(hasLine('No books match “xy”')).toBe(true);expect(screen.queryByText('Searching…')).toBeNull();type('constructor');await clock.tick(100);expect(calls.length).toBe(2);expect(titles()).toEqual(['Construction patterns']);})));
+const withBookHTTP=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),signal:options.signal,respond:(rows,status=200)=>resolve({ok:status>=200&&status<300,status,json:async()=>rows})};calls.push(call);const abort=()=>{const error=new Error('Aborted');error.name='AbortError';reject(error);};if(options.signal?.aborted)abort();else options.signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=original;}};
+test('non-ok search responses fail and retry immediately,while a new short query aborts without an alert',()=>withBookHTTP(calls=>withClock(async clock=>{render(<App/>);type('encoded & query');await clock.tick(100);expect(calls[0].url).toBe('/api/books?q=encoded%20%26%20query');await act(async()=>{calls[0].respond([],503);});expect(alertMessage()).toBe('Search failed');expect(screen.queryByText('Searching…')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Try again'}));expect(calls.length).toBe(2);await act(async()=>{calls[1].respond([{id:8,title:'Recovered answer'}]);});expect(titles()).toEqual(['Recovered answer']);expect(screen.queryByRole('alert')).toBeNull();type('another');await clock.tick(100);expect(calls.length).toBe(3);expect(screen.getByText('Searching…')).toBeTruthy();type('x');await clock.tick(100);expect(calls[2].signal.aborted).toBe(true);expect(calls.length).toBe(3);expect(titles()).toEqual([]);expect(screen.queryByText('Searching…')).toBeNull();expect(screen.queryByRole('alert')).toBeNull();})));
+`,
+"react-mh-autosave":`test('returning to the saved text during a different pending write still saves the newest text next',()=>withSaves(calls=>withClock(async clock=>{render(<App/>);type('Buy bread');await clock.tick(150);expect(calls.length).toBe(1);expect(calls[0].body).toBe('Buy bread');type('Buy milk');await clock.tick(150);expect(calls.length).toBe(1);await act(async()=>{calls[0].ok();});expect(calls.length).toBe(2);expect(calls[1].body).toBe('Buy milk');await act(async()=>{calls[1].ok();});expect(status()).toBe('All changes saved');})));
+test('empty and multiline notes keep their exact body,and a failed long save retries the newest note without overlap',()=>withSaves(calls=>withClock(async clock=>{const v=render(<App/>);type('');await clock.tick(150);expect(calls.length).toBe(1);expect(calls[0].body).toBe('');await act(async()=>{calls[0].ok();});expect(status()).toBe('All changes saved');const long='First line\\nSecond & <tag> '+'X'.repeat(80);type(long);await clock.tick(150);expect(calls.length).toBe(2);expect(calls[1].body).toBe(long);await act(async()=>{calls[1].error();});expect(alertMessage()).toBe('Could not save');const newest=long+' latest';type(newest);fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(calls.length).toBe(3);expect(calls[2].body).toBe(newest);fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(calls.length).toBe(3);await act(async()=>{calls[2].ok();});expect(status()).toBe('All changes saved');expect(screen.queryByRole('alert')).toBeNull();await clock.tick(200);expect(calls.length).toBe(3);v.unmount();expect(calls.length).toBe(3);})));\x20
+`,
+};
+for(const[id,cases]of Object.entries(PROJECT_ASYNC_REVIEW_CASES)){const solution=MEDIUM_HARD_REACT_A_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}

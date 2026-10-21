@@ -12,12 +12,13 @@
 
 import { buildSync } from 'esbuild';
 import { createContext, runInContext } from 'node:vm';
+import type { TaskRuntimePolicy } from '../shared/coding-task-runtime';
 import type { EvaluateResult } from '../shared/coding-evaluate';
 
 const ENTRY = `
 import { evaluateCalls } from './shared/coding-evaluate';
 import { prepareRunRealm } from './shared/coding-run-realm';
-globalThis.__runRealm = (input) => evaluateCalls({ ...input, hidden: prepareRunRealm(globalThis) });
+globalThis.__runRealm = (input) => evaluateCalls({ ...input, hidden: prepareRunRealm(globalThis, input.runtimePolicy) });
 `;
 
 let bundle: string | null = null;
@@ -38,10 +39,10 @@ const workerGlobals = (): Record<string, unknown> => ({
 });
 
 /** Runs a program as the Run button does: a new realm for every run. */
-export async function evaluateInRunRealm(input: { code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
+export async function evaluateInRunRealm(input: { runtimePolicy?: TaskRuntimePolicy; code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
   const realm = createContext(workerGlobals());
   runInContext(source(), realm);
   const run = (realm as { __runRealm: (value: typeof input) => Promise<EvaluateResult> }).__runRealm;
   // Plain data from here, so the caller's comparisons see this realm's objects.
-  return JSON.parse(JSON.stringify(await run({ code: input.code, calls: [...input.calls], expectations: input.expectations ?? null }))) as EvaluateResult;
+  return JSON.parse(JSON.stringify(await run({ runtimePolicy: input.runtimePolicy, code: input.code, calls: [...input.calls], expectations: input.expectations ?? null }))) as EvaluateResult;
 }

@@ -16,7 +16,7 @@ export const REACT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["useState", "forms"],
     title: "Color selector",
-    prompt: "Render a select over the colours declared in the starter — Red, Blue and Green — plus a line reading “You have selected: <colour>”. It starts on the first one, and choosing another updates the line immediately.",
+    prompt: "Render a single-selection dropdown with accessible name `Color`, containing Red, Blue and Green options in that order with those exact values. Render a line `You have selected: <color>`. Both the native select value and the line start on Red. Every choice, including Green, returning to Red and repeated selections, updates both immediately and keeps them consistent. Ordinary parent re-renders preserve the current selection. Independent and fresh mounts each start on Red. Use the starter colors array, keep the select controlled and label it visibly or with an equivalent accessible name.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const colors = ['Red', 'Blue', 'Green'];
@@ -33,13 +33,13 @@ export default App;
 `,
     skeleton: `const [color, setColor] = useState(/* the first colour */);
 
-<select value={color} onChange={event => setColor(/* the chosen option */)}>
+<select aria-label="Color" value={color} onChange={event => setColor(/* the chosen option */)}>
   {colors.map(one => (
     <option key={one}>{one}</option>
   ))}
 </select>
 <p>You have selected: {/* the colour in state */}</p>`,
-    hints: ["Keep the selected color in state. Bind value and onChange to the select."],
+    hints: ["Keep the selected color in state. Bind value/onChange to the select and give it the accessible name Color."],
     approach: [
       "Keep the chosen colour in a state value that starts as Red.",
       "Make the select controlled: its value comes from state, and its change handler writes the new selection back to state.",
@@ -62,6 +62,7 @@ test('shows the colour the user picks', () => {
   fireEvent.change(container.querySelector('select'), { target: { value: 'Blue' } });
   expect(container.textContent).toContain('You have selected: Blue');
 });
+test('selects Green and returns to Red in both the native control and status',()=>{const {container}=render(<App/>);const select=container.querySelector('select');for(const color of ['Green','Red']){fireEvent.change(select,{target:{value:color}});expect(select.value).toBe(color);expect(container.textContent).toContain('You have selected: '+color);}});
 `,
   },
   {
@@ -73,7 +74,7 @@ test('shows the colour the user picks', () => {
     tier: 1,
     focus: ["useState", "events"],
     title: "Counter",
-    prompt: "Show a number that starts at 0 and a button that adds one to it. Every click counts: three clicks must show 3, not 1.",
+    prompt: "Render one number outside one native button, starting at exactly 0. Give the button a nonempty accessible name of your choice. Each click adds exactly one, including repeated clicks beyond three. Ordinary parent re-renders preserve the count. Simultaneous mounted counters are independent and every fresh mount starts at 0. Display just the current count as the only number outside the button; no particular wrapper element or button text is required. Use local state or an equivalent reducer rather than a module-shared counter. Each discrete click is a separate event; no extra public hook API is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -100,14 +101,14 @@ return (
     hints: ["Start at 0. Update from the previous count inside the click handler."],
     approach: [
       "Hold the count in a useState value initialised to zero so the first render already shows a starting number.",
-      "In the button click handler, call the setter with an updater function so the next count is derived from the previous one.",
+      "In the button click handler, derive the next count from the current local state, using an updater or equivalent reducer.",
       "Render the count straight from state rather than tracking it in a separate variable.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts at zero', () => {
@@ -124,6 +125,9 @@ test('counts up on every click', () => {
   fireEvent.click(button);
   expect(container.textContent).toContain('3');
 });
+
+test('five clicks show exactly five',()=>{const {container}=render(<App/>);for(let i=0;i<5;i++)fireEvent.click(container.querySelector('button'));const copy=container.cloneNode(true);copy.querySelectorAll('button').forEach(b=>b.remove());expect((copy.textContent.match(/-?[0-9]+/g)||[]).join(' ')).toBe('5');});
+
 `,
   },
   {
@@ -135,7 +139,7 @@ test('counts up on every click', () => {
     tier: 1,
     focus: ["useState", "events"],
     title: "Toggle button",
-    prompt: "Render one button whose own label reads OFF to start with, flips to ON when clicked, and back to OFF when clicked again. The word lives inside the button, not beside it.",
+    prompt: "Render exactly one native button whose entire text is OFF initially. Every click alternates the entire text between ON and OFF, including repeated clicks beyond the first pair. Keep that exact text inside the button, with no prefix or other words. Ordinary parent re-renders preserve state; independent and fresh mounts start OFF. Store local boolean state or use an equivalent reducer. This exercise uses a changing action label; aria-pressed is not required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -162,14 +166,14 @@ return (
     hints: ["Store a boolean and replace it with its opposite on click."],
     approach: [
       "Store a single boolean in useState that records whether the button is currently on.",
-      "On click, pass an updater function to the setter that returns the negation of the previous boolean.",
+      "On each click, negate the local boolean, using an updater or equivalent reducer. A changing ON/OFF label does not need aria-pressed.",
       "Pick the label with a ternary on that boolean so one button element renders either word.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts OFF and flips on each click', () => {
@@ -181,6 +185,9 @@ test('starts OFF and flips on each click', () => {
   fireEvent.click(button);
   expect(button.textContent).toContain('OFF');
 });
+
+test('label is exactly OFF,then ON,and keeps alternating',()=>{const {container}=render(<App/>);const b=container.querySelector('button');expect(b.textContent).toBe('OFF');for(let i=1;i<=5;i++){fireEvent.click(b);expect(b.textContent).toBe(i%2?'ON':'OFF');}});
+
 `,
   },
   {
@@ -192,7 +199,7 @@ test('starts OFF and flips on each click', () => {
     tier: 1,
     focus: ["useState", "forms"],
     title: "Live paragraph",
-    prompt: "Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state.",
+    prompt: `Render a text input and a paragraph under it. The paragraph shows exactly what the input currently holds, updating on every keystroke, and the input stays controlled — its value comes from your state. Give the input the accessible name Your text. Start with an empty input and empty paragraph. Preserve raw single-line text, including spaces, literal markup and Unicode, up to 2000 UTF-16 code units. The paragraph contains only that value, with no prefix or normalization. Parent renders and separate instances must preserve their own state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -207,7 +214,9 @@ export default App;
 `,
     skeleton: `const [text, setText] = useState('');
 
+<label>Your text
 <input value={text} onChange={event => setText(/* what the input holds now */)} />
+</label>
 <p>{/* the same text */}</p>`,
     hints: ["Use one state value for both the input value and paragraph text."],
     approach: [
@@ -219,7 +228,7 @@ export default App;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('mirrors what is typed', () => {
@@ -229,7 +238,10 @@ test('mirrors what is typed', () => {
   expect(input.value).toBe('hello there');
   expect(container.querySelector('p').textContent).toContain('hello there');
 });
-`,
+
+test('the initially empty paragraph mirrors spaces exactly',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');expect(view.container.querySelector('p').textContent).toBe('');fireEvent.change(field,{target:{value:'  reef  '}});expect(view.container.querySelector('p').textContent).toBe('  reef  ');
+});`,
   },
   {
     id: "react-data-list",
@@ -240,15 +252,15 @@ test('mirrors what is typed', () => {
     tier: 1,
     focus: ["lists-keys", "map"],
     title: "Data list",
-    prompt: "Render the people already declared in the starter as a UL with one LI each, showing the name and the age. Give every LI a key that identifies the person rather than its position in the array.",
+    prompt: "App receives people, defaulting to the starter initialPeople. Render one UL with one LI per person in input order, reading exactly the name, one space and the age, for example `Daniel 25` and `John 24`. people is a dense read-only array of at most 100 ordinary records with unique positive integer ids, plain string names up to 2000 UTF16 units and integer ages from 0 through 150. Names may repeat or be empty; preserve exact whitespace, Unicode and markup-like text literally rather than parsing HTML. Arrays/records may be frozen; do not mutate them. Key rows by id so surviving LI nodes follow each person through reorder, renaming and age changes. New props update all values; an empty array keeps an empty UL. Separate mounted lists are independent. Render directly from props without extra state or effects.",
     starter: `import React, { useEffect, useState } from 'react';
 
-const people = [
+const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => {
+const App = ({ people = initialPeople } = {}) => {
 
 
   return <main>
@@ -263,9 +275,9 @@ export default App;
     <li key={/* the person's stable id */}>{/* name and age */}</li>
   ))}
 </ul>`,
-    hints: ["Map over people. Return one LI for each person and use its id as the key."],
+    hints: ["Map current people to list items, showing name plus one space plus age. Use the stable id as the key."],
     approach: [
-      "Start from the supplied people array; no state is needed because nothing on the screen ever changes.",
+      "Start from the supplied people array; render the current people prop directly without state or an effect.",
       "Map over that array inside the list element and return one list item per person.",
       "Give each list item a key taken from the stable id field, never from the array index.",
     ],
@@ -287,6 +299,7 @@ test('renders the people inside a UL', () => {
   const { container } = render(<App />);
   expect(container.querySelector('ul')).toBeTruthy();
 });
+test('shows each age alongside the name',()=>{const {container}=render(<App/>);expect([...container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(['Daniel 25','John 24']);});
 `,
   },
   {
@@ -298,7 +311,7 @@ test('renders the people inside a UL', () => {
     tier: 1,
     focus: ["conditional", "useState"],
     title: "Show and hide",
-    prompt: "Render a button and a paragraph. The paragraph must not be in the DOM at first; clicking adds it, clicking again removes it. Render it conditionally rather than hiding it with CSS.",
+    prompt: "Render one native button with a nonempty accessible name of your choice and a nonempty paragraph of your choice. The paragraph must be absent from the DOM at first. Every click alternates between adding one paragraph and removing it, for as many clicks as the user makes. Render it conditionally rather than keeping a CSS-hidden node. The button text may stay fixed or change with visibility. Ordinary parent re-renders preserve the current visible/hidden state. Simultaneously mounted components and fresh mounts start independently with no paragraph. No exact button or paragraph wording is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -343,6 +356,7 @@ test('hides the paragraph until the button is pressed', () => {
   fireEvent.click(container.querySelector('button'));
   expect(container.querySelector('p')).toBeNull();
 });
+test('still toggles after the first two clicks',()=>{const view=render(<App/>);for(let i=0;i<5;i++)fireEvent.click(view.container.querySelector('button'));expect(view.container.querySelectorAll('p')).toHaveLength(1);});
 `,
   },
   {
@@ -354,7 +368,7 @@ test('hides the paragraph until the button is pressed', () => {
     tier: 1,
     focus: ["useState", "spread", "forms"],
     title: "Add a todo",
-    prompt: "Render a text input, an Add button and a UL that starts empty. Adding appends the typed text as a new LI and clears the input back to empty, and a second task must not replace the first.",
+    prompt: "Render one text input named `New todo`, an Add button and a UL that starts empty. Keep the input controlled. Add uses JavaScript trim() on the current text. A nonempty result appends one LI with that exact trimmed text and clears the input; whitespace-only input is a no-op and leaves the input unchanged. Preserve duplicate texts as distinct rows, input order, internal whitespace, Unicode and markup-like text literally. Inputs may have up to 2000 UTF16 units. Use stable unique per-item keys so earlier LI nodes survive later appends. Each click is a separate event. Ordinary parent re-renders preserve text and rows;independent and fresh mounts start with empty input/list. A form submit or a button click handler is fine,with no page navigation.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -371,27 +385,27 @@ export default App;
 const [todos, setTodos] = useState([]);
 
 const addTodo = () => {
-  // append { id: a new unique id, text } in a new array, then empty text
+  // trim text;ignore blank values,otherwise append a uniquely keyed item and empty text
 };
 
-<input value={text} onChange={event => setText(/* the typed text */)} />
+<input aria-label="New todo" value={text} onChange={event => setText(/* the typed text */)} />
 <button onClick={addTodo}>Add</button>
 <ul>
   {todos.map(todo => (
     <li key={todo.id}>{/* the todo's text */}</li>
   ))}
 </ul>`,
-    hints: ["Keep input and todos in separate state. Create a new array when adding."],
+    hints: ["Keep input and todos in separate state. Trim only outer whitespace,skip blanks and append duplicates with distinct stable keys. Label the input New todo."],
     approach: [
       "Use two separate useState values: one string for the input text and one array for the todos.",
       "Keep the input controlled so its value always reflects the text state.",
-      "On add, build a new array by spreading the previous todos and appending an object with a unique id, then reset the text state to empty.",
+      "On Add,trim the input and leave blank values unchanged. Otherwise append a uniquely keyed item in a new array and clear the text. Render literal text and preserve earlier rows.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('adds the typed task and clears the input', () => {
@@ -415,6 +429,9 @@ test('keeps earlier todos when another is added', () => {
   expect(container.querySelectorAll('li')).toHaveLength(2);
   expect(container.textContent).toContain('First');
 });
+
+test('appends trimmed duplicate text as distinct rows',()=>{const {container}=render(<App/>),input=container.querySelector('input');for(const value of['  Zed  ','Amy','Zed']){fireEvent.change(input,{target:{value}});fireEvent.click(container.querySelector('button'));}expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Zed','Amy','Zed']);expect(input.value).toBe('');});
+
 `,
   },
   {
@@ -426,7 +443,7 @@ test('keeps earlier todos when another is added', () => {
     tier: 1,
     focus: ["filter", "useState"],
     title: "Remove a todo",
-    prompt: "The starter holds three todos. Render each as an LI with its text and its own Remove button; clicking one Remove deletes only that todo and leaves the others in place.",
+    prompt: "Render the three starter initialTodos in order,each as an LI with its exact text and one button whose visible label is Remove and accessible name is `Remove <todo text>`. Clicking deletes only that id,even when removing the middle or last row or after earlier removals. Use stable ids as keys so surviving LI nodes keep their identity and relative order. Never mutate initialTodos or earlier state. After removing all three,no todo row or Remove button remains;an empty UL or the existing All done message are both fine. Ordinary parent re-renders do not restore removed rows;simultaneous and fresh mounts have independent initial lists. Use filter,a loop building a new array or an equivalent immutable operation.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const initialTodos = [
@@ -454,21 +471,21 @@ const removeTodo = id => {
 <ul>
   {todos.map(todo => (
     <li key={todo.id}>
-      {todo.text} <button onClick={/* remove this todo */}>Remove</button>
+      {todo.text} <button aria-label={'Remove ' + todo.text} onClick={/* remove this todo */}>Remove</button>
     </li>
   ))}
 </ul>`,
-    hints: ["Filter out the item whose id matches the clicked button."],
+    hints: ["Filter out only the clicked id. Name each Remove button with its todo text,and keep stable keys on surviving rows."],
     approach: [
       "Hold the todos in useState so removing an item can trigger a re-render.",
       "Map the todos into list items, each rendering its text plus a remove button that knows its own id.",
-      "In the remove handler, call the setter with filter so it returns a new array without the matching id instead of mutating the old one.",
+      "In the remove handler, call the setter with filter or an equivalent immutable operation so it returns a new array without the matching id instead of mutating the old one.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders a Remove button for each todo', () => {
@@ -483,6 +500,9 @@ test('removes only the clicked todo', () => {
   fireEvent.click(container.querySelector('li button'));
   expect(container.querySelectorAll('li')).toHaveLength(before - 1);
 });
+
+test('removing the middle todo preserves the others in order',()=>{const {container}=render(<App/>);fireEvent.click(container.querySelectorAll('li button')[1]);const labels=Array.from(container.querySelectorAll('li')).map(li=>{const copy=li.cloneNode(true);copy.querySelector('button').remove();return copy.textContent.trim();});expect(labels).toEqual(['Practice hooks','Ship the app']);});
+
 `,
   },
   {
@@ -494,7 +514,7 @@ test('removes only the clicked todo', () => {
     tier: 1,
     focus: ["derived-state", "filter"],
     title: "Search a list",
-    prompt: "Filter the names declared in the starter with a text input, rendering the matches as LI items — all three before anything is typed. Matching ignores case, so typing ANA still leaves Ana on screen.",
+    prompt: "Filter the fixed starter names with a controlled native text/search input named `Search names`. Start with all three exact LI texts in starter order. Match a literal substring after query.trim().toLowerCase() against each name.toLowerCase();preserve the raw query in the input. Thus `an` or ` AN ` shows Ana and Daniel. Treat punctuation literally,not as a regular expression. Queries may have up to 2000 UTF16 units. Empty/whitespace query restores all names;no match gives zero LI rows,with either an empty UL or the existing No matches message. Derive matches from the unchanged source on every render. Surviving visible LI nodes keep their identity as the query changes;previously removed rows may mount again when restored. Ordinary parent re-renders preserve the query;separate and fresh mounts start with an empty query and all names. No extra data prop or CSS style is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const names = ['Ana', 'Daniel', 'John'];
@@ -510,15 +530,15 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [query, setQuery] = useState('');
-const visibleNames = names.filter(name => /* name includes query, both in lower case */);
+const visibleNames = names.filter(name => /* name includes the trimmed query, both in lower case */);
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleNames.map(name => (
     <li key={name}>{name}</li>
   ))}
 </ul>`,
-    hints: ["Store only the query. Derive filtered names during render."],
+    hints: ["Store the raw query,trim/lowercase only for matching,and derive from the unchanged names. Label the input Search names."],
     approach: [
       "Store only the query string in useState; the names list is a constant that never changes.",
       "Bind the input to that query state so every keystroke updates it.",
@@ -528,7 +548,7 @@ const visibleNames = names.filter(name => /* name includes query, both in lower 
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows every name before typing', () => {
@@ -542,6 +562,9 @@ test('filters as the user types, ignoring case', () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ana');
 });
+
+test('substring matching restores the full list after clearing',()=>{const {container}=render(<App/>),input=container.querySelector('input');fireEvent.change(input,{target:{value:'an'}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel']);fireEvent.change(input,{target:{value:''}});expect(Array.from(container.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['Ana','Daniel','John']);});
+
 `,
   },
   {
@@ -553,7 +576,7 @@ test('filters as the user types, ignoring case', () => {
     tier: 1,
     focus: ["forms", "events"],
     title: "Controlled form",
-    prompt: "Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit.",
+    prompt: `Render a form with two inputs — a name and an email — and a submit button. Submitting must not reload the page, and both submitted values then appear on screen. Nothing is shown before the first submit. Label the inputs Name and Email and keep both controlled from the first render. Show a snapshot of the last submitted values; editing the draft must not change that result until the next submit. Empty values are allowed. Preserve raw names up to 2000 UTF-16 code units of single-line text; email examples use ordinary valid addresses and the current native field value. The result wording is up to you. Parent renders and separate forms keep their own drafts and results.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -588,7 +611,7 @@ const submit = event => {
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the submitted values and does not reload', () => {
@@ -605,7 +628,10 @@ test('shows nothing before the form is submitted', () => {
   const { container } = render(<App />);
   expect(container.textContent).not.toContain('sam@example.com');
 });
-`,
+
+test('a real submit event is prevented before showing the submitted values',()=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Name'),{target:{value:'Visible User'}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:'visible@example.test'}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(view.container.textContent).toContain('Visible User');expect(view.container.textContent).toContain('visible@example.test');
+});`,
   },
   {
     id: "react-effect-on-mount",
@@ -616,7 +642,7 @@ test('shows nothing before the form is submitted', () => {
     tier: 1,
     focus: ["useEffect"],
     title: "Effect on mount",
-    prompt: "Render the text “Waiting…” and replace it with “Ready!” once the component has mounted — after the first render, not during it. The waiting text must be gone afterwards.",
+    prompt: "Render exactly one element with role status. Its first committed text is `Waiting\u2026`. Use an effect after that initial render to replace it with exactly `Ready!`;do not start Ready or change state during rendering. The waiting text is absent after the update. No timer or cleanup resource is needed. Ordinary parent re-renders keep Ready. Every independent or fresh mounted instance starts with its own Waiting state and then becomes Ready. Use the starter useEffect/useState or an equivalent local-state custom hook/reducer. This is a normal mounted-lifetime exercise,not a promise that development Strict Mode runs effect setup only once.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -629,26 +655,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [status, setStatus] = useState('Waiting…');
 
 useEffect(() => {
-  // run the side effect here
+  // Replace the waiting status after the initial render.
+}, []);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["An effect with [] runs after the first render."],
+return <p role="status">{status}</p>;`,
+    hints: ["Keep Waiting… as initial state. A useEffect with [] changes it after the first render;rendering Ready immediately skips that transition."],
     approach: [
       "Put the status message in useState with the waiting text as its initial value.",
-      "Add a useEffect with an empty dependency array so its body runs once after the first render.",
-      "Inside that effect set the status state to the ready text, and the re-render swaps the paragraph content.",
+      "Add a useEffect with an empty dependency array for the normal mounted lifetime. Development Strict Mode may repeat setup/cleanup.",
+      "Inside that effect set the status state to the ready text, and the re-render replaces the status content.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('replaces the waiting text after mounting', async () => {
@@ -656,6 +680,10 @@ test('replaces the waiting text after mounting', async () => {
   await waitFor(() => expect(container.textContent).toContain('Ready!'));
   expect(container.textContent).not.toContain('Waiting');
 });
+
+const observeFirstCommit=()=>{let first;function Probe(){const ref=React.useRef(null);React.useLayoutEffect(()=>{first=ref.current.querySelector('[role="status"]').textContent;},[]);return <section ref={ref}><App/></section>;}const root=render(<Probe/>);return {root,first,Probe};};
+test('first committed status is Waiting before the mounted Ready update',async()=>{const {root,first}=observeFirstCommit();expect(first).toBe('Waiting…');await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));});
+
 `,
   },
   {
@@ -667,7 +695,7 @@ test('replaces the waiting text after mounting', async () => {
     tier: 1,
     focus: ["useEffect", "useState"],
     title: "Document title",
-    prompt: "Render a count starting at 0 and a button that increments it, and keep document.title in step: it holds 0 on first render, and 1 after one click.",
+    prompt: "Render a counter starting at 0 and one button that increments it by one on every click. Show the current count as the only number in the page, either in the button or in a separate paragraph. Use an effect to keep document.title in sync after every update: it contains exactly that integer, with optional words or punctuation around it. For example, Count: 0, Count: 1, then Count: 2. Repeated clicks continue counting; ordinary parent re-renders preserve the count without adding to it. A fresh mounted counter starts at 0 and updates an unrelated previous page title. Restoring the old title on unmount is optional. This single-page exercise does not require multiple components to own document.title simultaneously.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -680,26 +708,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [count, setCount] = useState(0);
 
 useEffect(() => {
-  // run the side effect here
+  // Keep document.title in step with count.
+}, [count]);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Put count in the effect dependency array."],
+// Render count and an increment button; no cleanup resource is needed here.`,
+    hints: ["Put count in the effect dependency array and increment from the previous value. The visible number and title must keep matching after every click."],
     approach: [
       "Keep the counter in useState and update it from the previous value inside the button handler.",
       "Add a useEffect that assigns to document.title, composing the string from the current count.",
-      "List count in the effect dependency array so the title is rewritten after every change, not only on mount.",
-    ],
+      "List count in the effect dependency array so the title is rewritten after every change, not only on mount."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('writes the count into the document title', () => {
@@ -708,6 +734,12 @@ test('writes the count into the document title', () => {
   fireEvent.click(container.querySelector('button'));
   expect(document.title).toContain('1');
 });
+
+const titleNumbers=()=>document.title.match(/[0-9]+/g)||[];
+const pageNumbers=scope=>scope.textContent.match(/[0-9]+/g)||[];
+const withTitle=async body=>{const previous=document.title;try{await body();}finally{document.title=previous;}};
+test('visible count and title both reach two',()=>withTitle(async()=>{const root=render(<App/>);const button=within(root.container).getByRole('button');expect(titleNumbers()).toEqual(['0']);expect(pageNumbers(root.container)).toEqual(['0']);fireEvent.click(button);fireEvent.click(button);expect(titleNumbers()).toEqual(['2']);expect(pageNumbers(root.container)).toEqual(['2']);root.unmount();}));
+
 `,
   },
   {
@@ -719,7 +751,7 @@ test('writes the count into the document title', () => {
     tier: 1,
     focus: ["effect-cleanup", "timers"],
     title: "Delayed message",
-    prompt: "Show “Waiting…” immediately and “Done!” one second later, using a timeout. Clear that timeout when the component unmounts so it can never fire against a component that is gone.",
+    prompt: "Show exactly Waiting… immediately and Done! after a one-second timeout. Keep Waiting… until the full 1000 ms delay has elapsed, and keep Done! afterward. Normal browser timer scheduling can run later; the exercise uses a controlled clock to check the boundary. Clear the timeout when the component unmounts before it fires. Ordinary parent re-renders must not restart the countdown or change a completed message. Each independent or fresh mounted instance starts its own waiting state and delay. Other headings or wrappers are fine. Use an effect with cleanup; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -732,26 +764,25 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [message, setMessage] = useState('Waiting…');
 
 useEffect(() => {
-  // run the side effect here
-
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Return a cleanup function that calls clearTimeout."],
+  const timer = setTimeout(() => {
+    // Replace the message after one full second.
+  }, 1000);
+  return () => clearTimeout(timer);
+}, []);`,
+    hints: ["Use one 1000 ms timeout in a mount effect and clear its id during cleanup. Parent renders should not start another timer."],
     approach: [
       "Store the message in useState, starting with the placeholder text shown before the delay elapses.",
       "In a useEffect with an empty dependency array, start a one second setTimeout that sets the final message.",
-      "Return a cleanup function from that effect which clears the stored timeout id, so an unmount cannot set state late.",
-    ],
+      "Return a cleanup function from that effect which clears the stored timeout id, so an unmount cannot set state late."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the message once the timeout fires', async () => {
@@ -759,6 +790,7 @@ test('shows the message once the timeout fires', async () => {
   expect(container.textContent).toContain('Waiting');
   await waitFor(() => expect(container.textContent).toContain('Done!'), { timeout: 4000 });
 });
+
 `,
   },
   {
@@ -770,7 +802,7 @@ test('shows the message once the timeout fires', async () => {
     tier: 2,
     focus: ["fetch", "useEffect"],
     title: "GET one user",
-    prompt: "Fetch user 1 from the training API and render that user’s name and email once the response arrives.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users/1 once per normal mounted instance and display that response's exact name and email as literal text. A single paragraph,separate paragraphs or the existing email link are all fine. A successful JSON body is an ordinary record with id:1 and plain string name/email values up to 2000 UTF16 units. While the request or JSON body is pending,show an element with role status reading `Loading\u2026`;do not show user data yet. Check response.ok before awaiting response.json(). On HTTP,network or JSON failure,finish loading,show `Could not load user.` as an alert,and render no failed response data. No retry control is required. Ordinary parent re-renders do not fetch again. Clean up so a removed instance ignores late responses;independent/fresh mounts own their request and initial state. Development Strict Mode may deliberately repeat effect setup/cleanup. The API stub is local;no key or production user data is needed.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -789,24 +821,27 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItem = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
-      setItem(await response.json());
+      const data = await response.json();
+      if (active) setItem(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load user.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItem();
+  return () => { active = false; };
 }, []);`,
-    hints: ["Fetch in an effect, await response.json(), then save the user in state."],
+    hints: ["Fetch in an effect,check response.ok and await the JSON body. Keep Loading… until the body settles,catch failures and ignore late results after cleanup."],
     approach: [
       "Start the user state as null so the component can tell a not-yet-loaded record from a loaded one.",
-      "Fetch the single user inside a useEffect with an empty dependency array so the request fires once on mount.",
+      "Fetch the single user inside a useEffect with an empty dependency array for the normal mounted lifetime,with cleanup and HTTP/JSON failure handling.",
       "Await the parsed JSON body and store the whole object in state, then read the name and email fields off it.",
       "Guard the render so a fallback shows while the user state is still null.",
     ],
@@ -814,7 +849,7 @@ useEffect(() => {
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders the fetched name and email', async () => {
@@ -822,6 +857,15 @@ test('renders the fetched name and email', async () => {
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
   expect(container.textContent).toContain('leanne@example.com');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('loading lasts until the actual user JSON body arrives',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');expect(container.textContent).not.toContain('Body user');await sendJSON(calls[0],{id:1,name:'Body user',email:'body@example.test'});await waitFor(()=>expect(container.textContent).toContain('Body user'));expect(container.textContent).toContain('body@example.test');expect(within(container).queryByRole('status')).toBeNull();}));
+
 `,
     api: {
       method: "GET",
@@ -838,7 +882,7 @@ test('renders the fetched name and email', async () => {
     tier: 2,
     focus: ["fetch", "lists-keys"],
     title: "GET users list",
-    prompt: "Fetch the users list and render one LI per user showing their name. Start from an empty array so the first render, before any data arrives, does not throw.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users once per normal mounted instance. Start from an empty array and always render one UL,empty before the JSON body arrives. On success,render one LI per response record,in exact response order,with its exact name as literal text. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units;names may repeat or be empty. Key by id and keep surviving rows stable across normal parent re-renders. Check response.ok and await response.json(). HTTP,network or JSON failure leaves the UL empty and shows `Could not load users.` as an alert. A loading indicator is optional in this task. Do not refetch on ordinary parent renders;separate/fresh mounts own their request and empty initial list. Clean up late results after unmount. Development Strict Mode may deliberately repeat effect setup/cleanup. No retry control or real backend setup is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -857,20 +901,22 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items;
 
@@ -879,17 +925,17 @@ const visibleItems = items;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Start with an empty array so users.map is always safe."],
+    hints: ["Start from an empty array and map exact returned records,including duplicate names. Check response.ok,catch failures and ignore late results after cleanup."],
     approach: [
       "Initialise the users state as an empty array so mapping over it is safe on the very first render.",
-      "Fetch the users collection in a useEffect with an empty dependency array and store the parsed array in state.",
+      "Fetch the users collection in a useEffect with an empty dependency array and check response.ok,store the parsed array and catch failures with cleanup.",
       "Map that array into list items, keying each one by the user id that the API returns.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders one list item per fetched user', async () => {
@@ -897,6 +943,15 @@ test('renders one list item per fetched user', async () => {
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
   expect(container.textContent).toContain('Ervin Howell');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('duplicate names remain distinct records in response order',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:7,name:'Same'},{id:8,name:'Same'},{id:9,name:'Last'}]);expect(phasedNames(container)).toEqual(['Same','Same','Last']);}));
+
 `,
     api: {
       method: "GET",
@@ -913,7 +968,7 @@ test('renders one list item per fetched user', async () => {
     tier: 2,
     focus: ["fetch", "conditional"],
     title: "Loading state",
-    prompt: "Fetch the users list. Show “Loading…” while the request is in flight, then replace it with one LI per user showing their name.",
+    prompt: "GET https://jsonplaceholder.typicode.com/users once per normal mounted instance. Show an element with role status reading `Loading\u2026` until both the response and its JSON body have arrived. Check response.ok before awaiting response.json(). Success replaces the status with one UL of exact literal user names in response order,one LI per record. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units,including duplicate/empty names. An empty successful array finishes loading and shows an empty UL. HTTP,network or JSON failure also finishes loading,shows `Could not load users.` as an alert and keeps an empty UL,without rendering a failed body. Ordinary parent re-renders preserve state without refetching. Clean up removed instances so late responses cannot replace a fresh list;independent/fresh mounts own their request and loading state. Development Strict Mode may repeat effect setup/cleanup. No retry control or real service availability is required.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -932,20 +987,22 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items;
 
@@ -956,18 +1013,18 @@ if (loading) return /* a paragraph reading Loading… */;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Set loading false in finally so success and failure both finish loading."],
+    hints: ["Keep Loading… through JSON parsing. Finish loading for successful empty arrays and all failures;catch the error and ignore late results after cleanup."],
     approach: [
       "Add a second useState boolean for loading that starts true, alongside the users array state.",
       "Fetch in a mount effect and set the users from the parsed response.",
       "Turn loading off in a finally block so both success and failure finish loading.",
-      "Return the loading view early while the flag is true, and the mapped list once it is false.",
+      "Return a Loading… status until the full body settles. Then render the exact list or an alert plus empty UL;empty success also finishes loading.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 // The page's text without the starter's heading, which says "Loading state".
@@ -986,6 +1043,15 @@ test('shows loading first, then the users', async () => {
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
   expect(pageText(container)).not.toContain('Loading');
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('JSON body parsing is still part of loading',async()=>withPhasedRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');expect(phasedNames(container)).toEqual([]);await sendJSON(calls[0],[]);expect(within(container).queryByRole('status')).toBeNull();expect(container.querySelectorAll('ul')).toHaveLength(1);}));
+
 `,
     api: {
       method: "GET",
@@ -1002,7 +1068,7 @@ test('shows loading first, then the users', async () => {
     tier: 2,
     focus: ["fetch", "conditional"],
     title: "Fetch error state",
-    prompt: "Fetch the users list and render one LI per user. When the request fails, render no list items at all and show a short message instead — and treat a non-OK response as a failure, not only a thrown network error.",
+    prompt: `Fetch the users list and render one LI per user. When the request fails, render no list items at all and show a short message instead — and treat a non-OK response as a failure, not only a thrown network error. Use https://jsonplaceholder.typicode.com/users. Success returns zero to 100 users with unique ids and literal single-line names up to 500 characters; names may repeat and must be rendered in response order without truncation. A JSON decoding failure is a request failure too. Show a nonempty message with role="alert" even if the caught error has an empty message, and do not parse a non-success response as user data. Ordinary parent renders do not refetch; separate and fresh Apps own their requests. Loading and empty-success copy are optional for this error-handling exercise.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1028,7 +1094,7 @@ useEffect(() => {
       const data = await response.json();
       setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      setError('Could not load users');
     } finally {
       setLoading(false);
     }
@@ -1045,18 +1111,21 @@ if (error) return /* a short message instead of the list */;
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Check response.ok and throw an Error before reading JSON."],
+    hints: [
+      `Check response.ok and throw an Error before reading JSON.`,
+      `Use a friendly fallback rather than relying on every error having a message. Render the error in an alert and keep failed-response data out of the list.`,
+    ],
     approach: [
-      "Keep an error string in useState next to the users array, both starting empty.",
-      "Define an async function inside the effect and call it there, since the effect callback itself must not be async.",
-      "Check response.ok and throw an Error before parsing, so a bad status lands in the catch block.",
-      "Store the caught message in the error state and render a friendly message instead of the list when it is set.",
+      `Keep an error string in useState next to the users array, both starting empty.`,
+      `Define an async function inside the effect and call it there, since the effect callback itself must not be async.`,
+      `Check response.ok and throw an Error before parsing, so a bad status lands in the catch block.`,
+      `Set a nonempty friendly error message in catch and render it in an alert instead of the list. Check HTTP before reading JSON; JSON decoding failures also reach catch.`,
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows a message when the request fails', async () => {
@@ -1076,6 +1145,13 @@ test('renders the users when the request succeeds', async () => {
   const { container } = render(<App />);
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+test('the successful response supplies every literal user name',()=>auditServer(async calls=>{const view=render(<App/>),data=Array.from({length:17},(_,i)=>({id:i+50,name:i%3?' repeated name ':'<user>&'+i+'x'.repeat(450)}));expect(calls).toHaveLength(1);expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/users');expect(calls[0].method).toBe('GET');await auditReply(calls[0],data);expect(auditRows(view)).toEqual(data.map(user=>user.name));expect(view.container.querySelector('li user')).toBeNull();}));
 `,
     api: {
       method: "GET",
@@ -1092,7 +1168,7 @@ test('renders the users when the request succeeds', async () => {
     tier: 2,
     focus: ["fetch", "useState"],
     title: "Select fetched user",
-    prompt: "Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first.",
+    prompt: `Fetch the users and render one button per user, labelled with their name. Their details — name and email — appear only after a button is clicked; nothing is selected at first. Use https://jsonplaceholder.typicode.com/users with GET on mount, and render the returned array in order. Each user has a unique string or positive integer id and a name/email; the array can be empty or contain up to 24 users. Display names may repeat and may contain spaces, Unicode or literal markup, up to 2000 UTF-16 units. After each choice, display only that user’s name and email outside the buttons; another choice replaces the previous details. Keep button identity and selection through parent renders. Independent and fresh instances own their requests and selection. This exercise covers successful responses, not loading/error UI.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1149,7 +1225,7 @@ const visibleItems = items;
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows details only after a user is selected', async () => {
@@ -1160,6 +1236,14 @@ test('shows details only after a user is selected', async () => {
   fireEvent.click(target);
   await waitFor(() => expect(container.textContent).toContain('ervin@example.com'));
 });
+
+
+const withUsers=async body=>{const calls=[],real=globalThis.fetch;globalThis.fetch=(url,options={})=>new Promise(resolve=>calls.push({url:String(url),options,respond:users=>resolve({ok:true,status:200,json:()=>Promise.resolve(users)})}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const userOutput=root=>{const copy=root.cloneNode(true);copy.querySelectorAll('button').forEach(node=>node.remove());return copy.textContent;};
+const userRequest=call=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/users');expect(String(call.options.method||'GET').toUpperCase()).toBe('GET');};
+test('each fetched button reveals that user name and email outside the button list',()=>withUsers(async calls=>{
+ const view=render(<App/>),users=[{id:91,name:'Ada Reef',email:'ada@reef.test'},{id:203,name:'Bo Bay',email:'bo@bay.test'}];expect(view.container.querySelectorAll('button')).toHaveLength(0);userRequest(calls[0]);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));expect(userOutput(view.container)).not.toContain(users[0].email);fireEvent.click(buttons[0]);expect(userOutput(view.container)).toContain(users[0].name);expect(userOutput(view.container)).toContain(users[0].email);expect(userOutput(view.container)).not.toContain(users[1].email);
+}));
 `,
     api: {
       method: "GET",
@@ -1176,7 +1260,7 @@ test('shows details only after a user is selected', async () => {
     tier: 2,
     focus: ["derived-state", "filter", "fetch"],
     title: "Filter fetched users",
-    prompt: "Fetch the users once, then filter the rendered LI list with a text input, ignoring case. The filtering happens locally: do not send a new request on every keystroke.",
+    prompt: "Fetch https://jsonplaceholder.typicode.com/users once per normal mounted instance,then filter locally without another request on input or ordinary parent renders. GET is the default;development Strict Mode may deliberately repeat effect setup/cleanup. Always render a controlled native text/search input named `Filter users` and a UL. While the request or JSON body is pending,show `Loading users\u2026` as a status. Check response.ok before awaiting response.json(). Success returns a dense read-only array of up to 100 ordinary records with unique positive integer ids and plain string names up to 2000 UTF16 units;names may repeat or be empty. Show each exact literal name as an LI in response order,with stable id keys. Match name.toLowerCase() against query.trim().toLowerCase() as a literal substring while preserving raw input;queries may be up to 2000 units. Typing before data arrives filters the eventual data using the latest query. Preserve surviving visible LI nodes and do not mutate response data. HTTP,network or JSON failure ends loading,keeps an empty list and shows `Could not load users.` as an alert;typing never retries. Clean up the effect so a removed instance ignores late results. Separate/fresh mounts own their requests,query and empty initial list. The API stub is local;no production user data or backend setup is needed.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1196,43 +1280,45 @@ const [error, setError] = useState('');
 const [query, setQuery] = useState('');
 
 useEffect(() => {
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
+      if (active) setError('Could not load users.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
   loadItems();
+  return () => { active = false; };
 }, []);
 const visibleItems = items.filter(item =>
-  /* the user's name includes query, both in lower case */
+  /* the user's name includes the trimmed query, both in lower case */
 );
 
-<input value={query} onChange={event => setQuery(event.target.value)} />
+<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
 <ul>
   {visibleItems.map(item => (
     <li key={item.id}>{/* the user's name */}</li>
   ))}
 </ul>`,
-    hints: ["Fetch once. Filter locally from users and query—do not fetch on every keystroke."],
+    hints: ["Fetch once per ordinary mount,handle loading/status/JSON failures,and ignore late results after cleanup. Filter the current data locally using a trimmed query;typing must not refetch."],
     approach: [
       "Fetch the users once in an effect with an empty dependency array; the query must not be a dependency.",
-      "Hold the search text in its own useState value bound to a controlled input.",
-      "Derive the visible list during render by filtering the fetched users on a case-insensitive substring match.",
+      "Keep the controlled Filter users input available while loading. Track loading/error;check response.ok,catch failures and clean up late results.",
+      "Derive the visible list during render from the fetched users and current trimmed,lowercase query,without changing either source value.",
       "Map only that derived list, so typing never triggers another network request.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('filters the fetched users locally', async () => {
@@ -1242,6 +1328,13 @@ test('filters the fetched users locally', async () => {
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Ervin Howell');
 });
+
+const withUserRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),options,resolve,reject}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const fulfillUsers=async(call,data)=>{await act(async()=>{call.resolve({ok:true,status:200,json:async()=>data});});};
+const fetchedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('typing filters the actual response without another request',async()=>withUserRequests(async calls=>{const {container}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await fulfillUsers(calls[0],[{id:1,name:'Delta'},{id:2,name:'River'}]);const input=container.querySelector('input');fireEvent.change(input,{target:{value:'IV'}});expect(fetchedNames(container)).toEqual(['River']);expect(calls).toHaveLength(1);}));
+
 `,
     api: {
       method: "GET",
@@ -1258,7 +1351,7 @@ test('filters the fetched users locally', async () => {
     tier: 2,
     focus: ["fetch", "useEffect", "events"],
     title: "Refresh data",
-    prompt: "Fetch one todo when the component mounts and render its title, and fetch another when a Refresh button is clicked. Put the request in a single function that both the effect and the click handler call.",
+    prompt: "Fetch one todo on mount and fetch again on every click of a button named Refresh. Share the request function between the effect and button handler. Each request is a GET to https://jsonplaceholder.typicode.com/todos/{id}, with an integer id from 1 to 20; choosing a random id is optional and repeated ids are allowed. Render the successful response's exact title as literal text in a paragraph, including an empty title. Titles are plain strings up to 2000 UTF-16 code units. Await the JSON body and check response.ok first. Clear previous data and errors when starting a request. On HTTP, network or JSON failure, show Could not load todo. as an alert and no todo data. Refresh remains available so the next request can recover. If requests overlap, only the newest started request may update the page. Ordinary parent renders do not fetch again; unmounting invalidates pending results and a fresh instance starts its own request. Loading text is optional. The fixture is local, and no retry library or real backend is needed. One mount request means a normal mounted lifetime; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1271,32 +1364,42 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos/1';
-const [item, setItem] = useState(null);
+    skeleton: `const [todo, setTodo] = useState(null);
+const [error, setError] = useState('');
+const serial = React.useRef(0);
 
-const loadItem = async () => {
-  const response = await fetch(API_URL);
-  if (!response.ok) throw new Error('Request failed');
-  setItem(await response.json());
+const loadTodo = async () => {
+  const current = ++serial.current;
+  setTodo(null);
+  setError('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/1');
+    if (!response.ok) throw new Error('Request failed');
+    const data = await response.json();
+    // Only the newest request may store data.
+  } catch {
+    // Only the newest request may show Could not load todo.
+  }
 };
 
 useEffect(() => {
-  loadItem();
+  loadTodo();
+  return () => { serial.current += 1; };
 }, []);
 
-<button onClick={loadItem}>Refresh</button>`,
-    hints: ["Put the request in a function that both useEffect and onClick can call."],
+// Keep the Refresh button available and render the result or alert.`,
+    hints: ["Keep a request number in a ref. Both mount and Refresh call the same function; only the latest number may store its parsed response or error."],
     approach: [
-      "Extract the request into one named async function that fetches a random todo and writes it into state.",
-      "Call that same function from a useEffect with an empty dependency array to load data on mount.",
-      "Pass the same function as the click handler of the Refresh button so both paths share one code path.",
-      "Render the todo conditionally, since the state is null until the first request resolves.",
-    ],
+      "Store the current todo and error in local state; use a ref to identify the newest request.",
+      "Use one request function from both the mount effect and Refresh. Any id from 1 through 20 is valid, including a fixed id.",
+      "Clear old data, check response.ok, await JSON, and only accept data or errors for the newest request.",
+      "Invalidate pending results during cleanup and leave Refresh available after success or failure."
+],
     verify: "tests",
     estimatedMinutes: 10,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 const TODO_TITLES = ['Todo one', 'Todo two', 'Todo three'];
@@ -1315,6 +1418,22 @@ test('loads again when Refresh is clicked', async () => {
   fireEvent.click(refresh);
   await waitFor(() => expect(showsATodo(container.textContent)).toBe(true));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const refreshIn=scope=>within(scope).getByRole('button',{name:'Refresh'});
+const expectTodo=(scope,title)=>{expect(Array.from(scope.querySelectorAll('p')).some(node=>node.textContent===title)).toBe(true);expect(scope.querySelector('p b')).toBeNull();};
+const todoRequest=call=>{getOnly(call);const url=new URL(call.url);expect(url.origin+url.pathname.replace(/[/][0-9]+$/,'')).toBe('https://jsonplaceholder.typicode.com/todos');const match=url.pathname.match(/[/]todos[/]([0-9]+)$/);expect(Boolean(match)).toBe(true);expect(Number(match[1])>=1&&Number(match[1])<=20).toBe(true);expect(url.search).toBe('');};
+test('Refresh renders the actual new response title',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await finishRequest(calls[0],{id:1,title:'Initial custom todo'});expectTodo(root.container,'Initial custom todo');fireEvent.click(refreshIn(root.container));await waitFor(()=>expect(calls).toHaveLength(2));await finishRequest(calls[1],{id:1,title:'<b>Another todo</b>'});expectTodo(root.container,'<b>Another todo</b>');expect(root.container.textContent).not.toContain('Initial custom todo');}));
+
 `,
     api: {
       method: "GET",
@@ -1331,7 +1450,7 @@ test('loads again when Refresh is clicked', async () => {
     tier: 3,
     focus: ["fetch", "forms"],
     title: "POST a new post",
-    prompt: "Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it.",
+    prompt: `Render a form with a title input. On submit, POST that title as JSON to the posts endpoint and render what comes back — the title, and the id the API assigns it. Label the controlled input Title. Use https://jsonplaceholder.typicode.com/posts, method POST, a JSON content-type header and JSON.stringify({ title }). For nonblank single-line titles up to 2000 UTF-16 code units, preserve the exact text, including leading/trailing spaces, Unicode and literal markup. Prevent navigation. Display the latest returned title and id, not values invented from the draft. Wait for both the response and its JSON body; until then retain any previous result. Editing the draft does not alter a submitted or displayed snapshot. Submissions in this exercise are sequential and successful; response ordering, failures and blank-title behavior are outside its scope. Keep parent state and separate forms independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1368,7 +1487,7 @@ const createItem = async newItem => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('sends the title and renders what comes back', async () => {
@@ -1378,6 +1497,18 @@ test('sends the title and renders what comes back', async () => {
   await waitFor(() => expect(container.textContent).toContain('My new post'));
   expect(container.textContent).toContain('101');
 });
+
+
+const withPosts = async body => {
+ const calls=[],real=globalThis.fetch;
+ globalThis.fetch=(url,options={})=>new Promise(resolve=>{let jsonResolve;const json=new Promise(done=>{jsonResolve=done;});calls.push({url:String(url),options,response:()=>resolve({ok:true,status:201,json:()=>json}),json:jsonResolve});});
+ try{await body(calls);}finally{globalThis.fetch=real;}
+};
+const postEvent=container=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+const checkPost=(call,title)=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/posts');expect(String(call.options.method||'GET').toUpperCase()).toBe('POST');const headers=call.options.headers||{},entry=typeof headers.get==='function'?headers.get('content-type'):Object.entries(headers).find(([key])=>key.toLowerCase()==='content-type')?.[1];expect(/^application\\/json(?:;|$)/i.test(entry||'')).toBe(true);expect(typeof call.options.body).toBe('string');expect(JSON.parse(call.options.body)).toEqual({title});};
+test('the request preserves its title and the result comes from the response body',()=>withPosts(async calls=>{
+ const view=render(<App/>);const title='  A raw title 🦈  ';fireEvent.change(screen.getByLabelText('Title'),{target:{value:title}});postEvent(view.container);expect(calls).toHaveLength(1);checkPost(calls[0],title);expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].response());expect(view.container.textContent).not.toContain('Assigned by server');await act(async()=>calls[0].json({id:785,title:'Assigned by server'}));expect(view.container.textContent).toContain('785');expect(view.container.textContent).toContain('Assigned by server');
+}));
 `,
     api: {
       method: "POST",
@@ -1394,7 +1525,7 @@ test('sends the title and renders what comes back', async () => {
     tier: 3,
     focus: ["fetch", "spread"],
     title: "Create and append",
-    prompt: "Start with an empty UL and an Add button. Clicking it POSTs a new todo and, once the response arrives, appends the created todo to the list — the list goes from no items to one.",
+    prompt: "Start with an empty UL and one native type-button Add control. Clicking POSTs to https://jsonplaceholder.typicode.com/todos with a JSON Content-Type header and a JSON body containing a nonempty title string and completed:false. The exact requested title is your choice. While a request or its JSON body is pending,disable the button and do not append an optimistic row. Check response.ok,then await response.json(). A successful response is an ordinary record with a string or number id and a plain string title up to 2000 UTF16 units. Append that exact returned title as literal LI text in response order;do not substitute the requested title. Server ids and titles may repeat,so choose keys that keep all existing LI nodes stable during appends. Re-enable Add after completion. HTTP failure,network rejection or JSON failure adds no row and preserves earlier rows;show `Could not add todo. Try again.` as an alert and allow retry. Starting a retry clears the alert. Ordinary parent re-renders preserve state;simultaneous and fresh instances have independent empty lists. Requests are sequential because pending disables Add. The provided API stub simulates writes;this exercise does not create persistent remote data.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1407,31 +1538,40 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos';
-const [items, setItems] = useState([]);
+    skeleton: `const [items, setItems] = useState([]);
+const [saving, setSaving] = useState(false);
+const [error, setError] = useState('');
 
 const createItem = async newItem => {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(newItem),
-  });
-  if (!response.ok) throw new Error('Request failed');
-  const createdItem = await response.json();
-  setItems(currentItems => [...currentItems, createdItem]);
-};`,
-    hints: ["After the request succeeds, update with previous => [...previous, created]."],
+  setSaving(true);
+  setError('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(newItem),
+    });
+    if (!response.ok) throw new Error('Request failed');
+    const createdItem = await response.json();
+    // append the returned title with a stable unique local key
+  } catch {
+    setError('Could not add todo. Try again.');
+  } finally {
+    setSaving(false);
+  }
+};
+// Disable Add while saving, render an error alert, and keep the UL's earlier rows.`,
+    hints: ["Disable Add until the response body settles. Check response.ok,append the exact returned title with a stable local key,and catch failures without changing earlier rows."],
     approach: [
       "Start the todos state as an empty array and POST a new todo from an async click handler.",
       "Set method POST, a JSON content-type header, and a JSON.stringify body describing the new todo.",
-      "Await the created record from the response, then append it with a functional state update that spreads the previous array.",
-      "Key the rendered items by the returned id, falling back to the index when the API repeats ids.",
+      "Check response.ok and await the JSON record before appending its exact title. Keep loading/error state;catch failures,show the retry alert,and re-enable Add in finally.",
+      "Server ids may repeat. Assign a local unique key,or use stable append-only positions because rows never reorder/remove here. Starting a retry clears the alert.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('appends the created todo to the list', async () => {
@@ -1440,6 +1580,13 @@ test('appends the created todo to the list', async () => {
   fireEvent.click(container.querySelector('button'));
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(1));
 });
+
+const withCreates=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),options,resolve,reject}));try{await body(calls);}finally{globalThis.fetch=real;}};
+const settleCreate=async(call,data)=>{await act(async()=>{call.resolve({ok:true,status:201,json:async()=>data});});};
+const createdTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+test('uses the returned title and can append a repeated server id',async()=>withCreates(async calls=>{const {container}=render(<App/>);fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(1));await settleCreate(calls[0],{id:201,title:'First server title'});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(2));await settleCreate(calls[1],{id:201,title:'Second server title'});expect(createdTexts(container)).toEqual(['First server title','Second server title']);}));
+
 `,
     api: {
       method: "POST",
@@ -1456,7 +1603,7 @@ test('appends the created todo to the list', async () => {
     tier: 3,
     focus: ["useEffect", "fetch"],
     title: "User by id",
-    prompt: "Render a select whose option values are user ids — 1 and 2 are enough — and fetch that user whenever the selection changes, showing the fetched name. Changing the selection must fetch again rather than keep showing the first user.",
+    prompt: "Render a controlled select named User with option values 1 and 2, initially 1. GET https://jsonplaceholder.typicode.com/users/{selectedId} on mount and every changed selection, including returning to a previously selected id. Do not reuse a cached response instead of refetching. Display the successful response's exact name as literal text in a paragraph. It is an ordinary record with the selected id and a plain string name up to 2000 UTF-16 code units, including an empty name. Clear old user data and errors when starting the request, and wait for the JSON body. Check response.ok first. HTTP, network or JSON failure shows Could not load user. as an alert with no user data. A changed selection can recover, and only the latest selection may update the page. Ordinary parent re-renders do not refetch. Removed instances ignore late responses; fresh mounts start at user 1 and fetch their own data. A loading indicator is optional. The fixture is local; no real backend is needed. One request per mount means an ordinary mounted lifetime, not a guarantee that development Strict Mode runs setup only once.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1469,31 +1616,41 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_BASE = 'https://jsonplaceholder.typicode.com/users';
-const [selectedId, setSelectedId] = useState(1);
+    skeleton: `const [selectedId, setSelectedId] = useState(1);
 const [user, setUser] = useState(null);
+const [error, setError] = useState('');
 
 useEffect(() => {
-  const loadUser = async () => {
-    const response = await fetch(\`\${API_BASE}/\${selectedId}\`);
-    if (!response.ok) throw new Error('Request failed');
-    setUser(await response.json());
+  let active = true;
+  setUser(null);
+  setError('');
+  const load = async () => {
+    try {
+      const response = await fetch(\`https://jsonplaceholder.typicode.com/users/\${selectedId}\`);
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      if (active) setUser(data);
+    } catch {
+      if (active) setError('Could not load user.');
+    }
   };
+  load();
+  return () => { active = false; };
+}, [selectedId]);
 
-  loadUser();
-}, [selectedId]);`,
-    hints: ["Put selectedId in the dependency array and build the URL from it."],
+// Render a labelled select, the exact returned data, and any alert.`,
+    hints: ["Build the URL from the selected id and refetch on every change. Clear old details and ignore results from cleaned-up effects."],
     approach: [
-      "Keep the selected id in useState and drive it from a controlled select, converting the chosen value to a number.",
-      "Build the request URL inside the effect from a shared base plus the currently selected id.",
-      "List the selected id in the dependency array so the effect re-runs and refetches on every change.",
-      "Render the user conditionally, because the state is null between the selection and the response.",
-    ],
+      "Drive a controlled User select from state, initially 1.",
+      "An effect depending on the id clears stale details and requests that user every time, without a response cache.",
+      "Check response.ok and await JSON before rendering the exact returned name; catch errors with the fixed alert.",
+      "Return cleanup that invalidates the old effect so out-of-order responses cannot replace the latest selection."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('fetches a different user when the selection changes', async () => {
@@ -1502,6 +1659,21 @@ test('fetches a different user when the selection changes', async () => {
   fireEvent.change(container.querySelector('select'), { target: { value: '2' } });
   await waitFor(() => expect(container.textContent).toContain('Ervin Howell'));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const chooseUser=(scope,id)=>fireEvent.change(within(scope).getByRole('combobox',{name:'User'}),{target:{value:String(id)}});
+const expectUser=(scope,name)=>{expect(Array.from(scope.querySelectorAll('p')).some(node=>node.textContent===name)).toBe(true);expect(scope.querySelector('p b')).toBeNull();};
+test('returning to user one makes a new request and uses its new body',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await finishRequest(calls[0],{id:1,name:'First revision'});chooseUser(root.container,2);await finishRequest(calls[1],{id:2,name:'Second user'});chooseUser(root.container,1);await waitFor(()=>expect(calls).toHaveLength(3));await finishRequest(calls[2],{id:1,name:'Updated first revision'});expectUser(root.container,'Updated first revision');}));
+
 `,
     api: {
       method: "GET",
@@ -1518,7 +1690,7 @@ test('fetches a different user when the selection changes', async () => {
     tier: 3,
     focus: ["effect-cleanup", "timers"],
     title: "Debounced search",
-    prompt: "Render an input and show the settled query beneath it. That displayed value updates only 500ms after typing stops, so a quick burst of keystrokes produces one update rather than one per key.",
+    prompt: "Render a controlled input named Search and a paragraph showing Search: followed by a space and the settled query, initially empty. The raw input may contain up to 2000 UTF-16 code units. Preserve its exact case, spaces and literal text without trimming or transforming it. Every changed value starts a 500 ms debounce: keep the previous settled value through 499 ms after that change, then show only the latest raw value at 500 ms. A new change cancels the previous pending update; clearing the input also settles after 500 ms. An optional (typing…) marker after the settled value is fine. No request is made: this task only displays the settled query. Ordinary parent re-renders do not restart the remaining delay. Removed instances clear their pending timer; independent or fresh mounts own their empty query and timer. Use an effect, a debounced-value hook or equivalent local timer state. A controlled clock checks the boundary; real browser timers may run later.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1531,27 +1703,29 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [query, setQuery] = useState('');
+const [settledQuery, setSettledQuery] = useState('');
 
 useEffect(() => {
-  // run the side effect here
+  const timer = setTimeout(() => {
+    // Copy the exact current query into the settled state.
+  }, 500);
+  return () => clearTimeout(timer);
+}, [query]);
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
-    hints: ["Create a timeout when query changes and clear the previous timeout in cleanup."],
+// Render a Search-labelled input and the settled query in a paragraph.`,
+    hints: ["Keep raw query and settled query separately. Cancel the old 500 ms timeout on each change or unmount; copy the exact query without normalization."],
     approach: [
       "Use two state values: the immediate query bound to the input and a settled query that the display reads.",
       "In a useEffect that depends on the query, start a 500 ms setTimeout which copies the query into the settled state.",
       "Return a cleanup function that clears that timeout, so each new keystroke cancels the previous pending update.",
-      "Render from the settled value only, which is what makes the display lag behind the typing.",
-    ],
+      "Render from the settled value only, which is what makes the display lag behind the typing."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('only shows the settled value after typing stops', async () => {
@@ -1559,6 +1733,74 @@ test('only shows the settled value after typing stops', async () => {
   fireEvent.change(container.querySelector('input'), { target: { value: 'chair' } });
   await waitFor(() => expect(container.textContent).toContain('chair'), { timeout: 4000 });
 });
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const typed=scope=>within(scope).getByLabelText('Search');
+const expectSettled=(scope,value)=>{const p=scope.querySelector('p');expect(['Search: '+value,'Search: '+value+' (typing…)'].includes(p.textContent)).toBe(true);expect(p.querySelector('b')).toBeNull();};
+test('raw mixed-case text settles only after the full500ms delay',()=>withStepClock(async clock=>{const root=render(<App/>);fireEvent.change(typed(root.container),{target:{value:'  Mixed Case  '}});expect(typed(root.container).value).toBe('  Mixed Case  ');await clock.tick(499);expectSettled(root.container,'');await clock.tick(1);expectSettled(root.container,'  Mixed Case  ');root.unmount();expect(clock.pending()).toBe(0);}));
+
 `,
   },
   {
@@ -1570,7 +1812,7 @@ test('only shows the settled value after typing stops', async () => {
     tier: 3,
     focus: ["abort", "effect-cleanup"],
     title: "Abort a request",
-    prompt: "Fetch the posts in an effect, and abort the request if the component unmounts before it resolves so no state update happens afterwards.",
+    prompt: "GET https://jsonplaceholder.typicode.com/posts once per ordinary mounted instance, using a controller created inside its effect and passing its signal to fetch. Cleanup invalidates that effect and aborts its request. Initially render either a paragraph 0 posts or an empty UL. After the full successful JSON body, render either a paragraph with the exact returned count followed by posts, or one LI per exact literal returned title in response order. Both presentations are valid. The dense read-only array has at most 100 ordinary records with unique positive integer ids and plain titles up to 2000 UTF-16 code units; titles can be duplicated or empty. Check response.ok before parsing. HTTP, network or JSON failure shows Could not load posts. as an alert and no failed response data; a zero count or empty list may remain. Ignore AbortError and all work after cleanup. Ordinary parent re-renders do not refetch; independent or fresh instances own their request and empty initial data. This exercise does not require retries or loading text. Development Strict Mode may repeat effect setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1589,12 +1831,13 @@ const [error, setError] = useState('');
 
 useEffect(() => {
   const controller = new AbortController();
+  let active = true;
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL, { signal: controller.signal });
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
+      if (active) setItems(data);
     } catch (requestError) {
       // an AbortError is the cancel you asked for: no state update after it
       // anything else goes into error
@@ -1603,22 +1846,22 @@ useEffect(() => {
 
   loadItems();
 
-  return () => /* abort the controller */;
+  return () => { active = false; /* abort the controller */ };
 }, []);
 
 <p>{items.length} posts</p>`,
-    hints: ["Create the controller inside the effect and call controller.abort() in cleanup."],
+    hints: ["Abort the controller and invalidate the effect during cleanup. Only an active effect may store parsed posts or show its fixed failure alert."],
     approach: [
-      "Create a new AbortController inside the effect body, not outside it, so each run owns its own controller.",
-      "Pass the controller signal in the fetch options object so the browser can cancel the in-flight request.",
-      "Return a cleanup function that aborts the controller when the component unmounts or the effect re-runs.",
-      "Catch the rejection and ignore it when the error name is AbortError, since a deliberate cancel is not a failure.",
-    ],
+      "Create one controller and active flag inside the mount effect, and fetch the posts with its signal.",
+      "Check response.ok and await the JSON body; store it only while active.",
+      "Show a fixed alert for active non-abort failures. Render either the exact count or literal ordered titles.",
+      "Cleanup first invalidates the effect and then aborts the request."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('aborts the in-flight request when unmounted', async () => {
@@ -1638,6 +1881,15 @@ test('aborts the in-flight request when unmounted', async () => {
     globalThis.fetch = working;
   }
 });
+
+const withPhaseResponses=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const signal=options.signal;let release,rejectBody,bodyPromise,bodyReady=false,value;const aborted=()=>{const e=new Error('Aborted');e.name='AbortError';return e;};const json=()=>{if(!bodyPromise)bodyPromise=new Promise((yes,no)=>{release=yes;rejectBody=no;if(signal?.aborted)no(aborted());else if(bodyReady)yes(value);});return bodyPromise;};calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json}),body:data=>{bodyReady=true;value=data;release?.(data);},badJSON:()=>rejectBody?.(new SyntaxError('Bad JSON')),fail:error=>reject(error||new TypeError('Offline'))});const abort=()=>{const e=aborted();reject(e);rejectBody?.(e);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const phaseHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const phaseBody=async(call,data)=>{await act(async()=>call.body(data));};
+const phaseDone=async(call,data,status=200)=>{await phaseHeaders(call,status);await phaseBody(call,data);};
+
+const expectPosts=(scope,data)=>{const ul=scope.querySelector('ul');if(ul)expect(Array.from(ul.querySelectorAll('li')).map(li=>li.textContent)).toEqual(data.map(p=>p.title));else expect(within(scope).getByText(data.length+' posts',{exact:true})).toBeTruthy();};
+test('successful response may render an exact count or the literal titles',()=>withPhaseResponses(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await phaseDone(calls[0],[{id:1,title:'<b>Actual</b>'},{id:2,title:'Again'}]);expectPosts(root.container,[{id:1,title:'<b>Actual</b>'},{id:2,title:'Again'}]);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
     api: {
       method: "GET",
@@ -1654,7 +1906,7 @@ test('aborts the in-flight request when unmounted', async () => {
     tier: 3,
     focus: ["pagination", "slice"],
     title: "Paginated posts",
-    prompt: "Fetch the posts and show five at a time as LI items, with Previous and Next buttons. The first page holds posts one to five; Next moves to the following five.",
+    prompt: `Fetch the posts and show five at a time as LI items, with Previous and Next buttons. The first page holds posts one to five; Next moves to the following five. Fetch the full array once per mount from https://jsonplaceholder.typicode.com/posts; changing pages must not fetch again. Accept zero to 100 posts with unique ids and literal single-line titles up to 500 characters, including repeated titles. Render the exact current slice without changing its data. Disable Previous on page 1 and Next when no following page exists, including both for empty data. Show Loading… in a status while loading. HTTP, JSON and network errors show Could not load posts in an alert and a Try again button; retry the same endpoint and clear the alert when loading starts. Only the active request may store data or errors; invalidate it on cleanup. Normal parent renders retain the current page; separate and fresh mounts have their own requests and page state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1667,42 +1919,60 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
-const [page, setPage] = useState(1);
-const pageSize = 5;
+    skeleton: `  const API_URL = 'https://jsonplaceholder.typicode.com/posts';
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
-useEffect(() => {
-  const loadItems = async () => {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Request failed');
-    setItems(await response.json());
-  };
+  useEffect(() => {
+    let active = true;
+    setItems([]);
+    setStatus('loading');
+    const loadItems = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setItems(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
+    };
+    loadItems();
+    return () => { active = false; };
+  }, [attempt]);
 
-  loadItems();
-}, []);
+  const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
-const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
 <ul>
   {pageItems.map(item => (
-    <li key={item.id}>{/* the post's title */}</li>
+    <li key={item.id}>{/* the post title */}</li>
   ))}
 </ul>
 
-// Connect Previous/Next buttons to setPage, and disable each one at its end.`,
-    hints: ["Keep page in state. Calculate start index, then slice the fetched array."],
+// Render Loading… while loading, and Could not load posts in an alert on error.
+// Add Try again to increment attempt and connect disabled Previous/Next controls.`,
+    hints: [
+      `Keep page in state. Calculate start index, then slice the fetched array.`,
+      `Check response.ok before JSON, catch errors, and use an active flag in the effect cleanup. A retry counter in its dependencies lets Try again fetch again without refetching during page navigation.`,
+    ],
     approach: [
-      "Fetch every post once in a mount effect and keep the full array in state.",
-      "Track the current page number in its own useState value starting at one, with a fixed page size constant.",
-      "Derive the visible slice during render from the page number and page size instead of storing a second array.",
-      "Wire Previous and Next to update the page state, and disable each button at its boundary.",
+      `Fetch every post in an effect keyed by a retry counter. Check response.ok, catch JSON/network failures and ignore completions after cleanup.`,
+      `Track the current page number in its own useState value starting at one, with a fixed page size constant.`,
+      `Derive the visible slice during render from the page number and page size instead of storing a second array.`,
+      `Wire Previous and Next to update the page state, and disable each button at its boundary.`,
+      `Show a loading status, or an error alert and Try again. Increment the retry counter to clear the error and begin another request.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows five posts on the first page', async () => {
@@ -1720,6 +1990,20 @@ test('moves between pages', async () => {
   fireEvent.click(previous);
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(5));
 });
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+test('pagination uses actual returned titles without another request',()=>auditTransport(async calls=>{const view=render(<App/>),data=auditData(50,17);expect(within(view.container).getByRole('status').textContent).toBe('Loading…');expect(calls).toHaveLength(1);expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await auditReply(calls[0],data);for(let page=1;page<=4;page++){expect(auditRows(view)).toEqual(data.slice((page-1)*5,page*5).map(x=>x.title));if(page<4)auditClick(view,'Next');}expect(calls).toHaveLength(1);expect(auditButton(view,'Next').disabled).toBe(true);}));
 `,
     api: {
       method: "GET",
@@ -1736,7 +2020,7 @@ test('moves between pages', async () => {
     tier: 3,
     focus: ["useEffect", "fetch"],
     title: "Dependent fetch",
-    prompt: "Render a select whose option values are user ids — 1 and 2 are enough. Choosing one fetches that user’s posts and renders them as LI items, and changing the selection fetches again; the two users do not have the same number of posts.",
+    prompt: "Render a controlled select named Author with option values 1 and 2, initially 1. GET https://jsonplaceholder.typicode.com/posts?userId={selectedId} on mount and whenever the selected value changes. Always keep one UL and render one LI per successful response record in response order, with its exact title as literal text. Responses are dense read-only arrays of at most 100 ordinary records with unique positive integer ids and plain string titles up to 2000 UTF-16 code units; titles may be duplicated or empty. Key rows by id and keep surviving nodes stable across ordinary parent renders. Clear the previous list and error when starting a new selection request, including while the JSON body is pending. Check response.ok before parsing. HTTP, network or JSON failure leaves an empty UL and shows Could not load posts. as an alert. Changing selection can recover. An earlier request must never overwrite a later selection. Ordinary parent re-renders do not refetch; removed instances ignore late results and fresh mounts start at user 1 with an empty list. A loading indicator is optional. Use local effect state, a custom hook or equivalent reducer; no real service or data cache is required. Development Strict Mode may repeat effect setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1749,50 +2033,41 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
+    skeleton: `const [selectedId, setSelectedId] = useState(1);
 const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [selectedId, setSelectedId] = useState(1);
 
 useEffect(() => {
-  const loadItems = async () => {
+  let active = true;
+  setItems([]);
+  setError('');
+  const load = async () => {
     try {
-      const response = await fetch(\`\${API_URL}?userId=\${selectedId}\`);
+      const response = await fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${selectedId}\`);
       if (!response.ok) throw new Error('Request failed');
       const data = await response.json();
-      setItems(data);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
+      if (active) setItems(data);
+    } catch {
+      if (active) setError('Could not load posts.');
     }
   };
-
-  loadItems();
+  load();
+  return () => { active = false; };
 }, [selectedId]);
-const visibleItems = items;
 
-<select value={selectedId} onChange={event => setSelectedId(/* the chosen value, as a number */)}>
-  {/* an option with the value 1, and one with the value 2 */}
-</select>
-<ul>
-  {visibleItems.map(item => (
-    <li key={item.id}>{/* the post's title */}</li>
-  ))}
-</ul>`,
-    hints: ["Run the posts effect whenever selectedId changes."],
+// Render a labelled select, the exact returned data, and any alert.`,
+    hints: ["Depend on the selected id. Clear old rows at the start, check response.ok, and ignore results after that effect has cleaned up."],
     approach: [
-      "Hold the selected user id in state and change it from a controlled select of users.",
-      "Write one effect that fetches posts filtered by that id through a query-string parameter on the URL.",
-      "Put the selected id in that effect dependency array so choosing a different user refetches their posts.",
-      "Map the posts into a keyed list that simply re-renders whenever the state array is replaced.",
-    ],
+      "Keep the selected id in a controlled Author select, starting at 1.",
+      "In an effect depending on that id, clear old rows/errors and GET posts filtered by userId.",
+      "Check the response, parse the body, and store it only while that effect is active; catch failures with the fixed alert.",
+      "Cleanup invalidates old results. Map all exact returned titles with id keys, including duplicates and empty names."
+],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('loads the posts belonging to the selected user', async () => {
@@ -1801,6 +2076,21 @@ test('loads the posts belonging to the selected user', async () => {
   fireEvent.change(container.querySelector('select'), { target: { value: '2' } });
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(4));
 });
+
+const withPhasedRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const data=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>data}),json:value=>resolveJSON(value),badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new Error('Offline'))});});try{await body(calls);}finally{globalThis.fetch=real;}};
+const sendHeaders=async(call,status=200)=>{await act(async()=>{call.headers(status);});};
+const sendJSON=async(call,value)=>{await act(async()=>{call.json(value);});};
+const checkGet=(call,url)=>{expect(call.url).toBe(url);expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+const phasedNames=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+
+
+const finishRequest=async(call,data,status=200)=>{await sendHeaders(call,status);await sendJSON(call,data);};
+const getOnly=(call)=>{expect(call.options.method===undefined||call.options.method==='GET').toBe(true);};
+
+const chooseAuthor=(scope,id)=>fireEvent.change(within(scope).getByRole('combobox',{name:'Author'}),{target:{value:String(id)}});
+const postsRequest=(call,id)=>{getOnly(call);const u=new URL(call.url);expect(u.origin+u.pathname).toBe('https://jsonplaceholder.typicode.com/posts');expect(u.searchParams.get('userId')).toBe(String(id));};
+test('maps returned titles rather than synthesizing records from count',()=>withPhasedRequests(async calls=>{const root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));await finishRequest(calls[0],[{id:7,title:'Same'},{id:8,title:'Same'},{id:9,title:'<b>Actual</b>'}]);expect(phasedNames(root.container)).toEqual(['Same','Same','<b>Actual</b>']);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
     api: {
       method: "GET",
@@ -1817,7 +2107,7 @@ test('loads the posts belonging to the selected user', async () => {
     tier: 4,
     focus: ["useState", "fetch"],
     title: "Optimistic todo",
-    prompt: "Render a form with a title input. On submit, add the todo to the list straight away — before the POST resolves — then send it. If the request fails, take it back out so the list returns to empty.",
+    prompt: `Render a form with a title input. On submit, add the todo to the list straight away — before the POST resolves — then send it. If the request fails, remove only that draft from the list. Label the input New todo. Trim its title with JavaScript trim(); ignore an empty result without sending a request, and clear the input after adding a valid draft. Allow up to 20 independent submissions per mount, with single-line titles up to 500 characters. A pending marker is optional. Several POSTs may be in flight and finish in any order: a failure removes only its own draft, keeping the others in their original submission order. Reject non-success HTTP and failed JSON just like network errors. Keep each draft's stable client id after success and store the returned server id separately; the practice API may reuse an id, and timestamps alone are not unique. Preserve the submitted title rather than replacing it with server copy. Parent renders retain the list, separate forms are independent, and a fresh mount starts empty.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1838,23 +2128,28 @@ const addItem = async title => {
   setItems(current => [...current, temporaryItem]);
 
   try {
-    // POST the new item and replace temporaryItem with the response
+    // POST the title and check response.ok before JSON.
+    // Update only temporaryItem.id, keeping that client id and the title.
+    // Store the returned server id separately and clear pending.
   } catch {
     // remove temporaryItem to roll back
   }
 };`,
-    hints: ["Keep the previous list so catch can restore it if the request fails."],
+    hints: [
+      `Give every draft its own stable client id. Filter out only that id on failure; restoring an old array would erase other requests that finished meanwhile. A timestamp can repeat, so use a UUID or a per-form counter.`,
+      `Keep the client key on success, store the server id separately, and derive updates from the latest list with a functional updater. The training API can return the same server id for different practice writes.`,
+    ],
     approach: [
-      "Before sending anything, append a temporary todo with a locally generated id and a pending flag so the list updates instantly.",
-      "POST the real title next, checking response.ok and throwing when the status is not successful.",
-      "On success, replace the temporary entry by mapping the list and swapping in the saved record at the matching id.",
-      "In the catch block, roll back by filtering the temporary id out of the list so the failed item disappears.",
+      `Before sending, append a draft with a unique client id and the trimmed title. An optional pending flag can indicate that it is being saved.`,
+      `POST the real title next, checking response.ok and throwing when the status is not successful.`,
+      `On success, map the current list and update only the matching client id. Keep that id and the submitted title, storing the response id separately.`,
+      `In the catch block, roll back by filtering the temporary id out of the list so the failed item disappears.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('shows the todo before the server replies', async () => {
@@ -1877,6 +2172,16 @@ test('rolls the todo back when the request fails', async () => {
     globalThis.fetch = working;
   }
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditAdd=(view,title)=>{fireEvent.change(within(view.container).getByRole('textbox',{name:'New todo'}),{target:{value:title}});fireEvent.submit(view.container.querySelector('form'));};
+const auditTodos=(view,titles)=>{const rows=auditRows(view);expect(rows).toHaveLength(titles.length);titles.forEach((title,i)=>expect(rows[i]===title||rows[i]===title+' (saving…)').toBe(true));};
+
+test('concurrent pending titles are independent before and after out-of-order replies',()=>auditServer(async calls=>{const view=render(<App/>);for(const title of ['First','Second','Third','Fourth'])auditAdd(view,title);expect(calls).toHaveLength(4);auditTodos(view,['First','Second','Third','Fourth']);await auditReply(calls[2],{id:201,title:'server copy'});await act(async()=>{calls[1].fail(new TypeError('offline'));});auditTodos(view,['First','Third','Fourth']);await auditReply(calls[0],{id:201});await auditReply(calls[3],{id:201});auditTodos(view,['First','Third','Fourth']);}));
 `,
     api: {
       method: "POST",
@@ -1893,7 +2198,7 @@ test('rolls the todo back when the request fails', async () => {
     tier: 3,
     focus: ["custom-hook", "fetch"],
     title: "Reusable useFetch hook",
-    prompt: "Write useFetch(url) returning data, loading and error, and use it in App: “Loading…” while the request is in flight, one LI per user on success, and no list items plus a message when it fails.",
+    prompt: `Write and export \`useFetch(url)\`, returning \`{ data, loading, error }\`. Each committed URL change starts a request, resets data to null and error to an empty string, and sets loading to true. A successful JSON result becomes data and finishes loading; a non-OK HTTP response, rejected JSON body or request failure produces a nonempty error message, null data and loading false. Only the latest active request may publish a result: a late success or failure from an old URL, including an earlier visit to the same URL, must be ignored. Cleanup must invalidate that request even when a mock or pending JSON operation ignores abort; AbortController is optional. Unmounting and independent hook calls must not share state. This client-only exercise uses valid URL strings and arbitrary JSON values, with no cache or retries. Use the hook in App to fetch https://jsonplaceholder.typicode.com/users: show "Loading…" while loading, one li per returned user in order on success, and no items plus an error message on failure. App receives zero to 24 users with unique ids and literal names. Do not use bundled fixture names instead of the response.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1906,30 +2211,36 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useFetch = url => {
+    skeleton: `export const useFetch = url => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // fetch url, update data/error, then finish loading
+    // reset data/error/loading and fetch url
+    // publish only while this effect is active
+    return () => {
+      // mark this request inactive; optionally abort it
+    };
   }, [url]);
 
   return {data, loading, error};
 };`,
-    hints: ["Move the three state values and request effect into a function whose name starts with use."],
+    hints: [
+      `Give each effect an active flag. Its cleanup invalidates the request before a later URL can publish data or an error. Aborting is useful, but the active flag also guards work that resolves after cancellation.`,
+    ],
     approach: [
-      "Move the data, loading and error state plus the request effect into a function whose name begins with use and which takes the URL as its argument.",
-      "Reset to a loading state at the top of the effect and depend on the URL, so a new address starts a fresh request.",
-      "Check response.ok, parse the JSON, and write either the data or the error message before loading is turned off.",
-      "Return the three values from the hook, then let the component destructure them and branch on loading and error.",
+      `Export a hook with data, loading and error, and reset all three when its URL effect begins.`,
+      `Check response.ok before reading JSON. Publish success or failure only while this effect still owns the request.`,
+      `Invalidate the effect in cleanup, optionally aborting its transport too; do not let a previous URL finish the current loading state.`,
+      `Render loading, the actual returned users or a failure message in App. Separate hook calls keep separate request state.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useFetch } from './App';
 
 test('reports loading, then the fetched data', async () => {
   const { container } = render(<App />);
@@ -1948,6 +2259,10 @@ test('surfaces an error instead of the list', async () => {
     globalThis.fetch = working;
   }
 });
+
+
+const withAuditRequests=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let resolveJSON,rejectJSON;const json=new Promise((yes,no)=>{resolveJSON=yes;rejectJSON=no;});calls.push({url:String(url),options,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>json}),body:value=>resolveJSON(value),badBody:error=>rejectJSON(error),fail:reject});});const flush=()=>act(async()=>{for(let i=0;i<12;i++)await Promise.resolve();});try{await body(calls,flush);}finally{globalThis.fetch=real;}};
+test('the reusable hook loads again for a changed url',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/first"/>);expect(state).toEqual({data:null,loading:true,error:''});calls[0].headers();calls[0].body({name:'first'});await flush();expect(state.data).toEqual({name:'first'});view.rerender(<Probe url="/second"/>);expect(calls.map(x=>x.url)).toEqual(['/first','/second']);expect(state).toEqual({data:null,loading:true,error:''});calls[1].headers();calls[1].body(['second']);await flush();expect(state).toEqual({data:['second'],loading:false,error:''});view.unmount();}));
 `,
     api: {
       method: "GET",
@@ -1964,7 +2279,7 @@ test('surfaces an error instead of the list', async () => {
     tier: 4,
     focus: ["fetch", "map", "filter"],
     title: "CRUD mini app",
-    prompt: "Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed.",
+    prompt: `Fetch the posts and render each as an LI holding its title, an Edit button and a Delete button, plus a form that creates a new one. Creating appends a post carrying the typed title; Edit renames that post to “Edited” in place; Delete removes only that post. Edit and delete are local — no request needed. Use https://jsonplaceholder.typicode.com/posts. Initial GET returns zero to 100 records with unique integer ids and literal single-line titles up to 500 characters, including duplicates. Show Loading… until it settles; HTTP, JSON or network failure shows Could not load posts in an alert and no post rows. Label the controlled input Title. Trim submitted text and ignore an empty result. A create sends one JSON POST and appends only after a successful response; do not append failed data. While it is pending, disable Create and label it Creating…; another submit sends nothing. Clear the submitted field immediately, preserving any new text typed during the request. A failure shows Could not create post in an alert, preserves all posts/local edits and restores the failed title only if the field is still empty. The next attempt clears that alert. Every created row needs its own stable client id, with the response id kept separately: the training API may repeat server ids. Preserve the submitted title and update/delete only the clicked identity, even when names repeat. Parent renders retain state without refetching; separate and fresh Apps are independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1981,11 +2296,14 @@ export default App;
 const [items, setItems] = useState([]);
 
 useEffect(() => {
-  // GET items and save them with setItems
+  // GET items, check response.ok and catch HTTP/JSON/network failures.
+  // Store success, then leave the loading state.
 }, []);
 
 const createItem = async newItem => {
-  // POST newItem, then append the response
+  // Ignore blank titles and a pending create; clear only the submitted draft.
+  // POST, check response.ok, then append with a fresh client id.
+  // Keep the response id separately; restore a failed title only into an empty field.
 };
 
 const editItem = (id, changes) => {
@@ -1997,19 +2315,23 @@ const editItem = (id, changes) => {
 const deleteItem = id => {
   setItems(current => current.filter(item => item.id !== id));
 };`,
-    hints: ["Build one operation at a time: GET, render, POST, edit with map, delete with filter."],
+    hints: [
+      `Use functional list updates so a completed POST keeps local edits made while it was pending. Assign a unique client id to each created row; a repeated response id must not make Edit/Delete affect two rows.`,
+      `Check HTTP before JSON and catch both request and JSON errors. Track loading, load error, create error and a pending-create flag. Clear a submitted draft at request start so later typing is not erased when the request finishes.`,
+    ],
     approach: [
-      "Build it one operation at a time, starting with the GET into a posts array plus a loading flag.",
-      "Add a controlled title input whose submit handler POSTs the new post and appends the created record immutably.",
-      "Implement editing with map, returning a spread copy carrying the new title only for the matching id.",
-      "Implement deletion with filter on the id, so both local operations replace the array rather than mutating it.",
+      `Load once into list state with loading and a fatal load-error branch. Treat empty success as a ready empty list.`,
+      `Capture and trim a submitted title, reject blank/pending submissions, clear that draft and POST JSON. Append only a successful response, retaining a distinct client key and the submitted title.`,
+      `On create failure preserve the current list, report the alert and restore the captured title only if the field is still empty. Re-enable Create and clear the alert on the next attempt.`,
+      `Edit with map and delete with filter on the stable clicked id, using current state. These local operations send no requests.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor as waitForSlow, act, within } from '@testing-library/react';
 import App from './App';
+const waitFor = (check, options) => waitForSlow(check, { timeout: 300, ...options });
 
 test('lists the fetched posts', async () => {
   const { container } = render(<App />);
@@ -2033,6 +2355,15 @@ test('creates, edits, and deletes', async () => {
   fireEvent.click(remove);
   await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(7));
 });
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>calls.push({url:String(url),method:String(options.method||'GET').toUpperCase(),options,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>call.reply(data,status));};
+const auditTitles=view=>[...view.container.querySelectorAll('li')].map(li=>{const copy=li.cloneNode(true);copy.querySelectorAll('button').forEach(button=>button.remove());return copy.textContent.trim();});
+const auditCreate=(view,title)=>{fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:title}});fireEvent.submit(view.container.querySelector('form'));};
+const auditAction=(view,index,name)=>fireEvent.click(within(view.container.querySelectorAll('li')[index]).getByRole('button',{name,exact:true}));
+
+test('every fetched row and each independently created row supports its own local edit/delete',()=>auditServer(async calls=>{const view=render(<App/>),data=Array.from({length:12},(_,id)=>({id:id*13+1,title:id%3?'Repeated':'<post>&'+id}));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/posts');await auditReply(calls[0],data);let expected=data.map(p=>p.title);expect(auditTitles(view)).toEqual(expected);for(const title of ['Created A','Created B','Created C']){auditCreate(view,title);const call=calls[calls.length-1];expect(call.method).toBe('POST');expect(JSON.parse(call.options.body).title).toBe(title);await auditReply(call,{id:101,title:'Server title'});expected.push(title);expect(auditTitles(view)).toEqual(expected);}const count=calls.length;auditAction(view,13,'Edit');expected[13]='Edited';expect(auditTitles(view)).toEqual(expected);auditAction(view,12,'Delete');expected.splice(12,1);expect(auditTitles(view)).toEqual(expected);expect(calls).toHaveLength(count);expect(view.container.querySelector('li post')).toBeNull();}));
 `,
     api: {
       method: "GET + POST",
@@ -2049,7 +2380,7 @@ test('creates, edits, and deletes', async () => {
     tier: 3,
     focus: ["useRef", "timers"],
     title: "Stopwatch",
-    prompt: "Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running.",
+    prompt: `Show elapsed whole seconds in a paragraph, starting at 0, with Start, Stop and Reset buttons. Start counts up once a second, Stop freezes the number where it is, and Reset returns it to 0. Pressing Start twice must not leave two intervals running. Reset also stops the stopwatch. After Stop, Start resumes the saved count with a fresh full second before the next tick. Start while running may be ignored or restart the one interval, but must not create another. Parent renders preserve elapsed state and the pending interval. Clear it on unmount and keep separate instances independent. Either a number alone or a number with a seconds label is accepted.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2124,7 +2455,70 @@ test('Stop freezes the count and Reset clears it', () => withClock(async clock =
   expect(elapsed(container)).toContain('0');
   expect(container.textContent).not.toContain('1');
 }));
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('a stopped stopwatch resumes after a fresh full second',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(1500);fireEvent.click(control(view.container,'stop'));await clock.tick(3000);fireEvent.click(control(view.container,'start'));await clock.tick(999);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('1');await clock.tick(1);expect((view.container.querySelector('p').textContent.match(/[0-9]+/g)||[]).join(' ')).toBe('2');
+}));`,
   },
   {
     id: "react-uselocalstorage-hook",
@@ -2135,8 +2529,8 @@ test('Stop freezes the count and Reset clears it', () => withClock(async clock =
     tier: 3,
     focus: ["custom-hook", "useState"],
     title: "useLocalStorage hook",
-    prompt: "Write useLocalStorage(key, initial), which behaves like useState but persists. Use it for a counter rendered as “Count: n” with an Increment button: it starts from initial when storage is empty, writes every change to localStorage, and reads the count back after a remount.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `Write and export \`useLocalStorage(key, initial)\`, returning a state value and setter that accepts either a next value or a pure updater function, like useState. Read JSON lazily at mount; only a missing entry, invalid JSON or storage read failure uses initial. Stored 0, false, an empty string and null are valid values. Persist the current value as JSON under key after committed changes in an effect; never write during rendering or inside a state updater. If storage is blocked or full, keep the in-memory state usable. Values and initial are JSON-serializable data: null, booleans, finite numbers, strings, arrays and plain objects; function values, undefined and cycles are outside scope. Each hook has a fixed key for its mounted lifetime; remounting reads that key again. Leave unrelated keys alone. Cross-tab synchronization and changing a mounted hook’s key are outside scope. Use the hook in App with key "count" and initial 0: render "Count: n" and an Increment button, preserve the count through parent renders, and read it back after remounting.`,
+    starter: `import React, { useCallback, useEffect, useState } from 'react';
 
 const App = () => {
 
@@ -2148,13 +2542,13 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useLocalStorage = (key, initial) => {
+    skeleton: `export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => {
-    // read key from localStorage: nothing stored gives initial, otherwise JSON.parse what is there
+    // try reading and parsing key; on a missing entry or failure return initial
   });
 
   useEffect(() => {
-    // write JSON.stringify(value) under key
+    // try writing JSON.stringify(value) under key; storage failure must not break state
   }, [key, value]);
 
   return [value, setValue];
@@ -2162,19 +2556,21 @@ export default App;
 
 // In App, call it exactly as you would call useState:
 const [count, setCount] = useLocalStorage('count', 0);`,
-    hints: ["Read the stored value when state is first created and write it back whenever it changes."],
+    hints: [
+      `Use a lazy state initializer with guarded JSON reading. Return a normal state setter, and move storage writes to a guarded effect so updater functions stay pure.`,
+    ],
     approach: [
-      "Write a function whose name starts with use, taking a key and an initial value and returning the current value with its setter.",
-      "Initialise its state with a lazy initialiser that reads the key from storage once and falls back to the initial value when nothing is stored.",
-      "Add an effect depending on the key and the value that serialises the value and writes it back to storage after every change.",
-      "Call the hook in the counter exactly as you would call useState, so a remount reads the number back instead of restarting at zero.",
+      `Export the hook and lazily read and parse its fixed key, falling back only for missing or unreadable data.`,
+      `Return the state setter so direct values and queued pure updater functions follow React state semantics.`,
+      `Serialize the committed value in an effect depending on key and value; catch storage failures and keep state usable.`,
+      `Use count and initial zero in App; remount to verify persistence, and preserve valid stored falsy values.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useLocalStorage } from './App';
 
 test('uses the initial value when storage is empty', () => {
   localStorage.clear();
@@ -2201,6 +2597,9 @@ test('writes the count into localStorage', () => {
   for (let i = 0; i < localStorage.length; i += 1) stored.push(String(localStorage.getItem(localStorage.key(i))));
   expect(stored.join('|')).toContain('1');
 });
+
+
+test('stored zero,false,empty string and null are values rather than missing entries',()=>{for(const value of [0,false,'',null]){localStorage.clear();localStorage.setItem('preference',JSON.stringify(value));let result;const Probe=()=>{[result]=useLocalStorage('preference',17);return null;};const view=render(<Probe/>);expect(result).toBe(value);view.unmount();}});
 `,
   },
   {
@@ -2212,8 +2611,8 @@ test('writes the count into localStorage', () => {
     tier: 3,
     focus: ["accessibility", "useState", "events"],
     title: "Tabs",
-    prompt: "Render the three tabs declared in the starter, each a button with role=\"tab\", and exactly one element with role=\"tabpanel\" holding the selected tab’s content. The selected tab carries aria-selected=\"true\" and the others \"false\".",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: "Build a horizontal, automatically activated tab interface from the three starter tabs. Render an Account-named tablist containing exactly three native buttons of type button with role tab and exact Profile, Billing and Alerts labels in that order. Profile starts selected. Exactly one tab has aria-selected=true and tabIndex=0; others have aria-selected=false and tabIndex=-1. Show exactly one tabpanel with the selected tab's exact panel text and tabIndex=0. Use a useId prefix to give each tab and its corresponding panel distinct, stable ids, unique across mounted instances. Each tab's aria-controls names its own panel id, and the displayed panel's aria-labelledby names its selected tab. Inactive panels need not exist in the DOM. Clicking or focusing a tab selects it. With focus on a tab, ArrowRight/ArrowLeft move focus and selection one step with wraparound; Home/End move to the first/last. Prevent default for those four handled keys. Leave other keys, including Tab and vertical arrows, to the browser. Keep focus movement within the current tablist. Normal parent renders preserve selection and ids; independent/fresh instances start on Profile. No CSS theme or extra data prop is required.",
+    starter: `import React, { useId, useState } from 'react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
@@ -2232,28 +2631,37 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [activeId, setActiveId] = useState(/* the first tab's id */);
+const idPrefix = useId();
 const active = tabs.find(tab => /* the tab whose id is activeId */);
 
-<div role="tablist">
+const onKeyDown = event => {
+  // For ArrowLeft/ArrowRight/Home/End, prevent default, select and focus the target tab.
+};
+
+<div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
   {tabs.map(tab => (
-    <button key={tab.id} role="tab" aria-selected={/* is this the active tab */} onClick={() => setActiveId(tab.id)}>
+    <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+      aria-controls={idPrefix + '-panel-' + tab.id}
+      aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+      onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
       {tab.label}
     </button>
   ))}
 </div>
-<div role="tabpanel">{/* the active tab's panel */}</div>`,
-    hints: ["Store the active tab id, and give the tabs role tab with aria-selected."],
+<div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+  aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>`,
+    hints: ["Store the active id, derive the selected panel and use useId for stable relationships. Keep one tab stop; handled navigation keys select and focus their target."],
     approach: [
       "Describe the three tabs as an array of objects, each carrying an id, a visible label and the content of its panel.",
       "Track the id of the active tab in a single state value that starts as the id of the first tab in that array.",
-      "Render every tab as a button with the tab role, an aria-selected flag comparing its id to the active id, and a handler that stores its id.",
-      "Render one element with the tabpanel role and fill it with the content of whichever tab is currently active.",
+      "Render every tab as a button with the tab role, an aria-selected flag comparing its id to the active id, a tabIndex of 0 only when active, and click/focus handlers that select it.",
+      "Give each tab/panel stable useId-prefixed ids linked by aria-controls/aria-labelledby. Render one focusable panel with its exact content. Handle horizontal arrows/Home/End by preventing default, updating selection and focusing the target button; leave other keys alone.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('renders three tabs and a single panel', () => {
@@ -2280,6 +2688,9 @@ test('shows the panel belonging to the chosen tab', () => {
   expect(panel()).toContain('Alert');
   expect(panel()).not.toContain('Profile');
 });
+
+test('ArrowLeft wraps focus and selection to Alerts',()=>{const {container}=render(<App/>);const all=Array.from(container.querySelectorAll('[role="tab"]'));act(()=>all[0].focus());fireEvent.keyDown(all[0],{key:'ArrowLeft'});expect(document.activeElement).toBe(all[2]);expect(all[2].getAttribute('aria-selected')).toBe('true');expect(container.querySelector('[role="tabpanel"]').textContent).toBe('Alert settings');});
+
 `,
   },
   {
@@ -2291,8 +2702,8 @@ test('shows the panel belonging to the chosen tab', () => {
     tier: 3,
     focus: ["derived-state", "useState"],
     title: "Accordion",
-    prompt: "Render the three sections declared in the starter, each a header button with a body paragraph. No body shows at first; clicking a header opens that one, and opening a second closes the first — never two bodies at once.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: "Render the three starter sections in order with their exact titles and bodies. Each title is one native type-button control inside a heading,such as h3. Initially no body paragraph exists. Clicking opens that section and closes any other;clicking the already-open header closes it,so at most one paragraph exists. Every repeated choice,including Support,works. Set each button's aria-expanded to its actual open state and aria-controls to a nonempty stable panel id made with useId. The open paragraph has that id and exact body text. Targets are distinct within and across mounted accordions. Keep focus on the native header after activation;native Enter/Space and Tab behavior need no duplicate key handlers. Ordinary parent re-renders preserve state and ids;independent/fresh mounts start closed. No additional arrow-key or region-landmark behavior is required.",
+    starter: `import React, { useEffect, useState, useId } from 'react';
 
 const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
@@ -2311,6 +2722,7 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [openId, setOpenId] = useState(null);
+const idPrefix = useId();
 
 const toggle = id => {
   setOpenId(current => /* null when id is already open, otherwise id */);
@@ -2318,11 +2730,11 @@ const toggle = id => {
 
 {sections.map(section => (
   <section key={section.id}>
-    <button onClick={() => toggle(section.id)}>{section.title}</button>
-    {/* the body in a paragraph, only while section.id is openId */}
+    <h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>
+    {/* the body in a paragraph with id idPrefix + '-' + section.id, only while open */}
   </section>
 ))}`,
-    hints: ["Store the id of the single open section rather than a flag on every one."],
+    hints: ["Store the single open id,or null. Give heading buttons expanded state and stable useId panel targets;clicking the same header closes it."],
     approach: [
       "Keep one state value holding the id of the open section, starting as null because every section begins closed.",
       "Map the sections to a heading button each, deciding whether a section is open by comparing its id with the stored one.",
@@ -2333,7 +2745,7 @@ const toggle = id => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('starts with every section closed', () => {
@@ -2358,6 +2770,9 @@ test('opening one section closes the other', () => {
   expect(container.textContent).toContain('thirty days');
   expect(container.textContent).not.toContain('Ships within two days');
 });
+
+test('the current Support panel can close again',()=>{const {container}=render(<App/>),buttons=Array.from(container.querySelectorAll('button'));fireEvent.click(buttons[2]);expect(Array.from(container.querySelectorAll('p')).map(p=>p.textContent)).toEqual(['Support answers every weekday']);fireEvent.click(buttons[2]);expect(container.querySelector('p')).toBeNull();});
+
 `,
   },
   {
@@ -2369,7 +2784,7 @@ test('opening one section closes the other', () => {
     tier: 3,
     focus: ["useState", "events"],
     title: "Star rating",
-    prompt: "Render one button per entry in the stars array from the starter, plus a line reading “Rating: n” starting at 0. Hovering a star previews that rating, moving the pointer away restores the committed one, and clicking commits it — after clicking the fourth star the line reads “Rating: 4”.",
+    prompt: "Render five native buttons in starter stars order, with accessible names `Rate 1 star`, `Rate 2 stars` through `Rate 5 stars`, plus one paragraph `Rating: n` starting at 0. The number is the committed rating; hovering never changes that line. Hovering a star previews filling exactly the prefix from 1 through that value, not just any equal number of stars. Leaving the star row restores the last committed prefix, initially none. Clicking any star commits that rating, including lower values and later changes. Use filled/empty characters, classes or equivalent visible state; no particular CSS or wrapper is required. Keep normal parent re-renders, simultaneous instances and fresh mounts independent. Buttons retain their accessible names in every state. Keyboard activation uses native buttons; a full radio-group navigation pattern is outside this exercise.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const stars = [1, 2, 3, 4, 5];
@@ -2390,13 +2805,13 @@ const shown = /* hovered while there is one, otherwise rating */;
 
 <div onMouseLeave={() => setHovered(0)}>
   {stars.map(star => (
-    <button key={star} onMouseEnter={/* preview star */} onClick={/* commit star */}>
+    <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={/* preview star */} onClick={/* commit star */}>
       {/* ★ when star is at most shown, otherwise ☆ */}
     </button>
   ))}
 </div>
 <p>Rating: {rating}</p>`,
-    hints: ["Keep the hovered value and the committed value apart, and display whichever applies."],
+    hints: ["Keep preview and committed state separate. Fill the exact prefix for the hovered value or committed fallback;the Rating line always shows the committed value. Give each star a stable accessible name."],
     approach: [
       "Hold two numbers in state: the committed rating and the star currently under the pointer, both starting at zero.",
       "Derive how many stars look filled during render, preferring the hovered number and falling back to the committed rating.",
@@ -2407,7 +2822,7 @@ const shown = /* hovered while there is one, otherwise rating */;
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 // How each star looks. Nothing is rated on the first render, so a star that
@@ -2447,6 +2862,9 @@ test('keeps the rating that was clicked', () => {
   expect(container.textContent).toContain('Rating: 4');
   expect(filled(container, unrated)).toBe(4);
 });
+
+test('the fifth star previews five without changing committed zero',()=>{const {container}=render(<App/>);const baseline=looks(container),all=Array.from(container.querySelectorAll('button'));hover(all[4]);expect(filled(container,baseline)).toBe(5);expect(container.querySelector('p').textContent).toBe('Rating: 0');leave(all[4]);expect(filled(container,baseline)).toBe(0);});
+
 `,
   },
   {
@@ -2458,7 +2876,7 @@ test('keeps the rating that was clicked', () => {
     tier: 4,
     focus: ["events", "effect-cleanup"],
     title: "Modal",
-    prompt: "An Open button shows an element with role=\"dialog\" inside a backdrop. It closes on the Close button, on the Escape key, and on a click on the backdrop — but a click inside the dialog itself must leave it open.",
+    prompt: `An Open button shows an element with role="dialog" inside a backdrop. It closes on the Close button, on the Escape key, and on a click on the backdrop — but a click inside the dialog itself must leave it open. Handle Escape from anywhere in the document while this dialog is open; other keys leave it open. Remove any global key listener on close or unmount. Nested content clicks also stay inside. Repeated opens and separate instances must keep independent open state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2502,7 +2920,7 @@ useEffect(() => {
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 const dialog = container => container.querySelector('[role="dialog"]');
@@ -2535,7 +2953,10 @@ test('closes on a backdrop click but survives a click inside', () => {
   fireEvent.click(backdrop);
   expect(dialog(container)).toBeNull();
 });
-`,
+
+test('ordinary keys leave the dialog open',()=>{
+ const view=render(<App/>);openModal(view.container);fireEvent.keyDown(dialog(view.container),{key:'Enter'});expect(dialog(view.container)).toBeTruthy();
+});`,
   },
   {
     id: "react-theme-context",
@@ -2546,7 +2967,7 @@ test('closes on a backdrop click but survives a click inside', () => {
     tier: 3,
     focus: ["useContext"],
     title: "Theme context",
-    prompt: "Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click.",
+    prompt: `Create a theme context holding “light” or “dark” plus a way to change it. App provides it; a nested child — not App itself — reads the value and renders a button that shows the current theme and switches it on click. Start at light and keep switching on every ordinary click, with the button text Theme: light or Theme: dark. Parent renders retain the current theme and button node. Each mounted App owns its provider state; toggling or unmounting one must not alter another, and a fresh App starts at light. This task concerns state ownership and context rather than a particular provider object shape.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2584,7 +3005,7 @@ const toggleTheme = () => setTheme(/* the other theme */);
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 
 test('the nested child reads the theme from context', () => {
@@ -2602,6 +3023,11 @@ test('the nested child toggles the theme for everyone', () => {
   fireEvent.click(toggle);
   expect(container.textContent).toContain('light');
 });
+
+
+test('six ordinary clicks keep toggling the nested button',()=>{
+ const view=render(<App/>),button=view.container.querySelector('button');for(let i=0;i<6;i++){fireEvent.click(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));}
+});
 `,
   },
   {
@@ -2613,8 +3039,8 @@ test('the nested child toggles the theme for everyone', () => {
     tier: 3,
     focus: ["custom-hook", "timers", "effect-cleanup"],
     title: "useDebounce hook",
-    prompt: "Write useDebounce(value, delay), returning the value only once it has stopped changing for delay. Use it to filter the fruits declared in the starter into a UL: all three show at first, and typing narrows the list only after typing settles.",
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `Write and export \`useDebounce(value, delay)\` for string values and integer delays from 1 to 10000 milliseconds. Return the initial string immediately. A new value starts a wait; publish it only after a full delay without a value or delay change. A delay change restarts a pending wait even if the pending value is unchanged. Cancel obsolete timers and clean up on unmount. Parent renders with the same value and delay preserve the pending deadline. Separate hook calls own independent state. Use it in App with a 300ms delay to filter Apple, Banana and Cherry into list items: all three show initially. Label the controlled input "Filter fruit". Match a literal case-insensitive substring using toLowerCase; preserve spaces and punctuation rather than trimming them. An empty query matches all fruits and no match gives zero list items; an empty-state message is optional. This exercise checks scheduling with virtual time rather than physical clock precision.`,
+    starter: `import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const fruits = ['Apple', 'Banana', 'Cherry'];
 
@@ -2628,7 +3054,7 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const useDebounce = (value, delay) => {
+    skeleton: `export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
 
   useEffect(() => {
@@ -2644,19 +3070,21 @@ export default App;
 
 // In App, filter fruits with what the hook returns, not with what was typed:
 const settledQuery = useDebounce(query, 300);`,
-    hints: ["Every new value schedules a timeout, and the cleanup cancels the previous one."],
+    hints: [
+      `Keep the settled string in state. An effect depending on both value and delay schedules a replacement; cleanup cancels that schedule. Do not trim the string used for literal substring matching.`,
+    ],
     approach: [
-      "Write a hook taking a value and a delay that keeps its own state holding the most recently settled copy of that value.",
-      "In an effect depending on the value and the delay, schedule a timeout which copies the incoming value into that state.",
-      "Return a cleanup that cancels the pending timeout, so a value arriving mid-wait replaces the schedule rather than adding to it.",
-      "Feed the input state through the hook and filter the list with what it returns, so the list only changes once typing pauses.",
+      `Write a hook taking a value and a delay that keeps its own state holding the most recently settled copy of that value.`,
+      `In an effect depending on the value and the delay, schedule a timeout which copies the incoming value into that state.`,
+      `Return a cleanup that cancels the pending timeout, so a value arriving mid-wait replaces the schedule rather than adding to it.`,
+      `Feed the input state through the hook and filter the list with what it returns, so the list only changes once typing pauses.`,
     ],
     verify: "tests",
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App, { useDebounce } from './App';
 
 test('shows every item before anything is typed', () => {
   const { container } = render(<App />);
@@ -2680,6 +3108,70 @@ test('only the last value typed reaches the list', async () => {
   expect(container.textContent).toContain('Cherry');
   expect(container.textContent).not.toContain('Banana');
 });
+
+const withAuditClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    now: () => now,
+    active: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+test('the fruit filter waits the complete 300ms and keeps literal spaces',()=>withAuditClock(async clock=>{const view=render(<App/>),input=within(view.container).getByLabelText('Filter fruit');fireEvent.change(input,{target:{value:'BAN'}});await clock.tick(299);expect(view.container.querySelectorAll('li')).toHaveLength(3);await clock.tick(1);expect([...view.container.querySelectorAll('li')].map(x=>x.textContent)).toEqual(['Banana']);fireEvent.change(input,{target:{value:' ban '}});await clock.tick(300);expect(view.container.querySelectorAll('li')).toHaveLength(0);view.unmount();expect(clock.active()).toBe(0);}));
 `,
   },
   {
@@ -2691,7 +3183,7 @@ test('only the last value typed reaches the list', async () => {
     tier: 4,
     focus: ["fetch", "reduce", "useState"],
     title: "Todo dashboard",
-    prompt: "Fetch the first three todos from the training API on mount. Each todo in the response carries a title and a completed flag, and each LI has to show both: the title, then “done” or “to do”, then a Remove button. Above the list show a line reading “Done: n of m”, where n counts the completed ones. A text input and an Add button append a new todo with that title and completed false, and Remove drops that one todo.",
+    prompt: "Fetch the first three todos from the training API on mount. Each todo in the response carries a title and a completed flag, and each LI has to show both: the title, then “done” or “to do”, then a Remove button. Above the list show a line reading “Done: n of m”, where n counts the completed ones. A text input and an Add button append a new todo with that title and completed false, and Remove drops that one todo. Give new todos separate stable identities, including when titles match or two items are added quickly.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -2739,13 +3231,13 @@ const remove = id => {
   ))}
 </ul>`,
     hints: [
-      "One state array holds the todos, whichever way they arrived. Adding, removing and counting are all derivations of it.",
+      "Keep one todo array and derive both counts from it. Give every new todo a stable identity when it is created; a timestamp may repeat, and matching titles are separate items. Add a fresh unfinished record and remove only the selected identity.",
     ],
     approach: [
       "Start with one piece of state: the array of todos. Everything on screen — the list, the counts, what a Remove button does — is worked out from it.",
       "Load it once on mount with an effect and an empty dependency array, and put what comes back into that same state rather than a second one.",
       "Adding builds a new array with your new todo on the end; removing builds a new array with one filtered out. Never change the existing array in place.",
-      "The counts are not state. Derive the completed count from the array during render, and it can never disagree with the list beside it.",
+      "The counts are not state. Derive the completed count from the array during render, and it can never disagree with the list beside it. Assign a stable identity once when creating a todo, so rapid additions and repeated titles can still be removed separately.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -2852,7 +3344,7 @@ const total = /* the summed price of shown */;
   ))}
 </ul>`,
     hints: [
-      "Keep the fetched list and the search text in separate state, and work out what is shown from both during render rather than storing a second list.",
+      "Read the products array from the response body. Keep it separate from the search text and match either title or category without case sensitivity. Derive the displayed-price total from exactly those rows, including zero-priced products; clear searches without losing the loaded collection.",
     ],
     approach: [
       "Two pieces of state and no more: the products that arrived, and the text in the search box. What is shown is worked out from both.",
@@ -2979,7 +3471,7 @@ const visibleUsers = users.filter(user => {
 
 if (error) return <p role="alert">{error}</p>;`,
     hints: [
-      "Only two things come from outside: the users the server sent and what the learner typed or chose. Keep those in state, and work out the city options, the visible users and the “No users match.” line from them during render.",
+      "Keep all loaded users separate from the current name and city filters. Build the complete deduplicated city choices from the full collection, sort them, and derive matching rows from both controls. Empty success is not a network error. Explain the API, cache and pagination choices in comments.",
     ],
     approach: [
       "Fetch the users once in a mount effect. Check `response.ok` before reading the body, keep the error message for a `role=\"alert\"` element, and clear the loading flag in a `finally` block.",
@@ -3134,7 +3626,7 @@ const userIds = Object.keys(postsByUser).map(Number); // lowest first
   </button>
 ))}`,
     hints: [
-      "Keep the raw posts and the chosen user id in state, nothing else. The groups, the buttons and the list of the chosen user’s posts are all worked out from those two during render.",
+      "Reduce the full response into author groups, sort numeric author IDs and preserve post arrival order inside each group. Keep only the chosen author in state and derive the pressed buttons and their displayed posts. Include comments explaining an API, indexed pagination and caching plan for a larger feed.",
     ],
     approach: [
       "Fetch the posts once with loading and error state, keeping the raw array in a single state value.",
@@ -3279,7 +3771,7 @@ const addTodo = async event => {
 const toggle = id => setTodos(current => current.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
 const done = todos.filter(todo => todo.completed).length;`,
     hints: [
-      "The list is the only state that matters here: the count of finished todos is `todos.filter(...).length` during render. Adding waits for the server; ticking and deleting do not.",
+      "Keep the todos in one array, with separate loading, error and input states. Derive the completed count during render. Adding waits for the server and appends its returned record; toggling and deleting update local state immediately. Explain version conflicts between tabs in comments.",
     ],
     approach: [
       "Fetch the todos into one array state with loading and error handling before adding any interaction.",
@@ -3429,7 +3921,7 @@ const average = matches.reduce((sum, product) => sum + product.price, 0) / match
 
 <input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} />`,
     hints: [
-      "Keep four values in state: the products, the query, the sort and the page. Everything else is a pipeline worked out during render: filter, sort a copy, cut the page. The average reads the filtered list, before the page is cut.",
+      "Keep products and the query, order and page controls in state, alongside loading and error. Derive filter, copied sort and five-row page in that order; the average covers every match, including free products. Reset page on a new query or order and explain search indexes and cache keys in comments.",
     ],
     approach: [
       "Fetch once and remember that this API nests the records inside a products property rather than returning a bare array.",
@@ -3550,7 +4042,7 @@ test('an answer that is not ok shows an alert and no products', () => withServer
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Comments viewer",
-    prompt: "Browse the comments of the training API. On mount, fetch `https://jsonplaceholder.typicode.com/comments` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. List the comments in a `ul` with `aria-label=\"Comments\"`, one `li` each with the comment’s `name` and `email`. A `select` picks a post: its first option, “All posts”, has the value `\"\"`; then comes each `postId` in the data, once, lowest first, with the id as its value and “Post <id>” as its text. A text input filters by email as you type, matching any part of the address and ignoring case. The two apply together, and when no comment matches, show “No comments match.” A second `ul`, with `aria-label=\"Domains\"`, counts the email domains (the part after the `@`) of the comments shown, one `li` per domain reading “<domain>: <count>”, the most comments first and a tie in A to Z order. In code comments, explain how you would paginate the comments and protect the endpoint from abuse.",
+    prompt: `Browse the comments of the training API. On mount, fetch \`https://jsonplaceholder.typicode.com/comments\` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not \`ok\`, shows a message in an element with \`role="alert"\`. List the comments in a \`ul\` with \`aria-label="Comments"\`, one \`li\` each with the comment’s \`name\` and \`email\`. A \`select\` picks a post: its first option, “All posts”, has the value \`""\`; then comes each \`postId\` in the data, once, lowest first, with the id as its value and “Post <id>” as its text. A text input filters by email as you type, matching any part of the address and ignoring case. The two apply together, and when no comment matches, show “No comments match.” A second \`ul\`, with \`aria-label="Domains"\`, counts the email domains (the part after the \`@\`) of the comments shown, one \`li\` per domain reading “<domain>: <count>”, the most comments first and a tie in A to Z order. In code comments, explain how you would paginate the comments and protect the endpoint from abuse. Accept zero to 100 comments with unique ids, nonnegative integer postIds, literal single-line names up to 500 characters and addresses containing one @ with a nonempty local part and domain. For this data exercise the domain is the literal case-sensitive substring after @; do not normalize it when counting. Sort tied domains using JavaScript string order, as with sort(), not locale-dependent collation. Names such as constructor and toString are ordinary domain keys; use a Map or null-prototype dictionary rather than inherited object properties. Preserve each displayed name and address, including repeated names. Label the post control Post and the email field Email or Filter by email. JSON decoding failure follows the existing alert branch. Parent renders retain both filters without refetching; separate and fresh viewers are independent.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3584,24 +4076,87 @@ const domainCounts = shown.reduce((counts, comment) => {
   const domain = comment.email.split('@')[1];
   // count it
   return counts;
-}, {});
+}, Object.create(null));
 const domains = Object.entries(domainCounts); // most first, a tie A to Z
 
 <ul aria-label="Domains">
   {domains.map(([domain, count]) => <li key={domain}>{domain}: {count}</li>)}
 </ul>`,
     hints: [
-      "The fetched comments, the chosen post and the email text are the only state. The post options, the comments shown and the domain counts are three derivations of them, in that order, during render.",
+      `Keep the fetched comments, selected post and email query in state, alongside the request status. Derive post options, visible comments and domain counts while rendering. Use a Map or null-prototype dictionary when a domain becomes a key.`,
     ],
     approach: [
-      "Fetch the comments once into array state with loading and error branches.",
-      "Keep the selected post id and the email query in separate state values driven by controlled inputs; build the post options from the data with a `Set` and a numeric sort.",
-      "Derive the visible comments by filtering on the post id and on a case-insensitive email substring match.",
-      "Count domains with reduce over the addresses split at the at sign, sort the entries by count and then by name, and explain pagination and abuse protection in comments.",
+      `Fetch the comments once into array state with loading and error branches.`,
+      `Keep the selected post id and the email query in separate state values driven by controlled inputs; build the post options from the data with a \`Set\` and a numeric sort.`,
+      `Derive the visible comments by filtering on the post id and on a case-insensitive email substring match.`,
+      `Reduce over the literal domain after each at sign using safe dictionary keys or a Map. Sort by descending count, then JavaScript string order for ties. Explain pagination and abuse protection in comments.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
-    suite: `${CAPSTONE_HEADER}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor as waitForSlow, act, within } from '@testing-library/react';
+import App from './App';
+
+// A page that got its data renders it within a few milliseconds; a page that
+// never will fails in well under the grader's time limit.
+const waitFor = (check, options) => waitForSlow(check, { timeout: 300, ...options });
+
+// Every request the page makes is recorded with its address, method and
+// options, and waits until the check answers it with respond(data, status) or
+// fail(error). The fixture stub comes back when the check ends.
+const withServer = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// Host and path of an address, without the query or a trailing slash.
+const addressOf = url => {
+  const parsed = new URL(url, 'http://localhost/');
+  return parsed.host + parsed.pathname.replace(/[/]+$/, '');
+};
+const gets = (calls, url) => calls.filter(call => call.method === 'GET' && addressOf(call.url) === addressOf(url));
+const says = (container, words) => container.textContent.toLowerCase().includes(words.toLowerCase());
+// The words of every alert on the page; an empty live region says nothing.
+const alertText = container => [...container.querySelectorAll('[role="alert"]')].map(node => node.textContent).join(' ').trim();
+// The page without its alerts, so a message such as "Error loading users"
+// does not count as the loading line.
+const outsideAlerts = container => {
+  const copy = container.cloneNode(true);
+  copy.querySelectorAll('[role="alert"]').forEach(node => node.remove());
+  return copy;
+};
+const itemTexts = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+// A button element, or an input of type submit or button, by the words on it.
+const buttonNamed = (node, name) => [...node.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+  .find(button => (button.tagName === 'INPUT' ? button.value : button.textContent).toLowerCase().includes(name.toLowerCase()));
+const optionsOf = select => [...select.querySelectorAll('option')].map(option => [option.value, option.textContent.trim()]);
+// Each item holds the matching text, in order, and there are no others.
+const expectItems = (items, expected) => {
+  expect(items).toHaveLength(expected.length);
+  expected.forEach((text, index) => expect(items[index]).toContain(text));
+};
+// A failure puts a message with role="alert" on the page, no items, and no
+// loading line outside the alert.
+const expectFailure = async container => {
+  await waitFor(() => expect(alertText(container).length > 0).toBe(true));
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(says(outsideAlerts(container), 'loading')).toBe(false);
+};
+
 const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
 const COMMENTS = [
   { id: 1, postId: 1, name: 'Comment one', email: 'ana@example.com', body: 'First' },
@@ -3688,6 +4243,18 @@ test('an answer that is not ok shows an alert and no comments', () => withServer
   calls[0].respond(null, 500);
   await expectFailure(container);
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditEntries=(view,name)=>{const list=within(view.container).queryByRole('list',{name});return list?[...list.querySelectorAll('li')].map(li=>li.textContent.trim()):[];};
+const auditCommentData=()=>Array.from({length:27},(_,id)=>({id,postId:[120,4,19][id%3],name:id%2?'Same':'<comment>&'+id,email:'user'+id+'@'+['constructor','constructor','toString','Z.test','a.test'][id%5],body:'text'}));
+const auditComments=(view,data,post='',email='')=>{const shown=data.filter(c=>(post===''||String(c.postId)===post)&&c.email.toLowerCase().includes(email.toLowerCase())),items=auditEntries(view,'Comments'),counts=new Map();expect(items).toHaveLength(shown.length);shown.forEach((c,i)=>{expect(items[i]).toContain(c.name);expect(items[i]).toContain(c.email);const domain=c.email.slice(c.email.indexOf('@')+1);counts.set(domain,(counts.get(domain)||0)+1);});const domains=Array.from(counts).sort(([a,n],[b,m])=>m-n||(a<b?-1:a>b?1:0)).map(([domain,n])=>domain+': '+n);expect(auditEntries(view,'Domains')).toEqual(domains);const select=within(view.container).getByRole('combobox',{name:'Post'});expect([...select.options].map(o=>[o.value,o.textContent])).toEqual([['','All posts'],...Array.from(new Set(data.map(c=>c.postId))).sort((a,b)=>a-b).map(id=>[String(id),'Post '+id])]);if(!shown.length)expect(within(view.container).getByText('No comments match.')).toBeTruthy();};
+const auditEmailBox=view=>view.container.querySelector('input');
+
+test('all returned comments and literal dictionary-like domains are counted without fixture caps',()=>auditServer(async calls=>{const view=render(<App/>),data=auditCommentData();await auditReply(calls[0],data);auditComments(view,data);expect(view.container.querySelector('li comment')).toBeNull();}));
 `,
     api: {
       method: "GET",
@@ -3761,7 +4328,7 @@ useEffect(() => {
 const temperatures = readings.map(reading => reading.temperature);
 // Math.min(...temperatures) and Math.max(...temperatures) while rendering`,
     hints: [
-      "Keep one array of readings in state and work the lowest and highest out of it while rendering. Retry has to know which city failed, so remember the city of the last request instead of always retrying Prague.",
+      "Keep one readings array and derive its minimum and maximum during render. Store the last requested city so Retry repeats the failed request. Distinguish no unknown-city message from an unknown empty string, so blank names still show Unknown city: without sending a request.",
     ],
     approach: [
       "Write `loadWeather(city)` as one async function: clear the error, set loading, fetch the city’s URL, check `response.ok`, and save the reading. The mount effect calls it for Prague and Retry calls it for the city asked for last.",
@@ -4107,7 +4674,7 @@ test('a failed request shows an alert', () => withRequests(async calls => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Booking prototype",
-    prompt: "A booking page for a small studio. On mount, fetch `https://jsonplaceholder.typicode.com/todos?_limit=10` and treat each record as a time slot: its `title` names the slot and `completed: true` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with `role=\"alert\"`. Show every slot as a `button` inside an `li`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets `aria-pressed=\"true\"` and the other slot buttons `aria-pressed=\"false\"`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends `PATCH https://jsonplaceholder.typicode.com/todos/<id>` for the selected slot with the JSON body `{\"completed\":true}`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with `role=\"status\"` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them.",
+    prompt: `A booking page for a small studio. On mount, fetch \`https://jsonplaceholder.typicode.com/todos?_limit=10\` and treat each record as a time slot: its \`title\` names the slot and \`completed: true\` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with \`role="alert"\`. Show every slot as a \`button\` inside an \`li\`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets \`aria-pressed="true"\` and the other slot buttons \`aria-pressed="false"\`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends \`PATCH https://jsonplaceholder.typicode.com/todos/<id>\` for the selected slot with the JSON body \`{"completed":true}\`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with \`role="status"\` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them. The answer may contain zero to 10 slots, with unique nonnegative integer ids and literal single-line titles up to 500 characters. Titles may repeat; selection, PATCH identity and local updates always use the id. Disable all slot choices while a booking is pending so its selection cannot move underneath the request. This is a local interaction rule, not protection against other users. Empty or fully booked data leaves Book disabled. Rejected initial JSON follows the load-error branch; a successful PATCH need not include JSON and its HTTP status decides the booking outcome. Parent renders retain selection/booked state without reloading; separate and fresh booking pages keep independent state.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4139,7 +4706,7 @@ const markBooked = id =>
 
 const book = async () => {
   const slot = slots.find(one => one.id === selectedId);
-  if (!slot || booking) return;
+  if (!slot || slot.completed || booking) return;
   setBooking(true);
   setStatus('');
   setProblem('');
@@ -4157,22 +4724,22 @@ const book = async () => {
   }
 };
 
-// <button type="button" disabled={slot.completed} aria-pressed={slot.id === selectedId}
+// <button type="button" disabled={slot.completed || booking} aria-pressed={slot.id === selectedId}
 //   onClick={() => setSelectedId(slot.id)}>{slot.title}</button>`,
     hints: [
-      "The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch.",
+      `The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch. Lock the slot choices during the pending PATCH, and update the selected record by id even when two titles match.`,
     ],
     approach: [
-      "Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed `li` with a slot button disabled when `completed` is true.",
-      "Keep the selected slot’s id in state and set `aria-pressed` on each slot button by comparing ids.",
-      "Write `book()` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.",
-      "Mark a slot booked by mapping to a copy with `completed: true`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.",
+      `Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed \`li\` with a slot button disabled when \`completed\` is true.`,
+      `Keep the selected slot’s id in state and set \`aria-pressed\` on each slot button by comparing ids. Disable all slot controls while booking so a pending request retains its original selection.`,
+      `Write \`book()\` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.`,
+      `Mark a slot booked by mapping to a copy with \`completed: true\`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 // Every request waits until the check answers it, so the page can be read
@@ -4290,6 +4857,18 @@ test('a failed booking keeps the slot free and selected for another try', () => 
   expect(calls).toHaveLength(3);
   expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/1');
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditSlotButtons=view=>[...view.container.querySelectorAll('li button')];
+const auditBook=view=>[...view.container.querySelectorAll('button')].find(button=>!button.closest('li'));
+const auditSlots=(view,data,booked,selected)=>{const buttons=auditSlotButtons(view);expect(buttons).toHaveLength(data.length);data.forEach((slot,index)=>{expect(buttons[index].textContent.trim()).toBe(slot.title);expect(buttons[index].disabled).toBe(booked.has(slot.id));expect(buttons[index].getAttribute('aria-pressed')).toBe(slot.id===selected?'true':'false');});};
+const auditSlotData=()=>Array.from({length:8},(_,i)=>({id:i*17+10,title:i<2?'Same slot':i===6?'<slot>&'+'x'.repeat(450):'Slot '+i,completed:i===3||i===5}));
+
+test('duplicate titles are booked by their selected record id, across the whole returned list',()=>auditServer(async calls=>{const view=render(<App/>),data=auditSlotData(),booked=new Set(data.filter(x=>x.completed).map(x=>x.id));await auditReply(calls[0],data);auditSlots(view,data,booked,null);fireEvent.click(auditSlotButtons(view)[1]);fireEvent.click(auditBook(view));expect(calls[1].url).toBe('https://jsonplaceholder.typicode.com/todos/'+data[1].id);expect(calls[1].method).toBe('PATCH');expect(JSON.parse(calls[1].options.body)).toEqual({completed:true});await auditReply(calls[1],{});booked.add(data[1].id);auditSlots(view,data,booked,null);expect(within(view.container).getByRole('status').textContent).toBe('Booked: '+data[1].title);}));
 `,
     api: {
       method: "GET + PATCH",
@@ -4306,7 +4885,7 @@ test('a failed booking keeps the slot free and selected for another try', () => 
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Analytics panel",
-    prompt: "An analytics panel sums up a product’s events. On mount, fetch `/api/events`; the answer is a list of `{ id, type, date }`, where `type` is a word such as `visit` or `signup` and `date` a day such as `2026-09-03`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with `role=\"alert\"`. Three controls filter the events: a `select` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with `reduce` and render one summary card per type: an `article` with the type in an `h3` and its count, just the number, in a `p`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them.",
+    prompt: `An analytics panel sums up a product’s events. On mount, fetch \`/api/events\`; the answer is a list of \`{ id, type, date }\`, where \`type\` is a word such as \`visit\` or \`signup\` and \`date\` a day such as \`2026-09-03\`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with \`role="alert"\`. Three controls filter the events: a \`select\` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with \`reduce\` and render one summary card per type: an \`article\` with the type in an \`h3\` and its count, just the number, in a \`p\`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them. Accept zero to 100 events with unique ids, valid YYYY-MM-DD dates and nonempty ASCII type identifiers up to 40 characters (letters, digits, underscores or hyphens). Names such as all, constructor, toString and __proto__ are ordinary types. Use an empty value for All types so it cannot collide with a real type. Order type options and cards with JavaScript string order, as with sort(), rather than locale-dependent collation. Counts must not read inherited object properties: use a Map, a null-prototype dictionary, or safe own-property reads. Cross-year and inclusive date bounds combine with type; a From date after To simply matches nothing. Rejected JSON uses the same error branch. Parent renders keep filters without refetching; separate and fresh panels have independent labelled controls.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4325,7 +4904,7 @@ export default App;
     skeleton: `const [events, setEvents] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [type, setType] = useState('all');
+const [type, setType] = useState('');
 const [from, setFrom] = useState('');
 const [to, setTo] = useState('');
 
@@ -4333,29 +4912,30 @@ const [to, setTo] = useState('');
 
 const types = [...new Set(events.map(event => event.type))].sort();
 const shown = events.filter(event =>
-  (type === 'all' || event.type === type) &&
+  (type === '' || event.type === type) &&
   (from === '' || event.date >= from) &&
   true); // and the To box
 const counts = shown.reduce((totals, event) => {
   // totals[event.type] goes up by one
   return totals;
-}, {});
+}, Object.create(null));
 
 // <label>From <input type="date" value={from} onChange={event => setFrom(event.target.value)} /></label>`,
     hints: [
-      "Dates written as `2026-09-03` sort the same as text and as time, so a plain string comparison with `>=` and `<=` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.",
+      `Dates written as \`2026-09-03\` sort the same as text and as time, so a plain string comparison with \`>=\` and \`<=\` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.`,
+      `The empty select value means no type filter; all can then remain a real event type. Arbitrary keys such as constructor need a Map, a null-prototype dictionary or own-property checks. Use one declared string ordering for both options and cards.`,
     ],
     approach: [
-      "Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.",
-      "Keep the type and the two dates as separate state values bound to controlled inputs, with `all` and empty strings for no filter.",
-      "Derive the filtered events first, then reduce them into an object of counts by type, and render one keyed card per key of that object, sorted.",
-      "Build the type options from the full list with a `Set`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.",
+      `Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.`,
+      `Keep type and both dates as controlled state values, with empty strings for no filter. All types uses an empty option value rather than the real type name all.`,
+      `Derive the filtered events first, then reduce them into safe counts by type and render keyed cards in JavaScript string order. A Map or null-prototype dictionary avoids inherited-key collisions.`,
+      `Build the type options from the full list with a \`Set\`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.`,
     ],
     verify: "tests",
     estimatedMinutes: 45,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 // Every request waits until the check answers it, so the page can be read
@@ -4463,6 +5043,19 @@ test('a failed request shows an alert', () => withRequests(async calls => {
   expect(screen.queryByText('Loading…')).toBeNull();
   expect(cards()).toEqual([]);
 }));
+
+
+const auditServer=async body=>{const original=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{const call={url:String(url),method:String(options.method||'GET').toUpperCase(),options,jsonReads:0,reply:(data,status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>{call.jsonReads++;return Promise.resolve(data);}}),badJson:()=>resolve({ok:true,status:200,json:()=>{call.jsonReads++;return Promise.reject(new SyntaxError('JSON'));}}),fail:error=>reject(error)};calls.push(call);});try{await body(calls);}finally{globalThis.fetch=original;}};
+const auditReply=async(call,data,status=200)=>{await act(async()=>{call.reply(data,status);});};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+
+const auditCards=view=>[...view.container.querySelectorAll('article')].map(card=>[card.querySelector('h3').textContent,card.querySelector('p').textContent]);
+const auditSelect=(view,text)=>{const select=within(view.container).getByRole('combobox',{name:'Type'}),option=[...select.options].find(o=>o.textContent===text);expect(Boolean(option)).toBe(true);fireEvent.change(select,{target:{value:option.value}});};
+const auditDate=(view,label,value)=>fireEvent.change(within(view.container).getByLabelText(label),{target:{value}});
+const auditExpected=(data,filters)=>{const rows=data.filter(e=>(!filters.type||e.type===filters.type)&&(!filters.from||e.date>=filters.from)&&(!filters.to||e.date<=filters.to)),map=new Map();for(const event of rows)map.set(event.type,(map.get(event.type)||0)+1);return{rows,cards:Array.from(map).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([type,n])=>[type,String(n)])};};
+const auditAnalytics=(view,data,filters)=>{const result=auditExpected(data,filters);expect(auditCards(view)).toEqual(result.cards);expect(within(view.container).getByText('Showing '+result.rows.length+' of '+data.length+' events')).toBeTruthy();const options=[...within(view.container).getByRole('combobox',{name:'Type'}).options].map(o=>o.textContent);expect(options).toEqual(['All types',...Array.from(new Set(data.map(e=>e.type))).sort()]);if(!result.rows.length)expect(within(view.container).getByText('No events match these filters')).toBeTruthy();};
+
+test('all and dictionary-like names are real event types, not control values or object members',()=>auditServer(async calls=>{const view=render(<App/>),data=['all','constructor','constructor','__proto__','toString','Zeta','alpha','all'].map((type,id)=>({id,type,date:'2026-01-01'}));await auditReply(calls[0],data);auditAnalytics(view,data,{});for(const type of Array.from(new Set(data.map(e=>e.type)))){auditSelect(view,type);auditAnalytics(view,data,{type});}auditSelect(view,'All types');auditAnalytics(view,data,{});}));
 `,
     api: {
       method: "GET",
@@ -4533,7 +5126,7 @@ const authors = [...new Set(posts.map(post => post.userId))].sort((a, b) => a - 
 const shown = posts.filter(post => true); // the search and the author
 const authorsShown = new Set(shown.map(post => post.userId)).size;`,
     hints: [
-      "Build it in slices and keep each one working: the GET with its loading and error states, then the list, then the filters and stats worked out from the posts in state, then the POST. Nothing on screen but the posts and the form fields needs its own state.",
+      "Build the GET with loading and error handling, then the complete list and combined filters. Derive both stats from posts and controls during render. Add the POST with separate pending and failure states; keep the title after failure and append only the record returned by the server.",
     ],
     approach: [
       "Write the user flow, the data model and the endpoints in the notes before writing any component code.",

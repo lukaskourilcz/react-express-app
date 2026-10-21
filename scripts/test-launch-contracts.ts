@@ -1,7 +1,10 @@
 // First: clears the environment the handlers below read when imported.
 import './launch-test-env';
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { complexityContracts } from './coding-complexity-contract';
+import { codingBoardContracts } from './coding-board-contract';
+import { codingFetchContracts } from './coding-fetch-contract';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { constants as osConstants, tmpdir } from 'node:os';
@@ -43,20 +46,25 @@ import { defaultDeploymentCategories, validateCategoryScope } from '../lib/produ
 import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
+import { approachesFor } from '../lib/coding/approaches';
+import { puzzleFor } from '../lib/coding/puzzles';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
 import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { compileReactLearner } from '../lib/coding/react-transpile';
+import { FETCH_STUB_SOURCE } from '../shared/coding-react-support';
+import { LOCAL_FETCH_SOURCE } from '../shared/coding-fullstack-support';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
-import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
+import { decodeCodingSession, encodeCodingSession as encodeLegacyCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
-import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
-import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
+import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, codingTaskEligibility, questionEligibility, isAuditedCategory } from '../lib/curation';
+import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
@@ -310,6 +318,22 @@ async function auditGateContracts() {
     'lib/curation-registry.ts is stale: run npm run build:curation-registry',
   );
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
+  assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
+  const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
+  assert.equal(reviewedCoding.length, 725, 'all currently issued coding identities are included in the completed wave');
+  for (const task of reviewedCoding) {
+    assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
+    assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
+  }
+  const codingFixture = reviewedCoding[0];
+  const codingSolution = solutionFor(codingFixture.id);
+  assert.equal(codingTaskEligibility({ ...codingFixture, id: 'unreviewed-coding-gate-fixture' }, codingSolution).reason, 'unreviewed');
+  assert.equal(codingTaskEligibility({ ...codingFixture, title: { ...codingFixture.title, en: 'Changed unreviewed task' } }, codingSolution).reason, 'superseded');
+  assert.equal(codingTaskEligibility(codingFixture, { ...codingSolution!, solution: 'changed unreviewed solution' }).reason, 'superseded');
+  for (const task of CODING_TASKS.filter(task => !isCodingSectionTrack(task.track))) {
+    assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'unreviewed', `${task.id}: hidden system design is not approved by this wave`);
+    assert.equal(codingTaskById(task.id), undefined);
+  }
   // Content this audit rewrote is served only after a second reader checked
   // the rewrite: revision 2 without an accepted verdict is a process failure,
   // not a wording preference.
@@ -468,12 +492,13 @@ async function auditGateContracts() {
   const roundRes = mockResponse();
   await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 0, 'retired-while-open': 0 } } } as never, roundRes as never);
   assert.equal(roundRes.statusCode, 200, JSON.stringify(roundRes.body));
-  const round = roundRes.body as { done: boolean; voided?: number; lastRoundSize?: number; lastRoundCorrect?: number; asked?: number };
+  const round = roundRes.body as { done: boolean; voided?: number; lastRoundSize?: number; lastRoundCorrect?: number; asked?: number; review?: import('../shared/assessment').PlacementReview[] };
   assert.equal(round.done, false);
   assert.equal(round.voided, 1, 'the retired item is reported as void');
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  assert.deepEqual(round.review, [{ questionId: pool[0].id, selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: pool[0].explanation }], 'accepted review keeps the sealed shuffled answer index and omits retired items');
   // A round is graded once. Submitted again with other answers it would report
   // a different score, and a few dozen replays would find every key and mint a
   // perfect, verified placement receipt.
@@ -482,6 +507,7 @@ async function auditGateContracts() {
   assert.equal(replayRes.statusCode, 409, 'a placement round cannot be submitted twice');
   assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
   assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
+  assert.equal(JSON.stringify(replayRes.body).includes('correctAnswer'), false, 'a replay never receives review keys');
 
   // A Learn session lives as long as the attempt the answer routine opens for
   // it (two hours), so a level whose coding tasks run past an hour can still
@@ -635,6 +661,10 @@ async function tierContracts() {
     for (let part = 1; part <= 3; part++) assert.equal(contentTier({ kind: 'learn-part-test', topic, part }, index), 'free');
   }
   assert.equal(FREE_LEARN_LEVELS.react, 12);
+  assert.equal(FREE_LEARN_LEVELS.dsa, 2);
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 1 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 2 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 3 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 12 }, index), 'free');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 13 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 1 }, index), 'free', "React's first part is open");
@@ -2275,6 +2305,35 @@ async function guestChallengeLimitContracts() {
   assert.equal(quizStatuses.at(-1), 429, 'guest quizzes behind one address keep sharing its rate');
 }
 
+async function challengeSelectionContracts() {
+  const all = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), all as never);
+  assert.equal(all.statusCode, 200);
+  assert.equal(decodeChallengeRun((all.body as { runToken: string }).runToken)?.allTopics, true, 'the default selection earns the all-topics evidence');
+  const batch = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript,typescript' }), batch as never);
+  assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+  const opened = batch.body as { runToken: string; questions: { category: string }[] };
+  const run = decodeChallengeRun(opened.runToken)!;
+  assert.deepEqual(run.topics, ['javascript','typescript']);
+  assert.equal(run.allTopics, false);
+  assert.equal(run.userId, null);
+  assert.ok(opened.questions.every(question => run.topics!.includes(question.category)));
+  const changed = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript', runToken: opened.runToken }), changed as never);
+  assert.equal(changed.statusCode, 400, 'a refill cannot drop a sealed topic');
+  assert.equal((changed.body as { error: { code: string } }).error.code, 'invalid_run_scope');
+  const same = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'typescript,javascript', runToken: opened.runToken }), same as never);
+  assert.equal(same.statusCode, 200, 'a reordered identical selection refills the same run');
+  const relaxed = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript', ranked: '0' }), relaxed as never);
+  assert.equal(relaxed.statusCode, 400, 'there is only one Challenge mode');
+  const legacy = decodeChallengeRun(createChallengeRun(true, 'webdev').runToken)!;
+  assert.equal(legacy.topics, null, 'legacy runs without evidence get no invented categories');
+  assert.equal(legacy.allTopics, null);
+}
+
 /** A class behind one school address (review round 3: SEC-1, QUIZ-2, PLAY-3,
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
@@ -3051,7 +3110,7 @@ function monthlyXpContracts() {
   }
   // Learning XP lives in verified progress, not in user_xp: a first pass adds it.
   const learn = newest.get('complete_verified_roadmap_attempt')!;
-  assert.equal(learn.file, 'supabase-schema-056.sql', 'the Learn completion that credits the month is the one that runs');
+  assert.equal(learn.file, 'supabase-schema-062.sql', 'the Learn completion that credits the month and leaves coding pending is the one that runs');
   assert.match(learn.body, /IF p_user_id IS NOT NULL AND v_passed AND NOT v_was_passed THEN\s+PERFORM public\.add_xp_day\(p_user_id, v_attempt\.subject, public\.learn_step_xp\(v_attempt\.kind, v_attempt\.ref\)\);/,
     'only a first pass earns a step its learning XP');
   // A Learn replay pays its XP again an hour after the step last paid (060),
@@ -3273,7 +3332,7 @@ async function identityContracts() {
   const friendsDb = {
     async rpc(name: string, args: Record<string, unknown>) {
       friendCalls.push({ name, args });
-      if (name === 'set_user_handle') return { data: args.p_handle, error: null };
+      if (name === 'allocate_shark_name') return { data: { handle: `${args.p_base}9007199254740993`, ordinal: '9007199254740993', base: args.p_base }, error: null };
       if (name === 'friend_lookup') return { data: [{ handle: 'thirsty-sharkie', state: 'accepted', display_name: 'Ada Lovelace' }], error: null };
       if (name === 'friend_list') return { data: [{ handle: 'thirsty-sharkie', display_name: 'Ada Lovelace', picture: null, current_streak: 3 }], error: null };
       if (name === 'friend_requests') return { data: [{ handle: 'fin-de-fiesta', direction: 'incoming', display_name: 'Dee Example' }], error: null };
@@ -3285,18 +3344,18 @@ async function identityContracts() {
     await handleFriends(op, { method, headers: {}, query: { op, user_id: 'contract-identity-ada', ...options.query }, body: options.body } as never, res as never, friendsDb as never);
     return res;
   };
-  const longest = 'shark-so-fat-it-cant-swim-at-all';
-  assert.equal(longest.length, 32);
-  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { handle: longest } })).body, { handle: longest }, 'a 32-character sharkname is accepted');
-  for (const handle of [`${longest}x`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
+  const longest = 'sharkSoFatItCantSwim';
+  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { base: longest } })).body,
+    { handle: `${longest}9007199254740993`, ordinal: '9007199254740993', base: longest }, 'the suffix is a server-owned decimal string');
+  for (const handle of [`${longest}42`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
     const refused = await friends('friends-handle', 'PUT', { body: { handle } });
     assert.equal(refused.statusCode, 400, `${handle} is refused before the database`);
     assert.equal(code(refused), 'invalid_handle');
-    assert.match((refused.body as { error: { message: string } }).error.message, /3–32/);
+    assert.match((refused.body as { error: { message: string } }).error.message, /number is added automatically/);
   }
-  assert.equal(friendCalls.filter((one) => one.name === 'set_user_handle').length, 1, 'only the valid sharkname reached set_user_handle');
+  assert.equal(friendCalls.filter((one) => one.name === 'allocate_shark_name').length, 1, 'only the approved base reaches the atomic allocator');
   assert.match(readFileSync(join(process.cwd(), 'client/src/lib/friends.ts'), 'utf8'), /from '\.\.\/\.\.\/\.\.\/shared\/handles'/, 'the client checks the same rule as the API, from shared/handles.ts');
-  assert.ok(isValidHandle(longest) && !isValidHandle(`${longest}x`));
+  assert.ok(isValidHandle(longest));
 
   assert.deepEqual((await friends('friends-lookup', 'GET', { query: { handle: 'thirsty-sharkie' } })).body,
     { found: true, handle: 'thirsty-sharkie', state: 'accepted', displayName: 'Ada Lovelace' });
@@ -3306,6 +3365,8 @@ async function identityContracts() {
 }
 
 async function main() {
+  codingBoardContracts();
+  await codingFetchContracts();
   complexityContracts();
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
@@ -3453,7 +3514,7 @@ async function main() {
   // expired session, and nothing here noticed, because this block only ever
   // tried JavaScript.
   for (const track of CODING_TRACKS) {
-    const sealed = encodeCodingSession({ taskId: 'alg-two-sum', track, userId: 'user-0001' });
+    const sealed = encodeLegacyCodingSession({ taskId: 'alg-two-sum', track, userId: 'user-0001' });
     assert.equal(decodeCodingSession(sealed)?.track, track, `a coding session on the ${track} track must decode`);
   }
 
@@ -3606,12 +3667,12 @@ async function main() {
   assert.equal(tierUnlocked({ ...ladderBase, track: 'system-design', tier: 5 }), true, 'system design has no ladder');
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
   assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
-  assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+  assert.ok(Object.values(CODING_TASK_XP).every(xp => xp === 25), 'coding pass XP does not depend on difficulty');
   // Easy, Medium and Hard are labels projected from the tier ladder (#224).
   // Every listed challenge carries one, and nothing that opens, locks or pays
   // reads it: the ladder and the XP table stay keyed by tier.
   assert.ok(CODING_INDEX.every((row) => isDifficulty(row.difficulty)), 'every indexed challenge carries Easy, Medium or Hard');
-  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 }, 'coding XP stays keyed by tier');
+  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 25, 3: 25, 4: 25, 5: 25 }, 'coding tasks share the base reward');
   const codingCatalogSource = readFileSync(join(process.cwd(), 'shared', 'coding-catalog.ts'), 'utf8');
   const ladderSource = codingCatalogSource.slice(codingCatalogSource.indexOf('export function tierUnlocked'), codingCatalogSource.indexOf('/** Cosmetic badge ids'));
   assert.ok(ladderSource.includes('tierPassRatio') && !/difficulty/i.test(ladderSource.replace(/\/\*\*[\s\S]*?\*\//g, '')), 'the tier ladder never reads the difficulty label');
@@ -3752,9 +3813,9 @@ async function main() {
     const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
     const input = join(dir, 'input.json');
     const nonce = randomBytes(24).toString('hex');
-    writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
+    writeFileSync(input, JSON.stringify({ suite, appSource, nonce, compiledApp:compileReactLearner(appSource),compiledFixtures:{'./fetchStub':compileReactLearner(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner(LOCAL_FETCH_SOURCE,false)} }));
     const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
-      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV, ...env },
+      cwd: dir, encoding: 'utf8', timeout: 10_000, env: { ...process.env, ...GUEST_ENV, ...env },
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
@@ -3769,7 +3830,21 @@ async function main() {
   assert.deepEqual(honest.left, [], 'the guest deletes its input before learner code runs');
   const honestResult = readGuestResult(honest.stdout, honest.nonce, guestSuite);
   assert.equal(honestResult.failed, 0, JSON.stringify(honestResult));
-  assert.equal(splitHiddenCases(honestResult.cases).hidden.length, 3, 'the hidden cases ran');
+  const sortSuite = "import React from 'react';\nimport { render, screen } from '@testing-library/react';\nimport App from './App';\ntest('sort keeps Node24 writeback behavior in the learner VM', () => { render(<App />); expect(screen.getByText('blocked:1:0')).toBeInTheDocument(); });";
+  const sortGuest = guest(sortSuite, "export default function App() { let status='missed'; try { Object.freeze([0,1]).sort((a,b)=>a-b); } catch (error) { if (error.name==='TypeError') status='blocked'; } let writes=0; const value={length:2,1:2}; Object.defineProperty(value,0,{get(){return 1},set(){writes++}}); Array.prototype.sort.call(value,(a,b)=>a-b); let reads=0; Array.prototype.sort.call({length:1,get 0(){reads++;return 1}}); return <p>{status+':'+writes+':'+reads}</p>; }");
+  assert.equal(sortGuest.status, 0);
+  assert.deepEqual(sortGuest.left, []);
+  const sortGuestResult = readGuestResult(sortGuest.stdout, sortGuest.nonce, sortSuite);
+  assert.equal(sortGuestResult.failed, 0, JSON.stringify(sortGuestResult));
+  assert.equal(sortGuestResult.passed, 1, JSON.stringify(sortGuestResult));
+  assert.deepEqual(splitHiddenCases(honestResult.cases).hidden.map(one => one.name), [
+    '[hidden] closing again hides the details',
+    '[hidden] the button never submits a form',
+    '[hidden] two disclosures on one page use different ids',
+    '[hidden] stable relationship survives repeated actions and ordinary parent renders',
+    '[hidden] eight disclosures have distinct stable ids and independent panels',
+    '[hidden] a fresh disclosure starts closed with a working target',
+  ], 'the original and B107 disclosure cases all ran in the actual guest');
   assert.throws(() => readGuestResult(honest.stdout, randomBytes(24).toString('hex'), guestSuite), /no result/, 'a line without this run\'s nonce is not a result');
   assert.throws(() => readGuestResult(`${honest.stdout}${honest.stdout}`, honest.nonce, guestSuite), /no result/, 'two result lines are refused');
   assert.throws(() => readGuestResult(honest.stdout, honest.nonce, guestTask.suite!), /wrong number of cases/, 'a run reporting other cases than the suite declares is refused');
@@ -3781,7 +3856,7 @@ async function main() {
   ].join('\n'));
   assert.deepEqual(forged.left, [], 'the forged component wrote nothing');
   const forgedResult = readGuestResult(forged.stdout, forged.nonce, guestSuite);
-  assert.ok(forgedResult.passed === 0 && /process is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
+  assert.ok(forgedResult.passed === 0 && /'?process'? is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
   // A host function the component can reach compiles nothing either, and a
   // verdict line printed through the page's window.console is ignored.
   const escape = guest(guestSuite, [
@@ -3792,7 +3867,7 @@ async function main() {
   ].join('\n'));
   assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
   const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
-  assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+  assert.ok(escapeResult.passed === 0 && /Dynamic code generation is disabled/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
 
   // C1-6: a guest the learner's code ended is that code's error, not a grader
   // outage. A component that throws a value with no readable message now
@@ -3806,10 +3881,10 @@ async function main() {
   const nullThrowResult = readGuestRun(nullThrow.exitCode, nullThrow.stdout, nullThrow.nonce, guestSuite);
   assert.ok(nullThrowResult.passed === 0 && nullThrowResult.compileError === null, JSON.stringify(nullThrowResult));
   const exhausted = guest(guestSuite, 'export default function App() { const held = []; for (;;) held.push(new Array(1e6).fill(0)); }');
-  assert.notEqual(exhausted.exitCode, 0, 'a component that uses up the heap ends the guest');
+  assert.notEqual(exhausted.exitCode, 0, 'a component exhausting resources is stopped by the external guest deadline');
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
-  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'resource exhaustion never becomes a passing result');
   // The guest reads UTC: the API starts it with TZ=UTC, and its page realm
   // installs UTC whatever the process zone is.
   for (const env of [{}, { TZ: 'America/Los_Angeles' }, { TZ: 'Asia/Tokyo' }, { TZ: 'Australia/Lord_Howe' }] as Record<string, string>[]) {
@@ -3858,7 +3933,7 @@ async function main() {
     assert.equal(attempt.status, 0, `${name}: the guest printed a verdict`);
     const verdict = readGuestResult(attempt.stdout, attempt.nonce, guestSuite);
     assert.equal(verdict.passed, 0, `${name}: forged ${verdict.passed} passing case(s): ${JSON.stringify(verdict)}`);
-    assert.match(verdict.compileError ?? '', /not extensible|read only|Cannot (?:define|redefine|assign|add)/, `${name}: the built-in refused the change: ${verdict.compileError}`);
+    assert.match(verdict.compileError ?? '', /not extensible|read[- ]only|Cannot (?:define|redefine|assign|add)/, `${name}: the built-in refused the change: ${verdict.compileError}`);
   }
   // In its own realm the component may replace Promise.prototype.then. The
   // runner follows a case's promise with the then it captured before the
@@ -4519,7 +4594,7 @@ async function main() {
     for (const [body, verify, limits, write] of [
       [bodyOf(submitSource, 'routeHandler'), 'await tryAuth(req)', ['quizSubmitPerUser', 'challengeSubmitPerUser', 'quizSubmitAnonymous'], 'await claimSubmission('],
       [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser'], "rpc('record_challenge_completion'"],
-      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser'], 'await recordChallengeScore('],
+      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser'], 'await recordChallengeScore('],
     ] as const) {
       const verified = body.indexOf(verify);
       const written = body.indexOf(write);
@@ -4994,11 +5069,36 @@ async function main() {
     );
 
     // Machine evidence stands on its own and is never called a review.
-    const codingReview = codingTaskReview(CODING_TASKS[0]);
+    const codingReview = codingTaskReview({ ...CODING_TASKS[0], id: 'unreviewed-contract-fixture' });
     assert.equal(codingReview.status, 'unreviewed');
     assert.equal((codingReview.executionChecks ?? 0) > 0, true, 'a proven solution is recorded evidence');
     assert.equal(itemClaim(codingReview), 'checked-automatically');
     assert.ok(codingReview.version.length >= 8, 'a coding task carries a version to report against');
+
+    const authoredTask = CODING_TASKS.find(task => task.id === 'js-word-count')!;
+    const authoredSolution = solutionFor(authoredTask.id)!;
+    const reviewedHash = taskHash(authoredTask, authoredSolution);
+    const reviewedVersion = codingTaskReview(authoredTask, authoredSolution).version;
+    const changedSolution = { ...authoredSolution, hiddenTests: authoredSolution.hiddenTests!.map((row, index) => index === 0 ? { ...row, expected: 'changed-contract-value' } : row) };
+    assert.notEqual(taskHash(authoredTask, changedSolution), reviewedHash);
+    assert.notEqual(codingTaskReview(authoredTask, changedSolution).version, reviewedVersion, 'a grader edit changes the keyed public version');
+    assert.notEqual(taskHash(authoredTask, { ...authoredSolution, junior: 'changed authored variant' }), reviewedHash, 'each revealed solution variant participates in approval');
+    assert.notEqual(taskHash(authoredTask, { ...authoredSolution, hiddenSuite: 'changed trusted suite' }), reviewedHash, 'hidden React grader material participates in approval');
+    assert.notEqual(taskHash({ ...authoredTask, references: [{ title: { en: 'Changed reference', cs: '' }, url: 'https://example.test/reference' }] }, authoredSolution), reviewedHash, 'authored documentation references participate in approval');
+    const comparison = approachesFor(authoredTask.id)[0];
+    const previousCode = comparison.code;
+    try {
+      comparison.code += '\n// changed authored comparison';
+      assert.notEqual(taskHash(authoredTask, authoredSolution), reviewedHash, 'comparison code participates in approval');
+      assert.notEqual(codingTaskReview(authoredTask, authoredSolution).version, reviewedVersion, 'comparison code participates in the report version');
+    } finally { comparison.code = previousCode; }
+    const puzzle = puzzleFor(authoredTask.id)!;
+    const previousOrders = puzzle.accepted;
+    try {
+      puzzle.accepted = [...previousOrders, [...previousOrders[0]].reverse()];
+      assert.notEqual(taskHash(authoredTask, authoredSolution), reviewedHash, 'accepted puzzle orders participate in approval');
+      assert.notEqual(codingTaskReview(authoredTask, authoredSolution).version, reviewedVersion, 'a puzzle-key edit changes the report version');
+    } finally { puzzle.accepted = previousOrders; }
 
     // The public shape carries no scores unless a current record exists, and
     // never a reviewer, a report or anything resembling an answer.
@@ -5524,6 +5624,7 @@ async function main() {
   await qotdContracts();
   await quizSubmitScopeContracts();
   await guestChallengeLimitContracts();
+  await challengeSelectionContracts();
   await dailyIntegrityContracts();
   await dailyOwnerContracts();
   seededShuffleContracts();

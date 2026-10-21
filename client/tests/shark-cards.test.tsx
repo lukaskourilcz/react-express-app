@@ -225,7 +225,7 @@ describe('a wrong Learn answer', () => {
       fireEvent.click(await screen.findByRole('radio', { name: /<header>/ }, { timeout: 5000 }));
       expect(await screen.findByText('Incorrect')).toBeInTheDocument();
       expect(screen.getByText('The title element names the page.')).toBeInTheDocument();
-      fireEvent.click(await screen.findByRole('button', { name: 'Save as Shark Card' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Save as a Shark Card' }));
       await waitFor(() => expect(sent.filter((one) => one.method === 'POST')).toHaveLength(1));
       expect(sent[0].body).toEqual({
         question_id: 'rm-html-3', question: QUESTION.question, category: 'html',
@@ -248,7 +248,7 @@ describe('Save as Shark Card', () => {
     signIn();
     const { sent } = serveDeck([]);
     await mount(<SaveSharkCard question={question} correctIndex={0} explanation="z-index orders positioned boxes." />);
-    const save = await screen.findByRole('button', { name: 'Save as Shark Card' });
+    const save = await screen.findByRole('button', { name: 'Save as a Shark Card' });
     fireEvent.click(save);
     const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
     await waitFor(() => expect(savedButton).toBeEnabled());
@@ -257,9 +257,9 @@ describe('Save as Shark Card', () => {
       method: 'POST',
       body: { question_id: 'rm-css-9', question: question.question, category: 'css', correct_answer: 'z-index', explanation: 'z-index orders positioned boxes.', subject: 'webdev' },
     });
-    expect(screen.getByRole('link', { name: 'Open Shark Cards' })).toHaveAttribute('href', '/collection');
+    expect(screen.queryByRole('link', { name: 'Open Shark Cards' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Saved as Shark Card' }));
-    expect(await screen.findByRole('button', { name: 'Save as Shark Card' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await screen.findByRole('button', { name: 'Save as a Shark Card' })).toHaveAttribute('aria-pressed', 'false');
     await waitFor(() => expect(sent).toContainEqual({ method: 'DELETE', questionId: 'rm-css-9' }));
   });
 
@@ -270,7 +270,7 @@ describe('Save as Shark Card', () => {
     const alone = await act(async () => render(<SaveSharkCard question={question} correctIndex={0} explanation="" />, { wrapper }));
     server.events.on('request:start', ({ request }) => { if (new URL(request.url).pathname === '/api/flashcards') reads += 1; });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
-    expect(screen.getByRole('button', { name: 'Save as Shark Card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save as a Shark Card' })).toBeInTheDocument();
     expect(reads).toBe(0);
     server.events.removeAllListeners();
     alone.unmount();
@@ -284,9 +284,9 @@ describe('Save as Shark Card', () => {
     serveDeck([]);
     server.use(http.post('*/api/flashcards', () => HttpResponse.json({ error: { code: 'db_error', message: 'Could not save card' } }, { status: 500 })));
     await mount(<SaveSharkCard question={question} correctIndex={0} explanation="Why" />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Save as Shark Card' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as a Shark Card' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the card.');
-    expect(screen.getByRole('button', { name: 'Save as Shark Card' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Save as a Shark Card' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('renders nothing for a signed-out visitor', async () => {

@@ -1,0 +1,234 @@
+{
+  "time": "2026-10-17T11:10:14.331645+00:00",
+  "method": "curl sequential fresh connection,3reads/path; server coldness unknown",
+  "results": [
+    {
+      "path": "/",
+      "sample": 0,
+      "status": 200,
+      "dnsMs": 61.813,
+      "connectMs": 77.111,
+      "tlsMs": 116.809,
+      "ttfbMs": 146.649,
+      "totalMs": 146.9,
+      "bytes": 2286,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::5rllz-1792235410198-2856d1734c02",
+        "age": "16920",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/",
+      "sample": 1,
+      "status": 200,
+      "dnsMs": 3.0309999999999997,
+      "connectMs": 20.448999999999998,
+      "tlsMs": 89.69000000000001,
+      "ttfbMs": 151.195,
+      "totalMs": 151.468,
+      "bytes": 2286,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::x2xs7-1792235410330-2e0cc1dfdaaa",
+        "age": "16920",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/",
+      "sample": 2,
+      "status": 200,
+      "dnsMs": 1.936,
+      "connectMs": 16.586,
+      "tlsMs": 52.914,
+      "ttfbMs": 89.229,
+      "totalMs": 89.48299999999999,
+      "bytes": 2286,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::mlzqf-1792235410460-cb03c61c0f82",
+        "age": "16921",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/settings",
+      "sample": 0,
+      "status": 200,
+      "dnsMs": 2.297,
+      "connectMs": 26.616999999999997,
+      "tlsMs": 79.0,
+      "ttfbMs": 106.84299999999999,
+      "totalMs": 107.03999999999999,
+      "bytes": 864,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::5qmhh-1792235410582-6dc824d9ba0f",
+        "age": "12",
+        "cache-control": "public",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/settings",
+      "sample": 1,
+      "status": 200,
+      "dnsMs": 2.166,
+      "connectMs": 18.751,
+      "tlsMs": 69.047,
+      "ttfbMs": 123.511,
+      "totalMs": 123.72500000000001,
+      "bytes": 864,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::rb2g7-1792235410705-0a8417d2dad0",
+        "age": "12",
+        "cache-control": "public",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/settings",
+      "sample": 2,
+      "status": 200,
+      "dnsMs": 2.17,
+      "connectMs": 17.455,
+      "tlsMs": 53.766,
+      "ttfbMs": 84.633,
+      "totalMs": 84.86200000000001,
+      "bytes": 864,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::b94jv-1792235410805-62e987b14bdd",
+        "age": "12",
+        "cache-control": "public",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/quiz/roadmap",
+      "sample": 0,
+      "status": 200,
+      "dnsMs": 2.091,
+      "connectMs": 24.968,
+      "tlsMs": 68.804,
+      "ttfbMs": 987.37,
+      "totalMs": 988.77,
+      "bytes": 4346,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "MISS",
+        "x-vercel-id": "fra1::iad1::4t2jm-1792235410914-32f3ae3b488d",
+        "age": "0",
+        "cache-control": "public, max-age=60",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/quiz/roadmap",
+      "sample": 1,
+      "status": 200,
+      "dnsMs": 2.112,
+      "connectMs": 109.69800000000001,
+      "tlsMs": 241.92600000000002,
+      "ttfbMs": 277.605,
+      "totalMs": 279.25600000000003,
+      "bytes": 4341,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::pgqv4-1792235412090-d6d927ccb65c",
+        "age": "1",
+        "cache-control": "public, max-age=60",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/quiz/roadmap",
+      "sample": 2,
+      "status": 200,
+      "dnsMs": 3.6270000000000002,
+      "connectMs": 49.915,
+      "tlsMs": 89.006,
+      "ttfbMs": 130.844,
+      "totalMs": 131.183,
+      "bytes": 4341,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::x4dfx-1792235412227-9daa78c482af",
+        "age": "1",
+        "cache-control": "public, max-age=60",
+        "content-encoding": "gzip"
+      }
+    },
+    {
+      "path": "/api/leaderboard?period=30d",
+      "sample": 0,
+      "status": 200,
+      "dnsMs": 2.165,
+      "connectMs": 1017.3350000000002,
+      "tlsMs": 1052.172,
+      "ttfbMs": 1894.703,
+      "totalMs": 1894.942,
+      "bytes": 207,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "MISS",
+        "x-vercel-id": "fra1::iad1::5kzwg-1792235413341-5f6a56c4a812",
+        "age": "0",
+        "cache-control": "public",
+        "content-encoding": null
+      }
+    },
+    {
+      "path": "/api/leaderboard?period=30d",
+      "sample": 1,
+      "status": 200,
+      "dnsMs": 2.061,
+      "connectMs": 19.357,
+      "tlsMs": 55.614999999999995,
+      "ttfbMs": 114.28,
+      "totalMs": 114.5,
+      "bytes": 207,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::xjrsd-1792235414244-15d678e9e3d1",
+        "age": "0",
+        "cache-control": "public",
+        "content-encoding": null
+      }
+    },
+    {
+      "path": "/api/leaderboard?period=30d",
+      "sample": 2,
+      "status": 200,
+      "dnsMs": 1.8359999999999999,
+      "connectMs": 26.814,
+      "tlsMs": 59.786,
+      "ttfbMs": 108.867,
+      "totalMs": 109.06,
+      "bytes": 207,
+      "headers": {
+        "server-timing": null,
+        "x-vercel-cache": "HIT",
+        "x-vercel-id": "fra1::iad1::fcmh4-1792235414372-ee057f3e1459",
+        "age": "0",
+        "cache-control": "public",
+        "content-encoding": null
+      }
+    }
+  ]
+}

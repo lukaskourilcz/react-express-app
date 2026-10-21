@@ -142,7 +142,7 @@ export const EASY_REACT_A_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['useRef', 'events'],
     title: 'Focus the search box',
-    prompt: 'The page has a Name field, a Search field and a "Jump to search" button. Clicking the button puts the keyboard focus in the Search field, so the user can type straight away. Create a ref with `useRef(null)`, attach it to the Search input with the `ref` attribute, and call `focus()` on `ref.current` in the click handler. Nothing is focused before the click, so do not use `autoFocus`.',
+    prompt: `The page has a Name field, a Search field and a "Jump to search" button. Clicking the button puts the keyboard focus in the Search field, so the user can type straight away. Create a ref with \`useRef(null)\`, attach it to the Search input with the \`ref\` attribute, and call \`focus()\` on \`ref.current\` in the click handler. Nothing is focused before the click, so do not use \`autoFocus\`. Preserve both field values exactly, including spaces, literal text and up to 2000 UTF-16 code units of single-line text. Repeated clicks and parent renders must work, and each instance must focus its own Search field.`,
     starter: `import React, { useRef } from 'react';
 
 const App = () => {
@@ -194,7 +194,10 @@ test('text already in the Search field stays there', () => {
   expect(document.activeElement).toBe(search());
   expect(search().value).toBe('shoes');
 });
-`,
+
+test('a long search survives a jump unchanged',()=>{
+ render(<App/>);const value='a'.repeat(120);fireEvent.change(search(),{target:{value}});screen.getByLabelText('Name').focus();fireEvent.click(jump());expect(search().value).toBe(value);expect(document.activeElement).toBe(search());
+});`,
   },
   {
     id: 'react-easy2-cancel-the-reminder',
@@ -204,8 +207,8 @@ test('text already in the Search field stays there', () => {
     tier: 2,
     focus: ['useRef', 'timers'],
     title: 'Cancel the reminder',
-    prompt: 'Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that `setTimeout` returns in a ref rather than in state, and pass it to `clearTimeout` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `Pressing "Remind me" shows "Time to stretch" 300 milliseconds later. Pressing "Cancel" while the reminder is waiting stops it, so the message never appears. Keep the id that \`setTimeout\` returns in a ref rather than in state, and pass it to \`clearTimeout\` when Cancel is pressed. Pressing "Remind me" again while a reminder waits starts the wait over, so clear the old timeout first. Cancel with nothing waiting does nothing. The wait lasts the full 300 ms; a real browser callback may run later. A new reminder and Cancel do not erase an already displayed message. Parent renders must not restart a pending wait. Clear the pending timeout on unmount, and keep each instance independent.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [message, setMessage] = useState('');
@@ -235,7 +238,9 @@ const remind = () => {
 
 const cancel = () => {
   // clear the waiting timeout
-};`,
+};
+
+// Clear timeoutRef.current from an effect cleanup on unmount.`,
     hints: ['`setTimeout` returns an id, and `clearTimeout(id)` stops that timeout if it has not fired yet. A ref keeps the id between renders without causing a render of its own; `clearTimeout(null)` is allowed and does nothing.'],
     approach: [
       'Create `const timeoutRef = useRef(null)` in App.',
@@ -268,7 +273,70 @@ test('Cancel with nothing waiting does no harm', async () => {
   press('Remind me');
   await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });
-`,
+
+const withTestClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+test('the first reminder waits the full 300 ms',()=>withTestClock(async clock=>{
+ const view=render(<App/>);press('Remind me');await clock.tick(299);expect(view.container.querySelector('p').textContent).toBe('');await clock.tick(1);expect(view.container.querySelector('p').textContent).toBe('Time to stretch');
+}));`,
   },
 
   /* ── timers ───────────────────────────────────────────────────────── */
@@ -280,7 +348,7 @@ test('Cancel with nothing waiting does no harm', async () => {
     tier: 2,
     focus: ['timers', 'effect-cleanup'],
     title: 'Countdown to launch',
-    prompt: 'Show a number that starts at 3 and goes down by one every 100 milliseconds. At 0, show "Liftoff!" instead of the number and stop counting: clear the interval then, so it does not keep running. Start the interval with `setInterval` in an effect, and return a cleanup that calls `clearInterval`, so a countdown that leaves the page stops too.',
+    prompt: "Show a number that starts at 3 and goes down by one every 100 milliseconds. At 0, show \"Liftoff!\" instead of the number and stop counting: clear the interval then, so it does not keep running. Start the interval with `setInterval` in an effect, and return a cleanup that calls `clearInterval`, so a countdown that leaves the page stops too. Keep the number in a paragraph, unchanged until each full 100 ms boundary: 3, then 2, then 1, then Liftoff! at 300 ms. A controlled clock checks these boundaries; real browser timers may run later. There is one active interval per waiting mounted countdown and none after Liftoff or unmount. Ordinary parent re-renders must not restart the remaining delay or add listeners/timers. Independent and fresh mounts start their own countdown at 3. Either a count-dependent interval with cleanup or a single interval cleared at zero is fine. Development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -357,6 +425,72 @@ test('leaving the page clears the interval', () => {
     spy.restore();
   }
 });
+
+
+const withStepClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pendingIntervals: () => [...timers.values()].filter(timer => timer.every > 0).length,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+test('the first tick waits one full100ms',()=>withStepClock(async clock=>{const root=render(<App/>);expect(root.container.querySelector('p').textContent).toBe('3');await clock.tick(99);expect(root.container.querySelector('p').textContent).toBe('3');await clock.tick(1);expect(root.container.querySelector('p').textContent).toBe('2');root.unmount();expect(clock.pendingIntervals()).toBe(0);}));
+
 `,
   },
 
@@ -369,7 +503,7 @@ test('leaving the page clears the interval', () => {
     tier: 1,
     focus: ['useContext'],
     title: 'Read the theme',
-    prompt: '`Badge` expects a `theme` prop, but `Toolbar` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through `ThemeContext`. Make `Badge` read the theme with `useContext(ThemeContext)` instead of taking a prop, for both its text and its class name. Leave `Toolbar` as it is: with context, the components in between pass nothing along.',
+    prompt: `\`Badge\` expects a \`theme\` prop, but \`Toolbar\` renders it without one, so it shows "Theme: " and nothing after it. App already provides "dark" through \`ThemeContext\`. Make \`Badge\` read the theme with \`useContext(ThemeContext)\` instead of taking a prop, for both its text and its class name. Leave \`Toolbar\` as it is: with context, the components in between pass nothing along. Provider values are strings, including an explicitly empty string; an empty value is not the no-provider default. Use the latest value for both the exact text Theme: <value> and the badge--<value> class. Repeated provider changes must reach the same child element, and nested or separate providers must remain independent. Without a provider, use light. Keep the supplied Toolbar unchanged.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 export const ThemeContext = createContext('light');
@@ -422,6 +556,11 @@ test('outside any provider it shows the default', () => {
   const { container } = render(<Badge />);
   expect(container.textContent).toContain('Theme: light');
 });
+
+
+test('an explicitly empty theme does not use the no-provider default',()=>{
+ const view=render(<ThemeContext.Provider value=""><Badge theme="ignored"/></ThemeContext.Provider>);expect(view.container.textContent).toBe('Theme: ');expect(view.container.querySelector('span').className.split(' ')).toContain('badge--');
+});
 `,
   },
   {
@@ -432,7 +571,7 @@ test('outside any provider it shows the default', () => {
     tier: 2,
     focus: ['useContext'],
     title: 'Nearest provider wins',
-    prompt: 'Create and export `SizeContext` with `createContext("medium")`. `Label` shows its text and then, in brackets, the size it reads from `SizeContext`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it.',
+    prompt: `Create and export \`SizeContext\` with \`createContext("medium")\`. \`Label\` shows its text and then, in brackets, the size it reads from \`SizeContext\`, like "Page (medium)". In App, wrap the section in a provider with the value "large", and the aside inside it in a provider with the value "small". A Label with no provider above it gets the default; every other Label gets the value of the nearest provider above it. Size values are strings, including an explicitly empty string; that displays an empty pair of brackets rather than the default. Follow the current nearest provider through repeated updates to the same child, and keep sibling providers independent. Preserve the raw label text, including spaces, Unicode and literal markup up to 2000 UTF-16 units. medium is used only when there is no provider.`,
     starter: `import React, { createContext, useContext } from 'react';
 
 // Create and export SizeContext here, with "medium" as its default.
@@ -489,6 +628,11 @@ test('the inner provider wins for the note', () => {
   const { container } = render(<App />);
   expect(container.querySelector('aside').textContent).toBe('Note (small)');
 });
+
+
+test('an empty nearest size is a provided value rather than the default',()=>{
+ const view=render(<SizeContext.Provider value="outer"><SizeContext.Provider value=""><Label text="Raw label"/></SizeContext.Provider></SizeContext.Provider>);expect(view.container.textContent).toBe('Raw label ()');
+});
 `,
   },
   {
@@ -499,7 +643,7 @@ test('the inner provider wins for the note', () => {
     tier: 2,
     focus: ['useContext', 'useState'],
     title: 'Share a count through context',
-    prompt: 'The basket count lives in App\'s state. Provide `{ count, add }` through `BasketContext`, where `add` adds one to the count. `AddButton` calls `add` when clicked, and `BasketCount` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with `useContext`. The count starts at 0.',
+    prompt: `The basket count lives in App's state. Provide \`{ count, add }\` through \`BasketContext\`, where \`add\` adds one to the count. \`AddButton\` calls \`add\` when clicked, and \`BasketCount\` shows "Items in basket: <count>". Neither takes a prop for this: both read the context with \`useContext\`. The count starts at 0. Every invocation of add adds one, including several updates queued before the next render. Use the current nearest provider’s count and callback, even when the same consumer element is retained and the provider value changes. Names are raw plain text up to 2000 UTF-16 units. Keep the count and existing button nodes through parent renders, and keep separate and fresh baskets independent. Consumers are always placed under a provider; behavior outside one is not part of this exercise.`,
     starter: `import React, { createContext, useContext, useState } from 'react';
 
 export const BasketContext = createContext(null);
@@ -563,6 +707,11 @@ test('BasketCount shows whatever the provider holds', () => {
   const { container } = render(<BasketContext.Provider value={{ count: 7, add: () => {} }}><BasketCount /></BasketContext.Provider>);
   expect(container.textContent).toBe('Items in basket: 7');
 });
+
+
+test('two add calls queued before the next render both count',()=>{
+ const view=render(<App/>),button=screen.getByRole('button',{name:'Add Apples'});act(()=>{fireEvent.click(button);fireEvent.click(button);});expect(view.container.querySelector('header').textContent).toBe('Items in basket: 2');
+});
 `,
   },
 
@@ -575,7 +724,7 @@ test('BasketCount shows whatever the provider holds', () => {
     tier: 1,
     focus: ['custom-hook', 'useState'],
     title: 'A useToggle hook',
-    prompt: 'Write and export `useToggle(initial = false)`, a hook that keeps a boolean in state and returns `[on, toggle]`, where `toggle` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state.',
+    prompt: `Write and export \`useToggle(initial = false)\`, a hook that keeps a boolean in state and returns \`[on, toggle]\`, where \`toggle\` flips it. Use it twice in App: Wi-Fi starts on and Bluetooth starts off. Each button reads "Wi-Fi: on" or "Wi-Fi: off" (and the same for Bluetooth) and flips only its own setting. Two calls to one hook share the code, never the state. initial is a boolean used only on the first render, with false as the default; later prop changes must not reset the state. Every call to toggle flips the current boolean, including several calls in one handler or a retained earlier toggle function. The returned function does not need to keep the same identity between renders. Preserve independent queues for separate hook calls and component instances, state through parent renders, and fresh initial state after unmounting.`,
     starter: `import React, { useState } from 'react';
 
 // Write and export useToggle here.
@@ -629,6 +778,11 @@ test('a click turns it off and a second click back on', () => {
   fireEvent.click(button('Wi-Fi'));
   expect(button('Wi-Fi').textContent).toBe('Wi-Fi: on');
 });
+
+
+test('two toggle calls in one handler apply two flips',()=>{
+ const Twice=()=>{const[on,toggle]=useToggle(true);return <button onClick={()=>{toggle();toggle();}}>{on?'yes':'no'}</button>;};render(<Twice/>);const button=screen.getByRole('button');fireEvent.click(button);expect(button.textContent).toBe('yes');
+});
 `,
   },
   {
@@ -639,7 +793,7 @@ test('a click turns it off and a second click back on', () => {
     tier: 2,
     focus: ['custom-hook', 'effect-cleanup'],
     title: 'A useWindowWidth hook',
-    prompt: 'Write and export `useWindowWidth()`. It starts from `window.innerWidth` and returns the current width. In an effect that runs once, add a `resize` listener on `window` that stores the new width, and in the effect\'s cleanup remove that same listener: `removeEventListener` only removes a listener it is given the very same function for. App shows "Width: <n>px".',
+    prompt: `Write and export \`useWindowWidth()\`. It starts from window.innerWidth and returns the current numeric width. Subscribe to resize on window, update from window.innerWidth, and remove the subscription when it is no longer used. An effect with a named listener or an equivalent useSyncExternalStore subscription is valid. Cleanup must match the function and capture phase used to add the listener, or abort its signal. App shows "Width: <n>px". This is a client-only exercise with integer widths from 0 to 10000; do not clamp or debounce them. Parent renders and resize updates must not repeatedly register listeners. Separate consumers follow the same window, removing one leaves the others active, and the final unmount removes every owned listener. Sharing one native listener between consumers is allowed when its ownership is tracked correctly.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 // Write and export useWindowWidth here.
@@ -664,7 +818,9 @@ export default App;
   }, []);
   return width;
 };`,
-    hints: ['Name the listener once inside the effect, then pass that one function to both `addEventListener` and `removeEventListener`. An inline arrow in the cleanup is a new function, so nothing would be removed.'],
+    hints: [
+      `Name the listener once inside the effect, then pass that one function to both \`addEventListener\` and \`removeEventListener\`. An inline arrow in the cleanup is a new function, so nothing would be removed. Capture must match too: adding with capture: true and removing without it leaves the listener active. A stable useSyncExternalStore subscription is also valid.`,
+    ],
     approach: [
       'Keep the width in `useState(window.innerWidth)` inside the hook.',
       'In `useEffect(..., [])`, declare `onResize`, which calls `setWidth(window.innerWidth)`, and add it as the `resize` listener.',
@@ -720,6 +876,13 @@ test('removes the same listener it added when it leaves the page', () => {
     seen.restore();
   }
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('an initial width below 320 remains its actual numeric width',()=>{
+ window.innerWidth=127;const view=render(<App/>);expect(view.container.querySelector('p').textContent).toBe('Width: 127px');
+});
 `,
   },
   {
@@ -730,7 +893,7 @@ test('removes the same listener it added when it leaves the page', () => {
     tier: 2,
     focus: ['custom-hook', 'derived-state'],
     title: 'Totals from a hook',
-    prompt: 'Write and export `useBasketTotals(items)`. It returns `{ count, total }`: `count` adds up every item\'s `quantity`, and `total` adds up `price * quantity`. Work both out from `items` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends `{ name: "Pen", price: 2, quantity: 1 }`.',
+    prompt: `Write and export \`useBasketTotals(items)\`. It returns \`{ count, total }\`: \`count\` adds up every item's \`quantity\`, and \`total\` adds up \`price * quantity\`. Work both out from \`items\` while rendering: no state and no effect inside the hook, so the totals can never fall behind the items. App keeps the items in state, shows "Items: <count>" and "Total: <total>", and its "Add a pen" button appends \`{ name: "Pen", price: 2, quantity: 1 }\`. Inputs are immutable snapshots: changed arrays or records arrive through a new array reference. There can be up to 1000 items; quantity is an integer from 0 to 1000, and price is a finite nonnegative Number up to 10000. Names do not affect totals. Use input-order JavaScript Number arithmetic without rounding the result. New same-length arrays can change prices or quantities. The returned totals must be correct on the first render of each snapshot; useMemo is optional. Each ordinary Add a pen click appends one pen. Preserve parent state and independent/fresh hook calls.`,
     starter: `import React, { useState } from 'react';
 
 const startingItems = [
@@ -790,6 +953,11 @@ test('an empty basket is zero', () => {
   const { container } = render(<Probe />);
   expect(container.textContent).toBe('0/0');
 });
+
+
+test('derived totals preserve fractional prices without rounding',()=>{
+ const Probe=()=>{const{count,total}=useBasketTotals([{name:'Fraction',price:0.125,quantity:3}]);return <output>{count}/{total}</output>;};const view=render(<Probe/>);expect(view.container.textContent).toBe('3/0.375');
+});
 `,
   },
 
@@ -802,7 +970,7 @@ test('an empty basket is zero', () => {
     tier: 1,
     focus: ['pagination', 'slice'],
     title: 'One page at a time',
-    prompt: 'The Previous and Next buttons already change `page`, which starts at 1, but the list shows every photo. Show only the current page: take `photos.slice(start, start + PAGE_SIZE)`, where `start` is `(page - 1) * PAGE_SIZE`, and render each photo as a list item. Under the list, show "Page <page> of <pageCount>". App takes the photos as a prop, so a longer or shorter list pages the same way.',
+    prompt: `The Previous and Next buttons already change \`page\`, which starts at 1, but the list shows every photo. Show only the current page: take \`photos.slice(start, start + PAGE_SIZE)\`, where \`start\` is \`(page - 1) * PAGE_SIZE\`, and render each photo as a list item. Under the list, show "Page <page> of <pageCount>". App takes the photos as a prop, so a longer or shorter list pages the same way. PAGE_SIZE is 4. Accept zero to 100 literal photo names up to 500 characters, including duplicates; use unique keys for the read-only rows. An empty gallery has one empty page and reads "Page 1 of 1". Both controls keep the page between 1 and pageCount, including repeated boundary clicks; disabling a boundary control is optional. Previous moves back one page, not directly to the beginning. Same-length replacement arrays update the current page values without resetting its number; use a fresh App when changing the list length. Parent renders retain the page; separate galleries and fresh mounts are independent. Never mutate the supplied photos.`,
     starter: `import React, { useState } from 'react';
 
 const allPhotos = ['Harbour', 'Lighthouse', 'Dunes', 'Pier', 'Cliffs', 'Reef', 'Marina', 'Bay', 'Cove', 'Jetty'];
@@ -810,12 +978,12 @@ const PAGE_SIZE = 4;
 
 const App = ({ photos = allPhotos }) => {
   const [page, setPage] = useState(1);
-  const pageCount = Math.ceil(photos.length / PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
 
   return <main>
     <h2>One page at a time</h2>
     <ul>
-      {photos.map((photo) => <li key={photo}>{photo}</li>)}
+      {photos.map((photo, index) => <li key={index}>{photo}</li>)}
     </ul>
     <button type="button" onClick={() => setPage((previous) => Math.max(1, previous - 1))}>Previous</button>
     <button type="button" onClick={() => setPage((previous) => Math.min(pageCount, previous + 1))}>Next</button>
@@ -829,11 +997,13 @@ const visible = photos.slice(start, start + PAGE_SIZE);
 
 // <ul>{visible.map(...)}</ul>
 // <p>Page {page} of {pageCount}</p>`,
-    hints: ['Pages count from 1 and array indexes from 0, so page 1 starts at index 0 and page 2 at index `PAGE_SIZE`. `slice(start, end)` stops before `end` and never runs past the end of the array.'],
+    hints: [
+      `Pages count from 1 and array indexes from 0, so page 1 starts at index 0 and page 2 at index \`PAGE_SIZE\`. \`slice(start, end)\` stops before \`end\` and never runs past the end of the array. Keep pageCount at least 1 so an empty gallery has a single empty page.`,
+    ],
     approach: [
-      'Work out `start` as `(page - 1) * PAGE_SIZE` while rendering.',
-      'Take `photos.slice(start, start + PAGE_SIZE)` and map that, not `photos`, to list items.',
-      'Add a paragraph that reads "Page {page} of {pageCount}".',
+      `Work out \`start\` as \`(page - 1) * PAGE_SIZE\` while rendering.`,
+      `Take \`photos.slice(start, start + PAGE_SIZE)\` and map that, not \`photos\`, to list items.`,
+      `Add a paragraph that reads "Page {page} of {pageCount}".`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -861,6 +1031,9 @@ test('the last page holds the two that are left', () => {
   expect(shown(container)).toEqual(['Cove', 'Jetty']);
   expect(container.textContent).toContain('Page 3 of 3');
 });
+
+
+test('an empty gallery stays on Page 1 of 1 without phantom photos',()=>{const view=render(<App photos={[]}/>),q=within(view.container);for(let i=0;i<4;i++){expect(shown(view.container)).toEqual([]);expect(view.container.querySelector('p').textContent).toBe('Page 1 of 1');fireEvent.click(q.getByRole('button',{name:'Next'}));fireEvent.click(q.getByRole('button',{name:'Previous'}));}expect(view.container.querySelector('p').textContent).toBe('Page 1 of 1');});
 `,
   },
   {
@@ -871,7 +1044,7 @@ test('the last page holds the two that are left', () => {
     tier: 2,
     focus: ['pagination', 'slice'],
     title: 'Show more',
-    prompt: 'Show the first 3 comments as list items and a "Show more" button under them. Each click shows 3 more. Keep how many are shown in state, not a second copy of the comments, and render `comments.slice(0, shown)`. While any comment is still hidden the button stays; once every comment shows, the button goes away. App takes the comments as a prop, and a short list may need no button at all.',
+    prompt: `Show the first 3 comments as list items and a "Show more" button under them. Each click shows 3 more. Keep how many are shown in state, not a second copy of the comments, and render \`comments.slice(0, shown)\`. While any comment is still hidden the button stays; once every comment shows, the button goes away. App takes the comments as a prop, and a short list may need no button at all. Accept zero to 100 literal comment strings up to 500 characters, including duplicates. Use unique keys for these read-only rows rather than the comment text. The comments prop can be replaced with a new array of any length: keep the shown count and derive the visible prefix from the current data. A shorter array shows all it has; later growth can make Show more return. Preserve order, spaces and literal markup text. No eight-comment cap is allowed. Parent renders retain the count, while separate Apps and fresh mounts keep independent counts. Never mutate the input array.`,
     starter: `import React, { useState } from 'react';
 
 const allComments = [
@@ -890,7 +1063,7 @@ const App = ({ comments = allComments }) => {
   return <main>
     <h2>Show more</h2>
     <ul>
-      {comments.map((comment) => <li key={comment}>{comment}</li>)}
+      {comments.map((comment, index) => <li key={index}>{comment}</li>)}
     </ul>
   </main>;
 };
@@ -901,11 +1074,13 @@ export default App;
 
 // <ul>{comments.slice(0, shown).map(...)}</ul>
 // {/* some comments still hidden? */ && <button ...>Show more</button>}`,
-    hints: ['Store a number, the count of comments on screen, and derive the list from it with `slice(0, shown)`. Asking `slice` for more than the array holds is fine: it stops at the end.'],
+    hints: [
+      `Store a number, the count of comments on screen, and derive the list from it with \`slice(0, shown)\`. Asking \`slice\` for more than the array holds is fine: it stops at the end. Derive from the current prop so updated data appears immediately. Repeated text cannot serve as a unique key for these read-only rows.`,
+    ],
     approach: [
-      'Keep `shown` in `useState(3)`.',
-      'Render `comments.slice(0, shown)` as list items.',
-      'Render the button only while `shown < comments.length`, and let a click call `setShown((previous) => previous + 3)`.',
+      `Keep \`shown\` in \`useState(3)\`.`,
+      `Render \`comments.slice(0, shown)\` as list items.`,
+      `Render the button only while \`shown < comments.length\`, and let a click call \`setShown((previous) => previous + 3)\`.`,
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -932,6 +1107,9 @@ test('the button goes when every comment shows', () => {
   expect(count(container)).toBe(8);
   expect(more()).toBeNull();
 });
+
+
+test('duplicate comment replacements remain the current derived prefix',()=>{const view=render(<App comments={['a','a','b','c','c','d','d']}/>);fireEvent.click(within(view.container).getByRole('button',{name:'Show more'}));for(const comments of [['b','b'],['a','a','a','b','b','b','c'],['x','x','y','y','y','y','z']]){view.rerender(<App comments={comments}/>);expect([...view.container.querySelectorAll('li')].map(item=>item.textContent)).toEqual(comments.slice(0,6));}});
 `,
   },
   {
@@ -942,7 +1120,7 @@ test('the button goes when every comment shows', () => {
     tier: 2,
     focus: ['pagination', 'accessibility'],
     title: 'Numbered page buttons',
-    prompt: 'The list already shows one page of `songs`. Add a button for each page, labelled 1, 2, 3 and so on up to `Math.ceil(songs.length / PAGE_SIZE)`, inside `<nav aria-label="Pages">`. Clicking a number shows that page. The button of the current page carries `aria-current="page"`, and the others carry no `aria-current` at all, so a screen reader says which page is open. App takes the songs as a prop, so work the page count out from them.',
+    prompt: `The list already shows one page of \`songs\`. Add a button for each page, labelled 1, 2, 3 and so on up to \`Math.ceil(songs.length / PAGE_SIZE)\`, inside \`<nav aria-label="Pages">\`. Clicking a number shows that page. The button of the current page carries \`aria-current="page"\`, and the others carry no \`aria-current\` at all, so a screen reader says which page is open. App takes the songs as a prop, so work the page count out from them. PAGE_SIZE is 3. The list can contain zero to 100 literal strings up to 500 characters; duplicate titles are valid and must remain separate rows. Assign unique keys to these read-only rows instead of using repeated text as identity. Empty input has an empty Pages navigation and no page buttons. Every reachable page displays its exact slice, with exactly one current marker when pages exist. Same-length replacement arrays update the displayed values while retaining the selected page; use a fresh App when changing the list length. Parent renders retain the choice, while separate pagers and fresh mounts are independent.`,
     starter: `import React, { useState } from 'react';
 
 const allSongs = ['Blue Water', 'Low Tide', 'Salt Air', 'Deep End', 'Riptide', 'Undertow', 'Sea Glass'];
@@ -955,7 +1133,7 @@ const App = ({ songs = allSongs }) => {
   return <main>
     <h2>Numbered page buttons</h2>
     <ul>
-      {songs.slice(start, start + PAGE_SIZE).map((song) => <li key={song}>{song}</li>)}
+      {songs.slice(start, start + PAGE_SIZE).map((song, index) => <li key={start + index}>{song}</li>)}
     </ul>
   </main>;
 };
@@ -969,11 +1147,13 @@ const pages = Array.from({ length: pageCount }, (_, index) => index + 1);
 //   {pages.map((number) => <button key={number} type="button"
 //     aria-current={/* "page" or undefined */} onClick={...}>{number}</button>)}
 // </nav>`,
-    hints: ['React leaves an attribute out when its value is `undefined`, so `aria-current={number === page ? "page" : undefined}` marks one button and leaves the rest bare.'],
+    hints: [
+      `React leaves an attribute out when its value is \`undefined\`, so \`aria-current={number === page ? "page" : undefined}\` marks one button and leaves the rest bare. Titles can repeat; a unique position key is suitable here because each row contains only read-only text, not local input state.`,
+    ],
     approach: [
-      'Work out `pageCount` from `songs.length` and `PAGE_SIZE`, and build the list of page numbers from 1 to `pageCount`.',
-      'Render one button per number inside `<nav aria-label="Pages">`; a click calls `setPage(number)`.',
-      'Give each button `aria-current="page"` when its number is the current page and `undefined` otherwise.',
+      `Work out \`pageCount\` from \`songs.length\` and \`PAGE_SIZE\`, and build the list of page numbers from 1 to \`pageCount\`.`,
+      `Render one button per number inside \`<nav aria-label="Pages">\`; a click calls \`setPage(number)\`.`,
+      `Give each button \`aria-current="page"\` when its number is the current page and \`undefined\` otherwise.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -998,6 +1178,9 @@ test('only the current page is marked', () => {
   expect(pages()[1].getAttribute('aria-current')).toBeNull();
   expect(pages()[2].getAttribute('aria-current')).toBeNull();
 });
+
+
+test('more than four numbered pages are reachable and the last page is marked',()=>{const songs=Array.from({length:17},(_,i)=>'Song '+i),view=render(<App songs={songs}/>),nav=within(view.container).getByRole('navigation',{name:'Pages'}),buttons=[...nav.querySelectorAll('button')];expect(buttons.map(button=>button.textContent)).toEqual(['1','2','3','4','5','6']);fireEvent.click(buttons[5]);expect(shown(view.container)).toEqual(songs.slice(15));expect(buttons.map(button=>button.getAttribute('aria-current'))).toEqual([null,null,null,null,null,'page']);});
 `,
   },
 
@@ -1010,8 +1193,8 @@ test('only the current page is marked', () => {
     tier: 2,
     focus: ['abort', 'useRef'],
     title: 'Stop the download',
-    prompt: '"Download" fetches `/api/report`, shows "Downloading…" and then "Done" when the response arrives. Make "Stop" cancel it: create a new `AbortController` each time a download starts, keep it in a ref, pass its `signal` to `fetch`, and call `abort()` on it from Stop. The aborted `fetch` rejects, and the code in the starter then shows "Stopped". Stop after a finished download changes nothing, and so does Stop with no download at all.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: "\"Download\" fetches `/api/report`, shows \"Downloading…\" and then \"Done\" when the response arrives. Make \"Stop\" cancel it: create a new `AbortController` each time a download starts, keep it in a ref, pass its `signal` to `fetch`, and call `abort()` on it from Stop. The aborted `fetch` rejects, and the code in the starter then shows \"Stopped\". Stop after a finished download changes nothing, and so does Stop with no download at all. Keep one paragraph for Ready, Downloading…, Done, Stopped or Failed. A non-abort rejection shows Failed; an AbortError shows Stopped. This exercise finishes when fetch resolves and does not parse a download body. Each new Download supersedes and aborts the previous request; only its own current controller may update success or failure. An already-fulfilled older fetch must not finish the new pending download. All requests target exactly /api/report. Keep both buttons available through repeated downloads; Stop with no pending work preserves the terminal status. Ordinary parent re-renders do not start another request. Unmount aborts and invalidates pending work, while independent/fresh instances own their controller and start Ready. Development Strict Mode may repeat cleanup/setup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('Ready');
@@ -1022,7 +1205,7 @@ const App = () => {
       await fetch('/api/report');
       setStatus('Done');
     } catch (error) {
-      setStatus('Stopped');
+      setStatus(error.name === 'AbortError' ? 'Stopped' : 'Failed');
     }
   };
 
@@ -1041,21 +1224,30 @@ export default App;
 `,
     skeleton: `const controllerRef = useRef(null);
 
+useEffect(() => () => {
+  const previous = controllerRef.current;
+  controllerRef.current = null;
+  previous?.abort();
+}, []);
+
 const download = async () => {
+  // Abort the previous download before storing a new controller.
   const controller = new AbortController();
   controllerRef.current = controller;
-  // fetch('/api/report', { signal: controller.signal })
+  // Pass controller.signal to fetch. Check it is still current before
+  // showing Done, Stopped or Failed.
 };
 
 const stop = () => {
-  // abort the controller in the ref, if there is one
+  // Abort the current controller, if any.
 };`,
-    hints: ['An `AbortController` cancels once: after `abort()` its signal stays aborted, and a `fetch` given that signal rejects at once. So each download needs a controller of its own, and the ref holds the latest one.'],
+    hints: ["A controller aborts once. Give each new download its own controller and allow only that current controller to update status; cleanup aborts and invalidates it."],
     approach: [
-      'Create `const controllerRef = useRef(null)`.',
-      'At the start of `download`, make a new `AbortController`, store it in `controllerRef.current`, and pass `{ signal: controller.signal }` as the second argument to `fetch`.',
-      'In `stop`, call `controllerRef.current?.abort()`. The `?.` covers a Stop before any download.',
-    ],
+      "Keep the current download controller in a ref; each new Download aborts and replaces the previous controller.",
+      "Pass its signal to fetch, show Downloading…, and accept Done or the classified error only if it is still current.",
+      "Stop aborts the current controller and is harmless when no request is pending.",
+      "Cleanup clears the current ref before aborting, so late continuations cannot update the removed instance."
+],
     verify: 'tests',
     estimatedMinutes: 9,
     suite: `${header()}${FAKE_FETCH}
@@ -1084,6 +1276,9 @@ test('Stop aborts the request and shows Stopped', () => withFetch(async calls =>
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('Stopped');
 }));
+
+test('Stop is harmless before or after one correctly addressed download',()=>withFetch(async calls=>{const root=render(<App/>);expect(status(root.container)).toBe('Ready');press('Stop');expect(calls).toHaveLength(0);expect(status(root.container)).toBe('Ready');press('Download');expect(calls).toHaveLength(1);expect(calls[0].url).toBe('/api/report');await act(async()=>calls[0].respond({}));expect(status(root.container)).toBe('Done');await act(async()=>press('Stop'));expect(status(root.container)).toBe('Done');}));
+
 `,
   },
   {
@@ -1094,7 +1289,7 @@ test('Stop aborts the request and shows Stopped', () => withFetch(async calls =>
     tier: 2,
     focus: ['abort', 'fetch'],
     title: 'A cancel is not an error',
-    prompt: 'The starter loads `/api/prices` with an `AbortController`, and its Cancel button aborts the request. But every rejection shows "Could not load prices", so a cancel looks like a failure. In the `catch`, check the error\'s `name`: an `AbortError` shows "Cancelled", and any other error still shows "Could not load prices". Check the name, not the message, which differs from browser to browser.',
+    prompt: "The starter loads `/api/prices` with an `AbortController`, and its Cancel button aborts the request. But every rejection shows \"Could not load prices\", so a cancel looks like a failure. In the `catch`, check the error's `name`: an `AbortError` shows \"Cancelled\", and any other error still shows \"Could not load prices\". Check the name, not the message, which differs from browser to browser. On a normal mount, start one request to exactly /api/prices and initially show Loading…. A resolved fetch shows Prices loaded. For ordinary Error or DOMException rejections, compare the case-sensitive name exactly: AbortError means Cancelled; aborterror, TimeoutError and other names are failures regardless of the message. Keep one paragraph with the current status and the Cancel button. Repeated Cancel after the request settles does not replace its terminal status or make another request. Parent re-renders preserve the same request. Each independent or fresh mount owns a new controller and starts Loading; unmounting aborts its request. Development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
@@ -1157,6 +1352,9 @@ test('a failed request is still an error', () => withFetch(async calls => {
   await act(async () => { calls[0].fail(new TypeError('Failed to fetch')); });
   expect(status(container)).toBe('Could not load prices');
 }));
+
+test('case-sensitive error names do not turn a real failure into a cancellation',()=>withFetch(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(1);expect(calls[0].url).toBe('/api/prices');expect(status(root.container)).toBe('Loading…');const error=new Error('The operation was aborted.');error.name='aborterror';await act(async()=>calls[0].fail(error));expect(status(root.container)).toBe('Could not load prices');}));
+
 `,
   },
   {
@@ -1167,12 +1365,13 @@ test('a failed request is still an error', () => withFetch(async calls => {
     tier: 2,
     focus: ['abort', 'effect-cleanup'],
     title: 'Only the latest search',
-    prompt: 'Each change of the query starts a request for `/api/posts?q=<query>`, which answers with matching posts, but an old, slow answer can still arrive last and replace the results of a newer query. Give each run of the effect its own `AbortController`, pass its `signal` to `fetch`, and abort it in the effect\'s cleanup. React runs that cleanup before the next run and when the component leaves the page, so every request but the latest is cancelled. Ignore the `AbortError` an aborted request rejects with.',
+    prompt: "Each change of the query starts a request for `/api/posts?q=<query>`, which answers with matching posts, but an old, slow answer can still arrive last and replace the results of a newer query. Give each run of the effect its own `AbortController`, pass its `signal` to `fetch`, and abort it in the effect's cleanup. React runs that cleanup before the next run and when the component leaves the page, so every request but the latest is cancelled. Ignore the `AbortError` an aborted request rejects with. Keep the Search input controlled with well-formed Unicode text up to 2000 UTF-16 code units; encode it with encodeURIComponent as the single q parameter, without trimming it. Empty query makes no request, clears results/errors and cancels old work. Clear the previous list/error when any new query starts. Await the JSON body, checking response.ok first. Render every exact literal returned post title in order in one UL, keyed by id; the dense read-only response has at most 100 ordinary records with unique positive integer ids and plain titles up to 2000 code units, including duplicate or empty titles. HTTP, network or JSON failure for the active query shows Could not load posts. as an alert with an empty list; another query can recover. Ignore completed or queued response-processing work after that effect cleans up, even if the transport has already settled. Only the active query may change results or errors. Parent re-renders do not refetch; removed/fresh mounts own separate query state. A loading label is optional. One effect lifetime means normal mounting; development Strict Mode may repeat setup and cleanup.",
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!query) return;
@@ -1184,6 +1383,7 @@ const App = () => {
   return <main>
     <h2>Only the latest search</h2>
     <label>Search <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    {error && <p role="alert">{error}</p>}
     <ul>
       {results.map((post) => <li key={post.id}>{post.title}</li>)}
     </ul>
@@ -1193,21 +1393,31 @@ const App = () => {
 export default App;
 `,
     skeleton: `useEffect(() => {
+  setResults([]);
+  setError('');
   if (!query) return;
+  let active = true;
   const controller = new AbortController();
-  fetch(/* the URL */, { signal: controller.signal })
-    .then(/* ... */)
-    .catch((error) => {
-      // an AbortError is expected here; anything else is not
+  fetch('/api/posts?q=' + encodeURIComponent(query), { signal: controller.signal })
+    .then(response => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
+    .then(posts => {
+      // Commit results only while this effect is active.
+    })
+    .catch(error => {
+      // Ignore cancellation and stale work; show other active failures.
     });
-  return () => /* abort this run's request */;
+  return () => { active = false; controller.abort(); };
 }, [query]);`,
-    hints: ['The cleanup a run of an effect returns belongs to that run, so it aborts that run\'s controller, the one the closure remembers. A later run makes a new controller.'],
+    hints: ["Each effect run owns its controller and active flag. Abort and mark it inactive during cleanup, then accept parsed results or errors only while that run is active."],
     approach: [
-      'Inside the effect, after the empty-query check, create `const controller = new AbortController()`.',
-      'Pass `{ signal: controller.signal }` to `fetch`, and add a `catch` that ignores an error named `AbortError`.',
-      'Return `() => controller.abort()` from the effect.',
-    ],
+      "Clear results/errors whenever the raw query changes; empty query starts no request.",
+      "Each nonempty effect creates its own controller and active flag, then fetches the encoded query with its signal.",
+      "Check response.ok, await JSON, and commit exact titles only while active. Show the fixed alert for active non-abort failures.",
+      "Cleanup first invalidates the effect and then aborts its transport so queued processing cannot replace the latest query."
+],
     verify: 'tests',
     estimatedMinutes: 9,
     suite: `${header()}${FAKE_FETCH}
@@ -1237,6 +1447,16 @@ test('an old answer never replaces a newer one', () => withFetch(async calls => 
   await act(async () => { forQuery(calls, 'a').respond([{ id: 2, title: 'Apples' }, { id: 3, title: 'Avocados' }]); });
   expect(shown(container)).toEqual(['Abacus']);
 }));
+
+const withSearchPhases=async body=>{const real=globalThis.fetch,calls=[];globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>{let releaseJSON,rejectJSON;const json=new Promise((yes,no)=>{releaseJSON=yes;rejectJSON=no;});const signal=options.signal;calls.push({url:String(url),signal,headers:(status=200)=>resolve({ok:status>=200&&status<300,status,json:()=>json}),body:releaseJSON,badJSON:()=>rejectJSON(new Error('Bad JSON')),fail:()=>reject(new TypeError('Offline'))});const abort=()=>{const error=new Error('Aborted');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort);});try{await body(calls);}finally{globalThis.fetch=real;}};
+const searchInput=scope=>within(scope).getByLabelText('Search');
+const changeSearch=(scope,text)=>fireEvent.change(searchInput(scope),{target:{value:text}});
+const searchHeaders=async(call,status=200)=>{await act(async()=>call.headers(status));};
+const searchBody=async(call,data)=>{await act(async()=>call.body(data));};
+const searchDone=async(call,data,status=200)=>{await searchHeaders(call,status);await searchBody(call,data);};
+
+test('raw queries are encoded and actual response titles stay literal',()=>withFetch(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(0);const query='ice cream & tea/☕';changeSearch(root.container,query);await waitFor(()=>expect(calls).toHaveLength(1));const url=new URL(calls[0].url,'https://example.test');expect(url.pathname).toBe('/api/posts');expect(url.searchParams.get('q')).toBe(query);expect([...url.searchParams.keys()]).toEqual(['q']);await act(async()=>calls[0].respond([{id:1,title:'<b>Actual title</b>'},{id:2,title:'<b>Actual title</b>'}]));expect(shown(root.container)).toEqual(['<b>Actual title</b>','<b>Actual title</b>']);expect(root.container.querySelector('li b')).toBeNull();}));
+
 `,
   },
 
@@ -1249,7 +1469,7 @@ test('an old answer never replaces a newer one', () => withFetch(async calls => 
     tier: 1,
     focus: ['accessibility'],
     title: 'An accessible disclosure',
-    prompt: 'The "Shipping details" toggle is a clickable `div`, which a keyboard cannot reach and a screen reader does not announce as a control. Make it a `<button type="button">` with `aria-expanded`, "true" while the details show and "false" while they are hidden. Give the details paragraph an id made with `useId`, so two of these on one page never share it, and point the button\'s `aria-controls` at that id. Render the details only while they are open.',
+    prompt: "The \"Shipping details\" toggle is a clickable `div`, which a keyboard cannot reach and a screen reader does not announce as a control. Make it a `<button type=\"button\">` with `aria-expanded`, \"true\" while the details show and \"false\" while they are hidden. Give the details paragraph an id made with `useId`, so two of these on one page never share it, and point the button's `aria-controls` at that id. Render the details only while they are open. Start closed and keep the button label and paragraph text from the starter. The nonempty controlled id stays stable through open/close cycles and ordinary parent re-renders; when open it identifies this instance's paragraph. Repeated clicks keep alternating. Simultaneously mounted disclosures have distinct ids and independent open state, and each fresh mount starts closed. Keep focus on the native button after toggling; its native keyboard activation needs no custom Enter/Space handler.",
     starter: `import React, { useId, useState } from 'react';
 
 const App = () => {
@@ -1299,6 +1519,9 @@ test('aria-controls names the details', () => {
   const details = document.getElementById(toggle().getAttribute('aria-controls'));
   expect(details.textContent).toBe('Orders ship within two working days.');
 });
+
+test('reopening keeps the same controlled paragraph id',()=>{render(<App/>);const t=toggle(),id=t.getAttribute('aria-controls');for(let i=0;i<3;i++)fireEvent.click(t);expect(t.getAttribute('aria-expanded')).toBe('true');expect(t.getAttribute('aria-controls')).toBe(id);expect(document.getElementById(id).textContent).toBe('Orders ship within two working days.');});
+
 `,
   },
   {
@@ -1309,8 +1532,8 @@ test('aria-controls names the details', () => {
     tier: 2,
     focus: ['accessibility', 'forms'],
     title: 'A field that explains its error',
-    prompt: 'The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a `<label>` whose `htmlFor` matches the input\'s `id`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set `aria-invalid="true"` on the input, and point the input\'s `aria-describedby` at the error. While there is no error, the input carries neither attribute.',
-    starter: `import React, { useState } from 'react';
+    prompt: `The email field has no label, and its error is red text that nothing connects to the field. Replace the "Email" span with a \`<label>\` whose \`htmlFor\` matches the input's \`id\`. When Save is pressed with the field empty, show "Enter your email" in an element with its own id, set \`aria-invalid="true"\` on the input, and point the input's \`aria-describedby\` at the error. While there is no error, the input carries neither attribute. Use stable unique field and error ids for each instance. This exercise validates blankness only: test the current native field value with trim(), and use noValidate on the form so native email-format validation does not block that custom check. On each Save, blank or whitespace-only text sets the error and any nonblank text clears it; do not normalize the stored field value yourself. Values are single-line strings up to 2000 UTF-16 code units. Parent renders preserve ids and state, and each label/error must refer to its own instance.`,
+    starter: `import React, { useId, useState } from 'react';
 
 const App = () => {
   const [email, setEmail] = useState('');
@@ -1334,19 +1557,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `<label htmlFor="email">Email</label>
+    skeleton: `const fieldId = useId();
+const errorId = fieldId + '-error';
+
+<label htmlFor={fieldId}>Email</label>
 <input
-  id="email"
+  id={fieldId}
   aria-invalid={error ? true : undefined}
-  aria-describedby={error ? 'email-error' : undefined}
+  aria-describedby={error ? errorId : undefined}
   ...
 />
-{error && <p id="email-error" className="error">{error}</p>}`,
-    hints: ['`htmlFor` is how JSX writes the `for` attribute. An attribute whose value is `undefined` is left out, so `error ? "email-error" : undefined` adds `aria-describedby` only while the error shows.'],
+{error && <p id={errorId} className="error">{error}</p>}
+
+// <form noValidate onSubmit={save}>`,
+    hints: [`useId supplies a stable id for this instance. Derive an error id from it and use the same values in htmlFor, id and aria-describedby. An undefined attribute is left out, so add the error attributes only while an error exists.`],
     approach: [
-      'Swap the span for `<label htmlFor="email">Email</label>` and give the input `id="email"`.',
-      'Give the error paragraph an id, such as `email-error`.',
-      'On the input, set `aria-invalid` and `aria-describedby` only while there is an error, and `undefined` otherwise.',
+      `Create a field id with useId and derive an error id from it; tie the label to that field id.`,
+      `On Save, prevent navigation and check email.trim(); use noValidate on the form because this lesson checks blankness, not email syntax.`,
+      `Give the error its own id and add aria-invalid plus aria-describedby only while the error exists.`,
     ],
     verify: 'tests',
     estimatedMinutes: 9,
@@ -1371,7 +1599,10 @@ test('the field points at its error', () => {
   const message = document.getElementById(field().getAttribute('aria-describedby'));
   expect(message.textContent).toBe('Enter your email');
 });
-`,
+
+test('Unicode whitespace is empty for this custom blankness rule',()=>{
+ render(<App/>);fireEvent.change(field(),{target:{value:' '}});save();expect(field().getAttribute('aria-invalid')).toBe('true');expect(document.getElementById(field().getAttribute('aria-describedby')).textContent).toBe('Enter your email');
+});`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */
@@ -1383,7 +1614,7 @@ test('the field points at its error', () => {
     tier: 1,
     focus: ['splice', 'useState'],
     title: 'Draw a card',
-    prompt: 'Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". Copy the deck, call `splice(index, 1)` on the copy, and read the drawn card from the array `splice` returns. Never splice the array that is in state, or the `cards` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes.',
+    prompt: `Each card in the deck is a button. Clicking one takes that card out of the deck and shows "You drew <name>". For a splice-based solution, copy the deck, call \`splice(index, 1)\` on the copy, and read the drawn card from the array \`splice\` returns. Never splice the array that is in state, or the \`cards\` prop App was given. A deck can hold two cards with the same name (each has its own id), and only the one clicked goes. Grading accepts equivalent immutable removal. cards is the initial deck snapshot for a mount; parent renders do not reset it. It can be empty or contain up to 100 cards, with unique string ids or unique integer ids and nonblank single-line names up to 500 characters. Show each complete literal name without trimming, truncating or interpreting markup. Remove by the current position, retain the order of every other card and show only the latest draw. Separate Apps and fresh mounts keep independent decks.`,
     starter: `import React, { useState } from 'react';
 
 const startingDeck = [
@@ -1450,6 +1681,9 @@ test('the last card empties the deck', () => {
   expect(deck(container)).toEqual([]);
   expect(container.textContent).toContain('You drew Joker');
 });
+
+
+test('cards beyond the fifth position can be drawn with their whole name',()=>{const cards=Array.from({length:12},(_,i)=>({id:'id-'+i,name:'Long card '+i+' 🦈'}));const view=render(<App cards={cards}/>);fireEvent.click(view.container.querySelectorAll('button')[9]);expect(deck(view.container)).toEqual(cards.filter((_,i)=>i!==9).map(card=>card.name));expect(view.container.querySelector('p').textContent).toBe('You drew '+cards[9].name);});
 `,
   },
   {
@@ -1460,7 +1694,7 @@ test('the last card empties the deck', () => {
     tier: 2,
     focus: ['splice', 'forms'],
     title: 'Insert at a position',
-    prompt: 'The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call `splice(position - 1, 0, name)` on the copy. A position past the end adds the name at the end, which `splice` does by itself. A position below 1 puts the name at the top: a negative start would make `splice` count from the end.',
+    prompt: `The form has a Name field and a Position field, where 1 is the top of the queue. "Add" inserts the name at that position: copy the queue and call \`splice(position - 1, 0, name)\` on the copy. A position past the end adds the name at the end, which \`splice\` does by itself. A position below 1 puts the name at the top: a negative start would make \`splice\` count from the end. The Position input contains an integer from-10000 to 10000, or is empty (use the top). Name is a nonblank single-line string up to 500 characters; preserve its literal spaces, punctuation and case. Repeated ordinary submissions use the current growing queue and must prevent form navigation. The controlled fields start empty and at 1 respectively. Parent renders retain each queue; separate Apps and fresh mounts are independent. This lesson demonstrates splice on a copy; equivalent immutable insertion is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingQueue = ['Ana', 'Ben', 'Cleo'];
@@ -1529,6 +1763,9 @@ test('a position past the end adds at the end', () => {
   add('Dan', '9');
   expect(queue(container)).toEqual(['Ana', 'Ben', 'Cleo', 'Dan']);
 });
+
+
+test('names retain literal spaces and positions use the growing queue',()=>{const view=render(<App/>);for(let i=0;i<8;i++)add('  Person '+i+'  ','10000');expect(queue(view.container)).toEqual(['Ana','Ben','Cleo',...Array.from({length:8},(_,i)=>'  Person '+i+'  ')]);});
 `,
   },
   {
@@ -1539,7 +1776,7 @@ test('a position past the end adds at the end', () => {
     tier: 2,
     focus: ['splice', 'useState'],
     title: 'Take a seat',
-    prompt: 'A row of four seats holds a name or `null` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call `splice(index, 1, "You")` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled.',
+    prompt: `A row of four seats holds a name or \`null\` for a free seat. A free seat shows a "Take seat <n>" button. Clicking it puts "You" in that seat: copy the row and call \`splice(index, 1, "You")\` on the copy, which replaces one element, so the row keeps four seats and every other seat stays where it was. Once you are seated, the buttons of the other free seats are disabled. Start with [null,"Ana", null,"Ben"]. Both initial free seats are enabled; after either is chosen, exactly one seat contains "You" and all other people keep their original positions. Disabled buttons must stay disabled across parent renders and cannot change the selection when clicked. Use type="button" so taking a seat never submits an ancestor form. Separate mounted rows are independent and a fresh App starts from the original row. This lesson demonstrates splice on a copy; equivalent immutable replacement is accepted.`,
     starter: `import React, { useState } from 'react';
 
 const startingRow = [null, 'Ana', null, 'Ben'];
@@ -1604,6 +1841,9 @@ test('once seated, the other free seat is disabled', () => {
   fireEvent.click(seat(3));
   expect(seat(1).disabled).toBe(true);
 });
+
+
+test('taking a seat never submits a containing form',()=>{let submits=0;const view=render(<form onSubmit={event=>{event.preventDefault();submits++;}}><App/></form>);fireEvent.click(within(view.container).getByRole('button',{name:'Take seat 1'}));expect(submits).toBe(0);expect(row(view.container)).toEqual(['Seat 1: You','Seat 2: Ana','Take seat 3','Seat 4: Ben']);});
 `,
   },
 ];

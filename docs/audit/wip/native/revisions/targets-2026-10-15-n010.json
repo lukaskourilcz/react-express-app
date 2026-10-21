@@ -1,0 +1,88 @@
+{
+  "kind": "authored-complexity-revision",
+  "currentReviewFiles": [
+    "review-2026-10-15-n004.jsonl",
+    "review-2026-10-15-n006.jsonl"
+  ],
+  "uniqueCoverageAdded": 0,
+  "targets": {
+    "dsa-v1-d06-recursive-list-sum": {
+      "target": "O(n)",
+      "source": "lib/learning-paths/content/dsa/d06.ts",
+      "note": "Target: O(n) time and O(n) extra space from waiting recursive frames, where n is the number of list nodes under constant-cost field reads and Number addition. Empty input is constant work; the finite call counter does not measure memory."
+    },
+    "dsa-v1-d06-bounded-factorial": {
+      "target": "O(n)",
+      "source": "lib/learning-paths/content/dsa/d06.ts",
+      "note": "Target: O(n) time in the numeric input n under the variable-n, unit-cost multiplication model. The actual accepted Number inputs remain 0 through 20; a loop and the allowed recursion have different auxiliary stack costs."
+    },
+    "dsa-v1-d06-iterative-countdown": {
+      "target": "O(n)",
+      "source": "lib/learning-paths/content/dsa/d06.ts",
+      "note": "Target: O(n) time, where n is the starting numeric bound and the result holds n + 1 fixed-size Numbers. Under the usual amortized append model the output uses O(n) space while an iterative implementation needs constant auxiliary stack; zero is constant work."
+    },
+    "dsa-v1-d07-linear-search": {
+      "target": "O(n)",
+      "source": "lib/learning-paths/content/dsa/d07.ts",
+      "note": "Target: O(n) time in the worst case and O(1) extra space, where n is the input length and indexed reads/strict equality count as unit operations. An early match may finish sooner; empty input is constant work."
+    },
+    "dsa-v1-d07-first-occurrence": {
+      "target": "O(log n)",
+      "source": "lib/learning-paths/content/dsa/d07.ts",
+      "note": "Target: O(log n) time and O(1) extra space, where n is the array length under constant-cost numeric comparison and indexing. Empty input is constant work. The read-budget fixtures remain bounded examples, not a complexity proof for arbitrary source."
+    }
+  },
+  "revisions": [
+    {
+      "id": "dsa-v1-d06-recursive-list-sum",
+      "reviewFile": "docs/audit/wip/native/review-2026-10-15-n004.jsonl",
+      "contentHash": "332015c5185c22cb",
+      "gradingHash": "b74fa6a5496dd42b",
+      "previousHash": "9d13991540c5373e",
+      "previousGradingHash": "c4737eae127bdf40",
+      "target": "O(n)"
+    },
+    {
+      "id": "dsa-v1-d06-bounded-factorial",
+      "reviewFile": "docs/audit/wip/native/review-2026-10-15-n004.jsonl",
+      "contentHash": "314d182933b60012",
+      "gradingHash": "3c408b228fbc63eb",
+      "previousHash": "e501c33f6fc15ff3",
+      "previousGradingHash": "ab651d922eb0dcbd",
+      "target": "O(n)"
+    },
+    {
+      "id": "dsa-v1-d06-iterative-countdown",
+      "reviewFile": "docs/audit/wip/native/review-2026-10-15-n004.jsonl",
+      "contentHash": "37576e0909bd19f8",
+      "gradingHash": "528c128b65d723a5",
+      "previousHash": "25f0169d32fdff50",
+      "previousGradingHash": "6858df732dd5073b",
+      "target": "O(n)"
+    },
+    {
+      "id": "dsa-v1-d07-linear-search",
+      "reviewFile": "docs/audit/wip/native/review-2026-10-15-n006.jsonl",
+      "contentHash": "00e92324ea14a587",
+      "gradingHash": "34ca4c6782962dc0",
+      "previousHash": "97e4f3806dba19c0",
+      "previousGradingHash": "a240c1fa50c3ad63",
+      "target": "O(n)"
+    },
+    {
+      "id": "dsa-v1-d07-first-occurrence",
+      "reviewFile": "docs/audit/wip/native/review-2026-10-15-n006.jsonl",
+      "contentHash": "659845f8c9164106",
+      "gradingHash": "fb23fe33f5bf8348",
+      "previousHash": "9a5a926520d8a71c",
+      "previousGradingHash": "54c0489021526a43",
+      "target": "O(log n)"
+    }
+  ],
+  "checks": {
+    "expectedWorkerVerdicts": 36,
+    "validBaseRewardAnalyses": 10,
+    "changedSealedVersions": 5,
+    "currentUniqueNativeRecords": 105
+  }
+}

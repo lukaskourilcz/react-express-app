@@ -1,20 +1,8 @@
-// Executed only inside a fresh, network-denied microVM. Never import this
-// entry point into an API handler: it evaluates learner code.
-//
-// The input file (its path is the first argument) carries the hidden cases and
-// the nonce that marks the real result. It is read and deleted before any
-// learner code runs. jsdom, React and Testing Library are loaded next, and
-// then this realm's JavaScript built-ins are frozen (lib/coding/realm-lockdown.ts),
-// because the component reaches them through React and jsdom. The result goes
-// back on stdout as the one line that starts with the nonce, serialized by
-// hand from its own data properties with functions captured here, before the
-// component exists (serializeGuestResult in lib/coding/react-guest.ts).
-// react-isolated.ts reads only that line (react-guest.ts); it never reads a
-// file from the VM. Before the suite loads the learner's code, the guest
-// prints a started line with the nonce, so a crash after it reads as the
-// learner's error and one before it as a runner failure. Node starts with
-// GUEST_NODE_FLAGS, and learner code runs in a page realm without `process`
-// or `require` (lib/coding/react-runner.ts).
+// Runs only in a fresh, network-denied microVM. The trusted suite/renderer and
+// QuickJS learner engine are separate. Input (including hidden tests and nonce)
+// is deleted before learner execution. Captured stdout/exit and the descriptor
+// serializer publish one nonce-bound result; learner capabilities expose none
+// of them. See docs/react-grading-operations.md. No API imports this entry point.
 import { readFileSync, unlinkSync } from 'node:fs';
 import { guestResultLine, guestStartedLine, serializeGuestResult, type GuestInput } from '../lib/coding/react-guest';
 import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
@@ -27,13 +15,13 @@ const exit = process.exit.bind(process);
 const parse = JSON.parse;
 
 async function main() {
-  const { suite, appSource, nonce } = parse(readFileSync(inputPath, 'utf8')) as GuestInput;
+  const { suite, appSource, nonce, compiledApp, compiledFixtures } = parse(readFileSync(inputPath, 'utf8')) as GuestInput;
   unlinkSync(inputPath);
   await prepareReactRuntime();
   lockDownRealm();
   // Written out before any learner code runs, so a crash cannot lose it.
   await new Promise((resolve) => write(guestStartedLine(nonce), resolve));
-  const result = await runReactSuite({ suite, appSource });
+  const result = await runReactSuite({ suite, appSource, compiledApp, compiledFixtures });
   write(guestResultLine(nonce, serializeGuestResult(result)), () => exit(0));
 }
 main().catch(() => exit(1));

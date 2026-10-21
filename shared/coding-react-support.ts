@@ -1,7 +1,7 @@
 /** Fetch fixtures shared by every React runner: the browser harness writes
  * FETCH_STUB_SOURCE into the sandbox as /fetchStub.js, and the node content
- * test evaluates the same string. Suites never touch the network; the live
- * preview keeps using the public training APIs. Ported from interview-prepper. */
+ * test evaluates the same string. Both suites and live previews use these
+ * deterministic offline fixtures. Ported from interview-prepper. */
 
 export const FIXTURE_USERS = [
   { id: 1, name: 'Leanne Graham', username: 'Bret', email: 'leanne@example.com', address: { city: 'Gwenborough' } },
@@ -74,7 +74,7 @@ export const FIXTURE_EVENTS = [
 
 const asSource = (value: unknown) => JSON.stringify(value, null, 2);
 
-export const FETCH_STUB_SOURCE = `// Installed by the test runner. The preview still uses the real training API.
+export const FETCH_STUB_SOURCE = `// Shared offline fixtures for the preview and both test runners.
 const FIXTURES = {
   users: ${asSource(FIXTURE_USERS)},
   posts: ${asSource(FIXTURE_POSTS)},
@@ -125,7 +125,14 @@ const resolveBody = (url, options) => {
   for (const key of ['userId', 'postId']) {
     if (params.has(key)) items = items.filter(item => String(item[key]) === params.get(key));
   }
-  if (params.has('_limit')) items = items.slice(0, Number(params.get('_limit')));
+  if (params.has('_limit')) {
+    const requestedLimit = Number(params.get('_limit'));
+    const limit = Number.isFinite(requestedLimit) ? Math.max(0, Math.floor(requestedLimit)) : items.length;
+    const requestedPage = Number(params.get('_page') || 1);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const start = (page - 1) * limit;
+    items = items.slice(start, start + limit);
+  }
   // dummyjson-shaped endpoints nest their collection under a key
   return String(url).includes('dummyjson') ? { [collection]: items, total: items.length } : items;
 };

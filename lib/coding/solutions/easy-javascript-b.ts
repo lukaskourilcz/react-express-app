@@ -22,6 +22,7 @@ export const EASY_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
       { call: 'digitsOnly("(555) 010-9999")', expected: '5550109999' },
       { call: 'digitsOnly("1 2 3 4 5 6 7 8 9 0")', expected: '1234567890' },
       { call: 'digitsOnly("x9")', expected: '9' },
+      { call: 'digitsOnly("١2３4😀5")', expected: '245' },
     ],
   },
   'js-easy3-hex-colour': {
@@ -38,6 +39,13 @@ export const EASY_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
 
 const isHexColour = text => HEX_COLOUR.test(text);`,
     hiddenTests: [
+      {"call": "isHexColour(\"#123456\\n\")", "expected": false},
+      {"call": "isHexColour(\"\\n#123456\\n\")", "expected": false},
+      {"call": "isHexColour(\"#123456\\r\\n\")", "expected": false},
+      {"call": "isHexColour(\"#123456 \")", "expected": false},
+      {"call": "isHexColour(\"#１２３４５６\")", "expected": false},
+      {"call": "isHexColour(\"#abc\")", "expected": false},
+      {"call": "isHexColour(\"#123456 \")", "expected": false},
       { call: 'isHexColour(" #123456")', expected: false },
       { call: 'isHexColour("#AbCdEf")', expected: true },
       { call: 'isHexColour("color: #123456")', expected: false },
@@ -58,6 +66,9 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 };`,
     senior: `const hashtags = text => [...text.matchAll(/#\\w+/g)].map(([tag]) => tag);`,
     hiddenTests: [
+      {"call": "hashtags(\"#Dup #Dup #dup\")", "expected": ["#Dup", "#Dup", "#dup"]},
+      {"call": "hashtags(\"x#A_9 ##two #café #你好 #١\")", "expected": ["#A_9", "#two", "#caf"]},
+      {"call": "hashtags(\"#_ #12\")", "expected": ["#_", "#12"]},
       { call: 'hashtags("#a1_b2 done")', expected: ['#a1_b2'] },
       { call: 'hashtags("ends with #last")', expected: ['#last'] },
       { call: 'hashtags("#Dup and #dup")', expected: ['#Dup', '#dup'] },
@@ -68,40 +79,40 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   /* ── split ────────────────────────────────────────────────────────── */
   'js-easy3-read-query': {
     solution: `const parseQuery = query => {
-  const result = {};
-  // "".split("&") gives [""], so an empty query stops here.
-  if (query === "") return result;
+  const entries = [];
   for (const pair of query.split("&")) {
-    const [key, value] = pair.split("=");
-    result[key] = value ?? "";
+    if (pair === "") continue;
+    const index = pair.indexOf("=");
+    entries.push(index < 0 ? [pair, ""] : [pair.slice(0, index), pair.slice(index + 1)]);
   }
-  return result;
+  return Object.fromEntries(entries);
 };`,
     junior: `const parseQuery = query => {
   const result = {};
-  if (query.length === 0) {
-    return result;
-  }
   const pairs = query.split("&");
   for (let i = 0; i < pairs.length; i++) {
-    const parts = pairs[i].split("=");
-    const key = parts[0];
-    let value = parts[1];
-    if (value === undefined) {
-      value = "";
-    }
-    result[key] = value;
+    const pair = pairs[i];
+    if (pair === "") continue;
+    const index = pair.indexOf("=");
+    const key = index < 0 ? pair : pair.slice(0, index);
+    const value = index < 0 ? "" : pair.slice(index + 1);
+    Object.defineProperty(result, key, {
+      value, enumerable: true, configurable: true, writable: true,
+    });
   }
   return result;
 };`,
     senior: `const parseQuery = query =>
-  query === ""
-    ? {}
-    : Object.fromEntries(query.split("&").map(pair => {
-        const [key, value = ""] = pair.split("=");
-        return [key, value];
-      }));`,
+  Object.fromEntries(query.split("&").filter(pair => pair !== "").map(pair => {
+    const index = pair.indexOf("=");
+    return index < 0 ? [pair, ""] : [pair.slice(0, index), pair.slice(index + 1)];
+  }));`,
     hiddenTests: [
+      {"call": "parseQuery(\"&&a=1&&=zero&flag&\")", "expected": {"a": "1", "": "zero", "flag": ""}},
+      {"call": "parseQuery(\"a=b=c&x==&space= a b &plus=a+b&p=%20&?x=1\")", "expected": {"a": "b=c", "x": "=", "space": " a b ", "plus": "a+b", "p": "%20", "?x": "1"}},
+      {"call": "(() => { const out = parseQuery(\"__proto__=first&__proto__=last&constructor=custom\"); return [Object.keys(out).sort(), out[\"__proto__\"], out.constructor, Object.prototype.hasOwnProperty.call(out, \"__proto__\")]; })()", "expected": [["__proto__", "constructor"], "last", "custom", true]},
+      {"call": "parseQuery(\"en=cat&cs=dog\")", "expected": {"en": "cat", "cs": "dog"}},
+      {"call": "(() => { const first = parseQuery(\"a=1\"); const second = parseQuery(\"a=1\"); return first !== second; })()", "expected": true},
       { call: 'parseQuery("x=1&y=&z=3")', expected: { x: '1', y: '', z: '3' } },
       { call: 'parseQuery("limit=10")', expected: { limit: '10' } },
       { call: 'parseQuery("a=1&b=2&a=3")', expected: { a: '3', b: '2' } },
@@ -160,34 +171,9 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 
   /* ── for...in ─────────────────────────────────────────────────────── */
   'js-easy3-fill-defaults': {
-    solution: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    // in asks whether the key exists, so false, 0 and "" are kept.
-    if (!(key in result)) result[key] = defaults[key];
-  }
-  return result;
-};`,
-    junior: `const withDefaults = (settings, defaults) => {
-  const result = {};
-  for (const key in settings) {
-    result[key] = settings[key];
-  }
-  for (const key in defaults) {
-    const alreadySet = key in result;
-    if (!alreadySet) {
-      result[key] = defaults[key];
-    }
-  }
-  return result;
-};`,
-    senior: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) result[key] = defaults[key];
-  }
-  return result;
-};`,
+    solution: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    if (Object.hasOwn(settings, key)) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) {\n      result[key] = defaults[key];\n    }\n  }\n  return result;\n};",
+    junior: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    const isOwnSetting = Object.hasOwn(settings, key);\n    if (isOwnSetting) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    const isOwnDefault = Object.hasOwn(defaults, key);\n    const alreadySet = Object.hasOwn(result, key);\n    if (isOwnDefault && !alreadySet) result[key] = defaults[key];\n  }\n  return result;\n};",
+    senior: "const withDefaults = (settings, defaults) => Object.fromEntries([...Object.entries(defaults), ...Object.entries(settings)]);",
     hiddenTests: [
       { call: 'withDefaults({ name: "" }, { name: "anon" })', expected: { name: '' } },
       { call: 'withDefaults({ a: null }, { a: 1, b: 2 })', expected: { a: null, b: 2 } },
@@ -216,15 +202,7 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   }
   return counts;
 };`,
-    senior: `const countTypes = object => {
-  const counts = {};
-  for (const key in object) {
-    if (!Object.hasOwn(object, key)) continue;
-    const type = typeof object[key];
-    counts[type] = (counts[type] ?? 0) + 1;
-  }
-  return counts;
-};`,
+    senior: "const countTypes = object => {\n  const counts = {};\n  // Match the inherited-key semantics of for...in in this exercise.\n  for (const key in object) {\n    const type = typeof object[key];\n    counts[type] = (counts[type] ?? 0) + 1;\n  }\n  return counts;\n};",
     hiddenTests: [
       { call: 'countTypes({ a: 1, b: 2, c: 3 })', expected: { number: 3 } },
       { call: 'countTypes({ s: "", n: 0, b: false })', expected: { string: 1, number: 1, boolean: 1 } },
@@ -338,15 +316,14 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 };`,
     junior: `const applyDiscount = (items, percent) => {
   items.forEach(item => {
-    const keep = (100 - percent) / 100;
-    const newPrice = item.price * keep;
+    const numerator = item.price * (100 - percent);
+    const newPrice = numerator / 100;
     item.price = Math.round(newPrice);
   });
 };`,
     senior: `const applyDiscount = (items, percent) => {
-  const factor = 1 - percent / 100;
   items.forEach(item => {
-    item.price = Math.round(item.price * factor);
+    item.price = Math.round(item.price * (100 - percent) / 100);
   });
 };`,
     hiddenTests: [
@@ -391,7 +368,7 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   /* ── includes, indexOf, findIndex, every ──────────────────────────── */
   'js-easy3-hide-banned': {
     solution: `const hideBanned = (words, banned) => {
-  // includes compares strictly, so the match is exact.
+  // String membership is exact and case-sensitive.
   return words.map(word => (banned.includes(word) ? "***" : word));
 };`,
     junior: `const hideBanned = (words, banned) => {
@@ -476,8 +453,8 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   return Object.values(form).every(value => value.trim() !== "");
 };`,
     junior: `const isComplete = form => {
-  for (const key in form) {
-    const trimmed = form[key].trim();
+  for (const value of Object.values(form)) {
+    const trimmed = value.trim();
     if (trimmed === "") {
       return false;
     }
@@ -499,13 +476,14 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return { name, role, active };
 };`,
-    junior: `const makeUser = (options = {}) => {
-  const { name = "Guest", role = "viewer", active = true } = options;
-  const user = { name: name, role: role, active: active };
-  return user;
-};`,
+    junior: "const makeUser = ({ name = \"Guest\", role = \"viewer\", active = true } = {}) => {\n  const user = { name: name, role: role, active: active };\n  return user;\n};",
     senior: `const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => ({ name, role, active });`,
     hiddenTests: [
+      {"call": "makeUser(Object.freeze({name:0,role:'',active:false}))", "expected": {"name": 0, "role": "", "active": false}, "label": "zero empty string and false are preserved"},
+      {"call": "(() => {const options={name:undefined};Object.defineProperty(options,'unused',{enumerable:true,get(){throw new Error('extra field read');}});const out=makeUser(Object.freeze(options));return out.name==='Guest'&&out.role==='viewer'&&out.active===true&&Object.keys(out).sort().join(',')==='active,name,role';})()", "expected": true, "label": "read exactly named fields without enumerating ignored extras or mutating frozen input"},
+      {"call": "(() => {const value=Object.freeze({id:1});const o=Object.freeze({name:value,role:null,active:0});const a=makeUser(o),b=makeUser(o);return a!==b&&a!==o&&a.name===value&&a.role===null&&a.active===0;})()", "expected": true, "label": "shallow identity and a fresh exact output on every call"},
+      {"call": "makeUser(Object.freeze(Object.create({name:'Inherited',role:'editor',active:false})))", "expected": {"name": "Inherited", "role": "editor", "active": false}, "label": "destructuring reads inherited named data properties"},
+
       { call: 'makeUser({})', expected: { name: 'Guest', role: 'viewer', active: true } },
       { call: 'makeUser({ name: "Lin", role: "owner", active: true })', expected: { name: 'Lin', role: 'owner', active: true } },
       { call: 'makeUser({ extra: 1, role: "" })', expected: { name: 'Guest', role: '', active: true } },
@@ -526,6 +504,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const highest = scores => (scores.length ? Math.max(...scores) : null);`,
     hiddenTests: [
+      {"call": "[Object.is(highest([-0,+0]),+0),Object.is(highest([-0]),-0)]", "expected": [true, true], "label": "Math.max signed-zero semantics"},
+      {"call": "(() => {const input=Object.freeze([-9,4,1,-2]);return highest(input)===4&&input.join(',')==='-9,4,1,-2';})()", "expected": true, "label": "frozen caller order is preserved"},
+      {"call": "highest(Object.freeze(Array.from({length:10000},(_,i)=>i-10000)))", "expected": -1, "label": "ten thousand negative scores have a negative maximum"},
+
       { call: 'highest([0, -1])', expected: 0 },
       { call: 'highest([1.5, 1.25])', expected: 1.5 },
       { call: 'highest([100, 3, 100])', expected: 100 },
@@ -556,6 +538,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const countFiles = entry =>
   Array.isArray(entry.children) ? entry.children.reduce((total, child) => total + countFiles(child), 0) : 1;`,
     hiddenTests: [
+      {"call": "countFiles(Object.freeze({name:'same',children:Object.freeze([Object.freeze({name:'same'}),Object.freeze({name:'same'}),Object.freeze({name:'empty',children:Object.freeze([])})])}))", "expected": 2, "label": "duplicate names are separate file entries in a frozen tree"},
+      {"call": "(() => {let e=Object.freeze({name:'leaf'});for(let i=0;i<99;i++)e=Object.freeze({name:'dir',children:Object.freeze([e])});return countFiles(e);})()", "expected": 1, "label": "one hundred nested entries preserve the leaf"},
+      {"call": "countFiles(Object.freeze({name:'root',children:Object.freeze(Array.from({length:999},()=>Object.freeze({name:'same'})))}))", "expected": 999, "label": "maximum thousand-entry tree counts every file"},
       { call: 'countFiles({ name: "a", children: [{ name: "b", children: [{ name: "c", children: [{ name: "deep.txt" }] }] }] })', expected: 1 },
       { call: 'countFiles({ name: "root", children: [{ name: "1" }, { name: "d", children: [{ name: "2" }, { name: "3" }, { name: "e", children: [{ name: "4" }] }] }] })', expected: 4 },
       { call: 'countFiles({ name: "mixed", children: [{ name: "empty", children: [] }, { name: "readme.md" }] })', expected: 1 },
@@ -585,6 +570,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const depth = list => 1 + Math.max(0, ...list.filter(Array.isArray).map(item => depth(item)));`,
     hiddenTests: [
+      {"call": "depth(Object.freeze([null,Object.freeze({inside:[[[1]]]}),'[[x]]',Object.freeze([])]))", "expected": 2, "label": "only arrays add depth and opaque objects stay opaque"},
+      {"call": "(() => {let a=Object.freeze([]);for(let i=1;i<100;i++)a=Object.freeze([a]);return depth(a);})()", "expected": 100, "label": "one hundred frozen nesting levels"},
+      {"call": "depth(Object.freeze(Array(999).fill(null)))", "expected": 1, "label": "maximum array-plus-slot count without inner arrays"},
       { call: 'depth([[[[]]]])', expected: 4 },
       { call: 'depth(["a", ["b"]])', expected: 2 },
       { call: 'depth([1, [2], [3, [4, [5]]]])', expected: 4 },
@@ -630,6 +618,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const c=makeChangeWatcher();return [c(NaN),c(NaN),c(0),c(-0),c(0)];})()", "expected": [true, true, true, false, false], "label": "strict equality differs from Object.is for NaN and signed zero"},
+      {"call": "(() => {const c=makeChangeWatcher(),a={x:1},b={x:1};const first=c(a);a.x=2;return [first,c(a),c(b),c(b)];})()", "expected": [true, false, true, false], "label": "object identity is independent of matching or changed contents"},
+      {"call": "(() => {const c=makeChangeWatcher(),f=()=>0,s=Symbol('x');return [c(f),c(f),c(s),c(s),c(Symbol('x')),c(1n),c(1),c(undefined)];})()", "expected": [true, false, true, false, true, true, true, true], "label": "opaque functions symbols and BigInts use strict comparison"},
+      {"call": "(() => {const c=makeChangeWatcher(),a=Object.freeze(Object.defineProperty({},'unused',{get(){throw Error('inspect');}}));let ok=c(a);for(let i=1;i<1000;i++)ok=ok&&!c(a);return ok;})()", "expected": true, "label": "a thousand repeated opaque inputs are not inspected"},
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(null), changed(undefined), changed(null)]; })()', expected: [true, true, true] },
       { call: '(() => { const changed = makeChangeWatcher(); return [changed(3), changed(3), changed(3), changed(4)]; })()', expected: [true, false, false, true] },
       { call: '(() => { const a = makeChangeWatcher(); const b = makeChangeWatcher(); return [a(1), b(2), a(1), b(3)]; })()', expected: [true, true, false, true] },
@@ -649,6 +641,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const multiplyBy = factor => n => n * factor;`,
     hiddenTests: [
+      {"call": "[Object.is(multiplyBy(-1)(0),-0),Object.is(multiplyBy(0)(-1),-0),Object.is(multiplyBy(-0)(-1),+0)]", "expected": [true, true, true], "label": "signed-zero products are not replaced by positive zero"},
+      {"call": "multiplyBy(0.1)(0.2)", "expected": 0.020000000000000004, "label": "ordinary unrounded floating-point product"},
+      {"call": "(() => {const a=multiplyBy(2),b=multiplyBy(2),c=multiplyBy(-0.5);return a!==b&&a(3)===6&&c(3)===-1.5&&a(4)===8&&b(-2)===-4&&multiplyBy(1000000)(1000000)===1000000000000;})()", "expected": true, "label": "fresh independent stable functions and maximal product"},
       { call: 'multiplyBy(-1)(4)', expected: -4 },
       { call: '[10, 20].map(multiplyBy(0.5))', expected: [5, 10] },
       { call: 'multiplyBy(2)(multiplyBy(3)(1))', expected: 6 },
@@ -678,6 +673,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   try { return JSON.parse(text); } catch { return fallback; }
 };`,
     hiddenTests: [
+      {"call": "(() => {const fallback=Object.freeze({id:1});return parseOr('{bad',fallback)===fallback&&parseOr('false',fallback)===false&&parseOr('\"\"',fallback)===''&&Object.is(parseOr('-0',fallback),-0);})()", "expected": true, "label": "exact fallback identity and valid falsy values"},
+      {"call": "(() => {const out=parseOr('{\"__proto__\":{\"x\":1},\"a\":1,\"a\":2}',null);return Object.hasOwn(out,'__proto__')&&out.a===2&&out.__proto__.x===1&&Object.getPrototypeOf(out)!==out.__proto__;})()", "expected": true, "label": "duplicate-key and prototype-like-name parsing semantics"},
+      {"call": "(() => {const text='['+'0,'.repeat(4998)+'0]';const out=parseOr(text,null);return out.length===4999&&out.every(x=>x===0);})()", "expected": true, "label": "near-maximum input text"},
+      {"call": "[parseOr('true false',7),parseOr('[1,]',7),parseOr('/*x*/null',7),parseOr('  null  ',7)]", "expected": [7, 7, 7, null], "label": "syntax errors and valid surrounding whitespace"},
       { call: 'parseOr("null", "x")', expected: null },
       { call: 'parseOr(\'"text"\', "")', expected: 'text' },
       { call: 'parseOr(\'{"a": }\', 7)', expected: 7 },
@@ -686,7 +685,7 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   },
   'js-easy3-pretty-json': {
     solution: `const toFileText = value => {
-  // null keeps every property; 2 indents each level by two spaces.
+  // null means no replacer; 2 indents each level by two spaces.
   return JSON.stringify(value, null, 2) + "\\n";
 };`,
     junior: `const toFileText = value => {
@@ -696,6 +695,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const toFileText = value => \`\${JSON.stringify(value, null, 2)}\\n\`;`,
     hiddenTests: [
+      {"call": "toFileText({z:'😀',a:'line\\nquote\"',empty:[]})", "expected": "{\n  \"z\": \"😀\",\n  \"a\": \"line\\nquote\\\"\",\n  \"empty\": []\n}\n", "label": "original key order, Unicode and escaping"},
+      {"call": "[toFileText(null),toFileText(false),toFileText(0),toFileText('')]", "expected": ["null\n", "false\n", "0\n", "\"\"\n"], "label": "top-level JSON scalar values"},
+      {"call": "toFileText(Object.freeze({nested:Object.freeze([Object.freeze({ok:true})])}))", "expected": "{\n  \"nested\": [\n    {\n      \"ok\": true\n    }\n  ]\n}\n", "label": "frozen nested ordinary JSON data"},
+      {"call": "(() => {const text=toFileText(Object.freeze(Array(1000).fill(1)));return text.length===5003&&text.startsWith('[\\n  1,')&&text.endsWith('  1\\n]\\n');})()", "expected": true, "label": "large indented array has exactly one final LF"},
       { call: 'toFileText({ a: { b: true } })', expected: '{\n  "a": {\n    "b": true\n  }\n}\n' },
       { call: 'toFileText("hi")', expected: '"hi"\n' },
       { call: 'toFileText(3)', expected: '3\n' },
@@ -704,11 +707,7 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 
   /* ── promises and timers ──────────────────────────────────────────── */
   'js-easy3-list-failures': {
-    solution: `const failureMessages = promises => {
-  // allSettled never rejects: it reports how every promise ended.
-  return Promise.allSettled(promises).then(results =>
-    results.filter(result => result.status === "rejected").map(result => result.reason.message));
-};`,
+    solution: "const failureMessages = promises => {\n  // For these native-promise inputs, report every outcome instead of rejecting early.\n  return Promise.allSettled(promises).then(results =>\n    results.filter(result => result.status === \"rejected\").map(result => result.reason.message));\n};",
     junior: `const failureMessages = promises => {
   return Promise.allSettled(promises).then(results => {
     const messages = [];
@@ -725,6 +724,11 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return results.filter(({ status }) => status === "rejected").map(({ reason }) => reason.message);
 };`,
     hiddenTests: [
+      { call: "(() => {const a=Promise.reject(new Error(\"\")),b=Promise.reject(new Error(\"same\")),c=Promise.reject(new Error(\"same\"));a.catch(()=>{});b.catch(()=>{});c.catch(()=>{});return failureMessages(Object.freeze([Promise.resolve(new Error(\"fulfilled\")),a,b,c]));})()", expected: ["", "same", "same"], async: true },
+      { call: "(() => {const error=new Error(\"before\"),bad=Promise.reject(error);bad.catch(()=>{});let finished=false;const slow=new Promise(done=>setTimeout(()=>{finished=true;error.message=\"after\";done(1);},20));const inputs=[bad,slow],result=failureMessages(inputs);inputs.length=0;return result.then(messages=>[finished,messages]);})()", expected: [true, ["after"]], async: true },
+      { call: "(() => {const error=Object.freeze(new Error(\"repeated\")),bad=Promise.reject(error);bad.catch(()=>{});return failureMessages(Object.freeze(Array(1000).fill(bad))).then(messages=>[messages.length,messages[0],messages[999]]);})()", expected: [1000, "repeated", "repeated"], async: true },
+      { call: "(() => {const a=failureMessages([]),b=failureMessages([]);return Promise.all([a,b]).then(([x,y])=>[a instanceof Promise,x.length,y.length,x!==y]);})()", expected: [true, 0, 0, true], async: true },
+
       { call: '(() => { const one = Promise.reject(new Error("one")); const two = Promise.reject(new Error("two")); one.catch(() => {}); two.catch(() => {}); return failureMessages([one, two]); })()', expected: ['one', 'two'], async: true },
       { call: '(() => { const bad = Promise.reject(new Error("bad")); bad.catch(() => {}); return failureMessages([new Promise(resolve => setTimeout(() => resolve("slow"), 15)), bad]); })()', expected: ['bad'], async: true },
       { call: '(() => { const late = new Promise((resolve, reject) => setTimeout(() => reject(new Error("late")), 10)); late.catch(() => {}); return failureMessages([Promise.resolve(1), late, Promise.resolve(2)]); })()', expected: ['late'], async: true },
@@ -750,6 +754,11 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
     senior: `const withTimeout = (promise, ms, fallback) =>
   Promise.race([promise, new Promise(resolve => setTimeout(resolve, ms, fallback))]);`,
     hiddenTests: [
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x');const kept=[];for(const value of [obj,fn,sym,NaN,-0])kept.push(Object.is(await withTimeout(Promise.resolve(value),20,'unused'),value));const reason=Object.freeze({code:1}),bad=Promise.reject(reason);bad.catch(()=>{});return [kept,await withTimeout(bad,20,0).then(()=>false,error=>error===reason)];})()", expected: [[true, true, true, true, true], true], async: true },
+      { call: "(async()=>{let calls=0;const fn=()=>{calls++;},sym=Symbol('fallback'),obj=Object.freeze({});const out=[];for(const fallback of [fn,sym,obj,undefined,-0])out.push(Object.is(await withTimeout(new Promise(()=>{}),0,fallback),fallback));return [out,calls];})()", expected: [[true, true, true, true, true], 0], async: true },
+      { call: "(async()=>{const input=Promise.resolve('ready'),output=withTimeout(input,0,'late');let settled=false;output.then(()=>{settled=true;});const immediate=settled;return [output instanceof Promise,output!==input,immediate,await output];})()", expected: [true, true, false, "ready"], async: true },
+      { call: "(async()=>{let complete=false;const input=new Promise(done=>setTimeout(()=>{complete=true;done('late');},30));const output=withTimeout(input,0,'fallback');const first=await output;await new Promise(done=>setTimeout(done,50));return [first,await output,complete];})()", expected: ["fallback", "fallback", true], async: true },
+
       { call: 'withTimeout(new Promise(() => {}), 10, 0)', expected: 0, async: true },
       { call: 'withTimeout(Promise.resolve(0), 20, 99)', expected: 0, async: true },
       { call: '(() => { const late = new Promise((resolve, reject) => setTimeout(() => reject(new Error("late")), 50)); late.catch(() => {}); return withTimeout(late, 10, "fallback"); })()', expected: 'fallback', async: true },
@@ -758,28 +767,16 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 
   /* ── async/await ──────────────────────────────────────────────────── */
   'js-easy3-cache-or-load': {
-    solution: `const getValue = async (cache, key, load) => {
-  // async wraps this plain value in a promise as well.
-  if (key in cache) return cache[key];
-  const value = await load(key);
-  cache[key] = value;
-  return value;
-};`,
-    junior: `const getValue = async (cache, key, load) => {
-  const isCached = key in cache;
-  if (isCached) {
-    const cached = cache[key];
-    return cached;
-  }
-  const loaded = await load(key);
-  cache[key] = loaded;
-  return loaded;
-};`,
-    senior: `const getValue = async (cache, key, load) => {
-  if (Object.hasOwn(cache, key)) return cache[key];
-  return (cache[key] = await load(key));
-};`,
+    solution: "const getValue = async (cache, key, load) => {\n  if (Object.hasOwn(cache, key)) return cache[key];\n  const value = await load(key);\n  // Defining a data property also handles a literal __proto__ key safely.\n  Object.defineProperty(cache, key, { value, writable: true, enumerable: true, configurable: true });\n  return value;\n};",
+    junior: "const getValue = async (cache, key, load) => {\n  const isCached = Object.hasOwn(cache, key);\n  if (isCached) return cache[key];\n  const loaded = await load(key);\n  const descriptor = { value: loaded, writable: true, enumerable: true, configurable: true };\n  Object.defineProperty(cache, key, descriptor);\n  return loaded;\n};",
+    senior: "const getValue = async (cache, key, load) => {\n  if (Object.hasOwn(cache, key)) return cache[key];\n  const value = await load(key);\n  Object.defineProperty(cache, key, { value, writable: true, enumerable: true, configurable: true });\n  return value;\n};",
     hiddenTests: [
+      { call: "(async()=>{const key='x'.repeat(1000),cache=Object.create(null),value=Symbol('loaded');const result=await getValue(cache,key,actual=>Promise.resolve(actual===key?value:null));return [result===value,cache[key]===value,Object.keys(cache).length];})()", expected: [true, true, 1], async: true },
+
+      { call: "(async()=>{const out=[];for(const key of ['__proto__','constructor','toString','']){const cache={},prototype=Object.getPrototypeOf(cache),value=Object.freeze({key});let calls=0;const result=await getValue(cache,key,function(actual){calls++;return Promise.resolve(actual===key&&arguments.length===1?value:null);});const descriptor=Object.getOwnPropertyDescriptor(cache,key);out.push(result===value&&calls===1&&Object.getPrototypeOf(cache)===prototype&&descriptor.value===value&&descriptor.writable&&descriptor.enumerable&&descriptor.configurable);}return out;})()", expected: [true, true, true, true], async: true },
+      { call: "(async()=>{const cache=Object.create(null),fn=()=>1,sym=Symbol('x');const out=[];for(const [index,value] of [undefined,false,'',NaN,-0,fn,sym].entries()){const key='k'+index;cache[key]=value;out.push(Object.is(await getValue(cache,key,()=>{throw 'must not load';}),value));}return out;})()", expected: [true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),cache={kept:1};const a=getValue(cache,'failed',()=>{throw reason;});const b=getValue(cache,'rejected',()=>Promise.reject(reason));return [a instanceof Promise,await a.then(()=>false,error=>error===reason),await b.then(()=>false,error=>error===reason),Object.keys(cache).join(',')];})()", expected: [true, true, true, "kept"], async: true },
+
       { call: '(() => { const cache = {}; return getValue(cache, "k", () => Promise.reject(new Error("offline"))).catch(error => [error.message, "k" in cache]); })()', expected: ['offline', false], async: true },
       { call: 'getValue({}, "n", () => Promise.resolve(null))', expected: null, async: true },
       { call: 'getValue({ a: "cached" }, "a", () => Promise.resolve("loaded"))', expected: 'cached', async: true },
@@ -805,6 +802,9 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return { name, postCount };
 };`,
     hiddenTests: [
+      { call: "(async()=>{const user=Object.freeze({id:0,name:'\u00e9\ud83e\udd88'}),posts=Object.freeze(new Array(1000));let userCalls=0,postsCalls=0,argsOk=true,release;const result=loadProfile(function(){userCalls++;argsOk=argsOk&&arguments.length===0;return new Promise(done=>{release=done;});},function(id){postsCalls++;argsOk=argsOk&&arguments.length===1&&id===0;return Promise.resolve(posts);});const early=postsCalls;release(user);const a=await result,b=await loadProfile(()=>Promise.resolve(user),()=>Promise.resolve([]));return [result instanceof Promise,early,userCalls,postsCalls,argsOk,a.name,a.postCount,a!==b,Object.keys(a).sort().join(',')];})()", expected: [true, 0, 1, 1, true, "\u00e9\ud83e\udd88", 1000, true, "name,postCount"], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),out=[];let posts=0;out.push(await loadProfile(()=>{throw reason;},()=>{posts++;return Promise.resolve([]);}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.reject(reason),()=>{posts++;return Promise.resolve([]);}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.resolve({id:1,name:''}),()=>{throw reason;}).then(()=>false,error=>error===reason));out.push(await loadProfile(()=>Promise.resolve({id:1,name:''}),()=>Promise.reject(reason)).then(()=>false,error=>error===reason));return [out,posts];})()", expected: [[true, true, true, true], 0], async: true },
+
       { call: 'loadProfile(() => Promise.resolve({ id: 2, name: "Bo" }), () => Promise.reject(new Error("posts down"))).catch(error => error.message)', expected: 'posts down', async: true },
       { call: '(() => { let asked = 0; return loadProfile(() => Promise.reject(new Error("x")), () => { asked += 1; return Promise.resolve([]); }).catch(() => asked); })()', expected: 0, async: true },
       { call: 'loadProfile(() => Promise.resolve({ id: 9, name: "Nia" }), id => Promise.resolve(Array(id).fill("post")))', expected: { name: 'Nia', postCount: 9 }, async: true },
@@ -826,6 +826,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const sortNumbers = numbers => numbers.toSorted((a, b) => a - b);`,
     hiddenTests: [
+      {"call": "(() => {const input=Object.freeze([-0,+0,-0,2,-2]);const out=sortNumbers(input);return out!==input&&out[0]===-2&&Object.is(out[1],-0)&&Object.is(out[2],+0)&&Object.is(out[3],-0)&&out[4]===2&&Object.is(input[0],-0);})()", "expected": true, "label": "stable signed zeros and frozen original order"},
+      {"call": "(() => {const input=[];const a=sortNumbers(input),b=sortNumbers(input);return a!==input&&a!==b&&a.length===0;})()", "expected": true, "label": "each empty result is fresh"},
+      {"call": "(() => {const a=sortNumbers(Object.freeze(Array.from({length:1000},(_,i)=>999-i)));return a.length===1000&&a.every((x,i)=>x===i);})()", "expected": true, "label": "thousand-number reverse ordering"},
+      {"call": "sortNumbers(Object.freeze([1000000,-1000000,0.125,0.125,-0.5]))", "expected": [-1000000, -0.5, 0.125, 0.125, 1000000], "label": "finite endpoints, duplicate fractions and multiplicity"},
       { call: 'sortNumbers([25, 100, 3])', expected: [3, 25, 100] },
       { call: 'sortNumbers([-10, -9, -100])', expected: [-100, -10, -9] },
       { call: 'sortNumbers([2, 2, 1])', expected: [1, 2, 2] },

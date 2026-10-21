@@ -68,7 +68,7 @@ export const REACT_SOLUTIONS: Record<string, CodingSolution> = {
 
 const App = () => {
   const [color, setColor] = useState(colors[0]);
-  return <><select value={color} onChange={event => setColor(event.target.value)}>{colors.map(one => <option key={one}>{one}</option>)}</select><p>You have selected: {color}</p></>;
+  return <><select aria-label="Color" value={color} onChange={event => setColor(event.target.value)}>{colors.map(one => <option key={one}>{one}</option>)}</select><p>You have selected: {color}</p></>;
 };`,
     junior: `const colors = ['Red', 'Blue', 'Green'];
 
@@ -86,7 +86,7 @@ const App = () => {
 
   return (
     <main>
-      <select value={selectedColor} onChange={handleChange}>
+      <select aria-label="Color" value={selectedColor} onChange={handleChange}>
         {options}
       </select>
       <p>You have selected: {selectedColor}</p>
@@ -96,7 +96,7 @@ const App = () => {
     senior: `const colors = ['Red', 'Blue', 'Green'];
 
 const ColorSelect = ({ value, options, onChange }) => (
-  <select value={value} onChange={event => onChange(event.target.value)}>
+  <select aria-label="Color" value={value} onChange={event => onChange(event.target.value)}>
     {options.map(option => <option key={option} value={option}>{option}</option>)}
   </select>
 );
@@ -110,6 +110,7 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: "\ntest('has an accessible dropdown with the three exact options and native initial value',()=>{\n const view=render(<App/>),select=screen.getByRole('combobox',{name:'Color'});expect(select).toBe(view.container.querySelector('select'));expect(select.multiple).toBe(false);expect([...select.options].map(option=>[option.textContent,option.value])).toEqual([['Red','Red'],['Blue','Blue'],['Green','Green']]);expect(select.value).toBe('Red');expect(view.container.textContent).toContain('You have selected: Red');\n});\ntest('keeps actual selection and status aligned for every repeated choice',()=>{\n const view=render(<App/>),select=view.container.querySelector('select');\n for(let step=0;step<24;step++){const color=['Green','Red','Blue','Green'][step%4];fireEvent.change(select,{target:{value:color}});expect(select.value).toBe(color);expect(view.container.textContent).toContain('You have selected: '+color);view.rerender(<App/>);expect(select.value).toBe(color);expect(view.container.textContent).toContain('You have selected: '+color);}\n});\ntest('keeps selections independent across simultaneous and fresh mounts',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.change(first.container.querySelector('select'),{target:{value:'Green'}});expect(second.container.querySelector('select').value).toBe('Red');fireEvent.change(second.container.querySelector('select'),{target:{value:'Blue'}});expect(first.container.querySelector('select').value).toBe('Green');expect(first.container.textContent).toContain('You have selected: Green');expect(second.container.textContent).toContain('You have selected: Blue');first.unmount();const third=render(<App/>);expect(third.container.querySelector('select').value).toBe('Red');\n});\n",
   },
   "react-counter": {
     solution: `const App = () => {
@@ -145,7 +146,12 @@ const App = () => {
     </main>
   );
 };`,
-    hiddenSuite: `${NUMBERS_SHOWN}
+    hiddenSuite: `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+
 test('the page shows exactly one number, 0, before any click', () => {
   const { container } = render(<App />);
   expect(numbersShown(container)).toBe('0');
@@ -159,7 +165,12 @@ test('the number is exactly 1 after one click and 3 after three', () => {
   fireEvent.click(button);
   fireEvent.click(button);
   expect(numbersShown(container)).toBe('3');
-});`,
+});
+
+test('each of thirty-six clicks adds exactly one',()=>{const {container,rerender}=render(<App/>);const read=()=>numbersShown(container);expect(read()).toBe('0');expect(container.querySelectorAll('button')).toHaveLength(1);expect(container.querySelector('button').textContent.trim().length>0).toBe(true);for(let i=1;i<=36;i++){fireEvent.click(container.querySelector('button'));expect(read()).toBe(String(i));if(i%5===0){rerender(<App/>);expect(read()).toBe(String(i));}}});
+test('two counters own their state',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"]'),b=container.querySelector('[data-scope="b"]');expect(numbersShown(a)).toBe('0');expect(numbersShown(b)).toBe('0');for(let i=0;i<7;i++)fireEvent.click(a.querySelector('button'));expect(numbersShown(a)).toBe('7');expect(numbersShown(b)).toBe('0');fireEvent.click(b.querySelector('button'));expect(numbersShown(b)).toBe('1');expect(numbersShown(a)).toBe('7');});
+test('a new mounted counter starts at zero',()=>{const first=render(<App/>);fireEvent.click(first.container.querySelector('button'));first.unmount();const second=render(<App/>);expect(numbersShown(second.container)).toBe('0');fireEvent.click(second.container.querySelector('button'));expect(numbersShown(second.container)).toBe('1');});
+`,
   },
   "react-toggle-button": {
     solution: `const App = () => {
@@ -198,17 +209,23 @@ const App = () => {
   const [on, toggle] = useToggle();
   return (
     <main>
-      <button type="button" aria-pressed={on} onClick={toggle}>
+      <button type="button" onClick={toggle}>
         {on ? 'ON' : 'OFF'}
       </button>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('one button has an exact label through repeated parent updates',()=>{const {container,rerender}=render(<App/>);expect(container.querySelectorAll('button')).toHaveLength(1);for(let i=0;i<=32;i++){const b=container.querySelector('button');expect(b.textContent).toBe(i%2?'ON':'OFF');expect(within(container).getByRole('button',{name:i%2?'ON':'OFF'})).toBe(b);rerender(<App/>);expect(b.textContent).toBe(i%2?'ON':'OFF');if(i<32)fireEvent.click(b);}});
+test('two mounted toggles stay independent',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"] button'),b=container.querySelector('[data-scope="b"] button');fireEvent.click(a);expect(a.textContent).toBe('ON');expect(b.textContent).toBe('OFF');fireEvent.click(b);fireEvent.click(b);expect(a.textContent).toBe('ON');expect(b.textContent).toBe('OFF');});
+test('fresh mount resets an on button to OFF',()=>{const a=render(<App/>);fireEvent.click(a.container.querySelector('button'));a.unmount();const b=render(<App/>);expect(b.container.querySelector('button').textContent).toBe('OFF');});
+`,
   },
   "react-live-paragraph": {
     solution: `const App = () => {
   const [text, setText] = useState('');
-  return <><input value={text} onChange={event => setText(event.target.value)} /><p>{text}</p></>;
+  return <><label>Your text <input value={text} onChange={event => setText(event.target.value)} /></label><p>{text}</p></>;
 };`,
     junior: `const App = () => {
   const [text, setText] = useState('');
@@ -219,7 +236,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={text} onChange={handleChange} />
+      <label>Your text <input type="text" value={text} onChange={handleChange} /></label>
       <p>{text}</p>
     </main>
   );
@@ -262,21 +279,34 @@ test('the input is controlled from the first render: its value comes from state'
   expect(reactProps(input).value).toBe('');
   fireEvent.change(input, { target: { value: 'kept in state' } });
   expect(reactProps(input).value).toBe('kept in state');
-});`,
+});
+
+
+test('twenty-four raw updates remain exact and controlled through parent renders',()=>{
+ const view=render(<App/>);const values=['',' ','  raw  ','<b>literal</b>','0','false','🦈漢字','café','x'.repeat(2000)];
+ for(let i=0;i<24;i++){const value=values[i%values.length],field=screen.getByLabelText('Your text');fireEvent.change(field,{target:{value}});expect(field.value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);expect(reactProps(field).value).toBe(value);view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Your text').value).toBe(value);expect(view.container.querySelector('p').textContent).toBe(value);}
+});
+test('long-to-short-to-empty changes do not leave text from a previous value',()=>{
+ const view=render(<App/>);const field=screen.getByLabelText('Your text');for(const value of ['long '.repeat(100),'short','s','','<i>','  ']){fireEvent.change(field,{target:{value}});expect(view.container.querySelector('p').textContent).toBe(value);expect(field.value).toBe(value);}
+});
+test('independent mirrors and a fresh mount never share text state',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Your text'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Your text'),{target:{value:'Beta'}});expect(a.container.querySelector('p').textContent).toBe('Alpha');expect(b.container.querySelector('p').textContent).toBe('Beta');a.unmount();expect(b.container.querySelector('p').textContent).toBe('Beta');b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Your text').value).toBe('');expect(fresh.container.querySelector('p').textContent).toBe('');fresh.unmount();
+});
+`,
   },
   "react-data-list": {
-    solution: `const people = [
+    solution: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => <ul>{people.map(person => <li key={person.id}><span>{person.name}</span>{' '}<span>{person.age}</span></li>)}</ul>;`,
-    junior: `const people = [
+const App = ({ people = initialPeople } = {}) => <ul>{people.map(person => <li key={person.id}><span>{person.name}</span>{' '}<span>{person.age}</span></li>)}</ul>;`,
+    junior: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
 
-const App = () => {
+const App = ({ people = initialPeople } = {}) => {
   const items = [];
   for (const person of people) {
     items.push(
@@ -292,7 +322,7 @@ const App = () => {
     </main>
   );
 };`,
-    senior: `const people = [
+    senior: `const initialPeople = [
   { id: 1, name: 'Daniel', age: 25 },
   { id: 2, name: 'John', age: 24 },
 ];
@@ -303,13 +333,14 @@ const PersonItem = ({ name, age }) => (
   </li>
 );
 
-const App = () => (
+const App = ({ people = initialPeople } = {}) => (
   <main>
     <ul>
       {people.map(({ id, ...person }) => <PersonItem key={id} {...person} />)}
     </ul>
   </main>
 );`,
+    hiddenSuite: "\ntest('renders exact names and ages from read-only current data,including zero and empty',()=>{\n const people=Object.freeze([Object.freeze({id:99,name:'  <b>\u017dofie \ud83e\udd88</b>  ',age:0}),Object.freeze({id:1,name:'Same',age:150}),Object.freeze({id:2,name:'Same',age:7})]);\n const view=render(<App people={people}/>);expect(view.container.querySelectorAll('ul')).toHaveLength(1);expect([...view.container.querySelectorAll('ul li')].map(li=>li.textContent)).toEqual(people.map(person=>person.name+' '+person.age));\n view.rerender(<App people={Object.freeze([{id:7,name:'',age:0}])}/>);expect(view.container.querySelector('li').textContent).toBe(' 0');view.rerender(<App people={Object.freeze([])}/>);expect(view.container.querySelector('ul')).toBeTruthy();expect(view.container.querySelectorAll('li')).toHaveLength(0);expect(people[0].age).toBe(0);\n});\ntest('retains id-bound row nodes when order,name or age changes',()=>{\n const people=[{id:1,name:'One',age:10},{id:2,name:'Two',age:20},{id:3,name:'Three',age:30}],view=render(<App people={people}/>),nodes=[...view.container.querySelectorAll('li')];\n view.rerender(<App people={[{...people[2],name:'Changed',age:31},people[0],people[1]]}/>);let rows=[...view.container.querySelectorAll('li')];expect(rows[0]).toBe(nodes[2]);expect(rows[1]).toBe(nodes[0]);expect(rows[2]).toBe(nodes[1]);expect(rows[0].textContent).toBe('Changed 31');\n view.rerender(<App people={[people[1],{id:9,name:'New',age:0},people[2]]}/>);rows=[...view.container.querySelectorAll('li')];expect(rows[0]).toBe(nodes[1]);expect(rows[2]).toBe(nodes[2]);\n});\ntest('handles a hundred frozen people and independent mounts',()=>{\n const people=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({id:100-i,name:i===0?'x'.repeat(2000):'Person '+i,age:i})));const first=render(<App people={people}/>),second=render(<App people={[]}/>);\n expect([...first.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(people.map(person=>person.name+' '+person.age));first.rerender(<App people={[]}/>);expect(second.container.querySelectorAll('li')).toHaveLength(0);\n});\n",
   },
   "react-show-and-hide": {
     solution: `const App = () => {
@@ -347,13 +378,14 @@ const App = () => (
     </main>
   );
 };`,
+    hiddenSuite: "\ntest('conditionally adds/removes a nonempty paragraph through repeated toggles',()=>{\n const view=render(<App/>);const button=view.container.querySelector('button');expect(button).toBeTruthy();expect(button.textContent.trim().length>0).toBe(true);expect(view.container.querySelector('p')).toBeNull();\n for(let i=0;i<24;i++){fireEvent.click(button);const paragraphs=view.container.querySelectorAll('p');expect(paragraphs).toHaveLength(i%2===0?1:0);if(i%2===0)expect(paragraphs[0].textContent.trim().length>0).toBe(true);}\n});\ntest('keeps visibility through parent rerenders without mounting a hidden paragraph',()=>{\n const view=render(<App/>);view.rerender(<App/>);expect(view.container.querySelector('p')).toBeNull();fireEvent.click(view.container.querySelector('button'));view.rerender(<App/>);expect(view.container.querySelectorAll('p')).toHaveLength(1);fireEvent.click(view.container.querySelector('button'));view.rerender(<App/>);expect(view.container.querySelector('p')).toBeNull();\n});\ntest('owns visibility independently for concurrent and fresh mounts',()=>{\n const first=render(<App/>),second=render(<App/>);fireEvent.click(first.container.querySelector('button'));expect(first.container.querySelector('p')).toBeTruthy();expect(second.container.querySelector('p')).toBeNull();fireEvent.click(second.container.querySelector('button'));expect(first.container.querySelector('p')).toBeTruthy();expect(second.container.querySelector('p')).toBeTruthy();fireEvent.click(first.container.querySelector('button'));expect(second.container.querySelector('p')).toBeTruthy();first.unmount();const third=render(<App/>);expect(third.container.querySelector('p')).toBeNull();\n});\n",
   },
   "react-add-a-todo": {
     solution: `const App = () => {
   const [text, setText] = useState('');
   const [todos, setTodos] = useState([]);
   const addTodo = () => { if (!text.trim()) return; setTodos(items => [...items, {id: crypto.randomUUID(), text: text.trim()}]); setText(''); };
-  return <><input value={text} onChange={event => setText(event.target.value)} /><button onClick={addTodo}>Add</button><ul>{todos.map(todo => <li key={todo.id}>{todo.text}</li>)}</ul></>;
+  return <><input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} /><button onClick={addTodo}>Add</button><ul>{todos.map(todo => <li key={todo.id}>{todo.text}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [text, setText] = useState('');
@@ -378,7 +410,7 @@ const App = () => (
 
   return (
     <main>
-      <input type="text" value={text} onChange={handleChange} />
+      <input type="text" aria-label="New todo" value={text} onChange={handleChange} />
       <button onClick={handleAdd}>Add</button>
       <ul>
         {todos.map(todo => <li key={todo.id}>{todo.text}</li>)}
@@ -409,6 +441,14 @@ const App = () => (
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const todoTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>li.textContent);
+const addText=(scope,value)=>{const input=within(scope).getByRole('textbox',{name:'New todo'});fireEvent.change(input,{target:{value}});const before=input.value;fireEvent.click(within(scope).getByRole('button',{name:'Add'}));return {input,before};};
+test('trim blanks,duplicates,literal strings and stable appended rows',()=>{const {container,rerender}=render(<App/>);expect(container.querySelectorAll('ul')).toHaveLength(1);expect(todoTexts(container)).toEqual([]);let expected=[],nodes=[];for(const raw of['  Zed  ','',' '+String.fromCharCode(9,10),'Amy','Zed','<b>literal</b>',' 🌊 ','x'.repeat(2000),' Keep inside  space ']){const {input,before}=addText(container,raw);if(before.trim())expected.push(before.trim());expect(todoTexts(container)).toEqual(expected);nodes.forEach((node,i)=>expect(container.querySelectorAll('li')[i]).toBe(node));nodes=Array.from(container.querySelectorAll('li'));expect(input.value).toBe(before.trim()?'':before);expect(container.querySelector('li b')).toBeNull();rerender(<App/>);expect(todoTexts(container)).toEqual(expected);}});
+test('twenty-four additions preserve exact insertion order',()=>{const {container}=render(<App/>);const expected=[];for(let i=0;i<24;i++){const value=['Zulu','alpha','Zulu','item '+(24-i)][i%4];expected.push(value);addText(container,value);expect(todoTexts(container)).toEqual(expected);}});
+test('independent lists and fresh empty state',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');addText(a,'Left');expect(todoTexts(a)).toEqual(['Left']);expect(todoTexts(b)).toEqual([]);addText(b,'Right');expect(todoTexts(a)).toEqual(['Left']);expect(todoTexts(b)).toEqual(['Right']);root.unmount();expect(todoTexts(render(<App/>).container)).toEqual([]);});
+`,
   },
   "react-remove-a-todo": {
     solution: `const initialTodos = [
@@ -420,7 +460,7 @@ const App = () => (
 const App = () => {
   const [todos, setTodos] = useState(initialTodos);
   const removeTodo = id => setTodos(items => items.filter(item => item.id !== id));
-  return <ul>{todos.map(todo => <li key={todo.id}>{todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button></li>)}</ul>;
+  return <ul>{todos.map(todo => <li key={todo.id}>{todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => removeTodo(todo.id)}>Remove</button></li>)}</ul>;
 };`,
     junior: `const initialTodos = [
   { id: 1, text: 'Practice hooks' },
@@ -446,7 +486,7 @@ const App = () => {
       <ul>
         {todos.map(todo => (
           <li key={todo.id}>
-            {todo.text} <button onClick={() => handleRemove(todo.id)}>Remove</button>
+            {todo.text} <button aria-label={'Remove ' + todo.text} onClick={() => handleRemove(todo.id)}>Remove</button>
           </li>
         ))}
       </ul>
@@ -477,14 +517,23 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const originalTodoTexts=['Practice hooks','Read the docs','Ship the app'];
+const remainingTodoTexts=scope=>Array.from(scope.querySelectorAll('li')).map(li=>{const copy=li.cloneNode(true);copy.querySelector('button').remove();return copy.textContent.trim();});
+const checkRemoveRows=(scope,expected,nodes)=>{const rows=Array.from(scope.querySelectorAll('li'));expect(remainingTodoTexts(scope)).toEqual(expected);rows.forEach((row,i)=>{expect(row).toBe(nodes[originalTodoTexts.indexOf(expected[i])]);const b=within(row).getByRole('button',{name:'Remove '+expected[i]});expect(b.textContent).toBe('Remove');});};
+test('all six removal orders keep the clicked identity and surviving nodes',()=>{for(const order of[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]){const root=render(<App/>),scope=root.container,nodes=Array.from(scope.querySelectorAll('li'));let expected=[...originalTodoTexts];checkRemoveRows(scope,expected,nodes);for(const index of order){fireEvent.click(within(scope).getByRole('button',{name:'Remove '+originalTodoTexts[index]}));expected=expected.filter(t=>t!==originalTodoTexts[index]);checkRemoveRows(scope,expected,nodes);}expect(scope.querySelectorAll('li button')).toHaveLength(0);root.unmount();}});
+test('parent renders do not restore removed items',()=>{const {container,rerender}=render(<App/>),nodes=Array.from(container.querySelectorAll('li'));fireEvent.click(within(container).getByRole('button',{name:'Remove Read the docs'}));for(let i=0;i<4;i++){rerender(<App/>);checkRemoveRows(container,['Practice hooks','Ship the app'],nodes);}});
+test('separate lists and fresh mounts keep their own initial todos',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));expect(remainingTodoTexts(a)).toEqual(originalTodoTexts.slice(1));expect(remainingTodoTexts(b)).toEqual(originalTodoTexts);root.unmount();expect(remainingTodoTexts(render(<App/>).container)).toEqual(originalTodoTexts);});
+`,
   },
   "react-search-a-list": {
     solution: `const names = ['Ana', 'Daniel', 'John'];
 
 const App = () => {
   const [query, setQuery] = useState('');
-  const filtered = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
+  const filtered = names.filter(name => name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <><input aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
 };`,
     junior: `const names = ['Ana', 'Daniel', 'John'];
 
@@ -495,7 +544,7 @@ const App = () => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matches = [];
   for (const name of names) {
     const lowerName = name.toLowerCase();
@@ -506,7 +555,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input type="text" aria-label="Search names" value={query} onChange={handleChange} />
       <ul>
         {matches.map(name => <li key={name}>{name}</li>)}
       </ul>
@@ -515,7 +564,7 @@ const App = () => {
 };`,
     senior: `const names = ['Ana', 'Daniel', 'John'];
 
-const matches = (name, query) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+const matches = (name, query) => name.toLowerCase().includes(query.trim().toLowerCase());
 
 const App = () => {
   const [query, setQuery] = useState('');
@@ -529,6 +578,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const expectedNames=['Ana','Daniel','John'];
+const searchRows=scope=>Array.from(scope.querySelectorAll('li'));
+test('every raw query is controlled,trimmed,case-insensitive literal substring search',()=>{const {container,rerender}=render(<App/>);const input=within(container).getByLabelText('Search names');let previous=new Map(searchRows(container).map(li=>[li.textContent,li]));for(const query of['an','  an  ','OH','da','L','not found','  ','','A','.','[','ana','n','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});expect(input.value).toBe(query);const expected=expectedNames.filter(name=>name.toLowerCase().includes(query.trim().toLowerCase())),current=searchRows(container);expect(current.map(li=>li.textContent)).toEqual(expected);for(const li of current)if(previous.has(li.textContent))expect(li).toBe(previous.get(li.textContent));previous=new Map(current.map(li=>[li.textContent,li]));rerender(<App/>);expect(searchRows(container).map(li=>li.textContent)).toEqual(expected);expect(input.value).toBe(query);}});
+test('twenty changed searches never destructively shorten the source',()=>{const {container}=render(<App/>),input=within(container).getByLabelText('Search names');for(let i=0;i<20;i++){const q=['ANA','oh','none','', ' an '][i%5];fireEvent.change(input,{target:{value:q}});expect(searchRows(container).map(li=>li.textContent)).toEqual(expectedNames.filter(n=>n.toLowerCase().includes(q.trim().toLowerCase())));}});
+test('independent search text and fresh full list',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.change(a.querySelector('input'),{target:{value:'ana'}});expect(searchRows(a).map(li=>li.textContent)).toEqual(['Ana']);expect(searchRows(b).map(li=>li.textContent)).toEqual(expectedNames);root.unmount();expect(searchRows(render(<App/>).container).map(li=>li.textContent)).toEqual(expectedNames);});
+`,
   },
   "react-controlled-form": {
     solution: `const App = () => {
@@ -536,7 +593,7 @@ const App = () => {
   const [submitted, setSubmitted] = useState(null);
   const updateField = event => setForm(value => ({...value, [event.target.name]: event.target.value}));
   const submit = event => { event.preventDefault(); setSubmitted(form); };
-  return <><form onSubmit={submit}><input name="name" value={form.name} onChange={updateField} /><input name="email" value={form.email} onChange={updateField} /><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
+  return <><form onSubmit={submit}><label>Name <input name="name" value={form.name} onChange={updateField} /></label><label>Email <input name="email" value={form.email} onChange={updateField} /></label><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
 };`,
     junior: `const App = () => {
   const [name, setName] = useState('');
@@ -568,8 +625,8 @@ const App = () => {
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={name} onChange={handleNameChange} />
-        <input type="email" value={email} onChange={handleEmailChange} />
+        <label>Name <input type="text" value={name} onChange={handleNameChange} /></label>
+        <label>Email <input type="email" value={email} onChange={handleEmailChange} /></label>
         <button type="submit">Submit</button>
       </form>
       {result}
@@ -607,12 +664,28 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+const submitSnapshot=(container)=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('twenty raw submissions preserve the last snapshot while the live fields change',()=>{
+ const view=render(<App/>);const names=['',' ','  Reef <b>  ','0','🦈漢字','n'.repeat(2000)];
+ for(let i=0;i<20;i++){const name=names[i%names.length],email='person'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:name}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:email}});if(i===0)expect(view.container.textContent).not.toContain(email);submitSnapshot(view.container);expect(view.container.textContent).toContain(name);expect(view.container.textContent).toContain(email);const pendingName='unsent-name-'+i,pendingEmail='unsent'+i+'@example.test';fireEvent.change(screen.getByLabelText('Name'),{target:{value:pendingName}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:pendingEmail}});view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('Name').value).toBe(pendingName);expect(screen.getByLabelText('Email').value).toBe(pendingEmail);expect(view.container.textContent).toContain(email);expect(view.container.textContent).not.toContain(pendingEmail);expect(view.container.textContent).not.toContain(pendingName);}
+ fireEvent.change(screen.getByLabelText('Name'),{target:{value:''}});fireEvent.change(screen.getByLabelText('Email'),{target:{value:''}});submitSnapshot(view.container);expect(view.container.textContent).not.toContain('person19@example.test');expect(view.container.textContent).not.toContain('unsent19@example.test');
+});
+test('both inputs carry controlled value props from the first render',()=>{
+ const view=render(<App/>);const props=node=>node[Object.keys(node).find(key=>key.startsWith('__reactProps$'))]||{};const name=screen.getByLabelText('Name'),email=screen.getByLabelText('Email');expect(props(name).value).toBe('');expect(props(email).value).toBe('');fireEvent.change(name,{target:{value:'controlled name'}});fireEvent.change(email,{target:{value:'controlled@example.test'}});expect(props(name).value).toBe('controlled name');expect(props(email).value).toBe('controlled@example.test');expect(view.container.textContent).not.toContain('controlled@example.test');
+});
+test('separate forms keep their own drafts and submitted snapshots',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.change(one.getByLabelText('Name'),{target:{value:'Alpha'}});fireEvent.change(one.getByLabelText('Email'),{target:{value:'alpha@example.test'}});submitSnapshot(a.container);fireEvent.change(two.getByLabelText('Name'),{target:{value:'Beta'}});fireEvent.change(two.getByLabelText('Email'),{target:{value:'beta@example.test'}});submitSnapshot(b.container);expect(a.container.textContent).toContain('alpha@example.test');expect(a.container.textContent).not.toContain('beta@example.test');expect(b.container.textContent).toContain('beta@example.test');expect(b.container.textContent).not.toContain('alpha@example.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Name').value).toBe('');expect(screen.getByLabelText('Email').value).toBe('');expect(fresh.container.textContent).not.toContain('alpha@example.test');fresh.unmount();
+});
+`,
   },
   "react-effect-on-mount": {
     solution: `const App = () => {
   const [status, setStatus] = useState('Waiting…');
   useEffect(() => setStatus('Ready!'), []);
-  return <p>{status}</p>;
+  return <p role="status">{status}</p>;
 };`,
     junior: `const App = () => {
   const [isReady, setIsReady] = useState(false);
@@ -628,7 +701,7 @@ const App = () => {
 
   return (
     <main>
-      <p>{message}</p>
+      <p role="status">{message}</p>
     </main>
   );
 };`,
@@ -648,6 +721,12 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('one live status replaces Waiting exactly',async()=>{const {root,first}=observeFirstCommit();expect(first).toBe('Waiting…');expect(within(root.container).getAllByRole('status')).toHaveLength(1);await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));expect(root.container.textContent).not.toContain('Waiting');});
+test('ordinary parent updates preserve Ready',async()=>{const {root,Probe}=observeFirstCommit();await waitFor(()=>expect(within(root.container).getByRole('status').textContent).toBe('Ready!'));for(let i=0;i<12;i++){root.rerender(<Probe/>);expect(within(root.container).getByRole('status').textContent).toBe('Ready!');}});
+test('every independent and fresh instance commits its own Waiting state first',()=>{const initial=[];function Watch({label}){const ref=React.useRef(null);React.useLayoutEffect(()=>{initial.push([label,ref.current.querySelector('[role="status"]').textContent]);},[]);return <section ref={ref}><App/></section>;}const root=render(<><Watch label="a"/><Watch label="b"/></>);expect(initial).toEqual([['a','Waiting…'],['b','Waiting…']]);expect(within(root.container).getAllByRole('status').map(p=>p.textContent)).toEqual(['Ready!','Ready!']);root.unmount();const fresh=observeFirstCommit();expect(fresh.first).toBe('Waiting…');expect(within(fresh.root.container).getByRole('status').textContent).toBe('Ready!');});
+`,
   },
   "react-document-title": {
     solution: `const App = () => {
@@ -677,7 +756,6 @@ const App = () => {
   useEffect(() => {
     const previous = document.title;
     document.title = title;
-    // Give the tab its old name back when this component goes away
     return () => { document.title = previous; };
   }, [title]);
 };
@@ -703,7 +781,12 @@ test('the title holds exactly the count: 0, then 1, then 3', () => {
   fireEvent.click(button);
   fireEvent.click(button);
   expect(numbersInTitle()).toBe('3');
-});`,
+});
+
+test('every count through36 is rendered and reflected in the title',()=>withTitle(async()=>{const root=render(<App/>);const button=within(root.container).getByRole('button');for(let n=0;n<=36;n++){expect(titleNumbers()).toEqual([String(n)]);expect(pageNumbers(root.container)).toEqual([String(n)]);if(n<36)fireEvent.click(button);}root.unmount();}));
+test('parent renders do not reset or add to the counter',()=>withTitle(async()=>{const root=render(<App/>);for(let n=1;n<=12;n++){fireEvent.click(within(root.container).getByRole('button'));root.rerender(<App/>);expect(titleNumbers()).toEqual([String(n)]);expect(pageNumbers(root.container)).toEqual([String(n)]);}root.unmount();}));
+test('a fresh mounted counter replaces an unrelated previous title with zero',()=>withTitle(async()=>{document.title='Other page 456';const first=render(<App/>);fireEvent.click(within(first.container).getByRole('button'));first.unmount();document.title='Other page 987';const fresh=render(<App/>);expect(titleNumbers()).toEqual(['0']);expect(pageNumbers(fresh.container)).toEqual(['0']);fresh.unmount();}));
+`,
   },
   "react-delayed-message": {
     solution: `const App = () => {
@@ -752,8 +835,67 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, so "one second" is exact.
-    hiddenSuite: `${FAKE_CLOCK}
+    hiddenSuite: `
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
 test('Done! is absent until one second has passed, then shows', () => withClock(async clock => {
   const { container } = render(<App />);
   expect(container.textContent).toContain('Waiting');
@@ -783,35 +925,64 @@ test('leaving before the second is up clears the timeout', () => withClock(async
   }
   expect(started.length > 0).toBe(true);
   expect(started.every(id => cleared.includes(id))).toBe(true);
-}));`,
+}));
+const expectMessage=(scope,text)=>{expect(within(scope).getByText(text,{exact:true})).toBeTruthy();expect(within(scope).queryByText(text==='Done!'?'Waiting…':'Done!',{exact:true})).toBeNull();};
+
+test('the exact message remains Waiting through999ms then Done persists',()=>withClock(async clock=>{const root=render(<App/>);expectMessage(root.container,'Waiting…');await clock.tick(999);expectMessage(root.container,'Waiting…');await clock.tick(1);expectMessage(root.container,'Done!');await clock.tick(5000);expectMessage(root.container,'Done!');root.unmount();}));
+test('ordinary parent renders do not restart the pending timeout',()=>withClock(async clock=>{const root=render(<App/>);await clock.tick(400);root.rerender(<App/>);await clock.tick(599);expectMessage(root.container,'Waiting…');await clock.tick(1);expectMessage(root.container,'Done!');root.rerender(<App/>);await clock.tick(2000);expectMessage(root.container,'Done!');root.unmount();}));
+test('staggered independent mounts and fresh replacement keep their own delay',()=>withClock(async clock=>{const a=render(<App/>);await clock.tick(400);const b=render(<App/>);await clock.tick(600);expectMessage(a.container,'Done!');expectMessage(b.container,'Waiting…');a.unmount();await clock.tick(399);expectMessage(b.container,'Waiting…');await clock.tick(1);expectMessage(b.container,'Done!');b.unmount();const fresh=render(<App/>);expectMessage(fresh.container,'Waiting…');await clock.tick(999);expectMessage(fresh.container,'Waiting…');fresh.unmount();await clock.tick(5000);}));
+`,
   },
   "react-get-one-user": {
     solution: `const App = () => {
   const [user, setUser] = useState(null);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users/1').then(response => response.json()).then(setUser); }, []);
-  return user ? <p>{user.name} — {user.email}</p> : <p>Loading…</p>;
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users/1')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  if (loading) return <p role="status">Loading…</p>;
+  if (error) return <p role="alert">{error}</p>;
+  return user ? <p>{user.name} — {user.email}</p> : null;
 };`,
     junior: `const App = () => {
   const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadUser = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
-      const data = await response.json();
-      setUser(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUser(data);
+      } catch {
+        if (active) setError('Could not load user.');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadUser();
+    return () => { active = false; };
   }, []);
 
   if (isLoading) {
     return (
       <main>
-        <p>Loading…</p>
+        <p role="status">Loading…</p>
       </main>
     );
   }
+
+  if (error) return <p role="alert">{error}</p>;
 
   return (
     <main>
@@ -824,15 +995,18 @@ test('leaving before the second is up clears the timeout', () => withClock(async
 
 const useUser = id => {
   const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
+    setUser(null);
+    setError('');
     fetch(\`\${USERS_URL}/\${id}\`)
-      .then(response => response.json())
-      // A response that lands after unmount, or after the id changed, is ignored
-      .then(data => { if (active) setUser(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); });
     return () => { active = false; };
   }, [id]);
-  return user;
+  return { user, error, loading: user === null && !error };
 };
 
 const UserCard = ({ user }) => (
@@ -840,10 +1014,30 @@ const UserCard = ({ user }) => (
 );
 
 const App = () => {
-  const user = useUser(1);
-  return <main>{user ? <UserCard user={user} /> : <p>Loading…</p>}</main>;
+  const { user, error, loading } = useUser(1);
+  return <main>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <UserCard user={user} />}</main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+
 test('asks for user 1 and shows the name and email of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users/1');
@@ -852,24 +1046,45 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
   request.respond({ id: 1, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' });
   await waitFor(() => expect(container.textContent).toContain('Ada Lovelace'));
   expect(container.textContent).toContain('ada@engine.example');
-}));`,
+}));
+
+test('single authoritative record is literal and ordinary parent renders do not refetch',async()=>withPhasedRequests(async calls=>{const {container,rerender}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));checkGet(calls[0],'https://jsonplaceholder.typicode.com/users/1');await sendHeaders(calls[0]);expect(within(container).getByRole('status').textContent).toBe('Loading…');await sendJSON(calls[0],{id:1,name:'<b>Literal user</b> 🌊',email:'learner+tag@example.test'});await waitFor(()=>expect(container.textContent).toContain('<b>Literal user</b> 🌊'));expect(container.textContent).toContain('learner+tag@example.test');expect(container.querySelector('b')).toBeNull();expect(within(container).queryByRole('alert')).toBeNull();for(let i=0;i<4;i++){rerender(<App/>);expect(calls).toHaveLength(1);expect(container.textContent).toContain('learner+tag@example.test');}}));
+test('HTTP,network and JSON failures finish loading without rendering a failed body',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],503);await sendJSON(calls[index],{id:1,name:'Failed body',email:'failed@example.test'});}else if(failure==='network'){await act(async()=>calls[index].fail());}else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load user.'));expect(within(scope).queryByRole('status')).toBeNull();expect(scope.textContent).not.toContain('Failed body');root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('independent mounted users and a late old response do not replace each other',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[1]);await sendJSON(calls[1],{id:1,name:'Right',email:'right@example.test'});await sendHeaders(calls[0]);await sendJSON(calls[0],{id:1,name:'Left',email:'left@example.test'});expect(a.textContent).toContain('Left');expect(a.textContent).not.toContain('Right');expect(b.textContent).toContain('Right');root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await sendHeaders(calls[3]);await sendJSON(calls[3],{id:1,name:'Fresh',email:'fresh@example.test'});await sendHeaders(calls[2]);await sendJSON(calls[2],{id:1,name:'Stale',email:'stale@example.test'});expect(fresh.container.textContent).toContain('Fresh');expect(fresh.container.textContent).not.toContain('Stale');}));
+`,
   },
   "react-get-users-list": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(response => response.json()).then(setUsers); }, []);
-  return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); });
+    return () => { active = false; };
+  }, []);
+  return <main>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   const items = [];
@@ -879,6 +1094,7 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
 
   return (
     <main>
+      {error && <p role="alert">{error}</p>}
       <ul>{items}</ul>
     </main>
   );
@@ -887,17 +1103,23 @@ test('asks for user 1 and shows the name and email of the answer', () => withReq
 
 const useUsers = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const response = await fetch(USERS_URL);
-      const data = await response.json();
-      if (active) setUsers(data);
+      try {
+        const response = await fetch(USERS_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      }
     };
     load();
     return () => { active = false; };
   }, []);
-  return users;
+  return { users, error };
 };
 
 const UserList = ({ users }) => (
@@ -907,10 +1129,37 @@ const UserList = ({ users }) => (
 );
 
 const App = () => {
-  const users = useUsers();
-  return <main><UserList users={users} /></main>;
+  const { users, error } = useUsers();
+  return <main>{error && <p role="alert">{error}</p>}<UserList users={users} /></main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+
 test('asks for the users list and renders one item per user of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -920,39 +1169,64 @@ test('asks for the users list and renders one item per user of the answer', () =
   await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
-}));`,
+}));
+
+test('empty,pending and one-hundred-record responses preserve exact literal order and parent state',async()=>withPhasedRequests(async calls=>{for(const data of[[],Array.from({length:100},(_,i)=>({id:i+1,name:i===0?'':i%4===0?'<b>literal</b>':i%3===0?'Duplicate':'Name '+(100-i)}))]){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));checkGet(calls[index],'https://jsonplaceholder.typicode.com/users');expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual([]);await sendHeaders(calls[index]);expect(phasedNames(scope)).toEqual([]);await sendJSON(calls[index],Object.freeze(data.map(Object.freeze)));expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(scope.querySelector('li b')).toBeNull();const nodes=Array.from(scope.querySelectorAll('li'));root.rerender(<App/>);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));nodes.forEach((n,i)=>expect(scope.querySelectorAll('li')[i]).toBe(n));expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('all request failure kinds leave the UL empty and show an alert',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],500);await sendJSON(calls[index],[{id:1,name:'Failed body'}]);}else if(failure==='network')await act(async()=>calls[index].fail());else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual([]);root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('concurrent and fresh lists own their responses',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[1]);await sendJSON(calls[1],[{id:1,name:'Right'}]);await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:1,name:'Left'}]);expect(phasedNames(a)).toEqual(['Left']);expect(phasedNames(b)).toEqual(['Right']);root.unmount();const fresh=render(<App/>);expect(phasedNames(fresh.container)).toEqual([]);await waitFor(()=>expect(calls).toHaveLength(3));await sendHeaders(calls[2]);await sendJSON(calls[2],[]);expect(phasedNames(fresh.container)).toEqual([]);}));
+`,
   },
   "react-loading-state": {
     solution: `const App = () => {
-  const [users, setUsers] = useState([]); const [loading, setLoading] = useState(true);
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers).finally(() => setLoading(false)); }, []);
-  if (loading) return <p>Loading…</p>;
-  return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  if (loading) return <p role="status">Loading…</p>;
+  return <main>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   if (isLoading) {
     return (
       <main>
-        <p>Loading…</p>
+        <p role="status">Loading…</p>
       </main>
     );
   }
 
   return (
     <main>
+      {error && <p role="alert">{error}</p>}
       <ul>
         {users.map(user => <li key={user.id}>{user.name}</li>)}
       </ul>
@@ -962,14 +1236,15 @@ test('asks for the users list and renders one item per user of the answer', () =
     senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
 
 const App = () => {
-  // null means "nothing has arrived yet", so the loading flag is derived, not stored twice
   const [users, setUsers] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     fetch(USERS_URL)
-      .then(response => response.json())
-      .then(data => { if (active) setUsers(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) { setError('Could not load users.'); setUsers([]); } });
     return () => { active = false; };
   }, []);
 
@@ -979,11 +1254,38 @@ const App = () => {
     <main aria-busy={loading}>
       {loading
         ? <p role="status">Loading…</p>
-        : <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>}
+        : <>{error && <p role="alert">{error}</p>}<ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></>}
     </main>
   );
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+
 test('Loading stays while the request is in flight, then one item per user replaces it', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -996,13 +1298,18 @@ test('Loading stays while the request is in flight, then one item per user repla
   expect(pageText(container)).not.toContain('Loading');
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
-}));`,
+}));
+
+test('loading covers headers and body,then exact empty or literal rows replace it',async()=>withPhasedRequests(async calls=>{for(const data of[[],[{id:1,name:'Same'},{id:2,name:'Same'},{id:3,name:'<b>literal</b>'},{id:4,name:'🌊'}]]){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));checkGet(calls[index],'https://jsonplaceholder.typicode.com/users');expect(within(scope).getByRole('status').textContent).toBe('Loading…');expect(phasedNames(scope)).toEqual([]);await sendHeaders(calls[index]);expect(within(scope).getByRole('status').textContent).toBe('Loading…');await sendJSON(calls[index],data);expect(within(scope).queryByRole('status')).toBeNull();expect(scope.querySelectorAll('ul')).toHaveLength(1);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(scope.querySelector('li b')).toBeNull();root.rerender(<App/>);expect(phasedNames(scope)).toEqual(data.map(u=>u.name));expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('HTTP,network and JSON failure each stop the spinner and show an alert',async()=>withPhasedRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));if(failure==='http'){await sendHeaders(calls[index],500);await sendJSON(calls[index],[{id:1,name:'Failed body'}]);}else if(failure==='network')await act(async()=>calls[index].fail());else{await sendHeaders(calls[index]);await act(async()=>calls[index].badJSON());}await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(within(scope).queryByRole('status')).toBeNull();expect(phasedNames(scope)).toEqual([]);root.rerender(<App/>);expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('separate loading lifetimes and late old responses do not replace fresh rows',async()=>withPhasedRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await sendHeaders(calls[0]);await sendJSON(calls[0],[{id:1,name:'Left'}]);expect(phasedNames(a)).toEqual(['Left']);expect(within(b).getByRole('status').textContent).toBe('Loading…');await sendHeaders(calls[1]);await sendJSON(calls[1],[]);expect(within(b).queryByRole('status')).toBeNull();root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await sendHeaders(calls[3]);await sendJSON(calls[3],[{id:1,name:'Fresh'}]);await sendHeaders(calls[2]);await sendJSON(calls[2],[{id:1,name:'Stale'}]);expect(phasedNames(fresh.container)).toEqual(['Fresh']);}));
+`,
   },
   "react-fetch-error-state": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [error, setError] = useState('');
-  useEffect(() => { const load = async () => { try { const response = await fetch('https://jsonplaceholder.typicode.com/users'); if (!response.ok) throw new Error('Request failed'); setUsers(await response.json()); } catch (err) { setError(err.message); } }; load(); }, []);
-  if (error) return <p>{error}</p>;
+  useEffect(() => { const load = async () => { try { const response = await fetch('https://jsonplaceholder.typicode.com/users'); if (!response.ok) throw new Error('Request failed'); setUsers(await response.json()); } catch (err) { setError('Could not load users'); } }; load(); }, []);
+  if (error) return <p role="alert">{error}</p>;
   return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
     junior: `const App = () => {
@@ -1019,7 +1326,7 @@ test('Loading stays while the request is in flight, then one item per user repla
         const data = await response.json();
         setUsers(data);
       } catch (error) {
-        setErrorMessage(error.message);
+        setErrorMessage('Could not load users');
       }
     };
     loadUsers();
@@ -1028,7 +1335,7 @@ test('Loading stays while the request is in flight, then one item per user repla
   if (errorMessage !== '') {
     return (
       <main>
-        <p>Something went wrong: {errorMessage}</p>
+        <p role="alert">Something went wrong: {errorMessage}</p>
       </main>
     );
   }
@@ -1050,7 +1357,6 @@ const fetchJson = async (url, options) => {
 };
 
 const App = () => {
-  // One object with a status field: the screen can never be loading and failed at once
   const [state, setState] = useState({ status: 'loading' });
 
   useEffect(() => {
@@ -1069,7 +1375,35 @@ const App = () => {
     </main>
   );
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+const showsANewMessage = (inFlight, now) => now.trim() !== '' && !inFlight.includes(now);
+
 test('a non-OK answer is a failure even when its body is a list: a message, no items', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -1087,13 +1421,19 @@ test('a request that throws shows a message and no items', () => withRequests(as
   calls[0].fail(new TypeError('Network down'));
   await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
   expect(container.querySelectorAll('li').length).toBe(0);
-}));`,
+}));
+
+
+test('non-success headers, rejected JSON and an empty-message rejection produce a real alert without users',()=>auditServer(async calls=>{for(const failure of ['http','json','network']){const view=render(<App/>),call=calls[calls.length-1];await act(async()=>{if(failure==='http')call.reply([{id:1,name:'Not a success'}],503);else if(failure==='json')call.badJson();else call.fail(new TypeError(''));});const alert=within(view.container).getByRole('alert');expect(alert.textContent.trim().length>0).toBe(true);expect(auditRows(view)).toEqual([]);if(failure==='http')expect(call.jsonReads).toBe(0);view.unmount();}}));
+test('empty and long successful arrays derive their own rows without parent refetch',()=>auditServer(async calls=>{for(const length of [0,1,37]){const data=Array.from({length},(_,i)=>({id:i,name:i%2?'Same':'Long '+i+'x'.repeat(450)})),view=render(<App/>);await auditReply(calls[calls.length-1],data);const count=calls.length;view.rerender(<App/>);expect(calls).toHaveLength(count);expect(auditRows(view)).toEqual(data.map(user=>user.name));expect(within(view.container).queryByRole('alert')).toBeNull();view.unmount();}}));
+test('separate and fresh user requests do not share a result',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[1],[{id:1,name:'Second'}]);await auditReply(calls[0],[{id:1,name:'First'}]);expect(auditRows(a)).toEqual(['First']);expect(auditRows(b)).toEqual(['Second']);a.unmount();b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(3);await auditReply(calls[2],[]);expect(auditRows(fresh)).toEqual([]);}));
+`,
   },
   "react-select-fetched-user": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [selected, setSelected] = useState(null);
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <p>{selected.email}</p>}</>;
+  return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <section><p>{selected.name}</p><p>{selected.email}</p></section>}</>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
@@ -1144,7 +1484,6 @@ const UserDetails = ({ user }) => (
 
 const App = () => {
   const [users, setUsers] = useState([]);
-  // Only the id lives in state, so the details can never drift from the list
   const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
@@ -1170,32 +1509,67 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('all twenty-four fetched choices stay exact through repeated selection and parents',()=>withUsers(async calls=>{
+ const users=Array.from({length:24},(_,i)=>({id:'opaque-'+(31+i*17),name:i<2?'Same display name':'  Reef <b> 🦈 '+i+'  ',email:'unique'+i+'@reef.test'}));const view=render(<App/>);await act(async()=>calls[0].respond(users));const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(node=>node.textContent)).toEqual(users.map(user=>user.name));users.forEach(user=>expect(userOutput(view.container)).not.toContain(user.email));for(let turn=0;turn<48;turn++){const index=(turn*7)%24;fireEvent.click(buttons[index]);const out=userOutput(view.container);expect(out).toContain(users[index].name);expect(out).toContain(users[index].email);users.forEach((user,i)=>{if(i!==index)expect(out).not.toContain(user.email);});view.rerender(<App data-parent={turn}/>);expect(userOutput(view.container)).toContain(users[index].email);expect([...view.container.querySelectorAll('button')]).toEqual(buttons);expect(calls).toHaveLength(1);}
+}));
+test('empty and single-user results are data rather than a built-in fixture',()=>withUsers(async calls=>{
+ const empty=render(<App/>);await act(async()=>calls[0].respond([]));expect(empty.container.querySelectorAll('button')).toHaveLength(0);expect(userOutput(empty.container)).not.toContain('@');empty.unmount();const one=render(<App/>),user={id:777,name:'u'.repeat(2000),email:'one@reef.test'};await act(async()=>calls[1].respond([user]));expect(one.container.querySelectorAll('button')).toHaveLength(1);fireEvent.click(one.container.querySelector('button'));expect(userOutput(one.container)).toContain(user.name);expect(userOutput(one.container)).toContain(user.email);one.unmount();
+}));
+test('independent user requests and selections do not leak into another or a fresh mount',()=>withUsers(async calls=>{
+ const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);calls.forEach(userRequest);await act(async()=>{calls[1].respond([{id:1,name:'Beta',email:'beta@reef.test'}]);calls[0].respond([{id:1,name:'Alpha',email:'alpha@reef.test'}]);});fireEvent.click(a.container.querySelector('button'));expect(userOutput(a.container)).toContain('alpha@reef.test');expect(userOutput(b.container)).not.toContain('beta@reef.test');fireEvent.click(b.container.querySelector('button'));expect(userOutput(b.container)).toContain('beta@reef.test');expect(userOutput(a.container)).not.toContain('beta@reef.test');a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelectorAll('button')).toHaveLength(0);await act(async()=>calls[2].respond([{id:1,name:'Fresh',email:'fresh@reef.test'}]));expect(userOutput(fresh.container)).not.toContain('fresh@reef.test');fresh.unmount();
+}));
+`,
   },
   "react-filter-fetched-users": {
     solution: `const App = () => {
-  const [users, setUsers] = useState([]); const [query, setQuery] = useState('');
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
-  const filtered = users.filter(user => user.name.toLowerCase().includes(query.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
+  const [users, setUsers] = useState([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const filtered = users.filter(user => user.name.toLowerCase().includes(query.trim().toLowerCase()));
+  return <>{loading && <p role="status">Loading users…</p>}{error && <p role="alert">{error}</p>}<input aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [users, setUsers] = useState([]);
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const loadUsers = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users');
-      const data = await response.json();
-      setUsers(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUsers(data);
+      } catch {
+        if (active) setError('Could not load users.');
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     loadUsers();
+    return () => { active = false; };
   }, []);
 
   const handleChange = (event) => {
     setQuery(event.target.value);
   };
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.trim().toLowerCase();
   const matchingUsers = [];
   for (const user of users) {
     const lowerName = user.name.toLowerCase();
@@ -1206,7 +1580,9 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
+      <input type="text" aria-label="Filter users" value={query} onChange={handleChange} />
       <ul>
         {matchingUsers.map(user => <li key={user.id}>{user.name}</li>)}
       </ul>
@@ -1217,18 +1593,22 @@ const App = () => {
 
 const useUsers = () => {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     fetch(USERS_URL)
-      .then(response => response.json())
-      .then(data => { if (active) setUsers(data); });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUsers(data); })
+      .catch(() => { if (active) setError('Could not load users.'); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  return users;
+  return { users, loading, error };
 };
 
 const App = () => {
-  const users = useUsers();
+  const { users, loading, error } = useUsers();
   const [query, setQuery] = useState('');
 
   const visible = useMemo(() => {
@@ -1238,32 +1618,66 @@ const App = () => {
 
   return (
     <main>
+      {loading && <p role="status">Loading users…</p>}
+      {error && <p role="alert">{error}</p>}
       <input type="search" aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
       <p role="status">{visible.length} of {users.length} shown</p>
       <ul>{visible.map(user => <li key={user.id}>{user.name}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('pending input filters the current readonly response locally and retains surviving rows',async()=>withUserRequests(async calls=>{const {container,rerender}=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(1));expect(calls[0].url).toBe('https://jsonplaceholder.typicode.com/users');expect(calls[0].options.method===undefined||calls[0].options.method==='GET').toBe(true);expect(within(container).getByText('Loading users…').getAttribute('role')).toBe('status');const input=within(container).getByLabelText('Filter users');fireEvent.change(input,{target:{value:' alpha '}});expect(calls).toHaveLength(1);const data=Object.freeze([{id:1,name:'Alpha'},{id:2,name:' beta Alpha '},{id:3,name:'Alpha'},{id:4,name:'<b>literal</b>'},{id:5,name:''},{id:6,name:'🌊'},{id:7,name:'x'.repeat(2000)}].map(Object.freeze));await fulfillUsers(calls[0],data);expect(within(container).queryByText('Loading users…')).toBeNull();let previous=new Map();for(const query of[' alpha ','','B',' [ ','LIT','not found','  ','🌊','x'.repeat(2000),'']){fireEvent.change(input,{target:{value:query}});const expected=data.filter(u=>u.name.toLowerCase().includes(query.trim().toLowerCase()));expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));const rows=Array.from(container.querySelectorAll('li'));expected.forEach((u,i)=>{if(previous.has(u.id))expect(rows[i]).toBe(previous.get(u.id));});previous=new Map(expected.map((u,i)=>[u.id,rows[i]]));expect(container.querySelector('li b')).toBeNull();expect(input.value).toBe(query);rerender(<App/>);expect(fetchedNames(container)).toEqual(expected.map(u=>u.name));expect(calls).toHaveLength(1);}}));
+test('HTTP,network and JSON failures show an alert without retrying on typing',async()=>withUserRequests(async calls=>{for(const failure of['http','network','json']){const index=calls.length,root=render(<App/>),scope=root.container;await waitFor(()=>expect(calls).toHaveLength(index+1));await act(async()=>{if(failure==='http')calls[index].resolve({ok:false,status:503,json:async()=>[{id:1,name:'Must not render'}]});else if(failure==='network')calls[index].reject(new Error('Offline'));else calls[index].resolve({ok:true,status:200,json:async()=>{throw new Error('Bad JSON');}});});await waitFor(()=>expect(within(scope).getByRole('alert').textContent).toBe('Could not load users.'));expect(within(scope).queryByText('Loading users…')).toBeNull();expect(fetchedNames(scope)).toEqual([]);fireEvent.change(within(scope).getByLabelText('Filter users'),{target:{value:'still local'}});expect(calls).toHaveLength(index+1);root.unmount();}}));
+test('each mounted list fetches for itself and an old response cannot replace a fresh list',async()=>withUserRequests(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');await waitFor(()=>expect(calls).toHaveLength(2));await fulfillUsers(calls[1],[{id:1,name:'Right'}]);await fulfillUsers(calls[0],[{id:1,name:'Left'}]);expect(fetchedNames(a)).toEqual(['Left']);expect(fetchedNames(b)).toEqual(['Right']);root.unmount();const old=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(3));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await fulfillUsers(calls[3],[]);await fulfillUsers(calls[2],[{id:2,name:'Stale'}]);expect(fetchedNames(fresh.container)).toEqual([]);expect(within(fresh.container).queryByText('Loading users…')).toBeNull();}));
+`,
   },
   "react-refresh-data": {
     solution: `const App = () => {
   const [todo, setTodo] = useState(null);
-  const loadTodo = async () => { const id = Math.ceil(Math.random() * 20); const response = await fetch(\`https://jsonplaceholder.typicode.com/todos/\${id}\`); setTodo(await response.json()); };
-  useEffect(() => { loadTodo(); }, []);
-  return <><button onClick={loadTodo}>Refresh</button>{todo && <p>{todo.title}</p>}</>;
+  const [error, setError] = useState('');
+  const serial = useRef(0);
+  const loadTodo = async () => {
+    const current = ++serial.current;
+    setTodo(null);
+    setError('');
+    try {
+      const id = Math.floor(Math.random() * 20) + 1;
+      const response = await fetch(\`https://jsonplaceholder.typicode.com/todos/\${id}\`);
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      if (current === serial.current) setTodo(data);
+    } catch {
+      if (current === serial.current) setError('Could not load todo.');
+    }
+  };
+  useEffect(() => { loadTodo(); return () => { serial.current += 1; }; }, []);
+  return <><button onClick={loadTodo}>Refresh</button>{error && <p role="alert">{error}</p>}{todo && <p>{todo.title}</p>}</>;
 };`,
     junior: `const App = () => {
   const [todo, setTodo] = useState(null);
+  const [error, setError] = useState('');
+  const serial = useRef(0);
 
   const loadTodo = async () => {
-    const randomId = Math.floor(Math.random() * 20) + 1;
-    const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + randomId);
-    const data = await response.json();
-    setTodo(data);
+    const current = ++serial.current;
+    setTodo(null);
+    setError('');
+    try {
+      const randomId = Math.floor(Math.random() * 20) + 1;
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + randomId);
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      if (current === serial.current) setTodo(data);
+    } catch {
+      if (current === serial.current) setError('Could not load todo.');
+    }
   };
 
   useEffect(() => {
     loadTodo();
+    return () => { serial.current += 1; };
   }, []);
 
   const handleRefresh = () => {
@@ -1274,6 +1688,8 @@ const App = () => {
   if (todo !== null) {
     content = <p>{todo.title}</p>;
   }
+
+  if (error) content = <p role="alert">{error}</p>;
 
   return (
     <main>
@@ -1287,30 +1703,50 @@ const randomId = () => Math.floor(Math.random() * 20) + 1;
 
 const useRandomTodo = () => {
   const [todo, setTodo] = useState(null);
+  const [error, setError] = useState('');
   const requestId = useRef(0);
-
   const refresh = useCallback(async () => {
     const current = ++requestId.current;
-    const response = await fetch(\`\${TODOS_URL}/\${randomId()}\`);
-    const data = await response.json();
-    // Only the newest request may update the screen; a slow older one is dropped
-    if (current === requestId.current) setTodo(data);
+    setTodo(null);
+    setError('');
+    try {
+      const response = await fetch(\`\${TODOS_URL}/\${randomId()}\`);
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      if (current === requestId.current) setTodo(data);
+    } catch {
+      if (current === requestId.current) setError('Could not load todo.');
+    }
   }, []);
-
-  useEffect(() => { refresh(); }, [refresh]);
-  return { todo, refresh };
+  useEffect(() => { refresh(); return () => { requestId.current += 1; }; }, [refresh]);
+  return { todo, error, refresh };
 };
 
 const App = () => {
-  const { todo, refresh } = useRandomTodo();
-  return (
-    <main>
-      <button type="button" onClick={refresh}>Refresh</button>
-      <p aria-live="polite">{todo ? todo.title : 'Loading…'}</p>
-    </main>
-  );
+  const { todo, error, refresh } = useRandomTodo();
+  return <main><button type="button" onClick={refresh}>Refresh</button>{error ? <p role="alert">{error}</p> : <p aria-live="polite">{todo ? todo.title : 'Loading…'}</p>}</main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+
 const isOneTodo = call => /[/]todos[/][0-9]+$/.test(pathOf(call.url));
 
 test('mount and Refresh each ask for one todo, and the page shows the latest answer', () => withRequests(async calls => {
@@ -1326,13 +1762,18 @@ test('mount and Refresh each ask for one todo, and the page shows the latest ans
   calls[1].respond({ id: 12, userId: 1, title: 'Call the plumber', completed: true });
   await waitFor(() => expect(container.textContent).toContain('Call the plumber'));
   expect(container.textContent).not.toContain('Water the ferns');
-}));`,
+}));
+
+test('sixteen refreshes issue one GET each and preserve literal/empty response titles',()=>withPhasedRequests(async calls=>{const root=render(<App/>);for(let n=0;n<17;n++){await waitFor(()=>expect(calls).toHaveLength(n+1));todoRequest(calls[n]);await sendHeaders(calls[n]);const title=n===4?'':n%3===0?'<b>literal</b>':'Todo '+n;await sendJSON(calls[n],{id:7,title});expectTodo(root.container,title);root.rerender(<App/>);expect(calls).toHaveLength(n+1);if(n<16)fireEvent.click(refreshIn(root.container));}}));
+test('all request failures show an alert and Refresh recovers',()=>withPhasedRequests(async calls=>{const root=render(<App/>);for(const failure of['http','network','json']){const n=calls.length-1;await waitFor(()=>expect(calls).toHaveLength(n+1));if(failure==='http')await finishRequest(calls[n],{id:1,title:'Failed body'},503);else if(failure==='network')await act(async()=>calls[n].fail());else{await sendHeaders(calls[n]);await act(async()=>calls[n].badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load todo.'));expect(root.container.textContent).not.toContain('Failed body');fireEvent.click(refreshIn(root.container));const success=calls[calls.length-1];await finishRequest(success,{id:8,title:'Recovered'});expectTodo(root.container,'Recovered');expect(within(root.container).queryByRole('alert')).toBeNull();fireEvent.click(refreshIn(root.container));}}));
+test('newest refresh owns the result and fresh mounts ignore old pending requests',()=>withPhasedRequests(async calls=>{const old=render(<App/>);fireEvent.click(refreshIn(old.container));await waitFor(()=>expect(calls).toHaveLength(2));await finishRequest(calls[1],{id:2,title:'Newest'});await finishRequest(calls[0],{id:1,title:'Stale'});expectTodo(old.container,'Newest');expect(old.container.textContent).not.toContain('Stale');fireEvent.click(refreshIn(old.container));old.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await finishRequest(calls[3],{id:3,title:'Fresh'});await finishRequest(calls[2],{id:4,title:'Old removed'});expectTodo(fresh.container,'Fresh');expect(fresh.container.textContent).not.toContain('Old removed');}));
+`,
   },
   "react-post-a-new-post": {
     solution: `const App = () => {
   const [title, setTitle] = useState(''); const [created, setCreated] = useState(null);
   const submit = async event => { event.preventDefault(); const response = await fetch('https://jsonplaceholder.typicode.com/posts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})}); setCreated(await response.json()); };
-  return <><form onSubmit={submit}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
+  return <><form onSubmit={submit}><label>Title <input value={title} onChange={event => setTitle(event.target.value)} /></label><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
 };`,
     junior: `const App = () => {
   const [title, setTitle] = useState('');
@@ -1361,7 +1802,7 @@ test('mount and Refresh each ask for one todo, and the page shows the latest ans
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={title} onChange={handleChange} />
+        <label>Title <input type="text" value={title} onChange={handleChange} /></label>
         <button type="submit">Create</button>
       </form>
       {result}
@@ -1388,7 +1829,7 @@ const App = () => {
     setSaving(true);
     setError('');
     try {
-      setCreated(await postJson(POSTS_URL, { title: title.trim() }));
+      setCreated(await postJson(POSTS_URL, { title }));
       setTitle('');
     } catch (failure) {
       setError(failure.message);
@@ -1408,37 +1849,69 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('sixteen sequential posts use fresh exact snapshots and await each JSON body',()=>withPosts(async calls=>{
+ const view=render(<App/>),raw=['literal <b>reef</b>','  keep these spaces  ','quotes " and slash \\\\','🦈漢字café','x'.repeat(2000)];let previous=null;
+ expect(calls).toHaveLength(0);
+ for(let i=0;i<16;i++){const value=i%raw.length===4?raw[4]:raw[i%raw.length]+'-'+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value}});postEvent(view.container);expect(calls).toHaveLength(i+1);checkPost(calls[i],value);const serverTitle='Server reef 🦈 '+i,id=9000+i;expect(view.container.textContent).not.toContain(serverTitle);if(previous)expect(view.container.textContent).toContain(previous);await act(async()=>calls[i].response());expect(view.container.textContent).not.toContain(serverTitle);await act(async()=>calls[i].json({id,title:serverTitle}));expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).toContain(String(id));if(previous)expect(view.container.textContent).not.toContain(previous);previous=serverTitle;const pending='not submitted '+i;fireEvent.change(screen.getByLabelText('Title'),{target:{value:pending}});view.rerender(<App data-parent={i}/>);expect(view.container.textContent).toContain(serverTitle);expect(view.container.textContent).not.toContain(pending);expect(calls).toHaveLength(i+1);}
+}));
+test('editing a draft while its request is pending cannot rewrite the returned object',()=>withPosts(async calls=>{
+ const view=render(<App/>);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Submitted reef'}});postEvent(view.container);fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Unsent reef'}});checkPost(calls[0],'Submitted reef');await act(async()=>calls[0].response());await act(async()=>calls[0].json({id:427,title:'Server snapshot'}));expect(view.container.textContent).toContain('Server snapshot');expect(view.container.textContent).not.toContain('Unsent reef');
+}));
+test('two post forms and a fresh mount own separate drafts and created objects',()=>withPosts(async calls=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('Title'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('Title'),{target:{value:'Beta'}});postEvent(a.container);postEvent(b.container);checkPost(calls[0],'Alpha');checkPost(calls[1],'Beta');await act(async()=>{calls[1].response();calls[0].response();});await act(async()=>{calls[1].json({id:42,title:'Beta server'});calls[0].json({id:41,title:'Alpha server'});});expect(a.container.textContent).toContain('Alpha server');expect(a.container.textContent).not.toContain('Beta server');expect(b.container.textContent).toContain('Beta server');a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Title').value).toBe('');expect(fresh.container.textContent).not.toContain('server');expect(calls).toHaveLength(2);fresh.unmount();
+}));
+`,
   },
   "react-create-and-append": {
     solution: `const App = () => {
   const [todos, setTodos] = useState([]);
-  const createTodo = async () => { const response = await fetch('https://jsonplaceholder.typicode.com/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'Practice', completed:false})}); const created = await response.json(); setTodos(items => [...items, created]); };
-  return <><button onClick={createTodo}>Add</button><ul>{todos.map((todo, index) => <li key={todo.id ?? index}>{todo.title}</li>)}</ul></>;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const createTodo = async () => {
+    setSaving(true); setError('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Practice', completed: false }) });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      setTodos(items => [...items, { ...created, key: crypto.randomUUID() }]);
+    } catch {
+      setError('Could not add todo. Try again.');
+    } finally { setSaving(false); }
+  };
+  return <><button type="button" disabled={saving} onClick={createTodo}>{saving ? 'Adding…' : 'Add'}</button>{error && <p role="alert">{error}</p>}<ul>{todos.map(todo => <li key={todo.key}>{todo.title}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [todos, setTodos] = useState([]);
-
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const handleAdd = async () => {
-    const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'New todo', completed: false }),
-    });
-    const createdTodo = await response.json();
-    setTodos((currentTodos) => {
-      const nextTodos = [...currentTodos, createdTodo];
-      return nextTodos;
-    });
+    setSaving(true);
+    setError('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New todo', completed: false }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const createdTodo = await response.json();
+      setTodos(currentTodos => {
+        const nextTodos = [...currentTodos, createdTodo];
+        return nextTodos;
+      });
+    } catch {
+      setError('Could not add todo. Try again.');
+    } finally {
+      setSaving(false);
+    }
   };
-
-  return (
-    <main>
-      <button onClick={handleAdd}>Add</button>
-      <ul>
-        {todos.map((todo, index) => <li key={index}>{todo.title}</li>)}
-      </ul>
-    </main>
-  );
+  return <main>
+    <button type="button" disabled={saving} onClick={handleAdd}>{saving ? 'Adding…' : 'Add'}</button>
+    {error && <p role="alert">{error}</p>}
+    <ul>{todos.map((todo, index) => <li key={index}>{todo.title}</li>)}</ul>
+  </main>;
 };`,
     senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
 
@@ -1455,13 +1928,16 @@ const createTodo = async title => {
 const App = () => {
   const [todos, setTodos] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const add = async () => {
     setSaving(true);
+    setError('');
     try {
       const created = await createTodo(\`Todo \${todos.length + 1}\`);
-      // The training API answers with the same id every time, so key on a local one
       setTodos(current => [...current, { ...created, key: crypto.randomUUID() }]);
+    } catch {
+      setError('Could not add todo. Try again.');
     } finally {
       setSaving(false);
     }
@@ -1470,28 +1946,57 @@ const App = () => {
   return (
     <main>
       <button type="button" onClick={add} disabled={saving}>{saving ? 'Adding…' : 'Add'}</button>
+      {error && <p role="alert">{error}</p>}
       <ul>{todos.map(todo => <li key={todo.key}>{todo.title}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const checkCreateRequest=call=>{expect(call.url).toBe('https://jsonplaceholder.typicode.com/todos');expect(call.options.method).toBe('POST');const headers=new Headers(call.options.headers);expect(headers.get('content-type').toLowerCase().startsWith('application/json')).toBe(true);const body=JSON.parse(call.options.body);expect(typeof body.title).toBe('string');expect(body.title.trim().length>0).toBe(true);expect(body.completed).toBe(false);};
+test('pending writes wait for the server and keep exact returned values with repeated ids',async()=>withCreates(async calls=>{const {container,rerender}=render(<App/>);expect(createdTexts(container)).toEqual([]);expect(container.querySelectorAll('ul')).toHaveLength(1);let nodes=[];const expected=[];for(let i=0;i<6;i++){const b=within(container).getByRole('button',{name:'Add'});expect(b.type).toBe('button');fireEvent.click(b);await waitFor(()=>expect(calls).toHaveLength(i+1));checkCreateRequest(calls[i]);expect(container.querySelector('button').disabled).toBe(true);expect(createdTexts(container)).toEqual(expected);fireEvent.click(container.querySelector('button'));expect(calls).toHaveLength(i+1);const title=['<b>literal</b>','Duplicate','Duplicate','🌊','x'.repeat(2000),'Last'][i];expected.push(title);await settleCreate(calls[i],{id:201,title});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));expect(createdTexts(container)).toEqual(expected);nodes.forEach((n,j)=>expect(container.querySelectorAll('li')[j]).toBe(n));nodes=Array.from(container.querySelectorAll('li'));expect(container.querySelector('li b')).toBeNull();rerender(<App/>);expect(createdTexts(container)).toEqual(expected);}}));
+test('HTTP,network and JSON failures keep earlier rows and allow an error-clearing retry',async()=>withCreates(async calls=>{for(const failure of['http','network','json']){const root=render(<App/>),container=root.container;let index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));await settleCreate(calls[index],{id:1,title:'Keep'});await waitFor(()=>expect(container.querySelector('button').disabled).toBe(false));index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));const call=calls[index];await act(async()=>{if(failure==='http')call.resolve({ok:false,status:500,json:async()=>({id:2,title:'Do not append'})});else if(failure==='network')call.reject(new Error('Offline'));else call.resolve({ok:true,status:201,json:async()=>{throw new Error('Invalid JSON');}});});await waitFor(()=>expect(within(container).getByRole('alert').textContent).toBe('Could not add todo. Try again.'));expect(createdTexts(container)).toEqual(['Keep']);expect(container.querySelector('button').disabled).toBe(false);index=calls.length;fireEvent.click(container.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(index+1));expect(within(container).queryByRole('alert')).toBeNull();await settleCreate(calls[index],{id:1,title:'Keep'});await waitFor(()=>expect(createdTexts(container)).toEqual(['Keep','Keep']));expect(container.querySelector('button').disabled).toBe(false);root.unmount();}}));
+test('separate and fresh lists do not share created rows',async()=>withCreates(async calls=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(1));await settleCreate(calls[0],{id:1,title:'Left'});expect(createdTexts(a)).toEqual(['Left']);expect(createdTexts(b)).toEqual([]);fireEvent.click(b.querySelector('button'));await waitFor(()=>expect(calls).toHaveLength(2));await settleCreate(calls[1],{id:1,title:'Right'});expect(createdTexts(a)).toEqual(['Left']);expect(createdTexts(b)).toEqual(['Right']);root.unmount();expect(createdTexts(render(<App/>).container)).toEqual([]);}));
+`,
   },
   "react-user-by-id": {
     solution: `const App = () => {
-  const [id, setId] = useState(1); const [user, setUser] = useState(null);
-  useEffect(() => { fetch(\`https://jsonplaceholder.typicode.com/users/\${id}\`).then(r => r.json()).then(setUser); }, [id]);
-  return <><select value={id} onChange={event => setId(Number(event.target.value))}><option value="1">1</option><option value="2">2</option></select>{user && <p>{user.name}</p>}</>;
+  const [id, setId] = useState(1);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    setUser(null);
+    setError('');
+    fetch(\`https://jsonplaceholder.typicode.com/users/\${id}\`)
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); });
+    return () => { active = false; };
+  }, [id]);
+  return <><select aria-label="User" value={id} onChange={event => setId(Number(event.target.value))}><option value="1">User 1</option><option value="2">User 2</option></select>{error && <p role="alert">{error}</p>}{user && <p>{user.name}</p>}</>;
 };`,
     junior: `const App = () => {
   const [selectedId, setSelectedId] = useState('1');
   const [user, setUser] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
+    setUser(null);
+    setError('');
     const loadUser = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/users/' + selectedId);
-      const data = await response.json();
-      setUser(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users/' + selectedId);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setUser(data);
+      } catch {
+        if (active) setError('Could not load user.');
+      }
     };
     loadUser();
+    return () => { active = false; };
   }, [selectedId]);
 
   const handleChange = (event) => {
@@ -1503,9 +2008,11 @@ const App = () => {
     details = <p>{user.name}</p>;
   }
 
+  if (error) details = <p role="alert">{error}</p>;
+
   return (
     <main>
-      <select value={selectedId} onChange={handleChange}>
+      <select aria-label="User" value={selectedId} onChange={handleChange}>
         <option value="1">User 1</option>
         <option value="2">User 2</option>
       </select>
@@ -1518,41 +2025,55 @@ const USER_IDS = [1, 2];
 
 const useUser = id => {
   const [user, setUser] = useState(null);
-  const cache = useRef(new Map());
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const cached = cache.current.get(id);
-    if (cached) {
-      setUser(cached); // already seen: no round trip
-      return undefined;
-    }
     let active = true;
     setUser(null);
+    setError('');
     fetch(\`\${USERS_URL}/\${id}\`)
-      .then(response => response.json())
-      .then(data => {
-        cache.current.set(id, data);
-        if (active) setUser(data);
-      });
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setUser(data); })
+      .catch(() => { if (active) setError('Could not load user.'); });
     return () => { active = false; };
   }, [id]);
 
-  return user;
+  return { user, error };
 };
 
 const App = () => {
   const [id, setId] = useState(USER_IDS[0]);
-  const user = useUser(id);
+  const { user, error } = useUser(id);
   return (
     <main>
-      <select value={id} onChange={event => setId(Number(event.target.value))}>
+      <select aria-label="User" value={id} onChange={event => setId(Number(event.target.value))}>
         {USER_IDS.map(one => <option key={one} value={one}>User {one}</option>)}
       </select>
-      <p aria-live="polite">{user ? user.name : 'Loading…'}</p>
+      {error ? <p role="alert">{error}</p> : <p aria-live="polite">{user ? user.name : 'Loading…'}</p>}
     </main>
   );
 };`,
-    hiddenSuite: `${HELD_FETCH}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+
 test('each selection asks for that user and shows the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const first = requestTo(calls, '/users/1');
@@ -1565,13 +2086,18 @@ test('each selection asks for that user and shows the answer', () => withRequest
   second.respond({ id: 2, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' });
   await waitFor(() => expect(container.textContent).toContain('Grace Hopper'));
   expect(container.textContent).not.toContain('Ada Lovelace');
-}));`,
+}));
+
+test('sixteen changes refetch actual user data and do not retain stale names while parsing',()=>withPhasedRequests(async calls=>{const root=render(<App/>);let previous='';for(let n=0;n<17;n++){const id=n%2+1;await waitFor(()=>expect(calls).toHaveLength(n+1));checkGet(calls[n],'https://jsonplaceholder.typicode.com/users/'+id);if(previous)expect(root.container.textContent).not.toContain(previous);await sendHeaders(calls[n]);if(previous)expect(root.container.textContent).not.toContain(previous);const name=n===4?'':n%3===0?'<b>Name '+n+'</b>':'User revision '+n;await sendJSON(calls[n],{id,name});expectUser(root.container,name);root.rerender(<App/>);expect(calls).toHaveLength(n+1);previous=name;if(n<16)chooseUser(root.container,id===1?2:1);}}));
+test('all errors remove previous details and a changed selection recovers',()=>withPhasedRequests(async calls=>{const root=render(<App/>);let id=1;for(const failure of['http','network','json']){const n=calls.length-1;if(failure==='http')await finishRequest(calls[n],{id,name:'Failed body'},500);else if(failure==='network')await act(async()=>calls[n].fail());else{await sendHeaders(calls[n]);await act(async()=>calls[n].badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load user.'));expect(root.container.textContent).not.toContain('Failed body');id=id===1?2:1;chooseUser(root.container,id);await finishRequest(calls[calls.length-1],{id,name:'Recovered'});expectUser(root.container,'Recovered');expect(within(root.container).queryByRole('alert')).toBeNull();id=id===1?2:1;chooseUser(root.container,id);}}));
+test('only the latest selected user updates this mounted instance',()=>withPhasedRequests(async calls=>{const root=render(<App/>);chooseUser(root.container,2);await finishRequest(calls[1],{id:2,name:'Latest'});await finishRequest(calls[0],{id:1,name:'Stale'});expectUser(root.container,'Latest');expect(root.container.textContent).not.toContain('Stale');chooseUser(root.container,1);root.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));await finishRequest(calls[3],{id:1,name:'Fresh'});await finishRequest(calls[2],{id:1,name:'Old'});expectUser(fresh.container,'Fresh');expect(fresh.container.textContent).not.toContain('Old');}));
+`,
   },
   "react-debounced-search": {
     solution: `const App = () => {
   const [query, setQuery] = useState(''); const [settledQuery, setSettledQuery] = useState('');
   useEffect(() => { const timer = setTimeout(() => setSettledQuery(query), 500); return () => clearTimeout(timer); }, [query]);
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><p>Search: {settledQuery}</p></>;
+  return <><input aria-label="Search" value={query} onChange={event => setQuery(event.target.value)} /><p>Search: {settledQuery}</p></>;
 };`,
     junior: `const App = () => {
   const [query, setQuery] = useState('');
@@ -1600,7 +2126,7 @@ test('each selection asks for that user and shows the answer', () => withRequest
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input aria-label="Search" type="text" value={query} onChange={handleChange} />
       <p>Search: {settledQuery}</p>
     </main>
   );
@@ -1625,8 +2151,6 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK: keystrokes 100 ms apart, then
-    // the page is read at every step up to the 500 ms the prompt names.
     hiddenSuite: `${FAKE_CLOCK}
 test('a burst of keystrokes shows nothing until 500 ms after the last one, then only the final query', () => withClock(async clock => {
   const { container } = render(<App />);
@@ -1654,13 +2178,26 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
   expect(container.textContent).not.toContain('heron');
   await clock.tick(50);
   expect(container.textContent).toContain('heron');
-}));`,
+}));` + `
+test('sixteen literal queries keep their raw text and settle at499plus1,including clearing',()=>withStepClock(async clock=>{const root=render(<App/>);let previous='';const values=['  Mixed Case  ','<b>Literal</b>','a&b','☕','x'.repeat(2000),'','Again','two words','A','a','0','Search: marker','(typing…)','repeat','  ','end'];for(const value of values){fireEvent.change(typed(root.container),{target:{value}});expect(typed(root.container).value).toBe(value);await clock.tick(499);expectSettled(root.container,previous);await clock.tick(1);expectSettled(root.container,value);previous=value;expect(clock.pending()).toBe(0);}root.unmount();}));
+test('a new keystroke cancels the old deadline and parent renders do not restart the new one',()=>withStepClock(async clock=>{const root=render(<App/>);fireEvent.change(typed(root.container),{target:{value:'First'}});await clock.tick(400);fireEvent.change(typed(root.container),{target:{value:'Latest'}});await clock.tick(100);expectSettled(root.container,'');for(let i=0;i<12;i++)root.rerender(<App/>);await clock.tick(399);expectSettled(root.container,'');await clock.tick(1);expectSettled(root.container,'Latest');root.unmount();expect(clock.pending()).toBe(0);}));
+test('independent and fresh mounted debounce state owns its own pending timer',()=>withStepClock(async clock=>{const a=render(<App/>),b=render(<App/>);fireEvent.change(typed(a.container),{target:{value:'Left'}});await clock.tick(100);fireEvent.change(typed(b.container),{target:{value:'Right'}});await clock.tick(400);expectSettled(a.container,'Left');expectSettled(b.container,'');a.unmount();await clock.tick(100);expectSettled(b.container,'Right');fireEvent.change(typed(b.container),{target:{value:'Removed'}});b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(typed(fresh.container).value).toBe('');expectSettled(fresh.container,'');fresh.unmount();expect(clock.pending()).toBe(0);await clock.tick(1000);}));
+`,
   },
   "react-abort-a-request": {
     solution: `const App = () => {
   const [posts, setPosts] = useState([]);
-  useEffect(() => { const controller = new AbortController(); fetch('https://jsonplaceholder.typicode.com/posts', {signal: controller.signal}).then(r => r.json()).then(setPosts).catch(error => { if (error.name !== 'AbortError') console.error(error); }); return () => controller.abort(); }, []);
-  return <p>{posts.length} posts</p>;
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    fetch('https://jsonplaceholder.typicode.com/posts', {signal: controller.signal})
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setPosts(data); })
+      .catch(error => { if (active && error.name !== 'AbortError') setError('Could not load posts.'); });
+    return () => { active = false; controller.abort(); };
+  }, []);
+  return <main>{error && <p role="alert">{error}</p>}<p>{posts.length} posts</p></main>;
 };`,
     junior: `const App = () => {
   const [posts, setPosts] = useState([]);
@@ -1668,21 +2205,24 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
 
     const loadPosts = async () => {
       try {
         const response = await fetch('https://jsonplaceholder.typicode.com/posts', { signal: controller.signal });
+        if (!response.ok) throw new Error('Request failed');
         const data = await response.json();
-        setPosts(data);
+        if (active) setPosts(data);
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          setErrorMessage(error.message);
+        if (active && error.name !== 'AbortError') {
+          setErrorMessage('Could not load posts.');
         }
       }
     };
     loadPosts();
 
     return () => {
+      active = false;
       controller.abort();
     };
   }, []);
@@ -1690,7 +2230,7 @@ test('a pause shorter than 500 ms keeps the earlier settled query on the page', 
   if (errorMessage !== '') {
     return (
       <main>
-        <p>Could not load: {errorMessage}</p>
+        <p role="alert">{errorMessage}</p>
       </main>
     );
   }
@@ -1707,42 +2247,79 @@ const useJson = url => {
   const [state, setState] = useState({ data: null, error: null });
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     fetch(url, { signal: controller.signal })
-      .then(response => response.json())
-      .then(data => setState({ data, error: null }))
-      // Unmounting aborts on purpose; that is not a failure worth reporting
-      .catch(error => { if (error.name !== 'AbortError') setState({ data: null, error }); });
-    return () => controller.abort();
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setState({ data, error: null }); })
+      .catch(error => { if (active && error.name !== 'AbortError') setState({ data: null, error }); });
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return state;
 };
 
 const App = () => {
   const { data: posts, error } = useJson(POSTS_URL);
-  if (error) return <main><p role="alert">Could not load anything.</p></main>;
+  if (error) return <main><p role="alert">Could not load posts.</p></main>;
   return <main><p>{posts ? posts.length : 0} posts</p></main>;
 };`,
+    hiddenSuite: `
+test('empty and100record responses render their own count or exact literal list without parent refetch',()=>withPhaseResponses(async calls=>{for(const data of[[],Array.from({length:100},(_,i)=>({id:i+1,title:i===0?'':i%2?'Duplicate':'<b>Literal</b>'}))]){const n=calls.length,root=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(n+1));expect(calls[n].url).toBe('https://jsonplaceholder.typicode.com/posts');expect(calls[n].signal.aborted).toBe(false);expectPosts(root.container,[]);await phaseHeaders(calls[n]);expectPosts(root.container,[]);await phaseBody(calls[n],data);expectPosts(root.container,data);expect(root.container.querySelector('li b')).toBeNull();for(let i=0;i<8;i++)root.rerender(<App/>);expect(calls).toHaveLength(n+1);expectPosts(root.container,data);root.unmount();expect(calls[n].signal.aborted).toBe(true);}}));
+test('HTTP,network and JSON failures show the fixed alert without failed response data',()=>withPhaseResponses(async calls=>{for(const failure of['http','network','json']){const n=calls.length,root=render(<App/>);if(failure==='http')await phaseDone(calls[n],[{id:1,title:'Failed body'},{id:2,title:'Second'}],500);else if(failure==='network')await act(async()=>calls[n].fail(new TypeError('Offline')));else{await phaseHeaders(calls[n]);await act(async()=>calls[n].badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load posts.'));expect(root.container.textContent).not.toContain('Failed body');expect(root.container.querySelectorAll('li')).toHaveLength(0);expect(Array.from(root.container.querySelectorAll('p')).filter(p=>/^[0-9]+ posts$/.test(p.textContent)).every(p=>p.textContent==='0 posts')).toBe(true);root.unmount();}}));
+test('separate mounted requests own distinct signals and an old removal does not affect a fresh response',()=>withPhaseResponses(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);expect(calls[0].signal).not.toBe(calls[1].signal);await phaseHeaders(calls[0]);a.unmount();expect(calls[0].signal.aborted).toBe(true);expect(calls[1].signal.aborted).toBe(false);await phaseDone(calls[1],[{id:1,title:'Right'}]);expectPosts(b.container,[{id:1,title:'Right'}]);b.unmount();const fresh=render(<App/>);await phaseDone(calls[2],[{id:3,title:'Fresh'},{id:4,title:'Again'}]);expectPosts(fresh.container,[{id:3,title:'Fresh'},{id:4,title:'Again'}]);fresh.unmount();expect(calls[2].signal.aborted).toBe(true);}));
+`,
   },
   "react-paginated-posts": {
     solution: `const App = () => {
   const [posts, setPosts] = useState([]); const [page, setPage] = useState(1); const pageSize = 5;
-  useEffect(() => { fetch('https://jsonplaceholder.typicode.com/posts').then(r => r.json()).then(setPosts); }, []);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setStatus('loading');
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => {
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (active) setStatus('error'); });
+    return () => { active = false; };
+  }, [attempt]);
   const visible = posts.slice((page - 1) * pageSize, page * pageSize);
-  return <><ul>{visible.map(post => <li key={post.id}>{post.title}</li>)}</ul><button disabled={page === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button disabled={page * pageSize >= posts.length} onClick={() => setPage(value => value + 1)}>Next</button></>;
+  return <>{status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}<ul>{visible.map(post => <li key={post.id}>{post.title}</li>)}</ul><button type="button" disabled={page === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button type="button" disabled={page * pageSize >= posts.length} onClick={() => setPage(value => value + 1)}>Next</button></>;
 };`,
     junior: `const App = () => {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setStatus('loading');
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
-      const data = await response.json();
-      setPosts(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
     };
     loadPosts();
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
@@ -1771,11 +2348,13 @@ const App = () => {
 
   return (
     <main>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>
         {postsOnPage.map(post => <li key={post.id}>{post.title}</li>)}
       </ul>
-      <button onClick={handlePrevious} disabled={isFirstPage}>Previous</button>
-      <button onClick={handleNext} disabled={isLastPage}>Next</button>
+      <button type="button" onClick={handlePrevious} disabled={isFirstPage}>Previous</button>
+      <button type="button" onClick={handleNext} disabled={isLastPage}>Next</button>
     </main>
   );
 };`,
@@ -1785,7 +2364,7 @@ const PAGE_SIZE = 5;
 const usePagination = (items, pageSize) => {
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
-  const current = Math.min(page, pageCount); // stays valid even if the list shrinks
+  const current = Math.min(page, pageCount);
   const slice = useMemo(() => items.slice((current - 1) * pageSize, current * pageSize), [items, current, pageSize]);
   return {
     page: current,
@@ -1798,16 +2377,32 @@ const usePagination = (items, pageSize) => {
 
 const App = () => {
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    fetch(POSTS_URL).then(response => response.json()).then(data => { if (active) setPosts(data); });
+    setPosts([]);
+    setStatus('loading');
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => {
+        if (!active) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (active) setStatus('error'); });
     return () => { active = false; };
-  }, []);
+  }, [attempt]);
 
   const { page, pageCount, slice, previous, next } = usePagination(posts, PAGE_SIZE);
 
   return (
     <main>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></>}
       <ul>{slice.map(post => <li key={post.id}>{post.title}</li>)}</ul>
       <nav aria-label="Pagination">
         <button type="button" onClick={previous} disabled={page === 1}>Previous</button>
@@ -1817,24 +2412,52 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('empty, full and partial boundaries retain order and literal titles',()=>auditTransport(async calls=>{for(const size of [0,1,5,6,10,11,37,50]){const view=render(<App/>),call=calls[calls.length-1],data=auditData(300,size),count=Math.max(1,Math.ceil(size/5));await auditReply(call,data);const requests=calls.length;for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(data.slice((page-1)*5,page*5).map(x=>x.title));expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');for(let page=count;page>1;page--)auditClick(view,'Previous');auditClick(view,'Previous');expect(auditRows(view)).toEqual(data.slice(0,5).map(x=>x.title));expect(calls).toHaveLength(requests);view.unmount();}}));
+test('HTTP, JSON and offline failures clear on retry and allow successful paging',()=>auditTransport(async calls=>{const view=render(<App/>);for(let failure=0;failure<3;failure++){const call=calls[calls.length-1];await act(async()=>{if(failure===0)call.reply(auditData(1,10),false);else if(failure===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual([]);expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');auditClick(view,'Try again');expect(within(view.container).queryByRole('alert')).toBeNull();expect(calls[calls.length-1].url).toBe('https://jsonplaceholder.typicode.com/posts');}const data=auditData(1,12);await auditReply(calls[calls.length-1],data);auditClick(view,'Next');expect(auditRows(view)).toEqual(data.slice(5,10).map(x=>x.title));}));
+test('rerenders retain the page, while separate and fresh roots start their own fetch',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>),data=auditData(1,12);await auditReply(calls[0],data);await auditReply(calls[1],data.slice(0,1));auditClick(a,'Next');a.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditRows(a)).toEqual(data.slice(5,10).map(x=>x.title));expect(auditRows(b)).toEqual(data.slice(0,1).map(x=>x.title));a.unmount();b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(3);await auditReply(calls[2],data);expect(auditRows(fresh)).toEqual(data.slice(0,5).map(x=>x.title));}));
+`,
   },
   "react-dependent-fetch": {
     solution: `const App = () => {
-  const [userId, setUserId] = useState(1); const [posts, setPosts] = useState([]);
-  useEffect(() => { fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${userId}\`).then(r => r.json()).then(setPosts); }, [userId]);
-  return <><select value={userId} onChange={event => setUserId(Number(event.target.value))}><option value="1">User 1</option><option value="2">User 2</option></select><ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul></>;
+  const [userId, setUserId] = useState(1);
+  const [posts, setPosts] = useState([]);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setError('');
+    fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${userId}\`)
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) setError('Could not load posts.'); });
+    return () => { active = false; };
+  }, [userId]);
+  return <><select aria-label="Author" value={userId} onChange={event => setUserId(Number(event.target.value))}><option value="1">User 1</option><option value="2">User 2</option></select>{error && <p role="alert">{error}</p>}<ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [selectedUserId, setSelectedUserId] = useState('1');
   const [posts, setPosts] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
+    setPosts([]);
+    setError('');
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts?userId=' + selectedUserId);
-      const data = await response.json();
-      setPosts(data);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts?userId=' + selectedUserId);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setPosts(data);
+      } catch {
+        if (active) setError('Could not load posts.');
+      }
     };
     loadPosts();
+    return () => { active = false; };
   }, [selectedUserId]);
 
   const handleChange = (event) => {
@@ -1843,10 +2466,11 @@ const App = () => {
 
   return (
     <main>
-      <select value={selectedUserId} onChange={handleChange}>
+      <select aria-label="Author" value={selectedUserId} onChange={handleChange}>
         <option value="1">User 1</option>
         <option value="2">User 2</option>
       </select>
+      {error && <p role="alert">{error}</p>}
       <ul>
         {posts.map(post => <li key={post.id}>{post.title}</li>)}
       </ul>
@@ -1858,22 +2482,25 @@ const USER_IDS = [1, 2];
 
 const usePostsByUser = userId => {
   const [posts, setPosts] = useState([]);
+  const [error, setError] = useState('');
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
+    setPosts([]);
+    setError('');
     const params = new URLSearchParams({ userId: String(userId) });
     fetch(\`\${POSTS_URL}?\${params}\`, { signal: controller.signal })
-      .then(response => response.json())
-      .then(setPosts)
-      .catch(error => { if (error.name !== 'AbortError') setPosts([]); });
-    // A newer selection cancels the older request, so answers cannot land out of order
-    return () => controller.abort();
+      .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) setError('Could not load posts.'); });
+    return () => { active = false; controller.abort(); };
   }, [userId]);
-  return posts;
+  return { posts, error };
 };
 
 const App = () => {
   const [userId, setUserId] = useState(USER_IDS[0]);
-  const posts = usePostsByUser(userId);
+  const { posts, error } = usePostsByUser(userId);
   return (
     <main>
       <label>
@@ -1882,10 +2509,17 @@ const App = () => {
           {USER_IDS.map(id => <option key={id} value={id}>User {id}</option>)}
         </select>
       </label>
+      {error && <p role="alert">{error}</p>}
       <ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+test('sixteen changed selections refetch their own exact records and clear the pending old list',()=>withPhasedRequests(async calls=>{const root=render(<App/>);for(let n=0;n<17;n++){const id=n%2+1;await waitFor(()=>expect(calls).toHaveLength(n+1));postsRequest(calls[n],id);expect(within(root.container).getByRole('combobox',{name:'Author'}).value).toBe(String(id));expect(phasedNames(root.container)).toEqual([]);await sendHeaders(calls[n]);expect(phasedNames(root.container)).toEqual([]);const data=n===4?[]:Array.from({length:n===6?100:3},(_,i)=>({id:i+1,title:i===0?'':i%2?'Duplicate':'<b>Post '+n+'</b>'}));await sendJSON(calls[n],data);expect(phasedNames(root.container)).toEqual(data.map(x=>x.title));expect(root.container.querySelector('li b')).toBeNull();const nodes=Array.from(root.container.querySelectorAll('li'));root.rerender(<App/>);expect(calls).toHaveLength(n+1);nodes.forEach((node,i)=>expect(root.container.querySelectorAll('li')[i]).toBe(node));if(n<16)chooseAuthor(root.container,id===1?2:1);}}));
+test('failures leave an empty list and the next changed selection can recover',()=>withPhasedRequests(async calls=>{const root=render(<App/>);let id=1;for(const failure of['http','network','json']){const n=calls.length-1;if(failure==='http')await finishRequest(calls[n],[{id:1,title:'Failed body'}],500);else if(failure==='network')await act(async()=>calls[n].fail());else{await sendHeaders(calls[n]);await act(async()=>calls[n].badJSON());}await waitFor(()=>expect(within(root.container).getByRole('alert').textContent).toBe('Could not load posts.'));expect(phasedNames(root.container)).toEqual([]);id=id===1?2:1;chooseAuthor(root.container,id);await finishRequest(calls[calls.length-1],[{id:1,title:'Recovered'}]);expect(phasedNames(root.container)).toEqual(['Recovered']);expect(within(root.container).queryByRole('alert')).toBeNull();id=id===1?2:1;chooseAuthor(root.container,id);}}));
+test('late earlier selections cannot overwrite the latest list and fresh mounts start empty',()=>withPhasedRequests(async calls=>{const root=render(<App/>);chooseAuthor(root.container,2);await waitFor(()=>expect(calls).toHaveLength(2));await finishRequest(calls[1],[{id:2,title:'Latest'}]);await finishRequest(calls[0],[{id:1,title:'Stale'}]);expect(phasedNames(root.container)).toEqual(['Latest']);chooseAuthor(root.container,1);root.unmount();const fresh=render(<App/>);await waitFor(()=>expect(calls).toHaveLength(4));expect(phasedNames(fresh.container)).toEqual([]);await finishRequest(calls[3],[{id:3,title:'Fresh'}]);await finishRequest(calls[2],[{id:4,title:'Old'}]);expect(phasedNames(fresh.container)).toEqual(['Fresh']);}));
+`,
   },
   "react-optimistic-todo": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/todos';
@@ -1893,19 +2527,19 @@ const App = () => {
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState('');
   const addTodo = async title => {
-    const temporary = {id: \`temp-\${Date.now()}\`, title, pending: true};
+    const temporary = {id: crypto.randomUUID(), title, pending: true};
     setTodos(items => [...items, temporary]);
     try {
       const response = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})});
       if (!response.ok) throw new Error('Request failed');
       const saved = await response.json();
-      setTodos(items => items.map(item => item.id === temporary.id ? {...saved, title} : item));
+      setTodos(items => items.map(item => item.id === temporary.id ? {...temporary, serverId: saved.id, pending: false} : item));
     } catch {
       setTodos(items => items.filter(item => item.id !== temporary.id));
     }
   };
   const submit = event => { event.preventDefault(); if (!text.trim()) return; addTodo(text.trim()); setText(''); };
-  return <><form onSubmit={submit}><input value={text} onChange={event => setText(event.target.value)} /><button>Add</button></form><ul>{todos.map(todo => <li key={todo.id}>{todo.title}{todo.pending ? ' (saving…)' : ''}</li>)}</ul></>;
+  return <><form onSubmit={submit}><input aria-label="New todo" value={text} onChange={event => setText(event.target.value)} /><button>Add</button></form><ul>{todos.map(todo => <li key={todo.id}>{todo.title}{todo.pending ? ' (saving…)' : ''}</li>)}</ul></>;
 };`,
     junior: `const App = () => {
   const [title, setTitle] = useState('');
@@ -1941,7 +2575,7 @@ const App = () => {
         const updated = [];
         for (const todo of currentTodos) {
           if (todo.id === tempId) {
-            updated.push({ id: savedTodo.id, title: trimmedTitle });
+            updated.push({ id: tempId, serverId: savedTodo.id, title: trimmedTitle });
           } else {
             updated.push(todo);
           }
@@ -1964,7 +2598,7 @@ const App = () => {
   return (
     <main>
       <form onSubmit={handleSubmit}>
-        <input type="text" value={title} onChange={handleChange} />
+        <input type="text" aria-label="New todo" value={title} onChange={handleChange} />
         <button type="submit">Add</button>
       </form>
       <ul>
@@ -1998,7 +2632,6 @@ const App = () => {
     setTitle('');
     try {
       const saved = await postTodo(text);
-      // Keep the local id as the key: the training API hands back the same one every time
       setTodos(current => replaceTodo(current, draft.id, { ...draft, serverId: saved.id, status: 'saved' }));
     } catch {
       setTodos(current => withoutTodo(current, draft.id));
@@ -2019,18 +2652,26 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('equal clock readings do not merge independent drafts or their rollback',()=>auditServer(async calls=>{const view=render(<App/>),clock=Date.now;try{Date.now=()=>100;for(const title of ['Alpha','Beta','Gamma','Delta'])auditAdd(view,title);}finally{Date.now=clock;}auditTodos(view,['Alpha','Beta','Gamma','Delta']);await auditReply(calls[3],{id:201});await act(async()=>{calls[1].fail(new TypeError('offline'));});auditTodos(view,['Alpha','Gamma','Delta']);await auditReply(calls[0],{id:201});await auditReply(calls[2],{id:201});auditTodos(view,['Alpha','Gamma','Delta']);}));
+test('only nonblank trimmed titles POST JSON; HTTP and JSON failure remove only their own drafts',()=>auditServer(async calls=>{const view=render(<App/>);auditAdd(view,'   ');expect(calls).toHaveLength(0);const title='<todo>& '+('x'.repeat(440));auditAdd(view,'  '+title+'  ');auditAdd(view,'Kept');expect(within(view.container).getByRole('textbox',{name:'New todo'}).value).toBe('');for(const [i,expected]of[[0,title],[1,'Kept']]){expect(calls[i].url).toBe('https://jsonplaceholder.typicode.com/todos');expect(calls[i].method).toBe('POST');expect(JSON.parse(calls[i].options.body).title).toBe(expected);expect(calls[i].options.headers['Content-Type']).toBe('application/json');}await auditReply(calls[0],{id:201},500);auditTodos(view,['Kept']);auditAdd(view,'Bad JSON');await act(async()=>{calls[2].badJson();});auditTodos(view,['Kept']);await auditReply(calls[1],{id:201});auditTodos(view,['Kept']);expect(view.container.querySelector('li todo')).toBeNull();}));
+test('parent renders, separate forms and a fresh mount retain only their own optimistic list',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);auditAdd(a,'A');auditAdd(b,'B');a.rerender(<App/>);auditTodos(a,['A']);auditTodos(b,['B']);expect(calls).toHaveLength(2);await auditReply(calls[1],{id:201});await act(async()=>{calls[0].fail(new TypeError('offline'));});auditTodos(a,[]);auditTodos(b,['B']);a.unmount();b.unmount();const fresh=render(<App/>);auditTodos(fresh,[]);expect(calls).toHaveLength(2);}));
+`,
   },
-  "react-reusable-usefetch-hook": {
-    solution: `const useFetch = url => {
+  'react-reusable-usefetch-hook': {
+    solution: `export const useFetch = url => {
   const [state, setState] = useState({data: null, loading: true, error: ''});
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     setState({data: null, loading: true, error: ''});
     fetch(url, {signal: controller.signal})
       .then(response => { if (!response.ok) throw new Error('Request failed'); return response.json(); })
-      .then(data => setState({data, loading: false, error: ''}))
-      .catch(error => { if (error.name !== 'AbortError') setState({data: null, loading: false, error: error.message}); });
-    return () => controller.abort();
+      .then(data => { if (active) setState({data, loading: false, error: ''}); })
+      .catch(error => { if (active) setState({data: null, loading: false, error: error?.message || 'Request failed'}); });
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return state;
 };
@@ -2041,13 +2682,15 @@ const App = () => {
   if (error) return <p>{error}</p>;
   return <ul>{data.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
-    junior: `const useFetch = (url) => {
+    junior: `export const useFetch = (url) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
+      setData(null);
       setLoading(true);
       setError('');
       try {
@@ -2056,14 +2699,15 @@ const App = () => {
           throw new Error('Request failed with status ' + response.status);
         }
         const json = await response.json();
-        setData(json);
+        if (active) setData(json);
       } catch (requestError) {
-        setError(requestError.message);
+        if (active) setError(requestError?.message || 'Request failed');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     load();
+    return () => { active = false; };
   }, [url]);
 
   return { data, loading, error };
@@ -2108,21 +2752,23 @@ const reducer = (state, action) => {
   }
 };
 
-const useFetch = url => {
+export const useFetch = url => {
   const [state, dispatch] = React.useReducer(reducer, initial);
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     dispatch({ type: 'start' });
     (async () => {
       try {
         const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
-        dispatch({ type: 'success', data: await response.json() });
+        const data = await response.json();
+        if (active) dispatch({ type: 'success', data });
       } catch (error) {
-        if (error.name !== 'AbortError') dispatch({ type: 'failure', error: error.message });
+        if (active) dispatch({ type: 'failure', error: error?.message || 'Request failed' });
       }
     })();
-    return () => controller.abort();
+    return () => { active = false; controller.abort(); };
   }, [url]);
   return { data: state.data, loading: state.status === 'loading', error: state.error };
 };
@@ -2133,7 +2779,35 @@ const App = () => {
   if (error) return <main><p role="alert">{error}</p></main>;
   return <main><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
-    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+    hiddenSuite: `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+const showsANewMessage = (inFlight, now) => now.trim() !== '' && !inFlight.includes(now);
+
 test('Loading while the users request is in flight, then one item per user of the answer', () => withRequests(async calls => {
   const { container } = render(<App />);
   const request = requestTo(calls, '/users');
@@ -2168,62 +2842,117 @@ test('a request that throws shows a message and no items', () => withRequests(as
   requestTo(calls, '/users').fail(new TypeError('Network down'));
   await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
   expect(container.querySelectorAll('li').length).toBe(0);
-}));`,
+}));
+
+
+test('obsolete transport,JSON success and failures cannot replace the current request',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/a"/>);calls[0].headers();await flush();view.rerender(<Probe url="/b"/>);calls[1].headers();await flush();view.rerender(<Probe url="/a"/>);const latest={answer:42,nested:[false,null]};calls[2].headers();calls[2].body(latest);await flush();expect(state.data).toBe(latest);calls[0].body({stale:true});calls[1].badBody(new Error('obsolete JSON'));await flush();expect(state).toEqual({data:latest,loading:false,error:''});view.rerender(<Probe url="/c"/>);view.rerender(<Probe url="/d"/>);calls[3].fail(new TypeError('obsolete transport'));await flush();expect(state).toEqual({data:null,loading:true,error:''});calls[4].headers();calls[4].body(null);await flush();expect(state).toEqual({data:null,loading:false,error:''});view.unmount();}));
+test('current HTTP,JSON and transport errors become terminal and the next url recovers',()=>withAuditRequests(async(calls,flush)=>{let state;const Probe=({url})=>{state=useFetch(url);return null;};const view=render(<Probe url="/http"/>);calls[0].headers(503);await flush();expect(state.loading).toBe(false);expect(state.data).toBeNull();expect(Boolean(state.error)).toBe(true);for(let i=1;i<=3;i++){view.rerender(<Probe url={'/error'+i}/>);expect(state).toEqual({data:null,loading:true,error:''});if(i===1){calls[i].headers();calls[i].badBody(new SyntaxError('Invalid JSON'));}else calls[i].fail(i===2?new TypeError('Network unavailable'):Object.assign(new Error('Active aborted request'),{name:'AbortError'}));await flush();expect(state.loading).toBe(false);expect(Boolean(state.error)).toBe(true);}view.rerender(<Probe url="/recovery"/>);calls[4].headers();calls[4].body([]);await flush();expect(state).toEqual({data:[],loading:false,error:''});view.unmount();}));
+test('separate consumers and remounts do not share request state or stale completions',()=>withAuditRequests(async(calls,flush)=>{let one,two;const A=()=>{one=useFetch('/one');return null;},B=()=>{two=useFetch('/two');return null;};const a=render(<A/>),b=render(<B/>);calls[1].headers();calls[1].body('second');await flush();expect(one.loading).toBe(true);expect(two.data).toBe('second');a.unmount();if(calls[0].options.signal)expect(calls[0].options.signal.aborted).toBe(true);const fresh=render(<A/>);calls[0].headers();calls[0].body('old');await flush();expect(one).toEqual({data:null,loading:true,error:''});calls[2].headers();calls[2].body(false);await flush();expect(one.data).toBe(false);expect(two.data).toBe('second');fresh.unmount();b.unmount();}));
+`,
   },
   "react-crud-mini-app": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
 const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(API_URL).then(response => response.json()).then(setPosts).finally(() => setLoading(false));
+    let active = true;
+    fetch(API_URL)
+      .then(response => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) setLoadError('Could not load posts'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
-    const response = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})});
-    const created = await response.json();
-    setPosts(items => [...items, {...created, title}]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = (id, nextTitle) => setPosts(items => items.map(item => item.id === id ? {...item, title: nextTitle} : item));
   const deletePost = id => setPosts(items => items.filter(item => item.id !== id));
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (loading) return <p>Loading…</p>;
-  return <><form onSubmit={createPost}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
+  return <>{problem && <p role="alert">{problem}</p>}<form onSubmit={createPost}><input aria-label="Title" value={title} onChange={event => setTitle(event.target.value)} /><button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button type="button" onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button type="button" onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
 };`,
     junior: `const App = () => {
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const loadPosts = async () => {
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
-      const data = await response.json();
-      setPosts(data);
-      setIsLoading(false);
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (active) setPosts(data);
+      } catch {
+        if (active) setLoadError('Could not load posts');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadPosts();
+    return () => { active = false; };
   }, []);
 
   const handleTitleChange = (event) => {
     setTitle(event.target.value);
   };
 
-  const handleCreate = async (event) => {
+  const handleCreate = async event => {
     event.preventDefault();
-    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title }),
-    });
-    const created = await response.json();
-    const newPost = { id: created.id, title: title };
-    setPosts((currentPosts) => [...currentPosts, newPost]);
+    const text = title.trim();
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleEdit = (id) => {
@@ -2248,6 +2977,7 @@ const App = () => {
     setPosts(remainingPosts);
   };
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (isLoading) {
     return (
       <main>
@@ -2258,14 +2988,15 @@ const App = () => {
 
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={handleCreate}>
-        <input type="text" value={title} onChange={handleTitleChange} />
-        <button type="submit">Create</button>
+        <input type="text" aria-label="Title" value={title} onChange={handleTitleChange} />
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>
         {posts.map(post => (
           <li key={post.id}>
-            {post.title} <button onClick={() => handleEdit(post.id)}>Edit</button> <button onClick={() => handleDelete(post.id)}>Delete</button>
+            {post.title} <button type="button" onClick={() => handleEdit(post.id)}>Edit</button> <button type="button" onClick={() => handleDelete(post.id)}>Delete</button>
           </li>
         ))}
       </ul>
@@ -2289,33 +3020,49 @@ const PostItem = ({ post, onEdit, onDelete }) => (
 );
 
 const App = () => {
-  const [posts, setPosts] = useState(null); // null until the first load lands
+  const [loadError, setLoadError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [posts, setPosts] = useState(null);
   const [title, setTitle] = useState('');
 
   useEffect(() => {
     let active = true;
-    fetchJson(POSTS_URL).then(data => { if (active) setPosts(data); });
+    fetchJson(POSTS_URL)
+      .then(data => { if (active) setPosts(data); })
+      .catch(() => { if (active) { setLoadError('Could not load posts'); setPosts([]); } });
     return () => { active = false; };
   }, []);
 
   const createPost = async event => {
     event.preventDefault();
     const text = title.trim();
-    if (!text) return;
-    const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
-    // The training API hands back a fixed id, so mint a local one that cannot collide
-    setPosts(current => [...current, { ...created, id: crypto.randomUUID(), title: text }]);
+    if (!text || creating) return;
+    setCreating(true);
+    setProblem('');
     setTitle('');
+    try {
+      const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
+      const post = { ...created, serverId: created.id, id: crypto.randomUUID(), title: text };
+      setPosts(current => [...current, post]);
+    } catch {
+      setProblem('Could not create post');
+      setTitle(current => current === '' ? text : current);
+    } finally {
+      setCreating(false);
+    }
   };
   const editPost = useCallback((id, nextTitle) => setPosts(current => current.map(post => (post.id === id ? { ...post, title: nextTitle } : post))), []);
   const deletePost = useCallback(id => setPosts(current => current.filter(post => post.id !== id)), []);
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   if (!posts) return <main><p role="status">Loading…</p></main>;
   return (
     <main>
+      {problem && <p role="alert">{problem}</p>}
       <form onSubmit={createPost}>
         <input value={title} onChange={event => setTitle(event.target.value)} aria-label="Title" />
-        <button type="submit">Create</button>
+        <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create'}</button>
       </form>
       <ul>{posts.map(post => <PostItem key={post.id} post={post} onEdit={editPost} onDelete={deletePost} />)}</ul>
     </main>
@@ -2346,7 +3093,13 @@ test('Delete removes only the post whose button was clicked', async () => {
   expect(container.textContent).toContain('Post one');
   expect(container.textContent).toContain('Post two');
   expect(container.textContent).toContain('Post four');
-});`,
+});
+
+
+test('load HTTP, JSON and network failures show a nonempty alert without any posts',()=>auditServer(async calls=>{for(const mode of ['http','json','network']){const view=render(<App/>),call=calls[calls.length-1];await act(async()=>{if(mode==='http')call.reply([{id:1,title:'Failed data'}],503);else if(mode==='json')call.badJson();else call.fail();});expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');expect(auditTitles(view)).toEqual([]);view.unmount();}}));
+test('a pending create sends once, preserves newly typed text and recovers without removing local edits',()=>auditServer(async calls=>{const view=render(<App/>),data=[{id:1,title:'Old A'},{id:2,title:'Old B'}];await auditReply(calls[0],data);auditCreate(view,'   ');expect(calls).toHaveLength(1);const long='<new>&'+'x'.repeat(450);auditCreate(view,'  '+long+'  ');expect(auditTitles(view)).toEqual(['Old A','Old B']);expect(within(view.container).getByRole('button',{name:'Creating…'}).disabled).toBe(true);fireEvent.submit(view.container.querySelector('form'));expect(calls).toHaveLength(2);expect(JSON.parse(calls[1].options.body).title).toBe(long);expect(calls[1].options.headers['Content-Type']).toBe('application/json');fireEvent.change(within(view.container).getByRole('textbox',{name:'Title'}),{target:{value:'Next draft'}});auditAction(view,0,'Edit');await auditReply(calls[1],{id:101},500);expect(auditTitles(view)).toEqual(['Edited','Old B']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');expect(within(view.container).getByRole('alert').textContent).toBe('Could not create post');auditCreate(view,'Next draft');expect(within(view.container).queryByRole('alert')).toBeNull();await act(async()=>calls[2].badJson());expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('Next draft');auditCreate(view,'Next draft');await auditReply(calls[3],{id:101,title:'server'});expect(auditTitles(view)).toEqual(['Edited','Old B','Next draft']);expect(within(view.container).getByRole('textbox',{name:'Title'}).value).toBe('');}));
+test('parent renders, empty data and separate or fresh roots have independent CRUD state',()=>auditServer(async calls=>{const a=render(<App/>),b=render(<App/>);await auditReply(calls[0],[{id:1,title:'A'},{id:2,title:'Same'}]);await auditReply(calls[1],[]);auditAction(a,0,'Edit');a.rerender(<App/>);expect(calls).toHaveLength(2);expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual([]);auditCreate(b,'B');await auditReply(calls[2],{id:101});expect(auditTitles(a)).toEqual(['Edited','Same']);expect(auditTitles(b)).toEqual(['B']);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[3],[]);expect(auditTitles(fresh)).toEqual([]);}));
+`,
   },
   "react-stopwatch": {
     solution: `const App = () => {
@@ -2414,7 +3167,6 @@ test('Delete removes only the post whose button was clicked', async () => {
 const App = () => {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
-  // A null delay pauses the interval; the hook owns setup and teardown, so Start cannot double up
   useInterval(() => setSeconds(current => current + 1), running ? 1000 : null);
 
   const reset = () => {
@@ -2431,10 +3183,12 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, which the visible suite declares,
-    // so each second is exact and a second interval shows as a count that
-    // runs ahead.
-    hiddenSuite: `${NUMBERS_SHOWN}
+    hiddenSuite: `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+
 const secondsShown = container => numbersShown(container.querySelector('p'));
 
 test('Start counts exactly one per second from 0', () => withClock(async clock => {
@@ -2476,12 +3230,26 @@ test('Stop freezes the count, Reset returns exactly 0, and nothing ticks afterwa
   expect(secondsShown(container)).toBe('0');
   await clock.tick(2000);
   expect(secondsShown(container)).toBe('0');
-}));`,
+}));
+
+
+test('long runs keep counting beyond three and Reset stops the timer',()=>withTestClock(async clock=>{
+ const view=render(<App/>);fireEvent.click(control(view.container,'start'));await clock.tick(31000);expect(secondsShown(view.container)).toBe('31');expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));await clock.tick(6000);expect(secondsShown(view.container)).toBe('31');fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe('31');await clock.tick(1);expect(secondsShown(view.container)).toBe('32');fireEvent.click(control(view.container,'reset'));expect(secondsShown(view.container)).toBe('0');expect(clock.pending()).toBe(0);await clock.tick(3000);expect(secondsShown(view.container)).toBe('0');view.unmount();
+}));
+test('twelve stop, resume and reset cycles preserve elapsed state under parent renders',()=>withTestClock(async clock=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){fireEvent.click(control(view.container,'start'));fireEvent.click(control(view.container,'start'));await clock.tick(1000*(i%4+1)+i*7);const expected=i%4+1;view.rerender(<App data-parent={i}/>);expect(secondsShown(view.container)).toBe(String(expected));expect(clock.pending()).toBe(1);fireEvent.click(control(view.container,'stop'));expect(clock.pending()).toBe(0);await clock.tick(1777);expect(secondsShown(view.container)).toBe(String(expected));fireEvent.click(control(view.container,'start'));await clock.tick(999);expect(secondsShown(view.container)).toBe(String(expected));await clock.tick(1);expect(secondsShown(view.container)).toBe(String(expected+1));fireEvent.click(control(view.container,'reset'));expect(clock.pending()).toBe(0);expect(secondsShown(view.container)).toBe('0');}
+ view.unmount();
+}));
+test('independent stopwatches own their interval and a removed one cannot clear another',()=>withTestClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.click(control(a.container,'start'));await clock.tick(500);fireEvent.click(control(b.container,'start'));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(999);expect(secondsShown(b.container)).toBe('0');await clock.tick(1);expect(secondsShown(b.container)).toBe('1');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(secondsShown(fresh.container)).toBe('0');fresh.unmount();
+}));
+`,
   },
-  "react-uselocalstorage-hook": {
-    solution: `const useLocalStorage = (key, initial) => {
-  const [value, setValue] = useState(() => { const stored = localStorage.getItem(key); return stored === null ? initial : JSON.parse(stored); });
-  useEffect(() => { localStorage.setItem(key, JSON.stringify(value)); }, [key, value]);
+  'react-uselocalstorage-hook': {
+    solution: `export const useLocalStorage = (key, initial) => {
+  const [value, setValue] = useState(() => { try { const stored = localStorage.getItem(key); return stored === null ? initial : JSON.parse(stored); } catch { return initial; } });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Keep the in-memory state usable when storage is unavailable. */ } }, [key, value]);
   return [value, setValue];
 };
 
@@ -2489,20 +3257,17 @@ const App = () => {
   const [count, setCount] = useLocalStorage('count', 0);
   return <><p>Count: {count}</p><button onClick={() => setCount(value => value + 1)}>Increment</button></>;
 };`,
-    junior: `const useLocalStorage = (key, initialValue) => {
-  const storedValue = localStorage.getItem(key);
-  let startingValue = initialValue;
-  if (storedValue !== null) {
-    startingValue = JSON.parse(storedValue);
-  }
-  const [value, setValue] = useState(startingValue);
-
-  const saveValue = (nextValue) => {
-    setValue(nextValue);
-    localStorage.setItem(key, JSON.stringify(nextValue));
-  };
-
-  return [value, saveValue];
+    junior: `export const useLocalStorage = (key, initialValue) => {
+  const [value, setValue] = useState(() => {
+    try {
+      const storedValue = localStorage.getItem(key);
+      return storedValue === null ? initialValue : JSON.parse(storedValue);
+    } catch { return initialValue; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }, [key, value]);
+  return [value, setValue];
 };
 
 const App = () => {
@@ -2524,21 +3289,17 @@ const App = () => {
     const raw = localStorage.getItem(key);
     return raw === null ? fallback : JSON.parse(raw);
   } catch {
-    return fallback; // corrupt or blocked storage falls back to the initial value
+    return fallback;
   }
 };
 
-const useLocalStorage = (key, initial) => {
+export const useLocalStorage = (key, initial) => {
   const [value, setValue] = useState(() => readStorage(key, initial));
 
-  // Accepts a value or an updater, exactly like the setter from useState
-  const update = useCallback(next => {
-    setValue(current => {
-      const resolved = typeof next === 'function' ? next(current) : next;
-      localStorage.setItem(key, JSON.stringify(resolved));
-      return resolved;
-    });
-  }, [key]);
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }, [key, value]);
+  const update = useCallback(next => setValue(next), []);
 
   return [value, update];
 };
@@ -2552,9 +3313,19 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+const replaceStorageMethod=(name,method)=>{const target=Object.prototype.hasOwnProperty.call(localStorage,name)?localStorage:Object.getPrototypeOf(localStorage),descriptor=Object.getOwnPropertyDescriptor(target,name);Object.defineProperty(target,name,{configurable:true,writable:true,value:method});return()=>{if(descriptor)Object.defineProperty(target,name,descriptor);else delete target[name];};};
+test('functional setters compose and storage writes occur after rendering rather than inside an updater',()=>{localStorage.clear();let current,setter,inRender=false,badWrites=0,writes=0;const real=localStorage.setItem,restore=replaceStorageMethod('setItem',function(...args){writes++;if(inRender)badWrites++;return real.apply(this,args);});try{const Probe=()=>{inRender=true;try{[current,setter]=useLocalStorage('audit-counter',10);}finally{inRender=false;}return null;};const view=render(<Probe/>),savedSetter=setter;act(()=>{savedSetter(n=>n+1);savedSetter(n=>n*2);});expect(current).toBe(22);expect(JSON.parse(localStorage.getItem('audit-counter'))).toBe(22);act(()=>savedSetter({label:'raw <b>🦈</b>',values:[false,null,0]}));expect(current).toEqual({label:'raw <b>🦈</b>',values:[false,null,0]});expect(JSON.parse(localStorage.getItem('audit-counter'))).toEqual(current);expect(writes>0).toBe(true);expect(badWrites).toBe(0);view.unmount();}finally{restore();}});
+test('invalid JSON,read failures and write failures retain usable in-memory state',()=>{localStorage.clear();localStorage.setItem('count','{broken');const first=render(<App/>);expect(first.container.textContent).toContain('Count: 0');first.unmount();let reads=0;const restoreRead=replaceStorageMethod('getItem',()=>{reads++;throw new Error('SecurityError');});let view;try{view=render(<App/>);expect(reads>0).toBe(true);expect(view.container.textContent).toContain('Count: 0');}finally{restoreRead();if(view)view.unmount();}let writes=0;const restoreWrite=replaceStorageMethod('setItem',()=>{writes++;throw new Error('QuotaExceededError');});try{localStorage.clear();view=render(<App/>);for(let i=1;i<=8;i++){fireEvent.click(view.container.querySelector('button'));expect(view.container.textContent).toContain('Count: '+i);}expect(writes>0).toBe(true);view.unmount();}finally{restoreWrite();}});
+test('independent fixed keys,preserved unrelated storage and fresh mounts persist JSON values',()=>{localStorage.clear();localStorage.setItem('unrelated','keep');let one,two,setOne,setTwo;const A=()=>{[one,setOne]=useLocalStorage('left',3);return null;},B=()=>{[two,setTwo]=useLocalStorage('right',7);return null;};const a=render(<A/>),b=render(<B/>);expect(one).toBe(3);expect(two).toBe(7);act(()=>setOne([1,false,null]));act(()=>setTwo('value'));a.rerender(<A/>);expect(one).toEqual([1,false,null]);expect(two).toBe('value');expect(localStorage.getItem('unrelated')).toBe('keep');a.unmount();b.unmount();const fresh=render(<A/>);expect(one).toEqual([1,false,null]);expect(JSON.parse(localStorage.getItem('right'))).toBe('value');fresh.unmount();});
+`,
   },
   "react-tabs": {
-    solution: `const tabs = [
+    solution: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
@@ -2562,62 +3333,110 @@ const App = () => {
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId);
-  return <><div role="tablist">{tabs.map(tab => <button key={tab.id} role="tab" aria-selected={tab.id === activeId} onClick={() => setActiveId(tab.id)}>{tab.label}</button>)}</div><div role="tabpanel">{active.panel}</div></>;
-};`,
-    junior: `const tabs = [
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
+
+  return (
+    <main>
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
+        {tabs.map(tab => (
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
 ];
 
 const App = () => {
-  const [activeTabId, setActiveTabId] = useState('profile');
-
-  const handleSelect = (tabId) => {
-    setActiveTabId(tabId);
-  };
-
-  let activePanel = '';
+  const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
+  let active = tabs[0];
   for (const tab of tabs) {
-    if (tab.id === activeTabId) {
-      activePanel = tab.panel;
-    }
+    if (tab.id === activeId) active = tab;
   }
+
+  const onKeyDown = event => {
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
+  };
 
   return (
     <main>
-      <div role="tablist">
-        {tabs.map(tab => {
-          let isSelected = false;
-          if (tab.id === activeTabId) {
-            isSelected = true;
-          }
-          return (
-            <button key={tab.id} role="tab" aria-selected={isSelected} onClick={() => handleSelect(tab.id)}>
-              {tab.label}
-            </button>
-          );
-        })}
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
+        {tabs.map(tab => (
+          <button key={tab.id} type="button" role="tab" id={idPrefix + '-tab-' + tab.id}
+            aria-controls={idPrefix + '-panel-' + tab.id}
+            aria-selected={tab.id === activeId} tabIndex={tab.id === activeId ? 0 : -1}
+            onFocus={() => setActiveId(tab.id)} onClick={() => setActiveId(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
       </div>
-      <div role="tabpanel">{activePanel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id}
+        aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
-};`,
-    senior: `const tabs = [
+};
+
+export default App;`,
+    senior: `import React, { useId, useState } from 'react';
+
+const tabs = [
   { id: 'profile', label: 'Profile', panel: 'Profile details' },
   { id: 'billing', label: 'Billing', panel: 'Billing details' },
   { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
 ];
 
-const Tab = ({ tab, selected, onSelect }) => (
+const Tab = ({ tab, selected, onSelect, idPrefix }) => (
   <button
     type="button"
     role="tab"
-    id={\`tab-\${tab.id}\`}
+    id={idPrefix + '-tab-' + tab.id}
     aria-selected={selected}
-    aria-controls={\`panel-\${tab.id}\`}
+    aria-controls={idPrefix + '-panel-' + tab.id}
     tabIndex={selected ? 0 : -1}
+    onFocus={() => onSelect(tab.id)}
     onClick={() => onSelect(tab.id)}
   >
     {tab.label}
@@ -2626,28 +3445,46 @@ const Tab = ({ tab, selected, onSelect }) => (
 
 const App = () => {
   const [activeId, setActiveId] = useState(tabs[0].id);
+  const idPrefix = useId();
   const active = tabs.find(tab => tab.id === activeId) ?? tabs[0];
 
-  // Left and Right move between tabs, as the WAI-ARIA tabs pattern expects
   const onKeyDown = event => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (!step) return;
-    const index = tabs.findIndex(tab => tab.id === activeId);
-    setActiveId(tabs[(index + step + tabs.length) % tabs.length].id);
+    const buttons = Array.from(event.currentTarget.querySelectorAll('[role="tab"]'));
+    const current = buttons.indexOf(event.target);
+    if (current < 0) return;
+    let next;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveId(tabs[next].id);
+    buttons[next].focus();
   };
 
   return (
     <main>
       <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
-        {tabs.map(tab => <Tab key={tab.id} tab={tab} selected={tab.id === activeId} onSelect={setActiveId} />)}
+        {tabs.map(tab => <Tab key={tab.id} tab={tab} selected={tab.id === activeId} onSelect={setActiveId} idPrefix={idPrefix} />)}
       </div>
-      <div role="tabpanel" id={\`panel-\${active.id}\`} aria-labelledby={\`tab-\${active.id}\`}>{active.panel}</div>
+      <div role="tabpanel" id={idPrefix + '-panel-' + active.id} aria-labelledby={idPrefix + '-tab-' + active.id} tabIndex={0}>{active.panel}</div>
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const tabLabels=['Profile','Billing','Alerts'],tabPanels=['Profile details','Billing details','Alert settings'];
+const checkTabs=(scope,index)=>{const all=Array.from(scope.querySelectorAll('[role="tab"]')),panel=scope.querySelector('[role="tabpanel"]');expect(all).toHaveLength(3);expect(scope.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);expect(within(scope).getByRole('tablist',{name:'Account'}).contains(all[0])).toBe(true);all.forEach((t,i)=>{expect(t.tagName).toBe('BUTTON');expect(t.type).toBe('button');expect(t.textContent).toBe(tabLabels[i]);expect(t.getAttribute('aria-selected')).toBe(String(i===index));expect(t.tabIndex).toBe(i===index?0:-1);expect(t.id.length>0).toBe(true);expect(t.getAttribute('aria-controls').length>0).toBe(true);});expect(new Set(all.map(t=>t.id)).size).toBe(3);expect(new Set(all.map(t=>t.getAttribute('aria-controls'))).size).toBe(3);expect(panel.textContent).toBe(tabPanels[index]);expect(panel.id).toBe(all[index].getAttribute('aria-controls'));expect(panel.getAttribute('aria-labelledby')).toBe(all[index].id);expect(panel.tabIndex).toBe(0);return all;};
+test('all selected panels have proper stable relationships and normal parent updates',()=>{const {container,rerender}=render(<App/>);let all=checkTabs(container,0),ids=all.map(t=>t.id),targets=all.map(t=>t.getAttribute('aria-controls'));for(const i of [1,2,0,2,1,1,0,1,2,0]){fireEvent.click(all[i]);all=checkTabs(container,i);expect(all.map(t=>t.id).join('|')).toBe(ids.join('|'));expect(all.map(t=>t.getAttribute('aria-controls')).join('|')).toBe(targets.join('|'));rerender(<App/>);checkTabs(container,i);}});
+test('keyboard moves actual focus with wrapping,Home,End and automatic activation',()=>{const {container}=render(<App/>);let all=checkTabs(container,0),index=0;act(()=>all[index].focus());const keys=['ArrowLeft','ArrowRight','ArrowRight','ArrowRight','ArrowRight','Home','End','ArrowLeft','End','Home'];for(let round=0;round<3;round++)for(const key of keys){if(key==='ArrowLeft')index=(index+2)%3;else if(key==='ArrowRight')index=(index+1)%3;else index=key==='Home'?0:2;const before=document.activeElement;const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});fireEvent(before,event);expect(event.defaultPrevented).toBe(true);all=checkTabs(container,index);expect(document.activeElement).toBe(all[index]);}for(const key of ['ArrowUp','ArrowDown','x','Tab']){const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});fireEvent(all[index],event);expect(event.defaultPrevented).toBe(false);checkTabs(container,index);}act(()=>all[1].focus());checkTabs(container,1);expect(document.activeElement).toBe(all[1]);});
+test('concurrent tabs never share ids or selection and fresh mount resets',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');const aa=checkTabs(a,0),bb=checkTabs(b,0);expect(new Set([...aa,...bb].flatMap(t=>[t.id,t.getAttribute('aria-controls')])).size).toBe(12);fireEvent.click(aa[2]);checkTabs(a,2);checkTabs(b,0);act(()=>bb[1].focus());fireEvent.keyDown(bb[1],{key:'End'});checkTabs(a,2);checkTabs(b,2);root.unmount();checkTabs(render(<App/>).container,0);});
+`,
   },
   "react-accordion": {
-    solution: `const sections = [
+    solution: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2655,10 +3492,13 @@ const App = () => {
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
+  const idPrefix = useId();
   const toggle = id => setOpenId(current => current === id ? null : id);
-  return <>{sections.map(section => <section key={section.id}><button onClick={() => toggle(section.id)}>{section.title}</button>{openId === section.id && <p>{section.body}</p>}</section>)}</>;
+  return <>{sections.map(section => <section key={section.id}><h3><button type="button" aria-expanded={openId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => toggle(section.id)}>{section.title}</button></h3>{openId === section.id && <p id={idPrefix + '-' + section.id}>{section.body}</p>}</section>)}</>;
 };`,
-    junior: `const sections = [
+    junior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
@@ -2666,6 +3506,7 @@ const App = () => {
 
 const App = () => {
   const [openSectionId, setOpenSectionId] = useState(null);
+  const idPrefix = useId();
 
   const handleToggle = (sectionId) => {
     if (openSectionId === sectionId) {
@@ -2680,11 +3521,11 @@ const App = () => {
       {sections.map(section => {
         let body = null;
         if (section.id === openSectionId) {
-          body = <p>{section.body}</p>;
+          body = <p id={idPrefix + '-' + section.id}>{section.body}</p>;
         }
         return (
           <section key={section.id}>
-            <button onClick={() => handleToggle(section.id)}>{section.title}</button>
+            <h3><button type="button" aria-expanded={openSectionId === section.id} aria-controls={idPrefix + '-' + section.id} onClick={() => handleToggle(section.id)}>{section.title}</button></h3>
             {body}
           </section>
         );
@@ -2692,14 +3533,16 @@ const App = () => {
     </main>
   );
 };`,
-    senior: `const sections = [
+    senior: `import React, { useId, useState, useCallback } from 'react';
+
+const sections = [
   { id: 1, title: 'Shipping', body: 'Ships within two days' },
   { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
   { id: 3, title: 'Support', body: 'Support answers every weekday' },
 ];
 
 const AccordionItem = ({ section, open, onToggle }) => {
-  const panelId = \`panel-\${section.id}\`;
+  const panelId = useId();
   return (
     <section>
       <h3>
@@ -2714,7 +3557,6 @@ const AccordionItem = ({ section, open, onToggle }) => {
 
 const App = () => {
   const [openId, setOpenId] = useState(null);
-  // Clicking the open header closes it; clicking another swaps in one step
   const toggle = useCallback(id => setOpenId(current => (current === id ? null : id)), []);
   return (
     <main>
@@ -2724,6 +3566,14 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const accordionTitles=['Shipping','Returns','Support'],accordionBodies=['Ships within two days','Returns stay open for thirty days','Support answers every weekday'];
+const checkAccordion=(scope,open,ids)=>{const buttons=Array.from(scope.querySelectorAll('button'));expect(buttons).toHaveLength(3);buttons.forEach((b,i)=>{expect(within(scope).getByRole('button',{name:accordionTitles[i]})).toBe(b);const heading=within(scope).getByRole('heading',{name:accordionTitles[i]});expect(heading.contains(b)).toBe(true);expect(b.type).toBe('button');expect(b.getAttribute('aria-expanded')).toBe(String(i===open));expect(b.getAttribute('aria-controls')).toBe(ids[i]);});expect(new Set(ids).size).toBe(3);expect(ids.every(id=>typeof id==='string'&&id.length>0)).toBe(true);const paragraphs=Array.from(scope.querySelectorAll('p'));expect(paragraphs.map(p=>p.textContent)).toEqual(open===null?[]:[accordionBodies[open]]);if(open!==null)expect(document.getElementById(ids[open])).toBe(paragraphs[0]);return buttons;};
+test('thirty-six repeated and switched panels keep stable relationships and focus',()=>{const {container,rerender}=render(<App/>);const ids=Array.from(container.querySelectorAll('button')).map(b=>b.getAttribute('aria-controls'));let open=null,buttons=checkAccordion(container,open,ids);for(let i=0;i<36;i++){const index=[2,2,0,1,1,2,0,0,1][i%9];buttons[index].focus();fireEvent.click(buttons[index]);open=open===index?null:index;buttons=checkAccordion(container,open,ids);expect(document.activeElement).toBe(buttons[index]);rerender(<App/>);checkAccordion(container,open,ids);}});
+test('concurrent accordions have unique targets and independent panels',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),ai=Array.from(a.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls')),bi=Array.from(b.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));expect(new Set([...ai,...bi]).size).toBe(6);const aa=checkAccordion(a,null,ai),bb=checkAccordion(b,null,bi);fireEvent.click(aa[0]);fireEvent.click(bb[1]);checkAccordion(a,0,ai);checkAccordion(b,1,bi);fireEvent.click(aa[2]);checkAccordion(a,2,ai);checkAccordion(b,1,bi);});
+test('a fresh accordion starts with every body absent',()=>{const a=render(<App/>);fireEvent.click(a.container.querySelector('button'));a.unmount();const b=render(<App/>),ids=Array.from(b.container.querySelectorAll('button')).map(x=>x.getAttribute('aria-controls'));checkAccordion(b.container,null,ids);});
+`,
   },
   "react-star-rating": {
     solution: `const stars = [1, 2, 3, 4, 5];
@@ -2732,7 +3582,7 @@ const App = () => {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const shown = hovered || rating;
-  return <><div onMouseLeave={() => setHovered(0)}>{stars.map(star => <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>)}</div><p>Rating: {rating}</p></>;
+  return <><div onMouseLeave={() => setHovered(0)}>{stars.map(star => <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>)}</div><p>Rating: {rating}</p></>;
 };`,
     junior: `const stars = [1, 2, 3, 4, 5];
 
@@ -2766,7 +3616,7 @@ const App = () => {
             symbol = '★';
           }
           return (
-            <button key={star} onMouseEnter={() => handleMouseEnter(star)} onMouseLeave={handleMouseLeave} onClick={() => handleClick(star)}>
+            <button key={star} type="button" aria-label={'Rate ' + star + ' star' + (star === 1 ? '' : 's')} onMouseEnter={() => handleMouseEnter(star)} onMouseLeave={handleMouseLeave} onClick={() => handleClick(star)}>
               {symbol}
             </button>
           );
@@ -2781,8 +3631,7 @@ const App = () => {
 const Star = ({ value, filled, onHover, onSelect }) => (
   <button
     type="button"
-    aria-label={\`\${value} star\${value === 1 ? '' : 's'}\`}
-    aria-pressed={filled}
+    aria-label={\`Rate \${value} star\${value === 1 ? '' : 's'}\`}
     onMouseEnter={() => onHover(value)}
     onFocus={() => onHover(value)}
     onClick={() => onSelect(value)}
@@ -2794,7 +3643,7 @@ const Star = ({ value, filled, onHover, onSelect }) => (
 const App = () => {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(null);
-  const preview = hovered ?? rating; // the hover wins while the pointer is over a star
+  const preview = hovered ?? rating;
   const clearHover = () => setHovered(null);
 
   return (
@@ -2808,6 +3657,13 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+const checkStarAppearance=(scope,baseline,shown,rating)=>{const all=Array.from(scope.querySelectorAll('button'));expect(all).toHaveLength(5);all.forEach((b,i)=>{expect(b.type).toBe('button');expect(within(scope).getByRole('button',{name:'Rate '+(i+1)+' star'+(i===0?'':'s')})).toBe(b);expect(b.outerHTML!==baseline[i]).toBe(i<shown);});expect(scope.querySelector('p').textContent).toBe('Rating: '+rating);return all;};
+test('every hover fills the exact prefix and leaves the committed number alone',()=>{const {container,rerender}=render(<App/>);const baseline=looks(container);let all=checkStarAppearance(container,baseline,0,0);for(const value of[5,1,4,2,3,1,5,2,4,3]){hover(all[value-1]);checkStarAppearance(container,baseline,value,0);rerender(<App/>);checkStarAppearance(container,baseline,value,0);leave(all[value-1]);all=checkStarAppearance(container,baseline,0,0);}});
+test('all committed ratings survive lower and higher previews',()=>{const {container}=render(<App/>),baseline=looks(container);let all=checkStarAppearance(container,baseline,0,0);for(const value of[2,5,1,3,4,2,1,5]){fireEvent.click(all[value-1]);checkStarAppearance(container,baseline,value,value);for(const preview of[1,5,2]){hover(all[preview-1]);checkStarAppearance(container,baseline,preview,value);leave(all[preview-1]);all=checkStarAppearance(container,baseline,value,value);}}});
+test('ratings are independent and fresh instances start at zero',()=>{const root=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]'),ab=looks(a),bb=looks(b);const aa=checkStarAppearance(a,ab,0,0),bs=checkStarAppearance(b,bb,0,0);fireEvent.click(aa[1]);hover(bs[4]);checkStarAppearance(a,ab,2,2);checkStarAppearance(b,bb,5,0);leave(bs[4]);checkStarAppearance(b,bb,0,0);root.unmount();const fresh=render(<App/>);checkStarAppearance(fresh.container,looks(fresh.container),0,0);});
+`,
   },
   "react-modal": {
     solution: `const App = () => {
@@ -2838,16 +3694,17 @@ const App = () => {
     }
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      handleClose();
-    }
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = event => { if (event.key === 'Escape') handleClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
 
   let modal = null;
   if (isOpen) {
     modal = (
-      <div className="backdrop" onClick={handleBackdropClick} onKeyDown={handleKeyDown}>
+      <div className="backdrop" onClick={handleBackdropClick}>
         <div className="modal" role="dialog" aria-modal="true" tabIndex={-1}>
           <h3>Confirm</h3>
           <p>Are you sure?</p>
@@ -2870,18 +3727,20 @@ const App = () => {
   useEffect(() => {
     const opener = document.activeElement;
     dialogRef.current?.focus();
-    return () => opener?.focus?.(); // hand focus back to whatever opened the dialog
+    return () => opener?.focus?.();
   }, []);
 
   const onBackdropClick = event => {
     if (!dialogRef.current.contains(event.target)) onClose();
   };
-  const onKeyDown = event => {
-    if (event.key === 'Escape') onClose();
-  };
+  useEffect(() => {
+    const onKeyDown = event => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="backdrop" onClick={onBackdropClick} onKeyDown={onKeyDown}>
+    <div className="backdrop" onClick={onBackdropClick}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1} ref={dialogRef}>
         <h3 id="modal-title">{title}</h3>
         {children}
@@ -2905,6 +3764,28 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `
+
+
+test('Escape works from the document and other keys preserve the dialog',()=>{
+ const view=render(<App/>);const keys=['Enter','Tab','ArrowLeft','ArrowRight',' ','a','escape','Esc','Home','End','Delete','Backspace'];
+ for(const key of keys){openModal(view.container);fireEvent.keyDown(document,{key});expect(dialog(view.container)).toBeTruthy();fireEvent.keyDown(document,{key:'Escape'});expect(dialog(view.container)).toBeNull();}
+});
+test('nested content clicks stay inside through twelve open and close cycles',()=>{
+ const view=render(<App/>);
+ for(let i=0;i<12;i++){
+  openModal(view.container);const panel=dialog(view.container);const extra=document.createElement('span');extra.textContent='Nested '+i;panel.appendChild(extra);fireEvent.click(extra);expect(dialog(view.container)).toBe(panel);
+  fireEvent.click(panel);expect(dialog(view.container)).toBe(panel);view.rerender(<App data-parent={i}/>);expect(dialog(view.container)).toBe(panel);
+  if(i%2===0)fireEvent.click(panel.parentElement);else fireEvent.click(within(panel).getByRole('button',{name:'Close'}));expect(dialog(view.container)).toBeNull();
+ }
+});
+test('document listeners are removed on close and unmount; independent roots remain independent',()=>{
+ const hosts=[document,window],real=hosts.map(host=>[host.addEventListener,host.removeEventListener]),active=hosts.map(()=>new Set());
+ hosts.forEach((host,i)=>{host.addEventListener=function(type,listener,options){if(type==='keydown')active[i].add(listener);return real[i][0].call(this,type,listener,options);};host.removeEventListener=function(type,listener,options){if(type==='keydown')active[i].delete(listener);return real[i][1].call(this,type,listener,options);};});
+ try{const a=render(<App/>),b=render(<App/>);openModal(a.container);expect(dialog(a.container)).toBeTruthy();expect(dialog(b.container)).toBeNull();openModal(b.container);a.unmount();fireEvent.keyDown(document,{key:'Escape'});expect(dialog(b.container)).toBeNull();expect(active[0].size+active[1].size).toBe(0);openModal(b.container);b.unmount();expect(active[0].size+active[1].size).toBe(0);const fresh=render(<App/>);expect(dialog(fresh.container)).toBeNull();fresh.unmount();}
+ finally{hosts.forEach((host,i)=>{[host.addEventListener,host.removeEventListener]=real[i];});}
+});
+`,
   },
   "react-theme-context": {
     solution: `const ThemeContext = React.createContext(null);
@@ -2953,7 +3834,6 @@ const App = () => {
 const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
   const toggleTheme = useCallback(() => setTheme(current => (current === 'light' ? 'dark' : 'light')), []);
-  // Memoised so consumers only re-render when the theme itself changes
   const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -2976,12 +3856,25 @@ const App = () => (
     <main><Toolbar /></main>
   </ThemeProvider>
 );`,
+    hiddenSuite: `
+
+
+test('forty-eight ordinary clicks keep the button and theme through parent renders',()=>{
+ const view=render(<App/>),button=view.container.querySelector('button');for(let i=0;i<48;i++){fireEvent.click(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));view.rerender(<App data-parent={i}/>);expect(view.container.querySelector('button')).toBe(button);expect(button.textContent).toBe('Theme: '+(i%2?'light':'dark'));}
+});
+test('two mounted theme providers never change the other button',()=>{
+ const a=render(<App/>),b=render(<App/>),one=a.container.querySelector('button'),two=b.container.querySelector('button');for(let i=0;i<20;i++){fireEvent.click(one);expect(one.textContent).toBe('Theme: '+(i%2?'light':'dark'));expect(two.textContent).toBe('Theme: light');}fireEvent.click(two);expect(two.textContent).toBe('Theme: dark');expect(one.textContent).toBe('Theme: light');a.unmount();fireEvent.click(two);expect(two.textContent).toBe('Theme: light');b.unmount();
+});
+test('unmounting a dark provider leaves a fresh provider at light',()=>{
+ const view=render(<App/>);fireEvent.click(view.container.querySelector('button'));expect(view.container.querySelector('button').textContent).toBe('Theme: dark');view.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('button').textContent).toBe('Theme: light');fresh.unmount();
+});
+`,
   },
-  "react-usedebounce-hook": {
+  'react-usedebounce-hook': {
     solution: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
   useEffect(() => { const timer = setTimeout(() => setSettled(value), delay); return () => clearTimeout(timer); }, [value, delay]);
   return settled;
@@ -2991,11 +3884,11 @@ const App = () => {
   const [query, setQuery] = useState('');
   const settledQuery = useDebounce(query, 300);
   const visible = fruits.filter(fruit => fruit.toLowerCase().includes(settledQuery.toLowerCase()));
-  return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{visible.map(fruit => <li key={fruit}>{fruit}</li>)}</ul></>;
+  return <><input aria-label="Filter fruit" value={query} onChange={event => setQuery(event.target.value)} /><ul>{visible.map(fruit => <li key={fruit}>{fruit}</li>)}</ul></>;
 };`,
     junior: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   const timerRef = useRef(null);
 
@@ -3038,7 +3931,7 @@ const App = () => {
 
   return (
     <main>
-      <input type="text" value={query} onChange={handleChange} />
+      <input type="text" aria-label="Filter fruit" value={query} onChange={handleChange} />
       <ul>
         {matchingFruits.map(fruit => <li key={fruit}>{fruit}</li>)}
       </ul>
@@ -3047,17 +3940,17 @@ const App = () => {
 };`,
     senior: `const fruits = ['Apple', 'Banana', 'Cherry'];
 
-const useDebounce = (value, delay) => {
+export const useDebounce = (value, delay) => {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
-    if (value === settled) return undefined; // nothing to wait for
+    if (value === settled) return undefined;
     const timer = setTimeout(() => setSettled(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay, settled]);
   return settled;
 };
 
-const normalize = text => text.trim().toLocaleLowerCase();
+const normalize = text => text.toLowerCase();
 
 const FruitList = ({ items }) => (
   items.length === 0
@@ -3080,10 +3973,67 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, so any delay above 10 ms works:
-    // a key every 10 ms never lets a value settle, and a debounce without
-    // clearTimeout lets the first value through after its delay anyway.
-    hiddenSuite: `${FAKE_CLOCK}
+    hiddenSuite: `
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
 test('a value replaced before the delay never reaches the list', () => withClock(async clock => {
   const { container } = render(<App />);
   const input = container.querySelector('input');
@@ -3095,7 +4045,13 @@ test('a value replaced before the delay never reaches the list', () => withClock
   await clock.tick(5000);
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Banana');
-}));`,
+}));
+
+
+test('changed delay restarts the pending wait and rapid values never publish early',()=>withAuditClock(async clock=>{let latest;const Probe=({value,delay})=>{latest=useDebounce(value,delay);return null;};const view=render(<Probe value="initial" delay={37}/>);expect(latest).toBe('initial');view.rerender(<Probe value="pending" delay={37}/>);await clock.tick(20);view.rerender(<Probe value="pending" delay={83}/>);await clock.tick(82);expect(latest).toBe('initial');await clock.tick(1);expect(latest).toBe('pending');for(let i=0;i<24;i++){view.rerender(<Probe value={'value-'+i} delay={37}/>);await clock.tick(36);expect(latest).toBe('pending');}await clock.tick(1);expect(latest).toBe('value-23');view.unmount();expect(clock.active()).toBe(0);}));
+test('opaque strings,empty values and parent renders retain literal debounce results',()=>withAuditClock(async clock=>{let latest;const Probe=({value})=>{latest=useDebounce(value,19);return null;};const view=render(<Probe value="start"/>);for(const value of ['', '  ', '<b>🦈</b>', '"quoted"', 'İ', 'x'.repeat(2000)]){const previous=latest;view.rerender(<Probe value={value}/>);await clock.tick(10);view.rerender(<Probe value={value}/>);await clock.tick(8);expect(latest).toBe(previous);await clock.tick(1);expect(latest).toBe(value);}view.unmount();expect(clock.active()).toBe(0);}));
+test('independent timers,fresh hooks and removed consumers clean up without affecting survivors',()=>withAuditClock(async clock=>{let one,two;const A=({value})=>{one=useDebounce(value,37);return null;},B=({value})=>{two=useDebounce(value,53);return null;};const a=render(<A value="a"/>),b=render(<B value="b"/>);a.rerender(<A value="next a"/>);b.rerender(<B value="next b"/>);await clock.tick(36);expect(one).toBe('a');expect(two).toBe('b');a.unmount();expect(clock.active()).toBe(1);await clock.tick(17);expect(two).toBe('next b');b.unmount();expect(clock.active()).toBe(0);const fresh=render(<A value="fresh"/>);expect(one).toBe('fresh');fresh.unmount();expect(clock.active()).toBe(0);}));
+`,
   },
   "react-todo-dashboard": {
     solution: `const App = () => {
@@ -3112,7 +4068,7 @@ test('a value replaced before the delay never reaches the list', () => withClock
 
   const add = () => {
     if (!title.trim()) return;
-    setTodos(current => [...current, { id: Date.now(), title, completed: false }]);
+    setTodos(current => [...current, { id: crypto.randomUUID(), title, completed: false }]);
     setTitle('');
   };
 
@@ -3409,6 +4365,7 @@ const App = () => {
   // helpers and each visible suite's `loaded`, with data no visible check
   // shows.
   "react-user-directory": {
+    boardPlan: "// API plan: GET /users returns {id,name,email,address:{city}} records.\n// Keep the answer and local filters separate; city choices come from all users.\n// Cache a successful query briefly, then revalidate and keep errors visible.\n// For a large directory, filter and page on the server with a stable cursor,\n// an index on the normalized name and a city index, instead of downloading all rows.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3687,6 +4644,7 @@ test('filtering never asks the server again', () => withServer(async calls => {
 }));`,
   },
   "react-posts-dashboard": {
+    boardPlan: "// API plan: GET /posts returns {id,userId,title,body}; reduce groups by userId.\n// A large feed requests one author and a cursor page, backed by an author/id index.\n// Cache each author page briefly and revalidate; return per-author counts separately.\n// Keep incoming post order and store only the selected author, not a second feed.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3943,6 +4901,7 @@ test('choosing users never asks the server again', () => withServer(async calls 
 }));`,
   },
   "react-todo-client": {
+    boardPlan: "// Conflict plan: GET /todos?_limit=5 reads; POST /todos creates. Local toggles/deletes stay local here.\n// A real server accepts PATCH /todos/:id {completed,version} and atomically checks the version.\n// A stale edit gets 409: reload that todo and let the user compare the two edits.\n// BroadcastChannel may notify the other tab; the server still decides which write succeeds.\n// Send the intended completed value, not a toggle command, so retries are idempotent.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4306,6 +5265,7 @@ test('Delete and the checkboxes act on the todo they belong to', () => withServe
 }));`,
   },
   "react-product-explorer": {
+    boardPlan: "// Search plan: GET /products returns {products,total,skip,limit}; this exercise filters the loaded answer.\n// A large shop searches and sorts on the server, returns total and one stable page, and indexes normalized titles and price.\n// Use a trigram/full-text index for substring search; cache by query/order/page briefly and revalidate.\n// Include locale/currency and catalogue version in real cache keys; debounce typing and retain the last good page.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4658,6 +5618,7 @@ test('searching, sorting and paging never ask the server again', () => withServe
 }));`,
   },
   "react-comments-viewer": {
+    boardPlan: "// API plan: GET /comments returns {id,postId,name,email,body}; derive filters and domains.\n// For a large feed, request /posts/:id/comments?cursor=...&limit=20 or an email filter.\n// Index (post_id,id), use stable cursors and cache each query briefly; aggregate domains server-side.\n// Rate-limit reads and writes per account/IP; authenticate writes, cap body length and review new links.\n// Real public readers receive a redacted address rather than another person's full email.",
     solution: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4708,10 +5669,10 @@ const App = () => {
     const domain = comment.email.split('@')[1];
     counts[domain] = (counts[domain] || 0) + 1;
     return counts;
-  }, {});
+  }, Object.create(null));
   // Most comments first; a tie in A to Z order.
   const domains = Object.entries(domainCounts).sort(([nameA, countA], [nameB, countB]) =>
-    countB - countA || nameA.localeCompare(nameB));
+    countB - countA || (nameA < nameB ? -1 : nameA > nameB ? 1 : 0));
 
   if (loading) return <main><h2>Comments viewer</h2><p>Loading comments…</p></main>;
   if (error) return <main><h2>Comments viewer</h2><p role="alert">{error}</p></main>;
@@ -4795,7 +5756,7 @@ export default App;`,
     }
     counts[domain] = counts[domain] + 1;
     return counts;
-  }, {});
+  }, Object.create(null));
 
   const domainRows = Object.entries(domainCounts);
   domainRows.sort((first, second) => {
@@ -4827,13 +5788,13 @@ export default App;`,
   return (
     <main>
       <h2>Comments viewer</h2>
-      <select value={selectedPostId} onChange={handlePostChange}>
+      <select aria-label="Post" value={selectedPostId} onChange={handlePostChange}>
         <option value="">All posts</option>
         {postIds.map(postId => (
           <option key={postId} value={String(postId)}>{'Post ' + postId}</option>
         ))}
       </select>
-      <input type="text" value={emailFilter} onChange={handleEmailChange} placeholder="Filter by email" />
+      <input type="text" aria-label="Filter by email" value={emailFilter} onChange={handleEmailChange} placeholder="Filter by email" />
       {visibleComments.length === 0 && <p>No comments match.</p>}
       <ul aria-label="Comments">
         {visibleComments.map(comment => (
@@ -4873,7 +5834,7 @@ const countBy = (items, keyOf) => items.reduce((counts, item) => {
   const key = keyOf(item);
   return counts.set(key, (counts.get(key) ?? 0) + 1);
 }, new Map());
-const byCountThenName = ([nameA, countA], [nameB, countB]) => countB - countA || nameA.localeCompare(nameB);
+const byCountThenName = ([nameA, countA], [nameB, countB]) => countB - countA || (nameA < nameB ? -1 : nameA > nameB ? 1 : 0);
 
 const App = () => {
   const { status, comments, error } = useComments();
@@ -4983,7 +5944,13 @@ test('an email in capitals matches a lowercase filter', () => withServer(async c
   filterEmail(container, 'ana@');
   expect(entries('Comments')).toHaveLength(1);
   expect(entries('Comments')[0]).toContain('ANA@EXAMPLE.COM');
-}));`,
+}));
+
+
+test('post and case-insensitive email filters repeatedly derive current domain totals',()=>auditServer(async calls=>{const view=render(<App/>),data=auditCommentData();await auditReply(calls[0],data);for(const [post,email]of[['4',''],['4','CONSTRUCTOR'],['','user2'],['120','toString'],['19','missing'],['','']]){fireEvent.change(within(view.container).getByRole('combobox',{name:'Post'}),{target:{value:post}});fireEvent.change(auditEmailBox(view),{target:{value:email}});auditComments(view,data,post,email);}expect(calls).toHaveLength(1);}));
+test('rejected JSON and empty success have distinct alert/empty states',()=>auditServer(async calls=>{const broken=render(<App/>);await act(async()=>{calls[0].badJson();});expect(within(broken.container).getByRole('alert').textContent.trim().length>0).toBe(true);expect(auditEntries(broken,'Comments')).toEqual([]);expect(auditEntries(broken,'Domains')).toEqual([]);broken.unmount();const empty=render(<App/>);await auditReply(calls[1],[]);auditComments(empty,[]);expect(within(empty.container).queryByRole('alert')).toBeNull();}));
+test('separate labelled filters and parent renders retain independent summaries; fresh roots reset',()=>auditServer(async calls=>{const data=auditCommentData(),a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);expect(within(a.container).getByLabelText(/Email|Filter by email/i)).toBeTruthy();expect(within(b.container).getByLabelText(/Email|Filter by email/i)).toBeTruthy();fireEvent.change(auditEmailBox(a),{target:{value:'CONSTRUCTOR'}});a.rerender(<App/>);auditComments(a,data,'','CONSTRUCTOR');auditComments(b,data);expect(calls).toHaveLength(2);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[2],data);auditComments(fresh,data);}));
+`,
   },
   "react-weather-style-dashboard": {
     solution: `import React, { useEffect, useState } from 'react';
@@ -5020,7 +5987,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
-  const [unknown, setUnknown] = useState('');
+  const [unknown, setUnknown] = useState(null);
 
   const loadWeather = async city => {
     setLastCity(city);
@@ -5051,7 +6018,7 @@ const App = () => {
       setUnknown(wanted);
       return;
     }
-    setUnknown('');
+    setUnknown(null);
     loadWeather(city);
   };
 
@@ -5065,7 +6032,7 @@ const App = () => {
         <label>City <input value={name} onChange={event => setName(event.target.value)} /></label>
         <button type="submit">Search</button>
       </form>
-      {unknown && <p>Unknown city: {unknown}</p>}
+      {unknown !== null && <p>Unknown city: {unknown}</p>}
       {loading && <p>Loading…</p>}
       {error && (
         <div>
@@ -5114,7 +6081,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cityText, setCityText] = useState('');
-  const [unknownCity, setUnknownCity] = useState('');
+  const [unknownCity, setUnknownCity] = useState(null);
 
   const findCity = (text) => {
     const wanted = text.trim().toLowerCase();
@@ -5168,7 +6135,7 @@ const App = () => {
       setUnknownCity(cityText.trim());
       return;
     }
-    setUnknownCity('');
+    setUnknownCity(null);
     loadWeather(city);
   };
 
@@ -5196,7 +6163,7 @@ const App = () => {
         </label>
         <button type="submit">Search</button>
       </form>
-      {unknownCity !== '' && <p>Unknown city: {unknownCity}</p>}
+      {unknownCity !== null && <p>Unknown city: {unknownCity}</p>}
       {loading && <p>Loading…</p>}
       {error !== '' && (
         <div>
@@ -5278,12 +6245,12 @@ const useRecentWeather = () => {
 const App = () => {
   const { readings, request, load } = useRecentWeather();
   const [name, setName] = useState('');
-  const [unknown, setUnknown] = useState('');
+  const [unknown, setUnknown] = useState(null);
 
   const search = event => {
     event.preventDefault();
     const city = findCity(name);
-    setUnknown(city ? '' : name.trim());
+    setUnknown(city ? null : name.trim());
     if (city) load(city);
   };
 
@@ -5301,7 +6268,7 @@ const App = () => {
         <input id="city" value={name} onChange={event => setName(event.target.value)} />
         <button type="submit">Search</button>
       </form>
-      {unknown && <p>Unknown city: {unknown}</p>}
+      {unknown !== null && <p>Unknown city: {unknown}</p>}
       {request.status === 'loading' && <p aria-live="polite">Loading…</p>}
       {request.status === 'error' && (
         <div>
@@ -5854,7 +6821,7 @@ const App = () => {
           <li key={slot.id}>
             <button
               type="button"
-              disabled={slot.completed}
+              disabled={slot.completed || booking}
               aria-pressed={slot.id === selectedId}
               onClick={() => setSelectedId(slot.id)}
             >
@@ -5874,15 +6841,6 @@ const App = () => {
 
 export default App;`,
     junior: `import React, { useEffect, useState } from 'react';
-
-// SYSTEM DESIGN NOTES
-// User flow: choose a free slot, press Book, see a message.
-// Data model: a slot has id, title and completed (true means booked).
-// API endpoints: GET the slots, then PATCH one slot to book it.
-// Reliability and scale: disabling the buttons only protects one browser.
-// If two people book the same slot at once, the database has to refuse the
-// second one, for example with a unique index on the slot id in a bookings
-// table. The server then answers 409 and the page tells the second person.
 
 const App = () => {
   const [slots, setSlots] = useState([]);
@@ -5998,7 +6956,7 @@ const App = () => {
           }
           return (
             <li key={slot.id}>
-              <button type="button" disabled={slot.completed} aria-pressed={pressed} onClick={() => setSelectedId(slot.id)}>
+              <button type="button" disabled={slot.completed || isBooking} aria-pressed={pressed} onClick={() => setSelectedId(slot.id)}>
                 {slot.title}
               </button>
             </li>
@@ -6016,20 +6974,6 @@ const App = () => {
 
 export default App;`,
     senior: `import React, { useCallback, useEffect, useReducer } from 'react';
-
-// SYSTEM DESIGN NOTES
-// User flow: select one free slot, book it, get a definite answer.
-// Data model: slots [{ id, title, completed }] and one booking state machine:
-// idle -> sending -> booked | taken | failed.
-// API endpoints: GET /slots; POST /bookings { slotId, idempotencyKey } in a
-// real app (PATCH /todos/:id here), 201 on success and 409 when taken.
-// Reliability and scale: the UI guard stops double clicks, not races. The
-// server makes the booking atomic: INSERT INTO bookings (slot_id, user_id)
-// with UNIQUE (slot_id), or SELECT ... FOR UPDATE on the slot row inside a
-// transaction, so exactly one of two concurrent requests commits and the
-// other maps the constraint violation to 409. The idempotency key lets a
-// client retry a timed-out request without booking twice, and a short hold
-// with an expiry covers a checkout that takes several steps.
 
 const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
 const slotUrl = id => 'https://jsonplaceholder.typicode.com/todos/' + id;
@@ -6050,9 +6994,9 @@ const reducer = (state, action) => {
   }
 };
 
-const Slot = ({ slot, selected, onSelect }) => (
+const Slot = ({ slot, selected, onSelect, sending }) => (
   <li>
-    <button type="button" disabled={slot.completed} aria-pressed={selected} onClick={() => onSelect(slot.id)}>
+    <button type="button" disabled={slot.completed || sending} aria-pressed={selected} onClick={() => onSelect(slot.id)}>
       {slot.title}
     </button>
   </li>
@@ -6103,7 +7047,7 @@ const App = () => {
     <main>
       <h2>Booking prototype</h2>
       <ul aria-label="Slots">
-        {slots.map(slot => <Slot key={slot.id} slot={slot} selected={slot.id === selectedId} onSelect={select} />)}
+        {slots.map(slot => <Slot key={slot.id} slot={slot} selected={slot.id === selectedId} onSelect={select} sending={sending} />)}
       </ul>
       <button type="button" disabled={selectedId === null || sending} onClick={book}>
         {sending ? 'Booking…' : 'Book'}
@@ -6187,7 +7131,13 @@ test('a new booking clears the last status, and a 409 after a success books both
   expect(statusText()).toBe('');
   expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
   expect(bookButton().disabled).toBe(true);
-}));`,
+}));
+
+
+test('pending booking locks selection and failure retries the same selected id without duplicate PATCH',()=>auditServer(async calls=>{const view=render(<App/>),data=auditSlotData(),booked=new Set(data.filter(x=>x.completed).map(x=>x.id));await auditReply(calls[0],data);fireEvent.click(auditSlotButtons(view)[6]);fireEvent.click(auditBook(view));expect(auditBook(view).textContent.trim()).toBe('Booking…');expect(auditBook(view).disabled).toBe(true);fireEvent.click(auditSlotButtons(view)[7]);fireEvent.click(auditBook(view));expect(calls).toHaveLength(2);expect(auditSlotButtons(view)[6].getAttribute('aria-pressed')).toBe('true');expect(auditSlotButtons(view)[7].getAttribute('aria-pressed')).toBe('false');await auditReply(calls[1],{},503);auditSlots(view,data,booked,data[6].id);expect(within(view.container).getByRole('alert').textContent).toBe('Could not book '+data[6].title);fireEvent.click(auditBook(view));expect(calls[2].url).toBe(calls[1].url);expect(within(view.container).queryByRole('alert')).toBeNull();await auditReply(calls[2],{},409);booked.add(data[6].id);auditSlots(view,data,booked,null);expect(within(view.container).getByRole('alert').textContent).toBe(data[6].title+' was just booked by someone else');}));
+test('empty/full-booked data and malformed initial JSON never enable an invalid booking',()=>auditServer(async calls=>{for(const data of [[],Array.from({length:10},(_,id)=>({id,title:'Booked '+id,completed:true}))]){const view=render(<App/>);await auditReply(calls[calls.length-1],data);expect(auditSlotButtons(view)).toHaveLength(data.length);expect(auditBook(view).disabled).toBe(true);const count=calls.length;fireEvent.click(auditBook(view));expect(calls).toHaveLength(count);view.unmount();}const broken=render(<App/>);await act(async()=>{calls[calls.length-1].badJson();});expect(within(broken.container).getByRole('alert').textContent).toBe('Could not load slots');expect(auditSlotButtons(broken)).toEqual([]);}));
+test('parent renders and separate or fresh booking roots keep their own slots and selection',()=>auditServer(async calls=>{const data=auditSlotData(),a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);fireEvent.click(auditSlotButtons(a)[7]);a.rerender(<App/>);expect(auditBook(a).disabled).toBe(false);expect(auditBook(b).disabled).toBe(true);expect(calls).toHaveLength(2);fireEvent.click(auditBook(a));await act(async()=>{calls[2].fail(new TypeError('offline'));});expect(within(a.container).getByRole('alert')).toBeTruthy();expect(within(b.container).queryByRole('alert')).toBeNull();a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[3],data);expect(auditBook(fresh).disabled).toBe(true);expect(within(fresh.container).queryByRole('alert')).toBeNull();}));
+`,
   },
   "react-analytics-panel": {
     solution: `import React, { useEffect, useState } from 'react';
@@ -6209,7 +7159,7 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [type, setType] = useState('all');
+  const [type, setType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
@@ -6231,10 +7181,13 @@ const App = () => {
   const types = [...new Set(events.map(event => event.type))].sort();
   // Days written as 2026-09-03 compare correctly as text.
   const shown = events.filter(event =>
-    (type === 'all' || event.type === type) &&
+    (type === '' || event.type === type) &&
     (from === '' || event.date >= from) &&
     (to === '' || event.date <= to));
-  const counts = shown.reduce((totals, event) => ({ ...totals, [event.type]: (totals[event.type] || 0) + 1 }), {});
+  const counts = shown.reduce((totals, event) => {
+    totals[event.type] = (totals[event.type] || 0) + 1;
+    return totals;
+  }, Object.create(null));
   const cardTypes = Object.keys(counts).sort();
 
   if (loading) return <main><h2>Analytics panel</h2><p>Loading…</p></main>;
@@ -6246,7 +7199,7 @@ const App = () => {
       <label>
         Type{' '}
         <select value={type} onChange={event => setType(event.target.value)}>
-          <option value="all">All types</option>
+          <option value="">All types</option>
           {types.map(one => <option key={one} value={one}>{one}</option>)}
         </select>
       </label>
@@ -6267,21 +7220,11 @@ const App = () => {
 export default App;`,
     junior: `import React, { useEffect, useState } from 'react';
 
-// SYSTEM DESIGN NOTES
-// User flow: pick a type and dates, and the cards show how many of each
-// type happened.
-// Data model: each event has an id, a type and a date.
-// API endpoints: GET /api/events, and POST /api/events to record a new one.
-// Reliability and scale: many events arrive every second, so I would save
-// them without waiting (put them in a queue and insert them in batches) and
-// keep a table of totals per day and type, so the panel reads a few rows
-// instead of counting millions.
-
 const App = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
+  const [selectedType, setSelectedType] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -6312,7 +7255,7 @@ const App = () => {
 
   const shownEvents = [];
   for (const event of events) {
-    if (selectedType !== 'all' && event.type !== selectedType) {
+    if (selectedType !== '' && event.type !== selectedType) {
       continue;
     }
     if (fromDate !== '' && event.date < fromDate) {
@@ -6325,7 +7268,7 @@ const App = () => {
   }
 
   const addToTotals = (totals, event) => {
-    const updated = { ...totals };
+    const updated = Object.assign(Object.create(null), totals);
     if (updated[event.type] === undefined) {
       updated[event.type] = 0;
     }
@@ -6357,17 +7300,16 @@ const App = () => {
   return (
     <main>
       <h2>Analytics panel</h2>
-      <label htmlFor="type">Type</label>
-      <select id="type" value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
-        <option value="all">All types</option>
+      <label>Type
+        <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+        <option value="">All types</option>
         {types.map((type) => (
           <option key={type} value={type}>{type}</option>
         ))}
-      </select>
-      <label htmlFor="from">From</label>
-      <input id="from" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-      <label htmlFor="to">To</label>
-      <input id="to" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+        </select>
+      </label>
+      <label>From <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+      <label>To <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
       <p>Showing {shownEvents.length} of {events.length} events</p>
       {cardTypes.length === 0 && <p>No events match these filters</p>}
       {cardTypes.map((type) => (
@@ -6383,24 +7325,10 @@ const App = () => {
 export default App;`,
     senior: `import React, { useEffect, useMemo, useState } from 'react';
 
-// SYSTEM DESIGN NOTES
-// User flow: filter by type and an inclusive range of days; the cards and
-// the summary line follow every filter.
-// Data model: event { id, type, date, userId, props }; the client keeps raw
-// events and derives everything else with useMemo.
-// API endpoints: POST /api/events (batched, 202 Accepted) and
-// GET /api/stats?from&to&type answered from rollups.
-// Reliability and scale: the write path is append-only and asynchronous:
-// clients batch and retry with an idempotency id per event, the API writes to
-// a log (Kafka or a queue) and returns 202, and consumers load a columnar
-// store partitioned by day. Reads hit per-day, per-type rollups maintained by
-// the consumer, so a dashboard query touches days x types rows, never raw
-// events. Late events land in their day's partition and update its rollup.
-
-const NO_FILTERS = { type: 'all', from: '', to: '' };
+const NO_FILTERS = { type: '', from: '', to: '' };
 
 const matches = ({ type, from, to }) => event =>
-  (type === 'all' || event.type === type) &&
+  (type === '' || event.type === type) &&
   (!from || event.date >= from) &&
   (!to || event.date <= to);
 
@@ -6438,7 +7366,7 @@ const App = () => {
   const types = useMemo(() => [...new Set(events.map(event => event.type))].sort(), [events]);
   const shown = useMemo(() => events.filter(matches(filters)), [events, filters]);
   const counts = useMemo(() => shown.reduce((totals, { type }) => totals.set(type, (totals.get(type) || 0) + 1), new Map()), [shown]);
-  const cards = [...counts].sort(([a], [b]) => a.localeCompare(b));
+  const cards = [...counts].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
 
   if (status === 'loading') return <main><h2>Analytics panel</h2><p aria-live="polite">Loading…</p></main>;
   if (status === 'error') return <main><h2>Analytics panel</h2><p role="alert">Could not load events</p></main>;
@@ -6449,7 +7377,7 @@ const App = () => {
       <fieldset>
         <legend>Filters</legend>
         <label>Type <select value={filters.type} onChange={update('type')}>
-          <option value="all">All types</option>
+          <option value="">All types</option>
           {types.map(type => <option key={type} value={type}>{type}</option>)}
         </select></label>
         <label>From <input type="date" value={filters.from} max={filters.to || undefined} onChange={update('from')} /></label>
@@ -6523,7 +7451,13 @@ test('the type options list every type loaded, whatever the dates', () => withRe
   setDate('To', '2026-10-02');
   expect(cards()).toEqual([['download', '2']]);
   expect(typeOptions()).toEqual(['All types', 'download', 'refund', 'visit']);
-}));`,
+}));
+
+
+test('a bounded model combines type and inclusive cross-year dates without capping counts',()=>auditServer(async calls=>{const data=Array.from({length:60},(_,id)=>({id,type:['all','visit','constructor','alpha','visit'][id%5],date:['2025-12-30','2026-01-01','2026-06-10','2026-12-31','2027-01-01'][id%5]})),view=render(<App/>);await auditReply(calls[0],data);for(const filters of [{},{from:'2026-01-01'},{to:'2026-12-31'},{from:'2026-01-01',to:'2026-12-31'},{type:'visit',from:'2026-01-01',to:'2027-01-01'},{from:'2027-01-01',to:'2026-01-01'},{type:'all'},{type:'constructor'},{}]){auditSelect(view,filters.type||'All types');auditDate(view,'From',filters.from||'');auditDate(view,'To',filters.to||'');auditAnalytics(view,data,filters);}expect(calls).toHaveLength(1);}));
+test('JSON failure and empty data render their correct branches with no summary cards',()=>auditServer(async calls=>{const failed=render(<App/>);await act(async()=>{calls[0].badJson();});expect(within(failed.container).getByRole('alert').textContent).toBe('Could not load events');expect(auditCards(failed)).toEqual([]);failed.unmount();const empty=render(<App/>);await auditReply(calls[1],[]);auditAnalytics(empty,[],{});expect(within(empty.container).queryByRole('alert')).toBeNull();}));
+test('separate filter controls and parent renders keep independent current summaries',()=>auditServer(async calls=>{const data=[{id:1,type:'all',date:'2026-01-01'},{id:2,type:'visit',date:'2026-01-01'}],a=render(<App/>),b=render(<App/>);await auditReply(calls[0],data);await auditReply(calls[1],data);auditSelect(a,'all');a.rerender(<App/>);auditAnalytics(a,data,{type:'all'});auditAnalytics(b,data,{});expect(calls).toHaveLength(2);a.unmount();b.unmount();const fresh=render(<App/>);await auditReply(calls[2],data);auditAnalytics(fresh,data,{});}));
+`,
   },
   "react-interview-mini-project": {
     solution: `import React, { useEffect, useState } from 'react';
@@ -6959,3 +7893,61 @@ test('Search reads the titles only, not the bodies', () => withRequests(async ca
 }));`,
   },
 };
+
+const TODO_IDENTITY_REVIEW_CASES=`const idRTL=require('@testing-library/react');test('two todos added during the same clock tick have separate removal identities',async()=>{const before=Date.now;Date.now=()=>1700000000000;try{const v=render(<App/>);await idRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(3));const query=idRTL.within(v.container);for(const title of['First new item','Second new item']){fireEvent.change(v.container.querySelector('input'),{target:{value:title}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));}expect(v.container.querySelectorAll('li').length).toBe(5);const last=v.container.querySelectorAll('li')[4];fireEvent.click(last.querySelector('button'));expect(v.container.querySelectorAll('li').length).toBe(4);expect(v.container.textContent).toContain('First new item');expect(v.container.textContent).not.toContain('Second new item');}finally{Date.now=before;}});
+
+test('duplicate titles keep independent identities and counts across mixed removals and empty recovery',()=>withRequests(async calls=>{const rtl=require('@testing-library/react'),v=render(<App/>);const request=requestTo(calls,'/todos');expect(Boolean(request)).toBe(true);answerLikeTheApi(request);await waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(3),soon);const model=SERVER_TODOS.slice(0,3).map(row=>({title:row.title,completed:row.completed})),query=rtl.within(v.container);const check=()=>{const items=Array.from(v.container.querySelectorAll('li'));expect(items.length).toBe(model.length);model.forEach((row,i)=>{expect(items[i].textContent).toContain(row.title);expect(items[i].textContent).toContain(row.completed?'done':'to do');expect(Boolean(rtl.within(items[i]).getByRole('button',{name:/^remove/i}))).toBe(true);});expect(v.container.textContent).toContain('Done: '+model.filter(row=>row.completed).length+' of '+model.length);};check();for(const title of['Repeated title','Repeated title','Third local']){fireEvent.change(v.container.querySelector('input'),{target:{value:title}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title,completed:false});check();}for(const index of[0,3,1]){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[index]).getByRole('button',{name:/^remove/i}));model.splice(index,1);check();}while(model.length){fireEvent.click(rtl.within(v.container.querySelectorAll('li')[model.length-1]).getByRole('button',{name:/^remove/i}));model.pop();check();}fireEvent.change(v.container.querySelector('input'),{target:{value:'After empty'}});fireEvent.click(query.getByRole('button',{name:'Add',exact:true}));model.push({title:'After empty',completed:false});check();}));
+`;
+REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite=[REACT_SOLUTIONS["react-todo-dashboard"].hiddenSuite,TODO_IDENTITY_REVIEW_CASES].filter(Boolean).join("\n\n");
+
+const PROJECT_DATA_REVIEW_CASES:Record<string,string>={
+"react-product-search":`
+const productRTL=require('@testing-library/react');
+const productRows=[{id:101,title:'Harbor lamp',price:8,category:'lighting'},{id:102,title:'Field kit',price:0,category:'gear'},{id:103,title:'Notebook',price:32,category:'office'},{id:104,title:'Gasket',price:7,category:'GEAR'},{id:105,title:'Gearbox',price:100,category:'parts'},{id:106,title:'Part gear',price:2,category:'lighting'}];
+const withProductRows=async(rows,body)=>{const original=globalThis.fetch;globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({products:rows,total:99999,skip:0,limit:rows.length})});try{await body();}finally{globalThis.fetch=original;}};
+test('arbitrary nested products, category unions and repeated searches keep every field and visible-price total',()=>withProductRows(productRows,async()=>{const v=render(<App/>);await productRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(6));for(const text of['','GEAR','har','NOTE','missing','lighting','']){fireEvent.change(v.container.querySelector('input'),{target:{value:text}});const expected=productRows.filter(row=>row.title.toLowerCase().includes(text.toLowerCase())||row.category.toLowerCase().includes(text.toLowerCase())),items=Array.from(v.container.querySelectorAll('li'));expect(items.length).toBe(expected.length);expected.forEach((row,i)=>{expect(items[i].textContent).toContain(row.title);expect(items[i].textContent).toContain(String(row.price));expect(items[i].textContent).toContain(row.category);});expect(v.container.textContent).toContain('Total: '+expected.reduce((sum,row)=>sum+row.price,0));}}));
+test('empty nested products and zero-priced matches keep a zero total',async()=>{await withProductRows([],async()=>{const v=render(<App/>);await productRTL.act(async()=>{for(let i=0;i<5;i++)await Promise.resolve();});expect(v.container.querySelectorAll('li').length).toBe(0);expect(v.container.textContent).toContain('Total: 0');v.unmount();});await withProductRows(productRows,async()=>{const v=render(<App/>);await productRTL.waitFor(()=>expect(v.container.querySelectorAll('li').length).toBe(6));fireEvent.change(v.container.querySelector('input'),{target:{value:'Field kit'}});expect(v.container.querySelectorAll('li').length).toBe(1);expect(v.container.textContent).toContain('Total: 0');});});
+`,
+"react-user-directory":`
+const expandedDirectory=['Ava Reed','Ben North','Cara Reed','Drew Field','Eli Hill','Faye North','Gus Reed','Hana Last'].map((name,i)=>({id:201+i,name,email:'person'+i+'@example.test',address:{city:['Delta','Alpha','Delta','Gamma','Beta','Alpha','Gamma','Delta'][i]}}));
+test('eight users and repeated combined filters retain the complete sorted city choices',()=>withServer(async calls=>{const container=await loaded(calls,expandedDirectory),options=[['','All cities'],...['Alpha','Beta','Delta','Gamma'].map(city=>[city,city])];for(const[text,city]of[['',''],['','Alpha'],['NORTH','Alpha'],['reed','Delta'],['missing','Gamma'],['',''],['LAST','']]){search(container,text);chooseCity(container,city);const expected=expandedDirectory.filter(row=>row.name.toLowerCase().includes(text.toLowerCase())&&(!city||row.address.city===city)),items=itemTexts(container);expectItems(items,expected.map(row=>row.name));expected.forEach((row,i)=>expect(items[i]).toContain(row.address.city));expect(optionsOf(citySelect(container))).toEqual(options);expect(citySelect(container).value).toBe(city);expect(calls.length).toBe(1);if(!expected.length)expect(says(container,'No users match.')).toBe(true);}}));
+test('an empty successful directory has just All cities and no request error',()=>withServer(async calls=>{const v=render(<App/>);gets(calls,USERS_URL)[0].respond([]);await waitFor(()=>expect(says(outsideAlerts(v.container),'loading')).toBe(false));expect(v.container.querySelectorAll('li').length).toBe(0);expect(optionsOf(citySelect(v.container))).toEqual([['','All cities']]);expect(says(v.container,'No users match.')).toBe(true);expect(alertText(v.container)).toBe('');}));
+`,
+"react-posts-dashboard":`
+const expandedFeed=[42,2,42,17,42,30,42,81,42,2,42,42,81,42,42].map((userId,i)=>({id:301+i,userId,title:'Article ['+(i+1)+']',body:'Body '+i}));
+test('larger groups preserve every post and repeat selection keeps exactly one author pressed',()=>withServer(async calls=>{const container=await loaded(calls,expandedFeed),ids=[2,17,30,42,81],labels=ids.map(id=>'User '+id+' ('+expandedFeed.filter(row=>row.userId===id).length+')');expect(buttonTexts(container)).toEqual(labels);expect(userButtons(container).map(button=>button.getAttribute('aria-pressed'))).toEqual(ids.map(()=> 'false'));expect(postItems(container).length).toBe(0);for(const id of[42,42,81,2,17,30,42]){choose(container,'User '+id+' ('+expandedFeed.filter(row=>row.userId===id).length+')');expectItems(postTexts(container),expandedFeed.filter(row=>row.userId===id).map(row=>row.title));expect(userButtons(container).map(button=>button.getAttribute('aria-pressed'))).toEqual(ids.map(value=>String(value===id)));expect(calls.length).toBe(1);}}));
+test('an empty successful post feed has no authors or selected posts and no error',()=>withServer(async calls=>{const v=render(<App/>);gets(calls,POSTS_URL)[0].respond([]);await waitFor(()=>expect(says(outsideAlerts(v.container),'loading')).toBe(false));expect(userButtons(v.container).length).toBe(0);expect(postItems(v.container).length).toBe(0);expect(alertText(v.container)).toBe('');}));
+`,
+};
+for(const[id,cases]of Object.entries(PROJECT_DATA_REVIEW_CASES)){const solution=REACT_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}
+
+const FINAL_PROJECT_REVIEW_CASES:Record<string,string>={
+"react-todo-client":`
+test('keeps every server-created todo and local edits across three sequential creates',()=>withServer(async calls=>{
+ const data=Array.from({length:5},(_,i)=>({id:40+i,userId:i+1,title:i===0?'<b>literal</b>':'Initial '+i,completed:i%2===0}));const container=await loaded(calls,data);let expected=data.map(x=>({...x}));
+ for(let i=0;i<3;i++){add(container,'  draft '+i+'  ');const request=posts(calls)[i];expect(request.url).toBe(TODOS_URL);expect(JSON.parse(request.options.body)).toEqual({title:'draft '+i,completed:false,userId:1});expect(String(new Headers(request.options.headers).get('content-type'))).toContain('application/json');expect(container.querySelectorAll('li')).toHaveLength(expected.length);fireEvent.click(boxes(container)[1]);expected[1]={...expected[1],completed:!expected[1].completed};const created={id:900+i,userId:1,title:'Stored '+i,completed:i===1};request.respond(created,201);expected.push(created);await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(expected.length));expectItems(itemTexts(container),expected.map(x=>x.title));expect(ticked(container)).toEqual(expected.map(x=>x.completed));expect(says(container,'Completed: '+expected.filter(x=>x.completed).length+' of '+expected.length)).toBe(true);expect(textBox(container).value).toBe('');}
+ expect(container.querySelector('li b')).toBeNull();fireEvent.click(buttonNamed(container.querySelectorAll('li')[6],'Delete'));expected.splice(6,1);expectItems(itemTexts(container),expected.map(x=>x.title));expect(calls).toHaveLength(4);
+}));
+test('starts from an empty server list and preserves it after a refused create',()=>withServer(async calls=>{const container=await loaded(calls,[]);await waitFor(()=>expect(says(outsideAlerts(container),'loading')).toBe(false));expect(says(container,'Completed: 0 of 0')).toBe(true);add(container,' 	 ');expect(posts(calls)).toHaveLength(0);add(container,'Retry me');posts(calls)[0].respond(null,503);await waitFor(()=>expect(alertText(container).length>0).toBe(true));expect(container.querySelectorAll('li')).toHaveLength(0);expect(textBox(container).value).toBe('Retry me');add(container,'Stored later');posts(calls)[1].respond({id:901,userId:1,title:'Stored later',completed:true},201);await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(1));expect(says(container,'Completed: 1 of 1')).toBe(true);}));
+`,
+"react-product-explorer":`
+test('models seventeen products, free prices, repeated titles and every page across combined filters and orders',()=>withServer(async calls=>{
+ const data=Array.from({length:17},(_,i)=>({id:80-i,title:i%3===0?'Sea lamp':i===1?'<b>literal</b>':'Item '+i,price:i%4===0?0:(i*13)%29}));const view=render(<App/>),container=view.container;calls[0].respond({products:data,total:data.length,skip:0,limit:30});await waitFor(()=>expect(container.querySelectorAll('li')).toHaveLength(5));
+ for(const query of['','LAMP','Item','literal','none',''])for(const order of['price-desc','','price-asc']){search(container,query);sortBy(container,order);const filtered=data.filter(p=>p.title.toLowerCase().includes(query.toLowerCase())),ordered=[...filtered];if(order)ordered.sort((a,b)=>order==='price-asc'?a.price-b.price:b.price-a.price);const count=Math.max(1,Math.ceil(ordered.length/5));for(let page=1;page<=count;page++){const shown=ordered.slice((page-1)*5,page*5);expectItems(itemTexts(container),shown.map(p=>p.title));shown.forEach((p,i)=>expect(itemTexts(container)[i]).toContain(String(p.price)));expect(says(container,'Page '+page+' of '+count)).toBe(true);expect(buttonNamed(container,'Previous').disabled).toBe(page===1);expect(buttonNamed(container,'Next').disabled).toBe(page===count);if(filtered.length)expect(says(container,'Average price: '+(filtered.reduce((sum,p)=>sum+p.price,0)/filtered.length).toFixed(2))).toBe(true);else{expect(says(container,'No products match.')).toBe(true);expect(says(container,'Average price')).toBe(false);}if(page<count)press(container,'Next');}}
+ expect(container.querySelector('li b')).toBeNull();expect(calls).toHaveLength(1);
+}));
+test('an empty products answer is page one of one without an average',()=>withServer(async calls=>{const {container}=render(<App/>);calls[0].respond({products:[],total:0,skip:0,limit:30});await waitFor(()=>expect(says(container,'loading')).toBe(false));expect(container.querySelectorAll('li')).toHaveLength(0);expect(says(container,'No products match.')).toBe(true);expect(says(container,'Average price')).toBe(false);expect(says(container,'Page 1 of 1')).toBe(true);expect(buttonNamed(container,'Previous').disabled).toBe(true);expect(buttonNamed(container,'Next').disabled).toBe(true);}));
+`,
+"react-weather-style-dashboard":`
+test('blank and whitespace city names show the unknown-city message without a request',()=>withRequests(async calls=>{render(<App/>);await answer(calls[0],0);for(const value of['   ','']){search(value);expectLine('Unknown city:');expect(calls).toHaveLength(1);expect(recent()).toEqual(['Prague: 0 °C']);}search('Brno');expect(hasLine('Unknown city:')).toBe(false);await answer(calls[1],1);}));
+test('all five city coordinates and retained-range calculations follow repeated searches',()=>withRequests(async calls=>{render(<App/>);await answer(calls[0],40);const cases=[['Brno',49.2,16.61,-15],['Ostrava',49.83,18.29,41.25],['Vienna',48.21,16.37,0],['Berlin',52.52,13.41,-40],['Prague',50.08,14.44,32],['Vienna',48.21,16.37,0.25]];let model=[{name:'Prague',temperature:40}];for(let i=0;i<cases.length;i++){const[name,lat,lon,temp]=cases[i];search(' '+name.toUpperCase()+' ');expect(asked(calls[i+1])).toEqual([FORECAST,lat,lon,'temperature_2m']);await answer(calls[i+1],temp);model=[{name,temperature:temp},...model.filter(x=>x.name!==name)].slice(0,3);expect(recent()).toEqual(model.map(x=>x.name+': '+x.temperature+' °C'));expectLine('Lowest: '+Math.min(...model.map(x=>x.temperature))+' °C');expectLine('Highest: '+Math.max(...model.map(x=>x.temperature))+' °C');}}));
+`,
+"react-notification-center":`
+test('derives every day and every notification while repeatedly reading and filtering',()=>withRequests(async calls=>{render(<App/>);const data=Array.from({length:14},(_,i)=>({id:100-i,text:i===0?'<b>literal</b>':'Notice '+i,date:i<6?'2026-10-05':'2026-10-0'+(i%5+1),read:i%3===1}));await answer(calls[0],data);const model=data.map(x=>({...x}));const check=only=>{const visible=model.filter(x=>!only||!x.read),dates=[...new Set(visible.map(x=>x.date))].sort().reverse();expect(groups()).toEqual(dates.map(date=>[date,...visible.filter(x=>x.date===date).map(x=>[x.text,x.read?'read':'unread'])]));expectLine('Unread: '+model.filter(x=>!x.read).length);};check(false);unreadOnly();check(true);for(const record of model.filter(x=>!x.read)){markRead(record.text);record.read=true;check(true);}expect(screen.getByText('No unread notifications')).toBeTruthy();unreadOnly();check(false);expect(document.querySelector('li b')).toBeNull();expect(calls).toHaveLength(1);}));
+`,
+"react-interview-mini-project":`
+test('keeps all posts and complete numeric author choices under repeated filters and server-normalized creation',()=>withRequests(async calls=>{render(<App/>);const data=Array.from({length:9},(_,i)=>({id:50+i,userId:[11,2,30,1,7][i%5],title:i===0?'<b>literal</b>':i%2===0?'Sea post '+i:'Land post '+i,body:'not a title'}));await answer(calls[0],data);const model=data.map(x=>({...x}));expect(authorOptions()).toEqual(['All authors','User 1','User 2','User 7','User 11','User 30']);for(const query of['SEA','Land','none','']){typeIn('Search',query);for(const author of['User 30','User 2','All authors']){chooseAuthor(author);const shown=model.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(author==='All authors'||author==='User '+x.userId));expect(titles()).toEqual(shown.map(x=>x.title));expectLine('Showing '+shown.length+' of '+model.length+' posts');expectLine('Authors: '+new Set(shown.map(x=>x.userId)).size);}}
+ typeIn('Title','  draft  ');fireEvent.click(screen.getByRole('button',{name:'Add post'}));expect(JSON.parse(calls[1].body)).toEqual({title:'draft',body:'',userId:1});expect(titles()).toHaveLength(9);const created={id:999,userId:42,title:'Server title',body:''};await answer(calls[1],created);expect(titles()).toEqual([...model,created].map(x=>x.title));expect(authorOptions()).toEqual(['All authors','User 1','User 2','User 7','User 11','User 30','User 42']);expectLine('Showing 10 of 10 posts');expectLine('Authors: 6');expect(document.querySelector('li b')).toBeNull();expect(calls).toHaveLength(2);}));
+`,
+};
+for(const[id,cases]of Object.entries(FINAL_PROJECT_REVIEW_CASES)){const solution=REACT_SOLUTIONS[id];solution.hiddenSuite=[solution.hiddenSuite,cases].filter(Boolean).join("\n\n");}

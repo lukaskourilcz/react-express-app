@@ -1,0 +1,80 @@
+{
+  "schema": "devshark-audit-inventory/v1",
+  "reconciledOn": "2026-10-15",
+  "catalogueCommit": "e032b4f780a3c16a1dce7b413c56fecac2d7d4cf",
+  "shippedLocales": [
+    "en"
+  ],
+  "questionBank": {
+    "authoredActiveCategories": 2168,
+    "eligibleStatic": 2014,
+    "withheldByContentGate": 154,
+    "overrideRows": 485,
+    "deletedOverrideRows": 485,
+    "activeEditedOrCustomRows": 0,
+    "eligibleHiddenByOverrides": 194,
+    "effectiveOnBranch": 1820,
+    "allEffectiveItemsHaveCurrentQuestionReviews": true,
+    "newQuestionsNotYetDeployed": 0,
+    "effectiveProductionAtSnapshot": 1820,
+    "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
+    "overrideRecheckedOn": "2026-10-17",
+    "overrideRecheckEvidence": "docs/audit/question-overrides-2026-10-17.json: fresh production read-only aggregate/fingerprint matches485preserved deletions,zero active edits/custom,2014static/1820effective. All2168question review hashes checked. Q001revises five existing rows;59eligible answer-length candidates remain under#471.",
+    "answerLengthReconciliation": {
+      "evidence": "docs/audit/answer-length-reconciliation-2026-10-17.json",
+      "issue": 471,
+      "initialEligibleCandidates": 64,
+      "focusedRevisionsCompleted": 64,
+      "eligibleCandidatesRemaining": 0,
+      "automaticPublicationRule": false,
+      "deployedFocusedRevisions": 40,
+      "stagedFocusedRevisions": 24,
+      "stagedPR": 473
+    }
+  },
+  "coding": {
+    "authored": 770,
+    "issued": 725,
+    "hiddenSystemDesign": 45,
+    "editorialWaveComplete": false,
+    "executionEvidence": "PR #472 is merged at f041991ddcec6518ba3f2b62df1a380f044879c9 (17 October 2026, 04:54:49 UTC), with exactly e6bd411265c5d905110783a5db88ee70beb8abfb and frozen head 9d7e877ba449931dd3b0d2ca71bb02a8a3a2eba8 as parents. Required run 39001893155 passes: verify 2169s (36m09s), SQL 42s. Six fresh guard commands pass with unchanged verify/sql protection, exact head/base/main, clean mergeability, successful rollups/jobs/checks and no pending reviews, inline comments, auto-merge or implicit issue closure. The normal merge uses no override.\n\nExact READY production dpl_Dgxd1rrjq86aa6hSNvf57m366ZUa matches the merge SHA/project/production target with no alias error. Both whole frozen helpers exit 0: eleven general checks include eight actual older public-task Submits, zero guest XP and null progress. All eleven advanced cohort identities remain correctly guest-locked (ten new tasks and one existing revision), so new-cohort Submits remain zero. devshark.app points at this exact deployment before/after probes, and its homepage answers HTTP200. Preview dpl_6BG2aJBVS9Dc8jsfQh8zLgFjw3o3 has the equivalent bounded acceptance. No authenticated/Premium, dedicated account, physical-device or independent-human acceptance is claimed.\n\nProduction now contains all 725 issued coding reviews, 263 native records, the Comments viewer revision and the first 40 focused question revisions. The required planning notes for all five briefs are shipped, completing #470. Another 24 question revisions, the completed coding future-review gate and engineering #458/#461/#463/#466 are frozen in #473 at add4bb1aabaa598677f473353eadb7d39577495d. Its exact READY preview dpl_DPvNZDFAbka15gLN1KK9BR21DAJ3 passes both whole helpers with eleven general checks/eight old public Submits and eleven guest locks; required run 39004064701 and production acceptance remain pending. All 64 eligible question revisions are individually complete in source, with zero remaining eligible length flags and a clean 1,820-item copy sweep. Preserve all 485 deletion overrides, 154 content-withheld questions and 45 hidden system-design tasks.\n\nThis is a dated release checkpoint. Later exact production evidence is maintained in the linked PR/issue updates rather than inferred from staged source. Profile #435 and startup-guide #444 follow separately; owner/draft #365 and #190 holds remain.",
+    "currentModelReviewedIssuedTasks": 725,
+    "issuedStillRequiringReview": 0,
+    "deployedModelReviewedIssuedTasks": 725,
+    "stagedModelReviewedIssuedTasks": 0,
+    "stagedExecutionEvidence": "All issued coding reviews are deployed through #472. The source future-review gate and four compatibility repairs remain in #473; authenticated/cloud and owner holds remain separate.",
+    "deployedExecutionEvidence": "PR #472 is merged at f041991ddcec6518ba3f2b62df1a380f044879c9 (17 October 2026, 04:54:49 UTC), with exactly e6bd411265c5d905110783a5db88ee70beb8abfb and frozen head 9d7e877ba449931dd3b0d2ca71bb02a8a3a2eba8 as parents. Required run 39001893155 passes: verify 2169s (36m09s), SQL 42s. Six fresh guard commands pass with unchanged verify/sql protection, exact head/base/main, clean mergeability, successful rollups/jobs/checks and no pending reviews, inline comments, auto-merge or implicit issue closure. The normal merge uses no override.\n\nExact READY production dpl_Dgxd1rrjq86aa6hSNvf57m366ZUa matches the merge SHA/project/production target with no alias error. Both whole frozen helpers exit 0: eleven general checks include eight actual older public-task Submits, zero guest XP and null progress. All eleven advanced cohort identities remain correctly guest-locked (ten new tasks and one existing revision), so new-cohort Submits remain zero. devshark.app points at this exact deployment before/after probes, and its homepage answers HTTP200. Preview dpl_6BG2aJBVS9Dc8jsfQh8zLgFjw3o3 has the equivalent bounded acceptance. No authenticated/Premium, dedicated account, physical-device or independent-human acceptance is claimed.\n\nProduction now contains all 725 issued coding reviews, 263 native records, the Comments viewer revision and the first 40 focused question revisions. The required planning notes for all five briefs are shipped, completing #470. Another 24 question revisions, the completed coding future-review gate and engineering #458/#461/#463/#466 are frozen in #473 at add4bb1aabaa598677f473353eadb7d39577495d. Its exact READY preview dpl_DPvNZDFAbka15gLN1KK9BR21DAJ3 passes both whole helpers with eleven general checks/eight old public Submits and eleven guest locks; required run 39004064701 and production acceptance remain pending. All 64 eligible question revisions are individually complete in source, with zero remaining eligible length flags and a clean 1,820-item copy sweep. Preserve all 485 deletion overrides, 154 content-withheld questions and 45 hidden system-design tasks.\n\nThis is a dated release checkpoint. Later exact production evidence is maintained in the linked PR/issue updates rather than inferred from staged source. Profile #435 and startup-guide #444 follow separately; owner/draft #365 and #190 holds remain.",
+    "deploymentEvidence": "PR #472 is merged at f041991ddcec6518ba3f2b62df1a380f044879c9 (17 October 2026, 04:54:49 UTC), with exactly e6bd411265c5d905110783a5db88ee70beb8abfb and frozen head 9d7e877ba449931dd3b0d2ca71bb02a8a3a2eba8 as parents. Required run 39001893155 passes: verify 2169s (36m09s), SQL 42s. Six fresh guard commands pass with unchanged verify/sql protection, exact head/base/main, clean mergeability, successful rollups/jobs/checks and no pending reviews, inline comments, auto-merge or implicit issue closure. The normal merge uses no override.\n\nExact READY production dpl_Dgxd1rrjq86aa6hSNvf57m366ZUa matches the merge SHA/project/production target with no alias error. Both whole frozen helpers exit 0: eleven general checks include eight actual older public-task Submits, zero guest XP and null progress. All eleven advanced cohort identities remain correctly guest-locked (ten new tasks and one existing revision), so new-cohort Submits remain zero. devshark.app points at this exact deployment before/after probes, and its homepage answers HTTP200. Preview dpl_6BG2aJBVS9Dc8jsfQh8zLgFjw3o3 has the equivalent bounded acceptance. No authenticated/Premium, dedicated account, physical-device or independent-human acceptance is claimed.\n\nProduction now contains all 725 issued coding reviews, 263 native records, the Comments viewer revision and the first 40 focused question revisions. The required planning notes for all five briefs are shipped, completing #470. Another 24 question revisions, the completed coding future-review gate and engineering #458/#461/#463/#466 are frozen in #473 at add4bb1aabaa598677f473353eadb7d39577495d. Its exact READY preview dpl_DPvNZDFAbka15gLN1KK9BR21DAJ3 passes both whole helpers with eleven general checks/eight old public Submits and eleven guest locks; required run 39004064701 and production acceptance remain pending. All 64 eligible question revisions are individually complete in source, with zero remaining eligible length flags and a clean 1,820-item copy sweep. Preserve all 485 deletion overrides, 154 content-withheld questions and 45 hidden system-design tasks.\n\nThis is a dated release checkpoint. Later exact production evidence is maintained in the linked PR/issue updates rather than inferred from staged source. Profile #435 and startup-guide #444 follow separately; owner/draft #365 and #190 holds remain.",
+    "sourceEditorialReviewComplete": true,
+    "futureReviewGateEnabled": true
+  },
+  "nativePaths": {
+    "paths": 2,
+    "modules": 24,
+    "lessons": 38,
+    "activities": 112,
+    "checkQuestions": 113,
+    "nativeCodeActivities": 46,
+    "reusedCodingActivities": 1,
+    "lessonActivityQuestionRecords": 263,
+    "editorialWaveComplete": false,
+    "deliveryDependsOnDeploymentFlagsAndStorage": true,
+    "currentStagedModelReviewRecords": 0,
+    "recordsStillRequiringReview": 0,
+    "reviewEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review. All 263 current individual native model reviews are shipped, including the two explicit n042 revisions with preserved history.",
+    "deployedModelReviewRecords": 263,
+    "currentModelReviewRecords": 263,
+    "stagedReviewEvidence": "No remaining local native records; authenticated production acceptance remains separate.",
+    "sourceEditorialReviewComplete": true
+  },
+  "notDeliverable": {
+    "retiredSectionQuestions": 319,
+    "unreferencedQuestions": 312,
+    "legacyCoreQuestions": 795
+  },
+  "limits": [
+    "Dated #472 production snapshot: all 725 issued coding reviews/263 native records, one existing coding revision and 40 focused question revisions are deployed. The final 24 question revisions, future-review gate and four compatibility repairs are in #473. Source question bindings remain current; 485 deletions and 1,820 effective items are preserved. Consult PR/issue updates for subsequent release evidence.",
+    "No item-level coding or native-path review is manufactured from execution checks.",
+    "Re-read production overrides before claiming any later live coverage."
+  ]
+}

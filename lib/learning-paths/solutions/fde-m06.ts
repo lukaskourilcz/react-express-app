@@ -13,8 +13,8 @@ import type { PathCodeSolution } from '../types';
 
 const DISPATCHER = `const createDispatcher = (registry, session) => {
   const held = (session && session.scopes) || [];
-  const completed = {};
-  const pending = {};
+  const completed = Object.create(null);
+  const pending = Object.create(null);
   let nextId = 1;
 
   const validate = (schema, args) => {
@@ -44,7 +44,7 @@ const DISPATCHER = `const createDispatcher = (registry, session) => {
       try {
         return { ok: true, value: tool.handler(args), attempts };
       } catch (thrown) {
-        error = String((thrown && thrown.message) || thrown);
+        error = thrown && typeof thrown.message === 'string' ? thrown.message : String(thrown);
       }
     }
     return { ok: false, reason: 'tool_failed', attempts, error };
@@ -73,7 +73,7 @@ const DISPATCHER = `const createDispatcher = (registry, session) => {
     if (tool.approval) {
       const callId = 'CALL-' + nextId;
       nextId += 1;
-      pending[callId] = { tool, args: request, key };
+      pending[callId] = { tool, args: { ...request }, key };
       return settle(key, { ok: false, reason: 'pending_approval', callId });
     }
 
@@ -94,6 +94,15 @@ export const FDE_M06_SOLUTIONS: Record<string, PathCodeSolution> = {
   'fde-v1-m06-tool-dispatcher': {
     solution: DISPATCHER,
     hiddenTests: [
+      {"call": "(function(){var f=__fixture({syncFails:3});var d=createDispatcher(f.registry,f.session);var a=d.call('ledger.sync',{batchId:'B'},{idempotencyKey:'retry'});var b=d.call('ledger.sync',{batchId:'B'},{idempotencyKey:'retry'});return {a:a,b:b,ran:f.log.length};})()", "expected": {"a": {"ok": false, "reason": "tool_failed", "attempts": 3, "error": "gateway timeout"}, "b": {"ok": true, "value": {"batchId": "B", "synced": true}, "attempts": 1}, "ran": 4}, "criterion": "idempotent-calls"},
+      {"call": "(function(){var count=0;var registry={x:{scope:'x',schema:{},approval:true,handler:function(){count++;if(count===1)throw new Error('first');return 7;}}};var d=createDispatcher(registry,{operatorId:'U',scopes:['x']});var a=d.call('x',{}, {idempotencyKey:'k'});var fail=d.approve(a.callId);var b=d.call('x',{}, {idempotencyKey:'k'});var done=d.approve(b.callId);return {a:a,fail:fail,b:b,done:done,count:count};})()", "expected": {"a": {"ok": false, "reason": "pending_approval", "callId": "CALL-1"}, "fail": {"ok": false, "reason": "tool_failed", "attempts": 1, "error": "first"}, "b": {"ok": false, "reason": "pending_approval", "callId": "CALL-2"}, "done": {"ok": true, "value": 7, "attempts": 1}, "count": 2}, "criterion": "idempotent-calls"},
+
+      {"call": "(function(){var f=__fixture();var d=createDispatcher(f.registry,f.session);var a=d.call('orders.read',{status:'open'},{idempotencyKey:'__proto__'});var b=d.call('ledger.sync',{batchId:'B'},{idempotencyKey:'__proto__'});return {a:a,b:b,ran:f.log.length};})()", "expected": {"a": {"ok": true, "value": {"count": 2}, "attempts": 1}, "b": {"ok": true, "value": {"count": 2}, "attempts": 1}, "ran": 1}, "criterion": "idempotent-calls"},
+      {"call": "(function(){var f=__fixture();var d=createDispatcher(f.registry,f.session);var args={orderId:'A',amountCents:100,currency:'USD'};var waiting=d.call('refunds.create',args);args.amountCents=999;args.currency='EUR';var out=d.approve(waiting.callId);return {out:out,amount:f.log[0].args.amountCents,currency:f.log[0].args.currency};})()", "expected": {"out": {"ok": true, "value": {"refundId": "RFD-1", "amountCents": 100}, "attempts": 1}, "amount": 100, "currency": "USD"}},
+      {"call": "(function(){var registry={'x':{scope:'x',schema:{},handler:function(){throw new Error('');}}};return createDispatcher(registry,{operatorId:'U',scopes:['x']}).call('x',{});})()", "expected": {"ok": false, "reason": "tool_failed", "attempts": 1, "error": ""}},
+      {"call": "(function(){var f=__fixture();Object.freeze(f.session.scopes);Object.freeze(f.session);Object.keys(f.registry).forEach(function(k){Object.freeze(f.registry[k].schema);Object.freeze(f.registry[k]);});Object.freeze(f.registry);var d=createDispatcher(f.registry,f.session);var args=Object.freeze({orderId:'A',amountCents:0,currency:'EUR'});var wait=d.call('refunds.create',args,{idempotencyKey:'constructor'});var result=d.approve(wait.callId);var again=d.call('unknown',{}, {idempotencyKey:'constructor'});return {result:result,again:again,ran:f.log.length};})()", "expected": {"result": {"ok": true, "value": {"refundId": "RFD-1", "amountCents": 0}, "attempts": 1}, "again": {"ok": true, "value": {"refundId": "RFD-1", "amountCents": 0}, "attempts": 1}, "ran": 1}, "criterion": "idempotent-calls"},
+      {"call": "(function(){var f=__fixture();var d=createDispatcher(f.registry,f.session);var a=d.call('refunds.create',{orderId:'A',amountCents:100,currency:'USD'},{idempotencyKey:''});var b=d.call('refunds.create',{orderId:'B',amountCents:200,currency:'EUR'},{idempotencyKey:''});return {a:a,b:b,ran:f.log.length};})()", "expected": {"a": {"ok": false, "reason": "pending_approval", "callId": "CALL-1"}, "b": {"ok": false, "reason": "pending_approval", "callId": "CALL-1"}, "ran": 0}, "criterion": "idempotent-calls"},
+
       {
         call: "(function () { var f = __fixture({ scopes: ['orders.read'] }); var d = createDispatcher(f.registry, f.session); var out = d.call('refunds.create', {}); return { out: out, ran: f.log.length }; })()",
         expected: { out: { ok: false, reason: 'scope_denied', scope: 'refunds.write' }, ran: 0 },

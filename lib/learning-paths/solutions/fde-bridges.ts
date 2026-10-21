@@ -35,10 +35,11 @@ const mapAccount = (raw: RawAccount): MapResult => {
   const problems: string[] = [];
   const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-  let id = 0;
-  if (typeof raw.account_id === 'number' && Number.isInteger(raw.account_id)) id = raw.account_id;
-  else if (/^\\d+$/.test(text(raw.account_id))) id = Number(text(raw.account_id));
-  else problems.push('account_id must be a whole number');
+  const rawId = raw.account_id;
+  const convertedId = typeof rawId === 'number' ? rawId
+    : typeof rawId === 'string' && /^\\d+$/.test(rawId.trim()) ? Number(rawId.trim()) : NaN;
+  const id = convertedId;
+  if (!Number.isSafeInteger(id) || id < 0) problems.push('account_id must be a whole number');
 
   const companyName = text(raw.company_name);
   if (companyName === '') problems.push('company_name must not be empty');
@@ -48,7 +49,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
 
   const rawDate = raw.signed_up_at;
   let signedUpAt: string | null = null;
-  if (rawDate === undefined || rawDate === null || text(rawDate) === '') signedUpAt = null;
+  if (rawDate === undefined || rawDate === null || (typeof rawDate === 'string' && rawDate.trim() === '')) signedUpAt = null;
   else if (typeof rawDate === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate.trim())) signedUpAt = rawDate.trim();
   else problems.push('signed_up_at must be YYYY-MM-DD');
 
@@ -61,6 +62,12 @@ const mapAccount = (raw: RawAccount): MapResult => {
   return { ok: true, record: { id, companyName, ownerEmail, signedUpAt, plan } };
 };`,
     hiddenTests: [
+      {"call": "[42, false, [], {}, NaN].map(value => mapAccount(__raw({ signed_up_at: value })))", "expected": [{"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}]},
+      {"call": "[-1, Infinity, 9007199254740992, '9007199254740993', '9'.repeat(400)].map(value => mapAccount(__raw({ account_id: value })))", "expected": [{"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}]},
+      {"call": "[0, Number.MAX_SAFE_INTEGER, '0000', '9007199254740991'].map(value => { const r = mapAccount(__raw({ account_id: value })); return r.ok ? r.record.id : r.problems; })", "expected": [0, 9007199254740991, 0, 9007199254740991]},
+      {"call": "[undefined, null, '', '   '].map(value => { const r = mapAccount(__raw({ signed_up_at: value })); return r.ok ? r.record.signedUpAt : r.problems; })", "expected": [null, null, null, null]},
+      {"call": "(function(){const raw=Object.freeze(__raw({account_id:' 0 ',plan:' growth ',owner_email:' @ ',signed_up_at:' 2026-99-99 '})); const before=JSON.stringify(raw);const r=mapAccount(raw);return {r,unchanged:JSON.stringify(raw)===before};})()", "expected": {"r": {"ok": true, "record": {"id": 0, "companyName": "Brightpier Freight", "ownerEmail": "@", "signedUpAt": "2026-99-99", "plan": "growth"}}, "unchanged": true}},
+
       {
         call: 'mapAccount(__raw({ account_id: 4821.5 }))',
         expected: { ok: false, problems: ['account_id must be a whole number'] },
@@ -176,6 +183,11 @@ const operatorReducer = (state, action) => {
   }
 };`,
     hiddenTests: [
+      {"call": "(function(){return [null,undefined,{}, {type:4},{type:'unknown'}].every(function(a){return operatorReducer(initialOperatorState,a)===initialOperatorState;});})()", "expected": true, "label": "missing nonstring and unknown actions are exact no-ops"},
+      {"call": "(function(){return __view(__run([{type:'load',requestId:1},{type:'failed',requestId:1,message:''}])).error;})()", "expected": "", "label": "empty failure messages survive unchanged"},
+      {"call": "(function(){var s=Object.freeze({status:'approving',requestId:1,proposal:Object.freeze({id:'P'}),error:null,abandoned:Object.freeze([8,9])});var action=Object.freeze({type:'cancel'});var n=operatorReducer(s,action);return {old:s.abandoned,new:n.abandoned,status:n.status,fresh:n!==s};})()", "expected": {"old": [8, 9], "new": [8, 9, 1], "status": "idle", "fresh": true}, "label": "cancel preserves frozen previous state and appends to a fresh abandoned list"},
+      {"call": "(function(){var s=initialOperatorState;for(var i=1;i<=50;i++){s=operatorReducer(s,{type:'load',requestId:i});s=operatorReducer(s,{type:'cancel'});}return {count:s.abandoned.length,first:s.abandoned[0],last:s.abandoned[49],initial:initialOperatorState.abandoned.length};})()", "expected": {"count": 50, "first": 1, "last": 50, "initial": 0}, "label": "one hundred actions preserve serial abandoned ids and immutable initial state"},
+
       {
         call: "(function () { var state = __run([]); return operatorReducer(state, { type: 'approve', requestId: 9 }) === state; })()",
         expected: true,

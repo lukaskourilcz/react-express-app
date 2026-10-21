@@ -114,12 +114,15 @@ export const CONSOLE_SOURCE = `(emit, format, clock) => {
   };
 }`;
 
+// Capture the trusted compiler before a disposable task realm can revoke
+// learner-visible compilation. Keep actual compilation lazy for page CSP.
+const compileConsole = Function;
 let compiled: LearnerConsoleFactory | null = null;
 
 /** The factory compiled for this JavaScript realm. Only the worker and the
  * node content test call it: the page itself never compiles code, which is
  * why this waits for the first call instead of running at import. */
 export function learnerConsoleFactory(): LearnerConsoleFactory {
-  compiled ??= new Function(`return ${CONSOLE_SOURCE};`)() as LearnerConsoleFactory;
+  compiled ??= compileConsole(`return ${CONSOLE_SOURCE};`)() as LearnerConsoleFactory;
   return compiled;
 }

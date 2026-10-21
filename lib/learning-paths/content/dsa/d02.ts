@@ -14,8 +14,7 @@
 import type { ModuleSource } from '../../types';
 
 /** Counts index writes on a plain array by proxying it, and reports whether
- * the learner handed back the very object they were given. Appended after the
- * learner's code, so it cannot be shadowed, and it counts with the built-ins
+ * the learner handed back the very object they were given. Private helper state cannot be shadowed, and it counts with the built-ins
  * taken before that code ran (`__probe`, shared/coding-evaluate.ts), so
  * replacing `Proxy` changes nothing. */
 const WRITE_PROBE = `
@@ -26,6 +25,15 @@ var __countWrites = function (values, run) {
       if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
       target[prop] = value;
       return true;
+    },
+    defineProperty: function (target, prop, descriptor) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
+      __probe.defineProperty(target, prop, descriptor);
+      return true;
+    },
+    deleteProperty: function (target, prop) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
+      return __probe.deleteProperty(target, prop);
     },
   });
   var result = run(proxy);
@@ -54,12 +62,12 @@ export const DSA_D02: ModuleSource = {
         {
           label: 'MDN — Array',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
         {
           label: 'MDN — Array.prototype.splice',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
@@ -82,7 +90,7 @@ export const DSA_D02: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'There are two ways to change an array, and they promise the caller different things. Writing `values[i] = next` changes the array the caller is still holding. `map`, `filter`, `slice` and spreading leave that array alone and hand back a second one. After the first kind of call the caller’s variable points at different data; after the second kind it does not.',
+            'There are two ways to change an array, and they promise the caller different things. Writing `values[i] = next` changes the array the caller is still holding. For ordinary dense arrays and callbacks without mutation, map, filter, slice and spreading construct a new outer array. They copy references, not nested objects; a callback can still mutate data if you write it that way. After the first kind of call the caller’s variable points at different data; after the second kind it does not.',
         },
         {
           kind: 'code',
@@ -114,32 +122,32 @@ console.log("and the returned array is the same object:", same === source);`,
           kind: 'callout',
           tone: 'note',
           body:
-            'Name which one you wrote. `sortInPlace` and `sortedCopy` cost nothing to type and save every later reader from opening the body. A function that mutates its argument conventionally returns that same argument, the way `Array.prototype.reverse` and `Array.prototype.sort` do, so the return value is a convenience rather than a copy.',
+            'Name which one you wrote. `sortInPlace` and `sortedCopy` cost nothing to type and save every later reader from opening the body. Mutation does not determine the return type: reverse and sort return the same array, pop returns the removed value, and push returns the new length. Document the return value as well as the mutation.',
         },
         {
           kind: 'prose',
           body:
-            'Where you change the array decides what the change costs. `push` and `pop` work at the end, where no other element has to move. `shift` and `unshift` work at the front, and every element after the one you touched lands on a different index, so the engine has to write all of them.',
+            'Where you change the array decides what the change costs. `push` and `pop` work at the end, where no other element has to move. In the dense-array model, shift and unshift at the front move the remaining entries to different indices. Real engines may use other representations; the table describes the stated model, not a JavaScript timing guarantee.',
         },
         {
           kind: 'table',
           caption: 'What each operation costs on an array of n elements, under the unit-cost model this path uses.',
           headers: ['Operation', 'Cost', 'Why'],
           rows: [
-            ['`push(value)`', 'Amortised O(1)', 'Writes one slot past the end; the occasional resize is spread over many pushes'],
+            ['`push(value)`', 'Amortized O(1)', 'Writes one slot past the end; the occasional resize is spread over many pushes'],
             ['`pop()`', 'O(1)', 'Drops the last slot, so nothing else changes index'],
             ['`shift()`', 'O(n)', 'Every remaining element moves down one index'],
             ['`unshift(value)`', 'O(n)', 'Every existing element moves up one index to free slot 0'],
             ['`slice(from, to)`', 'O(k) for the k elements copied', 'Allocates a new array and copies the range into it'],
-            ['`splice(i, count)`', 'O(n − i)', 'Removes in place, then shifts the whole tail down to close the hole'],
+            ['`splice(i, count)`', 'O(1 + k + t)', 'Copies k removed entries and moves a tail of t entries when its positions change'],
             ['`indexOf(value)`', 'O(n)', 'Scans from the front until something matches'],
-            ['`concat(other)` and `[...values]`', 'O(n)', 'Both allocate a new array and copy every element into it'],
+            ['`concat(other)` / `[...values]`', 'O(n + m) / O(n)', 'Copy n entries plus the m entries of other / copy only the n input entries'],
           ],
         },
         {
           kind: 'prose',
           body:
-            'The linear ones deserve a closer look, because the call site hides the work. `queue.shift()` is four keystrokes and up to n − 1 writes. Nothing in the syntax hints at that, which is why it slips into loops that then run in quadratic time.',
+            'The linear ones deserve a closer look, because the call site hides the work. `queue.shift()` is a short call and up to n − 1 moves in this model. Nothing in the syntax hints at that, which is why it slips into loops that then run in quadratic time.',
         },
         {
           kind: 'trace',
@@ -190,17 +198,17 @@ console.log("and the returned array is the same object:", same === source);`,
           kind: 'callout',
           tone: 'warning',
           body:
-            'Draining a queue with `while (queue.length > 0) out.push(queue.shift())` reads well and costs O(n²). The first shift moves n − 1 elements, the next moves n − 2, and the sum of that run is about n²/2. Keep a head index and walk it forward instead, or drain from the end with `pop` when the order does not matter.',
+            'Under this dense-array cost model, draining a queue with `while (queue.length > 0) out.push(queue.shift())` costs O(n²). The first shift moves n − 1 elements, the next moves n − 2, and the sum of that run is about n²/2. Keep a head index and walk it forward instead, or drain from the end with `pop` when the order does not matter.',
         },
         {
           kind: 'prose',
           body:
-            'Strings cannot be changed in place at all. Assigning to `text[0]` throws in strict mode and does nothing in sloppy mode, and every method that looks like an edit — `slice`, `replace`, `toUpperCase` — returns a new string and leaves the original alone. Building a string with `result += character` inside a loop allocates a new string on every pass, so it is quadratic in the total length.',
+            'Strings cannot be changed in place at all. Assigning to `text[0]` throws in strict mode and does nothing in sloppy mode, and every method that looks like an edit — `slice`, `replace`, `toUpperCase` — returns a new string and leaves the original alone. If concatenation copies the entire accumulated text each time, a character-building loop costs quadratic total copying. Engines can defer copying through internal representations, so += alone does not prove that cost. Collecting fragments and joining them makes the output-construction work explicit.',
         },
         {
           kind: 'prose',
           body:
-            'Reading a string is cheap, though. `text[i]` and `text.length` are the only two things a two-pointer routine over a string needs, and neither allocates. That is why the palindrome check in the next lesson gets constant auxiliary space without trying.',
+            'Reading a string is cheap, though. For the ASCII exercise, indexing returns one code unit and length gives the input size. These are constant-sized operations in our model; an engine may still create temporary string values. That is why the palindrome check in the next lesson gets constant auxiliary space without trying.',
         },
         {
           kind: 'prose',
@@ -215,23 +223,23 @@ console.log("and the returned array is the same object:", same === source);`,
       summary: 'The ends-inward walk, the read-and-write compaction, and the auxiliary-space difference between changing an array and returning a new one.',
       estimatedMinutes: 20,
       sources: [
-        { label: 'Harvard CS50x — Algorithms', url: 'https://cs50.harvard.edu/x/weeks/3/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Algorithms', url: 'https://cs50.harvard.edu/x/weeks/3/', reviewedOn: '2026-10-14' },
         {
           label: 'MDN — Array.prototype.reverse',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
         {
           label: 'MDN — String',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Two pointers is one idea wearing two shapes. Keep two indices into the same sequence, move them under a rule that never sends either one backwards, and a question that looks like it needs every pair collapses into a single pass.',
+            'Two pointers is one idea wearing two shapes. Keep two indices into the same sequence and move each monotonically in its chosen direction. When a justified rule discards candidates without losing a valid answer, some pair problems can be solved in one pass.',
         },
         {
           kind: 'prose',
@@ -242,12 +250,12 @@ console.log("and the returned array is the same object:", same === source);`,
           kind: 'code',
           language: 'javascript',
           code: '// Ends inward on an ascending array: is there a pair adding up to target?\nconst hasPairSum = (sorted, target) => {\n  let left = 0;\n  let right = sorted.length - 1;\n\n  while (left < right) {\n    const sum = sorted[left] + sorted[right];\n    if (sum === target) return true;\n    if (sum < target) left += 1;\n    else right -= 1;\n  }\n\n  return false;\n};',
-          caption: 'Each step discards one index for good, so n − 1 steps replace the n²/2 pairs a double loop would visit.',
+          caption: 'Each step discards one index for good, so at most n − 1 steps replace the n(n − 1)/2 pairs a double loop would visit.',
         },
         {
           kind: 'prose',
           body:
-            'The sorted order is what makes that legal. When the sum is too small, the smallest element cannot be part of any pair that reaches the target, so raising `left` throws away nothing useful. When the sum is too large, the same argument applies to `right`. Take the sorting away and the walk stops being correct.',
+            'Assume ascending finite Numbers, finite pair sums and a finite target, compared using JavaScript Number arithmetic. The sorted order is what makes that elimination legal. When the sum is too small, the smallest remaining element cannot be part of any remaining pair that reaches the target, so raising `left` throws away nothing useful. When the sum is too large, the same argument applies to `right`. Take the sorting away and the walk stops being correct.',
         },
         {
           kind: 'trace',
@@ -319,7 +327,7 @@ console.log("and the returned array is the same object:", same === source);`,
         {
           kind: 'prose',
           body:
-            'Total space counts the input, so any routine over an n-element array is O(n) in total. Auxiliary space is the number that separates these two columns: the ends-inward reverse allocates two indices and one held value and stays at O(1) whatever n is, while spreading the array into a copy and reversing that allocates a full second array.',
+            'The stored input contributes O(n) space in this model. Total space must also include output and auxiliary allocations; a routine that builds a quadratic-sized structure can use O(n²) total space. Auxiliary space is the number that separates these two columns: the ends-inward reverse allocates two indices and one held value and stays at O(1) whatever n is, while spreading the array into a copy and reversing that allocates a full second array.',
         },
         {
           kind: 'callout',
@@ -330,7 +338,7 @@ console.log("and the returned array is the same object:", same === source);`,
         {
           kind: 'prose',
           body:
-            'Strings force the choice for you. You cannot reverse one in place, so an ends-inward walk over a string is read-only: two indices, `text[left]`, `text[right]`, no allocation, O(1) auxiliary space. Reversing a copy and comparing is correct too, and it allocates an array of characters, a reversed array and a new string on the way to the same boolean.',
+            'Strings force the choice for you. You cannot reverse one in place, so an ends-inward walk over a string is read-only: two indices, `text[left]`, `text[right]`, no allocation, O(1) auxiliary space. Reversing a copy and comparing is correct too, and it allocates one character array, reversed in place, and a new string on the way to the same boolean.',
         },
       ],
     },
@@ -389,7 +397,7 @@ console.log("and the returned array is the same object:", same === source);`,
         },
         {
           id: 'dsa-v1-d02-q2',
-          prompt: '`queue` starts with n elements. What is the tightest growth class for the running time of `drain`?',
+          prompt: 'In the dense-array model, removing the front moves every remaining entry; push has amortized constant cost. `queue` starts with n entries. What is the tightest growth class for the running time of `drain`?',
           context: {
             language: 'javascript',
             code: 'const drain = queue => {\n  const out = [];\n  while (queue.length > 0) out.push(queue.shift());\n  return out;\n};',
@@ -397,12 +405,12 @@ console.log("and the returned array is the same object:", same === source);`,
           options: ['O(n²)', 'O(n)', 'O(n log n)', 'O(1)'],
           correct: 0,
           explanation:
-            'Each `shift` moves every remaining element down one index, so the first costs about n writes, the next about n − 1, and the run adds up to roughly n²/2 — the quadratic family. O(n) would be the answer if removal from the front were constant, which it is not; `push` really is amortised constant, so draining from the end with `pop` would be O(n). Nothing halves anything here, so there is no log factor, and the loop runs n times, so it cannot be constant.',
+            'Under the stated model, front removals move n − 1, n − 2, down to zero entries: n(n − 1)/2 moves. The n loop iterations and amortized pushes add linear work, so the total is quadratic. Linear time would require constant front removal in a different representation. Draining from the end with pop is linear under this model; no halving or constant-work shortcut occurs here.',
           competencies: ['arrays-strings', 'complexity'],
         },
         {
           id: 'dsa-v1-d02-q3',
-          prompt: 'For an array of length n, what is the auxiliary space — the memory used beyond the input itself — of `reverseSection`?',
+          prompt: 'Assume a dense array of n fixed-size entries and valid integer bounds inside it. What is the auxiliary space — memory beyond the stored input — of `reverseSection`?',
           context: {
             language: 'javascript',
             code: 'const reverseSection = (values, from, to) => {\n  let left = from;\n  let right = to;\n\n  while (left < right) {\n    const held = values[left];\n    values[left] = values[right];\n    values[right] = held;\n    left += 1;\n    right -= 1;\n  }\n\n  return values;\n};',
@@ -415,7 +423,7 @@ console.log("and the returned array is the same object:", same === source);`,
           ],
           correct: 0,
           explanation:
-            'The routine writes into the array it was handed and allocates three local variables, and that count does not grow with n. Returning `values` allocates nothing: it hands back the same array the caller already had, so the return value adds no auxiliary space. A swap needs one held element, not a copy of the array. And the pointers move one step each per iteration, meeting after about n/2 steps — nothing halves, so there is no logarithm.',
+            'The routine writes into the array it was handed and allocates three local variables, and that count does not grow with n. Returning `values` allocates nothing: it hands back the same array the caller already had, so the return value adds no auxiliary space. A swap needs one held element, not a copy of the array. The pointers move one position each through the selected section. Its length changes the number of iterations, not the fixed amount of live auxiliary storage; no recursive stack or copied array is created.',
           competencies: ['arrays-strings', 'complexity'],
         },
         {
@@ -428,7 +436,7 @@ console.log("and the returned array is the same object:", same === source);`,
           options: ['3', '4', '6', '7'],
           correct: 0,
           explanation:
-            'The pairs compared are (0, 6), (1, 5) and (2, 4). After the third match both pointers sit on index 3, `left < right` is false and the loop stops, so three comparisons. 4 would include the middle character against itself, which the `left < right` condition rules out. 6 counts every character except the middle one, which double-counts each pair. 7 is one comparison per character, which is what a copy-and-compare version costs, not the ends-inward walk.',
+            'The pairs compared are (0, 6), (1, 5) and (2, 4). After the third match both pointers sit on index 3, `left < right` is false and the loop stops, so three comparisons. 4 would include the middle character against itself, which the `left < right` condition rules out. 6 counts every character except the middle one, which double-counts each pair. 7 is one comparison per character, which would be the count for a deliberately full position-by-position comparison, not this ends-inward walk. A built-in string comparison does not promise that exact count.',
           competencies: ['arrays-strings', 'complexity'],
         },
       ],
@@ -439,24 +447,24 @@ console.log("and the returned array is the same object:", same === source);`,
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Reverse in place',
-      summary: 'Reverse an array by swapping inward from both ends, and hand back the very array you were given.',
+      summary: "Reverse the caller's array within a measured indexed-mutation budget; practice an ends-inward swap loop.",
       competencies: ['arrays-strings', 'complexity'],
       estimatedMinutes: 15,
       code: {
         language: 'javascript',
         prompt:
-          'Write `reverseInPlace(values)`. It reverses the array in place and returns that same array. `reverseInPlace([1, 2, 3, 4])` gives `[4, 3, 2, 1]`, and the array the caller passed in holds `[4, 3, 2, 1]` afterwards. An empty array and a single-element array both come back unchanged.\n\nThe mutation contract is the exercise. Two graded assertions check it: the caller’s array must hold the reversed order after the call, and the value you return must be that same object, not a reversed copy of it. A third counts index writes and allows at most one per element.\n\n`Array.prototype.reverse` already does all of this. Write the swap loop yourself — the pointer arithmetic and the held value are what this exercise trains.',
+          "Write `reverseInPlace(values)` for a dense ordinary array. Reverse its entries in place and return the same array object. Empty and one-element arrays remain unchanged.\n\nOn measured cases, the original array must contain the reversed order, the returned object must be identical to it, and at most n indexed mutations are allowed. Assignments, property definitions and deletions are counted; length updates are not. A returned reversed copy alone fails, but temporary copying or using a built-in is not detected as forbidden. Practice writing an ends-inward swap loop.\n\nTarget: O(n) time and O(1) extra space, where n is the input length. These finite assertions do not measure total runtime growth or temporary allocations.",
         contract: [
-          'Reverse the array you were given; do not build a second one.',
+          'Reverse the dense array you were given. Temporary allocation is not measured by these assertions.',
           'Return that same array, so `reverseInPlace(values) === values` holds.',
-          'The graded write budget is at most one index write per element.',
+          'On measured cases, allow at most n indexed mutations: assignments, property definitions and deletions. Length updates are not counted.',
           'An empty array and a one-element array are returned unchanged, and still as the same object.',
         ],
         starter: `const reverseInPlace = values => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(reverseInPlace([1, 2, 3, 4]));
 `,
         skeleton: `const reverseInPlace = values => {
@@ -470,11 +478,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
 
   return /* the array you were given */;
 };`,
-        hints: [
-          'Put one index at each end. Swap what they point at, then move `left` up by one and `right` down by one, and stop as soon as they meet or cross.',
-          'A swap needs somewhere to put the first value before you overwrite it: `const held = values[left]` first, then the two assignments.',
-          'An empty array and a one-element array never enter the loop, because `left` is not below `right` to begin with. Returning `values` still gives the right answer for both.',
-        ],
+        hints: ["Identify the two positions whose values must trade places. Which positions no longer need attention after that swap?", "What protects the first value from being lost when you overwrite its slot?", "Check whether an empty or one-element input needs any writes, and which array object the caller expects back."],
         approach: [
           'Start `left` at 0 and `right` at `values.length - 1`.',
           'While `left` is below `right`, swap `values[left]` with `values[right]` using one temporary variable.',
@@ -494,7 +498,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
             label: 'Reversed in place, and the same array returned',
             critical: true,
             weight: 2,
-            detail: 'The caller’s array must hold the reversed order after the call, the return value must be that same object, and the write counter must stay within one write per element. Building a reversed copy fails here even when its contents are right.',
+            detail: 'The caller’s array must hold the reversed order, the returned object must be that same array, and counted indexed mutations must stay within n. Returning only a separate copy fails; copying temporarily and writing back can pass. These assertions do not measure auxiliary allocations.',
           },
         ],
         tests: [
@@ -530,16 +534,16 @@ console.log(reverseInPlace([1, 2, 3, 4]));
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Palindrome, from both ends',
-      summary: 'Walk a string inward from both ends and decide whether it reads the same backwards, with no copy and no normalisation.',
+      summary: "Compare case-sensitive ASCII text from opposite ends; practice a two-pointer approach with constant auxiliary space.",
       competencies: ['arrays-strings', 'complexity'],
       estimatedMinutes: 20,
       code: {
         language: 'javascript',
         prompt:
-          'Write `isPalindrome(text)`, returning `true` when the string reads the same backwards and `false` when it does not.\n\nThe input holds ASCII letters and digits only: no spaces, punctuation, accents or anything else to skip over. The comparison is case-sensitive and there is no normalisation of any kind, so `isPalindrome(\'Racecar\')` is `false` because capital `R` is not lowercase `r`. Do not lowercase, uppercase, strip or otherwise rewrite the input.\n\n`isPalindrome(\'\')` is `true` and `isPalindrome(\'x\')` is `true`: the empty string and a single character have nothing to contradict them. Use two indices walking inward and return as soon as a pair fails to match.',
+          "Write `isPalindrome(text)`, returning a boolean for whether the string reads the same forwards and backwards. Input contains ASCII letters and digits only; compare case-sensitively. `Racecar` is false because R and r differ. Empty text and any one-character string are palindromes.\n\nPractice two indices moving inward and stop at the first mismatched pair. Other correct implementations can pass these semantic checks; the tests do not prove that no copy was allocated.\n\nTarget: O(n) time and O(1) extra space, where n is the number of ASCII characters. Space is a goal, not a measured claim about arbitrary submitted code.",
         contract: [
           'The input contains only ASCII letters and digits, so there is nothing to skip.',
-          'Compare characters exactly: no lowercasing, uppercasing or normalising.',
+          'Compare characters with case-sensitive equality; different letter cases are not equivalent.',
           'The empty string and any single character are palindromes.',
           'Return a boolean, not a truthy value.',
         ],
@@ -547,7 +551,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(isPalindrome('racecar'));
 `,
         skeleton: `const isPalindrome = text => {
@@ -561,11 +565,7 @@ console.log(isPalindrome('racecar'));
 
   return /* nothing contradicted it */;
 };`,
-        hints: [
-          'Index a string the same way you index an array: `text[left]` gives one character, and `text.length` gives the count.',
-          'Return `false` from inside the loop the moment a pair differs. If the loop finishes without that happening, every pair matched and the answer is `true`.',
-          'When the length is odd the two pointers land on the same middle index and the loop stops there, which is correct: a character always equals itself.',
-        ],
+        hints: ["Which position mirrors the first character, and which mirrors the second? ASCII indexing is enough for this task.", "A mismatched pair settles the result. Decide whether later pairs can change that result.", "When the length is odd, consider whether the middle character needs a separate comparison."],
         approach: [
           'Start `left` at 0 and `right` at `text.length - 1`.',
           'While `left` is below `right`, compare `text[left]` with `text[right]`.',
@@ -590,25 +590,25 @@ console.log(isPalindrome('racecar'));
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Compact a sorted array',
-      summary: 'Drop the duplicates from an ascending array with a read pointer and a write pointer, and return how many distinct values are left.',
+      summary: "Compact the distinct prefix of a sorted numeric array within a measured mutation budget; practice read and write pointers.",
       competencies: ['arrays-strings', 'complexity'],
       estimatedMinutes: 25,
       code: {
         language: 'javascript',
         prompt:
-          'Write `removeDuplicatesSorted(sorted)`. The argument is an array of numbers in ascending order, possibly with repeats. Move the distinct values into the front of that same array, in order, and return how many there are. `removeDuplicatesSorted([1, 1, 2, 3, 3, 3, 4])` returns 4 and leaves `1, 2, 3, 4` in the first four slots.\n\nEverything from the returned length onward is unspecified. Whatever the leftovers are, no assertion looks at them, and neither should a caller.\n\nAn empty array returns 0. An array whose values are all equal returns 1. Because the input is sorted, equal values are always neighbours, so one read pointer and one write pointer are enough — the graded write budget is at most one index write per element, which rules out deleting duplicates with repeated `splice` calls.',
+          "Write `removeDuplicatesSorted(sorted)` for a dense ascending array of finite Numbers. Put its distinct values into the front of that same array, in ascending order, and return their count. Treat values equal with === as duplicates. For `[1, 1, 2, 3, 3, 4]`, return 4 and leave `[1, 2, 3, 4]` in the first four slots. Empty input returns 0.\n\nThe tail after the returned count is unspecified and is not checked. On measured cases, at most n indexed mutations are allowed: assignments, property definitions and deletions count, length updates do not. Repeated splice calls may exceed this budget. Temporary copies are not measured; a copy that is never written back fails the prefix contract. Practice read and write pointers.\n\nTarget: O(n) time and O(1) extra space, where n is the original array length. The finite mutation tests do not establish time or space complexity for arbitrary code.",
         contract: [
           'The input is sorted ascending, so equal values sit next to each other; rely on that.',
           'Write the distinct values into the front of the array you were given, in ascending order.',
           'Return the count of distinct values as a number.',
           'Slots from the returned length onward are unspecified and are never checked.',
-          'The graded write budget is at most one index write per element.',
+          'On measured cases, allow at most n indexed mutations: assignments, property definitions and deletions. Length updates are not counted.',
         ],
         starter: `const removeDuplicatesSorted = sorted => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const values = [1, 1, 2, 3, 3, 3, 4];
 console.log(removeDuplicatesSorted(values), values);
 `,
@@ -623,11 +623,7 @@ console.log(removeDuplicatesSorted(values), values);
 
   return write;
 };`,
-        hints: [
-          'The first element is always kept, so start the write pointer at 1 and the read pointer at 1.',
-          'Compare `sorted[read]` with `sorted[write - 1]`, the last value you kept. When they differ, write `sorted[read]` into `sorted[write]` and move the write pointer up.',
-          'An empty array never reaches the loop; return 0 before it. Every other array keeps at least its first element, which is why an all-equal array returns 1.',
-        ],
+        hints: ["Sorted equal values form neighboring runs. Decide which representative belongs in the kept prefix.", "The next position to read and the next position to keep may differ after a duplicate. Track their roles separately.", "Check empty input before assuming there is a first kept value. Test one long equal run and a list with no repeats."],
         approach: [
           'Return 0 straight away when the array is empty.',
           'Treat the first element as kept, so the write pointer starts at 1.',
@@ -648,7 +644,7 @@ console.log(removeDuplicatesSorted(values), values);
             label: 'Compacted into the caller’s array, within the write budget',
             critical: true,
             weight: 2,
-            detail: 'The distinct values must end up in the front of the array that was passed in, and the write counter must stay within one write per element. Building a separate array of distinct values, or deleting duplicates with repeated `splice` calls, fails here.',
+            detail: 'The distinct prefix must be written into the caller’s array within n counted indexed mutations. Computing a separate result without writing it back fails. Temporary copies are not measured; repeated splice removal may exceed the finite budget.',
           },
         ],
         tests: [

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {gradeCheck} from '../../../../lib/learning-paths/grade';
+const check=LEARNING_PATHS.find(p=>p.id==='fde')!.modules.find(m=>m.id==='fde-v1-m05')!.activities.find(a=>a.kind==='check')!;const questions=check.questions!;const keys=questions.map(q=>q.correct);assert.deepEqual(keys,[0,0,0,0]);assert.equal(gradeCheck(check,keys,keys).state,'verified_pass');for(let i=0;i<4;i++){const answers=[...keys];answers[i]=1;const result=gradeCheck(check,keys,answers);assert.equal(result.state,'needs_revision');assert.equal(result.keyWithheld,false);}
+const transcript=JSON.parse(questions[0].context!.code);const cited=transcript.retrieved.find((r:any)=>r.sourceId==='KB-204'&&r.version===1);assert(cited.text.includes('depot van'));assert(transcript.answer.includes('original delivery carrier'));assert.deepEqual(transcript.citations,[{sourceId:'KB-204',version:1}]);
+// An illustrative candidate ordering under the explicit access policy, not a
+// real retriever, recall benchmark, unauthorized-data fetch or generation run.
+const candidates=[{id:1,allowed:true},{id:2,allowed:false},{id:3,allowed:false},{id:4,allowed:false},{id:5,allowed:false},{id:6,allowed:true}];assert.deepEqual(candidates.slice(0,5).filter(c=>c.allowed).map(c=>c.id),[1]);assert.deepEqual(candidates.filter(c=>c.allowed).slice(0,5).map(c=>c.id),[1,6]);assert(0.94>0.67);
+const citation=JSON.parse(questions[3].options[0].en.replace(/^`|`$/g,''));assert.deepEqual(citation,{sourceId:'KB-118',version:3,chunkId:'KB-118#c4',retrievedAt:'2026-04-02T09:14:11Z'});
+writeFileSync(process.argv[2],JSON.stringify({checkedRecords:5,records:[...questions.map(q=>({id:q.id,contentHash:nativeContentHash(q),gradingHash:null})),{id:check.id,contentHash:nativeContentHash(check),gradingHash:nativeGradingHash(check)}],checks:['actual transcript identifies cited depot-van text and contradictory carrier answer','illustrative allowed rank-six candidate lost by global-top-five-then-filter','higher superseded similarity does not set eligibility under the manually reviewed policy','literal citation locator fields; actual resolution/support require the explicitly assumed retained authorized archive','exercise threshold and feedback; no live retrieval/generation/index benchmark or independent semantic approval']},null,2),{mode:0o600});
+console.log('PASS five grounding bindings, literal transcript/citation and bounded candidate example');

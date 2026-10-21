@@ -26,6 +26,8 @@ import type { Question, QuestionTranslation } from './quiz-data';
 import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
 import type { CodingTask, Localized } from '../shared/coding-catalog';
 import type { CodingSolution } from './coding/types';
+import { approachesFor } from './coding/approaches';
+import { puzzleFor } from './coding/puzzles';
 import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from './curation-registry';
 import {
   eligibilityFrom,
@@ -120,12 +122,16 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
     topic: task.topic,
     level: task.level,
     tier: task.tier,
+    difficulty: task.difficulty ?? null,
+    estimatedMinutes: task.estimatedMinutes,
     focus: task.focus,
     verify: task.verify,
     format: task.format ?? 'implement',
     title: stripCs(task.title),
     prompt: stripCs(task.prompt),
     starter: task.starter,
+    previousRequirements: task.previousRequirements?.map(stripCs) ?? null,
+    references: task.references?.map(reference => ({ title: reference.title.en, url: reference.url })) ?? null,
     skeleton: task.skeleton ?? null,
     hints: task.hints.en,
     approach: task.approach?.en ?? null,
@@ -162,9 +168,22 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
       ? Object.fromEntries(Object.entries(task.failureHints).map(([key, value]) => [key, value?.en ?? null]))
       : null,
     pitfall: task.pitfall ?? null,
-    solution: solution ? { solution: solution.solution, hiddenTests: solution.hiddenTests ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null } : null,
+    solution: solution ? {
+      solution: solution.solution, junior: solution.junior ?? null, senior: solution.senior ?? null,
+      hiddenTests: solution.hiddenTests ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null,
+      hiddenSuite: solution.hiddenSuite ?? null,
+    } : null,
+    approaches: approachesFor(task.id).map(approach => ({
+      name: approach.name.en, code: approach.code, readability: approach.readability.en,
+      time: approach.time, space: approach.space, assumptions: approach.assumptions.en,
+      tradeoffs: approach.tradeoffs.en,
+    })),
+    puzzle: (() => {
+      const puzzle = puzzleFor(task.id);
+      return puzzle ? { lines: puzzle.lines, accepted: puzzle.accepted, competencies: puzzle.competencies, claim: puzzle.claim.en } : null;
+    })(),
   };
-  return createHash('sha256').update(JSON.stringify(['task-hash:v1', authored])).digest('hex').slice(0, 16);
+  return createHash('sha256').update(JSON.stringify(['task-hash:v2', authored])).digest('hex').slice(0, 16);
 }
 
 /** The plain digest of a coding task's Czech overlay, or null when any of it
@@ -278,11 +297,8 @@ const CODING_CONTRACT_DATE = '2026-09-08';
  */
 export function codingTaskReview(task: CodingTask, solution?: CodingSolution): PublicItemReview {
   const version = stableAttemptId(
-    'content-version:v1',
-    task.id,
-    task.title.en,
-    task.prompt.en,
-    task.starter,
+    'coding-content-version:v2',
+    taskHash(task, solution),
   ).slice(0, 12);
   const entry = REGISTRY_BY_ID.get(task.id);
   const record = entry ? recordFrom(entry, entry.hash === taskHash(task, solution), version) : null;

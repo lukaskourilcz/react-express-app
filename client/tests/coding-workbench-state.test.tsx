@@ -45,13 +45,13 @@ const outcome = (extra: Partial<RunOutcome>): RunOutcome => ({ results: [], logs
 const status = () => document.querySelector('.cd-workbench > [role="status"]')!;
 const editor = () => screen.getByLabelText('Test editor');
 
-function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?: 'section' | 'landing' } = {}) {
+function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?: 'section' | 'landing'; onRefreshTask?: (code: string) => Promise<void> } = {}) {
   return render(
     <MemoryRouter initialEntries={['/coding/javascript/js-test-state']}>
       <LanguageProvider>
         <Routes>
           <Route path="/coding/javascript/js-test-state" element={(
-            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode={props.mode ?? 'section'} />
+            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode={props.mode ?? 'section'} onRefreshTask={props.onRefreshTask} />
           )} />
           <Route path="/coding/:track/:taskId" element={<h1>Another task</h1>} />
         </Routes>
@@ -82,14 +82,14 @@ it('clears the last verdict when a new Submit fails', async () => {
   expect(screen.queryByRole('heading', { level: 3, name: 'Failed' })).toBeNull();
 });
 
-it('says a verdict is about earlier code once the code changes', async () => {
+it('replaces the editor with the completion screen after a pass', async () => {
   vi.mocked(submitCoding).mockResolvedValueOnce(verdict({}));
   mount();
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   expect(screen.queryByText(/You changed the code after this check/)).toBeNull();
-  fireEvent.change(editor(), { target: { value: 'const double = (list) => list.map((n) => n * 2);' } });
-  expect(screen.getByText('You changed the code after this check. Submit again to check the new version.')).toBeVisible();
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
+  expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
 });
 
 // C3-9 / C4-3: "Passing the visible examples is not enough" appeared when
@@ -159,7 +159,7 @@ it('does not call the server’s results about the code just submitted stale', a
   vi.mocked(runCodeTests).mockImplementationOnce(() => new Promise(() => {}));
   vi.mocked(submitCoding).mockResolvedValueOnce(verdict({}));
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   expect(screen.queryByText('The code changed since this run.')).toBeNull();
 });
 
@@ -214,11 +214,11 @@ it('sends Submit without waiting for the browser run, and shows the server run',
   mount();
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   await waitFor(() => expect(submitCoding).toHaveBeenCalledTimes(1));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   // The browser run finishing late does not replace what the server saw.
   await act(async () => { finishLocal(outcome({ codeError: 'late local run' })); });
   expect(screen.queryByText('late local run')).toBeNull();
-  expect(screen.getByRole('tab', { name: /Results/ })).toHaveTextContent('2/2');
+  expect(screen.queryByRole('tab', { name: /Results/ })).toBeNull();
 });
 
 // C3-8: the gate was checked at render time only, so a learner who edited
@@ -331,9 +331,9 @@ it('opens the challenge offered after a skip inside the app', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Another task' })).toBeVisible();
 });
 
-// C3-4 / C5-9: an accepted order came back as "Passed", and then asked for
-// approach comparisons, which the server refused with 403.
-it('shows an accepted order as an order, not a pass, and asks for no approaches', async () => {
+// An accepted arrangement uses the same minimal completion, with its actual
+// zero XP. It still never requests verified-code approach comparisons.
+it('shows the minimal completion for an accepted order without granting XP or requesting approaches', async () => {
   vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
     matches: query === '(max-width: 1023.95px)', media: query, onchange: null,
     addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
@@ -349,10 +349,10 @@ it('shows an accepted order as an order, not a pass, and asks for no approaches'
   }));
   mount({ subject: { ...task, puzzle } });
   fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
-  expect(await screen.findByRole('heading', { level: 3, name: 'That order works.' })).toBeVisible();
-  expect(screen.queryByRole('heading', { level: 3, name: /^Passed/ })).toBeNull();
-  expect(status()).toHaveTextContent('That order works.');
-  expect(screen.queryByRole('link', { name: 'Next task' })).toBeNull();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Passed +0 XP' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Check the order/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Next task' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
   expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
 });
 
@@ -370,12 +370,13 @@ it('shows three landing examples while Run still checks every test', async () =>
 
 it('keeps Big O space targets and guidance exclusively inside its named tooltip', () => {
   mount({ subject: { ...task, prompt: { en: 'Target: O(n) time, and O(1) extra space.', cs: '' } } });
-  expect(screen.getByText('Big O · Target O(n) time')).toBeVisible();
-  const info = screen.getByRole('button', { name: 'About Big O complexity' });
+  expect(screen.getByText('Desired complexity: O(n)')).toBeVisible();
+  const info = screen.getByRole('link', { name: 'About Big O complexity' });
   const tooltip = document.getElementById(info.getAttribute('aria-describedby')!)!;
   expect(tooltip).toHaveAttribute('role', 'tooltip');
-  expect(tooltip).toHaveTextContent('Target extra space: O(1).');
-  expect(tooltip).toHaveTextContent('n is the size of the input.');
+  expect(info).toHaveAttribute('href', '/big-o');
+  expect(tooltip).toHaveTextContent('array items, string characters, list nodes');
+  expect(tooltip).toHaveTextContent('Variables such as n, m or L refer to the sizes described in the brief.');
   expect(document.querySelector('.cd-complexity details')).toBeNull();
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
 });
@@ -404,4 +405,41 @@ it('uses named icons and tooltips only for the homepage command buttons', () => 
   }
   expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
+});
+
+
+it('keeps the draft and requires the latest brief after a stale Submit', async () => {
+  vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
+  const refresh = vi.fn().mockResolvedValue(undefined);
+  mount({ onRefreshTask: refresh });
+  const source = 'const double = ns => ns.map(n => n * 2);';
+  fireEvent.change(editor(), { target: { value: source } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  await screen.findByText(/Review the latest brief/);
+  expect(editor()).toHaveValue(source);
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(submitCoding).toHaveBeenCalledTimes(1);
+  expect(document.querySelector('.cd-completion')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Load latest brief' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalledWith(source));
+  await waitFor(() => expect(screen.queryByText(/Review the latest brief/)).toBeNull());
+  expect(editor()).toHaveValue(source);
+  expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled', 'true');
+});
+
+it('keeps the stale draft when loading the latest brief fails', async () => {
+  vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
+  const refresh = vi.fn().mockRejectedValue(new ApiError('Connection lost', 0));
+  mount({ onRefreshTask: refresh });
+  fireEvent.change(editor(), { target: { value: 'const kept = 1;' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  await screen.findByRole('button', { name: 'Load latest brief' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load latest brief' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Load latest brief' })).not.toBeDisabled());
+  expect(editor()).toHaveValue('const kept = 1;');
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(submitCoding).toHaveBeenCalledTimes(1);
 });

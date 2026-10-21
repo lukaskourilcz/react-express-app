@@ -30,6 +30,9 @@ export const DSA_D04_SOLUTIONS: Record<string, PathCodeSolution> = {
       '  };\n' +
       '};',
     hiddenTests: [
+      {"call":"(() => { const s=createStack(), value={id:7}; s.push(value); return [s.peek()===value,s.pop()===value,s.size()]; })()","expected":[true,true,0]},
+      {"call":"(() => { const s=createStack(), values=[undefined,false,0,\"\",NaN]; for(const value of values)s.push(value); const n=s.pop(); return [n!==n,s.pop(),s.pop(),s.pop(),s.pop()===undefined,s.size(),s.pop()]; })()","expected":[true,"",0,false,true,0,null]},
+      {"call":"(() => { const s=createStack(), value=Symbol(\"entry\"); s.push(value); return s.peek()===value && s.pop()===value; })()","expected":true},
       { call: '(() => { const s = createStack(); return s.size(); })()', expected: 0 },
       {
         call: '(() => { const s = createStack(); [1, 2, 3, 4, 5].forEach(v => s.push(v)); return [s.pop(), s.pop(), s.size()]; })()',
@@ -82,6 +85,9 @@ export const DSA_D04_SOLUTIONS: Record<string, PathCodeSolution> = {
       '  };\n' +
       '};',
     hiddenTests: [
+      {"call":"(() => { const q=createQueue(), value={id:3}; q.enqueue(value); return [q.dequeue()===value,q.size()]; })()","expected":[true,0]},
+      {"call":"(() => { const q=createQueue(), values=[undefined,false,0,\"\",NaN]; for(const value of values)q.enqueue(value); const first=q.dequeue(); const second=q.dequeue(); const third=q.dequeue(); const fourth=q.dequeue(); const last=q.dequeue(); return [first===undefined,second,third,fourth,last!==last,q.size(),q.dequeue()]; })()","expected":[true,false,0,"",true,0,null]},
+      {"call":"(() => { const q=createQueue(), value=Symbol(\"entry\"); q.enqueue(value); return q.dequeue()===value; })()","expected":true},
       { call: '__measureQueue(32).size', expected: 0 },
       { call: '__measureQueue(48).out.length', expected: 48 },
       {

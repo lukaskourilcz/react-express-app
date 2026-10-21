@@ -356,8 +356,8 @@ function ProfileBody({
 
             <GithubGardenCard />
 
-            {/* The sharkname is what friends and, with the switch below on,
-                the boards show; the two sit together. */}
+            {/* Friends' identity and the independent leaderboard preferences
+                stay together in the Profile. */}
             <SharknameCard focus={focusSharkname} onFocused={() => setFocusSharkname(false)} />
 
             <LeaderboardVisibilityCard />
@@ -726,8 +726,8 @@ function AdvisorCard() {
   );
 }
 
-/** Whether the public leaderboards name this learner: the same switch the
- *  Leaderboard shows, over the same query, so the two always agree. */
+/** The Profile's complete leaderboard name/photo preferences. Friends keep
+ * their own independent identity settings in SharknameCard. */
 export function LeaderboardVisibilityCard() {
   const t = useT();
   return (

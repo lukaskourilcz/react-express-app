@@ -119,7 +119,7 @@ const MAP: Boards = {
   const groups = new Map();
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
-    const letters = word.split("");
+    const letters = [...word]; // iterate Unicode code points, like the reference key
     letters.sort();
     const key = letters.join("");
     if (!groups.has(key)) {
@@ -316,17 +316,16 @@ const MAP_AND_SET: Boards = {
   return users;
 }`,
     `function isIsomorphic(a, b) {
-  if (a.length !== b.length) return false;
-  const partner = new Map(); // character of a -> its character in b
-  const taken = new Set(); // characters of b already given out
-  for (let i = 0; i < a.length; i += 1) {
-    if (partner.has(a[i])) {
-      if (partner.get(a[i]) !== b[i]) return false;
+  const left = [...a], right = [...b];
+  if (left.length !== right.length) return false;
+  const partner = new Map(), taken = new Set();
+  for (let i = 0; i < left.length; i++) {
+    if (partner.has(left[i])) {
+      if (partner.get(left[i]) !== right[i]) return false;
     } else {
-      // Two characters of a cannot share one partner.
-      if (taken.has(b[i])) return false;
-      partner.set(a[i], b[i]);
-      taken.add(b[i]);
+      if (taken.has(right[i])) return false;
+      partner.set(left[i], right[i]);
+      taken.add(right[i]);
     }
   }
   return true;
@@ -388,22 +387,17 @@ const MAP_AND_SET: Boards = {
   return users;
 }`,
     `function isIsomorphic(a, b) {
-  if (a.length !== b.length) {
-    return false;
-  }
+  const left = Array.from(a);
+  const right = Array.from(b);
+  if (left.length !== right.length) return false;
   const partner = new Map();
   const taken = new Set();
-  for (let i = 0; i < a.length; i++) {
-    const from = a[i];
-    const to = b[i];
+  for (let i = 0; i < left.length; i++) {
+    const from = left[i], to = right[i];
     if (partner.has(from)) {
-      if (partner.get(from) !== to) {
-        return false;
-      }
+      if (partner.get(from) !== to) return false;
     } else {
-      if (taken.has(to)) {
-        return false;
-      }
+      if (taken.has(to)) return false;
       partner.set(from, to);
       taken.add(to);
     }
@@ -468,14 +462,14 @@ const MAP_AND_SET: Boards = {
   return users;
 };`,
     `const isIsomorphic = (a, b) => {
-  if (a.length !== b.length) return false;
-  const partner = new Map();
-  const taken = new Set();
-  return [...a].every((char, i) => {
-    if (partner.has(char)) return partner.get(char) === b[i];
-    if (taken.has(b[i])) return false;
-    partner.set(char, b[i]);
-    taken.add(b[i]);
+  const left = [...a], right = [...b];
+  if (left.length !== right.length) return false;
+  const partner = new Map(), taken = new Set();
+  return left.every((point, i) => {
+    if (partner.has(point)) return partner.get(point) === right[i];
+    if (taken.has(right[i])) return false;
+    partner.set(point, right[i]);
+    taken.add(right[i]);
     return true;
   });
 };`,
@@ -499,7 +493,7 @@ const MAP_AND_SET: Boards = {
 const OBJECTS: Boards = {
   reference: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (const record of list) {
     // The key is in a variable, so square brackets, not counts.category.
     counts[record.category] = (counts[record.category] ?? 0) + 1;
@@ -507,7 +501,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (const record of list) {
     if (!groups[record.category]) groups[record.category] = [];
     groups[record.category].push(record.name);
@@ -515,8 +509,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {}; // category -> highest rating so far
+  const out = Object.create(null);
+  const bestRating = Object.create(null); // category -> highest rating so far
   for (const record of list) {
     const key = record.category;
     if (!out[key]) {
@@ -538,7 +532,7 @@ const OBJECTS: Boards = {
   return [...list].sort((a, b) => b.runs - a.runs || a.name.localeCompare(b.name));
 }`,
     `function topPerCategory(list, k) {
-  const out = {};
+  const out = Object.create(null);
   // Sorted once, so each category fills up with its best records first.
   for (const record of sortActors(list)) {
     if (!out[record.category]) out[record.category] = [];
@@ -549,7 +543,7 @@ const OBJECTS: Boards = {
   ],
   junior: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const category = list[i].category;
     if (counts[category] === undefined) {
@@ -560,7 +554,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     if (groups[record.category] === undefined) {
@@ -571,8 +565,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {};
+  const out = Object.create(null);
+  const bestRating = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     const category = record.category;
@@ -596,19 +590,13 @@ const OBJECTS: Boards = {
     if (a.runs !== b.runs) {
       return b.runs - a.runs;
     }
-    if (a.name < b.name) {
-      return -1;
-    }
-    if (a.name > b.name) {
-      return 1;
-    }
-    return 0;
+    return a.name.localeCompare(b.name);
   });
   return copy;
 }`,
     `function topPerCategory(list, k) {
   const sorted = sortActors(list);
-  const out = {};
+  const out = Object.create(null);
   for (let i = 0; i < sorted.length; i++) {
     const record = sorted[i];
     if (out[record.category] === undefined) {
@@ -624,18 +612,18 @@ const OBJECTS: Boards = {
   ],
   senior: [
     `const countByCategory = (list) => {
-  const counts = {};
+  const counts = Object.create(null);
   for (const { category } of list) counts[category] = (counts[category] ?? 0) + 1;
   return counts;
 };`,
     `const groupByCategory = (list) => {
-  const groups = {};
+  const groups = Object.create(null);
   for (const { name, category } of list) (groups[category] ??= []).push(name);
   return groups;
 };`,
     `const summarize = (list) => {
-  const out = {};
-  const top = {};
+  const out = Object.create(null);
+  const top = Object.create(null);
   for (const { name, category, runs, rating } of list) {
     const summary = (out[category] ??= { count: 0, runs: 0, best: name });
     summary.count += 1;
@@ -650,7 +638,7 @@ const OBJECTS: Boards = {
     `const byRunsThenName = (a, b) => b.runs - a.runs || a.name.localeCompare(b.name);
 const sortActors = (list) => [...list].sort(byRunsThenName);`,
     `const topPerCategory = (list, k) => {
-  const out = {};
+  const out = Object.create(null);
   for (const { name, category } of sortActors(list)) {
     const names = (out[category] ??= []);
     if (names.length < k) names.push(name);
@@ -681,41 +669,36 @@ const LOOKUPS: Boards = {
   return { added, removed, changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const seen = new Map();
   for (const [from, to] of links) {
-    if (!graph[from]) graph[from] = [];
-    // Each target once, in link order.
-    if (!graph[from].includes(to)) graph[from].push(to);
+    if (!seen.has(from)) { seen.set(from, new Set()); graph[from] = []; }
+    if (!seen.get(from).has(to)) {
+      seen.get(from).add(to);
+      graph[from].push(to);
+    }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
-  const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  // Mark a page when it is queued, so no page is queued twice.
+  const graph = linksToGraph(links), queue = [start], order = [];
   const visited = new Set([start]);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     order.push(page);
     for (const next of graph[page] ?? []) {
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  // depths doubles as the visited set: a page with a depth has been queued.
-  const depths = { [start]: 0 };
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
+  depths[start] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     for (const next of graph[page] ?? []) {
-      if (!(next in depths)) {
+      if (!Object.hasOwn(depths, next)) {
         depths[next] = depths[page] + 1;
         queue.push(next);
       }
@@ -755,47 +738,41 @@ const LOOKUPS: Boards = {
   return { added: added, removed: removed, changed: changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const targetsBySource = new Map();
   for (let i = 0; i < links.length; i++) {
-    const from = links[i][0];
-    const to = links[i][1];
-    if (graph[from] === undefined) {
+    const from = links[i][0], to = links[i][1];
+    if (!targetsBySource.has(from)) {
+      targetsBySource.set(from, new Set());
       graph[from] = [];
     }
-    if (graph[from].indexOf(to) === -1) {
-      graph[from].push(to);
-    }
+    const seen = targetsBySource.get(from);
+    if (!seen.has(to)) { seen.add(to); graph[from].push(to); }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
   const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  const visited = new Set();
-  visited.add(start);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const queue = [start], order = [], visited = new Set([start]);
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head];
+    head++;
     order.push(page);
-    const neighbours = graph[page] || [];
+    const neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  const depths = {};
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
   depths[start] = 0;
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
-    const neighbours = graph[page] || [];
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head++], neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
       if (depths[next] === undefined) {
@@ -820,20 +797,21 @@ const LOOKUPS: Boards = {
   };
 };`,
     `const linksToGraph = (links) => {
-  const graph = {};
+  const groups = new Map();
   for (const [from, to] of links) {
-    const targets = (graph[from] ??= []);
-    if (!targets.includes(to)) targets.push(to);
+    if (!groups.has(from)) groups.set(from, new Set());
+    groups.get(from).add(to);
   }
-  return graph;
+  return Object.fromEntries([...groups].map(([from, targets]) => [from, [...targets]]));
 };`,
     `const crawlOrder = (links, start) => {
-  const graph = linksToGraph(links);
-  const visited = new Set([start]);
-  for (const page of visited) {
-    for (const next of graph[page] ?? []) visited.add(next);
+  const graph = linksToGraph(links), queue = [start], visited = new Set([start]);
+  for (let head = 0; head < queue.length; head++) {
+    for (const next of graph[queue[head]] ?? []) {
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
   }
-  return [...visited];
+  return queue;
 };`,
     `const crawlDepths = (links, start) => {
   const graph = linksToGraph(links);
@@ -848,41 +826,722 @@ const LOOKUPS: Boards = {
 
 const HIDDEN: Record<string, Hidden> = {
   'js-path-map': [
-    [['[...countAll([0, 0, false])]', [[0, 2], [false, 1]]], ['countAll([true, true]).get(true)', 2]],
-    [['mostCommon([3, 1, 1, 3, 2])', 3], ['mostCommon([0, 0, 1])', 0]],
-    [['twoSum([0, 4, 0], 0)', [0, 2]], ['twoSum([1, 5, 9], 14)', [1, 2]], ['twoSum([2, 2, 2], 4)', [0, 1]]],
-    [['topK([5, 4, 4, 5, 3], 3)', [5, 4, 3]], ['topK(["b", "a", "a"], 2)', ['a', 'b']]],
-    [['groupAnagrams(["listen", "silent", "enlist", "google"])', [['listen', 'silent', 'enlist'], ['google']]], ['groupAnagrams(["", ""])', [['', '']]]],
-  ],
+    [
+        [
+            "[...countAll([0, 0, false])]",
+            [
+                [
+                    0,
+                    2
+                ],
+                [
+                    false,
+                    1
+                ]
+            ]
+        ],
+        [
+            "countAll([true, true]).get(true)",
+            2
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const input=Object.freeze([a,b,a,NaN,NaN,-0,+0,undefined,null,1n,1,'1']);const m=countAll(input),keys=[...m.keys()];return m.size===9&&m.get(a)===2&&m.get(b)===1&&m.get(NaN)===2&&m.get(0)===2&&m.get(undefined)===1&&m.get(1n)===1&&m.get(1)===1&&m.get('1')===1&&keys[0]===a&&keys[1]===b&&Object.is(keys[3],+0);})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll([]),b=countAll([]);a.set('x',1);return a!==b&&b.size===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll(Object.freeze(Array.from({length:1000},(_,i)=>i%20)));return a.size===20&&[...a.values()].every(n=>n===50);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "mostCommon([3, 1, 1, 3, 2])",
+            3
+        ],
+        [
+            "mostCommon([0, 0, 1])",
+            0
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});return mostCommon(Object.freeze([a,b,b,a]))===a&&Number.isNaN(mostCommon(Object.freeze([NaN,1,NaN])))&&mostCommon([undefined,undefined,1])===undefined&&Object.is(mostCommon([-0,+0]),+0);})()",
+            true
+        ],
+        [
+            "mostCommon(Object.freeze(Array.from({length:1000},(_,i)=>i%2)))",
+            0
+        ]
+    ],
+    [
+        [
+            "twoSum([0, 4, 0], 0)",
+            [
+                0,
+                2
+            ]
+        ],
+        [
+            "twoSum([1, 5, 9], 14)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "twoSum([2, 2, 2], 4)",
+            [
+                0,
+                1
+            ]
+        ],
+        [
+            "twoSum(Object.freeze([1,2,3,4]),5)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "[twoSum(Object.freeze([-1000000,1000000]),0),twoSum(Object.freeze([-0,+0]),0)]",
+            [
+                [
+                    0,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ]
+        ],
+        [
+            "twoSum(Object.freeze(Array.from({length:1000},(_,i)=>i*2)),-1)",
+            []
+        ]
+    ],
+    [
+        [
+            "topK([5, 4, 4, 5, 3], 3)",
+            [
+                5,
+                4,
+                3
+            ]
+        ],
+        [
+            "topK([\"b\", \"a\", \"a\"], 2)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1}),input=Object.freeze([a,NaN,b,NaN,b,a]);const out=topK(input,3);return out.length===3&&out[0]===a&&Number.isNaN(out[1])&&out[2]===b;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze([1,2]);const a=topK(input,0),b=topK(input,0),c=topK(input,1000);return a!==b&&a.length===0&&c.length===2&&c[0]===1&&c[1]===2;})()",
+            true
+        ],
+        [
+            "(() => {const out=topK(Object.freeze(Array.from({length:1000},(_,i)=>i%20)),1000);return out.length===20&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "groupAnagrams([\"listen\", \"silent\", \"enlist\", \"google\"])",
+            [
+                [
+                    "listen",
+                    "silent",
+                    "enlist"
+                ],
+                [
+                    "google"
+                ]
+            ]
+        ],
+        [
+            "groupAnagrams([\"\", \"\"])",
+            [
+                [
+                    "",
+                    ""
+                ]
+            ]
+        ],
+        [
+            "(() => {const a=String.fromCodePoint(0x1f600,0x1f9e1),b=String.fromCodePoint(0x1f5e1,0x1fa00),reverse=[...a].reverse().join('');const out=groupAnagrams(Object.freeze([a,b,reverse]));return out.length===2&&out[0].length===2&&out[0][0]===a&&out[0][1]===reverse&&out[1][0]===b;})()",
+            true
+        ],
+        [
+            "groupAnagrams(Object.freeze(['a','A','a','é','e\\u0301','\\u0301e']))",
+            [
+                [
+                    "a",
+                    "a"
+                ],
+                [
+                    "A"
+                ],
+                [
+                    "é"
+                ],
+                [
+                    "é",
+                    "́e"
+                ]
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['ab','ba']);const a=groupAnagrams(input),b=groupAnagrams(input);return a!==b&&a[0]!==b[0]&&a[0].join(',')==='ab,ba';})()",
+            true
+        ],
+        [
+            "(() => {const word='x'.repeat(100);const out=groupAnagrams(Object.freeze(Array(500).fill(word)));return out.length===1&&out[0].length===500&&out[0].every(x=>x===word);})()",
+            true
+        ]
+    ]
+],
   'js-path-set': [
-    [['unique([true, false, true])', [true, false]], ['unique([NaN, NaN]).length', 1]],
-    [['common(["a", "b"], ["b", "a"])', ['a', 'b']], ['common([1, 2, 2, 3], [2, 2])', [2]]],
-    [['difference([0, "0", 0], ["0"])', [0]], ['difference(["x", "y", "x"], ["y"])', ['x']]],
-    [['firstRepeat(["b", "a", "a", "b"])', 'a'], ['firstRepeat([false, true, false])', false]],
-    [['duplicates(["a", "b", "b", "a", "c"])', ['b', 'a']], ['duplicates([0, false, 0, false])', [0, false]]],
-  ],
+    [
+        [
+            "unique([true, false, true])",
+            [
+                true,
+                false
+            ]
+        ],
+        [
+            "unique([NaN, NaN]).length",
+            1
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const out=unique(Object.freeze([a,b,a,NaN,NaN,undefined,undefined,1n,1,'1',-0,+0]));return out.length===8&&out[0]===a&&out[1]===b&&Number.isNaN(out[2])&&out[3]===undefined&&out[4]===1n&&out[5]===1&&out[6]==='1'&&out[7]===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=unique([]),b=unique([]),input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=unique(input);return a!==b&&out!==input&&out.length===1000&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "common([\"a\", \"b\"], [\"b\", \"a\"])",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "common([1, 2, 2, 3], [2, 2])",
+            [
+                2
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=common(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===5&&out[0]===y&&Number.isNaN(out[1])&&out[2]===undefined&&out[3]===0&&out[4]===1;})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=common(a,b),y=common([],[]),z=common([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i+500);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "difference([0, \"0\", 0], [\"0\"])",
+            [
+                0
+            ]
+        ],
+        [
+            "difference([\"x\", \"y\", \"x\"], [\"y\"])",
+            [
+                "x"
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=difference(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===2&&out[0]===x&&out[1]==='1';})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=difference(a,b),y=difference([],[]),z=difference([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "firstRepeat([\"b\", \"a\", \"a\", \"b\"])",
+            "a"
+        ],
+        [
+            "firstRepeat([false, true, false])",
+            false
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});return firstRepeat(Object.freeze([x,y]))===null&&firstRepeat(Object.freeze([x,y,y,x]))===y&&Number.isNaN(firstRepeat([NaN,1,NaN]))&&firstRepeat([undefined,undefined])===undefined&&Object.is(firstRepeat([+0,-0]),-0);})()",
+            true
+        ],
+        [
+            "firstRepeat(Object.freeze([...Array.from({length:999},(_,i)=>i),500]))",
+            500
+        ]
+    ],
+    [
+        [
+            "duplicates([\"a\", \"b\", \"b\", \"a\", \"c\"])",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "duplicates([0, false, 0, false])",
+            [
+                0,
+                false
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=duplicates(Object.freeze([x,y,NaN,x,undefined,y,NaN,undefined,undefined]));return out.length===4&&out[0]===x&&out[1]===y&&Number.isNaN(out[2])&&out[3]===undefined;})()",
+            true
+        ],
+        [
+            "(() => {const a=duplicates([]),b=duplicates([]),input=Object.freeze([...Array.from({length:500},(_,i)=>i),...Array.from({length:500},(_,i)=>499-i)]);const out=duplicates(input);return a!==b&&out.length===500&&out.every((v,i)=>v===499-i);})()",
+            true
+        ]
+    ]
+],
   'js-path-mapset': [
-    [['[...countWords("a\\tb\\na", [])]', [['a', 2], ['b', 1]]], ['countWords("Stop stop", ["stop"]).size', 0]],
-    [['[...tagsByUser([{user: "b", tag: "1"}, {user: "a", tag: "2"}]).keys()]', ['b', 'a']], ['tagsByUser([{user: "a", tag: "x"}]).has("b")', false]],
-    [['isIsomorphic("badc", "baba")', false], ['isIsomorphic("abab", "cdcd")', true]],
-    [['buildIndex([{id: 1, text: "A b"}, {id: 2, text: "a"}]).get("a").size', 2], ['buildIndex([{id: 3, text: "x"}]).has("y")', false]],
-    [['search([{id: 1, text: "a b"}, {id: 2, text: "b a"}], "b a b")', [1, 2]], ['search([{id: "x", text: "a"}], "A")', ['x']], ['search([{id: 1, text: "redfish"}], "red")', []], ['search([{id: 1, text: "catalog"}, {id: 2, text: "a cat nap"}], "cat")', [2]]],
-  ],
+    [
+        [
+            "[...countWords(\"a\\tb\\na\", [])]",
+            [
+                [
+                    "a",
+                    2
+                ],
+                [
+                    "b",
+                    1
+                ]
+            ]
+        ],
+        [
+            "countWords(\"Stop stop\", [\"stop\"]).size",
+            0
+        ],
+        [
+            "[...countWords('Cat, cat CAT.\\u00a0é É e\\u0301',Object.freeze([]))]",
+            [
+                [
+                    "cat,",
+                    1
+                ],
+                [
+                    "cat",
+                    1
+                ],
+                [
+                    "cat.",
+                    1
+                ],
+                [
+                    "é",
+                    2
+                ],
+                [
+                    "é",
+                    1
+                ]
+            ]
+        ],
+        [
+            "(() => {const text='a '.repeat(4999)+'a',stop=Object.freeze(Array(1000).fill('skip'));const a=countWords(text,stop),b=countWords('',stop),c=countWords('',stop);return a.get('a')===5000&&a.size===1&&b!==c&&b.size===0;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "[...tagsByUser([{user: \"b\", tag: \"1\"}, {user: \"a\", tag: \"2\"}]).keys()]",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "tagsByUser([{user: \"a\", tag: \"x\"}]).has(\"b\")",
+            false
+        ],
+        [
+            "(() => {const user=Object.freeze({id:1}),other=Object.freeze({id:1}),tag=Object.freeze({x:1});const events=Object.freeze([Object.freeze({user,tag}),Object.freeze({user:other,tag:'x'}),Object.freeze({user,tag}),Object.freeze({user:1,tag:NaN}),Object.freeze({user:'1',tag:NaN})]);const a=tagsByUser(events),b=tagsByUser(events);return a.size===4&&a.get(user).size===1&&a.get(user).has(tag)&&a.get(other).has('x')&&a.get(1).has(NaN)&&a.get('1').has(NaN)&&a!==b&&a.get(user)!==b.get(user)&&a.get(user)!==a.get(other);})()",
+            true
+        ],
+        [
+            "(() => {const a=tagsByUser(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({user:i%10,tag:i%20}))));return a.size===10&&[...a.values()].every(s=>s.size===2)&&new Set(a.values()).size===10;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "isIsomorphic(\"badc\", \"baba\")",
+            false
+        ],
+        [
+            "isIsomorphic(\"abab\", \"cdcd\")",
+            true
+        ],
+        [
+            "[isIsomorphic('😀😀','aa'),isIsomorphic('😀😃','ab'),isIsomorphic('😀😃','aa'),isIsomorphic('😀a😀','aba'),isIsomorphic('e\\u0301','ab'),isIsomorphic('é','ab'),isIsomorphic('Aa','aa')]",
+            [
+                true,
+                true,
+                false,
+                true,
+                true,
+                false,
+                false
+            ]
+        ],
+        [
+            "isIsomorphic('a'.repeat(1000),'😀'.repeat(1000))",
+            true
+        ]
+    ],
+    [
+        [
+            "buildIndex([{id: 1, text: \"A b\"}, {id: 2, text: \"a\"}]).get(\"a\").size",
+            2
+        ],
+        [
+            "buildIndex([{id: 3, text: \"x\"}]).has(\"y\")",
+            false
+        ],
+        [
+            "(() => {const docs=Object.freeze([Object.freeze({id:0,text:'Z z __proto__'}),Object.freeze({id:'0',text:'z'}),Object.freeze({id:'',text:'__proto__'})]);const a=buildIndex(docs),b=buildIndex(docs),z=[...a.get('z')],p=[...a.get('__proto__')];return a!==b&&a.get('z')!==b.get('z')&&z.length===2&&z[0]===0&&z[1]==='0'&&p[0]===0&&p[1]==='';})()",
+            true
+        ],
+        [
+            "(() => {const docs=Object.freeze(Array.from({length:500},(_,i)=>Object.freeze({id:i,text:'a b a'})));const a=buildIndex(docs);return a.size===2&&a.get('a').size===500&&a.get('b').size===500;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "search([{id: 1, text: \"a b\"}, {id: 2, text: \"b a\"}], \"b a b\")",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "search([{id: \"x\", text: \"a\"}], \"A\")",
+            [
+                "x"
+            ]
+        ],
+        [
+            "search([{id: 1, text: \"redfish\"}], \"red\")",
+            []
+        ],
+        [
+            "search([{id: 1, text: \"catalog\"}, {id: 2, text: \"a cat nap\"}], \"cat\")",
+            [
+                2
+            ]
+        ],
+        [
+            "search(Object.freeze([Object.freeze({id:'z',text:'A b'}),Object.freeze({id:0,text:'a b'}),Object.freeze({id:'0',text:'a b'}),Object.freeze({id:'',text:'a b'})]),'b\\ta b')",
+            [
+                "z",
+                0,
+                "0",
+                ""
+            ]
+        ],
+        [
+            "(() => {const docs=Object.freeze(Array.from({length:500},(_,i)=>Object.freeze({id:'id'+i,text:'a b'})));const a=search(docs,'b a b'),b=search(docs,'   '),c=search(docs,'   ');return a.length===500&&a.every((id,i)=>id==='id'+i)&&b!==c&&b.length===0;})()",
+            true
+        ]
+    ]
+],
   'js-path-objects': [
-    [['countByCategory([{category: "b"}, {category: "a"}]).b', 1], ['Object.keys(countByCategory([{category: "z"}, {category: "a"}]))', ['z', 'a']]],
-    [['groupByCategory([{name: "A", category: "x"}, {name: "A", category: "x"}])', { x: ['A', 'A'] }], ['Object.keys(groupByCategory([{name: "A", category: "b"}, {name: "B", category: "a"}]))', ['b', 'a']]],
-    [['summarize([{name: "A", category: "x", runs: 1, rating: 1}, {name: "B", category: "x", runs: 1, rating: 2}, {name: "C", category: "x", runs: 1, rating: 2}]).x.best', 'B'], ['summarize([{name: "A", category: "x", runs: 2, rating: 1}, {name: "B", category: "y", runs: 3, rating: 1}]).y.runs', 3]],
-    [['sortActors([{name: "b", runs: 0}, {name: "a", runs: 0}]).map((a) => a.name)', ['a', 'b']], ['sortActors([{name: "A", runs: 1}, {name: "B", runs: 2}, {name: "C", runs: 3}]).map((a) => a.runs)', [3, 2, 1]]],
-    [['topPerCategory([{name: "A", category: "x", runs: 1}, {name: "B", category: "y", runs: 2}], 1)', { x: ['A'], y: ['B'] }], ['topPerCategory([{name: "A", category: "x", runs: 5}, {name: "B", category: "x", runs: 5}, {name: "C", category: "x", runs: 9}], 2).x', ['C', 'A']]],
-  ],
+    [
+        [
+            "countByCategory([{category: \"b\"}, {category: \"a\"}]).b",
+            1
+        ],
+        [
+            "Object.keys(countByCategory([{category: \"z\"}, {category: \"a\"}]))",
+            [
+                "z",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['__proto__','constructor','toString','','__proto__'].map(category=>Object.freeze({category})));const a=countByCategory(input),b=countByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__===2&&Object.hasOwn(a,'constructor')&&a.constructor===1&&a.toString===1&&a['']===1;})()",
+            true
+        ],
+        [
+            "Object.keys(countByCategory([{category:'4294967295'},{category:'01'},{category:'2'},{category:'10'},{category:'x'}]))",
+            [
+                "2",
+                "10",
+                "4294967295",
+                "01",
+                "x"
+            ]
+        ],
+        [
+            "countByCategory(Object.freeze(Array.from({length:1000},()=>Object.freeze({category:'same'}))))['same']",
+            1000
+        ]
+    ],
+    [
+        [
+            "groupByCategory([{name: \"A\", category: \"x\"}, {name: \"A\", category: \"x\"}])",
+            {
+                "x": [
+                    "A",
+                    "A"
+                ]
+            }
+        ],
+        [
+            "Object.keys(groupByCategory([{name: \"A\", category: \"b\"}, {name: \"B\", category: \"a\"}]))",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'  A  '}),Object.freeze({category:'constructor',name:''}),Object.freeze({category:'__proto__',name:'  A  '})]);const a=groupByCategory(input),b=groupByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='  A  ,  A  '&&Object.hasOwn(a,'constructor')&&a.constructor[0]===''&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const a=groupByCategory(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i}))));return a.x.length===1000&&a.x.every((name,i)=>name==='n'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 1, rating: 1}, {name: \"B\", category: \"x\", runs: 1, rating: 2}, {name: \"C\", category: \"x\", runs: 1, rating: 2}]).x.best",
+            "B"
+        ],
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 2, rating: 1}, {name: \"B\", category: \"y\", runs: 3, rating: 1}]).y.runs",
+            3
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'',runs:0,rating:0}),Object.freeze({category:'__proto__',name:'later',runs:1000000,rating:0}),Object.freeze({category:'constructor',name:'top',runs:1,rating:5})]);const a=summarize(input),b=summarize(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.count===2&&a.__proto__.runs===1000000&&a.__proto__.best===''&&a.constructor.best==='top'&&a.__proto__!==b.__proto__&&Object.keys(a.__proto__).sort().join(',')==='best,count,runs';})()",
+            true
+        ],
+        [
+            "summarize(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:1000000,rating:0})))).x",
+            {
+                "count": 1000,
+                "runs": 1000000000,
+                "best": "n0"
+            }
+        ]
+    ],
+    [
+        [
+            "sortActors([{name: \"b\", runs: 0}, {name: \"a\", runs: 0}]).map((a) => a.name)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "sortActors([{name: \"A\", runs: 1}, {name: \"B\", runs: 2}, {name: \"C\", runs: 3}]).map((a) => a.runs)",
+            [
+                3,
+                2,
+                1
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({name:'same',runs:10,id:1}),b=Object.freeze({name:'same',runs:10,id:2}),c=Object.freeze({name:'higher',runs:1000000,id:3}),input=Object.freeze([a,b,c]);const out=sortActors(input),empty=[];return out!==input&&out[0]===c&&out[1]===a&&out[2]===b&&input[0]===a&&sortActors(empty)!==empty&&sortActors(empty)!==sortActors(empty);})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(['Zebra','apple','éclair','alpha'].map(name=>Object.freeze({name,runs:1})));const out=sortActors(input);return out.every((r,i)=>input.includes(r)&&(i===0||out[i-1].name.localeCompare(r.name)<=0));})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:'x',runs:i})));const out=sortActors(input);return out.length===1000&&out.every((r,i)=>r===input[999-i]);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 1}, {name: \"B\", category: \"y\", runs: 2}], 1)",
+            {
+                "x": [
+                    "A"
+                ],
+                "y": [
+                    "B"
+                ]
+            }
+        ],
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 5}, {name: \"B\", category: \"x\", runs: 5}, {name: \"C\", category: \"x\", runs: 9}], 2).x",
+            [
+                "C",
+                "A"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'B',runs:1}),Object.freeze({category:'__proto__',name:'A',runs:2}),Object.freeze({category:'constructor',name:'C',runs:3})]);const a=topPerCategory(input,2),b=topPerCategory(input,2);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='A,B'&&a.constructor[0]==='C'&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:i})));const out=topPerCategory(input,1000);return out.x.length===1000&&out.x.every((name,i)=>name==='n'+(999-i));})()",
+            true
+        ]
+    ]
+],
   'js-path-lookups': [
-    [['indexById([{id: "a", n: 1}]).get("a").n', 1], ['indexById([{id: 1}, {id: 2}]).get(2).id', 2]],
-    // Two changed ids, listed in after order rather than before order.
-    [['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 1}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['a'] }], ['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 2}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['b', 'a'] }]],
-    [['linksToGraph([["a", "b"], ["a", "c"], ["a", "b"]]).a', ['b', 'c']], ['linksToGraph([["a", "a"]])', { a: ['a'] }]],
-    [['crawlOrder([["a", "a"]], "a")', ['a']], ['crawlOrder([["s", "b"], ["s", "a"], ["a", "c"], ["b", "c"]], "s")', ['s', 'b', 'a', 'c']]],
-    [['crawlDepths([["a", "a"]], "a")', { a: 0 }], ['crawlDepths([["s", "x"], ["x", "y"], ["y", "z"], ["s", "z"]], "s").z', 1]],
-  ],
+    [
+        [
+            "indexById([{id: \"a\", n: 1}]).get(\"a\").n",
+            1
+        ],
+        [
+            "indexById([{id: 1}, {id: 2}]).get(2).id",
+            2
+        ],
+        [
+            "(() => {const id=Object.freeze({x:1}),a=Object.freeze({id}),b=Object.freeze({id:1}),c=Object.freeze({id:'1'}),input=Object.freeze([a,b,c]);const x=indexById(input),y=indexById(input);return x!==y&&x.get(id)===a&&x.get(1)===b&&x.get('1')===c&&x.size===3;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id})));const out=indexById(input);return out.size===1000&&input.every(r=>out.get(r.id)===r);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 1}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 2}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "b",
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});const before=Object.freeze([Object.freeze({id:a,runs:1}),Object.freeze({id:0,runs:1}),Object.freeze({id:'0',runs:5})]),after=Object.freeze([Object.freeze({id:b,runs:1}),Object.freeze({id:a,runs:0}),Object.freeze({id:'0',runs:5})]);const x=diffCatalog(before,after),y=diffCatalog(before,after);return x!==y&&x.added!==y.added&&x.removed!==y.removed&&x.changed!==y.changed&&x.added[0]===b&&x.removed[0]===0&&x.changed[0]===a&&x.added.length===1&&x.removed.length===1&&x.changed.length===1;})()",
+            true
+        ],
+        [
+            "(() => {const before=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id,runs:1}))),after=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i+500,runs:0})));const x=diffCatalog(before,after);return x.added.length===500&&x.removed.length===500&&x.changed.length===500&&x.added[0]===1000&&x.removed[0]===0&&x.changed[0]===500&&x.changed[499]===999;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "linksToGraph([[\"a\", \"b\"], [\"a\", \"c\"], [\"a\", \"b\"]]).a",
+            [
+                "b",
+                "c"
+            ]
+        ],
+        [
+            "linksToGraph([[\"a\", \"a\"]])",
+            {
+                "a": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','']),Object.freeze(['constructor','toString'])]);const a=linksToGraph(links),b=linksToGraph(links);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='constructor,'&&a.constructor[0]==='toString'&&a.__proto__!==b.__proto__&&!Object.hasOwn(a,'toString');})()",
+            true
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const a=linksToGraph(links);return a.s.length===2000&&a.s.every((p,i)=>p==='p'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlOrder([[\"a\", \"a\"]], \"a\")",
+            [
+                "a"
+            ]
+        ],
+        [
+            "crawlOrder([[\"s\", \"b\"], [\"s\", \"a\"], [\"a\", \"c\"], [\"b\", \"c\"]], \"s\")",
+            [
+                "s",
+                "b",
+                "a",
+                "c"
+            ]
+        ],
+        [
+            "crawlOrder(Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]),'')",
+            [
+                "",
+                "__proto__",
+                "constructor",
+                "toString"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const out=crawlOrder(links,'s');return out.length===2001&&out[0]==='s'&&out.slice(1).every((p,i)=>p==='p'+i)&&crawlOrder([],'')!==crawlOrder([],'');})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlDepths([[\"a\", \"a\"]], \"a\")",
+            {
+                "a": 0
+            }
+        ],
+        [
+            "crawlDepths([[\"s\", \"x\"], [\"x\", \"y\"], [\"y\", \"z\"], [\"s\", \"z\"]], \"s\").z",
+            1
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]);const a=crawlDepths(links,''),b=crawlDepths(links,'');return a!==b&&Object.hasOwn(a,'')&&a['']===0&&Object.hasOwn(a,'__proto__')&&a.__proto__===1&&a.constructor===2&&a.toString===3;})()",
+            true
+        ],
+        [
+            "Object.keys(crawlDepths([['s','10'],['s','2']],'s'))",
+            [
+                "2",
+                "10",
+                "s"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['p'+i,'p'+(i+1)])));const out=crawlDepths(links,'p0');return Object.keys(out).length===2001&&out.p0===0&&out.p2000===2000;})()",
+            true
+        ]
+    ]
+],
 };
 
 export const JAVASCRIPT_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries([

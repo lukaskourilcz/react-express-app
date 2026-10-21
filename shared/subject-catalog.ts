@@ -9,7 +9,7 @@ export const SUBJECT_SCOPE_CATALOG = {
     // The landing prints this as the number of questions. It counts what a
     // learner can be served from the static bank: the audit's gate applied,
     // the retired sections left out. `npm run test:launch` recomputes it.
-    questionCount: 1974,
+    questionCount: 2014,
     // Active challenges listed in the Coding section, excluding hidden tracks.
     // The launch contract recomputes this from the server's active catalogue.
     codingChallengeCount: 725,

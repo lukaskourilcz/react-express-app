@@ -25,9 +25,14 @@ export const JAVASCRIPT_DEBUG_SOLUTIONS: Record<string, CodingSolution> = {
   const mean = total / numbers.length;
   return mean;
 };`,
-    senior: `// A running mean folds each value in as it arrives, so there is no total to divide and nothing to divide by zero.
-const average = numbers => numbers.reduce((mean, number, index) => mean + (number - mean) / (index + 1), 0);`,
+    senior: `const average = numbers => numbers.length === 0
+  ? 0
+  : numbers.reduce((total, number) => total + number, 0) / numbers.length;`,
     hiddenTests: [
+      {"call": "average([10000000000000000, 1, 1])", "expected": 3333333333333333.5},
+      {"call": "average([0.1, 0.2])", "expected": 0.15000000000000002},
+      {"call": "average([-1.5, 0.5, 2.5])", "expected": 0.5},
+      {"call": "(() => { const numbers = [2, 4, 6]; const mean = average(numbers); return [mean, numbers]; })()", "expected": [4, [2, 4, 6]]},
       { call: 'average([0])', expected: 0 },
       { call: 'average([1, 2, 3, 4])', expected: 2.5 },
       { call: 'Number.isNaN(average([]))', expected: false, label: 'the empty case is a number, not NaN' },
@@ -112,6 +117,12 @@ const without = (items, unwanted) => reject(items, item => item === unwanted);`,
     senior: `// find gives undefined when nothing matches; ?? turns that into the null the contract promises.
 const firstLongerThan = (words, length) => words.find(word => word.length > length) ?? null;`,
     hiddenTests: [
+      {"call": "firstLongerThan(['','later'],-1)", "expected": "", "label": "a negative threshold can make the empty string the first answer"},
+      {"call": "firstLongerThan(['😀','ab'],1)", "expected": "😀", "label": "JavaScript string length uses UTF-16 units"},
+      {"call": "(() => {const words=['first'];Object.defineProperty(words,'1',{get(){throw new Error('read past first match');}});Object.freeze(words);return firstLongerThan(words,1);})()", "expected": "first", "label": "do not read later entries after finding the first match"},
+      {"call": "firstLongerThan(Object.freeze(['  x ','longer']),3)", "expected": "  x ", "label": "preserve exact whitespace and original order"},
+      {"call": "firstLongerThan(Object.freeze(Array(2000).fill('x'.repeat(1000))),1000)", "expected": null, "label": "maximum count and word length with no strictly longer match"},
+
       { call: 'firstLongerThan(["aa", "bbb", "cccc"], 1)', expected: 'aa' },
       { call: 'firstLongerThan(["a", "b"], 0)', expected: 'a' },
       { call: 'firstLongerThan(["abc"], 3)', expected: null, label: 'longer than means strictly longer' },

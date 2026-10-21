@@ -11,11 +11,9 @@
 // their ranks; the all-time and Today boards arrive in order, and this screen
 // numbers them so equal results share a rank, as the others' do.
 //
-// A row names a learner only if they switched that on (migration 049): the
-// server sends no name and no picture otherwise, and the row reads "Learner"
-// with the default avatar. A signed-in learner's own row follows the same
-// rule, so it shows them what everybody else sees, and the switch sits on
-// this screen as well as on the Profile.
+// The server supplies the chosen account name or shark nickname and the
+// optional photo. The Profile card owns those preferences; this screen reads
+// them only to show the learner's own row as everybody else sees it.
 //
 // A rank is always the number as text. The top three get a heavier ink ring,
 // never a fill or a medal colour, so the order reads the same without colour. Nothing
@@ -33,11 +31,10 @@ import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/Segme
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
-import { getUserProfile, useAuth } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
 import { leaderboardQuery, useLeaderboard, type LeaderboardRequest } from '../lib/queries';
 import { leaderboardVisibilityQuery, useLeaderboardVisibility } from '../lib/leaderboardVisibility';
-import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type {
   CategoryLeaderboardEntry,
@@ -144,8 +141,7 @@ function Leaderboard() {
   const compact = useMediaQuery('(max-width: 479.95px)');
   const subject = useActiveSubject();
   const { user } = useAuth();
-  const profile = getUserProfile(user);
-  const { visible: named } = useLeaderboardVisibility();
+  const { setting } = useLeaderboardVisibility();
   const topics = visibleCategoryOptionsFor();
   const selectId = useId();
 
@@ -212,9 +208,9 @@ function Leaderboard() {
 
   const rows = board ? toRows(drawTab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
-  // The pinned line is drawn here, not sent, so it applies the server's rule
-  // itself: the learner's own name and photo only while they are switched on.
-  const ownName = named === true ? profile.name?.trim() || null : null;
+  // The pinned line uses the server's private name preference. Public photo
+  // consent is not inferred from the account's avatar.
+  const ownName = setting ? (setting.mode === 'account' ? setting.accountName ?? setting.nickname : setting.nickname) : null;
   const pinned: Row | null =
     me && me.rank !== null && !viewerListed
       ? {
@@ -222,7 +218,7 @@ function Leaderboard() {
           rank: me.rank,
           name: ownName ?? t('leaderboard.anonymous'),
           anonymous: ownName === null,
-          picture: named === true ? profile.picture ?? null : null,
+          picture: setting?.picture ?? null,
           ...(drawTab === 'month' ? monthFigures(me as MonthLeaderboardMe, t) : answerFigures(me as LeaderboardMe, t)),
           isViewer: true,
         }
@@ -337,8 +333,6 @@ function Leaderboard() {
           </p>
         )}
       </div>
-
-      {user && <LeaderboardVisibilitySwitch />}
 
       {stale && board && (
         <Banner

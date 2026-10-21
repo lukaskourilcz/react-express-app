@@ -243,10 +243,9 @@ describe('the question buffer', () => {
       await next();
     }
     await screen.findByText('Run ended');
-    // Three proven strikes: the run completes.
-    await waitFor(() => expect(api.completions).toHaveLength(1));
-    expect(api.completions[0].status).toBe(200);
-    expect(api.completions[0].proofs).toHaveLength(3);
+    // Retired questions do not count, and the zero result is never saved.
+    await settle();
+    expect(api.completions).toEqual([]);
   });
 });
 
@@ -318,11 +317,11 @@ describe('the run reward', () => {
     api.completeStatus = (runToken) => (runToken === 'RUN-1' && api.completions.length === 0 ? { status: 429, code: 'rate_limited' } : { status: 200 });
     await mount();
     await start();
-    await strikeOut();
+    await strikeOut(1);
     expect(JSON.parse(localStorage.getItem(PENDING) ?? '[]')).toEqual([expect.objectContaining({ runToken: 'RUN-1' })]);
     fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
     await screen.findByText(/^Batch \d+ question \d+\?$/);
-    await strikeOut();
+    await strikeOut(1);
     await waitFor(() => expect(localStorage.getItem(PENDING)).toBeNull());
     expect(api.completions.map(({ runToken, status }) => [runToken, status])).toEqual([['RUN-1', 429], ['RUN-1', 200], ['RUN-2', 200]]);
   });
@@ -362,7 +361,7 @@ describe('the run reward', () => {
       await start();
       await strikeOut(2);
       expect(gains).toEqual([10, 10]);
-      expect(api.completions).toHaveLength(1);
+      expect(api.completions).toHaveLength(2);
     } finally {
       stop();
     }
@@ -381,7 +380,7 @@ describe('the run reward', () => {
     expect(within(items[0]).getByText('Batch 1 question 2?')).toBeInTheDocument();
     expect(within(items[0]).getByText('right')).toBeInTheDocument();
     expect(within(items[0]).getByText('Because.')).toBeInTheDocument();
-    fireEvent.click(within(items[0]).getByRole('button', { name: 'Save as Shark Card' }));
+    fireEvent.click(within(items[0]).getByRole('button', { name: 'Save as a Shark Card' }));
     await waitFor(() => expect(api.cards).toHaveLength(1));
     expect(api.cards[0]).toEqual({
       question_id: 'b1-q2', question: 'Batch 1 question 2?', category: 'javascript',
@@ -393,7 +392,7 @@ describe('the run reward', () => {
     // A new run starts with nothing missed.
     fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
     await screen.findByText(/^Batch \d+ question \d+\?$/);
-    await strikeOut();
+    await strikeOut(1);
     expect(within(await screen.findByRole('region', { name: 'Questions you missed' })).getAllByRole('listitem')).toHaveLength(3);
   });
 
@@ -459,6 +458,7 @@ describe('Play again while the last run’s refill is in flight', () => {
     await mount();
     await start();
     // After the second answer four questions are queued: RUN-1's refill goes out and hangs.
+    await answer('right'); await next();
     await strikeOutNow();
     await waitFor(() => expect(api.completions.map((one) => one.runToken)).toEqual(['RUN-1']));
     expect(api.batchRequests).toHaveLength(2);
@@ -471,6 +471,7 @@ describe('Play again while the last run’s refill is in flight', () => {
     expect(api.batchRequests).toHaveLength(3);
     expect(api.batchRequests[2].get('runToken')).toBeNull();
 
+    await answer('right'); await next();
     await strikeOutNow();
     await waitFor(() => expect(api.completions).toHaveLength(2));
     expect(api.completions[1].runToken).toBe('RUN-2');
@@ -554,45 +555,20 @@ describe('the ranked clock', () => {
   });
 });
 
-describe('the Hall of Fame name', () => {
-  const JANA = { user: { id: 'learner-1', user_metadata: { full_name: 'Jana Novakova' } }, isAuthenticated: true, isLoading: false };
-
-  it('starts empty for a learner whose name is hidden on the leaderboards', async () => {
-    api.auth = JANA;
-    api.visible = false;
-    await mount();
-    await start();
-    await strikeOutNow();
-    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
-    expect(screen.getByText('Shown publicly on the Hall of Fame.')).toBeInTheDocument();
+describe('automatic Challenge results', () => {
+  it('saves a positive guest result automatically with no name form', async () => {
+    await mount(); await start();
+    await answer('right'); await next(); await strikeOutNow(); await settle();
+    expect(api.completions).toHaveLength(1);
+    expect(api.completions[0].proofs).toHaveLength(4);
+    expect(screen.queryByLabelText('Your name')).toBeNull();
+    expect(screen.queryByText('Save your score')).toBeNull();
+    expect(api.scores).toEqual([]);
   });
-
-  it('holds the account name for a learner who shows it, once: a cleared box stays clear', async () => {
-    api.auth = JANA;
-    api.visible = true;
-    await mount();
-    await start();
-    await strikeOutNow();
-    const box = () => screen.getByLabelText('Your name') as HTMLInputElement;
-    await waitFor(() => expect(box().value).toBe('Jana Novakova'));
-    fireEvent.change(box(), { target: { value: '' } });
-    await settle();
-    expect(box().value).toBe('');
-    fireEvent.change(box(), { target: { value: 'Reef runner' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit score' }));
-    await waitFor(() => expect(api.scores).toEqual([{ name: 'Reef runner', runToken: 'RUN-1' }]));
-  });
-
-  // An account made with an email and password has no name: the box never
-  // takes the address in its place, even with the leaderboard switch on.
-  it('starts empty for an account without a Google name, whatever the switch says', async () => {
-    api.auth = { user: { id: 'learner-2', email: 'ada.lovelace@example.com', user_metadata: { email: 'ada.lovelace@example.com', email_verified: true } }, isAuthenticated: true, isLoading: false };
-    api.visible = true;
-    await mount();
-    await start();
-    await strikeOutNow();
-    await settle();
-    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
+  it('does not submit an all-strike zero score', async () => {
+    await mount(); await start(); await strikeOutNow(); await settle();
+    expect(api.completions).toEqual([]);
+    expect(localStorage.getItem(PENDING)).toBeNull();
   });
 });
 

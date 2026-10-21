@@ -19,13 +19,13 @@ export const REACT_LOOP_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["jsx"],
     title: "Heading and intro",
-    prompt: "The starter declares two constants, `title` and `intro`. Render `title` inside an h1 and `intro` inside a paragraph, placing the constants in the JSX instead of retyping their text. The page must show exactly “Deep End” as its h1 and “Practise React one list at a time.” as its paragraph.",
+    prompt: "The starter supplies `heading` and `description` values to App, defaulting to the `title` and `intro` constants. Render heading in one h1 and description in one paragraph using JSX expressions. With no props the texts are exactly “Deep End” and “Practise React one list at a time.” Changing either prop must change its text on the next render. Both inputs are plain strings of up to 2000 UTF16 code units, including empty strings, whitespace, Unicode and markup-like text. Preserve their exact text and display markup-like content literally; do not parse it as HTML. No state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const title = 'Deep End';
 const intro = 'Practise React one list at a time.';
 
-const App = () => {
+const App = ({ heading = title, description = intro } = {}) => {
 
 
   return <main>
@@ -37,28 +37,29 @@ export default App;
 `,
     skeleton: `return (
   <main>
-    <h1>{/* the title constant */}</h1>
-    <p>{/* the intro constant */}</p>
+    <h1>{/* the heading value */}</h1>
+    <p>{/* the description value */}</p>
   </main>
 );`,
     hints: ["Curly braces let you drop a JavaScript value into JSX markup."],
     approach: [
       "Return one parent element from App that holds both the heading and the paragraph.",
-      "Put the title constant inside the h1 with curly braces instead of typing the words again.",
-      "Do the same for intro inside a paragraph, so changing a constant changes the page.",
+      "Put the heading value inside the h1 with curly braces instead of typing the words again.",
+      "Put description inside the paragraph. The supplied defaults keep the original page when no props are passed.",
     ],
     verify: "tests",
     estimatedMinutes: 5,
     suite: `${SUITE_IMPORTS}
-test('renders the title constant in an h1', () => {
+test('renders the heading value in an h1', () => {
   const { container } = render(<App />);
   expect(container.querySelector('h1').textContent).toBe('Deep End');
 });
 
-test('renders the intro constant in a paragraph', () => {
+test('renders the description value in a paragraph', () => {
   const { container } = render(<App />);
   expect(container.querySelector('p').textContent).toBe('Practise React one list at a time.');
 });
+test('accepts a different heading and description',()=>{const {container}=render(<App heading="Another heading" description="Another introduction"/>);expect(container.querySelector('h1').textContent).toBe('Another heading');expect(container.querySelector('p').textContent).toBe('Another introduction');});
 `,
   },
   {
@@ -69,12 +70,14 @@ test('renders the intro constant in a paragraph', () => {
     tier: 1,
     focus: ["jsx", "map"],
     title: "Greeting component",
-    prompt: "Write a `Greeting` component that takes a `name` prop and renders a paragraph reading “Hello, <name>”. In `App`, map over the `names` array declared in the starter and render one `Greeting` per name, so the page shows three paragraphs, “Hello, Ana”, “Hello, Bo” and “Hello, Cyril”, in that order.",
+    prompt: "Export a named `Greeting` component taking a name prop and rendering one paragraph with exactly `Hello, ` followed by that name. App receives `people`, defaulting to the starter names array, and renders one greeting per name in array order. With no props it shows “Hello, Ana”, “Hello, Bo” and “Hello, Cyril”. people is a dense read-only array of at most 100 unique strings, each at most 2000 UTF16 units; it may be frozen or empty. Preserve names exactly, including empty strings, whitespace, Unicode and markup-like text, without parsing HTML or mutating input. Re-rendering with new people must update the list; an empty array renders no paragraphs. Declare Greeting outside App and use each unique name as its key. map or a loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const names = ['Ana', 'Bo', 'Cyril'];
 
-const App = () => {
+export const Greeting = ({ name }) => null;
+
+const App = ({ people = names } = {}) => {
 
 
   return <main>
@@ -84,22 +87,22 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const Greeting = ({ name }) => (
+    skeleton: `export const Greeting = ({ name }) => (
   <p>{/* the greeting for this name */}</p>
 );
 
-{names.map(name => (
+{people.map(name => (
   <Greeting key={name} name={/* the name */} />
 ))}`,
     hints: ["A component is a function that receives props and returns JSX, and map can return one of them per array element."],
     approach: [
       "Declare Greeting above App as a function that reads name from its props.",
       "Return a paragraph from Greeting that joins the fixed word to the name.",
-      "Inside App, map the names array to Greeting elements, passing each name as a prop and as the key.",
+      "Inside App, render people in order as Greeting elements with the name prop and stable unique name key; keep the supplied default.",
     ],
     verify: "tests",
     estimatedMinutes: 5,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { Greeting } from './App';")}
 test('renders one greeting paragraph per name', () => {
   const { container } = render(<App />);
   expect(container.querySelectorAll('p')).toHaveLength(3);
@@ -110,6 +113,7 @@ test('greets every name in array order', () => {
   const texts = [...container.querySelectorAll('p')].map(p => p.textContent.trim());
   expect(texts).toEqual(['Hello, Ana', 'Hello, Bo', 'Hello, Cyril']);
 });
+test('exports Greeting and accepts a different people list',()=>{const direct=render(<Greeting name="Mia"/>);expect(direct.container.querySelector('p').textContent).toBe('Hello, Mia');direct.unmount();const {container}=render(<App people={['Zoe','Ada']}/>);expect([...container.querySelectorAll('p')].map(p=>p.textContent)).toEqual(['Hello, Zoe','Hello, Ada']);});
 `,
   },
   {
@@ -120,7 +124,7 @@ test('greets every name in array order', () => {
     tier: 1,
     focus: ["jsx", "lists-keys", "map"],
     title: "Price component",
-    prompt: "Write a `Price` component that takes `amount` and `currency` props and renders a span with the amount to two decimals, a space and the currency, so `amount={3.5}` with `currency=\"EUR\"` gives “3.50 EUR”. Render the `items` declared in the starter as a UL with one LI per item holding the item name and its `Price`, keyed by the item id.",
+    prompt: "Export a named `Price` component taking amount and currency props. Render one span with exactly `amount.toFixed(2)`, one space and currency: 3.5 with EUR gives “3.50 EUR”. Use JavaScript Number.toFixed(2), including its binary floating-point rounding (2.675 gives 2.67), rather than a different money-rounding rule. App receives products, defaulting to the starter items, and renders one UL with one LI per product in order, containing its exact name and Price. Use the unique item id as its key. products is a dense read-only array of at most 100 records with unique positive integer ids, plain string names up to 2000 UTF16 units, finite numeric amounts from -1000000 through 1000000, and three-uppercase-letter currencies. Arrays/records may be frozen; do not mutate them. Preserve literal name text, including whitespace and markup-like content, without parsing HTML. An empty array renders an empty UL. New products and changed Price props must update on re-render. No state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
 const items = [
@@ -129,7 +133,9 @@ const items = [
   { id: 3, name: 'Sticker', amount: 0.99, currency: 'USD' },
 ];
 
-const App = () => {
+export const Price = ({ amount, currency }) => null;
+
+const App = ({ products = items } = {}) => {
 
 
   return <main>
@@ -139,22 +145,22 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const Price = ({ amount, currency }) => (
+    skeleton: `export const Price = ({ amount, currency }) => (
   <span>{/* amount to two decimals, a space, the currency */}</span>
 );
 
-{items.map(item => (
+{products.map(item => (
   <li key={item.id}>{item.name} <Price amount={/* ... */} currency={/* ... */} /></li>
 ))}`,
     hints: ["Props arrive as a single object argument, and toFixed(2) turns a number into a two-decimal string."],
     approach: [
       "Declare Price above App and destructure amount and currency from its props.",
       "Format the amount with toFixed(2) and join it to the currency with one space inside a span.",
-      "Map the items to list items keyed by id, each rendering the name and a Price with that item's amount and currency.",
+      "Render products in order as list items keyed by id, each with the exact name and a Price using that amount and currency.",
     ],
     verify: "tests",
     estimatedMinutes: 8,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { Price } from './App';")}
 test('renders one list item per item with its name', () => {
   const { container } = render(<App />);
   const items = [...container.querySelectorAll('ul li')];
@@ -175,6 +181,7 @@ test('renders the formatted price inside a span', () => {
   const spans = [...container.querySelectorAll('span')].map(span => span.textContent.trim());
   expect(spans).toContain('3.50 EUR');
 });
+test('exports Price and accepts other products',()=>{const direct=render(<Price amount={2.675} currency="GBP"/>);expect(direct.container.querySelector('span').textContent).toBe('2.67 GBP');direct.unmount();const {container}=render(<App products={[{id:9,name:'Tea',amount:0,currency:'JPY'}]}/>);expect(container.querySelectorAll('li')).toHaveLength(1);expect(container.querySelector('li').textContent).toContain('Tea');expect(container.querySelector('li span').textContent).toBe('0.00 JPY');});
 `,
   },
   {
@@ -185,16 +192,16 @@ test('renders the formatted price inside a span', () => {
     tier: 1,
     focus: ["lists-keys", "map"],
     title: "Keyed book list",
-    prompt: "Render the `books` declared in the starter as a UL with one LI per book reading “<title> by <author>” in array order, for example “Dune by Frank Herbert”, with a paragraph above it reading “3 books”. Each LI takes its key from the book's `id`, never from the array index.",
+    prompt: "Render App's books prop, defaulting to the starter initialBooks, as one UL with one LI per book reading exactly `<title> by <author>` in array order. Above it render one paragraph with exactly `<count> books` (use books even for one). The no-props page keeps the original three books. books is a dense read-only array of at most 100 ordinary records with unique nonempty string ids up to 80 UTF16 units, and plain string titles/authors up to 2000 units; records/array may be frozen. Preserve exact text including empty strings, spaces, Unicode and markup-like text, displaying it literally. Do not mutate input. New props update the rows/count; an empty array keeps an empty UL and `0 books`. Key rows by id: an existing book must keep its LI DOM node through reorder, renaming and insertion/removal of other books. map or a loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
-const books = [
+const initialBooks = [
   { id: 'b1', title: 'Dune', author: 'Frank Herbert' },
   { id: 'b2', title: 'Emma', author: 'Jane Austen' },
   { id: 'b3', title: 'Ubik', author: 'Philip K. Dick' },
 ];
 
-const App = () => {
+const App = ({ books = initialBooks } = {}) => {
 
 
   return <main>
@@ -229,6 +236,7 @@ test('renders every book as title by author, in order', () => {
   const items = [...container.querySelectorAll('ul li')].map(li => li.textContent.trim());
   expect(items).toEqual(['Dune by Frank Herbert', 'Emma by Jane Austen', 'Ubik by Philip K. Dick']);
 });
+test('accepts other books and an empty list',()=>{const view=render(<App books={[{id:'x',title:'Other',author:'Writer'}]}/>);expect(view.container.querySelector('li').textContent).toBe('Other by Writer');expect(view.container.querySelector('p').textContent).toBe('1 books');view.rerender(<App books={[]}/>);expect(view.container.querySelectorAll('li')).toHaveLength(0);expect(view.container.querySelector('p').textContent).toBe('0 books');});
 `,
   },
   {
@@ -239,17 +247,17 @@ test('renders every book as title by author, in order', () => {
     tier: 1,
     focus: ["lists-keys", "filter", "map"],
     title: "In-stock list",
-    prompt: "Render only the `products` declared in the starter whose `inStock` is true, as a UL with one LI per product name, plus a paragraph reading “2 of 4 in stock”. Filter the array before mapping it, so Snorkel and Wetsuit never appear, and key each LI by the product id.",
+    prompt: "App receives products, defaulting to the starter initialProducts. Render only products whose boolean inStock is true as one UL with one LI containing each exact name in input order, and one paragraph reading exactly `<available> of <total> in stock`. The default is `2 of 4 in stock`. products is a dense read-only array of at most 100 ordinary records with unique positive integer ids, plain string names up to 2000 UTF16 units and boolean inStock values; records/array may be frozen. Names can repeat across different ids. Preserve exact literal text including empty, whitespace, Unicode and markup-like values; do not parse HTML or mutate input. Changing products updates filtering and both counts; empty input keeps an empty UL and `0 of 0 in stock`. Key rows by id: rows that remain visible keep their LI DOM node through reorder, rename and filtering of other rows. filter/map or an equivalent immutable loop is fine; no state or effect is needed.",
     starter: `${STARTER_IMPORT}
 
-const products = [
+const initialProducts = [
   { id: 1, name: 'Fins', inStock: true },
   { id: 2, name: 'Snorkel', inStock: false },
   { id: 3, name: 'Mask', inStock: true },
   { id: 4, name: 'Wetsuit', inStock: false },
 ];
 
-const App = () => {
+const App = ({ products = initialProducts } = {}) => {
 
 
   return <main>
@@ -286,6 +294,7 @@ test('reports how many products are in stock', () => {
   const { container } = render(<App />);
   expect(container.textContent).toContain('2 of 4 in stock');
 });
+test('accepts changed stock and empty products',()=>{const view=render(<App products={[{id:9,name:'Tea',inStock:false},{id:2,name:'Coffee',inStock:true}]}/>);expect([...view.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(['Coffee']);expect(view.container.querySelector('p').textContent).toBe('1 of 2 in stock');view.rerender(<App products={[]}/>);expect(view.container.querySelector('p').textContent).toBe('0 of 0 in stock');});
 `,
   },
   {
@@ -296,7 +305,7 @@ test('reports how many products are in stock', () => {
     tier: 1,
     focus: ["useState", "spread", "filter"],
     title: "Guest list",
-    prompt: "Start from the `initialGuests` declared in the starter and render a text input, an Add button and a UL with one LI per guest holding the name and its own Remove button. Add appends the typed name to the end of the list and clears the input; Remove drops only that guest. Never mutate an existing array: build a new one with spread when adding and with `filter` when removing, so a fresh mount still starts from the two original guests.",
+    prompt: "Start from initialGuests and render a text input with accessible name `Guest name`, an Add button and a UL with one LI per guest holding the exact name and its own Remove button. On Add, trim the input with JavaScript trim. Ignore an empty/whitespace-only result without changing the list or clearing that input; otherwise append one guest and clear the input. Duplicate names are allowed as separate guests. Remove deletes only the clicked guest, even when names match; adding after removing every guest works. Preserve internal spaces, Unicode and markup-like text literally. Use distinct stable row ids, keep surviving rows in order, and support repeated mixed additions/removals. Build new arrays/changed records without mutating previous state or the seed; spread/filter or equivalent immutable operations are fine. Independently mounted apps and fresh mounts each start with Ana and Bo. No network, persistence or Enter-key behavior is required.",
     starter: `${STARTER_IMPORT}
 
 const initialGuests = [
@@ -329,7 +338,7 @@ const removeGuest = id => {
     approach: [
       "Keep the guests array and the input text in two separate useState values, seeding the array from initialGuests.",
       "On Add, store a new array made of the previous guests followed by an object with a fresh id and the trimmed text, then clear the text.",
-      "On Remove, store the result of filtering the previous guests by a different id, so nothing touches the original array.",
+      "On Remove, store the result of filtering the previous guests by a different id, or another immutable equivalent, so nothing touches the original array.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -373,6 +382,7 @@ test('leaves the seed array untouched for the next mount', () => {
   expect(names).toHaveLength(2);
   expect(names[0]).toContain('Ana');
 });
+test('ignores blank names and removes one duplicate',()=>{const view=render(<App/>),input=view.container.querySelector('input');fireEvent.change(input,{target:{value:'  '}});fireEvent.click(button(view.container,'Add'));expect(view.container.querySelectorAll('li')).toHaveLength(2);fireEvent.change(input,{target:{value:' Ana '}});fireEvent.click(button(view.container,'Add'));expect(view.container.querySelectorAll('li')).toHaveLength(3);fireEvent.click(view.container.querySelectorAll('li')[2].querySelector('button'));expect(view.container.querySelectorAll('li')).toHaveLength(2);expect(view.container.querySelector('li').textContent).toContain('Ana');});
 `,
   },
   {
@@ -383,7 +393,7 @@ test('leaves the seed array untouched for the next mount', () => {
     tier: 2,
     focus: ["useState", "slice", "spread"],
     title: "Insert and reorder",
-    prompt: "Render `initialStops` as an OL. Each LI shows the stop name in a span and three buttons: “Insert after”, “Up”, and “Down”. Insert a new “Stop <n>”, using the next length, directly after the selected item. Up and Down swap with a neighbour and do nothing at the edges. Build new arrays with `slice` and spread; never mutate the previous state. Inserting after Reef should give Harbour, Reef, Stop 4, Lighthouse.",
+    prompt: "Render initialStops as one OL. Each LI shows the exact stop name in a span and three buttons: Insert after, Up and Down. Insert a new `Stop <n>`, where n is the total current length plus one, directly after the selected item. Repeated insertions work at the first, middle and last positions. Up/Down swap the selected stop with its neighbour and do nothing at either edge. Preserve order for every other item and keep each surviving stop's LI DOM node through moves/insertions by using stable unique ids as keys. Build new arrays without mutating prior state or initialStops; slice/spread or equivalent immutable array operations are fine. Support repeated mixed actions and independent/fresh mounts. Initially Harbour, Reef, Lighthouse; inserting after Reef gives Harbour, Reef, Stop 4, Lighthouse.",
     starter: `${STARTER_IMPORT}
 
 const initialStops = [
@@ -457,6 +467,7 @@ test('leaves the seed array untouched for the next mount', () => {
   const second = render(<App />);
   expect(stopNames(second.container)).toEqual(['Harbour', 'Reef', 'Lighthouse']);
 });
+test('inserts after the first item using the total length',()=>{const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Insert after'));expect(stopNames(view.container)).toEqual(['Harbour','Stop 4','Reef','Lighthouse']);});
 `,
   },
   {
@@ -467,7 +478,7 @@ test('leaves the seed array untouched for the next mount', () => {
     tier: 2,
     focus: ["useState", "map", "spread"],
     title: "Toggle done with map",
-    prompt: "Render the `initialTasks` declared in the starter as a UL where every LI holds a checkbox followed by the task text, checked when `done` is true, plus a paragraph reading “1 of 3 done”. Clicking a checkbox flips only that task's `done` and keeps the list order, so ticking “Write tests” makes the paragraph read “2 of 3 done”. Update with `map`, returning a new object for the matching task and the same object for every other one, so a fresh mount starts again from the seed.",
+    prompt: "Render initialTasks as a UL where every LI holds a labelled checkbox followed by its exact task text, checked when done is true. A paragraph reads exactly `<done> of <total> done`, initially `1 of 3 done`. Clicking any checkbox flips only that task, works repeatedly in both directions and updates the count while preserving list order and surviving LI DOM nodes. Key rows by stable task id. Prefer map to create a new array and a new object for the matching task, keeping unaffected objects unchanged; equivalent immutable loops are fine. Do not mutate prior state or the seed. Independently mounted apps and fresh mounts each start from the original flags. After ticking Write tests, the count is `2 of 3 done`; ticking it again restores `1 of 3 done`.",
     starter: `${STARTER_IMPORT}
 
 const initialTasks = [
@@ -540,6 +551,7 @@ test('leaves the seed tasks untouched for the next mount', () => {
   expect(boxes(second.container).map(box => box.checked)).toEqual([false, true, false]);
   expect(second.container.textContent).toContain('1 of 3 done');
 });
+test('toggling the first task twice restores its original flag',()=>{const view=render(<App/>);fireEvent.click(boxes(view.container)[0]);fireEvent.click(boxes(view.container)[0]);expect(boxes(view.container).map(b=>b.checked)).toEqual([false,true,false]);expect(view.container.querySelector('p').textContent).toBe('1 of 3 done');});
 `,
   },
   {
@@ -550,7 +562,7 @@ test('leaves the seed tasks untouched for the next mount', () => {
     tier: 1,
     focus: ["forms", "unshift", "useState"],
     title: "Newest-first todos",
-    prompt: "Render a form with a text input and an Add button, and a UL that starts empty. Submitting adds the trimmed text as a new LI at the top of the list, above everything added earlier, and clears the input; a blank submission adds nothing. Adding “First” and then “Second” must list Second before First.",
+    prompt: "Render a form with a text input named `Todo text`, an Add submit button and a UL that starts empty. Submitting prevents page navigation, trims the input with JavaScript trim, prepends one new LI and clears the input. A blank or whitespace-only submission changes neither list nor input. Duplicate text is allowed as distinct todos. Keep exact internal spaces, Unicode and markup-like text as literal text; inputs are plain strings up to 2000 UTF16 units. Newest-first means insertion order, not alphabetical sorting. Use stable unique row ids so existing LI nodes survive later prepends. Build new arrays without mutating prior state, support repeated submissions, and keep simultaneous/fresh mounts independent. Adding First then Second lists Second before First.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -574,7 +586,7 @@ const submit = event => {
 };
 
 <form onSubmit={submit}>
-  <input value={text} onChange={event => setText(event.target.value)} />
+  <input aria-label="Todo text" value={text} onChange={event => setText(event.target.value)} />
   <button>Add</button>
 </form>`,
     hints: ["Put the new item first and spread the previous array after it, which is the immutable form of unshift."],
@@ -613,6 +625,7 @@ test('ignores a blank submission', () => {
   add(container, '   ');
   expect(container.querySelectorAll('li')).toHaveLength(0);
 });
+test('keeps duplicate texts as separate newest-first rows',()=>{const view=render(<App/>);add(view.container,' zzz ');add(view.container,'aaa');add(view.container,'zzz');expect([...view.container.querySelectorAll('li')].map(li=>li.textContent)).toEqual(['zzz','aaa','zzz']);});
 `,
   },
   {
@@ -623,7 +636,7 @@ test('ignores a blank submission', () => {
     tier: 2,
     focus: ["useMemo", "filter", "reduce"],
     title: "Memoised total",
-    prompt: "Render a search input, a UL of the `orders` declared in the starter whose name contains the query ignoring case, and a paragraph reading “Total: <sum of the matching prices>”, so an empty query shows all six with “Total: 585” and “dive” shows two with “Total: 180”. Add a button labelled “Nudge” that increments a counter shown as “Nudges: <n>”. Compute the filtered list and its total inside one `useMemo` that depends only on the query, so a re-render caused by Nudge skips that work.",
+    prompt: "Practice memoizing derived work with useMemo. Export `summarizeOrders(query)`: trim the plain string query, compare it case-insensitively with each starter order name using substring matching, and return `{matching, total}` in original order with the sum of matching prices. Query length is at most 2000 UTF16 units; an empty/whitespace query matches all six (total 585), DIVE matches two (total 180), and no match totals 0. Treat source orders and returned records as read-only. App receives optional `calculate`, defaulting to summarizeOrders, and passes it the current raw query. A supplied synchronous pure calculator has the same result shape, with at most 100 uniquely identified ordinary order records, literal string names and a numeric total; render its returned result. Render a controlled input named `Search orders`, a UL of matching names, `Total: <total>`, a Nudge button and `Nudges: <n>` starting at 0. Memoize the calculation using every reactive input it reads: query and calculate. Ordinary Nudge/parent re-renders with those inputs unchanged skip the calculation; a changed query or calculator function recomputes. Observations in this exercise use ordinary mounted updates without Strict Mode, Suspense or hot reload. Memoization is a performance tool, not persistent storage; this small list is for practice, and real performance should be measured before optimizing. Keep mounted apps independent.",
     starter: `${STARTER_IMPORT}
 
 const orders = [
@@ -635,7 +648,9 @@ const orders = [
   { id: 6, name: 'Dive knife', price: 60 },
 ];
 
-const App = () => {
+export const summarizeOrders = query => ({ matching: [], total: 0 });
+
+const App = ({ calculate = summarizeOrders } = {}) => {
 
 
   return <main>
@@ -645,23 +660,28 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [query, setQuery] = useState('');
-const [nudges, setNudges] = useState(0);
-
-const { matching, total } = useMemo(() => {
-  const matching = orders.filter(order => /* the name contains the query, ignoring case */);
+    skeleton: `export function summarizeOrders(query) {
+  const needle = query.trim().toLowerCase();
+  const matching = orders.filter(order => /* name contains needle */);
   const total = matching.reduce((sum, order) => /* add the price */, 0);
   return { matching, total };
-}, [/* only what the calculation reads */]);`,
-    hints: ["useMemo takes a function that returns the filtered list with its total, and a dependency array holding the query alone."],
+}
+
+const App = ({ calculate = summarizeOrders } = {}) => {
+  const [query, setQuery] = useState('');
+  const [nudges, setNudges] = useState(0);
+  const result = useMemo(() => /* call calculate with query */, [/* both reactive inputs */]);
+  return <main>{/* controlled search, result list/total, Nudge and its count */}</main>;
+};`,
+    hints: ["Keep a pure named summarizer outside App. The memo callback calls calculate(query), and both values belong in its dependency list."],
     approach: [
-      "Keep the query and the nudge counter in two useState values, and bind the input to the query.",
-      "Wrap the filter and the reduce in useMemo with the query as its only dependency, returning both the matching orders and their total.",
-      "Render the list, the total and the counter from those values; clicking Nudge changes only its own state.",
+      "In summarizeOrders, trim/lowercase the query, filter the fixed orders and sum matching prices without changing them.",
+      "Keep query and nudges in state. useMemo(() => calculate(query), [query, calculate]) caches only the derived work.",
+      "Render matching names and total from that result; Nudge changes only its own state. Label the input Search orders.",
     ],
     verify: "tests",
     estimatedMinutes: 12,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { summarizeOrders } from './App';")}
 const button = (root, label) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === label);
 
 test('shows every order and the full total before typing', () => {
@@ -689,6 +709,7 @@ test('counts nudges without touching the total', () => {
   expect(container.textContent).toContain('Total: 40');
   expect(container.querySelectorAll('li')).toHaveLength(1);
 });
+test('uses a supplied calculator and skips nudge-only work',()=>{let calls=0;const calculate=query=>{calls++;return {matching:[{id:9,name:query||'Custom',price:7}],total:7};};const view=render(<App calculate={calculate}/>);expect(calls).toBe(1);fireEvent.click(button(view.container,'Nudge'));expect(calls).toBe(1);fireEvent.change(view.container.querySelector('input'),{target:{value:'Other'}});expect(calls).toBe(2);expect(view.container.querySelector('li').textContent).toBe('Other');});
 `,
   },
   {
@@ -699,12 +720,16 @@ test('counts nudges without touching the total', () => {
     tier: 2,
     focus: ["events", "useState", "map"],
     title: "Stable pick handler",
-    prompt: "Render a paragraph reading “Picked: none” and one button per flavour declared in the starter, each rendered by a `FlavourButton` child wrapped in `React.memo` that receives `label` and `onPick` props. Clicking a button passes its label to `onPick` and the paragraph shows it, so clicking Mint gives “Picked: Mint”. Create `onPick` with `useCallback` and an empty dependency array, so the memoised children receive the same function on every render.",
+    prompt: "Render `Picked: none` and one button for each starter flavour, in order. The starter supplies a memoized FlavourButton outside App, receiving label and onPick. App also accepts an optional `Button` component prop, defaulting to FlavourButton; render that component for each flavour with its label and one shared onPick callback. A supplied component follows the same label/onPick interface and may be memoized. Clicking calls onPick(label) and updates the paragraph, for example `Picked: Mint`. Use useCallback with an empty dependency array: the callback only uses the stable state updater. Its function identity stays the same during ordinary parent/selection re-renders of one mounted App, allowing memoized children with unchanged props to skip work. Give mapped children stable flavour keys, keep their type outside App, and keep separate mounts independent. This is a focused identity exercise; memoization should serve an observed performance need rather than being added to every callback.",
     starter: `${STARTER_IMPORT}
 
 const flavours = ['Vanilla', 'Chocolate', 'Mint'];
 
-const App = () => {
+const FlavourButton = React.memo(({ label, onPick }) => (
+  <button onClick={() => onPick(label)}>{label}</button>
+));
+
+const App = ({ Button = FlavourButton } = {}) => {
 
 
   return <main>
@@ -714,19 +739,20 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const FlavourButton = React.memo(({ label, onPick }) => (
-  <button onClick={() => onPick(label)}>{label}</button>
-));
-
-const [picked, setPicked] = useState('none');
+    skeleton: `const [picked, setPicked] = useState('none');
 const onPick = useCallback(label => {
-  /* store the label */
-}, []);`,
+  /* store the supplied label */
+}, []);
+
+return <main>
+  <p>Picked: {picked}</p>
+  {flavours.map(label => <Button key={label} label={label} onPick={onPick} />)}
+</main>;`,
     hints: ["A function created in the component body is new on every render, while useCallback with no dependencies hands back the same one each time."],
     approach: [
       "Keep the picked label in useState starting as none, and render the paragraph from it.",
       "Wrap the handler in useCallback with an empty dependency array; it only calls the setter with the label it receives.",
-      "Declare FlavourButton outside App, wrap it in React.memo, and map the flavours to it, passing the label and the shared handler.",
+      "Keep the supplied FlavourButton outside App. Map flavours to the Button prop with stable keys, labels and the shared handler.",
     ],
     verify: "tests",
     estimatedMinutes: 12,
@@ -747,6 +773,7 @@ test('shows the label of the clicked flavour', () => {
   expect(container.textContent).toContain('Picked: Vanilla');
   expect(container.textContent).not.toContain('Picked: Mint');
 });
+test('keeps the supplied child callback stable across a selection',()=>{let latest;const Probe=({label,onPick})=>{latest=onPick;return <button onClick={()=>onPick(label)}>{label}</button>;};const view=render(<App Button={Probe}/>);const first=latest;fireEvent.click(button(view.container,'Mint'));expect(view.container.textContent).toContain('Picked: Mint');expect(latest).toBe(first);});
 `,
   },
   {
@@ -757,7 +784,7 @@ test('shows the label of the clicked flavour', () => {
     tier: 2,
     focus: ["useReducer", "push", "pop"],
     title: "Undo stack",
-    prompt: "Render a Push button, an Undo button, a paragraph reading “Depth: <n>” and a UL listing the stack from bottom to top. Manage the stack with `useReducer`: a `push` action adds “Step <n>” where n is the new depth, and a `pop` action removes the last entry. Undo is disabled while the stack is empty, so two pushes and one undo leave only “Step 1” with “Depth: 1”.",
+    prompt: "Render Push and Undo buttons, a paragraph `Depth: <n>` and a UL listing the stack from bottom to top. Manage immutable state with useReducer: push appends `Step <n>`, where n is the new current depth, and pop removes only the last entry. Undo is disabled when empty and an empty Undo click does nothing. Number by depth, not total lifetime pushes: after two pushes, Undo and another push, the list is Step 1, Step 2 again. Support repeated mixed actions beyond three steps without mutating prior state. Derive depth/disabled status from the current stack, preserve order, and keep simultaneous/fresh mounts independent. Two pushes and one Undo leave Step 1 with `Depth: 1`.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -826,6 +853,7 @@ test('undo removes the last step only', () => {
   expect(container.querySelectorAll('li')).toHaveLength(0);
   expect(button(container, 'Undo').disabled).toBe(true);
 });
+test('a push after Undo uses the new depth, not a lifetime counter',()=>{const view=render(<App/>);fireEvent.click(button(view.container,'Push'));fireEvent.click(button(view.container,'Push'));fireEvent.click(button(view.container,'Undo'));fireEvent.click(button(view.container,'Push'));expect(steps(view.container)).toEqual(['Step 1','Step 2']);});
 `,
   },
   {
@@ -836,7 +864,7 @@ test('undo removes the last step only', () => {
     tier: 2,
     focus: ["useReducer", "shift", "spread"],
     title: "Ticket queue",
-    prompt: "Render a “Take a ticket” button, a “Call next” button, a paragraph reading “Next up: <first ticket or none>”, a paragraph reading “Waiting: <n>” and a UL of the waiting tickets in order. Keep the queue in `useReducer`: an `enqueue` action appends “Ticket <n>” with n counting up from 1 for the whole session, and a `dequeue` action removes the first ticket. Call next is disabled when nobody waits, so three takes and one call leave Ticket 2 and Ticket 3 with “Next up: Ticket 2”.",
+    prompt: "Render Take a ticket and Call next buttons, paragraphs `Next up: <first ticket or none>` and `Waiting: <n>`, and a UL of waiting tickets in FIFO order. Manage immutable queue state with useReducer. Enqueue appends `Ticket <n>`, counting issued tickets from 1 for the lifetime of this mounted App, independently of how many still wait. Dequeue removes only the first ticket and never resets the issued counter. Call next is disabled when empty and does nothing there. After issuing and calling tickets 1 through 3, the next issued ticket must be Ticket 4. Support repeated interleaved actions beyond three tickets without mutating prior state; both status paragraphs and disabled state always reflect the current queue. Separate mounted apps and fresh mounts have their own numbering starting at 1; this exercise has no persistence across unmounts.",
     starter: `${STARTER_IMPORT}
 
 const App = () => {
@@ -908,6 +936,7 @@ test('calling next removes the first ticket and keeps the numbering', () => {
   expect(container.textContent).toContain('Waiting: 0');
   expect(button(container, 'Call next').disabled).toBe(true);
 });
+test('a new ticket after an empty queue continues numbering',()=>{const view=render(<App/>);fireEvent.click(button(view.container,'Take a ticket'));fireEvent.click(button(view.container,'Call next'));fireEvent.click(button(view.container,'Take a ticket'));expect(tickets(view.container)).toEqual(['Ticket 2']);});
 `,
   },
   {
@@ -918,12 +947,16 @@ test('calling next removes the first ticket and keeps the numbering', () => {
     tier: 3,
     focus: ["custom-hook", "pagination", "slice"],
     title: "usePagination hook",
-    prompt: "Write `usePagination(items, pageSize)`, a hook that keeps the current page in state and returns that page's items, the page number, the page count and functions that move forward and back. Use it in App with the `cities` declared in the starter and a page size of 3: render the page items as a UL, a paragraph reading “Page 1 of 3”, and Previous and Next buttons that are disabled on the first and the last page. Cut each page out of the array with `slice`.",
+    prompt: "Export `usePagination(items, pageSize)`, a stateful hook returning `{pageItems, page, pageCount, next, previous}`. items is a dense read-only array of up to 1000 arbitrary values; preserve each selected value/reference and do not mutate input. pageSize is a positive integer from 1 through 100. Start on page 1. pageCount is at least 1, even for empty input; an empty page contains no items. Derive each page using slice or an equivalent immutable operation. next/previous move one page and clamp at both ends, even if callers do not disable their own controls. Repeated calls in one event batch apply each step. When items or pageSize change, retain the page number when valid and otherwise clamp the stored page to the nearest valid page; later growth must not resurrect an out-of-range page. Keep hook instances independent. App receives optional items and pageSize, defaulting to the starter cities and 3, and uses the hook. App items are unique plain strings up to 2000 UTF16 units, possibly frozen or empty. Render one UL of exact literal page strings, `Page <page> of <pageCount>` and Previous/Next buttons disabled at the current ends. Defaults show Athens, Bergen, Cork and `Page 1 of 3`; empty input shows `Page 1 of 1` with both controls disabled.",
     starter: `${STARTER_IMPORT}
 
 const cities = ['Athens', 'Bergen', 'Cork', 'Dresden', 'Evora', 'Faro', 'Ghent'];
 
-const App = () => {
+export const usePagination = (items, pageSize) => ({
+  pageItems: [], page: 1, pageCount: 1, next: () => {}, previous: () => {}
+});
+
+const App = ({ items = cities, pageSize = 3 } = {}) => {
 
 
   return <main>
@@ -933,24 +966,26 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const usePagination = (items, pageSize) => {
-  const [index, setIndex] = useState(0);
-  const pageCount = Math.ceil(items.length / pageSize);
+    skeleton: `export const usePagination = (items, pageSize) => {
+  const [requested, setIndex] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const index = Math.min(requested, pageCount - 1);
+  if (requested !== index) setIndex(index);
   const pageItems = items.slice(/* start */, /* end */);
-  const next = () => setIndex(current => /* one further, never past the last page */);
-  const previous = () => setIndex(current => /* one back, never below zero */);
+  const next = () => setIndex(current => /* one further, clamped */);
+  const previous = () => setIndex(current => /* one back, clamped */);
   return { pageItems, page: index + 1, pageCount, next, previous };
 };`,
     hints: ["Multiply the zero-based page index by the page size to find where a page starts, then slice one page length from there."],
     approach: [
       "Declare usePagination outside App; inside it, hold the zero-based page index in useState.",
       "Derive the page count from the item count and the page size, and the visible items from a slice that starts at the index times the page size.",
-      "Return the visible items, the one-based page number, the page count, and next and previous functions that stay within the bounds.",
-      "Call the hook in App with the cities and 3, then render the list, the status line and the two buttons with their disabled flags.",
+      "Return visible items and numeric page/pageCount with bounded next/previous functional updates. Guard a stored-page clamp when changed inputs reduce the range, without an unconditional render update.",
+      "Call the hook with App items/pageSize, which default to cities and 3. Render exact items, the page status and current disabled flags.",
     ],
     verify: "tests",
     estimatedMinutes: 15,
-    suite: `${SUITE_IMPORTS}
+    suite: `${SUITE_IMPORTS.replace("import App from './App';", "import App, { usePagination } from './App';")}
 const button = (root, label) => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === label);
 const shown = root => [...root.querySelectorAll('li')].map(li => li.textContent.trim());
 
@@ -980,6 +1015,7 @@ test('the last page holds the remainder and disables Next', () => {
   expect(shown(container)).toEqual(['Dresden', 'Evora', 'Faro']);
   expect(button(container, 'Previous').disabled).toBe(false);
 });
+test('handles empty items and a different page size',()=>{const view=render(<App items={[]} pageSize={2}/>);expect(view.container.textContent).toContain('Page 1 of 1');expect(button(view.container,'Previous').disabled).toBe(true);expect(button(view.container,'Next').disabled).toBe(true);view.rerender(<App items={['A','B','C']} pageSize={2}/>);expect(shown(view.container)).toEqual(['A','B']);fireEvent.click(button(view.container,'Next'));expect(shown(view.container)).toEqual(['C']);});
 `,
   },
   {
@@ -990,7 +1026,7 @@ test('the last page holds the remainder and disables Next', () => {
     tier: 3,
     focus: ["lists-keys", "splice", "useState"],
     title: "Reorder with stable keys",
-    prompt: "Render `initialSteps` as an OL. Each LI shows the label plus Up and Down buttons; disable Up on the first item and Down on the last. For a move, copy the array, remove the item with `splice`, insert it one position over with another `splice`, and store the copy. Key each LI by the step’s `id`. Moving Build down should produce Plan, Test, Build, Ship while preserving the same LI element.",
+    prompt: "Render initialSteps as an OL. Each LI shows the exact label in a span plus Up and Down buttons. Disable Up on the current first row and Down on the current last row; the flags follow positions after every move. A move swaps one item with its neighbour, leaves every other relative position unchanged and does nothing past an edge. Keep stable step ids as keys so the same LI nodes follow their steps, including repeated mixed moves beyond two actions. Never mutate prior state or initialSteps. Copying then using splice, non-mutating toSpliced or an equivalent immutable operation is fine. Keep simultaneous and fresh mounts independent. Initially Plan, Build, Test, Ship; moving Build down gives Plan, Test, Build, Ship while preserving its LI node.",
     starter: `${STARTER_IMPORT}
 
 const initialSteps = [
@@ -1071,6 +1107,7 @@ test('leaves the seed array untouched for the next mount', () => {
   const second = render(<App />);
   expect(labels(second.container)).toEqual(['Plan', 'Build', 'Test', 'Ship']);
 });
+test('disabled Up follows the new first item',()=>{const view=render(<App/>);fireEvent.click(control(view.container.querySelectorAll('li')[0],'Down'));const rows=view.container.querySelectorAll('li');expect(labels(view.container)).toEqual(['Build','Plan','Test','Ship']);expect(control(rows[0],'Up').disabled).toBe(true);expect(control(rows[1],'Up').disabled).toBe(false);});
 `,
   },
 ];

@@ -8,6 +8,7 @@
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
+import { timedSupabaseFetch, withServerTiming } from './request-timing';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, getBearer, requireAuth, type AuthResult } from './auth';
 import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
@@ -23,7 +24,7 @@ const IS_PROD =
   process.env.VERCEL_ENV === 'production';
 
 // No browser session to persist or refresh in a serverless function.
-const SERVER_SIDE_AUTH = { auth: { persistSession: false, autoRefreshToken: false } } as const;
+const SERVER_SIDE_AUTH = { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: timedSupabaseFetch } } as const;
 const requestContext = new AsyncLocalStorage<{ requestId: string; memo?: Map<string, Promise<unknown>> }>();
 
 function incomingRequestId(req: VercelRequest): string {
@@ -48,7 +49,7 @@ export function withRequestContext<T>(
   // which replaces this one.
   res.setHeader('Cache-Control', 'private, no-store');
   const started = Date.now();
-  return requestContext.run({ requestId }, async () => {
+  return requestContext.run({ requestId }, () => withServerTiming(res, async () => {
     try {
       return await run();
     } catch (error) {
@@ -75,7 +76,7 @@ export function withRequestContext<T>(
         latency_ms: Date.now() - started,
       });
     }
-  }) as Promise<Awaited<T> | VercelResponse | void>;
+  })) as Promise<Awaited<T> | VercelResponse | void>;
 }
 
 /**

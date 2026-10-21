@@ -238,7 +238,9 @@
   border-radius: var(--radius-inner);
 }
 @media (max-width: 1023.98px) {
-  .ss-header-brand { margin-inline: 12px 8px; }
+  .ss-header-brand { margin-inline: 12px 8px; min-width: 0; }
+  .ss-header-brand svg { max-width: 100%; height: auto; }
+  .ss-slot > .ss-show-mobile { flex-shrink: 0; }
 }
 /* The product name keeps its spelling inside uppercase labels (kickers):
    devShark, never DEVSHARK. */
@@ -995,3 +997,14 @@
     border: 1px solid var(--color-text-primary) !important;
   }
 }
+
+/* Shared selectable technology pills: Quiz, Play and Challenge. */
+.ss-topic-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 7px 14px; border: 1px solid var(--ss-card-line); border-radius: 999px; background: var(--ss-card-bg); color: var(--color-text-primary); font: 600 var(--ss-type-compact) var(--font-family-body); cursor: pointer; }
+.ss-topic-pill[aria-pressed="true"] { border-color: var(--brand-accent); background: var(--brand-accent-soft); color: var(--brand-accent-on-soft); }
+.ss-topic-pill:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+
+.ss-topic-picker { border: 0; padding: 0; margin: 0; min-width: 0; width: 100%; }
+.ss-topic-picker legend { margin-bottom: 10px; font-weight: 600; }
+.ss-topic-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.challenge-topic-count { --ss-challenge-gold: light-dark(#946000, #f5c364); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 28px; min-height: 44px; font-size: var(--ss-type-meta); }
+.challenge-topic-count:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-element); }

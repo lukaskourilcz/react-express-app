@@ -30,6 +30,7 @@ BEGIN
     p_quest_xp => 0, p_name => 'Fastest, one wrong', p_daily_date => v_today, p_duration_ms => 10000);
   UPDATE public.user_stats SET show_on_leaderboards = TRUE WHERE user_id IN (v_slow, v_fast, v_fastest);
 
+  UPDATE public.user_handles h SET leaderboard_name_mode='account', leaderboard_account_name=u.name FROM public.user_stats u WHERE u.user_id=h.user_id AND u.name IS NOT NULL;
   -- One transaction records all three at the same instant; date them the way
   -- the day went: the slow result first, the fast one an hour later.
   UPDATE public.daily_attempts SET created_at = NOW() - INTERVAL '3 hours' WHERE user_id = v_slow;

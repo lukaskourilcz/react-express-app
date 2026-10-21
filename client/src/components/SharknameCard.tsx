@@ -28,10 +28,10 @@ import { InitialsAvatar } from './ui/InitialsAvatar';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../lib/api';
 import {
-  getHandle, getIdentity, setHandle as saveHandle, setIdentity as saveIdentity, isValidHandle,
+  getHandle, getIdentity, setHandle as saveHandle, setIdentity as saveIdentity,
   type HandleState, type Identity,
 } from '../lib/friends';
-import { generateSharkname } from '../../../shared/sharkname';
+import { generateSharkname, isAllowedSharkBase, numberedSharkname } from '../../../shared/sharkname';
 import { HANDLE_MAX_LENGTH } from '../../../shared/handles';
 import './Friends.css';
 import './SharknameCard.css';
@@ -75,7 +75,10 @@ export default function SharknameCard({ focus = false, onFocused }: { focus?: bo
 
   // A board names a learner by this card's choices (board_display_name), so
   // a saved change refetches whatever boards the tab has loaded.
-  const boardsChanged = () => void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+  const boardsChanged = () => {
+    void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['leaderboard-name'] });
+  };
 
   return (
     <section className="ss-panel sn-card" aria-labelledby={titleId}>
@@ -131,7 +134,8 @@ function SharknameEditor({
   const inputId = useId();
   const noteId = useId();
   const input = useRef<HTMLInputElement>(null);
-  const current = state.handle ?? '';
+  const current = state.base ?? state.handle ?? '';
+  const preview = (base: string) => base === current && state.handle ? state.handle : numberedSharkname(base, state.ordinal);
   const [draft, setDraft] = useState(current);
   const [flip, setFlip] = useState<{ name: string; n: number } | null>(null);
   const [rolls, setRolls] = useState(0);
@@ -164,7 +168,7 @@ function SharknameEditor({
     setFlip(null);
     setDraft(name);
     setRolls((n) => n + 1);
-    setAnnounce(t('sharkname.generated', { name }));
+    setAnnounce(t('sharkname.generated', { name: preview(name) }));
   };
 
   const roll = () => {
@@ -189,7 +193,7 @@ function SharknameEditor({
 
   const submit = async () => {
     if (rolling || saving || unchanged || locked) return;
-    if (!isValidHandle(clean)) { setError(t('friends.handleInvalid')); setTaken(null); return; }
+    if (!isAllowedSharkBase(clean)) { setError(t('sharkname.invalidBase')); setTaken(null); return; }
     setSaving(true); setError(null); setTaken(null); setSaved(null);
     try {
       const result = await saveHandle(clean);
@@ -206,7 +210,7 @@ function SharknameEditor({
     }
   };
 
-  const plate = rolling ? flip.name : clean || t('sharkname.none');
+  const plate = rolling ? preview(flip.name) : clean ? preview(clean) : t('sharkname.none');
   const dateLabel = until ? new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', year: 'numeric' }).format(until) : '';
 
   return (
@@ -215,7 +219,7 @@ function SharknameEditor({
       {/* The plate repeats the field in display type. Keyed per name so each
           one slides in; aria-hidden because the field and the status below
           already say it. */}
-      <p className="sn-plate" data-empty={!rolling && !clean ? 'true' : undefined} data-rolling={rolling ? 'true' : undefined} aria-hidden="true">
+      <p className="sn-plate" data-empty={!rolling && !clean ? 'true' : undefined} data-rolling={rolling ? 'true' : undefined} aria-hidden={!state.ordinal}>
         <span key={rolling ? `flip-${flip.n}` : `name-${rolls}`} className={rolling ? 'sn-plate__name sn-plate__name--flip' : rolls > 0 ? 'sn-plate__name sn-plate__name--land' : 'sn-plate__name'}>
           {plate}
         </span>
@@ -227,7 +231,7 @@ function SharknameEditor({
           id={inputId}
           className="fr-input sn-input"
           value={draft}
-          maxLength={HANDLE_MAX_LENGTH}
+          maxLength={HANDLE_MAX_LENGTH - 1}
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
@@ -251,6 +255,7 @@ function SharknameEditor({
         />
       </div>
       <p className="ss-sr-only" role="status" aria-live="polite">{announce}</p>
+      {state.ordinal && <p className="fr-note">{t('sharkname.numberStable')}</p>}
       {until && <p id={noteId} className="fr-note">{t('sharkname.cooldown', { date: dateLabel })}</p>}
       {saved && <p className="fr-note fr-note--ok" role="status">{t('sharkname.saved', { name: saved })}</p>}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}

@@ -28,7 +28,7 @@ export const MEDIUM_HARD_JAVASCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['regex', 'callbacks', 'objects'],
     title: 'Fill in a template',
-    prompt: 'An email template marks each blank with a name in braces: `"Hi {name}, your order {orderId} has shipped."`. Write `fill(template, values)`, returning the text with every blank replaced by its value from the `values` object. Use `replace` with a regular expression that has the `g` flag, and pass a callback that works out each replacement. A name is made of letters, digits and underscores, and spaces just inside the braces are allowed, so `{ name }` is the same blank as `{name}`. A blank whose name is not an own property of `values` stays exactly as written, braces included, so a missing value is easy to spot. The values `0`, `false` and `""` are real values: fill them in, turned into text with `String`.',
+    prompt: "An email template marks each blank with a name in braces: `\"Hi {name}, your order {orderId} has shipped.\"`. Write `fill(template, values)`, returning the text with every blank replaced by its value from the `values` object. Use `replace` with a regular expression that has the `g` flag, and pass a callback that works out each replacement. A name is made of letters, digits and underscores, and whitespace just inside the braces is allowed, so `{ name }` is the same blank as `{name}`. A blank whose name is not an own property of `values` stays exactly as written, braces included, so a missing value is easy to spot. The values `0`, `false` and `\"\"` are real values: fill them in, turned into text with `String`. Letters are ASCII A-Z/a-z; digits are 0-9. Whitespace around a name follows JavaScript \\s, including tabs and line breaks. Other characters inside a name make that blank invalid. Process matches once, left to right: inserted text is literal and is not scanned again; an inner valid blank in {{name}} is still replaced. template has at most 10000 UTF-16 code units. values is a read-only ordinary data record, possibly frozen or with a null prototype, with at most 1000 own properties; values are primitives, including null, undefined, BigInt and Symbol, with String(value) at most 1000 code units. No getters or custom conversion methods are involved. Leave values unchanged. Target: O(n²) time as a conservative backtracking/copying upper bound and O(n) output space, where n is 1 + template length + output length; this is an authored upper bound, not a universal regex-engine speed guarantee.",
     starter: `const fill = (template, values) => {
 
 };
@@ -47,7 +47,7 @@ console.log(fill("Hi {name}, your order {orderId} has shipped.", { name: "Ada", 
       'Capture the name with `(\\w+)` and allow `\\s*` on either side of it. `Object.hasOwn(values, name)` tells a value the object really holds from one it only inherits, such as `toString`.',
     ],
     approach: [
-      'Write the pattern: an opening brace, optional spaces, a captured name of `\\w` characters, optional spaces, a closing brace. Add the `g` flag so every blank is found.',
+      'Write the pattern: an opening brace, optional JavaScript whitespace, a captured ASCII name of `\\w` characters, optional JavaScript whitespace, a closing brace. Add the `g` flag so every blank is found.',
       'Call `template.replace(pattern, (blank, name) => ...)`.',
       'In the callback, return `String(values[name])` when `values` has its own property `name`, and `blank`, the text that matched, when it does not.',
     ],
@@ -70,7 +70,7 @@ console.log(fill("Hi {name}, your order {orderId} has shipped.", { name: "Ada", 
     tier: 3,
     focus: ['split', 'map', 'sort'],
     title: 'Sort version numbers',
-    prompt: 'Release tags such as `"1.10.0"` and `"1.9.2"` are whole numbers separated by dots. Sorted as text, `"1.10.0"` lands before `"1.9.2"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `"."`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `"2.1"` and `"2.1.0"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged.',
+    prompt: "Release tags such as `\"1.10.0\"` and `\"1.9.2\"` are whole numbers separated by dots. Sorted as text, `\"1.10.0\"` lands before `\"1.9.2\"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `\".\"`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `\"2.1\"` and `\"2.1.0\"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged. This is numeric dotted-version ordering, not full SemVer: no signs, suffixes or build metadata. versions is a read-only dense array of at most 1000 strings and may be frozen. Each string has 1 to 20 nonempty decimal parts of 1 to 10 ASCII digits, each worth at most 1000000000; leading zeros are allowed and do not change numeric value. These bounds make Number conversion exact. Preserve original strings and return a fresh array even for empty or single input. Target: O(n log n) time under the usual stable comparison-sort model and O(n) additional/output storage, where n is 2 + versions.length; version lengths are bounded here, and JavaScript does not guarantee native sort complexity.",
     starter: `const sortVersions = versions => {
 
 };
@@ -88,7 +88,7 @@ console.log(sortVersions(["1.10.0", "1.9.2", "1.2.10"]));
   return /* a sorted copy */;
 };`,
     hints: [
-      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. `sort` keeps equal items in their original order, but only if you really return 0 for them.',
+      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. Return 0 for equal versions so stable `sort` keeps their input order.',
       '`"1.10".split(".").map(Number)` gives `[1, 10]`. Read a part that is not there as 0 with `left[i] ?? 0`.',
     ],
     approach: [
@@ -116,7 +116,7 @@ console.log(sortVersions(["1.10.0", "1.9.2", "1.2.10"]));
     tier: 3,
     focus: ['for-of', 'strings', 'push'],
     title: 'Read one line of CSV',
-    prompt: 'In a CSV line, fields are separated by commas, and a field that holds a comma of its own is wrapped in double quotes: `Ada,"London, UK",36`. Inside quotes, a quote character is written twice, so `"say ""hi"""` is the text `say "hi"`. Write `parseCsvLine(line)`, returning the fields as an array of strings. `split(",")` cannot do this, because it also splits at the commas inside quotes. Walk the characters with `for...of` and remember whether you are inside quotes. Build the current field as you go, `push` it when you reach a comma outside quotes, and push the last field at the end. Spaces are part of a field. An empty line is one empty field, `[""]`, and two commas in a row have an empty field between them.',
+    prompt: "In a CSV line, fields are separated by commas, and a field that holds a comma of its own is wrapped in double quotes: `Ada,\"London, UK\",36`. Inside quotes, a quote character is written twice, so `\"say \"\"hi\"\"\"` is the text `say \"hi\"`. Write `parseCsvLine(line)`, returning the fields as an array of strings. `split(\",\")` cannot do this, because it also splits at the commas inside quotes. Walk the characters with `for...of` and remember whether you are inside quotes. Build the current field as you go, `push` it when you reach a comma outside quotes, and push the last field at the end. Spaces are part of a field. An empty line is one empty field, `[\"\"]`, and two commas in a row have an empty field between them. The input is one well-formed CSV record, not necessarily one physical line: CR/LF may occur inside quoted fields, and there is no record-ending newline outside a field. Each field is either unquoted (no comma, quote, CR or LF) or entirely quoted with every internal quote doubled. There are no extra characters outside a quoted field before the next separator. Invalid records need no specified behavior. line has at most 10000 UTF-16 code units, may contain Unicode, and must preserve whitespace literally. Return a fresh fields array each call. Use for...of over the original string as requested. Target: O(n²) time as a portable conservative bound for immutable field-string accumulation, where n is 1 + line.length; engines may avoid copying prefixes.",
     starter: `const parseCsvLine = line => {
 
 };
@@ -172,7 +172,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['closures', 'split', 'callbacks'],
     title: 'Lines from chunks',
-    prompt: 'A download arrives in chunks of text, and a chunk can end in the middle of a line. Write `createLineReader(onLine)`, returning an object with two methods. `push(chunk)` adds a chunk and calls `onLine(line)` once for every line the text so far has completed, in order, without its `"\\n"`. Text after the last `"\\n"` is not a line yet: keep it in the closure until a later chunk finishes it. `end()` calls `onLine` with that last piece if it is not empty. Split the text you hold on `"\\n"`: every piece but the last is a finished line, and the last piece is what you keep. Empty lines in the middle are lines too. Windows ends lines with `"\\r\\n"`, so drop a `"\\r"` from the end of a line before you report it. Each reader keeps its own text.',
+    prompt: "A download arrives in chunks of text, and a chunk can end in the middle of a line. Write `createLineReader(onLine)`, returning an object with two methods. `push(chunk)` adds a chunk and calls `onLine(line)` once for every line the text so far has completed, in order, without its `\"\\n\"`. Text after the last `\"\\n\"` is not a line yet: keep it in the closure until a later chunk finishes it. `end()` calls `onLine` with that last piece if it is not empty. Split the text you hold on `\"\\n\"`: every piece but the last is a finished line, and the last piece is what you keep. Empty lines in the middle are lines too. Windows ends lines with `\"\\r\\n\"`, so drop a `\"\\r\"` from the end of a line before you report it. Each reader keeps its own text. Split only on LF; spaces and other whitespace stay literal. Remove exactly one final CR from each reported piece, including the piece flushed by end. A nonempty remainder consisting of one CR therefore reports an empty string. end clears the remainder after reporting it; repeating end without new text reports nothing, and later push calls start a new remainder on the same reader. onLine is synchronous, returns normally, does not call the reader again and does not depend on this; invoke it with exactly one argument and ignore its result. Method return values are unspecified. Across at most 10000 push/end calls, input contains at most 10000 UTF-16 code units. Target: O(n²) time for the complete sequence under a string-copying/split cost model, where n is 1 + total input code units + method calls: many small chunks can repeatedly copy an unfinished line. Peak buffered/split space is O(n), excluding callback work.",
     starter: `const createLineReader = onLine => {
 
 };
@@ -227,7 +227,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['closures', 'push', 'pop'],
     title: 'Undo and redo',
-    prompt: 'A drawing app keeps its history in two stacks. Write `createHistory(initial)`, returning an object with four methods. `current()` returns the present value. `set(value)` makes `value` the present one. `undo()` goes back one step and `redo()` goes forward again, and both return the value that is present afterwards. Keep the past values and the undone values in two arrays inside the closure, and move values between them with `push` and `pop`. `set` pushes the old present onto the past and empties the undone values, because a new change starts a new branch. `undo` with no past, or `redo` with nothing undone, changes nothing and returns the present value. Each history is separate.',
+    prompt: "A drawing app keeps its history in two stacks. Write `createHistory(initial)`, returning an object with four methods. `current()` returns the present value. `set(value)` makes `value` the present one. `undo()` goes back one step and `redo()` goes forward again, and both return the value that is present afterwards. Keep the past values and the undone values in two arrays inside the closure, and move values between them with `push` and `pop`. `set` pushes the old present onto the past and empties the undone values, because a new change starts a new branch. `undo` with no past, or `redo` with nothing undone, changes nothing and returns the present value. Each history is separate. Values are opaque, including objects, arrays, undefined, NaN and signed zero. Preserve exact references/values without inspecting, cloning or changing them; current, undo and redo return the original stored value. set records a step even when the value is identical to the current one; its return value is unspecified. Every factory call returns a separate object/closure and supports up to 10000 total method calls. Target: O(n) time amortized over n method calls, with O(n) retained stack space, assuming amortized constant-time push/pop; clearing an undone branch may release its stored entries. Factory/current are constant work. This target describes the whole operation sequence, not a traversal inside each method.",
     starter: `const createHistory = initial => {
 
 };
@@ -284,7 +284,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['closures', 'shift', 'push', 'while'],
     title: 'Allow so many requests a minute',
-    prompt: 'An API lets each client make at most `limit` requests in any window of `windowMs` milliseconds. Write `createLimiter(limit, windowMs)`, returning an object with two methods. Both take the current time in milliseconds, and the times only ever move forward. `allow(now)` returns `true` if a request may go ahead now and `false` if it must be refused. `remaining(now)` returns how many more requests would be allowed right now, without making one. Keep the times of accepted requests in an array inside the closure, oldest first. Both methods start by removing, with `shift` in a `while` loop, every time that is `windowMs` or more before `now`. `allow` then accepts only if fewer than `limit` times are left, and records the request with `push`. A refused request is not recorded, and each limiter keeps its own times.',
+    prompt: "An API lets each client make at most `limit` requests in any window of `windowMs` milliseconds. Write `createLimiter(limit, windowMs)`, returning an object with two methods. Both take the current time in milliseconds, and the times only ever move forward. `allow(now)` returns `true` if a request may go ahead now and `false` if it must be refused. `remaining(now)` returns how many more requests would be allowed right now, without making one. Keep the times of accepted requests in an array inside the closure, oldest first. Both methods start by removing, with `shift` in a `while` loop, every time that is `windowMs` or more before `now`. `allow` then accepts only if fewer than `limit` times are left, and records the request with `push`. A refused request is not recorded, and each limiter keeps its own times. limit is an integer from 0 to 1000, windowMs an integer from 1 to 1000000000, and now a nonnegative integer at most 1000000000000. Times passed to either method are nondecreasing for each instance; equal times are allowed. limit zero always refuses and has zero remaining. Methods may be called up to 10000 times per instance; remaining may purge expired entries but never records a request. Every factory returns a separate object/state. Target: O(n²) time as a conservative upper bound for a complete sequence, where n is 1 + the call count + limit, treating front removal by shift as linear in the retained array length. Each accepted time is removed at most once; retained queue space is O(limit). This small-array exercise does not promise constant-time production rate limiting.",
     starter: `const createLimiter = (limit, windowMs) => {
 
 };
@@ -340,7 +340,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['closures', 'spread', 'recursion'],
     title: 'Curry a function',
-    prompt: 'Write `curry(fn)`, returning a version of `fn` that takes its arguments a few at a time. For `const add3 = (a, b, c) => a + b + c`, `curry(add3)(1)(2)(3)`, `curry(add3)(1, 2)(3)` and `curry(add3)(1)(2, 3)` all give 6. `fn.length` is how many parameters `fn` declares. Each call gathers the arguments so far, using rest parameters and spread syntax. Once there are at least `fn.length` of them, call `fn` with all of them and return its result. Until then, return a new function that remembers what has been gathered and goes on gathering. A function returned part of the way can be used again and again: with `const addOne = curry(add3)(1)`, `addOne(2)(3)` gives 6 and `addOne(10, 20)` gives 31.',
+    prompt: "Write `curry(fn)`, returning a version of `fn` that takes its arguments a few at a time. For `const add3 = (a, b, c) => a + b + c`, `curry(add3)(1)(2)(3)`, `curry(add3)(1, 2)(3)` and `curry(add3)(1)(2, 3)` all give 6. `fn.length` is JavaScript's expected argument count, not necessarily every parameter written in the declaration. Each call gathers the arguments so far, using rest parameters and spread syntax. Once there are at least `fn.length` of them, call `fn` with all of them and return its result. Until then, return a new function that remembers what has been gathered and goes on gathering. A function returned part of the way can be used again and again: with `const addOne = curry(add3)(1)`, `addOne(2)(3)` gives 6 and `addOne(10, 20)` gives 31. Use the normal, unchanged fn.length value, which is an integer from 0 to 100 here. Default parameters stop that count and rest parameters are not counted. fn does not depend on this. Each tested branch has at most 100 calls and at most 1000 gathered arguments; calls may contain zero arguments. Pass all gathered arguments in order, preserving exact opaque references/values without cloning or inspection; return the exact fn result or propagate its original synchronous error. Do not call fn before enough arguments have been collected; reusable partials must not share mutable argument arrays. Target: O(n) time per gathering call, excluding fn work, where n is 1 + the total argument count after that call. Repeated single-argument calls may therefore copy a quadratic total number of argument entries across a branch.",
     starter: `const curry = fn => {
 
 };
@@ -388,7 +388,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['while', 'for', 'push'],
     title: 'Read a grid in a spiral',
-    prompt: 'Write `spiral(grid)`, returning every value of a rectangular grid in spiral order: along the top row from left to right, down the right column, back along the bottom row from right to left, up the left column, and then the same again one ring further in. `spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9]])` gives `[1, 2, 3, 6, 9, 8, 7, 4, 5]`. Keep four bounds: `top`, `bottom`, `left` and `right`. A `while` loop runs while `top <= bottom` and `left <= right`. Inside it, four `for` loops each walk one side, `push` its values and move one bound inwards. Check the bounds again before the bottom row and before the left column, or a single row or column left in the middle is read twice. Leave `grid` unchanged.',
+    prompt: "Write `spiral(grid)`, returning every value of a rectangular grid in spiral order: along the top row from left to right, down the right column, back along the bottom row from right to left, up the left column, and then the same again one ring further in. `spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9]])` gives `[1, 2, 3, 6, 9, 8, 7, 4, 5]`. Keep four bounds: `top`, `bottom`, `left` and `right`. A `while` loop runs while `top <= bottom` and `left <= right`. Inside it, four `for` loops each walk one side, `push` its values and move one bound inwards. Check the bounds again before the bottom row and before the left column, or a single row or column left in the middle is read twice. Leave `grid` unchanged. grid is a read-only dense rectangular array of 0..100 rows and 0..100 columns; outer and row arrays may be frozen. Elements are opaque: preserve exact references and values, including undefined, NaN and signed zero. Do not inspect or clone elements. Return a fresh output on each call, including an empty grid or zero-width rows. Use the four bounds and side loops described above. Target: O(n) time and output space, where n is 1 + the number of rows + the total number of cells; each cell is visited once.",
     starter: `const spiral = grid => {
 
 };
@@ -439,7 +439,7 @@ console.log(spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9]]));
     tier: 3,
     focus: ['recursion', 'map'],
     title: 'Paint bucket',
-    prompt: 'A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy.',
+    prompt: "A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy. grid is a read-only dense nonempty rectangular array, possibly frozen with its rows, with 1 to 10 rows and columns. Starting indices are valid integers. Colours are literal strings of at most 50 UTF-16 code units, including the empty string, and compare by ===. Return a fresh outer array and a fresh independent copy of every row on every call, including unchanged rows and same-colour calls; the input may share row references. The small grid keeps this recursion exercise within a practical call-stack bound; larger images should use an explicit work stack. Target: O(n) time and copy/recursion space, where n is 1 + the number of cells, under bounded colour comparison.",
     starter: `const paintBucket = (grid, row, col, colour) => {
 
 };
@@ -460,7 +460,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
 };`,
     hints: [
       '`grid.map(row => [...row])` copies every row. `[...grid]` alone copies only the outer array, and the rows would still be the caller’s.',
-      'A painted cell no longer has the starting colour, so the recursion never visits it twice. That is also why a starting cell that already has `colour` must stop straight away: every cell would look unpainted forever.',
+      'Changing a cell’s colour marks it as processed, so later recursive calls stop there. Why must the same-colour case return before recursion starts?',
     ],
     approach: [
       'Copy the grid row by row with `map`, and read the starting colour from the copy.',
@@ -486,7 +486,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
     tier: 3,
     focus: ['nested-loops', 'map-set', 'every'],
     title: 'Is this sudoku valid so far?',
-    prompt: 'A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`.',
+    prompt: "A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`. Treat this as validation: return false for a non-array board, any shape other than nine dense array rows of nine own cells, or any cell that is not an integer Number from 0 to 9. This includes sparse rows, strings, null, NaN, infinities and fractions; -0 is an empty cell. Ignore unrelated array properties. Inputs have ordinary data properties without getters or proxies and may be frozen; never change them. Check shape with every over a dense index list, then reject an invalid cell before checking its row/column/box Sets. Target: O(1) time and space, because this task fixes the board at 9 by 9 and 27 Sets; invalid larger shapes are rejected from their lengths. Nested loops over this fixed board do not imply growth in a variable n.",
     starter: `const isValidSudoku = board => {
 
 };
@@ -503,7 +503,7 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const digit = board[r][c];
-      // skip an empty cell
+      // reject a missing/noninteger/out-of-range cell, then skip zero
       // a digit this row, column or box has seen already is a clash
       // otherwise remember it in all three
     }
@@ -515,9 +515,9 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
       'Each cell belongs to exactly one row Set, one column Set and one box Set. Check all three before adding the digit to any of them.',
     ],
     approach: [
-      'Return `false` unless the board has 9 rows and `every` row has 9 cells.',
+      'Use Array.isArray and length checks, then every over all nine indices to require nine own array rows of length nine.',
       'Make nine Sets each for the rows, the columns and the boxes.',
-      'Loop over every cell. Skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
+      'Loop over every cell. Reject missing own cells or values outside integer 0..9, then skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
       'Add the digit to all three Sets. If the loops finish, return `true`.',
     ],
     verify: 'tests',
@@ -540,7 +540,7 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
     tier: 3,
     focus: ['map-set', 'for-of', 'objects'],
     title: 'Build a comment thread',
-    prompt: 'Comments come from the database as a flat list of `{ id, parentId, text }` objects, where `parentId` is the `id` of the comment being replied to, or `null` for a top-level comment. Write `buildThread(comments)`, returning the top-level comments as a tree. Each node is `{ id, text, replies }`, and `replies` holds the nodes that answer it. Every list keeps the order the comments have in the input, even when a reply comes before its parent. A comment whose parent is not in the list goes to the top level, so nothing is lost. Make the nodes and a `Map` from each id to its node in one `for...of` pass, then attach each node to its parent’s `replies` in a second pass. Leave `comments` unchanged.',
+    prompt: "Comments come from the database as a flat list of `{ id, parentId, text }` objects, where `parentId` is the `id` of the comment being replied to, or `null` for a top-level comment. Write `buildThread(comments)`, returning the top-level comments as a tree. Each node is `{ id, text, replies }`, and `replies` holds the nodes that answer it. Every list keeps the order the comments have in the input, even when a reply comes before its parent. A comment whose parent is not in the list goes to the top level, so nothing is lost. Make the nodes and a `Map` from each id to its node in one `for...of` pass, then attach each node to its parent\u2019s `replies` in a second pass. Leave `comments` unchanged. Domain: comments is a read-only dense array of at most 1000 ordinary data records, possibly frozen or null-prototype. IDs are unique under Map SameValueZero equality: strings up to 1000 UTF-16 units or integers from -1000000000 through 1000000000; numeric and string IDs are distinct. parentId is null or an ID in this domain. Chains of existing parents are acyclic, with no self-parent; duplicate IDs and cycles are outside this exercise. text is a string up to 1000 UTF-16 units, including empty/Unicode text. Return fresh nodes containing only id, text and replies, with a distinct fresh replies array per node and a fresh root array per call. Preserve original id/text values, ignore extra record fields and leave all input unchanged. Target: O(n) time and result/Map space, where n is 1 + the comment count, under average constant-time Map access and bounded keys; this is the exercise cost model, not a language guarantee.",
     starter: `const buildThread = comments => {
 
 };
@@ -593,7 +593,7 @@ console.log(JSON.stringify(buildThread([
     tier: 3,
     focus: ['reduce', 'objects', 'destructuring'],
     title: 'Who owes what',
-    prompt: 'Friends log shared costs as `{ paidBy, amount, split }` objects: `amount` is in cents, and `split` lists everyone who shares the cost, which includes the payer only if the payer is listed. Write `balances(expenses)`, returning an object that maps each person to a balance in cents: everything they paid, minus their share of every cost in which they are listed. A positive balance means the group owes them. Each share is `Math.floor(amount / split.length)`, and the cents left over go one each to the first people in `split`, so the shares add up to exactly `amount`. Everyone who paid or shared appears, even at 0. Build the object with `reduce`, and destructure each expense in the callback’s parameters.',
+    prompt: "Friends log shared costs as `{ paidBy, amount, split }` objects: `amount` is in cents, and `split` lists everyone who shares the cost, which includes the payer only if the payer is listed. Write `balances(expenses)`, returning an object that maps each person to a balance in cents: everything they paid, minus their share of every cost in which they are listed. A positive balance means the group owes them. Each share is `Math.floor(amount / split.length)`, and the cents left over go one each to the first people in `split`, so the shares add up to exactly `amount`. Everyone who paid or shared appears, even at 0. Build the object with `reduce`, and destructure each expense in the callback’s parameters. expenses is a read-only dense array of at most 1000 read-only records; split is a nonempty read-only dense array of at most 100 unique, case-sensitive names. Inputs may be frozen. Names are strings of 1..100 characters, including names such as __proto__ or constructor; treat every name as an own data key without inherited-property interference. amount is an integer from 0 to 1000000000. Return a fresh result object each call, with integer balances and no input changes. Its prototype and key enumeration order are not part of the result contract. Target: O(n) time under the bounded-key access model, where n is 1 + expenses.length + the sum of all split lengths; maximum aggregate cents remain safely representable.",
     starter: `const balances = expenses => {
 
 };
@@ -608,13 +608,13 @@ console.log(balances([{ paidBy: "Ada", amount: 3000, split: ["Ada", "Ben", "Cy"]
     const leftOver = /* the cents that do not divide evenly */;
     // everyone in split loses their share, and the first leftOver people one cent more
     return totals;
-  }, {});`,
+  }, Object.create(null));`,
     hints: [
-      'Start the accumulator at `{}` and return it from every call of the callback. A person you have not seen yet has no balance, so read it as `(totals[name] ?? 0)`.',
+      'Start the accumulator at `Object.create(null)` so names cannot collide with inherited keys and return it from every call of the callback. A person you have not seen yet has no balance, so read it as `(totals[name] ?? 0)`.',
       'For 1000 cents between three people, `Math.floor(1000 / 3)` is 333 and `1000 % 3` is 1 left over, so the first person pays 334.',
     ],
     approach: [
-      'Call `reduce` on the expenses with `{}` as the starting value, and write the callback as `(totals, { paidBy, amount, split }) => ...`.',
+      'Call `reduce` on the expenses with `Object.create(null)` as the starting value, and write the callback as `(totals, { paidBy, amount, split }) => ...`.',
       'Add `amount` to the payer’s balance.',
       'Work out the equal share and the cents left over. Go through `split` with its index, and take the share from each person, plus one cent while the index is below the number left over.',
       'Return `totals` from the callback, and `reduce` returns the finished object.',
@@ -638,7 +638,7 @@ console.log(balances([{ paidBy: "Ada", amount: 3000, split: ["Ada", "Ben", "Cy"]
     tier: 3,
     focus: ['recursion', 'objects', 'every'],
     title: 'Equal all the way down',
-    prompt: '`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `"0"` and `"1"`, and `NaN` equals `NaN`.',
+    prompt: "`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `\"0\"` and `\"1\"`, and `NaN` equals `NaN`. Arrays compare length and every numeric position only; a missing own index counts as undefined, and extra named/symbol array properties are ignored. Build a dense list of indices before every, because every on a sparse array skips holes. Records compare own enumerable string keys only: ignore nonenumerable/symbol keys and the difference between Object.prototype and null prototypes. Inputs are read-only data without getters, functions, exotic objects or cycles; arrays may be sparse/frozen, and ordinary records have a default or null prototype. Shared subtrees are allowed, but unfolding each input has at most 10000 container entries, depth at most 100 and at most 100000 string-value code units; key lengths are at most 100. Object.is means signed zeros differ while NaN matches itself. Target: O(n) time under bounded-key access and O(n) worst-case key/index/recursion storage, where n is 1 + expanded entry occurrences + string-value code units across both input trees, including repeated shared occurrences.",
     starter: `const deepEqual = (a, b) => {
 
 };
@@ -650,17 +650,17 @@ console.log(deepEqual({ a: [1, 2] }, { a: [1, 2] }));
   if (Object.is(a, b)) return true;
   // both must be objects, and not null, to be equal from here on
   // an array only equals an array
-  // arrays: the same length, and every item equal
+  // arrays: same length, then every numeric index (including holes) equal
   // objects: the same number of keys, and every key of a in b with an equal value
 };`,
     hints: [
-      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` is the only reliable way to tell an array from an object.',
+      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` reliably distinguishes arrays from ordinary records here.',
       'Comparing key counts is not enough on its own: `{ a: undefined }` and `{ b: undefined }` have one key each. Check that every key of `a` is an own key of `b` with `Object.hasOwn`.',
     ],
     approach: [
       'Return `true` when `Object.is(a, b)`. That covers numbers, strings, booleans, `null`, `undefined`, `NaN` and the same object twice.',
       'Return `false` unless both are objects and neither is `null`, and unless both are arrays or neither is.',
-      'For arrays, compare the lengths, then use `every` to call `deepEqual` on the items at each index.',
+      'For arrays, compare lengths, create every index with Array.from({ length: a.length }, (_, i) => i), then use every to compare own values at those indices; a hole reads undefined.',
       'For objects, compare the number of keys, then use `every` over the keys of `a`: each must be an own key of `b` whose value is `deepEqual` to `a`’s.',
     ],
     verify: 'tests',
@@ -682,7 +682,7 @@ console.log(deepEqual({ a: [1, 2] }, { a: [1, 2] }));
     tier: 3,
     focus: ['async-await', 'slice', 'promises'],
     title: 'Upload in batches',
-    prompt: 'Uploading 1,000 photos at once overloads the server, and uploading them one by one is slow. Write an `async` function `inBatches(items, size, worker)` that calls `worker(item)` for every item, `size` items at a time. `worker` returns a promise. Start a whole batch together, wait with `Promise.all` until every item in it has finished, and only then start the next batch. Cut the batches with `slice`. Resolve with all the results, in the same order as `items`. If a worker rejects, `inBatches` rejects with the same error and starts no further batch.',
+    prompt: "Uploading 1,000 photos at once overloads the server, and uploading them one by one is slow. Write an `async` function `inBatches(items, size, worker)` that calls `worker(item)` for every item, `size` items at a time. `worker` returns a promise. Start a whole batch together, wait with `Promise.all` until every item in it has finished, and only then start the next batch. Cut the batches with `slice`. Resolve with all the results, in the same order as `items`. If a worker rejects, `inBatches` rejects with the same error and starts no further batch. items is a read-only dense array of at most 1000 opaque nonthenable values, possibly frozen. Capture its initial membership before invoking any worker; later caller edits must not affect this run. size is an integer from 1 through 1000. worker is an ordinary function that always returns an ordinary native Promise, without throwing synchronously; call it with exactly the item as its only argument. Invoke every worker in a batch before awaiting that batch. Preserve the exact fulfilled values and first observed rejection reason/reference, including undefined, functions, Symbols, NaN and -0. A batch rejection settles the result without waiting for other pending workers in that batch, including one that never settles; already started producers are not cancelled. Start no later batch after failure. Return a new native Promise with a fresh dense result array in original item order. Target: O(n) time and retained snapshot/result/handler space across the run, where n is 1 + the initial item count, excluding worker work, waiting and host scheduling.",
     starter: `const inBatches = async (items, size, worker) => {
 
 };
@@ -692,8 +692,9 @@ const upload = photo => new Promise(done => setTimeout(() => done(photo + " uplo
 inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
 `,
     skeleton: `const inBatches = async (items, size, worker) => {
+  const input = items.slice(); // capture before workers start
   const results = [];
-  for (let start = 0; start < items.length; start += size) {
+  for (let start = 0; start < input.length; start += size) {
     const batch = /* size items from start */;
     // start every item of the batch, then wait for all of them
     // add the batch's results
@@ -704,12 +705,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
       '`await` inside a `for` loop pauses the loop, so the next batch cannot start before the current one has finished.',
       '`Promise.all` resolves with the results in the order of the promises you gave it, whatever order they finish in, and it rejects as soon as one of them rejects.',
     ],
-    approach: [
-      'Loop over the start index of each batch, in steps of `size`.',
-      'Cut the batch with `items.slice(start, start + size)` and call `worker` on each item, which starts them all.',
-      'Await `Promise.all` of those promises and push its results onto the result list.',
-      'Return the list. An error thrown by `await` leaves the loop, so no later batch starts.',
-    ],
+    approach: ["Capture a shallow items.slice() snapshot before starting a worker.", "Loop over snapshot batch starts in steps of size and cut each batch with slice.", "Call worker once per item with only that item, await Promise.all for the batch, and append its values in order.", "Return the list. A rejection leaves the loop without starting a later batch or cancelling workers already started."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -728,7 +724,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
     tier: 3,
     focus: ['promises', 'closures', 'async-await'],
     title: 'Only the newest call answers',
-    prompt: 'A search box calls an async `search(query)` on every keystroke, and a slow answer to an old query can arrive after the answer to a newer one. Write `latestOnly(search)`, returning a function `run(...args)` that calls `search(...args)` straight away and returns a promise. If no other call of `run` has started by the time that search settles, the promise resolves to `{ stale: false, value }` with the search’s result, or rejects with its error if the search failed. If a later call has started in the meantime, the answer is stale: the promise resolves to `{ stale: true }`, whether the search succeeded or failed. Count the calls in the closure, and compare the count when each one settles. Two wrapped functions keep separate counts.',
+    prompt: "A search box calls an async `search(query)` on every keystroke, and a slow answer to an old query can arrive after the answer to a newer one. Write `latestOnly(search)`, returning a function `run(...args)` that calls `search(...args)` straight away and returns a promise. If no other call of `run` has started when the wrapper handles that search result, the promise resolves to `{ stale: false, value }` with the search\u2019s result, or rejects with its error if the search failed. If a later call has started in the meantime, the answer is stale: the promise resolves to `{ stale: true }`, whether the search succeeded or failed. Count the calls in the closure, and compare the count when handling each result or error. Two wrapped functions keep separate counts. search is a supplied ordinary function that returns an opaque nonthenable value or ordinary native Promise, or throws synchronously. It does not depend on this. Forward exactly the original arguments in order, without cloning or invoking values; each call has at most 20 arguments and each wrapper at most 10000 calls. Register the call before invoking search, including if search synchronously starts another run. Freshness is decided when the wrapper handles the result or error, not when the producer first settles: two back-to-back runs over already fulfilled promises make the first stale. A completed outcome never changes retroactively. Fresh values and rejection reasons retain exact identity, including functions, Symbols, undefined, NaN and -0. Stale outcomes have only their own stale: true property, without a value/error field. Every run returns a new native Promise, including a synchronous search throw. Separate wrappers have independent state. Creating the wrapper takes constant work. Target: O(n) time and retained argument/handler space per run, where n is 1 + that call's argument count, excluding search work, waiting and host scheduling.",
     starter: `const latestOnly = search => {
 
 };
@@ -752,7 +748,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
   };
 };`,
     hints: [
-      'Give each call a number from a counter that lives in the closure: `const mine = ++started`. When the search settles, the call is the newest one exactly when `mine === started`.',
+      'Give each call a number from a counter that lives in the closure: `const mine = ++started`. When the wrapper handles the search outcome, the call is the newest one exactly when `mine === started`.',
       'Put the `await` inside `try`. In `catch`, return `{ stale: true }` for an old call, and `throw error` again for the newest one.',
     ],
     approach: [
@@ -782,7 +778,7 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
     tier: 4,
     focus: ['sort', 'while', 'two-pointer', 'objects'],
     title: 'Settle up after a trip',
-    prompt: 'After a trip, `balances` maps each person to a balance in cents: positive means the group owes them, negative means they owe the group, and the balances add up to 0. Write `settleUp(balances)`, returning the payments that settle every debt, as `{ from, to, amount }` objects in the order they are made. Follow one greedy rule, so everyone gets the same answer. Put the people who owe in one list and the people who are owed in another, leave out anyone at 0, and `sort` each list from the largest amount to the smallest, breaking a tie by name from A to Z. Then walk both lists with two indexes in a `while` loop: the current debtor pays the current creditor the smaller of what one owes and the other is owed. Whoever that brings to 0 is done, and their index moves on. Whoever still has an amount left stays current, even if someone later in the list now has more. Leave `balances` unchanged.',
+    prompt: "After a trip, `balances` maps each person to a balance in cents: positive means the group owes them, negative means they owe the group, and the balances add up to 0. Write `settleUp(balances)`, returning the payments that settle every debt, as `{ from, to, amount }` objects in the order they are made. Follow one greedy rule, so everyone gets the same answer. Put the people who owe in one list and the people who are owed in another, leave out anyone at 0, and `sort` each list from the largest amount to the smallest, breaking a tie by name from A to Z. Then walk both lists with two indexes in a `while` loop: the current debtor pays the current creditor the smaller of what one owes and the other is owed. Whoever that brings to 0 is done, and their index moves on. Whoever still has an amount left stays current, even if someone later in the list now has more. Leave `balances` unchanged. balances is an ordinary or null-prototype record with at most 2000 own enumerable string-keyed data properties. Only these properties count; ignore symbol and non-enumerable keys. Names are literal strings of at most 128 UTF-16 units, including empty names, Unicode and prototype-like names. Ties use JavaScript string < and > ordering, not locale collation. Balances are primitive integer cents in [-1000000000000,1000000000000], summing exactly to zero; these bounds keep every total and payment safe. Either zero sign means no debt. The input may be frozen. Return a fresh mutable payment array and fresh mutable payment records. Target: O(n log n) time and O(n) extra space, where n is the number of counted people; use log(max(2,n)). Name lengths are bounded. Advance indices instead of shifting the remaining arrays.",
     starter: `const settleUp = balances => {
 
 };
@@ -819,6 +815,7 @@ console.log(settleUp({ Ada: 1400, Ben: -400, Cy: -1000 }));
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
+      {"call": "settleUp({A:4294967296,B:-4294967296})", "expected": [{"from": "B", "to": "A", "amount": 4294967296}], "label": "cents do not wrap at 32 bits"},
       { call: 'settleUp({ Ada: 1400, Ben: -400, Cy: -1000 })', expected: [{ from: 'Cy', to: 'Ada', amount: 1000 }, { from: 'Ben', to: 'Ada', amount: 400 }] },
       { call: 'settleUp({ a: 500, b: 300, c: -600, d: -200 })', expected: [{ from: 'c', to: 'a', amount: 500 }, { from: 'c', to: 'b', amount: 100 }, { from: 'd', to: 'b', amount: 200 }], label: 'one debtor pays two creditors' },
       { call: 'settleUp({ Zoe: 100, Amy: 100, Max: -100, Bob: -100 })', expected: [{ from: 'Bob', to: 'Amy', amount: 100 }, { from: 'Max', to: 'Zoe', amount: 100 }], label: 'equal amounts go in name order', edge: true },
@@ -835,7 +832,7 @@ console.log(settleUp({ Ada: 1400, Ben: -400, Cy: -1000 }));
     tier: 4,
     focus: ['nested-loops', 'while', 'push'],
     title: 'What changed between two versions',
-    prompt: 'Write `diffLines(before, after)`, comparing two arrays of lines and returning the edit that turns the first into the second, as a list of `[mark, line]` pairs: `" "` for a line both keep, `"-"` for a line only `before` has and `"+"` for a line only `after` has. Read in order, the `" "` and `"-"` lines spell out `before`, and the `" "` and `"+"` lines spell out `after`. Keep as many lines as possible: the kept lines must be a longest common subsequence of the two arrays. Fill a table with two nested loops, where `table[i][j]` is the length of the longest common subsequence of `before.slice(i)` and `after.slice(j)`, working backwards from the ends. Then walk forwards from `[0, 0]` in a `while` loop and `push` one pair per step. Keep the line when both sides match. Otherwise remove the line from `before` if that keeps the table’s best length, and add the line from `after` if it does not. Removing wins a tie, so a changed line shows its `-` before its `+`.',
+    prompt: "Write `diffLines(before, after)`, comparing two arrays of lines and returning the edit that turns the first into the second, as a list of `[mark, line]` pairs: `\" \"` for a line both keep, `\"-\"` for a line only `before` has and `\"+\"` for a line only `after` has. Read in order, the `\" \"` and `\"-\"` lines spell out `before`, and the `\" \"` and `\"+\"` lines spell out `after`. Keep as many lines as possible: the kept lines must be a longest common subsequence of the two arrays. Fill a table with two nested loops, where `table[i][j]` is the length of the longest common subsequence of `before.slice(i)` and `after.slice(j)`, working backwards from the ends. Then walk forwards from `[0, 0]` in a `while` loop and `push` one pair per step. Keep the line when both sides match. Otherwise remove the line from `before` if that keeps the table\u2019s best length, and add the line from `after` if it does not. Removing wins a tie, so a changed line shows its `-` before its `+`. Inputs are dense readonly arrays of at most 200 primitive strings each, with at most 128 UTF-16 units per string, possibly frozen. Empty, whitespace-only, mixed-case, Unicode and embedded-newline strings are literal lines: compare with === without trimming, splitting, case folding or Unicode normalization. Return a fresh mutable outer array and fresh independent mutable two-entry pair arrays; never mutate either input or reuse another call's state. Keep the exact remove-first tie rule, not just any maximal LCS. Target: O(n*m) time and O(n*m) extra space, n=before.length+1,m=after.length+1, using bounded-length comparisons. A flat typed table is also valid.",
     starter: `const diffLines = (before, after) => {
 
 };
@@ -873,6 +870,7 @@ console.log(diffLines(["a", "b", "c"], ["a", "c", "d"]));
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      { call: "diffLines(['e\\u0301'],['\u00e9'])", expected: [["-", "e\u0301"], ["+", "\u00e9"]], edge: true },
       { call: 'diffLines(["a", "b", "c"], ["a", "c", "d"])', expected: [[' ', 'a'], ['-', 'b'], [' ', 'c'], ['+', 'd']] },
       { call: '(() => { const before = ["title", "intro", "body", "outro", "sign-off"]; const after = ["title", "body", "extra", "outro", "thanks", "sign-off"]; const edit = diffLines(before, after); const kept = edit.filter(([mark]) => mark === " ").length; return [kept, edit.filter(([mark]) => mark !== "+").map(([, line]) => line), edit.filter(([mark]) => mark !== "-").map(([, line]) => line)]; })()', expected: [4, ['title', 'intro', 'body', 'outro', 'sign-off'], ['title', 'body', 'extra', 'outro', 'thanks', 'sign-off']], label: 'the edit spells out both versions and keeps the most lines' },
       { call: 'diffLines(["same"], ["same"])', expected: [[' ', 'same']], label: 'nothing changed' },
@@ -889,7 +887,8 @@ console.log(diffLines(["a", "b", "c"], ["a", "c", "d"]));
     tier: 4,
     focus: ['recursion', 'nested-loops', 'some'],
     title: 'Find a word in a letter grid',
-    prompt: 'In a word search, a word is traced through a grid of letters by stepping from each letter to the next one up, down, left or right, never diagonally, and without using any cell twice. Write `findWord(grid, word)`, where `grid` is an array of equal-length strings, one per row. Return the `[row, column]` cells that spell the word, in order, or `null` if it cannot be traced. Try every cell as a start with two nested loops, row by row from the top left. From each start, follow the word with a recursive function that marks its cell as used, tries the neighbours in the order up, right, down, left with `some`, and unmarks the cell again if no path from it works, so that another path can use it. Return the first path found in that order. An empty word gives `[]`.',
+    prompt: 'In a word search, a word is traced through a grid of letters by stepping from each letter to the next one up, down, left or right, never diagonally, and without using any cell twice. Write `findWord(grid, word)`, where `grid` is an array of equal-length strings, one per row. Return the `[row, column]` cells that spell the word, in order, or `null` if it cannot be traced. Try every cell as a start with two nested loops, row by row from the top left. From each start, follow the word with a recursive function that marks its cell as used, tries the neighbours in the order up, right, down, left with `some`, and unmarks the cell again if no path from it works, so that another path can use it. Return the first path found in that order. An empty word gives `[]`. Inputs are a dense, possibly readonly array of at most 8 rows and 8 columns, with equal row lengths, and a primitive word of at most 8 UTF16 code units. Empty grids or zero columns have no nonempty path. A cell is one UTF16 code unit (including a surrogate half); comparisons are literal and case-sensitive, without Unicode normalization. Do not modify grid. Return a fresh mutable outer array and distinct mutable coordinate pairs on each successful call, including a fresh [] for an empty word. The recursive/some approach is a teaching suggestion; equivalent code that returns the same first path is accepted. Target: O(r*c*4^L*L) time and O(r*c+L^2) space, where r and c are row and column counts plus one and L is word length plus one. This conservative bound includes four-way search and path copying/scanning in the senior board. Marked-cell implementations can avoid the L time factor and use O(r*c+L) space.',
+
     starter: `const findWord = (grid, word) => {
 
 };
@@ -925,6 +924,7 @@ const findWord = (grid, word) => {
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "findWord(['AB','BA'],'ABA')", "expected": [[0, 0], [0, 1], [1, 1]], "label": "choose right before down when both paths work"},
       { call: 'findWord(["ABCE", "SFCS", "ADEE"], "ABCCED")', expected: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1]] },
       { call: 'findWord(["ABCE", "SFCS", "ADEE"], "SEE")', expected: [[1, 3], [2, 3], [2, 2]], label: 'a dead end on the way' },
       { call: 'findWord(["XY", "ZX"], "X")', expected: [[0, 0]], label: 'starts are tried from the top left' },
@@ -941,7 +941,7 @@ const findWord = (grid, word) => {
     tier: 4,
     focus: ['recursion', 'map-set', 'sort'],
     title: 'Every arrangement, once',
-    prompt: 'Write `arrangements(letters)`, returning every different order of the letters of a string, each order once, sorted the way `sort` orders strings when no compare function is given. `arrangements("aab")` gives `["aab", "aba", "baa"]`: the two `a`s are the same letter, so swapping them makes nothing new. Build the orders recursively: an order is one of the letters followed by an order of the letters that are left. Count each letter in a `Map`, so each position picks each different letter once, taking one from its count before going deeper and putting it back afterwards. Never make a repeat and remove it later: for `"aaaaaaaaab"`, making every order first would mean 3,628,800 of them to find 10. The empty string has one order, `""`.',
+    prompt: 'Write `arrangements(letters)`, returning every different order of the letters of a string, each order once, sorted the way `sort` orders strings when no compare function is given. `arrangements("aab")` gives `["aab", "aba", "baa"]`: the two `a`s are the same letter, so swapping them makes nothing new. Build the orders recursively: an order is one of the letters followed by an order of the letters that are left. Count each letter in a `Map`, so each position picks each different letter once, taking one from its count before going deeper and putting it back afterwards. Never make a repeat and remove it later: for `"aaaaaaaaab"`, making every order first would mean 3,628,800 of them to find 10. The empty string has one order, `""`. letters is a well-formed primitive Unicode string of at most 10 code points (use Array.from or for-of, so an emoji is one letter). Do not normalize Unicode, fold case or trim whitespace. There are at most 10000 distinct output strings. Return a fresh mutable array on each call, including the empty case, in default UTF16 string-sort order. Equivalent duplicate-avoiding algorithms are accepted; Map recursion is the teaching approach, not a required syntax check. Target: O(n^2*p*log(p)) time and O(n^2+n*p) space, a conservative upper bound including recursive path copies and comparison sorting, where n is code-point count plus one and p is distinct output count plus two. A count-based traversal can improve these factors.',
     starter: `const arrangements = letters => {
 
 };
@@ -973,6 +973,7 @@ console.log(arrangements("aab"));
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
+      {"call": "arrangements(\"\ud83d\ude00a\")", "expected": ["a\ud83d\ude00", "\ud83d\ude00a"], "label": "one code point can occupy two UTF16 units"},
       { call: 'arrangements("abc")', expected: ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'] },
       { call: 'arrangements("aab")', expected: ['aab', 'aba', 'baa'], label: 'repeated letters make no repeats' },
       { call: 'arrangements("abab")', expected: ['aabb', 'abab', 'abba', 'baab', 'baba', 'bbaa'] },
@@ -989,7 +990,7 @@ console.log(arrangements("aab"));
     tier: 4,
     focus: ['strings', 'split', 'push'],
     title: 'Justify a paragraph',
-    prompt: 'Write `justify(text, width)`, laying the words of `text` out in lines of exactly `width` characters, like a newspaper column. Split the text into words on runs of whitespace. Fill each line greedily: take as many words as fit with one space between each pair. Then widen the line to `width` by adding spaces between its words, as evenly as possible; when they cannot be even, the gaps on the left get one more. A line with a single word, and the last line, are not widened: they keep single spaces and are padded with spaces at the end up to `width`. A word longer than `width` sits alone on its line with no padding. Empty text gives `[]`.',
+    prompt: "Write `justify(text, width)`, laying the words of `text` out in lines of exactly `width` characters, like a newspaper column. Split the text into words on runs of whitespace. Fill each line greedily: take as many words as fit with one space between each pair. Then widen the line to `width` by adding spaces between its words, as evenly as possible; when they cannot be even, the gaps on the left get one more. A line with a single word, and the last line, are not widened: they keep single spaces and are padded with spaces at the end up to `width`. A word longer than `width` sits alone on its line with no padding. Empty text gives `[]`. text is primitive; let n = text.length, with n <= 20000 UTF-16 code units; width is a primitive integer in 1..20000. Width and word lengths count UTF-16 units, so an emoji uses two; this exercise does not measure rendered glyph widths. Whitespace means the JavaScript /\\s+/ character set. Preserve every other unit exactly, including combining marks and lone surrogates, without normalization. Return a fresh mutable array on every call, including whitespace-only input. Build each line from chunks and join once rather than repeatedly copying its growing prefix. Target: O(n + L) time and O(n + L) space, where L is the total UTF-16 length of the returned lines.",
     starter: `const justify = (text, width) => {
 
 };
@@ -1022,6 +1023,7 @@ console.log(justify("This is an example of text justification.", 16));
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "justify(\"e\\u0301 x\",2)", "expected": ["e\u0301", "x "], "label": "width counts literal UTF-16 units"},
       { call: 'justify("This is an example of text justification.", 16)', expected: ['This    is    an', 'example  of text', 'justification.  '] },
       { call: 'justify("What must be acknowledgment shall be", 16)', expected: ['What   must   be', 'acknowledgment  ', 'shall be        '], label: 'a single word on a line is padded at the end' },
       { call: 'justify("aa b c dd eeee", 10)', expected: ['aa  b c dd', 'eeee      '], label: 'the left gaps take the extra spaces' },
@@ -1040,7 +1042,7 @@ console.log(justify("This is an example of text justification.", 16));
     tier: 4,
     focus: ['split', 'every', 'sort', 'objects'],
     title: 'Match a URL to a route',
-    prompt: 'A router picks the page that answers a URL. Write `matchRoute(routes, path)`, where each route is a pattern such as `"/users/:id/posts/:postId"`. Split patterns and paths on `"/"` into segments; a trailing slash on a path is ignored, so `"/about/"` is `"/about"`. A segment that starts with `:` matches any one segment that is not empty and records it under that name. A final `*` matches the rest of the path, one segment or more, and records it as `rest`, joined with `/`. Any other segment must match exactly. Return `{ route, params }` for the best matching route, or `null` if none matches. When several routes match, the most specific wins: compare their segments from the left, where an exact segment beats a `:name` segment and a `:name` segment beats `*`, and the first difference decides. Routes that are equally specific keep their order, so the one listed first wins. Test each pattern with `every`, `sort` the matches with a compare function, and leave `routes` unchanged.',
+    prompt: "A router picks the page that answers a URL. Write `matchRoute(routes, path)`, where each route is a pattern such as `\"/users/:id/posts/:postId\"`. Split patterns and paths on `\"/\"` into segments; a trailing slash on a path is ignored, so `\"/about/\"` is `\"/about\"`. A segment that starts with `:` matches any one segment that is not empty and records it under that name. A final `*` matches the rest of the path, one segment or more, and records it as `rest`, joined with `/`. Any other segment must match exactly. Return `{ route, params }` for the best matching route, or `null` if none matches. When several routes match, the most specific wins: compare their segments from the left, where an exact segment beats a `:name` segment and a `:name` segment beats `*`, and the first difference decides. Routes that are equally specific keep their order, so the one listed first wins. Test each pattern with `every`, `sort` the matches with a compare function, and leave `routes` unchanged. Inputs are a dense ordinary array of at most 1000 primitive route strings (at most 100000 UTF-16 units altogether) and one primitive path string. Each string starts with / and has at most 1000 UTF-16 units. Here n is the route count and m the largest actual string length across routes and path. Remove exactly one final empty segment from both patterns and path, including / becoming [\"\"]. Keep internal empty segments. A wildcard needs at least one remaining segment, which may be empty; a named parameter still requires a nonempty segment. Parameter names are nonempty ASCII identifiers [A-Za-z_][A-Za-z0-9_]*, including __proto__ and constructor; * appears only as a final whole segment. Repeated parameter names keep the last value; wildcard rest overwrites an earlier rest parameter. Other text is literal: do not decode percent escapes, parse a query string, normalize Unicode or change case. The array may be frozen; preserve its values/order. Return fresh result/params records with every captured name as an own data property; a null-prototype params record is valid. Target: O(m + n m log n) time and O(m + n m) extra space in the comparison-sort model; use log(max(2,n)). Scanning for the best match without sorting is valid too.",
     starter: `const matchRoute = (routes, path) => {
 
 };
@@ -1049,7 +1051,7 @@ console.log(justify("This is an example of text justification.", 16));
 console.log(matchRoute(["/users/:id", "/users/me"], "/users/me"));
 `,
     skeleton: `const segmentsOf = text => {
-  // split on "/" and drop one empty segment at the end, but keep "/" as [""]
+  // split on "/" and drop exactly one final empty segment, including "/" becoming [""]
 };
 
 const matchRoute = (routes, path) => {
@@ -1077,6 +1079,7 @@ const matchRoute = (routes, path) => {
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "(() => {const result=matchRoute([\"/:__proto__\"],\"/value\");return Object.hasOwn(result.params,\"__proto__\")&&result.params.__proto__===\"value\";})()", "expected": true, "label": "parameter names are own data properties"},
       { call: 'matchRoute(["/users", "/users/:id", "/users/:id/posts/:postId"], "/users/42/posts/7")', expected: { route: '/users/:id/posts/:postId', params: { id: '42', postId: '7' } } },
       { call: 'matchRoute(["/users/:id", "/users/me"], "/users/me")', expected: { route: '/users/me', params: {} }, label: 'an exact segment beats a :name segment' },
       { call: 'matchRoute(["/files/*", "/files/:name"], "/files/2026/q3/report.pdf")', expected: { route: '/files/*', params: { rest: '2026/q3/report.pdf' } }, label: '* takes the rest of the path' },
@@ -1093,7 +1096,7 @@ const matchRoute = (routes, path) => {
     tier: 4,
     focus: ['recursion', 'for-in', 'objects', 'sort'],
     title: 'What changed in the settings',
-    prompt: 'Two versions of a settings object are nested plain objects whose leaves are strings, numbers, booleans, `null`, or arrays of those. Keys never contain a dot. Write `diffSettings(before, after)`, returning every leaf that differs as a `{ path, change }` object. `path` is the keys from the top down, joined with dots, and `change` is `"added"` (only in `after`), `"removed"` (only in `before`) or `"changed"`. Walk both objects with `for...in`, and recurse where both hold a plain object under the same key. An object that is only on one side is reported leaf by leaf, so an empty one reports nothing. Where one side holds an object and the other a leaf, the object’s leaves count as removed or added, and the leaf as added or removed. Leaves are compared with `===`, and arrays are equal when they have the same length and `===` items in the same order. Return the list sorted by `path`, the way `sort` orders strings when no compare function is given.',
+    prompt: "Two versions of a settings object are nested plain objects whose leaves are strings, numbers, booleans, `null`, or arrays of those. Keys never contain a dot. Write `diffSettings(before, after)`, returning every leaf that differs as a `{ path, change }` object. `path` is the keys from the top down, joined with dots, and `change` is `\"added\"` (only in `after`), `\"removed\"` (only in `before`) or `\"changed\"`. Walk both objects with `for...in`, and recurse where both hold a plain object under the same key. An object that is only on one side is reported leaf by leaf, so an empty one reports nothing. Where one side holds an object and the other a leaf, the object\u2019s leaves count as removed or added, and the leaf as added or removed. Leaves are compared with `===`, and arrays are equal when they have the same length and `===` items in the same order. Return the list sorted by `path`, the way `sort` orders strings when no compare function is given. before and after are acyclic trees of ordinary or null-prototype plain records, with no shared containers, to depth 64. Only own enumerable string-keyed data properties count; symbols and non-enumerable properties are ignored. Keys are nonempty, dot-free strings of at most 64 UTF-16 units. Across both trees there are at most 20000 properties and array items; leaf strings have at most 1024 UTF-16 units. Arrays are dense arrays of the primitive leaf types, never nested containers; NaN and infinities are valid numbers. Strict equality means NaN differs from NaN, while the two zero signs compare equal. Inputs and arrays may be frozen and must remain unchanged. Return a fresh mutable array and change records. Let n count input properties, array items and leaf-string UTF-16 units, and p be the greatest full leaf-path length in UTF-16 units, at least 1. Target: O(n p log n) time and O(n p) space, including path copies and output; use log(max(2,n)). This bound includes flattening paths and sorting comparisons rather than treating unbounded strings as constant-sized.",
     starter: `const diffSettings = (before, after) => {
 
 };
@@ -1132,6 +1135,7 @@ const diffSettings = (before, after) => {
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "diffSettings({value:NaN,zero:-0},{value:NaN,zero:0})", "expected": [{"path": "value", "change": "changed"}], "label": "strict equality treats NaN and zero signs differently"},
       { call: 'diffSettings({ theme: "dark", font: { size: 14, family: "Inter" } }, { theme: "light", font: { size: 14, family: "Inter", weight: 400 } })', expected: [{ path: 'font.weight', change: 'added' }, { path: 'theme', change: 'changed' }] },
       { call: 'diffSettings({ a: 1, b: { c: 2 } }, { a: 1 })', expected: [{ path: 'b.c', change: 'removed' }], label: 'a removed object reports its leaves' },
       { call: 'diffSettings({}, { editor: { tabs: { size: 2, spaces: true } } })', expected: [{ path: 'editor.tabs.size', change: 'added' }, { path: 'editor.tabs.spaces', change: 'added' }], label: 'an added object, two levels deep' },
@@ -1148,7 +1152,7 @@ const diffSettings = (before, after) => {
     tier: 4,
     focus: ['json', 'recursion', 'map-set'],
     title: 'JSON that survives a loop',
-    prompt: '`JSON.stringify` throws on an object that contains itself, and real data does that: a tree node with a `parent` link, or a user whose friends list leads back to them. Write `safeStringify(value)`, returning the JSON text of `value` with every reference back to an object that contains it replaced by the string `"[Circular]"`. An object that appears twice without containing itself, such as one address used for billing and shipping, is not a loop and is written out both times. Walk the value recursively and build a copy. Keep the objects on the current path from the root in a `Set`: add an object before visiting its children and delete it afterwards, and put `"[Circular]"` in place of a child that is already in the set. Then pass the copy to `JSON.stringify`. The values are plain objects, arrays, strings, numbers, booleans and `null`. Leave `value` unchanged.',
+    prompt: "`JSON.stringify` throws on a circular reference reached through the properties it serializes, and real data does that: a tree node with a `parent` link, or a user whose friends list leads back to them. Write `safeStringify(value)`, returning the JSON text of `value` with every reference back to an object that contains it replaced by the string `\"[Circular]\"`. An object that appears twice without containing itself, such as one address used for billing and shipping, is not a loop and is written out both times. Walk the value recursively and build a copy. Keep the objects on the current path from the root in a `Set`: add an object before visiting its children and delete it afterwards, and put `\"[Circular]\"` in place of a child that is already in the set. Then pass the copy to `JSON.stringify`. The values are plain objects, arrays, strings, numbers, booleans and `null`. Leave `value` unchanged. Use standard own enumerable string-key order for ordinary plain or null-prototype data records. Arrays use ordinary data indices/default iteration: sparse holes serialize as null and extra named properties are ignored. Ignore non-enumerable and Symbol keys. There are no getters, proxies, custom iterators, callable toJSON hooks or BigInts. Numbers include NaN, infinities and -0 and follow standard JSON serialization; strings may contain Unicode and lone surrogates. Frozen/shared/cyclic inputs are valid and must stay unchanged. Preserve literal keys such as __proto__, constructor and toJSON as data. Each ancestor edge becomes the string \"[Circular]\"; sharing across siblings is expanded separately. Bound the expanded traversal to 5000 value occurrences, depth 100 and at most 20000 serialized UTF-16 units. Target: O(n) time and retained copy/output space, where n counts expanded value occurrences and inspected key/string units, counting a shared subtree again for each occurrence. Assume average constant-time Set operations and linear own-key enumeration/serialization. Counting only unique input objects would miss the cost of repeated shared subtrees.",
     starter: `const safeStringify = value => {
 
 };
@@ -1198,7 +1202,7 @@ console.log(safeStringify(node));
     tier: 4,
     focus: ['promises', 'timers', 'map-set', 'closures'],
     title: 'Batch requests into one',
-    prompt: 'A page asks for many users one at a time, and every request is a round trip to the server. Write `createLoader(loadMany, waitMs)`, returning a function `load(id)` that returns a promise of one user. `load` does not fetch straight away: the first `load` of a batch starts a `setTimeout` of `waitMs`, and every `load` before it fires joins the same batch. When the timer fires, call `loadMany(ids)` once with the batch’s ids, each id once, in the order they were first asked for. `loadMany` returns a promise of an array with one result per id, in the same order. Each `load` promise resolves with the result for its id, so an id asked for twice gets the same result both times. If `loadMany` rejects, every promise in that batch rejects with the same error. A `load` after the timer has fired starts a new batch. Keep the batch being gathered in a `Map` inside the closure, from each id to the callers waiting for it.',
+    prompt: "A page asks for many users one at a time, and every request is a round trip to the server. Write `createLoader(loadMany, waitMs)`, returning a function `load(id)` that returns a promise of one user. `load` does not fetch straight away: the first `load` of a batch starts a `setTimeout` of `waitMs`, and every `load` before it fires joins the same batch. When the timer fires, call `loadMany(ids)` once with the batch\u2019s ids, each id once, in the order they were first asked for. `loadMany` returns a promise of an array with one result per id, in the same order. Each `load` promise resolves with the result for its id, so an id asked for twice gets the same result both times. If `loadMany` rejects, every promise in that batch rejects with the same error. A `load` after the timer has fired starts a new batch. Keep the batch being gathered in a `Map` inside the closure, from each id to the callers waiting for it. IDs are strings up to 1000 UTF-16 units or integers from -1000000000 through 1000000000, compared using Map SameValueZero: numeric and string IDs differ, and -0 is sent as +0. waitMs is an integer from 0 through 1000. Each loader receives at most 10000 calls and each batch at most 1000 distinct IDs. No fetch starts inline; calls before the first timer fires, including microtasks, join that batch without resetting its timer. loadMany receives one fresh ID array as its only argument and treats it as read-only. It returns an ordinary native Promise of a stable array of exactly that length, or throws synchronously. Results are opaque nonthenable values; preserve their exact identities and any original throw/rejection reason. Duplicate callers may receive the same Promise or different Promises; they must receive the same result. Once the timer fires, another load starts a fresh batch even for an ID already pending or fulfilled elsewhere. Do not retain a success/failure cache between batches. Clear the gathering batch before calling loadMany, including synchronous reentry. Creating a loader takes constant work. Target: O(n) time across the run for wrapper/handler work, where n is 1 + the load-call count + the distinct IDs sent across batches, assuming average constant-time Map access; retained work/space scales with outstanding calls. Exclude loadMany work, waiting and host scheduling.",
     starter: `const createLoader = (loadMany, waitMs) => {
 
 };
@@ -1250,7 +1254,7 @@ console.log(safeStringify(node));
     tier: 4,
     focus: ['promises', 'map-set', 'closures'],
     title: 'One request, shared',
-    prompt: 'Three widgets on a page ask for the same exchange rate at the same moment, and the app should send one request, not three. Write `shareRequests(fetchRate, ttlMs, now)`, returning a function `get(key)` that returns a promise of `fetchRate(key)`’s result. `now()` returns the current time in milliseconds: call it instead of `Date.now()`, so the checks can move time. Keep a `Map` inside the closure from each key to `{ promise, at }`. `get` returns the stored promise when the key has one that was stored less than `ttlMs` ago. Otherwise it calls `fetchRate(key)`, stores the promise with the time, and returns it. So callers share a request while it is in flight, and share its result until it is `ttlMs` old. A request that fails must not be remembered: when its promise rejects, delete its entry so the next `get` tries again, but only if the entry is still that request’s, because a newer request for the same key may have replaced it.',
+    prompt: "Three widgets on a page ask for the same exchange rate at the same moment, and the app should send one request, not three. Write `shareRequests(fetchRate, ttlMs, now)`, returning a function `get(key)` that returns a promise of `fetchRate(key)`\u2019s result. `now()` returns the current time in milliseconds: call it instead of `Date.now()`, so the checks can move time. Keep a `Map` inside the closure from each key to `{ promise, at }`. `get` returns the stored promise when the key has one that was stored less than `ttlMs` ago. Otherwise it calls `fetchRate(key)`, stores the promise with the time, and returns it. So callers share a request while it is in flight, and share its result until it is `ttlMs` old. A request that fails must not be remembered: when its promise rejects, delete its entry so the next `get` tries again, but only if the entry is still that request\u2019s, because a newer request for the same key may have replaced it. Domain: fetchRate is a supplied non-reentrant function that always returns an ordinary native Promise and does not throw synchronously. Call it with exactly the original key. Keys are opaque Map keys, including objects, functions, Symbols, null, undefined, NaN and -0; never stringify them. now is a supplied zero-argument function returning finite nondecreasing milliseconds, stable during each get call; it does not throw or reenter. ttlMs is an integer from 0 through 1000000000, with at most 10000 gets per wrapper. At exactly the TTL boundary an entry expires even while pending; a zero TTL never reuses an entry. Callers hitting the same fresh entry must receive that exact stored Promise, but it need not be the Promise originally returned by fetchRate. Preserve exact opaque fulfilled values and rejection reasons, including undefined. Cleanup may use a separate rejection handler or a stored rethrowing chain; an older failure must not delete a newer entry. Wrappers are independent. Creating the wrapper takes constant work. Target: O(1) time per get and O(k) retained entries, where k is the distinct cached keys, assuming average constant-time Map operations and constant-time supplied clock; exclude fetchRate work, waiting and host scheduling.",
     starter: `const shareRequests = (fetchRate, ttlMs, now) => {
 
 };
@@ -1272,7 +1276,7 @@ console.log(safeStringify(node));
 };`,
     hints: [
       'Store the promise, not the value. A promise exists from the moment the request starts, so a second caller can share it before any answer has arrived.',
-      'Attach the clean-up with `entry.promise.catch(...)` and compare `entries.get(key) === entry` inside it. The caller still receives the original promise, so they see the rejection too.',
+      'Attach the clean-up with `entry.promise.catch(...)` and compare `entries.get(key) === entry` inside it. Return the stored promise to every cache hit. A separate cleanup handler preserves rejection; a stored catch chain must rethrow the same reason.',
     ],
     approach: [
       'Make a `Map` inside `shareRequests`, so each one keeps its own entries.',

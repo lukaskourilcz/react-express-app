@@ -7,16 +7,19 @@
 // unless the row was actually persisted.
 
 import { createServiceClient, withTimeout } from './http';
+import { randomInt } from 'node:crypto';
+import { generateSharkname } from '../shared/sharkname';
 import type { ScopeSubjectId } from '../shared/subject-catalog';
 
 const supabase = createServiceClient();
-const TABLE = 'challenge_scores';
 
 export interface ChallengeScore {
   id: string;
   name: string;
   score: number;
   createdAt: string;
+  topics?: string[] | null;
+  allTopics?: boolean | null;
 }
 
 export interface ChallengeLeaderboard {
@@ -26,7 +29,6 @@ export interface ChallengeLeaderboard {
 
 export class ChallengeStoreError extends Error {}
 
-const MAX_NAME = 40;
 const MAX_SCORE = 100_000;
 
 function rowToScore(row: Record<string, unknown>): ChallengeScore {
@@ -35,36 +37,15 @@ function rowToScore(row: Record<string, unknown>): ChallengeScore {
     name: String(row.name ?? ''),
     score: typeof row.score === 'number' ? row.score : Number(row.score) || 0,
     createdAt: String(row.created_at ?? ''),
+    topics: Array.isArray(row.selected_topics) ? row.selected_topics.filter((topic): topic is string => typeof topic === 'string') : null,
+    allTopics: typeof row.all_topics === 'boolean' ? row.all_topics : null,
   };
 }
 
 export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 10): Promise<ChallengeLeaderboard> {
   if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
   try {
-    let result = await withTimeout(
-      supabase
-        .from(TABLE)
-        .select('id, name, score, created_at')
-        .eq('subject', subject)
-        .order('score', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(limit),
-      4000,
-    );
-    // Keep reads available during the code-first deployment window. Once 022
-    // is installed every request is subject-scoped; old schemas only contain
-    // the historic Web Development board.
-    if (result.error?.message?.includes('subject') && subject === 'webdev') {
-      result = await withTimeout(
-        supabase
-          .from(TABLE)
-          .select('id, name, score, created_at')
-          .order('score', { ascending: false })
-          .order('created_at', { ascending: true })
-          .limit(limit),
-        4000,
-      );
-    }
+    const result = await withTimeout(supabase.rpc('challenge_leaderboard', { p_subject: subject, p_limit: limit }), 4000);
     const { data, error } = result;
     if (error || !Array.isArray(data)) throw new ChallengeStoreError(error?.message || 'Could not load leaderboard');
     const top = data.map(rowToScore);
@@ -76,47 +57,21 @@ export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 1
 }
 
 export async function recordChallengeScore(input: {
-  name: string;
-  score: number;
-  runId: string;
-  subject: ScopeSubjectId;
-  userId?: string | null;
+  score: number; runId: string; subject: ScopeSubjectId; userId?: string | null;
+  topics?: string[] | null; allTopics?: boolean | null;
 }): Promise<ChallengeScore | null> {
+  if (!Number.isInteger(input.score) || input.score <= 0) return null;
   if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
-  const cleanName = (input.name ?? '').trim().slice(0, MAX_NAME);
-  if (!cleanName) return null;
-  const cleanScore =
-    Number.isFinite(input.score) && input.score >= 0
-      ? Math.min(Math.floor(input.score), MAX_SCORE)
-      : 0;
-  try {
-    let result = await withTimeout(
-      supabase
-        .from(TABLE)
-        .insert({
-          name: cleanName,
-          score: cleanScore,
-          run_id: input.runId,
-          subject: input.subject,
-          user_id: input.userId ?? null,
-        })
-        .select('id, name, score, created_at')
-        .single(),
-      5000,
-    );
-    if (result.error?.code === '23505') {
-      result = await withTimeout(
-        supabase.from(TABLE).select('id, name, score, created_at').eq('run_id', input.runId).single(),
-        5000,
-      );
-    } else if (result.error?.message?.includes('run_id') || result.error?.message?.includes('subject')) {
-      throw new ChallengeStoreError('Migration 023 is required for verified challenge scores');
-    }
-    const { data, error } = result;
-    if (error || !data) throw new ChallengeStoreError(error?.message || 'Could not save score');
-    return rowToScore(data as Record<string, unknown>);
-  } catch (error) {
-    if (error instanceof ChallengeStoreError) throw error;
-    throw new ChallengeStoreError(error instanceof Error ? error.message : 'Could not save score');
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const result = await withTimeout(supabase.rpc('save_completed_challenge_score', {
+      p_run_id: input.runId, p_subject: input.subject, p_user_id: input.userId ?? null,
+      p_score: Math.min(input.score, MAX_SCORE),
+      p_base: generateSharkname(() => randomInt(1_000_000) / 1_000_000),
+      p_topics: input.topics ?? null, p_all_topics: input.allTopics ?? null,
+    }), 5000);
+    if (result.error?.message?.includes('handle_taken')) continue;
+    if (result.error || !result.data) throw new ChallengeStoreError(result.error?.message || 'Could not save score');
+    return rowToScore(result.data as Record<string, unknown>);
   }
+  throw new ChallengeStoreError('Could not assign a sharkname');
 }

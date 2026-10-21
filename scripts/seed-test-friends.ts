@@ -33,8 +33,8 @@ interface Profile {
   /** The account id is `seed-friend-<slug>`. The slug was the first handle,
    * and stays the id so a re-run updates the same ten accounts. */
   slug: string;
-  /** A sharkname from shared/sharkname.ts, the one migration 055 gave the
-   * production accounts. 24 characters at most. */
+  /** Original base, converted to camelCase before allocation. Existing
+   * identities keep their allocated name and global number on every rerun. */
   handle: string;
   /** ISO 3166-1 alpha-2. Shown as a flag, ranked nowhere. */
   country: string;
@@ -264,6 +264,16 @@ CREATE TEMP TABLE seed_friend_categories (
 INSERT INTO seed_friend_categories VALUES
 ${categories.join(',\n')};
 
+-- Allocate before user_stats' default-name trigger. Existing identities keep
+-- their current name; numbers are allocated atomically and never recycled.
+DO $$ DECLARE s RECORD; base TEXT; BEGIN
+  FOR s IN SELECT user_id, handle FROM seed_friends ORDER BY user_id LOOP
+    base := regexp_replace(initcap(replace(s.handle, '-', ' ')), ' ', '', 'g');
+    base := lower(left(base, 1)) || substr(base, 2);
+    PERFORM public.allocate_shark_name('user:' || s.user_id, base, s.user_id, FALSE);
+  END LOOP;
+END; $$;
+
 -- The accounts. No name and no email: these are not people, and a fabricated
 -- name in the column an OAuth provider fills is the kind of fake data that
 -- later gets mistaken for real.
@@ -279,9 +289,8 @@ ON CONFLICT (user_id) DO UPDATE SET
   current_streak = EXCLUDED.current_streak, longest_streak = EXCLUDED.longest_streak,
   last_quiz_date = EXCLUDED.last_quiz_date;
 
-INSERT INTO public.user_handles (user_id, handle, country, discoverable)
-SELECT s.user_id, s.handle, s.country, TRUE FROM seed_friends s
-ON CONFLICT (user_id) DO UPDATE SET handle = EXCLUDED.handle, country = EXCLUDED.country;
+UPDATE public.user_handles h SET country = s.country, discoverable = TRUE
+FROM seed_friends s WHERE h.user_id = s.user_id;
 
 INSERT INTO public.user_category_stats (user_id, category, total_correct, total_questions)
 SELECT c.user_id, c.category, c.correct, c.questions FROM seed_friend_categories c

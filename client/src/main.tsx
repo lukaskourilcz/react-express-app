@@ -19,12 +19,13 @@ import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
 import { MARKETING_LOADERS } from './lib/marketingTags';
 import { MotionProvider } from './lib/motion';
-import { installScrollbarActivity } from './lib/scrollbarActivity';
 import { captureReferralFromUrl } from './lib/referral';
 import { installChunkErrorTracking } from './lib/routeRecovery';
+import { capturePublicGuide } from './lib/publicGuideHandoff';
 
-const disposeScrollbarActivity = installScrollbarActivity();
-if (import.meta.hot) import.meta.hot.dispose(disposeScrollbarActivity);
+// Cosmetic scroll feedback can load after the interactive entry.
+const scrollbarReady = import('./lib/scrollbarActivity').then(({ installScrollbarActivity }) => installScrollbarActivity()).catch(() => () => {});
+if (import.meta.hot) import.meta.hot.dispose(() => { void scrollbarReady.then(dispose => dispose()); });
 // Before anything imports a chunk: the route boundary tells a chunk that did
 // not load from a page that threw by the errors Vite announced.
 const disposeChunkErrorTracking = installChunkErrorTracking();
@@ -80,6 +81,7 @@ const ReactQueryDevtools = import.meta.env.DEV
     )
   : null;
 
+capturePublicGuide();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

@@ -24,8 +24,8 @@ export const LINKS_SEED = [
 
 const prompts = [
   en('A link shortener turns a long URL into a short slug. Start with the check every later level relies on. Write `normalizeLink(value)`: accept a non-null object that is not an array, with a string `url` and a string `slug`. Trim both. The url must start with `https://` and have something after it, 200 characters at most. The slug is lower-cased and must be 3 to 20 characters of `a`–`z`, `0`–`9` and `-`. Return a new `{ url, slug }`, or `null` when anything is wrong. Ignore extra fields and never change the input.'),
-  en('Port `normalizeLink` to TypeScript with an `unknown` input, and define `Draft = { url: string; slug: string }` and `Link = Draft & { visits: number }`. Add `RequestData = { method: string; path: string; body?: unknown }`, `Reply = { status: number; body: unknown }` and `createApi(seed: readonly Link[]): (request: RequestData) => Reply`, an in-memory API with its own copy of the seed. `GET /api/links` returns 200 and every link in insertion order. `POST /api/links` checks the body with `normalizeLink`: an invalid body returns 400 `{ error: "invalid" }`, a slug that already exists returns 409 `{ error: "taken" }`, and otherwise the link is stored with `visits: 0` and returned with 201. Anything else returns 404 `{ error: "not_found" }`. Replies carry copies, so a caller cannot change the stored links.'),
-  en('Extend `createApi`. `POST /api/links/SLUG/visit` adds one to that link\'s visits and returns 200 with the updated link. `DELETE /api/links/SLUG` removes the link and returns 200 `{ deleted: "SLUG" }`; a deleted slug is free to use again. An unknown slug returns 404 `{ error: "not_found" }`, and so does a visit sent with any method but POST.'),
+  en("Port `normalizeLink` to TypeScript with an `unknown` input, and define `Draft = { url: string; slug: string }` and `Link = Draft & { visits: number }`. Add `RequestData = { method: string; path: string; body?: unknown }`, `Reply = { status: number; body: unknown }` and `createApi(seed: readonly Link[]): (request: RequestData) => Reply`, an in-memory API with its own copy of the seed. `GET /api/links` returns 200 and every link in insertion order. `POST /api/links` checks the body with `normalizeLink`: an invalid body returns 400 `{ error: \"invalid\" }`, a slug that already exists returns 409 `{ error: \"taken\" }`, and otherwise the link is stored with `visits: 0` and returned with 201. Anything else returns 404 `{ error: \"not_found\" }`. Replies carry copies, so a caller cannot change the stored links. Retain the earlier exact normalizeLink rules, including inherited ordinary data fields, ECMAScript trim/lowercase, UTF16 limits and literal https prefix rather than full URL parsing. Seeds are dense readonly/frozen arrays of at most 10000 valid Links with unique already-normalized slugs, exactly url/slug/visits own data fields and nonnegative integer visits<=1000000. Each API owns separate shallow record copies; primitive fields make these sufficient. Requests have ordinary string method/path fields, path<=256 units; normalization raw strings<=20000 units. Match methods/paths exactly and case-sensitively with no trimming, URL decoding or query handling. GET preserves insertion order, POST collisions occur after normalization, invalid/collision/unknown requests leave state unchanged. Reply wrappers, arrays and every link/error object are fresh mutable values without aliases into stored/seed/caller state. At most10000 requests and10000 live links are used. This is a synchronous in-memory exercise, not an HTTP deployment. Preserve unknown input/body types, readonly seed and the typed returned handler. Target: O(n+s) time and O(n+s) extra space as a common bound per API construction or request, where n is current/seed link count+1 and s is combined raw path/url/slug UTF16 length+1. This covers the junior linear lookup and listing/copying; Map versions improve some routes."),
+  en("Extend `createApi`. `POST /api/links/SLUG/visit` adds one to that link's visits and returns 200 with the updated link. `DELETE /api/links/SLUG` removes the link and returns 200 `{ deleted: \"SLUG\" }`; a deleted slug is free to use again. An unknown slug returns 404 `{ error: \"not_found\" }`, and so does a visit sent with any method but POST. Keep every earlier normalization, seed/ownership, typing and exact route rule/bound. A successful visit increments once and returns a fresh copy; unknown/wrong-method/malformed paths never increment or delete. Route slugs are exact stored keys, without lowercasing, decoding, trimming, query parsing or trailing-slash/newline acceptance. DELETE removes only that key and keeps survivors in insertion order;a subsequent POST of the deleted normalized slug appends a fresh link with zero visits. Seeds have visits<=1000000 and at most 10000 requests, so every increment stays a safe integer. Reply mutation never changes future state. Target: O(n+s) time and O(n+s) extra space as the same common construction/request bound, n=live/seed links+1, s=combined raw path/url/slug length+1; correct Map implementations may improve lookup/deletion while the junior array implementation retains linear work."),
   en('Keep your typed API and export `normalizeLink` and `createApi` from this file. Add `export default function App({ fetcher })`: use the `fetcher` prop, or when it is missing, one `createLocalFetch(createApi(SEED))` per mounted app, importing `createLocalFetch` from \'./localFetch\'. SEED is `[{ url: "https://developer.mozilla.org", slug: "mdn", visits: 3 }, { url: "https://react.dev", slug: "react", visits: 0 }]`. On mount, GET /api/links. From the first render until the answer arrives, show "Loading" with `role="status"`. Then list each link in an `li` with its slug and url, and its visits in an `output` labelled "visits SLUG". An empty list shows "No links". A rejected or non-2xx answer shows "Request failed" with `role="alert"` and a "Retry" button that loads again. Give every link a "Visit SLUG" button that POSTs /api/links/SLUG/visit and then loads the list again. `./localFetch` runs your own handler in the page; there is no server behind it.'),
   en('Add a form with inputs labelled "URL" and "Slug" and a "Shorten" button. Submitting POSTs JSON to /api/links with `headers: { "Content-Type": "application/json" }`, and Shorten is disabled until the request settles. On 201, load the list again and clear both inputs. On 409 show "Slug already taken" with `role="alert"`; on 400, "Check the link and slug"; on any other failure, "Request failed". After a failure the inputs keep what was typed.'),
 ];
@@ -34,8 +34,8 @@ const hints = [
   en('Check the shape before anything else: `typeof value !== "object" || value === null || Array.isArray(value)` is `null`. Then check that both fields are strings before you call `trim` on them.'),
   en('Keep the links in a `Map` from slug to link inside `createApi`, filled from copies of the seed. Copy on the way out too: `{ ...link }`. A 409 is a `has` on that Map.'),
   en('Split the path: `request.path.split("/")` for `/api/links/abc/visit` gives `["", "api", "links", "abc", "visit"]`. Look the slug up once and answer 404 when the Map does not have it.'),
-  en('`const [transport] = useState(() => fetcher ?? createLocalFetch(createApi(SEED)))` creates the local API once per mount. Keep a status in state that starts at "loading", so the first render already shows Loading.'),
-  en('Await the POST, then check `response.status`. Only a 201 clears the inputs and reloads; keep the typed text on any other outcome. A pending flag in state disables Shorten until the request settles.'),
+  en("Create one transport per mounted app with lazy state. Load all returned links, keep Loading visible until the response is ready, and retry rejected or non-successful responses. Visit POSTs for that slug and then reloads the authoritative list. Parent renders retain the local API; other mounted apps have their own API."),
+  en("Submit the current URL and Slug as JSON with the Content-Type header and keep Shorten disabled until settlement. Only 201 clears both inputs and reloads. A 409, 400, other status or rejected request keeps both fields and shows its matching alert; a later success removes the old message."),
 ];
 
 const approaches = [
@@ -68,7 +68,7 @@ const tests: CallTest[][] = [
     check('normalizeLink(["https://a.io", "abc"])', null, 'an array is not a link', true),
     check('(() => { const input = {url: " https://a.io ", slug: "ABC"}; normalizeLink(input); return input; })()', { url: ' https://a.io ', slug: 'ABC' }, 'the input is not changed', true),
   ],
-  [
+  [check("(()=>{const api=createApi([{url:'https://z',slug:'zzz',visits:0},{url:'https://a',slug:'aaa',visits:0}]);return api({method:'GET',path:'/api/links'}).body.map(v=>v.slug);})()",["zzz", "aaa"]),
     check(`createApi([${seedCall}])({method: "GET", path: "/api/links"})`, { status: 200, body: [LINKS_SEED[0]] }),
     check('createApi([])({method: "POST", path: "/api/links", body: {url: " https://devshark.app ", slug: "Shark"}})', { status: 201, body: { url: 'https://devshark.app', slug: 'shark', visits: 0 } }),
     check('createApi([])({method: "POST", path: "/api/links", body: {url: "ftp://x.io", slug: "abc"}})', { status: 400, body: { error: 'invalid' } }, 'an invalid body'),
@@ -77,7 +77,7 @@ const tests: CallTest[][] = [
     check('(() => { const api = createApi([]); api({method: "POST", path: "/api/links", body: {url: "https://a.io", slug: "one"}}); return api({method: "GET", path: "/api/links"}).body.length; })()', 1, 'a created link is listed'),
     check(`(() => { const seed = [${seedCall}]; const api = createApi(seed); seed[0].visits = 99; const reply = api({method: "GET", path: "/api/links"}); reply.body[0].visits = 42; return api({method: "GET", path: "/api/links"}).body[0].visits; })()`, 3, 'state is copied in and out', true),
   ],
-  [
+  [check("createApi([{url:'https://a',slug:'abc',visits:0}])({method:'POST',path:'/api/links/abc/visit\\n'})",{"status": 404, "body": {"error": "not_found"}}),
     check(`(() => { const api = createApi([${seedCall}]); api({method: "POST", path: "/api/links/mdn/visit"}); return api({method: "POST", path: "/api/links/mdn/visit"}); })()`, { status: 200, body: { url: LINKS_SEED[0].url, slug: 'mdn', visits: 5 } }),
     check(`(() => { const api = createApi([${seedCall}]); const reply = api({method: "DELETE", path: "/api/links/mdn"}); return [reply, api({method: "GET", path: "/api/links"}).body]; })()`, [{ status: 200, body: { deleted: 'mdn' } }, []]),
     check(`(() => { const api = createApi([${seedCall}]); api({method: "DELETE", path: "/api/links/mdn"}); return api({method: "POST", path: "/api/links", body: {url: "https://b.io", slug: "mdn"}}).status; })()`, 201, 'a deleted slug is free again'),
@@ -89,13 +89,13 @@ const tests: CallTest[][] = [
 
 const typeTests: TypeTest[][] = [
   [],
-  [
+  [{"code": "{const seed:readonly Link[]=[{url:\"https://a\",slug:\"abc\",visits:0}];const api:(request:RequestData)=>Reply=createApi(seed);const result:Reply=api({method:\"GET\",path:\"/api/links\"});const body:unknown=result.body;}"},{"code": "{const bad:string=createApi([])({method:\"GET\",path:\"/api/links\"});}", "rejects": true},{"code": "{const bad:string=createApi([])({method:\"GET\",path:\"/api/links\"}).body;}", "rejects": true},
     { code: '{ const draft: Draft | null = normalizeLink({}); const link: Link = { url: "https://a.io", slug: "abc", visits: 0 }; const api: (request: RequestData) => Reply = createApi([link]); }' },
     { code: '{ const link: Link = { url: "https://a.io", slug: "abc", visits: "0" }; }', rejects: true },
     { code: '{ const wrong: string = normalizeLink({}); }', rejects: true },
     { code: '{ createApi([{ url: "https://a.io" }]); }', rejects: true },
   ],
-  [
+  [{"code": "{const bad:string=createApi([])({method:\"POST\",path:\"/api/links/abc/visit\"});}", "rejects": true},
     { code: '{ const reply: Reply = createApi([])({ method: "DELETE", path: "/api/links/abc" }); }' },
     { code: '{ createApi([])({ method: "GET" }); }', rejects: true },
   ],
@@ -151,9 +151,10 @@ export function buildFullStackPathTasks(): CodingTask[] {
     return {
       id, track, topic: track, level: 25, tier: 2, verify: 'tests',
       title: en(`${project.title.en} · ${index + 1}`),
-      prompt: prompts[index],
+      prompt: index === 0 ? en("A link shortener turns a long URL into a short slug. Start with the check every later level relies on. Write `normalizeLink(value)`: accept a non-null object that is not an array, with a string `url` and a string `slug`. Trim both. The url must start with `https://` and have something after it, 200 characters at most. The slug is lower-cased and must be 3 to 20 characters of `a`\u2013`z`, `0`\u2013`9` and `-`. Return a new `{ url, slug }`, or `null` when anything is wrong. Ignore extra fields and never change the input. Use ECMAScript trim and toLowerCase, then measure UTF16 code units. Only the literal https prefix and length are checked; spaces or line breaks inside the remaining text are not URL validation errors. Hyphens may appear anywhere in a valid slug. Required fields may be inherited data fields; ignore extra fields without reading them. Inputs contain ordinary data fields, no proxies or required-field accessors, with at most 20000 code units per raw string. Return a fresh mutable record on each success, without retaining caller state. Target: O(n) time and O(n) space, where n is one plus the combined UTF16 lengths of the raw url and slug, including trimming and lowercase conversion. Non-string shape checks take constant time.") : prompts[index],
       previousRequirements: prompts.slice(0, index),
-      references: references[index],
+      references: index === 0 ? [...references[0], doc('String trimming', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim'), doc('Lowercase conversion', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase')] : references[index],
+
       hints: { en: [hints[index].en], cs: [hints[index].cs] },
       approach: { en: approaches[index].map((step) => step.en), cs: approaches[index].map((step) => step.cs) },
       focus: index === 0 ? ['objects', 'strings'] : react ? ['useEffect', 'fetch', 'forms'] : ['narrowing', 'unions'],
@@ -162,7 +163,7 @@ export function buildFullStackPathTasks(): CodingTask[] {
       ...(react
         ? { suite: PRELUDE + suites.slice(0, index - 2).join('\n') }
         : {
-          tests: tests.slice(0, index + 1).flat(),
+          tests: [...tests.slice(0, index + 1).flat(), ...(index === 0 ? [{"call": "normalizeLink({url:'https://a b',slug:' A-B '})", "expected": {"url": "https://a b", "slug": "a-b"}, "label": {"en": "prefix and length only; this is not URL parsing", "cs": ""}}] : [])],
           ...(index > 0 ? { typeTests: typeTests.slice(0, index + 1).flat() } : {}),
         }),
     };

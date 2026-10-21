@@ -1,0 +1,14 @@
+.bo-page { max-width: 800px; --ss-chart-blue: light-dark(#0e7490, #6ccce2); --ss-chart-gold: light-dark(#946000, #f5c364); }
+.bo-page > p, .bo-page .ss-info-card p { line-height: 1.65; }
+.bo-page .ss-info-card { margin-top: 24px; }
+.bo-chart { margin: 24px 0; }
+.bo-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.bo-chart text { fill: currentColor; font-size: 12px; }
+.bo-grid { stroke: currentColor; opacity: .12; }
+.bo-chart figcaption { margin-top: 12px; font-size: .875rem; }
+.bo-table-wrap { overflow-x: auto; }
+.bo-table { width: 100%; border-collapse: collapse; text-align: left; }
+.bo-table caption { font-weight: 600; text-align: left; padding-bottom: 12px; }
+.bo-table th, .bo-table td { padding: 12px 8px; border-bottom: 1px solid var(--color-border); }
+.bo-table td:nth-last-child(-n+2) { font-variant-numeric: tabular-nums; }
+.bo-cta { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }

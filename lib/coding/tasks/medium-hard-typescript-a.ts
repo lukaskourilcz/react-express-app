@@ -27,7 +27,7 @@ export const MEDIUM_HARD_TYPESCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['unions', 'narrowing', 'reduce', 'readonly'],
     title: 'Apply the discounts',
-    prompt: 'A checkout holds its lines and a list of discounts. Each discount is one member of the union `Discount`, told apart by its `kind`. `"percent"` takes that percentage off the running total, rounded to the nearest cent with `Math.round`. `"fixed"` takes a number of cents off. `"two-for-one"` makes every second item of one `sku` free, line by line, so a line of 3 teas pays for 2. Write `totalCents(lines: readonly Line[], discounts: readonly Discount[]): number`. Add up the lines with `reduce`, then apply the discounts in the order they are listed with a second `reduce`, using a `switch` on `kind` to work out each saving. The total never goes below 0: a discount that would take it lower stops at 0. End the `switch` with a `default` branch that assigns the discount to a variable of type `never`, so the compiler complains the day someone adds a kind without a branch for it.',
+    prompt: "A checkout holds its lines and a list of discounts. Each discount is one member of the union `Discount`, told apart by its `kind`. `\"percent\"` takes that percentage off the running total, rounded to the nearest cent with `Math.round`. `\"fixed\"` takes a number of cents off. `\"two-for-one\"` makes every second item of one `sku` free, line by line, so a line of 3 teas pays for 2. Write `totalCents(lines: readonly Line[], discounts: readonly Discount[]): number`. Add up the lines with `reduce`, then apply the discounts in the order they are listed with a second `reduce`, using a `switch` on `kind` to work out each saving. The total never goes below 0: a discount that would take it lower stops at 0. End the `switch` with a `default` branch that assigns the discount to a variable of type `never`, so the compiler complains the day someone adds a kind without a branch for it. Domain: dense stable arrays of at most 1000 lines and 1000 discounts, possibly frozen, with no accessors/proxies. Each priceCents is an integer from 0 through 1000000, quantity an integer from 0 through 1000, percent an integer from 0 through 100, and fixed cents an integer from 0 through 1000000000000. SKU strings have at most 200 UTF-16 units and match exactly, including empty text, case and spaces. Leave inputs unchanged. Percent discounts round the saving before subtraction: half off one cent leaves zero. Each two-for-one entry independently computes its saving from the original line quantities, even when repeated; duplicate SKU lines are not pooled. Target: O(n^2) time and O(n) temporary space for scanning lines per discount, where n is 1 + line count + discount count under bounded integer arithmetic. More precisely the work is O(l + d + t*l) for l lines, d discounts and t two-for-one entries. Precomputed SKU savings are a valid faster alternative.",
     starter: `interface Line {
   sku: string;
   priceCents: number;
@@ -100,7 +100,7 @@ const totalCents = (lines: readonly Line[], discounts: readonly Discount[]): num
     tier: 3,
     focus: ['constraints', 'slice', 'narrowing'],
     title: 'The page after a cursor',
-    prompt: 'An API hands out a long list one page at a time. Instead of a page number, the client sends a cursor: the `id` of the last item it already has, or `null` for the first page. A page number slips when new items arrive at the top; a cursor keeps its place. Write `pageAfter<T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T>`. With `null`, start at the first item. Otherwise start right after the item whose `id` is the cursor, and when no item has that id, the cursor is stale: return an empty page with `next: null`. Take at most `size` items with `slice`; `size` is at least 1. `next` is the id of the last item on the page when more items follow it, and `null` on the last page. Compare the cursor with `null` itself, because an empty string is an id like any other. The constraint `T extends { id: string }` is what lets you read `item.id`, and the page still keeps every other field of `T`.',
+    prompt: "An API hands out a long list one page at a time. Instead of a page number, the client sends a cursor: the `id` of the last item it already has, or `null` for the first page. A page number slips when new items arrive at the top; a cursor keeps its place. Write `pageAfter<T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T>`. With `null`, start at the first item. Otherwise start right after the item whose `id` is the cursor, and when no item has that id, the cursor is stale: return an empty page with `next: null`. Take at most `size` items with `slice`; `size` is at least 1. `next` is the id of the last item on the page when more items follow it, and `null` on the last page. Compare the cursor with `null` itself, because an empty string is an id like any other. The constraint `T extends { id: string }` is what lets you read `item.id`, and the page still keeps every other field of `T`. Domain: a dense readonly ordinary array of at most 1000 stable records, possibly frozen, with unique own string ids of at most 200 UTF-16 units and no accessors/proxies. IDs match exactly, including empty text, whitespace, case and prototype-like names. Size is an integer from 1 through 1000000000. Each call uses the provided stable ordered list; a missing cursor remains stale. Keep exact item references and opaque fields, with no input mutation. Return a fresh plain mutable Page object and fresh mutable items array every call, including empty/stale/after-last results. Target: O(n) time in the worst case and O(n) output space, where n is 1 + input item count for the cursor scan plus bounded slice; a first page may take less work.",
     starter: `interface Page<T> {
   items: T[];
   next: string | null;
@@ -158,7 +158,7 @@ console.log(pageAfter([{ id: "a" }, { id: "b" }, { id: "c" }], null, 2));
     tier: 3,
     focus: ['generics', 'tuples', 'for-of'],
     title: 'One bubble per sender',
-    prompt: 'A chat window draws the messages one person sends in a row as one bubble, and starts a new bubble when someone else writes. Write `groupRuns<T>(items: readonly T[], keyOf: (item: T) => string): [string, T[]][]`, returning one `[key, items]` pair for every run of neighbouring items that share a key, in order. A key that comes back later starts a new run, so this is not the same as grouping by key. Walk the items once with `for...of` and compare each item’s key with the key of the last run. Because the function is generic, the items in each run keep their own type, whether they are messages, numbers or log lines. Leave `items` unchanged.',
+    prompt: "A chat window draws the messages one person sends in a row as one bubble, and starts a new bubble when someone else writes. Write `groupRuns<T>(items: readonly T[], keyOf: (item: T) => string): [string, T[]][]`, returning one `[key, items]` pair for every run of neighbouring items that share a key, in order. A key that comes back later starts a new run, so this is not the same as grouping by key. Walk the items once with `for...of` and compare each item\u2019s key with the key of the last run. Because the function is generic, the items in each run keep their own type, whether they are messages, numbers or log lines. Leave `items` unchanged. Domain: a dense readonly array of at most 1000 opaque values, possibly frozen. Call keyOf exactly once per item in input order, passing only that item as one positional argument. The synchronous callback returns a string of at most 200 UTF-16 units; it may keep its own counter but does not change input membership or records. If it throws, propagate that exact value and make no later calls. Empty text, case, whitespace and prototype-like strings are ordinary exact keys. Preserve item references/values without cloning or coercion. Return a fresh mutable outer array, fresh run pairs and fresh run-item arrays on every call, with no alias across runs or calls; leave items unchanged. Target: O(n) time and output space, where n is 1 + item count under bounded key comparisons, excluding work done inside keyOf.",
     starter: `interface Message {
   from: string;
   text: string;
@@ -215,7 +215,7 @@ console.log(groupRuns([{ from: "Ada", text: "Hi" }, { from: "Ada", text: "Free n
     tier: 3,
     focus: ['keyof', 'utility-types', 'generics'],
     title: 'Check a sign-up form',
-    prompt: 'A form library lets every field list its own checks. A check takes the field’s value and returns a message when something is wrong, or `null` when the value is fine. The types in the starter describe it. `Rules<T>` maps each key of the form `T` to a list of checks for that field’s own type, `T[K]`, so a check on `age` receives a number and a check on `email` receives a string. Write `checkForm<T extends object>(values: T, rules: Rules<T>): Errors<T>`. For every field that has checks, run them in order and stop at the first message: that message is the field’s error, and the checks after it do not run, because a later check may assume the earlier ones passed. A field with no checks, or whose checks all return `null`, does not appear in the result. `Errors<T>` is `Partial<Record<keyof T, string>>`, so an error may be missing for any field.',
+    prompt: "A form library lets every field list its own checks. A check takes the field\u2019s value and returns a message when something is wrong, or `null` when the value is fine. The types in the starter describe it. `Rules<T>` maps each key of the form `T` to a list of checks for that field\u2019s own type, `T[K]`, so a check on `age` receives a number and a check on `email` receives a string. Write `checkForm<T extends object>(values: T, rules: Rules<T>): Errors<T>`. For every field that has checks, run them in order and stop at the first message: that message is the field\u2019s error, and the checks after it do not run, because a later check may assume the earlier ones passed. A field with no checks, or whose checks all return `null`, does not appear in the result. `Errors<T>` is `Partial<Record<keyof T, string>>`, so an error may be missing for any field. Domain: stable ordinary/null-prototype values and rules objects, possibly frozen, with no accessors/proxies. Only own enumerable rule keys are checked, in Reflect.ownKeys order with nonenumerable keys skipped; keys may be strings, numbers or symbols belonging to T. A missing/undefined rule list or an empty list has no error. There are at most 100 ruled fields and 20 checks per field. Invoke each check as a plain function without a receiver. Each synchronous check gets exactly one argument, the exact field value (own or inherited on a bounded prototype chain), and does not modify inputs. Call checks in field/list order, stop that field at its first string including empty text, and propagate the exact thrown value without later calls. Return a fresh mutable prototype-safe error dictionary whose own keys are exactly failing fields, with unchanged literal messages. Missing keys read as undefined, including prototype-like names. Leave all inputs and opaque field values unchanged. Target: O(n) time and output space, where n is 1 + own rule-key count + total rule-list entries, excluding callback work and under bounded property-key operations.",
     starter: `type Check<V> = (value: V) => string | null;
 type Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };
 type Errors<T> = Partial<Record<keyof T, string>>;
@@ -230,24 +230,9 @@ console.log(checkForm({ email: "ada", age: 17 }, {
   age: [(age) => (age >= 18 ? null : "You must be 18 or over")],
 }));
 `,
-    skeleton: `const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
-  const errors: Errors<T> = {};
-  for (const key in rules) {
-    const checks = rules[key];
-    // no checks for this field: move on
-    // run each check on values[key]; the first message is the error, then stop
-  }
-  return errors;
-};`,
-    hints: [
-      '`for (const key in rules)` gives each key as a key of `T`, so `rules[key]` is the list of checks for that field and `values[key]` is a value of the type those checks accept. No cast is needed.',
-      'A `for...of` loop over the checks can stop with `break` as soon as one returns a message. Compare the result with `null`: a message is any string.',
-    ],
-    approach: [
-      'Start an empty `Errors<T>` object.',
-      'Loop over the keys of `rules`. Skip a key whose list is missing.',
-      'Run the checks on `values[key]` in order. At the first result that is not `null`, store it under `key` and stop checking that field.',
-    ],
+    skeleton: "type Check<V> = (value: V) => string | null;\ntype Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };\ntype Errors<T> = Partial<Record<keyof T, string>>;\n\nconst checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {\n  const errors = Object.create(null) as Errors<T>;\n  const checkField = <K extends keyof T>(key: K): void => {\n    const checks = rules[key];\n    // skip absent lists; run checks until the first non-null message\n  };\n  for (const key of Reflect.ownKeys(rules)) {\n    if (Object.prototype.propertyIsEnumerable.call(rules, key)) checkField(key as keyof T);\n  }\n  return errors;\n};",
+    hints: ["Use a generic field helper <K extends keyof T> so rules[key] and values[key] stay linked as T[K]. Reflect.ownKeys includes symbols; filter to own enumerable keys. The input contract makes the boundary cast to keyof T valid.", "A for-of loop can stop at the first message. Compare with null because even empty text is a message. A null-prototype error dictionary prevents inherited names from appearing as errors."],
+    approach: ["Create a fresh prototype-safe Errors<T> dictionary.", "Visit own enumerable rule keys in Reflect.ownKeys order and pass each to a generic field helper.", "Run its checks once in list order on the exact field value. Store the first non-null message and stop that field."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -274,7 +259,7 @@ console.log(checkForm({ email: "ada", age: 17 }, {
     tier: 3,
     focus: ['type-guards', 'literal-types', 'record', 'strings'],
     title: 'Release notes from commits',
-    prompt: 'Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `"other"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type’s list: the summary, with the scope and a colon in front when there is a scope, as in `"search: filter by date"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `"other"` exactly as written. Keep the order the subjects came in.',
+    prompt: "Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `\"other\"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type\u2019s list: the summary, with the scope and a colon in front when there is a scope, as in `\"search: filter by date\"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `\"other\"` exactly as written. Keep the order the subjects came in. Scope grammar for this simplified exercise: a scope contains one or more characters and no nested parentheses; colons, including colon-space text, are allowed inside it. Subjects are primitive strings with no CR/LF; there are at most 1000, each at most 1000 UTF-16 units. Use exact type text with no trimming/case changes. A nonempty summary may be only spaces or contain later colon-space separators; preserve it exactly. Unknown/malformed subjects stay whole in other. Return a fresh plain mutable Notes object with exactly its four own section keys and independent mutable arrays across sections/calls. Leave subjects and the fixed COMMIT_TYPES tuple unchanged. isCommitType accepts exactly the three listed literals and returns an actual boolean. This is the stated teaching grammar, not a complete Conventional Commits parser. Target: O(n) time and output space for releaseNotes, where n is 1 + subject count + total input UTF-16 length; isCommitType checks a fixed three-entry set in O(1) time.",
     starter: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
 type CommitType = (typeof COMMIT_TYPES)[number];
 type Notes = Record<CommitType | "other", string[]>;
@@ -290,29 +275,9 @@ const releaseNotes = (subjects) => {
 // Scratch pad. Change this and press Run.
 console.log(releaseNotes(["feat(search): filter by date", "chore: bump deps"]));
 `,
-    skeleton: `const isCommitType = (value: string): value is CommitType =>
-  /* is value one of COMMIT_TYPES? */;
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const colon = subject.indexOf(": ");
-    // no ": ", or nothing after it: other
-    // the text before it is the type, maybe followed by (scope)
-    // a known type: push the note into notes[type]; otherwise: other
-  }
-  return notes;
-};`,
-    hints: [
-      '`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.',
-      '`indexOf(": ")` finds the first colon followed by a space, so a summary may hold another one. When the text before it ends with `)`, the scope sits between the `(` and that last character.',
-    ],
-    approach: [
-      'Write the guard: return whether any entry of `COMMIT_TYPES` equals `value`, with the return type `value is CommitType`.',
-      'Build a fresh `Notes` object with four empty lists on every call.',
-      'For each subject, find `": "`. Split the text before it into a type and an optional scope, and check that neither the summary nor a bracketed scope is empty.',
-      'If the shape holds and the type passes `isCommitType`, push `scope ? scope + ": " + summary : summary` into that type’s list. Otherwise push the subject into `other`.',
-    ],
+    skeleton: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType => {\n  // exact membership in COMMIT_TYPES\n};\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    // find the type and optional scope; a scope may contain colon-space text\n    // require the summary separator after the closing parenthesis, when present\n    // push a recognized note, or preserve the whole malformed/unknown subject\n  }\n  return notes;\n};",
+    hints: ["`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.", "A scope can contain colon-space text. When a scope starts before the first separator, find its closing parenthesis and require colon-space immediately after it; the remainder is the complete summary. Otherwise use the first colon-space separator."],
+    approach: ["Write the exact three-type guard and create fresh independent section arrays.", "Identify the optional single pair of scope parentheses before the summary separator; reject empty or nested scopes and malformed separators.", "Keep the whole remaining nonempty summary, including spaces and later separators. A recognized type gets the note, otherwise keep the original subject in other."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -341,7 +306,7 @@ const releaseNotes = (subjects: readonly string[]): Notes => {
     tier: 3,
     focus: ['tuples', 'map-set', 'while'],
     title: 'Fill in the missing days',
-    prompt: 'A sales chart needs one point per day, but the database only returns the days that had sales. Each reading is a labelled tuple, `[date: string, value: number]`, with the date written `YYYY-MM-DD`. Write `fillDays(readings: readonly Reading[]): Reading[]`, returning one reading for every day from the earliest date to the latest, in date order, with `0` for a day that has no reading. Readings may arrive in any order, and two readings for the same day add up, so collect them in a `Map` first. Then walk from the first day to the last with a `while` loop. To step one day, make a date at midnight UTC with `new Date(date + "T00:00:00Z")`, add a day with `setUTCDate(getUTCDate() + 1)`, and read the text back with `toISOString().slice(0, 10)`. Run and the checker keep time in UTC, and stepping in UTC keeps the code right in any other time zone too, because a clock change can never skip or repeat a UTC day. No readings give an empty list.',
+    prompt: "A sales chart needs one point per day, but the database only returns the days that had sales. Each reading is a labelled tuple, `[date: string, value: number]`, with the date written `YYYY-MM-DD`. Write `fillDays(readings: readonly Reading[]): Reading[]`, returning one reading for every day from the earliest date to the latest, in date order, with `0` for a day that has no reading. Readings may arrive in any order, and two readings for the same day add up, so collect them in a `Map` first. Then walk from the first day to the last with a `while` loop. To step one day, make a date at midnight UTC with `new Date(date + \"T00:00:00Z\")`, add a day with `setUTCDate(getUTCDate() + 1)`, and read the text back with `toISOString().slice(0, 10)`. Run and the checker keep time in UTC, and stepping in UTC keeps the code right in any other time zone too, because a clock change can never skip or repeat a UTC day. No readings give an empty list. Domain: at most 1000 dense Reading tuples, possibly frozen, with valid Gregorian dates in exactly YYYY-MM-DD form from years 1000 through 9998. The inclusive earliest-to-latest span is at most 1000 days. Values are integers from -1000000000 through 1000000000; sum same-day values in input order. Preserve input order, tuples and values. Return a fresh mutable outer array and fresh mutable Reading tuples, with no alias to an input pair or another call; return a fresh [] when empty. Target: O(n log n) time and O(n) storage for collecting and sorting unique dates plus emitting every day, where n is 1 + input reading count + output day count under bounded date arithmetic and average Map operations. More precisely, with r readings, u unique dates and d emitted days, this takes O(r + u log u + d); tracking the endpoints without sorting is a valid faster alternative.",
     starter: `type Reading = [date: string, value: number];
 
 const fillDays = (readings) => {
@@ -404,7 +369,7 @@ console.log(fillDays([["2026-03-01", 4], ["2026-03-04", 2]]));
     tier: 4,
     focus: ['keyof', 'generics', 'optional', 'strings'],
     title: 'Print a table',
-    prompt: 'A command-line tool prints its results as a text table. Write `printTable<T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string`. A `Column<T>` names a key of the row type, a header, and an optional `align`, `"left"` or `"right"`, that is left when it is missing. `Formats<T>` is a mapped type: for any key `K` of `T` it may hold a function that turns a `T[K]` into text, so a format for `price` receives a number when `price` is a number. A cell’s text is its format’s result when its key has one, and `String(value)` otherwise. Lay the table out like this. Each column is as wide as its longest text, header included. Pad every header and cell to that width with spaces, `padEnd` for left and `padStart` for right. Join the cells of a line with `" | "`. The second line is a rule: dashes as wide as each column, joined with `"-+-"`. One line per row follows, and the lines are joined with `"\\n"`. No line ends with a space, so trim the end of each line. A table with no rows is its header line and its rule.',
+    prompt: "A command-line tool prints its results as a text table. Write `printTable<T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string`. A `Column<T>` names a key of the row type, a header, and an optional `align`, `\"left\"` or `\"right\"`, that is left when it is missing. `Formats<T>` is a mapped type: for any key `K` of `T` it may hold a function that turns a `T[K]` into text, so a format for `price` receives a number when `price` is a number. A cell\u2019s text is its format\u2019s result when its key has one, and `String(value)` otherwise. Lay the table out like this. Each column is as wide as its longest text, header included. Pad every header and cell to that width with spaces, `padEnd` for left and `padStart` for right. Join the cells of a line with `\" | \"`. The second line is a rule: dashes as wide as each column, joined with `\"-+-\"`. One line per row follows, and the lines are joined with `\"\\n\"`. No line ends with a space, so trim the end of each line. A table with no rows is its header line and its rule. Domain: dense readonly ordinary arrays of at most 100 stable rows and 20 stable columns, possibly frozen, with no accessors/proxies. Property keys may be strings, numbers or symbols on bounded prototype chains. Only own entries of formats supply formatters; inherited entries are ignored, so constructor and toString remain ordinary column names. Each present formatter is synchronous, returns text and does not modify inputs; call it exactly once per displayed cell in row-major column order, with exactly that cell value as its sole argument, including repeated columns. Propagate its exact thrown value and stop later calls. Unformatted values have bounded primitive String conversion. Headers and resulting cell text have at most 200 UTF-16 units, no line breaks or tabs, and no whitespace other than ASCII spaces; widths count UTF-16 units, not visual display columns. Empty formatted text is valid. Preserve all inputs. Zero columns produce empty header/rule/body lines joined by newlines. Target: O(n*m + L) time and output space, where n is 1 + row count, m is 1 + column count, and L is the total UTF-16 size of the padded lines before trailing-space removal; formatter work is excluded.",
     starter: `interface Column<T> {
   key: keyof T;
   header: string;
@@ -426,7 +391,7 @@ console.log(printTable(
 `,
     skeleton: `const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {
   const cellText = <K extends keyof T>(row: T, key: K): string => {
-    const format = formats[key];
+    const format = Object.hasOwn(formats, key) ? formats[key] : undefined;
     // the format's text when there is one, String(row[key]) otherwise
   };
   const body = rows.map((row) => columns.map((column) => cellText(row, column.key)));
@@ -437,7 +402,7 @@ console.log(printTable(
   return [/* the header line, the rule, then one line per row */].join("\\n");
 };`,
     hints: [
-      'Read `formats[key]` with `key` typed as a type parameter `K extends keyof T`. The compiler then knows the format takes a `T[K]`, and `row[key]` is a `T[K]`, so the call type-checks. The format is optional, so check that it is there before you call it.',
+      'Read `formats[key]` with `key` typed as a type parameter `K extends keyof T`. The compiler then knows the format takes a `T[K]`, and `row[key]` is a `T[K]`, so the call type-checks. Only own formatter entries count. The format is optional, so check it before calling it, exactly once per displayed cell.',
       'Work out every cell’s text first, then the widths, then the padding: a formatted price can be wider than the number it came from. `Math.max(header.length, ...lengths)` handles a table with no rows too.',
     ],
     approach: [
@@ -472,16 +437,16 @@ console.log(printTable(
     tier: 4,
     focus: ['record', 'tuples', 'narrowing', 'utility-types'],
     title: 'Pick an order from warehouses',
-    prompt: 'A shop keeps stock in three warehouses. `Stock` is a `Readonly` `Record` from each `Warehouse` to how many of each sku it holds, and a sku a warehouse does not list counts as 0. Write `allocate(order: readonly OrderLine[], stock: Stock): Allocation`, where an order line is a tuple `[sku, quantity]` and the result says where to pick each line. First check that the order can be filled at all: add up, for each sku, what the order asks for and what the three warehouses hold. When any sku is short, pick nothing and return `{ ok: false, short }`, where `short` maps every short sku to how many are missing. Otherwise go through the lines in order. When one warehouse holds the whole line, pick all of it there, from the first such warehouse in `WAREHOUSES` order: one parcel is cheaper than two. When none does, take what each warehouse holds, in `WAREHOUSES` order, until the line is complete, and skip a warehouse that has none. Each pick is a tuple `[warehouse, sku, quantity]`. Stock picked for one line is gone for the next, and a sku can appear on more than one line, so keep your own copy of the counts: `stock` itself never changes. `Allocation` is a union told apart by `ok`, so a caller reads `picks` only after checking it.',
+    prompt: "A shop keeps stock in three warehouses. `Stock` is a `Readonly` `Record` from each `Warehouse` to how many of each sku it holds, and a sku a warehouse does not list counts as 0. Write `allocate(order: readonly OrderLine[], stock: Stock): Allocation`, where an order line is a tuple `[sku, quantity]` and the result says where to pick each line. First check that the order can be filled at all: add up, for each sku, what the order asks for and what the three warehouses hold. When any sku is short, pick nothing and return `{ ok: false, short }`, where `short` maps every short sku to how many are missing. Otherwise go through the lines in order. When one warehouse holds the whole line, pick all of it there, from the first such warehouse in `WAREHOUSES` order: one parcel is cheaper than two. When none does, take what each warehouse holds, in `WAREHOUSES` order, until the line is complete, and skip a warehouse that has none. Each pick is a tuple `[warehouse, sku, quantity]`. Stock picked for one line is gone for the next, and a sku can appear on more than one line, so keep your own copy of the counts: `stock` itself never changes. `Allocation` is a union told apart by `ok`, so a caller reads `picks` only after checking it. Domain: a dense readonly order of at most 1000 stable tuples with exact string skus of at most 200 UTF-16 units and positive integer quantities from 1 through 1000000. Stock covers the three fixed warehouses; each inner lookup has at most 1000 own enumerable string entries with nonnegative integer counts through 1000000000, or undefined counting as 0. Inherited, nonenumerable and Symbol stock entries are ignored. Inputs may be frozen and have no accessors/proxies. Empty, case-sensitive, whitespace and prototype-like sku names are valid. The inner stock lookups and short result use Partial because unlisted skus are undefined. Preserve every source tuple, count and WAREHOUSES order without mutation. A short order returns all missing amounts before any picks, with no picks key. Success returns only ok/picks, with fresh mutable result, picks and pick tuples on every call; failure has a fresh mutable prototype-safe short dictionary with only short skus and undefined for absent names. Target: O(n) time and output space, where n is 1 + order-line count + total own enumerable stock-entry count under bounded average hash/property operations; the warehouse count is fixed at three.",
     starter: `type Warehouse = "north" | "south" | "east";
 const WAREHOUSES: readonly Warehouse[] = ["north", "south", "east"];
 
-type Stock = Readonly<Record<Warehouse, Readonly<Record<string, number>>>>;
+type Stock = Readonly<Record<Warehouse, Readonly<Partial<Record<string, number>>>>>;
 type OrderLine = readonly [sku: string, quantity: number];
 type PickItem = [warehouse: Warehouse, sku: string, quantity: number];
 type Allocation =
   | { ok: true; picks: PickItem[] }
-  | { ok: false; short: Record<string, number> };
+  | { ok: false; short: Partial<Record<string, number>> };
 
 const allocate = (order, stock) => {
 
@@ -494,10 +459,10 @@ console.log(allocate([["tea", 3]], { north: { tea: 2 }, south: { tea: 5 }, east:
   // 1. what the order asks for and what the warehouses hold, per sku
   // 2. any sku short: return { ok: false, short }
 
-  const left: Record<Warehouse, Record<string, number>> = {
-    north: { ...stock.north },
-    south: { ...stock.south },
-    east: { ...stock.east },
+  const left: Record<Warehouse, Partial<Record<string, number>>> = {
+    north: Object.assign(Object.create(null), stock.north),
+    south: Object.assign(Object.create(null), stock.south),
+    east: Object.assign(Object.create(null), stock.east),
   };
   const picks: PickItem[] = [];
   for (const [sku, quantity] of order) {
@@ -531,13 +496,7 @@ console.log(allocate([["tea", 3]], { north: { tea: 2 }, south: { tea: 5 }, east:
       { call: '(() => { const stock = { north: { tea: 2 }, south: {}, east: {} }; allocate([["tea", 2]], stock); return stock; })()', expected: { north: { tea: 2 }, south: {}, east: {} }, label: 'stock is not changed', edge: true },
       { call: 'allocate([], { north: {}, south: {}, east: {} })', expected: { ok: true, picks: [] }, label: 'an empty order', edge: true },
     ],
-    typeTests: [
-      { code: 'const __result = allocate([["tea", 2]], { north: { tea: 5 }, south: {}, east: {} }); if (__result.ok) { const __picks: [Warehouse, string, number][] = __result.picks; }', label: 'picks are there once ok is true' },
-      { code: 'const __other = allocate([], { north: {}, south: {}, east: {} }); if (!__other.ok) { const __short: Record<string, number> = __other.short; }', label: 'short is there once ok is false' },
-      { code: 'allocate([["tea", 2]], { north: {}, south: {}, east: {} }).picks;', label: 'check ok before reading picks', rejects: true },
-      { code: 'allocate([["tea", 2]], { north: {}, south: {} });', label: 'stock covers every warehouse', rejects: true },
-      { code: 'allocate([["tea", "2"]], { north: {}, south: {}, east: {} });', label: 'a quantity is a number', rejects: true },
-    ],
+    typeTests: [{"code": "const __result = allocate([[\"tea\", 2]], { north: { tea: 5 }, south: {}, east: {} }); if (__result.ok) { const __picks: [Warehouse, string, number][] = __result.picks; }", "label": "picks are there once ok is true"}, {"code": "const __other = allocate([], { north: {}, south: {}, east: {} }); if (!__other.ok) { const __short: Partial<Record<string, number>> = __other.short; }", "label": "short is there once ok is false"}, {"code": "allocate([[\"tea\", 2]], { north: {}, south: {}, east: {} }).picks;", "label": "check ok before reading picks", "rejects": true}, {"code": "allocate([[\"tea\", 2]], { north: {}, south: {} });", "label": "stock covers every warehouse", "rejects": true}, {"code": "allocate([[\"tea\", \"2\"]], { north: {}, south: {}, east: {} });", "label": "a quantity is a number", "rejects": true}, {"code": "const __audit=allocate([],{north:{},south:{},east:{}}); if(!__audit.ok){const __missing:number=__audit.short[\"absent\"];}", "rejects": true, "label": "a sku outside the shortfall may be missing"}],
   },
   {
     id: 'ts-mh-import-rows',
@@ -547,7 +506,7 @@ console.log(allocate([["tea", 3]], { north: { tea: 2 }, south: { tea: 5 }, east:
     tier: 4,
     focus: ['utility-types', 'keyof', 'strings', 'narrowing'],
     title: 'Import a spreadsheet',
-    prompt: 'People paste spreadsheets into an admin page as tab-separated text: a header line with the column names, then one record per line, with the cells separated by a tab, `"\\t"`. Write `importRows<S extends Parsers>(text: string, schema: S): ImportResult<S>`. The schema gives every column the program needs a parser: a function from the cell’s text to a value, which throws when the text is not acceptable. `Row<S>` uses `ReturnType` to give each key the type its parser returns, so a schema of `{ name: String, price: Number }` makes rows of `{ name: string; price: number }`. The rules: split the text into lines on `"\\n"`, numbered from 1 with the header as line 1. A line that is empty or only spaces is skipped, but still counted. The header may list its columns in any order and may have extra ones, which are ignored; trim each header name. If a schema key has no column, return no rows and one error per missing key, in schema order: `"Missing column: price"`. For every record, hand each parser its cell, trimmed; a cell past the end of a short line is `""`. A parser that throws rejects the record: it is left out of `rows`, and every rejected cell adds an error `"Line 3, price: <message>"`, in schema order. The message is the error’s `message` when it is an `Error`, and `String(error)` for anything else. Rows keep the order of their lines. TypeScript cannot follow a loop that fills in every key of `Row<S>`, so build each row as a `Record<string, unknown>` and tell the compiler once, with `as Row<S>`, after every parser has run.',
+    prompt: "People paste spreadsheets into an admin page as tab-separated text: a header line with the column names, then one record per line, with the cells separated by a tab, `\"\\t\"`. Write `importRows<S extends Parsers>(text: string, schema: S): ImportResult<S>`. The schema gives every column the program needs a parser: a function from the cell\u2019s text to a value, which throws when the text is not acceptable. `Row<S>` uses `ReturnType` to give each key the type its parser returns, so a schema of `{ name: String, price: Number }` makes rows of `{ name: string; price: number }`. The rules: split the text into lines on `\"\\n\"`, numbered from 1 with the header as line 1. A line that is empty or only spaces is skipped, but still counted. The header may list its columns in any order and may have extra ones, which are ignored; trim each header name. If a schema key has no column, return no rows and one error per missing key, in schema order: `\"Missing column: price\"`. For every record, hand each parser its cell, trimmed; a cell past the end of a short line is `\"\"`. A parser that throws rejects the record: it is left out of `rows`, and every rejected cell adds an error `\"Line 3, price: <message>\"`, in schema order. The message is the error\u2019s `message` when it is an `Error`, and `String(error)` for anything else. Rows keep the order of their lines. TypeScript cannot follow a loop that fills in every key of `Row<S>`, so build each row as a `Record<string, unknown>` and tell the compiler once, with `as Row<S>`, after every parser has run. Domain: text has at most 100000 UTF-16 units, 50 header columns and 1000 later physical lines; schema has at most 20 own enumerable string keys, each trimmed already and at most 200 units, including empty/prototype-like names. No other schema keys, accessors or proxies are involved; schema may be frozen/null-prototype. Use Object.keys(schema) order, including ordinary numeric-key order. Duplicate trimmed headers use their first matching column. A record is blank when JavaScript trim makes it empty, including tab-only lines. Call every parser once per nonblank record in schema order, even after a cell rejects the row, with one trimmed string argument as a plain function without a receiver. Missing headers cause no parser calls. Parsers are synchronous, do not alter inputs and may return opaque values or undefined; preserve their exact results without cloning/calling/awaiting them. Throws have bounded string conversion; Error.message is stable text of at most 200 units, and other thrown values use String as specified. Each accepted row has exactly the schema own keys, including __proto__, and fresh mutable row/result/rows/errors containers; no inherited fields are copied. Target: O(L + k*h + r*k + E) time and output space, where L is 1 + input UTF-16 length, k is schema key count, h is header column count, r is later physical line count, and E is total error-text length. Header positions are found once; parser work is excluded.",
     starter: `type Parsers = Record<string, (cell: string) => unknown>;
 type Row<S extends Parsers> = { [K in keyof S]: ReturnType<S[K]> };
 
@@ -574,7 +533,7 @@ console.log(importRows("name\\tprice\\nTea\\t3.5\\nCake\\t12", { name: String, p
   lines.forEach((line, index) => {
     // skip the header and blank lines; the line number is index + 1
     const cells = line.split("\\t");
-    const row: Record<string, unknown> = {};
+    const row = Object.create(null) as Record<string, unknown>;
     let rejected = false;
     for (const key of keys) {
       const cell = /* the cell under this key's column, trimmed, or "" */;
@@ -623,7 +582,7 @@ console.log(importRows("name\\tprice\\nTea\\t3.5\\nCake\\t12", { name: String, p
     tier: 4,
     focus: ['unions', 'narrowing', 'sort', 'readonly'],
     title: 'Apply edits to a file',
-    prompt: 'A formatter or a linter’s quick fix does not hand back a new file. It hands back a list of edits, each one replacing the text from `start` up to, but not including, `end` with `insert`, and every offset refers to the original text. An insertion has `start === end`, and a deletion has an empty `insert`. Write `applyEdits(text: string, edits: readonly Edit[]): EditResult`. First check each edit in list order: it needs `0 <= start <= end <= text.length`, and the first one that fails gives `{ ok: false, reason: "out-of-range", edit: index }`. Two edits conflict when one starts before the other ends, or when they start at the same offset, because then their order would be a guess. Sort a copy of the edits by `start`, remembering each one’s index in the list you were given: `edits` is readonly, and the caller’s order must survive. Walk the sorted copy, and the first time an edit starts before the previous one ends, or at the same offset, return `{ ok: false, reason: "overlap", edits: [previous index, this index] }`. Otherwise build the new text in one pass: the original text up to each edit’s start, then its `insert`, then carry on from its `end`. `EditResult` is a union told apart by `ok` and then by `reason`, so a caller can read `text` only after checking `ok`, and `edits` only after checking the reason.',
+    prompt: "A formatter or a linter\u2019s quick fix does not hand back a new file. It hands back a list of edits, each one replacing the text from `start` up to, but not including, `end` with `insert`, and every offset refers to the original text. An insertion has `start === end`, and a deletion has an empty `insert`. Write `applyEdits(text: string, edits: readonly Edit[]): EditResult`. First check each edit in list order: it needs `0 <= start <= end <= text.length`, and the first one that fails gives `{ ok: false, reason: \"out-of-range\", edit: index }`. Two edits conflict when one starts before the other ends, or when they start at the same offset, because then their order would be a guess. Sort a copy of the edits by `start`, remembering each one\u2019s index in the list you were given: `edits` is readonly, and the caller\u2019s order must survive. Walk the sorted copy, and the first time an edit starts before the previous one ends, or at the same offset, return `{ ok: false, reason: \"overlap\", edits: [previous index, this index] }`. Otherwise build the new text in one pass: the original text up to each edit\u2019s start, then its `insert`, then carry on from its `end`. `EditResult` is a union told apart by `ok` and then by `reason`, so a caller can read `text` only after checking `ok`, and `edits` only after checking the reason. Domain: text has at most 10000 UTF-16 units and edits is a dense readonly array of at most 1000 stable data records, possibly frozen. Each insert has at most 1000 UTF-16 units; no accessors/proxies are involved. Offsets count UTF-16 code units, with no normalization. A fractional, NaN or infinite offset is out-of-range too: both offsets must be integers. Validate all ranges in original list order before checking overlaps; keep the stated first-error and stable equal-start index rules. Leave edit order and every record unchanged on success or failure. Target: O(n log n) time and O(n) storage for sorting a copy and joining output chunks, where n is 1 + edit count + text length + total inserted text length. More precisely the work is O(e log e + L + I) for e edits, L original UTF-16 units and I inserted units, under the comparison-sort model; repeated copying of a growing result is avoidable.",
     starter: `interface Edit {
   start: number;
   end: number;
@@ -651,12 +610,13 @@ console.log(applyEdits("let x = 1;", [{ start: 4, end: 5, insert: "count" }]));
 
   // 2. walk sorted: an edit that starts before the previous end, or at the same start
 
-  let result = "";
+  const parts: string[] = [];
   let from = 0;
   for (const edit of sorted) {
     // the text from \`from\` to edit.start, then edit.insert; carry on from edit.end
   }
-  return { ok: true, text: result + text.slice(from) };
+  parts.push(text.slice(from));
+  return { ok: true, text: parts.join("") };
 };`,
     hints: [
       '`[...edits].sort(...)` or `edits.map(...).sort(...)` sorts a new array; `edits.sort(...)` would reorder the caller’s list, and the `readonly` type refuses it. `sort` is stable, so edits with the same start keep their list order.',
@@ -666,7 +626,7 @@ console.log(applyEdits("let x = 1;", [{ start: 4, end: 5, insert: "count" }]));
       'Find the first edit, in list order, whose `start` and `end` are not both inside the text with `start <= end`, and return it as `out-of-range`.',
       'Pair each edit with its index, and sort that copy by `start`.',
       'Walk the sorted copy. When an edit’s start is before the previous edit’s end, or equal to the previous start, return both indexes as `overlap`.',
-      'Build the text: for each sorted edit, append the original text since the last edit’s end, then the insert, and at the end append the rest of the original.',
+      'Collect text chunks: for each sorted edit, push the original text since the last edit’s end and the insert; push the remaining original text and join once at the end.',
     ],
     verify: 'tests',
     estimatedMinutes: 35,

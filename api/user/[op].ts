@@ -42,6 +42,7 @@ import {
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends, handleIdentity } from '../../lib/friends-handlers';
 import { verifiedProfile as verifiedProfileOf } from '../../lib/public-identity';
+import { handleLeaderboardName } from '../../lib/leaderboard-identity';
 import { handleEntitlement } from '../../lib/entitlements';
 import { handleVoucherRedeem } from '../../lib/vouchers';
 import {
@@ -70,6 +71,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
+  if (op === 'leaderboard-name') return handleLeaderboardName(req, res, supabase);
   if (op === 'identity') return handleIdentity(req, res, supabase, verifiedProfile);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
@@ -137,7 +139,7 @@ export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op
  * milestones and invitations as it reads, badges are worked out from the
  * stats, and a friend lookup searches by handle. They take the two-tier read
  * limit (`limitRead`). Returns false after sending the 429. */
-const LIMITED_READS: ReadonlySet<string> = new Set(['wallet', 'badges', 'friends-lookup']);
+const LIMITED_READS: ReadonlySet<string> = new Set(['wallet', 'badges', 'friends-lookup', 'friends-handle', 'leaderboard-name']);
 async function limitUserRead(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
   if (req.method !== 'GET' || !LIMITED_READS.has(op)) return true;
   return limitRead(req, res);

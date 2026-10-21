@@ -16,6 +16,7 @@ export const DSA_D01_SOLUTIONS: Record<string, PathCodeSolution> = {
       { call: 'sumOfEvens([2, 2, 2, 2, 2])', expected: 10 },
       { call: 'sumOfEvens([1000000, 1, -1000000])', expected: 0 },
       { call: 'sumOfEvens([-2, -4, -6])', expected: -12 },
+      { call: '(() => { const values = [2, 1, 4]; const total = sumOfEvens(values); return [total, values]; })()', expected: [6, [2, 1, 4]] },
       {
         call: '__countReads([2, 4, 6, 8, 10, 12, 14, 16, 18, 20], function (view) { return sumOfEvens(view); }).result',
         expected: 110,
@@ -53,6 +54,7 @@ export const DSA_D01_SOLUTIONS: Record<string, PathCodeSolution> = {
       { call: 'maxGap([-5, 5])', expected: 10 },
       { call: 'maxGap([10, 2, 8, 2, 10])', expected: 8 },
       { call: 'maxGap([0, 0, 0, 1])', expected: 1 },
+      { call: '(() => { const values = [3, 9, 1]; const gap = maxGap(values); return [gap, values]; })()', expected: [8, [3, 9, 1]] },
       {
         call: '__countReads([9, 1, 8, 2, 7, 3, 6, 4, 5], function (view) { return maxGap(view); }).result',
         expected: 8,

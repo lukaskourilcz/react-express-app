@@ -14,7 +14,10 @@
 
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { assessComplexity } from '../coding/complexity';
+import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
+import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { refuseLocked } from '../access';
@@ -24,7 +27,8 @@ import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../coding/grader-capacity';
 import { codingTaskById } from '../coding/active';
-import { decodeLearningPathSession, encodeLearningPathSession } from '../quiz-tokens';
+import { decodeLearningPathSession } from '../quiz-tokens';
+import { createLearningPathSession, pathCodeAttemptVersion } from './session';
 import {
   activityIn,
   activitySummary,
@@ -48,6 +52,7 @@ import {
   requestHash,
 } from './grade';
 import type { MergedActivity, MergedPath } from './types';
+import { activityDomainScores, diagnosticCompetencies, diagnosticEvidence } from './competencies';
 import {
   isLearningPathId,
   isBaseTrack,
@@ -251,7 +256,7 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
           state: (value?.state as EvidenceState) ?? 'not_started',
           verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
           score: typeof value?.score === 'number' ? value.score : null,
-          ...(value?.domainScores ? { domainScores: value.domainScores } : {}),
+          ...(activityDomainScores(activity, value?.domainScores) ? { domainScores: activityDomainScores(activity, value?.domainScores)! } : {}),
           attempts: Number(value?.attempts ?? 0),
           updatedAt: value?.updatedAt ?? null,
         };
@@ -260,35 +265,15 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
   });
 }
 
-/**
- * Per-competency results from the diagnostic, with an explicit not-assessed
- * state. An aggregate score is never turned into mastery: a competency the
- * learner did not answer for reports as not assessed, not as a zero.
- */
-function competencyResults(path: MergedPath, rows: ProgressRow[]): CompetencyResult[] {
-  const diagnosticId = path.diagnosticActivityId;
-  const recorded = diagnosticId
-    ? rows.map((row) => row.activity_states?.[diagnosticId]).find(Boolean)
-    : undefined;
-  const found = diagnosticId ? activityIn(path, diagnosticId) : null;
-  const questions = found?.activity.questions ?? [];
-  const score = typeof recorded?.score === 'number' ? recorded.score : null;
-
-  return path.competencies.map((competency) => {
-    const items = questions.filter((question) => question.competencies.includes(competency.id)).length;
-    if (!recorded || items === 0 || score === null) {
-      return { competencyId: competency.id, state: 'not_assessed', score: null, assessedItems: items };
-    }
-    // The diagnostic records one overall score; per-competency confidence is
-    // only as good as the number of items that touched the competency, so the
-    // state stays coarse and the item count travels with it.
-    return {
-      competencyId: competency.id,
-      state: score >= (found?.activity.passThreshold ?? 0.8) ? 'demonstrated' : 'gap',
-      score,
-      assessedItems: items,
-    };
-  });
+/** Read the latest accepted evidence so a weaker retake can inform recommendations
+ * without demoting a previously passed module/completion record. */
+async function loadDiagnosticEvidence(supabase: SupabaseClient, userId: string, enrollmentId: string, path: MergedPath): Promise<Record<string, number> | null> {
+  if (!path.diagnosticActivityId) return null;
+  const { data, error } = await withTimeout(supabase.from('learning_path_evidence')
+    .select('domain_scores').eq('enrollment_id', enrollmentId).eq('user_id', userId)
+    .eq('activity_id', path.diagnosticActivityId).order('revision', { ascending: false }).limit(1).maybeSingle());
+  if (error) throw Object.assign(new Error('db_error'), { supabase: error });
+  return data?.domain_scores ?? null;
 }
 
 function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], baseTrack: BaseTrack | null): string[] {
@@ -520,7 +505,7 @@ export async function handlePathProgress(req: VercelRequest, res: VercelResponse
     const rows = await loadProgressRows(supabase, enrollmentId);
     const manifest = publicManifest(path);
     const states = stateMap(rows);
-    const competencies = competencyResults(path, rows);
+    const competencies = diagnosticCompetencies(path, await loadDiagnosticEvidence(supabase, userId, enrollmentId, path));
     const enrollment = toEnrollment(row);
     const body: PathProgressResponse = {
       enrollment,
@@ -587,6 +572,16 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
 
+  if (body.previousSession !== undefined && (typeof body.previousSession !== 'string' || body.previousSession.length > 16_384)) {
+    return jsonError(res, 400, 'bad_request', 'The previous session is invalid');
+  }
+  const previousAttempt = typeof body.previousSession === 'string' ? decodeLearningPathSession(body.previousSession) : null;
+  const needsBriefReview = activity.kind === 'code' && body.previousSession !== undefined && (
+    !previousAttempt || previousAttempt.userId !== userId || previousAttempt.enrollmentId !== row.enrollment_id || previousAttempt.activityId !== activity.id
+    || previousAttempt.curriculumVersion !== path.version || previousAttempt.rubricVersion !== path.rubric.version
+    || previousAttempt.version !== pathCodeAttemptVersion(activity, path.rubric.version)
+  );
+
   const attemptId = newId();
   // Purpose comes from the manifest, never from the request: it decides
   // whether a result can count as placement evidence or as core completion.
@@ -613,7 +608,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const payload = await buildActivityPayload(path, activity, supabase, row.enrollment_id);
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
-  const session = encodeLearningPathSession({
+  const session = createLearningPathSession({
     attemptId,
     enrollmentId: row.enrollment_id,
     userId,
@@ -644,6 +639,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   res.setHeader('Cache-Control', 'private, no-store');
   const out: StartActivityResponse = {
     attemptId,
+    ...(needsBriefReview ? { needsBriefReview: true } : {}),
     session: session.token,
     expiresAt: new Date(session.expiresAt).toISOString(),
     activity: activitySummary(activity),
@@ -738,6 +734,7 @@ async function buildActivityPayload(
       return {
         code: {
           language: code.language,
+          complexityGuidance: complexityGuidance({ track: code.language, prompt: code.prompt, tests: code.tests }),
           prompt: code.prompt,
           starter: code.starter,
           ...(code.skeleton ? { skeleton: code.skeleton } : {}),
@@ -866,13 +863,40 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
   }
 
+  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity, path.rubric.version)) {
+    // A response lost after an accepted write is still the recorded result,
+    // even when the catalogue changed before its network retry. Read only the
+    // bound attempt; never regrade it or pay its reward again.
+    const saved = await withTimeout(supabase.from('learning_path_attempts')
+      .select('user_id,enrollment_id,activity_id,state,idempotency_key,request_hash,accepted_result')
+      .eq('attempt_id', session.attemptId).eq('user_id', userId).maybeSingle());
+    if (saved.error) return jsonError(res, 503, 'progress_unavailable', 'Could not check the recorded attempt. Try again.');
+    const row = saved.data;
+    if (row?.state === 'accepted' && row.user_id === userId && row.enrollment_id === session.enrollmentId && row.activity_id === activity.id) {
+      const hash = requestHash({ answers: body.answers ?? null, code: body.code ?? null, artifact: null, acknowledged: body.acknowledged ?? null });
+      if (row.idempotency_key !== body.idempotencyKey || row.request_hash !== hash) {
+        return jsonError(res, 409, 'idempotency_conflict', 'That attempt was already checked with different work.');
+      }
+      if (row.accepted_result && typeof row.accepted_result === 'object') {
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.json({ ...row.accepted_result, replayed: true });
+      }
+    }
+    return jsonError(res, 409, 'task_changed', 'This activity changed while you were working. Load its latest brief before submitting. Your code has been kept.');
+  }
+  if (session.rubricVersion !== path.rubric.version) {
+    return jsonError(res, 409, 'version_conflict', 'The activity criteria changed while this attempt was open. Start it again.');
+  }
+
   let state: EvidenceState = 'in_progress';
   let score: number | null = null;
   let domainScores: Record<string, number> | null = null;
+  let diagnosticCounts: Record<string, number> | null = null;
   let failedDomains: string[] = [];
   let criteria: SubmitActivityResponse['criteria'] = [];
   let questions: SubmitActivityResponse['questions'] = null;
   let code: SubmitActivityResponse['code'] = null;
+  let complexity: ComplexityReport | null = null;
   let feedback: SubmitActivityResponse['feedback'] = [];
   let artifact: Record<string, string | string[]> | null = null;
 
@@ -899,6 +923,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       domainScores = graded.domainScores;
       failedDomains = graded.failedDomains;
       questions = graded.verdicts;
+      if (activity.id === path.diagnosticActivityId && activity.purpose === 'diagnostic') {
+        diagnosticCounts = diagnosticEvidence(activity, graded.verdicts);
+      }
       if (graded.failedDomains.length > 0) {
         feedback = [{
           en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
@@ -949,6 +976,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
+      complexity = assessComplexity(activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!
+        : { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
       feedback = codeFeedback(graded);
       break;
     }
@@ -1008,6 +1037,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     nextActivityId: computeNextActivity(manifest, states),
     replayed: false,
     xpAwarded: 0,
+    ...(complexity ? { complexity } : {}),
   };
 
   const acceptParams = {
@@ -1024,7 +1054,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     p_state: state,
     p_verification_kind: activity.verification,
     p_score: score,
-    p_domain_scores: domainScores,
+    p_domain_scores: diagnosticCounts ? { ...domainScores, ...diagnosticCounts } : domainScores,
     p_criteria: criteria.map((criterion) => ({ id: criterion.id, critical: criterion.critical, passed: criterion.passed })),
     p_artifact: artifact,
     p_module_complete: moduleWillComplete,
@@ -1035,11 +1065,18 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // other. With the requirements, the routine (migration 054) decides
   // completion again from the states it writes, one result at a time. Before
   // 054 is installed it does not take them, and the call is made without.
-  let accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
-    ...acceptParams,
-    p_module_requires: moduleRequirements(module),
-  }));
-  if (accepted.error && isRpcMissing(accepted.error)) {
+  const canonicalTaskId = activity.reuseTaskId ?? `path-code-${createHash('sha256').update(`${path.id}:${activity.id}`).digest('hex').slice(0,32)}`;
+  const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
+  const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
+    : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
+  let accepted = activity.kind === 'code'
+    ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', {
+      p_accept: { ...acceptParams, p_module_requires: moduleRequirements(module) },
+      p_task_id: canonicalTaskId, p_track: codeTrack, p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
+      p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+    }))
+    : await withTimeout(supabase.rpc('accept_learning_path_result', { ...acceptParams, p_module_requires: moduleRequirements(module) }));
+  if (activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
     accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
   }
   if (accepted.error) {
@@ -1047,7 +1084,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 500, 'db_error', 'Could not record the result');
   }
   markStorageInstalled();
-  const outcome = (accepted.data ?? {}) as { ok?: boolean; reason?: string; replayed?: boolean; result?: unknown };
+  const outcome = (accepted.data ?? {}) as { ok?: boolean; reason?: string; replayed?: boolean; result?: unknown; coding?: { xpKind?: string } };
   if (!outcome.ok) {
     if (outcome.reason === 'expired') return jsonError(res, 410, 'attempt_expired', 'This attempt expired. Start it again.');
     if (outcome.reason === 'conflict') {
@@ -1061,11 +1098,12 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     status: 200, kind: 'submit', path: path.id, activityKind: activity.kind,
     state, replayed: outcome.replayed === true,
   });
-  if (outcome.replayed === true) {
-    const stored = (outcome.result ?? out) as SubmitActivityResponse;
-    return res.json({ ...stored, replayed: true });
+  const stored = (outcome.result ?? out) as SubmitActivityResponse;
+  if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
+    await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
   }
-  return res.json(out);
+  if (activity.kind === 'code' && stored.state === 'verified_pass') await settleMilestones(supabase,userId,'webdev');
+  return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 
 /**
@@ -1107,7 +1145,7 @@ function projectModuleProgress(
           state: (value?.state as EvidenceState) ?? 'not_started',
           verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
           score: typeof value?.score === 'number' ? value.score : null,
-          ...(value?.domainScores ? { domainScores: value.domainScores } : {}),
+          ...(activityDomainScores(one, value?.domainScores) ? { domainScores: activityDomainScores(one, value?.domainScores)! } : {}),
           attempts: Number(value?.attempts ?? 0),
           updatedAt: value?.updatedAt ?? null,
         };

@@ -24,11 +24,11 @@ function groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]> 
 `,
     focus: ['generics', 'map-set'],
     prompts: [
-      en('Implement `groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]>`: a Map from each key to the items that have it, keys in first-seen order and items in input order. `groupBy(["apple", "avocado", "banana"], (word) => word[0])` gives `"a" → ["apple", "avocado"]` and `"b" → ["banana"]`. `T` is the item type and `K` the key type; TypeScript infers both from the call, so the result is typed without a cast. Do not change the input.'),
-      en('Add `countBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, number>`: how many items share each key, keys in first-seen order. `countBy([1, 2, 3], (n) => n > 1)` gives `false → 1` and `true → 2`. The key can be any type: a string, a number, a boolean.'),
-      en('Add `uniqueBy<T, K>(items: readonly T[], keyOf: (item: T) => K): T[]`: the items in input order, keeping only the first item for each key. `uniqueBy(["apple", "avocado", "banana"], (word) => word[0])` gives `["apple", "banana"]`. A `Set<K>` of the keys you have kept makes each check one `has()` call. The result has the same element type as the input.'),
-      en('Add `partition<T, S extends T>(items: readonly T[], isMatch: (item: T) => item is S): [S[], Exclude<T, S>[]]`: the items `isMatch` accepts, then the rest, both in input order. `isMatch` is a type guard, so partitioning `(number | string)[]` with `(x): x is number => typeof x === "number"` is typed `[number[], string[]]`. TypeScript does not narrow a generic `T` in the `else` branch, so the rest needs one cast: `item as Exclude<T, S>`.'),
-      en('Add `sortBy<T>(items: readonly T[], ...keys: ((item: T) => number | string)[]): T[]`: a new array sorted by the first key, then by the second where the first ties, and so on. Compare with `<` and `>`, smallest first: numbers by value, strings by character code. To sort a number from high to low, return its negative: `(actor) => -actor.runs`. Equal items keep input order, and the input is not changed.'),
+      en("Implement `groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]>`: a Map from each key to the items that have it, keys in first-seen order and items in input order. `groupBy([\"apple\", \"avocado\", \"banana\"], (word) => word[0])` gives `\"a\" \u2192 [\"apple\", \"avocado\"]` and `\"b\" \u2192 [\"banana\"]`. `T` is the item type and `K` the key type; TypeScript infers both from the call, so the result is typed without a cast. Do not change the input. Shared rules for every helper in this path: inputs are dense ordinary readonly arrays of at most 1000 stable items, possibly frozen, without array accessors/proxies. Items and keys are opaque values; do not clone them or inspect them except through the supplied callback. Each keyOf/isMatch callback is called exactly once per item, in input order, as a plain function with exactly one argument. Callbacks do not mutate the arrays/items or built-ins; propagate a callback exception immediately. Map/Set keys use SameValueZero, including NaN, one shared -0/+0 key, object identity, Symbols and undefined. Return fresh mutable outer results and fresh group arrays on every call, including empty calls; retain exact item references and leave inputs unchanged. Target: O(n) time on average and O(n) space for groupBy, where n is 1 + input length with average constant Map operations; callback work is additional and excluded."),
+      en("Add `countBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, number>`: how many items share each key, keys in first-seen order. `countBy([1, 2, 3], (n) => n > 1)` gives `false \u2192 1` and `true \u2192 2`. The key can be any type: a string, a number, a boolean. Keep the shared level-one input/callback rules. K may also be an object, Symbol, undefined or NaN; distinct object identities stay distinct, without stringification. A missing key has no Map entry and get returns undefined. Return a fresh mutable Map per call, including empty input. Target: O(n) time on average and O(n) space for countBy, where n is 1 + input length with average constant Map operations; callback work is additional and excluded."),
+      en("Add `uniqueBy<T, K>(items: readonly T[], keyOf: (item: T) => K): T[]`: the items in input order, keeping only the first item for each key. `uniqueBy([\"apple\", \"avocado\", \"banana\"], (word) => word[0])` gives `[\"apple\", \"banana\"]`. A `Set<K>` of the keys you have kept makes each check one `has()` call. The result has the same element type as the input. Keep the shared level-one input/callback rules. Every item still gets one keyOf call, even when its key was already seen. Retain the first exact item reference per SameValueZero key, including falsy/undefined items, and return a fresh mutable array even when nothing is removed. Target: O(n) time on average and O(n) space for uniqueBy, where n is 1 + input length with average constant Set/Map operations; callback work is additional and excluded."),
+      en("Add `partition<T, S extends T>(items: readonly T[], isMatch: (item: T) => item is S): [S[], Exclude<T, S>[]]`: the items `isMatch` accepts, then the rest, both in input order. `isMatch` is a type guard, so partitioning `(number | string)[]` with `(x): x is number => typeof x === \"number\"` is typed `[number[], string[]]`. TypeScript does not narrow a generic `T` in the `else` branch, so the rest needs one cast: `item as Exclude<T, S>`. Keep the shared level-one input/callback rules. A supplied type guard must honestly describe both branches: it returns true if and only if the item belongs to S; a positive-number check is not a valid guard for all numbers. The Exclude result relies on that promise and does not validate the guard. Call isMatch once per item, not in two filter passes. Return a fresh mutable tuple with two independent fresh mutable arrays, preserving exact references and order in each branch, including empty/all-match/no-match cases. Target: O(n) time and O(n) output space for partition, where n is 1 + input length; callback work is additional and excluded."),
+      en("Add `sortBy<T>(items: readonly T[], ...keys: ((item: T) => number | string)[]): T[]`: a new array sorted by the first key, then by the second where the first ties, and so on. Compare with `<` and `>`, smallest first: numbers by value, strings by character code. To sort a number from high to low, return its negative: `(actor) => -actor.runs`. Equal items keep input order, and the input is not changed. Keep the shared dense/frozen-input and opaque-item rules. There are at most five selectors. Each selector returns one stable type across all items: finite Numbers within +/-1000000000, or primitive strings of at most 100 UTF-16 units. Do not mix numbers/strings within one selector; NaN is outside this sorting domain. String order is raw case-sensitive UTF-16 code-unit order, without locale conversion. Selectors must not mutate data; their comparison call count/order is unspecified, but each invocation is a plain one-argument call. Propagate errors. With zero selectors preserve the input order in a fresh mutable array, including empty/singleton inputs. Equal full key tuples retain input order and exact references. Target: O(n log n) time and O(n) auxiliary space for sortBy under the five-selector/text bounds and the comparison-sort cost model, where n is max(2, input length); selector work is additional and excluded."),
     ],
     hints: [
       en('`if (!groups.has(key)) groups.set(key, []); groups.get(key)!.push(item);` The `!` tells the compiler what the line before made true: the key has an array now.'),
@@ -83,26 +83,66 @@ function groupBy<T, K>(items: readonly T[], keyOf: (item: T) => K): Map<K, T[]> 
     ],
     typeTests: [
       [
-        { code: 'const groups: Map<string, string[]> = groupBy(["a", "b"], (s) => s.toUpperCase());' },
-        { code: 'const wrong: Map<number, string[]> = groupBy(["a"], (s) => s);', rejects: true },
+            {
+                  "code": "const groups: Map<string, string[]> = groupBy([\"a\", \"b\"], (s) => s.toUpperCase());"
+            },
+            {
+                  "code": "const wrong: Map<number, string[]> = groupBy([\"a\"], (s) => s);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __key={id:1};const __groups:Map<typeof __key,{readonly x:number}[]>=groupBy(Object.freeze([Object.freeze({x:1})]),()=>__key);__groups.get(__key)?.push({x:2});"
+            }
       ],
       [
-        { code: 'const counts: Map<boolean, number> = countBy([1, 2], (n) => n > 1);' },
-        { code: 'const wrong: Map<boolean, string> = countBy([1], (n) => n > 0);', rejects: true },
+            {
+                  "code": "const counts: Map<boolean, number> = countBy([1, 2], (n) => n > 1);"
+            },
+            {
+                  "code": "const wrong: Map<boolean, string> = countBy([1], (n) => n > 0);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __s=Symbol(\"key\");const __counts:Map<typeof __s,number>=countBy(Object.freeze([1]),()=>__s);const __missing:number|undefined=__counts.get(__s);"
+            }
       ],
       [
-        { code: 'const kept: string[] = uniqueBy(["a"], (s) => s.length);' },
-        { code: 'const wrong: number[] = uniqueBy(["a"], (s) => s.length);', rejects: true },
+            {
+                  "code": "const kept: string[] = uniqueBy([\"a\"], (s) => s.length);"
+            },
+            {
+                  "code": "const wrong: number[] = uniqueBy([\"a\"], (s) => s.length);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __items=Object.freeze([Object.freeze({id:1})]);const __unique:{readonly id:number}[]=uniqueBy(__items,x=>x.id);__unique.push({id:2});"
+            }
       ],
       [
-        { code: 'const [numbers, words]: [number[], string[]] = partition([1, "a"] as (number | string)[], (x): x is number => typeof x === "number");' },
-        { code: 'const [wrong]: [string[], number[]] = partition([1, "a"] as (number | string)[], (x): x is number => typeof x === "number");', rejects: true },
+            {
+                  "code": "const [numbers, words]: [number[], string[]] = partition([1, \"a\"] as (number | string)[], (x): x is number => typeof x === \"number\");"
+            },
+            {
+                  "code": "const [wrong]: [string[], number[]] = partition([1, \"a\"] as (number | string)[], (x): x is number => typeof x === \"number\");",
+                  "rejects": true
+            },
+            {
+                  "code": "type __Input={kind:\"yes\";value:number}|{kind:\"no\";text:string};const __input:readonly __Input[]=[];const __out:[Extract<__Input,{kind:\"yes\"}>[],Extract<__Input,{kind:\"no\"}>[]]=partition(__input,(x):x is Extract<__Input,{kind:\"yes\"}>=>x.kind===\"yes\");__out[1].push({kind:\"no\",text:\"x\"});"
+            }
       ],
       [
-        { code: 'const sorted: { n: string }[] = sortBy([{ n: "a" }], (x) => x.n);' },
-        { code: 'sortBy([{ n: "a" }], (x) => x.missing);', rejects: true },
-      ],
-    ],
+            {
+                  "code": "const sorted: { n: string }[] = sortBy([{ n: \"a\" }], (x) => x.n);"
+            },
+            {
+                  "code": "sortBy([{ n: \"a\" }], (x) => x.missing);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __input=Object.freeze([Object.freeze({n:1,s:\"x\"})]);const __out:{readonly n:number;readonly s:string}[]=sortBy(__input,x=>x.n,x=>x.s);__out.push({n:2,s:\"y\"});"
+            }
+      ]
+],
     references: [
       [handbook('Generics', 'generics.html'), doc('Map', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map')],
       [handbook('Generic functions', 'functions.html#generic-functions'), doc('Map.prototype.get()', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/get')],
@@ -127,23 +167,23 @@ function area(shape: Shape): number {
 `,
     focus: ['unions', 'narrowing', 'type-guards'],
     prompts: [
-      en('`Shape` is a discriminated union: every member has a `kind`, and `kind` tells TypeScript which other fields exist. Implement `area(shape)`: `Math.PI * radius * radius` for a circle, `side * side` for a square, and `width * height` for a rect. Switch on `shape.kind`; inside each `case` TypeScript knows the exact member, so `shape.radius` only compiles in the circle branch.'),
-      en('Add `perimeter(shape: Shape): number`: `2 * Math.PI * radius`, `4 * side`, or `2 * (width + height)`. Make the switch exhaustive: its `default` branch returns `assertNever(shape)`. Write `assertNever(value: never): never` too; it throws `new Error("Unexpected shape: " + JSON.stringify(value))`. If a fourth shape is added and a `case` is missing, `shape` is no longer `never` in that branch and the compiler points at the gap.'),
-      en('Add `parseAmount(input: string | number | null | undefined): number | null`. A finite number comes back as it is. A string is trimmed and must look like a decimal number, `/^-?\\d+(\\.\\d+)?$/`; then `Number` converts it. Everything else gives `null`: `NaN`, `Infinity`, `null`, `undefined`, an empty string and `"12abc"`. Check `typeof input` first: after `typeof input === "number"`, TypeScript treats `input` as a number, and after the `"string"` check, as a string.'),
-      en('Add `isShape(value: unknown): value is Shape`, a type guard for data you did not write, such as parsed JSON. It returns `true` only for a non-null object whose `kind` is `"circle"`, `"square"` or `"rect"` and whose size fields for that kind are finite numbers of zero or more. After `if (isShape(value))`, TypeScript lets you call `area(value)`.'),
-      en('Add `totalArea(values: unknown[]): { total: number; skipped: number }`: add up the area of every value `isShape` accepts, and count the ones it rejects. Round `total` to two decimals with `Math.round(total * 100) / 100`. An empty list gives `{ total: 0, skipped: 0 }`.'),
+      en("`Shape` is a discriminated union: every member has a `kind`, and `kind` tells TypeScript which other fields exist. Implement `area(shape)`: `Math.PI * radius * radius` for a circle, `side * side` for a square, and `width * height` for a rect. Switch on `shape.kind`; inside each `case` TypeScript knows the exact member, so `shape.radius` only compiles in the circle branch. For area/perimeter, Shape inputs are stable ordinary records with own or inherited data fields, possibly frozen, no accessors/proxies, and dimensions from 0 through 1000, including fractions. Leave the input and its unrelated metadata unchanged. These helpers trust their typed input and do not validate arbitrary runtime data. Return ordinary JavaScript Number formula results without rounding; comparisons may allow ordinary floating-point roundoff. An if/else implementation with identical behavior is valid too. Target: O(1) time and extra space for area: Shape has exactly three fixed variants and each formula has a fixed number of operations."),
+      en("Add `perimeter(shape: Shape): number`: `2 * Math.PI * radius`, `4 * side`, or `2 * (width + height)`. Make the switch exhaustive: its `default` branch returns `assertNever(shape)`. Write `assertNever(value: never): never` too; it throws `new Error(\"Unexpected shape: \" + JSON.stringify(value))`. If a fourth shape is added and a `case` is missing, `shape` is no longer `never` in that branch and the compiler points at the gap. Keep the level-one numeric/input-preservation rules. Do not round the perimeter. assertNever is a compile-time exhaustiveness helper, not a validator that proves an arbitrary object is a Shape. Runtime diagnostic demonstrations pass bounded acyclic data with ordinary JSON.stringify behavior; preserve the exact Unexpected shape prefix and serialized value. Target: O(1) time and extra space for a valid Shape perimeter; the diagnostic serialization cost for an invalid value is separate and depends on that value."),
+      en("Add `parseAmount(input: string | number | null | undefined): number | null`. A finite number comes back as it is. A string is trimmed and must look like a decimal number, `/^-?\\d+(\\.\\d+)?$/`; then `Number` converts it, provided the converted result is finite. Everything else gives `null`: `NaN`, `Infinity`, `null`, `undefined`, an empty string and `\"12abc\"`. Check `typeof input` first: after `typeof input === \"number\"`, TypeScript treats `input` as a number, and after the `\"string\"` check, as a string. Strings have at most 1000 UTF-16 units. Use the exact ASCII decimal grammar shown, including its required integer digits, optional minus and optional nonempty fraction; trim follows JavaScript trim, not a hand-picked space list. A matching string must also convert to a finite Number: overflow returns null. Preserve ordinary Number precision and signed zero; do not round or use parseFloat to accept a prefix. Numbers may be any primitive Number and return unchanged only when finite. This is a decimal-format exercise, not an exact-money type. Target: O(n) time and O(n) temporary text space for parseAmount, where n is max(1, string UTF-16 length), or 1 for a non-string input."),
+      en("Add `isShape(value: unknown): value is Shape`, a type guard for data you did not write, such as parsed JSON. It returns `true` only for a non-null object whose `kind` is `\"circle\"`, `\"square\"` or `\"rect\"` and whose size fields for that kind are finite numbers of zero or more. After `if (isShape(value))`, TypeScript lets you call `area(value)`. Domain: arbitrary primitive values or stable non-null objects with ordinary own/inherited data properties and no accessors/proxies. Arrays or boxed objects decorated with valid shape fields are objects too and are not rejected merely for their container kind; functions are excluded by typeof. Extra fields do not matter. Accept all finite nonnegative Number dimensions, with no numeric coercion or upper-bound check here; missing, negative, NaN and infinite sizes fail. Return an actual boolean, leave every input unchanged and do not sanitize/copy it. The formulas in earlier levels retain their stated bounded input domain. Target: O(1) time and extra space for isShape under constant property access: it checks only one discriminant and at most two size fields."),
+      en("Add `totalArea(values: readonly unknown[]): { total: number; skipped: number }`: add up the area of every value `isShape` accepts, and count the ones it rejects. Round `total` to two decimals with `Math.round(total * 100) / 100`. An empty list gives `{ total: 0, skipped: 0 }`. values is a dense ordinary readonly array of at most 1000 stable values, possibly frozen, with the level-four isShape data domain and no accessors/proxies. For this bounded aggregation exercise, each accepted shape has dimensions at most 1000, as in the formula levels. Preserve list order/references and every input value, count each occurrence including repeated references and zero-area shapes, and ignore unrelated fields. Add full-precision areas in input order, then round once at the end using the stated Number expression; do not round individual areas. Return a fresh mutable plain object with exactly total/skipped each call, including empty input. Target: O(n) time and O(n) allowed auxiliary space for totalArea, where n is 1 + value count with constant-size shape checks/formulas; a one-pass O(1)-extra-space implementation is also valid."),
     ],
     hints: [
       en('`switch (shape.kind) { case "circle": return Math.PI * shape.radius ** 2; ... }`. Each `case` returns, so no `break` is needed.'),
       en('After the three `case`s, TypeScript has ruled every member out, so `shape` is `never` in `default`. `never` is assignable to anything, which is why `return assertNever(shape)` compiles in a function that returns a number.'),
-      en('`if (typeof input === "number") return Number.isFinite(input) ? input : null;` Then `if (typeof input !== "string") return null;` leaves `input` a string for the regular expression.'),
+      en('`if (typeof input === "number") return Number.isFinite(input) ? input : null;` Then `if (typeof input !== "string") return null;` leaves `input` a string for the regular expression. After converting a matching string, check Number.isFinite again: a valid decimal can still overflow.'),
       en('Cast once after the object check: `const record = value as Record<string, unknown>`. Then a size check is `typeof record.side === "number" && Number.isFinite(record.side) && record.side >= 0`.'),
       en('Loop over the values: `if (isShape(value)) total += area(value); else skipped += 1;`. Inside the `if`, `value` is a `Shape`.'),
     ],
     approaches: [
       [en('Switch on `shape.kind`.'), en('Return the formula for each of the three kinds.'), en('Read only the fields that kind has.')],
       [en('Write `assertNever`: it only throws.'), en('Switch on `shape.kind` in `perimeter` and return each formula.'), en('Return `assertNever(shape)` from the `default` branch.')],
-      [en('Numbers: return the input if it is finite, otherwise `null`.'), en('Anything that is not a string now: return `null`.'), en('Trim the string, test it against the pattern, and convert it with `Number`.')],
+      [en('Numbers: return the input if it is finite, otherwise `null`.'), en('Anything that is not a string now: return `null`.'), en('Trim the string and test the exact decimal pattern. Convert a match with `Number`; return null if that result is not finite.')],
       [en('Return `false` unless the value is an object and not `null`.'), en('Read `kind` and switch on it.'), en('For each kind, check that its size fields are finite numbers of zero or more; any other kind is `false`.')],
       [en('Start with `total = 0` and `skipped = 0`.'), en('For each value, add its area if `isShape` accepts it, or count it as skipped.'), en('Round the total to two decimals and return both numbers.')],
     ],
@@ -164,6 +204,7 @@ function area(shape: Shape): number {
       ],
       [
         check('parseAmount(5)', 5),
+        check("parseAmount(\"9\".repeat(400))", null, "a matching decimal that overflows is not finite", true),
         check('parseAmount(" 2.50 ")', 2.5),
         check('parseAmount("-3")', -3),
         check('parseAmount("12abc")', null, 'text after the number'),
@@ -191,26 +232,67 @@ function area(shape: Shape): number {
     ],
     typeTests: [
       [
-        { code: 'const a: number = area({ kind: "circle", radius: 1 });' },
-        { code: 'area({ kind: "circle", side: 1 });', rejects: true },
+            {
+                  "code": "const a: number = area({ kind: \"circle\", radius: 1 });"
+            },
+            {
+                  "code": "area({ kind: \"circle\", side: 1 });",
+                  "rejects": true
+            },
+            {
+                  "code": "const __circle=Object.freeze({kind:\"circle\" as const,radius:1});const __area:number=area(__circle);"
+            }
       ],
       [
-        { code: 'const p: number = perimeter({ kind: "square", side: 1 });' },
-        { code: 'const incomplete = (s: Shape): number => { switch (s.kind) { case "circle": return 1; case "square": return 2; default: return assertNever(s); } };', rejects: true },
+            {
+                  "code": "const p: number = perimeter({ kind: \"square\", side: 1 });"
+            },
+            {
+                  "code": "const incomplete = (s: Shape): number => { switch (s.kind) { case \"circle\": return 1; case \"square\": return 2; default: return assertNever(s); } };",
+                  "rejects": true
+            },
+            {
+                  "code": "const __assert:(value:never)=>never=assertNever;const __perimeter:number=perimeter(Object.freeze({kind:\"rect\" as const,width:1,height:2}));"
+            }
       ],
       [
-        { code: 'const n: number | null = parseAmount("1");' },
-        { code: 'const wrong: number = parseAmount("1");', rejects: true },
+            {
+                  "code": "const n: number | null = parseAmount(\"1\");"
+            },
+            {
+                  "code": "const wrong: number = parseAmount(\"1\");",
+                  "rejects": true
+            },
+            {
+                  "code": "parseAmount(true);",
+                  "rejects": true
+            }
       ],
       [
-        { code: 'const input: unknown = JSON.parse("{}"); if (isShape(input)) { const a: number = area(input); }' },
-        { code: 'const input: unknown = JSON.parse("{}"); const a: number = area(input);', rejects: true },
+            {
+                  "code": "const input: unknown = JSON.parse(\"{}\"); if (isShape(input)) { const a: number = area(input); }"
+            },
+            {
+                  "code": "const input: unknown = JSON.parse(\"{}\"); const a: number = area(input);",
+                  "rejects": true
+            },
+            {
+                  "code": "const __guard:(value:unknown)=>value is Shape=isShape;const __data:unknown={};if(isShape(__data)){const __valid:Shape=__data;}else{const __stillUnknown:unknown=__data;}"
+            }
       ],
       [
-        { code: 'const result: { total: number; skipped: number } = totalArea([1, "a"]);' },
-        { code: 'const wrong: string = totalArea([]).total;', rejects: true },
-      ],
-    ],
+            {
+                  "code": "const result: { total: number; skipped: number } = totalArea([1, \"a\"]);"
+            },
+            {
+                  "code": "const wrong: string = totalArea([]).total;",
+                  "rejects": true
+            },
+            {
+                  "code": "const __values:readonly unknown[]=Object.freeze([{kind:\"square\",side:1}]);const __sum:{total:number;skipped:number}=totalArea(__values);__sum.total=2;"
+            }
+      ]
+],
     references: [
       [handbook('Discriminated unions', 'narrowing.html#discriminated-unions'), handbook('Union types', 'everyday-types.html#union-types')],
       [handbook('Exhaustiveness checking', 'narrowing.html#exhaustiveness-checking'), handbook('The never type', 'narrowing.html#the-never-type')],

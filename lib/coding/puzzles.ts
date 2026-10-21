@@ -81,9 +81,9 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
   'js-count-vowels': {
     lines: [
       { id: 'a', code: 'function countVowels(text) {' },
-      { id: 'b', code: '  const vowels = "aeiou";' },
+      { id: 'b', code: '  const vowels = "aeiouAEIOU";' },
       { id: 'c', code: '  let count = 0;' },
-      { id: 'd', code: '  for (const letter of text.toLowerCase()) {' },
+      { id: 'd', code: '  for (const letter of text) {' },
       { id: 'e', code: '    if (vowels.includes(letter)) count++;' },
       { id: 'f', code: '  }' },
       { id: 'g', code: '  return count;' },
@@ -107,18 +107,18 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
   'js-palindrome': {
     lines: [
       { id: 'a', code: 'function isPalindrome(text) {' },
-      { id: 'b', code: '  const clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");' },
+      { id: 'b', code: '  const length = text.length;' },
       { id: 'c', code: '  let left = 0;' },
-      { id: 'd', code: '  let right = clean.length - 1;' },
+      { id: 'd', code: '  let right = length - 1;' },
       { id: 'e', code: '  while (left < right) {' },
-      { id: 'f', code: '    if (clean[left] !== clean[right]) return false;' },
+      { id: 'f', code: '    if (text[left] !== text[right]) return false;' },
       { id: 'g', code: '    left++;' },
       { id: 'h', code: '    right--;' },
       { id: 'i', code: '  }' },
       { id: 'j', code: '  return true;' },
       { id: 'k', code: '}' },
     ],
-    // `left` needs nothing, so it can come before `clean` as well as either
+    // `left` needs nothing, so it can come before `length` as well as either
     // side of `right`; the two steps inside the loop can swap.
     accepted: [
       ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'],

@@ -4,6 +4,16 @@
 import { useT } from '../../i18n/LanguageContext';
 import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../../lib/categories';
 import type { CategoryType } from '../../types/quiz';
+import { CategoryGlyph } from './techIcons';
+
+/** The same selectable technology pill in Quiz, Play and Challenge. */
+export function TopicPill({ category, selected, onClick }: { category: CategoryType; selected: boolean; onClick: () => void }) {
+  const t = useT();
+  return <button type="button" className="ss-topic-pill" aria-pressed={selected} onClick={onClick}>
+    <CategoryGlyph category={category} color={getCategoryHexColor(category)} size={16} />
+    {t(categoryLabelKey(category))}
+  </button>;
+}
 
 export function CategoryTag({ category }: { category: CategoryType }) {
   const t = useT();

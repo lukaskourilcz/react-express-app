@@ -56,6 +56,15 @@ const validateTriage = raw => {
   return { ok: true, decision: { ticketId: ticketId, category: category, confidence: confidence } };
 };`,
     hiddenTests: [
+      {"call": "validateTriage('{\"confidence\":\"bad\"}')", "expected": {"ok": false, "reason": "missing-field"}},
+      {"call": "validateTriage('{\"ticketId\":\"A\",\"category\":null,\"confidence\":\"bad\"}')", "expected": {"ok": false, "reason": "missing-field"}},
+      {"call": "validateTriage('{\"ticketId\":\"A\",\"category\":\"billing\",\"confidence\":1e400}')", "expected": {"ok": false, "reason": "wrong-type"}, "criterion": "range-checks"},
+      {"call": "(function(){var r=validateTriage('{\"ticketId\":\"A\",\"category\":\"billing\",\"confidence\":-0}');return r.ok&&Object.is(r.decision.confidence,-0);})()", "expected": true},
+      {"call": "[validateTriage('before {\"ticketId\":\"A\",\"category\":\"billing\",\"confidence\":0.5} after {\"extra\":1}'),validateTriage('} before {') ]", "expected": [{"ok": false, "reason": "unparsable-json"}, {"ok": false, "reason": "no-json-object"}]},
+      {"call": "[validateTriage(Symbol('x')),validateTriage(10n),validateTriage(function(){})]", "expected": [{"ok": false, "reason": "not-a-string"}, {"ok": false, "reason": "not-a-string"}, {"ok": false, "reason": "not-a-string"}], "criterion": "no-crash"},
+      {"call": "validateTriage(JSON.stringify({ticketId:'\\u00a0A\\u00a0',category:' billing ',confidence:0.5,extra:{quote:'braces { } inside string',nested:{x:1}}}))", "expected": {"ok": true, "decision": {"ticketId": "A", "category": "billing", "confidence": 0.5}}},
+      {"call": "(function(){var body=JSON.stringify({ticketId:'A',category:'bug',confidence:0.5});var raw=' '.repeat(10000-body.length)+body;return validateTriage(raw);})()", "expected": {"ok": true, "decision": {"ticketId": "A", "category": "bug", "confidence": 0.5}}},
+
       {
         call:
           '[validateTriage(undefined), validateTriage(42), validateTriage({ ticketId: "TCK-1004", category: "bug", confidence: 0.82 })]',

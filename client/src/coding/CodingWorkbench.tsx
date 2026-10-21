@@ -5,14 +5,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
+import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { runtimePolicyForTask } from '../../../shared/coding-task-runtime';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, MIN_ATTEMPT_MS, type LadderRung } from './hint-ladder';
@@ -21,7 +22,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
+import { FlagIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -39,22 +40,6 @@ import './Coding.css';
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
  * so its identity is stable and it runs once per mount. */
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
-
-function ComplexityInfo({ guidance }: { guidance: ReturnType<typeof complexityGuidance> }) {
-  // Hover/focus use Astryx's normal tooltip behavior; a tap pins it until a
-  // second tap, focus leaves, or Escape. This keeps the information reachable
-  // on touch screens, where the shared tooltip suppresses simulated hover.
-  const [pinned, setPinned] = useState<boolean | undefined>(undefined);
-  return <Tooltip isOpen={pinned} placement="above" content={<div className="cd-complexity__tip">
-    {guidance.targetSpace && <p>Target extra space: <code>{guidance.targetSpace}</code>.</p>}
-    <p>{guidance.note}</p>
-  </div>}>
-    <Button variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label="About Big O complexity" className="cd-complexity__info"
-      onClick={() => setPinned((value) => value === true ? false : true)}
-      onBlur={() => setPinned(false)} onFocus={() => setPinned(undefined)} onMouseEnter={() => setPinned(undefined)}
-      onKeyDown={(event) => { if (event.key === 'Escape') setPinned(false); }} />
-  </Tooltip>;
-}
 
 /** A React suite that moves focus inside the preview frame takes the page's
  * focus with it. Call before a run; the function it returns gives focus back
@@ -98,6 +83,7 @@ export interface CodingWorkbenchProps {
   onEdit?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
+  onRefreshTask?: (code: string) => Promise<void>;
   nextHref?: string | null;
   backHref?: string;
   onContinue?: () => void;
@@ -159,7 +145,7 @@ function useOnline(): boolean {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
+  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction, onRefreshTask } = props;
   const evolution = evolvingStage(task.id);
   const complexity = complexityGuidance(task);
   const { t, lang } = useLanguage();
@@ -193,6 +179,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // A pass recorded during this visit outlives the card that announced it: a
   // later Submit clears the card, not the pass.
   const [recordedPass, setRecordedPass] = useState(false);
+  const [taskChanged, setTaskChanged] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // The last Run or Submit kept the code on this device only.
   const [draftTooLarge, setDraftTooLarge] = useState(false);
@@ -328,7 +315,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       } else {
         setRunPhase('starting');
         const outcome = await runCodeTests({
-          track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
+          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
         });
         setRun(outcome);
         setServerChecked(false);
@@ -397,7 +384,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         // comes first, the server's run replaces it.
         const preview = new AbortController();
         localRun.current = preview;
-        void runCodeTests({ track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
+        void runCodeTests({ runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
           if (preview.signal.aborted) return;
           setRun(local);
           setServerChecked(false);
@@ -429,7 +416,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result, code);
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
+      if (error instanceof ApiError && error.code === 'task_changed') {
+        localRun.current?.abort();
+        setRun(null);
+        setServerChecked(false);
+        setTaskChanged(true);
+        setSubmitError(t('coding.verdict.taskChanged'));
+      }
+      else if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
       // The upgrade sheet is already open; the line beside the button says why.
       else if (isPremiumRequired(error)) setSubmitError(t('error.premiumRequired'));
       else setSubmitError(submitFailure(error));
@@ -468,6 +462,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'task_changed') setTaskChanged(true);
       setSubmitError(isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
     } finally {
       setPhase('idle');
@@ -584,7 +579,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : '';
 
   const busy = phase !== 'idle';
-  const submitDisabled = mode === 'landing' || busy || !session || !online || Boolean(solution);
+  const submitDisabled = taskChanged || mode === 'landing' || busy || !session || !online || Boolean(solution);
 
   // The shortcut does what the button would: nothing, while Submit is off.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -948,13 +943,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {(verdict.xpAwarded > 0 || (isReact && verdict.verdict === 'passed' && !verdictStale)) && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
       {!(isReact && verdict.verdict === 'passed' && !verdictStale) && <RepeatXpNote verdict={verdict} />}
-      {!isReact && verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
-        <strong>Estimated time: {verdict.complexity.time ?? 'Cannot determine'}</strong>
-        {!verdictStale && verdict.verdict === 'passed' && verdict.complexity.assessment === 'within-target' && <p>Meets the stated time target under the analysis assumptions.</p>}
-        {!verdictStale && verdict.complexity.assessment === 'above-target' && <p>Above the stated time target. Look for repeated work inside a scan.</p>}
-        <p>{verdict.complexity.explanation}</p>
-        <details><summary>How this estimate works</summary><p>{verdict.complexity.assumptions}</p></details>
-      </div>}
+      {verdict.complexity?.time && <p className="cd-verdict__row">{t('coding.complexity.result', { complexity: verdict.complexity.time })}</p>}
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1037,10 +1026,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />
-      <div className="cd-complexity">
-        <span>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</span>
+      {complexity.targetTime && <div className="cd-complexity">
+        <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
         <ComplexityInfo guidance={complexity} />
-      </div>
+      </div>}
       {/* Earlier briefs still apply, but they are context now, not the
           task: smaller, lighter, and numbered by the stage that set them. */}
       {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
@@ -1122,7 +1111,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // What the actions open: hints, the skip form, confirmations and errors. It
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
+  const refreshTask = async () => {
+    if (!onRefreshTask || busy) return;
+    setPhase('submitting');
+    try { await onRefreshTask(code); setTaskChanged(false); setSubmitError(null); setRun(null); }
+    catch (error) { setSubmitError(friendlyError(error)); }
+    finally { setPhase('idle'); }
+  };
+  const refreshAction = taskChanged && onRefreshTask && <Button className="cd-brief-refresh" variant="secondary" isDisabled={busy || !online} onClick={() => void refreshTask()} label={t('coding.verdict.reloadBrief')} />;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
+
+  if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
+    return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
+      xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
+      onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
+      backHref={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} /></div>;
+  }
 
   return (
     <div
@@ -1139,6 +1143,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   over rather than being graded under the new one. */}
               <CodePuzzle key={session ?? task.id} puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
               {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              {puzzleMode && refreshAction}
               <div className="cd-actions">
                 <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
               </div>
@@ -1272,6 +1277,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {draftTooLarge && <p className="cd-note cd-note--warn" role="status">{t('coding.draft.tooLarge')}</p>}
               {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
               {submitError && !puzzleMode && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              {!puzzleMode && refreshAction}
             </div>
           )}
 

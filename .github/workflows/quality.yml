@@ -38,10 +38,10 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   verify:
     runs-on: ubuntu-latest
-    # The coding content contract now also grades every task against wrong
-    # solutions (lookup tables, constants, static React pages), which adds
-    # a few minutes to a run that already took about fifteen.
-    timeout-minutes: 30
+    # Full isolated grading, browser coverage, Storybook and performance need
+    # more than the old 30-minute cap: run 38491511671 passed the preceding
+    # gates and timed out during the final Storybook/performance step.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,8 +52,22 @@ jobs:
             package-lock.json
             client/package-lock.json
       - run: npm ci && npm ci --prefix client
+      - name: Rebuild modified QuickJS runtime from pinned sources
+        env:
+          QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -n "$QUICKJS_BASE_SHA" && "$QUICKJS_BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            [[ "$QUICKJS_BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+            git fetch --no-tags --depth=1 origin "$QUICKJS_BASE_SHA"
+            if git diff --quiet "$QUICKJS_BASE_SHA" HEAD -- lib/coding/vendor lib/coding/quickjs-variant.ts scripts/rebuild-quickjs-sort.mjs package.json package-lock.json client/package-lock.json; then
+              echo "QuickJS inputs unchanged; required runtime integrity tests still run below."
+              exit 0
+            fi
+          fi
+          npm run check:quickjs-build
       - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
-      - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
+      - run: npm run audit:native-reviews
+      - run: npm run test:performance && npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:path-authority && npm run test:react-authority && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: |
           # The browser checks below run against this build, so it signs in the
@@ -74,10 +88,12 @@ jobs:
           npm run preview --prefix client -- --host 0.0.0.0 --port 4173 > /tmp/preview.log 2>&1 &
           node scripts/wait-for-preview.mjs
           npm run test:browser -- tests/browser/public.spec.ts
+          npm run test:browser -- tests/browser/guide-startup.spec.ts tests/browser/profile-leaderboard-preferences.spec.ts
           npm run test:browser -- tests/browser/evolving.spec.ts
           npm run test:browser -- tests/browser/coding-pages.spec.ts
           npm run test:browser -- tests/browser/coding-workbench.spec.ts
           npm run test:browser -- tests/browser/coding-drafts.spec.ts
+          npm run test:browser -- tests/browser/learning-release.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts

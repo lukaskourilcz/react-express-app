@@ -1,11 +1,11 @@
 // First: no exported Supabase project may verify the stand-in tokens below.
 import './launch-test-env';
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
 import { handleCodingBookmarks, canSaveCodingTask } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
-import { encodeCodingSession } from '../lib/quiz-tokens';
 
 const solved = 'const double=ns=>ns.map(n=>n*2)';
 
@@ -23,7 +23,8 @@ function request(session: string, account: string | null) {
 const errorCode = (body: unknown) => (body as { error?: { code?: string } } | null)?.error?.code;
 
 async function main() {
-  const accountA = encodeCodingSession({taskId:'js-double-numbers',track:'javascript',userId:'account-a',roadmapAttemptId:'account-a-attempt-0123456789'});
+  const accountA = encodeCodingSession({taskId:'js-double-numbers',track:'javascript',userId:'account-a'});
+  const linkedA = encodeCodingSession({taskId:'js-double-numbers',track:'javascript',userId:'account-a',roadmapAttemptId:'account-a-attempt-0123456789'});
   for (const [name, handler] of [['submit', handleCodingSubmit], ['reveal', handleCodingReveal]] as const) {
     // A guest holding account A's session.
     const guest = response();
@@ -50,6 +51,10 @@ async function main() {
   await handleCodingSubmit(request(accountA, 'account-a') as never, ownSubmit as never, null);
   assert.notEqual(errorCode(ownSubmit.body), 'invalid_session', 'the owner is not refused its own session');
   assert.equal(errorCode(ownSubmit.body), 'not_configured', 'the owner\'s submit reaches the progress write');
+  const missingParent=response();
+  await handleCodingReveal(request(linkedA,'account-a') as never,missingParent as never,null);
+  assert.equal(missingParent.statusCode,503,'a Learn-linked reveal requires a readable parent attempt');
+  assert.ok(!(missingParent.body as {solution?:string}).solution,'no reference is revealed before the linked parent is verified');
 
   console.log('Coding account-bound submit and reveal authorization passed: guests and other signed-in accounts are refused, the owner is not.');
 

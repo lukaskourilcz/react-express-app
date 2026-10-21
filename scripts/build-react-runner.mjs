@@ -1,6 +1,9 @@
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
+
+const resolveDependency = createRequire(import.meta.url);
 
 // The QuickJS grader's worker thread (lib/coding/sandbox.ts).
 await buildSandboxWorker();
@@ -13,6 +16,17 @@ await build({
   outfile: 'lib/coding/generated/react-sandbox.cjs',
   bundle: true, platform: 'node', format: 'cjs', packages: 'external', target: 'node24',
   banner: { js: '"use strict";' },
+  // Keep the pinned wasm module, its loader and FFI together when the guest
+  // runs against an existing dependency snapshot. Other packages stay external.
+  plugins: [{
+    name: 'bundle-quickjs-runtime',
+    setup(build) {
+      build.onResolve({ filter: /^(?:quickjs-emscripten(?:-core)?|@jitl\/quickjs-[^/]+)(?:\/.*)?$/ }, args => ({
+        path: resolveDependency.resolve(args.path, { paths: [args.resolveDir || process.cwd()] }),
+        external: false,
+      }));
+    },
+  }],
 });
 
 // The SDK's transitive dependencies include ESM-only packages. Vercel's

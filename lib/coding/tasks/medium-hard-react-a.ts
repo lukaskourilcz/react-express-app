@@ -37,7 +37,7 @@ export const MEDIUM_HARD_REACT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['useContext', 'useReducer', 'custom-hook'],
     title: 'A basket every page can reach',
-    prompt: 'A shop shows its basket in the header, the product list and the basket panel, three components that all need the same lines. Share them through context. `basketReducer(lines, action)` works out the next lines, where a line is `{ id, name, quantity }`. `{ type: "add", product }` adds one: the product’s line gains 1, or a new line with quantity 1 goes on the end. `{ type: "remove", id }` takes one away, and a line that reaches 0 leaves the list. Any other action returns the very same `lines`. Never change the array or a line you were given: return new ones. `BasketProvider` keeps the lines with `useReducer(basketReducer, [])` and provides `{ lines, add, remove }`, where `add(product)` and `remove(id)` dispatch. `useBasket()` reads that context and throws `new Error("useBasket must be used inside BasketProvider")` when there is no provider, so create the context with `null` as its default. Then finish the components: `BasketBadge` shows `Basket (n)`, where n counts items, not lines. `BasketLines` shows "Your basket is empty" when it is, and otherwise a list labelled "Basket" with one `li` per line: the text `Tea × 2` in a `span`, then the buttons "Remove one Tea" and "Add one Tea".',
+    prompt: `A shop shows its basket in the header, the product list and the basket panel, three components that all need the same lines. Share them through context. \`basketReducer(lines, action)\` works out the next lines, where a line is \`{ id, name, quantity }\`. \`{ type: "add", product }\` adds one: the product’s line gains 1, or a new line with quantity 1 goes on the end. \`{ type: "remove", id }\` takes one away, and a line that reaches 0 leaves the list. Any other action returns the very same \`lines\`. Never mutate the array or a line you were given; use new arrays and objects for changed data. \`BasketProvider\` keeps the lines with \`useReducer(basketReducer, [])\` and provides \`{ lines, add, remove }\`, where \`add(product)\` and \`remove(id)\` dispatch. \`useBasket()\` reads that context and throws \`new Error("useBasket must be used inside BasketProvider")\` when there is no provider, so create the context with \`null\` as its default. Then finish the components: \`BasketBadge\` shows \`Basket (n)\`, where n counts items, not lines. \`BasketLines\` shows "Your basket is empty" when it is, and otherwise a list labelled "Basket" with one \`li\` per line: the text \`Tea × 2\` in a \`span\`, then the buttons "Remove one Tea" and "Add one Tea". Products have string or finite integer ids; compare ids strictly, so 0 and "0" are different products. Each id keeps one name. Lines start with positive integer quantities; there is no two-item cap. Preserve insertion order, ignore removal of an absent id, and append a removed product at the end when it is added again. Public provider actions must compose correctly when called several times in one event. Separate and nested providers keep independent baskets; the nearest provider supplies each consumer.`,
     starter: `import React, { createContext, useContext, useReducer } from 'react';
 
 const PRODUCTS = [
@@ -119,14 +119,14 @@ export const useBasket = () => {
   return basket;
 };`,
     hints: [
-      'A reducer is a plain function, so you can call it in a test or in your head: the same lines and the same action always give the same answer. Returning the same array for an action you do not know is how React knows nothing changed.',
-      'A context with `null` as its default tells you something: `useContext` gives `null` only when no provider sits above the component. The count in the badge is a sum, `lines.reduce((sum, line) => sum + line.quantity, 0)`.',
+      `A reducer is a plain function, so you can call it in a test or in your head: the same lines and the same action always give the same answer. Returning the same array for an action you do not know is how React knows nothing changed.`,
+      `A context with \`null\` as its default tells you something: \`useContext\` gives \`null\` only when no provider sits above the component. The count in the badge is a sum, \`lines.reduce((sum, line) => sum + line.quantity, 0)\`.`,
     ],
     approach: [
-      'Write `basketReducer` with a `switch` on `action.type`: `map` to update a line, spread to append one, `filter` to drop a line at 0.',
-      'Create the context with `createContext(null)`. `BasketProvider` calls `useReducer` and provides the lines with `add` and `remove`.',
-      '`useBasket` reads the context and throws when it is `null`.',
-      'Finish `BasketBadge` with the total quantity and `BasketLines` with the empty message or the labelled list.',
+      `Write \`basketReducer\` with a \`switch\` on \`action.type\`: \`map\` to update a line, spread to append one, \`filter\` to drop a line at 0.`,
+      `Create the context with \`createContext(null)\`. \`BasketProvider\` calls \`useReducer\` and provides the lines with \`add\` and \`remove\`.`,
+      `\`useBasket\` reads the context and throws when it is \`null\`.`,
+      `Finish \`BasketBadge\` with the total quantity and \`BasketLines\` with the empty message or the labelled list.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
@@ -193,6 +193,9 @@ test('the reducer gives new arrays and leaves the old ones alone', () => {
   expect(after).toEqual([{ id: 'tea', name: 'Tea', quantity: 2 }]);
   expect(before[0].quantity).toBe(1);
 });
+
+
+test('repeated additions keep growing past two items',()=>{let value=[];const product={id:'tea',name:'Tea'};for(let i=1;i<=12;i++){value=basketReducer(value,{type:'add',product});expect(value).toEqual([{...product,quantity:i}]);}});
 `,
   },
   {
@@ -203,8 +206,8 @@ test('the reducer gives new arrays and leaves the old ones alone', () => {
     tier: 3,
     focus: ['fetch', 'pagination', 'spread', 'conditional'],
     title: 'Load more from the server',
-    prompt: 'A photo library shows 3 photos a page and asks the server for one page at a time. On mount, fetch `/api/photos?page=1`; the answer is a list of `{ id, title }`, and each title goes in an `li`. A "Load more" button fetches the next page and adds its photos after the ones already shown, with spread. While a request is on its way, the button is disabled and reads "Loading…". A page with fewer than 3 photos is the last one: the button goes, and a paragraph says "That’s everything". When a request fails, keep the photos already shown, show "Could not load photos" in an element with `role="alert"`, and turn the button into "Try again", which asks for the same page again. The alert goes as soon as the next request starts.',
-    starter: `import React, { useEffect, useState } from 'react';
+    prompt: `A photo library shows 3 photos a page and asks the server for one page at a time. On mount, fetch \`/api/photos?page=1\`; the answer is a list of \`{ id, title }\`, and each title goes in an \`li\`. A "Load more" button fetches the next page and adds its photos after the ones already shown, with spread. While a request is on its way, the button is disabled and reads "Loading…". A page with fewer than 3 photos is the last one: the button goes, and a paragraph says "That’s everything". When a request fails, keep the photos already shown, show "Could not load photos" in an element with \`role="alert"\`, and turn the button into "Try again", which asks for the same page again. The alert goes as soon as the next request starts. Treat non-success HTTP responses and rejected JSON as failures too. Before reading JSON, check response.ok. Responses have zero to three photos with globally unique ids and literal single-line titles up to 500 characters, including repeated titles; preserve their order and text through all pages, not just the first three. Ordinary parent renders do not refetch or reset the list. Invalidate a pending request on unmount, and let only the current request append photos or report a failure. Keep each mounted App independent.`,
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const PAGE_SIZE = 3;
 
@@ -228,37 +231,76 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [photos, setPhotos] = useState([]);
+    skeleton: `const cancel = useRef(() => {});
+const [photos, setPhotos] = useState([]);
 const [page, setPage] = useState(0);          // the last page shown
 const [status, setStatus] = useState('loading'); // 'loading', 'ready', 'error' or 'done'
 
 const load = (number) => {
+  cancel.current();
+  let current = true;
+  cancel.current = () => { current = false; };
   setStatus('loading');
   fetch('/api/photos?page=' + number)
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) throw new Error('Request failed');
+      return response.json();
+    })
     .then((next) => {
+      if (!current) return;
       // append with spread, remember the page, and decide: 'ready' or 'done'
     })
-    .catch(() => setStatus('error'));
+    .catch(() => { if (current) setStatus('error'); });
 };
 
-useEffect(() => { load(1); }, []);
+useEffect(() => { load(1); return () => cancel.current(); }, []);
 
 // render: the list, then one of "That’s everything", the alert with "Try again",
 // or the Load more button, disabled and reading "Loading…" while loading`,
     hints: [
-      'Add a page with the updater form, `setPhotos((shown) => [...shown, ...next])`, so the new photos land after the ones on screen even if the list changed while the request was out.',
-      'One `status` value, `"loading"`, `"ready"`, `"error"` or `"done"`, decides what shows under the list. The page to ask for next is always the last page shown plus one, and "Try again" asks for that same page.',
+      `Add a page with the updater form, \`setPhotos((shown) => [...shown, ...next])\`, so the new photos land after the ones on screen even if the list changed while the request was out.`,
+      `One \`status\` value, \`"loading"\`, \`"ready"\`, \`"error"\` or \`"done"\`, decides what shows under the list. The page to ask for next is always the last page shown plus one, and "Try again" asks for that same page.`,
+      `Check response.ok before JSON. Keep a cancellation callback in a ref so cleanup can invalidate the latest request, including requests started by the button. Import useRef when using this approach.`,
     ],
     approach: [
-      'Keep the photos, the last page shown and a status in state.',
-      'Write `load(number)`: set the status to loading, fetch that page, append its photos, remember the page number, and set the status to done for a short page and ready otherwise. A failure sets the status to error.',
-      'Call `load(1)` in an effect on mount, and `load(page + 1)` from the button.',
-      'Render the button as "Load more", "Loading…" (disabled) or "Try again" from the status, the alert on an error, and "That’s everything" instead of the button when the status is done.',
+      `Keep the photos, the last page shown and a status in state.`,
+      `Write \`load(number)\`: set the status to loading, fetch that page, append its photos, remember the page number, and set the status to done for a short page and ready otherwise. A failure sets the status to error. Reject non-success HTTP responses; catch JSON failures as well. Guard completion with request ownership and invalidate the latest request in effect cleanup.`,
+      `Call \`load(1)\` in an effect on mount, and \`load(page + 1)\` from the button.`,
+      `Render the button as "Load more", "Loading…" (disabled) or "Try again" from the status, the alert on an error, and "That’s everything" instead of the button when the status is done.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import App from './App';
+
+const withFetch = async (body) => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    const signal = options.signal;
+    calls.push({
+      url: String(url),
+      signal,
+      respond: data => resolve({ ok: true, status: 200, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+    const abort = () => {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      reject(error);
+    };
+    if (signal && signal.aborted) abort();
+    else if (signal) signal.addEventListener('abort', abort);
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+
 const photos = (from, count) => Array.from({ length: count }, (_, i) => ({ id: from + i, title: 'Photo ' + (from + i) }));
 const titles = () => screen.queryAllByRole('listitem').map(li => li.textContent);
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
@@ -315,6 +357,20 @@ test('a failure keeps the photos and Try again asks for the same page', () => wi
   expect(calls[2].url).toBe('/api/photos?page=2');
   expect(screen.queryByRole('alert')).toBeNull();
 }));
+
+
+const auditTransport = async body => {
+ const original=globalThis.fetch,calls=[];
+ globalThis.fetch=(url)=>new Promise((resolve,reject)=>calls.push({url:String(url),reply:(data,ok=true)=>resolve({ok,status:ok?200:503,json:()=>Promise.resolve(data)}),badJson:()=>resolve({ok:true,status:200,json:()=>Promise.reject(new SyntaxError('JSON'))}),fail:()=>reject(new TypeError('offline'))}));
+ try{await body(calls);}finally{globalThis.fetch=original;}
+};
+const auditRows=view=>[...view.container.querySelectorAll('li')].map(li=>li.textContent);
+const auditButton=(view,label)=>within(view.container).getByRole('button',{name:label});
+const auditClick=(view,label)=>fireEvent.click(auditButton(view,label));
+const auditData=(start,n)=>Array.from({length:n},(_,i)=>({id:start+i,title:i%2?' repeat ':'<post>& '+(start+i)+' '+('x'.repeat(i===0?450:0))}));
+const auditReply=async(call,data,ok=true)=>{await act(async()=>{call.reply(data,ok);});};
+
+test('an HTTP error keeps existing photos and retries the failed page',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,3);await auditReply(calls[0],first);auditClick(view,'Load more');await auditReply(calls[1],auditData(50,3),false);expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).getByRole('alert')).toBeTruthy();auditClick(view,'Try again');expect(calls[2].url).toBe('/api/photos?page=2');expect(within(view.container).queryByRole('alert')).toBeNull();await auditReply(calls[2],[]);expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).queryByRole('button')).toBeNull();}));
 `,
   },
   {
@@ -325,7 +381,7 @@ test('a failure keeps the photos and Try again asks for the same page', () => wi
     tier: 3,
     focus: ['derived-state', 'accessibility', 'events'],
     title: 'Sort a table by any column',
-    prompt: 'The table of top scorers should sort by whichever column you choose. Each column header holds a button. The first click on a column sorts the rows by it, ascending; the next click on the same column sorts descending, and the one after that ascending again. A click on a different column sorts by that column, ascending. The sorted column’s `th` carries `aria-sort="ascending"` or `aria-sort="descending"`, and the other headers carry no `aria-sort` at all, so a screen reader can announce how the table is sorted. Keep only the column and the direction in state, and sort a copy of `PLAYERS` while rendering: `PLAYERS` itself never changes order. Names and teams compare with `localeCompare`, goals as numbers, and rows that tie keep their order from `PLAYERS` in both directions. Before the first click, the rows are in `PLAYERS` order.',
+    prompt: "The table of top scorers should sort by whichever column you choose. Each column header holds a button. The first click on a column sorts the rows by it, ascending; the next click on the same column sorts descending, and the one after that ascending again. A click on a different column sorts by that column, ascending. The sorted column\u2019s `th` carries `aria-sort=\"ascending\"` or `aria-sort=\"descending\"`, and the other headers carry no `aria-sort` at all, so a screen reader can announce how the table is sorted. Keep only the column and the direction in state, and sort a copy of `PLAYERS` while rendering: `PLAYERS` itself never changes order. Names and teams compare with `localeCompare`, goals as numbers, and rows that tie keep their order from `PLAYERS` in both directions. Before the first click, the rows are in `PLAYERS` order. Keep the original caption,headers and exact name/team/goals cells. Header controls are native type-button elements inside scope=col headers. Use stable player identities so each surviving TR node follows its player through every reorder. Repeat mixed column choices for any number of clicks;ordinary parent re-renders preserve the current sort. Simultaneous tables own their sort choices and fresh mounts start unsorted in the original PLAYERS order. Copy/sort,toSorted or an equivalent immutable stable operation is fine;no one comparison implementation is required.",
     starter: `import React, { useState } from 'react';
 
 export const PLAYERS = [
@@ -432,6 +488,9 @@ test('text columns sort as text', () => {
   sortBy('Team');
   expect(names()).toEqual(['Ali', 'Ben', 'Mia', 'Zoe']);
 });
+
+test('every row node follows its player when names reorder',()=>{const {container}=render(<App/>);const before=new Map(Array.from(container.querySelectorAll('tbody tr')).map(tr=>[tr.cells[0].textContent,tr]));sortBy('Name');for(const tr of container.querySelectorAll('tbody tr'))expect(tr).toBe(before.get(tr.cells[0].textContent));});
+
 `,
   },
   {
@@ -442,8 +501,8 @@ test('text columns sort as text', () => {
     tier: 3,
     focus: ['timers', 'effect-cleanup', 'lists-keys'],
     title: 'Notices that dismiss themselves',
-    prompt: 'The Save and Delete buttons each add a notice, "Saved" or "Deleted", to the region with `role="status"`. Each notice is an `li` with its text in a `span` and a button named "Dismiss <text>", such as "Dismiss Saved", which removes it at once. A notice also leaves by itself 300 milliseconds after it appeared; a real one would stay for several seconds, and the short wait keeps the checks quick. At most three notices show at once, so a fourth pushes out the oldest. Give every notice an id from a counter and use it as the key: the text is not unique, and an index moves when an older notice leaves. Move each notice into a `Notice` component whose effect starts the 300 ms timeout and whose cleanup clears it. Then a notice that is dismissed or pushed out early leaves no timer behind, and each timer belongs to exactly one notice.',
-    starter: `import React, { useState } from 'react';
+    prompt: "The Save and Delete buttons each add a notice, \"Saved\" or \"Deleted\", to the region with `role=\"status\"`. Each notice is an `li` with its text in a `span` and a button named \"Dismiss <text>\", such as \"Dismiss Saved\", which removes it at once. A notice also leaves by itself 300 milliseconds after it appeared; a real one would stay for several seconds, and the short wait keeps the checks quick. At most three notices show at once, so a fourth pushes out the oldest. Give every notice an id from a counter and use it as the key: the text is not unique, and an index moves when an older notice leaves. Move each notice into a `Notice` component whose effect starts the 300 ms timeout and whose cleanup clears it. Then a notice that is dismissed or pushed out early leaves no timer behind, and each timer belongs to exactly one notice. Duplicate text is still a separate notice: dismissing one Saved removes only that id. Surviving LI nodes keep their identity when older notices leave, another arrives, or the parent re-renders. Every notice stays through 299 ms and leaves at its own full 300 ms boundary under a controlled clock; browser scheduling may be later. Each waiting notice owns one pending timeout, with no timer left after dismiss, eviction, expiry or unmount. Repeated adds and dismissals keep working beyond the sample sequence. Every independent or fresh App starts with an empty status region and its own counter/timers. The child may be called Notice or an equivalent name. Development Strict Mode may repeat setup and cleanup.",
+    starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [notices, setNotices] = useState([]);
@@ -543,6 +602,74 @@ test('each notice keeps its own 300 ms', () => withClock(async clock => {
   await clock.tick(180);
   expect(texts()).toEqual([]);
 }));
+
+const withNoticeClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    pending: () => timers.size,
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+
+
+const noticeRows=scope=>Array.from(within(scope).getByRole('status').querySelectorAll('li'));
+const noticeTexts=scope=>noticeRows(scope).map(row=>row.querySelector('span').textContent);
+const noticePress=(scope,label)=>fireEvent.click(within(scope).getByRole('button',{name:label}));
+test('dismissing one duplicate notice leaves the other one',()=>withNoticeClock(async clock=>{const root=render(<App/>);noticePress(root.container,'Save');noticePress(root.container,'Save');expect(noticeTexts(root.container)).toEqual(['Saved','Saved']);const second=noticeRows(root.container)[1];fireEvent.click(within(second).getByRole('button',{name:'Dismiss Saved'}));expect(noticeTexts(root.container)).toEqual(['Saved']);expect(clock.pending()).toBe(1);root.unmount();expect(clock.pending()).toBe(0);}));
+
 `,
   },
   {
@@ -553,7 +680,7 @@ test('each notice keeps its own 300 ms', () => withClock(async clock => {
     tier: 3,
     focus: ['forms', 'events', 'splice', 'accessibility'],
     title: 'A tag input',
-    prompt: 'A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call `preventDefault()` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an `li` with the tag in a `span` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling `splice` on the copy.',
+    prompt: `A field labelled "Tags" turns what you type into tags. Enter, or a comma, adds the text as a tag, trimmed and in lower case, and clears the field. Blank text adds nothing, and a tag that is already there is not added twice; the field is cleared either way. Call \`preventDefault()\` for those two keys, so Enter does not submit a form around the field and a comma never lands in it. Backspace in an empty field removes the last tag. The tags form a list labelled "Tags chosen": each is an \`li\` with the tag in a \`span\` and a button whose accessible name is "Remove tag <tag>", such as "Remove tag css". Remove a tag by copying the array and calling \`splice\` on the copy. Normalize with JavaScript trim().toLowerCase() and compare the resulting strings exactly, including non-ASCII text. Preserve other text literally; do not interpret markup or impose a four-tag cap. Input strings are single-line and up to 500 characters. Ignore key events while composition is active: check event.nativeEvent.isComposing (or the corresponding native-event flag) before adding, clearing, preventing default or removing a tag. A composing Enter or comma belongs to input-method text entry; a later non-composing confirmation adds the tag normally. Backspace removes a tag only when the field is exactly empty, not whitespace. Other keys stay unprevented. Separate and fresh Apps keep their own text and tags.`,
     starter: `import React, { useState } from 'react';
 
 const App = () => {
@@ -581,6 +708,7 @@ export default App;
 };
 
 const keyDown = (event) => {
+  if (event.nativeEvent?.isComposing || event.isComposing) return;
   if (event.key === 'Enter' || event.key === ',') {
     event.preventDefault();
     add();
@@ -597,14 +725,14 @@ const remove = (index) => {
 
 // <button type="button" aria-label={'Remove tag ' + tag} onClick={() => remove(index)}>×</button>`,
     hints: [
-      'A keydown handler runs before the browser acts on the key, which is why `preventDefault()` there keeps the comma out of the field and stops Enter from submitting a form.',
-      '`splice(index, 1)` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until `setTags` hands React the new one. `tags.slice(0, -1)` is a new array without the last tag.',
+      `A keydown handler runs before the browser acts on the key, which is why \`preventDefault()\` there keeps the comma out of the field and stops Enter from submitting a form. First check the native composition flag: Enter can confirm an input-method composition rather than submit a tag.`,
+      `\`splice(index, 1)\` changes the array it is called on, so call it on a copy made with spread; the array in state must stay as it was until \`setTags\` hands React the new one. \`tags.slice(0, -1)\` is a new array without the last tag.`,
     ],
     approach: [
-      'Handle `onKeyDown` on the input: Enter and comma prevent the default and add the tag, Backspace on empty text removes the last one.',
-      'Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.',
-      'Removing copies the tags, splices out one index and stores the copy.',
-      'Render each tag with a remove button that has `aria-label="Remove tag <tag>"`, so the button says what it removes.',
+      `Ignore composing keyboard events before handling Enter, comma or Backspace. Handle ordinary Enter/comma with preventDefault and add; ordinary Backspace on an exactly empty field removes the last tag.`,
+      `Adding trims and lower-cases the text, skips blank text and a tag already there, and always clears the field.`,
+      `Removing copies the tags, splices out one index and stores the copy.`,
+      `Render each tag with a remove button that has \`aria-label="Remove tag <tag>"\`, so the button says what it removes.`,
     ],
     verify: 'tests',
     estimatedMinutes: 20,
@@ -660,6 +788,9 @@ test('Enter is prevented, so a form around the field is not sent', () => {
   type('html');
   expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
 });
+
+
+test('composing keys leave pending text and tags alone until normal confirmation',()=>{render(<App/>);type('日本語');expect(fireEvent.keyDown(field(),{key:'Enter',isComposing:true})).toBe(true);expect(field().value).toBe('日本語');expect(tags()).toEqual([]);key('Enter');expect(tags()).toEqual(['日本語']);expect(field().value).toBe('');expect(fireEvent.keyDown(field(),{key:'Backspace',isComposing:true})).toBe(true);expect(tags()).toEqual(['日本語']);type(' ChEcK ');expect(fireEvent.keyDown(field(),{key:',',isComposing:true})).toBe(true);expect(field().value).toBe(' ChEcK ');key(',');expect(tags()).toEqual(['日本語','check']);expect(field().value).toBe('');});
 `,
   },
   {
@@ -670,7 +801,7 @@ test('Enter is prevented, so a form around the field is not sent', () => {
     tier: 3,
     focus: ['derived-state', 'forms', 'useRef', 'useEffect'],
     title: 'Select all, or some',
-    prompt: 'An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its `indeterminate` property. `indeterminate` has no HTML attribute and no React prop, so put a ref on the box and set `ref.current.indeterminate` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled.',
+    prompt: `An inbox lists four messages, each with a checkbox labelled by its subject. Above them, a checkbox labelled "Select all" shows the selection: checked when every message is selected, unchecked when none is, and in between when some are, which a checkbox shows through its \`indeterminate\` property. \`indeterminate\` has no HTML attribute and no React prop, so put a ref on the box and set \`ref.current.indeterminate\` in an effect that runs whenever the selection changes. Clicking "Select all" selects every message, unless all are selected already, and then it clears them. A button "Delete selected (n)", disabled when n is 0, removes the selected messages. Keep the messages and the selected ids in state, and work out all, none and some while rendering. With no messages left, "Select all" is unchecked and disabled. Unchecking any one selected message leaves the other selections alone, including after Select all. Preserve each surviving list row when deleting, update the count from the remaining messages and keep separate inbox instances independent. Parent renders must preserve the selection and indeterminate state.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const MESSAGES = [
@@ -789,7 +920,10 @@ test('Delete selected removes the chosen messages', () => {
   expect(all().checked).toBe(false);
   expect(all().indeterminate).toBe(false);
 });
-`,
+
+test('unchecking one item after Select all keeps the other three selected',()=>{
+ render(<App/>);fireEvent.click(all());fireEvent.click(box('Invoice 1042'));expect(deleteButton().textContent).toBe('Delete selected (3)');expect(all().indeterminate).toBe(true);expect(box('Lunch on Friday').checked).toBe(true);expect(box('Your parcel is on its way').checked).toBe(true);expect(box('Team photos').checked).toBe(true);
+});`,
   },
   {
     id: 'react-mh-use-shortcut',
@@ -799,7 +933,7 @@ test('Delete selected removes the chosen messages', () => {
     tier: 3,
     focus: ['custom-hook', 'events', 'effect-cleanup', 'useRef'],
     title: 'Keyboard shortcuts with a hook',
-    prompt: 'Write `useShortcut(key, handler)`, a hook that calls `handler(event)` whenever that key is pressed anywhere on the page: add a `keydown` listener to `window` in an effect, and remove it in the cleanup. Two details make it pleasant to use. Keep the newest handler in a ref, updated on every render, and let the listener call `handlerRef.current`: the handler can then read fresh state while the listener is added once per key, not after every render. And ignore key presses whose target is an `input`, a `textarea` or a `select`, so typing a slash into a text field still types a slash. App already uses the hook: "/" moves the focus to the Search field, and "n" adds one to "New notes".',
+    prompt: `Write \`useShortcut(key, handler)\`, a hook that calls \`handler(event)\` whenever that key is pressed anywhere on the page: add a \`keydown\` listener to \`window\` in an effect, and remove it in the cleanup. Two details make it pleasant to use. Keep the newest handler in a ref, updated in an effect after each committed render, and let the listener call \`handlerRef.current\`: the handler can then read fresh state while the listener is added once per key, not after every render. And ignore key presses whose target is an \`input\`, a \`textarea\` or a \`select\`, so typing a slash into a text field still types a slash. App already uses the hook: "/" moves the focus to the Search field, and "n" adds one to "New notes". Export the hook. Match event.key exactly, including case, and forward the original event so the handler can prevent its default action. A suspended or abandoned render must not publish its handler. A normal or layout effect can update the ref. Keep one subscription per key through callback-only and parent renders; remove it with the same function and capture phase, or abort its signal. Each hook cleans up its own subscription. This exercise covers the three named typing controls and ordinary DOM key events; modifier policies, contenteditable and shortcut arbitration are outside its scope.`,
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 export const useShortcut = (key, handler) => {
@@ -828,7 +962,7 @@ export default App;
 
 export const useShortcut = (key, handler) => {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler; // the newest handler, every render
+  useEffect(() => { handlerRef.current = handler; }); // only committed renders
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -839,13 +973,13 @@ export const useShortcut = (key, handler) => {
   }, [key]);
 };`,
     hints: [
-      'The effect depends on `key` only, so it runs once for a key and the listener it adds lives until the key changes or the component leaves. The handler App passes is a new function on every render; reading it from a ref means the listener always calls the newest one without being added again.',
-      '`event.target.tagName` is `"INPUT"`, `"TEXTAREA"` or `"SELECT"` for a key typed into a field. `removeEventListener` only removes the very function that was added, so keep it in a variable inside the effect.',
+      `A ref lets the key subscription call the latest committed handler without registering again. Update that ref in an effect, so a suspended render cannot overwrite the handler used by the visible page.`,
+      `\`event.target.tagName\` is \`"INPUT"\`, \`"TEXTAREA"\` or \`"SELECT"\` for a key typed into a field. \`removeEventListener\` only removes the very function that was added, so keep it in a variable inside the effect. Removal must match the capture phase too, unless cleanup aborts the subscription signal.`,
     ],
     approach: [
-      'Create `handlerRef` with `useRef(handler)` and assign `handlerRef.current = handler` in the hook’s body.',
-      'In an effect that depends on `key`, define the listener: skip events from fields, and call `handlerRef.current(event)` when `event.key` matches.',
-      'Add it to `window` and return a cleanup that removes it.',
+      `Initialize the ref with the first handler and publish later handlers in an effect after commit, never in the hook body.`,
+      `In an effect that depends on \`key\`, define the listener: skip events from fields, and call \`handlerRef.current(event)\` when \`event.key\` matches.`,
+      `Add it to \`window\` and return a cleanup that removes it.`,
     ],
     verify: 'tests',
     estimatedMinutes: 25,
@@ -891,6 +1025,11 @@ test('/ is prevented, so no slash is typed anywhere', () => {
   render(<App />);
   expect(press('/')).toBe(false);
 });
+
+
+const watchLiveListeners=(target,eventType)=>{const add=target.addEventListener,remove=target.removeEventListener,records=[];const capture=options=>typeof options==='boolean'?options:Boolean(options&&options.capture);const alive=row=>!row.removed&&!(row.options&&row.options.signal&&row.options.signal.aborted);target.addEventListener=function(type,listener,options){if(type===eventType&&!records.some(row=>alive(row)&&row.listener===listener&&row.capture===capture(options)))records.push({listener,options,capture:capture(options),removed:false});return add.call(this,type,listener,options);};target.removeEventListener=function(type,listener,options){if(type===eventType)records.forEach(row=>{if(row.listener===listener&&row.capture===capture(options))row.removed=true;});return remove.call(this,type,listener,options);};return {active:()=>records.filter(alive).length,registered:()=>records.length,restore:()=>{target.addEventListener=add;target.removeEventListener=remove;}};};
+
+test('shortcut matching preserves the exact key and original cancellable event',()=>{const events=[];const Probe=()=>{useShortcut('q',event=>{events.push(event);event.preventDefault();});return null;};render(<Probe/>);const upper=new KeyboardEvent('keydown',{key:'Q',bubbles:true,cancelable:true});document.body.dispatchEvent(upper);expect(events).toEqual([]);const lower=new KeyboardEvent('keydown',{key:'q',bubbles:true,cancelable:true});document.body.dispatchEvent(lower);expect(events[0]).toBe(lower);expect(lower.defaultPrevented).toBe(true);});
 `,
   },
   {
@@ -901,8 +1040,8 @@ test('/ is prevented, so no slash is typed anywhere', () => {
     tier: 3,
     focus: ['forms', 'useRef', 'events', 'lists-keys'],
     title: 'Rename in place',
-    prompt: 'Each file in the list shows its name in a `span` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with `role="alert"`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a `Map` in a ref, keyed by file id, and focus the right one in an effect once the form has gone.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `Each file in the list shows its name in a \`span\` and a button whose accessible name is "Rename <name>". Clicking it swaps the name for a small form: an input labelled "New name for <name>", filled with the current name and focused. Submitting the form saves the trimmed text; blank text, or the name the file already has, just closes the form. The Escape key in the input closes the form without saving. A name that another file already has is refused: the form stays open and shows "That name is taken" in an element with \`role="alert"\`, which goes when the form closes. Only one file is renamed at a time: Rename on another file closes the first form without saving. Whenever a form closes by a save or by Escape, the focus goes back to that file’s Rename button, so a keyboard user keeps their place. Keep the buttons in a \`Map\` in a ref, keyed by file id, and focus the right one in an effect once the form has gone. Compare trimmed names exactly and case-sensitively, without Unicode normalization. They are plain single-line strings up to 2000 UTF-16 code units; this exercise does not validate filesystem paths. Duplicate checks use the current file names, so an old name becomes available after its file is renamed. Preserve file order and the existing list rows, parent draft state and each instance’s own labels, data and focus. If you use DOM ids, make them unique to the instance.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const FILES = [
   { id: 1, name: 'report.pdf' },
@@ -1008,7 +1147,10 @@ test('blank text keeps the old name', () => {
   submit('photo.jpg');
   expect(names()).toEqual(['report.pdf', 'notes.txt', 'photo.jpg']);
 });
-`,
+
+test('duplicate comparisons are case-sensitive',()=>{
+ render(<App/>);fireEvent.click(renameButton('notes.txt'));type('notes.txt','REPORT.PDF');submit('notes.txt');expect(names()).toEqual(['report.pdf','REPORT.PDF','photo.jpg']);expect(screen.queryByRole('alert')).toBeNull();expect(document.activeElement).toBe(renameButton('REPORT.PDF'));
+});`,
   },
   {
     id: 'react-mh-wait-for-export',
@@ -1018,7 +1160,7 @@ test('blank text keeps the old name', () => {
     tier: 3,
     focus: ['fetch', 'timers', 'effect-cleanup', 'conditional'],
     title: 'Wait for the export',
-    prompt: 'Exporting a large report takes the server a while, so the page starts a job and keeps asking how it is going. "Export" posts to `/api/exports`, and the answer is `{ id }`. Then ask `/api/exports/<id>` about the job: once straight away, then again 200 milliseconds after each answer, never while an answer is still on its way. An answer `{ status: "running", progress }` shows "Preparing… <progress>%". `{ status: "done", url }` shows a link "Download the export" to that url, and `{ status: "failed" }` shows "The export failed" in an element with `role="alert"`; either one ends the asking. The Export button is disabled while a job runs. Do the asking in an effect that depends on the job id, and clear the waiting timeout in its cleanup, so a page that closes stops asking.',
+    prompt: `Exporting a large report takes the server a while, so the page starts a job and keeps asking how it is going. "Export" posts to \`/api/exports\`, and the answer is \`{ id }\`. Then ask \`/api/exports/<id>\` about the job: once straight away, then again 200 milliseconds after each answer, never while an answer is still on its way. An answer \`{ status: "running", progress }\` shows "Preparing… <progress>%". \`{ status: "done", url }\` shows a link "Download the export" to that url, and \`{ status: "failed" }\` shows "The export failed" in an element with \`role="alert"\`; either one ends the asking. The Export button is disabled while a job runs. Do the asking in an effect that depends on the job id, and clear the waiting timeout in its cleanup, so a page that closes stops asking. Each poll uses GET and waits for the complete JSON body before starting its 200 ms delay. Job ids are distinct URL-safe strings of 1–80 characters; progress is an integer from 0 to 100 and download URLs are same-origin paths. Responses in this exercise are successful HTTP/JSON responses; failure is reported by the job status. Export must stay disabled from the first status request until done or failed; disabling it while the initial POST is pending is also allowed. Repeated jobs, parent renders and a late answer after removal must not leave another poll running.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const App = () => {
@@ -1130,7 +1272,14 @@ test('Export is disabled while a job runs', () => withFetch(async calls => {
   await begin(calls);
   expect(exportButton().disabled).toBe(true);
 }));
-`,
+
+test('starting an export uses POST', () => withFetch(async calls => {
+  const real = globalThis.fetch;
+  let method;
+  globalThis.fetch = (url, options = {}) => { method = options.method; return real(url, options); };
+  try { render(<App />); fireEvent.click(exportButton()); expect(method).toBe('POST'); }
+  finally { globalThis.fetch = real; }
+}));`,
   },
 
   /* ── Hard ─────────────────────────────────────────────────────────── */
@@ -1142,8 +1291,8 @@ test('Export is disabled while a job runs', () => withFetch(async calls => {
     tier: 4,
     focus: ['accessibility', 'useRef', 'events', 'effect-cleanup'],
     title: 'A menu button',
-    prompt: 'A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has `aria-haspopup="menu"` and `aria-expanded`, `"true"` or `"false"`. The open menu is a `ul` with `role="menu"`, each item an `li` with `role="menuitem"` and `tabIndex={-1}`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A `mousedown` anywhere outside the button and the menu closes it without moving the focus: add that listener to `document` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call `focus()` on them.',
-    starter: `import React, { useEffect, useRef, useState } from 'react';
+    prompt: `A button "Actions" opens a menu of three items, Rename, Duplicate and Delete. Build it the way the ARIA Authoring Practices describe a menu button. The button has \`aria-haspopup="menu"\` and \`aria-expanded\`, \`"true"\` or \`"false"\`. The open menu is a \`ul\` with \`role="menu"\`, each item an \`li\` with \`role="menuitem"\` and \`tabIndex={-1}\`. Opening the menu, with a click or with ArrowDown on the button, moves the focus to the first item. In the menu, ArrowDown and ArrowUp move the focus to the next and previous item, wrapping at the ends, and Home and End move it to the first and last. Enter on an item, or a click, chooses it: the menu closes, the focus returns to the button, and a paragraph reads "Chose Duplicate". Escape closes the menu and returns the focus to the button. A \`mousedown\` anywhere outside the button and the menu closes it without moving the focus: add that listener to \`document\` only while the menu is open, and remove it in the effect’s cleanup. Keep the items in refs, so you can call \`focus()\` on them. Give the menu the accessible name Actions. Tab and Shift+Tab keep their normal browser action: once keyboard focus leaves the menu, close it without returning focus to the Actions button. Moving focus between menu items keeps it open. An outside mousedown or focus change must not steal focus. If you provide aria-controls, use an id belonging only to that instance. Nested content inside a menu item or the trigger still counts as inside. Parent renders and repeated choices must preserve the active item and the chosen result.`,
+    starter: `import React, { useEffect, useId, useRef, useState } from 'react';
 
 const ITEMS = ['Rename', 'Duplicate', 'Delete'];
 
@@ -1260,7 +1409,10 @@ test('a mousedown outside closes the menu', () => {
   fireEvent.mouseDown(screen.getByRole('heading'));
   expect(screen.queryByRole('menu')).toBeNull();
 });
-`,
+
+test('Tab can leave the menu without its default action being blocked',()=>{
+ const view=render(<><App/><button type="button">After menu</button></>);fireEvent.click(trigger());const event=new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});act(()=>document.activeElement.dispatchEvent(event));expect(event.defaultPrevented).toBe(false);const outside=screen.getByRole('button',{name:'After menu'});act(()=>fireEvent.blur(document.activeElement,{relatedTarget:outside}));act(()=>outside.focus());expect(screen.queryByRole('menu')).toBeNull();expect(document.activeElement).toBe(outside);
+});`,
   },
   {
     id: 'react-mh-city-combobox',
@@ -1270,8 +1422,8 @@ test('a mousedown outside closes the menu', () => {
     tier: 4,
     focus: ['accessibility', 'events', 'filter', 'derived-state'],
     title: 'An autocomplete for cities',
-    prompt: 'A field labelled "City" suggests cities as you type. Build it as an ARIA combobox. The input has `role="combobox"`, `aria-autocomplete="list"`, `aria-controls` with the id of the list, and `aria-expanded`, `"true"` while suggestions show. The suggestions are the cities that start with the typed text, ignoring case and the spaces around it, at most five, in a `ul` with `role="listbox"`; each is an `li` with `role="option"` and an id of its own. An empty field shows no list. When nothing matches there is no list either, and a paragraph says "No cities match". ArrowDown and ArrowUp move the active option, wrapping at the ends; with no active option, ArrowDown goes to the first and ArrowUp to the last. The focus stays in the input: `aria-activedescendant` names the active option’s id, and that option has `aria-selected="true"`; with no active option the input has no `aria-activedescendant`. Enter picks the active option: the field takes its name, the list closes, and a paragraph reads "Selected: Paris". A click on an option picks it too, and Enter with no active option does nothing. Escape closes the list and leaves the text alone. Typing opens the list again with no active option. Keep the text, the active index and whether the list is open in state, and work the suggestions out from the text while rendering.',
-    starter: `import React, { useState } from 'react';
+    prompt: "A field labelled \"City\" suggests cities as you type. Build it as an ARIA combobox. The input has `role=\"combobox\"`, `aria-autocomplete=\"list\"`, `aria-controls` with the id of the list, and `aria-expanded`, `\"true\"` while suggestions show. The suggestions are the cities that start with the typed text, ignoring case and the spaces around it, at most five, in a `ul` with `role=\"listbox\"`; each is an `li` with `role=\"option\"` and an id of its own. An empty field shows no list. When nothing matches there is no list either, and a paragraph says \"No cities match\". ArrowDown and ArrowUp move the active option, wrapping at the ends; with no active option, ArrowDown goes to the first and ArrowUp to the last. The focus stays in the input: `aria-activedescendant` names the active option\u2019s id, and that option has `aria-selected=\"true\"`; with no active option the input has no `aria-activedescendant`. Enter picks the active option: the field takes its name, the list closes, and a paragraph reads \"Selected: Paris\". A click on an option picks it too, and Enter with no active option does nothing. Escape closes the list and leaves the text alone. Typing opens the list again with no active option. Keep the text, the active index and whether the list is open in state, and work the suggestions out from the text while rendering. Use the starter useId base to give each mounted input,label,list and current option a nonempty distinct id,unique across instances;keep the input/list ids stable across normal parent re-renders. Input remains a controlled native field with its raw text,up to 2000 UTF16 units. Every repeated arrow/Enter/Escape interaction works. Arrow keys prevent default while the list shows;Enter prevents default only when it picks an active option. With a closed list,arrows do not reopen it;type to reopen. Leave unrelated keys to the browser. Picking keeps the input focused. Last Selected text persists through later typing/Escape until another pick. Surviving options keep their DOM identity while narrowing a prefix. Simultaneous components and fresh mounts have independent empty state. No blur-closing,Home/End,virtualization or arbitrary city-data API is required.",
+    starter: `import React, { useId, useState } from 'react';
 
 const CITIES = [
   'Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Bern', 'Bratislava', 'Brussels',
@@ -1280,18 +1432,19 @@ const CITIES = [
 ];
 
 const App = () => {
+  const baseId = useId();
   const [text, setText] = useState('');
 
   return <main>
     <h2>Where to?</h2>
-    <label htmlFor="city">City</label>
-    <input id="city" value={text} onChange={(event) => setText(event.target.value)} />
+    <label htmlFor={baseId + '-input'}>City</label>
+    <input id={baseId + '-input'} value={text} onChange={(event) => setText(event.target.value)} />
   </main>;
 };
 
 export default App;
 `,
-    skeleton: `const [text, setText] = useState('');
+    skeleton: `// text, setText and baseId are provided by the starter.
 const [active, setActive] = useState(-1);
 const [open, setOpen] = useState(false);
 const [selected, setSelected] = useState('');
@@ -1299,7 +1452,8 @@ const [selected, setSelected] = useState('');
 const query = text.trim().toLowerCase();
 const suggestions = query === '' ? [] : CITIES.filter(/* starts with query */).slice(0, 5);
 const showList = open && suggestions.length > 0;
-const optionId = (index) => 'city-option-' + index;
+const listId = baseId + '-list';
+const optionId = (index) => baseId + '-option-' + index;
 
 const onKeyDown = (event) => {
   // ArrowDown / ArrowUp: move active, wrapping; preventDefault so the caret stays put
@@ -1384,6 +1538,9 @@ test('text with no match says so', () => {
   expect(screen.queryByRole('listbox')).toBeNull();
   expect(field().getAttribute('aria-expanded')).toBe('false');
 });
+
+test('two comboboxes have their own labelled input,list and option ids',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const scopes=Array.from(container.querySelectorAll('[data-scope]')),inputs=scopes.map(s=>within(s).getByRole('combobox',{name:'City'}));expect(new Set(inputs.map(i=>i.id)).size).toBe(2);inputs.forEach(i=>fireEvent.change(i,{target:{value:'b'}}));const lists=scopes.map(s=>within(s).getByRole('listbox'));inputs.forEach((i,n)=>expect(document.getElementById(i.getAttribute('aria-controls'))).toBe(lists[n]));const ids=[...inputs,...lists,...scopes.flatMap(s=>Array.from(s.querySelectorAll('[role="option"]')))].map(n=>n.id);expect(ids.every(Boolean)).toBe(true);expect(new Set(ids).size).toBe(ids.length);});
+
 `,
   },
   {
@@ -1394,8 +1551,8 @@ test('text with no match says so', () => {
     tier: 4,
     focus: ['forms', 'derived-state', 'accessibility', 'useRef'],
     title: 'A sign-up form that says what is wrong',
-    prompt: 'The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its `blur`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a `p` with an id of its own, and the field gets `aria-invalid="true"` and `aria-describedby` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email.',
-    starter: `import React, { useRef, useState } from 'react';
+    prompt: `The sign-up form has three fields, Email, Password and Repeat password, and a "Create account" submit button. Each field has a rule and a message. Email must match \`/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/\` once trimmed: "Enter an email like name@example.com". Password needs 8 or more characters and at least one digit: "Use 8 or more characters with a number". Repeat password must equal Password: "The passwords do not match". Work the errors out from the values while rendering; do not store them. A field’s error shows only once the field has been left, on its \`blur\`, or after a submit attempt, so nobody is told off while still typing. A shown error sits in a \`p\` with an id of its own, and the field gets \`aria-invalid="true"\` and \`aria-describedby\` with that id; while its error is hidden, or once the value is fixed, the field has neither attribute. Submitting with any error shows every error, sends nothing, and moves the focus to the first field with an error, so keep the inputs in refs. A valid submit replaces the form with "Welcome, <email>", using the trimmed email. Password length means JavaScript UTF-16 code units (\`password.length\`); the required digit is an ASCII digit 0–9. Compare both password fields exactly, without trimming them. Email uses the stated simple pattern, not complete mailbox validation. Validate the current native email value after trimming it. Field values can contain up to 2000 units of single-line text. Give every instance stable unique field/error ids so labels and error descriptions remain local. Parent renders retain input nodes and touched state; separate and fresh forms remain independent.`,
+    starter: `import React, { useId, useRef, useState } from 'react';
 
 const App = () => {
   const [values, setValues] = useState({ email: '', password: '', repeat: '' });
@@ -1427,6 +1584,7 @@ export default App;
     skeleton: `const [touched, setTouched] = useState({ email: false, password: false, repeat: false });
 const [tried, setTried] = useState(false);
 const [welcome, setWelcome] = useState('');
+const prefix = useId();
 const refs = { email: useRef(null), password: useRef(null), repeat: useRef(null) };
 
 const errors = {
@@ -1445,11 +1603,13 @@ const submit = (event) => {
 
 // <input ... onBlur={() => setTouched({ ...touched, email: true })}
 //        aria-invalid={shown('email') ? 'true' : undefined}
-//        aria-describedby={shown('email') ? 'email-error' : undefined} />
-// {shown('email') && <p id="email-error">{errors.email}</p>}`,
+//        aria-describedby={shown('email') ? prefix + 'email-error' : undefined} />
+// {shown('email') && <p id={prefix + 'email-error'}>{errors.email}</p>}
+
+// Derive each input id from prefix too, and use that same id in its label htmlFor.`,
     hints: [
-      'The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.',
-      '`aria-describedby` makes a screen reader read the error with the field, and `aria-invalid` says the field needs attention. React drops an attribute whose value is `undefined`, which is how a field with no shown error has neither.',
+      `The errors follow from the values alone, so they are always right for what is on screen. What needs state is whether to show them: a touched flag per field, and whether a submit was tried.`,
+      `\`aria-describedby\` makes a screen reader read the error with the field, and \`aria-invalid\` says the field needs attention. React drops an attribute whose value is \`undefined\`, which is how a field with no shown error has neither. Use useId to derive stable field and error ids unique to each mounted form.`,
     ],
     approach: [
       'Work out each field’s message from the values: the email pattern on the trimmed email, the length and a digit for the password, equality for the repeat.',
@@ -1522,6 +1682,11 @@ test('a valid submit welcomes the new user', () => {
   submit();
   expect(screen.getByText('Welcome, ada@example.com')).toBeTruthy();
 });
+
+
+test('seven UTF-16 units are too short even with a digit',()=>{
+ render(<App/>);type('Password','abcdef1');leave('Password');expect(describedBy('Password')).toBe('Use 8 or more characters with a number');type('Password','abcdefg1');expect(describedBy('Password')).toBeNull();
+});
 `,
   },
   {
@@ -1532,7 +1697,7 @@ test('a valid submit welcomes the new user', () => {
     tier: 4,
     focus: ['timers', 'effect-cleanup', 'accessibility', 'events'],
     title: 'A carousel that plays itself',
-    prompt: 'A carousel shows one of four slides and moves on by itself every 200 milliseconds; a real one would wait several seconds, and the short wait keeps the checks quick. The slides sit in a `section` with `aria-roledescription="carousel"` and `aria-label="Featured"`, and in it a `p` reads "Slide 2 of 4: <title>". Previous and Next buttons, inside the section, move one slide, wrapping at the ends, and start the 200 ms wait over, so the slide never changes straight after a click. A "Pause" button stops the autoplay and becomes "Play", which starts it again. The autoplay also stops while the pointer is over the section or the keyboard focus is inside it, and goes on when both have left; the Pause button still wins, so a paused carousel stays paused when the pointer leaves. The slide’s `p` has `aria-live="off"` while the carousel plays, so a screen reader is not interrupted by every change, and `aria-live="polite"` while it does not. Run the timer in an effect that depends on whether the carousel plays and on the current slide, and clear it in the cleanup.',
+    prompt: `A carousel shows one of four slides and moves on by itself every 200 milliseconds; a real one would wait several seconds, and the short wait keeps the checks quick. The slides sit in a \`section\` with \`aria-roledescription="carousel"\` and \`aria-label="Featured"\`, and in it a \`p\` reads "Slide 2 of 4: <title>". Previous and Next buttons, inside the section, move one slide, wrapping at the ends, and start the 200 ms wait over, so the slide never changes straight after a click. A "Pause" button stops the autoplay and becomes "Play", which starts it again. The autoplay also stops while the pointer is over the section or the keyboard focus is inside it, and goes on when both have left; the Pause button still wins, so a paused carousel stays paused when the pointer leaves. The slide’s \`p\` has \`aria-live="off"\` while the carousel plays, so a screen reader is not interrupted by every change, and \`aria-live="polite"\` while it does not. Run the timer in an effect that depends on whether the carousel plays and on the current slide, and clear it in the cleanup. Manual navigation must keep the Pause choice. Each restarted wait lasts the full 200 ms; actual browser callbacks can run later. Pointer and focus holds combine: autoplay resumes only when both have left and Pause is off. Keep each instance independent and clear its pending timer when removed.`,
     starter: `import React, { useEffect, useState } from 'react';
 
 const SLIDES = ['Spring sale', 'New arrivals', 'Free delivery', 'Gift cards'];
@@ -1636,7 +1801,10 @@ test('aria-live is off while it plays and polite while it does not', () => {
   press('Pause');
   expect(slide().getAttribute('aria-live')).toBe('polite');
 });
-`,
+
+test('autoplay waits the full 200 ms',()=>withClock(async clock=>{
+ render(<App/>);await clock.tick(199);expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');await clock.tick(1);expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
+}));`,
   },
   {
     id: 'react-mh-search-as-you-type',
@@ -1693,7 +1861,7 @@ useEffect(() => {
   return () => controller.abort();
 }, [query, attempt]);`,
     hints: [
-      'Two pieces of state split the job. `text` changes on every key and drives the input; `query` changes 100 ms after the last key and drives the request. The first effect’s cleanup clears the timeout whenever another key arrives, which is the whole debounce.',
+      'Debounce the raw input text for the full 100 ms after its last change, then trim the settled text for the request and cache key. Keep successful arrays, including empty answers, in a per-mount Map ref. A short query clears results; a failed request offers an immediate retry and an aborted request is ignored.',
       'The second effect’s cleanup runs just before it runs again and when the page closes, which is exactly when the old request should be aborted. An aborted `fetch` rejects with an error whose `name` is `"AbortError"`: ignore that one and treat every other rejection as a failure.',
     ],
     approach: [
@@ -1790,7 +1958,7 @@ test('a failed search offers Try again, which asks at once', () => withFetch(asy
     tier: 5,
     focus: ['fetch', 'timers', 'useRef', 'effect-cleanup'],
     title: 'Autosave a note',
-    prompt: 'A notes editor saves by itself. A `textarea` labelled "Note" starts with `INITIAL`. 150 milliseconds after the typing stops, save with `fetch("/api/notes/1", { method: "PUT", body: text })`; a real editor would wait longer, and the short wait keeps the checks quick. A status line, a `p` with `role="status"`, reads "Saving…" while a save is on its way, "All changes saved" when the text on screen is the text last saved, and "Unsaved changes" otherwise, so text typed and then changed back needs no save. Only one save is on its way at a time: when the wait ends during a save, let that save answer first, then save the newest text straight away. A failed save, a network error or an answer that is not `ok`, shows "Could not save" in an element with `role="alert"` and a "Retry" button that saves the newest text at once; the alert goes when a save succeeds. When the page closes with unsaved text, save it at once from the cleanup of an effect. That cleanup belongs to the first render, so it must read the newest text, and the text last saved, from refs.',
+    prompt: 'A notes editor saves by itself. A `textarea` labelled "Note" starts with `INITIAL`. 150 milliseconds after the typing stops, save with `fetch("/api/notes/1", { method: "PUT", body: text })`; a real editor would wait longer, and the short wait keeps the checks quick. A status line, a `p` with `role="status"`, reads "Saving…" while a save is on its way, "All changes saved" when the text on screen is the text last saved, and "Unsaved changes" otherwise. Returning to the last saved text needs no write unless a different version is already being saved. While the component is mounted, only one save is on its way at a time: when the wait ends during a save, let that save finish; after success, save the newest text straight away. If it fails, Retry uses the newest text. A failed save, a network error or an answer that is not `ok`, shows "Could not save" in an element with `role="alert"` and a "Retry" button that saves the newest text at once; the alert goes when a save succeeds. When the page closes with unsaved text, save it at once from the cleanup of an effect. That cleanup belongs to the first render, so it must read the newest text, and the text last saved, from refs.',
     starter: `import React, { useEffect, useRef, useState } from 'react';
 
 const INITIAL = 'Buy milk';
@@ -1829,7 +1997,7 @@ const save = async () => {
 };
 
 useEffect(() => {
-  if (text === savedRef.current) return;
+  if (text === savedRef.current && !busy.current) return;
   const timer = setTimeout(save, 150);
   return () => clearTimeout(timer);
 }, [text]);
@@ -1838,13 +2006,13 @@ useEffect(() => () => {
   // closing: unsaved text goes out at once
 }, []);`,
     hints: [
-      'State drives what the page shows; refs hold what callbacks need to read later. A timeout, an answer handler and an unmount cleanup were all created by an earlier render, so the newest text and the text last saved must come from refs, not from the variables of that render.',
+      'Callbacks and the initial-render cleanup read the newest and last saved text from refs. While a write is pending, returning to the previously saved text still needs a debounce timer: that pending write may store a different value. Queue the newest value, save it after success, and let Retry use the latest text after failure.',
       'One save at a time needs two flags in refs: one that says a save is on its way, and one that says another save was asked for meanwhile. When the save on its way answers, look at the second flag and save the newest text if it is set.',
     ],
     approach: [
       'Keep the text, the text last saved and the saving and failed flags in state, and mirror the newest and the saved text in refs.',
       'Write `save()`: while busy, only note that another save is wanted. Otherwise PUT the newest text, treat a rejection or an answer that is not `ok` as a failure, and when done, save again if one was wanted.',
-      'An effect on the text waits 150 ms and calls `save`, clearing the timeout in its cleanup; Retry calls `save` straight away.',
+      'An effect on the text waits 150 ms and calls `save`, clearing the timeout in its cleanup; Retry calls `save` straight away. Keep that timer when a different value is being saved, even if the newest text matches the previous saved value.',
       'An effect with `[]` returns a cleanup that PUTs the newest text when it differs from the text last saved.',
     ],
     verify: 'tests',

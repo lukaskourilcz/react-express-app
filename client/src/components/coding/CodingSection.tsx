@@ -42,7 +42,7 @@ import {
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import { Badge } from '@astryxdesign/core/Badge';
-import { ApiError, isPremiumRequired } from '../../lib/api';
+import { ApiError, friendlyError, isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
@@ -676,8 +676,25 @@ export function CodingTaskScreen() {
   // A track the section does not offer (system design is hidden) is not
   // found. Its task is never fetched, so no session is issued.
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
-  const task = useCodingTask(track ? taskId : undefined);
+  const [learnLink, setLearnLink] = useState(() => {
+    const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
+    try { return { taskId, session: sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined }; } catch { return { taskId, session: sealed ?? undefined }; }
+  });
+  const learnSession = learnLink.taskId === taskId ? learnLink.session : undefined;
+  useEffect(() => {
+    if (!learnSession || !taskId) return;
+    try { sessionStorage.setItem(`devshark:learn-coding:${taskId}`, learnSession); } catch { /* memory copy still works */ }
+    if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  }, [learnSession, taskId]);
+  const task = useCodingTask(track ? taskId : undefined, learnSession);
+  useEffect(() => {
+    if (learnSession && task.data?.session && task.data.session !== learnSession && task.data.task.id === taskId) {
+      setLearnLink({ taskId, session: task.data.session });
+    }
+  }, [learnSession, task.data, taskId]);
   const [attempt, setAttempt] = useState(0);
+  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string } | null>(null);
+  const [completedTask, setCompletedTask] = useState<string | null>(null);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
@@ -719,6 +736,7 @@ export function CodingTaskScreen() {
   useEffect(() => { if (fetchedSignedIn === false && isAuthenticated) void refetchTask(); }, [fetchedSignedIn, isAuthenticated, refetchTask]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
+    setCompletedTask(verdict.verdict === 'passed' && !verdict.graderUnavailable ? taskId ?? null : null);
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
     // An accepted order comes back as "passed" about the arrangement. The task
     // itself stays open for the code (the server records no progress), so it
@@ -779,6 +797,10 @@ export function CodingTaskScreen() {
   }
   const CodingWorkbench = workbench.View;
   if (task.isError || !task.data || !CodingWorkbench) {
+    if (learnSession && task.error instanceof ApiError && ['invalid_session', 'session_owner_mismatch'].includes(task.error.code ?? '')) return <div className="cd-page">
+      <p className="cd-note cd-note--error" role="alert">{friendlyError(task.error)}</p>
+      <Button as={Link} href="/learn" variant="secondary" label={t('coding.lesson.backToLearn')} />
+    </div>;
     return (
       <div className="cd-page">
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>
@@ -802,7 +824,7 @@ export function CodingTaskScreen() {
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
-  const initialCode = choice.code ?? (stage && previousLocal !== null
+  const initialCode = (refreshDraft?.taskId === taskId ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -810,19 +832,19 @@ export function CodingTaskScreen() {
     <div className="cd-page ss-pop">
       {/* Rendered only when it has something to say: an empty row would still
           take a gap in the page's column and push the brief down for nothing. */}
-      {(stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
+      {completedTask !== taskId && (stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
         {stage && <span>{stage.challenge.title[lang]} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {/* A list that did not load offers to load it again; a star that did
           not save says so, and the star itself is the way to try again. */}
-      {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
-      {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
-      <DraftNote choice={choice} />
-      {stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
+      {completedTask !== taskId && bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
+      {completedTask !== taskId && save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
+      {completedTask !== taskId && <DraftNote choice={choice} />}
+      {completedTask !== taskId && stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
         <PremiumStagesNote stages={stage.challenge.stages} short={stage.challenge.short === true} />
       )}
-      {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
+      {completedTask !== taskId && stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
       {CodingWorkbench && <CodingWorkbench
             key={`${data.task.id}-${attempt}-${choice.version}-${data.signedIn}`}
             task={data.task}
@@ -835,6 +857,12 @@ export function CodingTaskScreen() {
             onDraft={onDraft}
             onEdit={onEdit}
             onVerdict={onVerdict}
+            onRefreshTask={async (code) => {
+              keepDeviceDraft(data.task.id, code, draftBase, draftEpoch);
+              setRefreshDraft({ taskId: data.task.id, code });
+              const refreshed = await task.refetch();
+              if (refreshed.error) throw refreshed.error;
+            }}
             nextHref={nextHref}
             backHref={backHref}
             // The star sits with the workbench's own utilities, beside the

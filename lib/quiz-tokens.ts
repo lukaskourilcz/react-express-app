@@ -56,6 +56,9 @@ interface ChallengeRunPayload {
   runId: string;
   ranked: boolean;
   subject: ScopeSubjectId;
+  topics?: string[];
+  allTopics?: boolean;
+  userId?: string | null;
   iat: number;
   exp: number;
 }
@@ -149,6 +152,7 @@ export interface CodingDesignKey {
   order?: number[];
 }
 interface CodingSessionPayload {
+  version?: string;
   kind: 'coding-session';
   taskId: string;
   track: CodingTrack;
@@ -167,6 +171,7 @@ interface CodingSessionPayload {
 // index per question after shuffling, so the browser holds the questions
 // without holding the answers.
 interface LearningPathSessionPayload {
+  version?: string;
   kind: 'learning-path-session';
   attemptId: string;
   enrollmentId: string;
@@ -362,16 +367,20 @@ export function stableAttemptId(...parts: string[]): string {
   return createHmac('sha256', TOKEN_KEY).update(parts.join('\u001f'), 'utf8').digest('base64url').slice(0, 32);
 }
 
-export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev') {
+export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev', evidence?: { topics: string[]; allTopics: boolean; userId: string | null }) {
   const now = Date.now();
   const runId = b64url(randomBytes(18));
-  return { runId, ranked, subject, runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, iat: now, exp: now + CHALLENGE_TTL_MS }) };
+  return { runId, ranked, subject, ...evidence, runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, ...evidence, iat: now, exp: now + CHALLENGE_TTL_MS }) };
 }
 
-export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId } | null {
+export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId; topics: string[] | null; allTopics: boolean | null; userId?: string | null } | null {
   const payload = openToken(token) as Partial<ChallengeRunPayload> | null;
   if (!payload || payload.kind !== 'challenge-run' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.ranked !== 'boolean' || !isScopeSubject(payload.subject)) return null;
-  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject };
+  const topics = Array.isArray(payload.topics) && payload.topics.length > 0 && payload.topics.every(topic => typeof topic === 'string') ? payload.topics : null;
+  if ((topics !== null) !== (typeof payload.allTopics === 'boolean')) return null;
+  if (payload.userId !== undefined && payload.userId !== null && typeof payload.userId !== 'string') return null;
+  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject, topics, allTopics: topics ? payload.allTopics! : null,
+    ...(payload.userId !== undefined ? { userId: payload.userId } : {}) };
 }
 
 export function encodeScoreProof(runId: string, questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {
@@ -511,6 +520,8 @@ const CODING_TTL_MS = 3 * 60 * 60 * 1000;
 const GITHUB_CONNECT_TTL_MS = 10 * 60 * 1000;
 
 export interface CodingSession {
+  /** Missing only on legacy tokens; submit refuses these before grading. */
+  version?: string;
   taskId: string;
   track: CodingSessionPayload['track'];
   attemptId: string;
@@ -524,6 +535,7 @@ export function encodeCodingSession(input: Omit<CodingSession, 'attemptId' | 'is
   const now = Date.now();
   return sealToken({
     kind: 'coding-session',
+    ...(input.version ? { version: input.version } : {}),
     taskId: input.taskId,
     track: input.track,
     attemptId: input.attemptId ?? b64url(randomBytes(18)),
@@ -534,6 +546,8 @@ export function encodeCodingSession(input: Omit<CodingSession, 'attemptId' | 'is
     exp: now + CODING_TTL_MS,
   });
 }
+
+const isAttemptVersion = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 
 const isIndexList = (value: unknown, max: number): value is number[] =>
   Array.isArray(value) && value.length <= max && value.every((n) => Number.isInteger(n) && n >= 0 && n <= 25);
@@ -547,6 +561,7 @@ export function decodeCodingSession(token: string): CodingSession | null {
   // still naming four, so every Algorithms session sealed correctly and then
   // failed to open, and every submit came back as an expired session.
   if (!isCodingTrack(payload.track)) return null;
+  if (payload.version !== undefined && !isAttemptVersion(payload.version)) return null;
   if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
   if (payload.userId !== null && (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128)) return null;
   if (payload.roadmapAttemptId !== undefined && (typeof payload.roadmapAttemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.roadmapAttemptId))) return null;
@@ -571,6 +586,7 @@ export function decodeCodingSession(token: string): CodingSession | null {
     }
   }
   return {
+    ...(payload.version ? { version: payload.version } : {}),
     taskId: payload.taskId,
     track: payload.track!,
     attemptId: payload.attemptId,
@@ -598,6 +614,7 @@ export function decodeGithubConnectState(token: string): { userId: string } | nu
 const LEARNING_PATH_TTL_MS = 3 * 60 * 60 * 1000;
 
 export interface LearningPathSession {
+  version?: string;
   attemptId: string;
   enrollmentId: string;
   userId: string;
@@ -620,6 +637,7 @@ export function encodeLearningPathSession(
   return {
     token: sealToken({
       kind: 'learning-path-session',
+      ...(input.version ? { version: input.version } : {}),
       attemptId: input.attemptId,
       enrollmentId: input.enrollmentId,
       userId: input.userId,
@@ -647,6 +665,7 @@ export function decodeLearningPathSession(token: string): LearningPathSession | 
   if (typeof payload.enrollmentId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.enrollmentId)) return null;
   if (typeof payload.userId !== 'string' || payload.userId.length < 8 || payload.userId.length > 128) return null;
   if (!isLearningPathId(payload.pathId)) return null;
+  if (payload.version !== undefined && !isAttemptVersion(payload.version)) return null;
   if (typeof payload.activityId !== 'string' || !/^[a-z0-9-]{3,96}$/.test(payload.activityId)) return null;
   if (!['lesson', 'check', 'code', 'artifact'].includes(payload.activityKind ?? '')) return null;
   if (!['diagnostic', 'exercise', 'project'].includes(payload.purpose ?? '')) return null;
@@ -660,6 +679,7 @@ export function decodeLearningPathSession(token: string): LearningPathSession | 
   }
   return {
     attemptId: payload.attemptId,
+    ...(payload.version ? { version: payload.version } : {}),
     enrollmentId: payload.enrollmentId,
     userId: payload.userId,
     pathId: payload.pathId,

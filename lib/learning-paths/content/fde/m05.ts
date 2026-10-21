@@ -124,7 +124,7 @@ export const FDE_M05: ModuleSource = {
       id: 'fde-v1-m05-l1',
       title: 'Ingestion, chunking and provenance',
       summary:
-        'What a chunk carries beside its text, why a citation without a version cannot be checked, and how a chunking decision turns into a retrieval failure weeks later.',
+        'Chunk context, trusted provenance, resolvable citations and the limits of source/index timestamps.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -147,12 +147,12 @@ export const FDE_M05: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'An operator reading a proposed answer asks one question you have to be able to answer: where did that sentence come from? A citation that names a title does not answer it, and neither does a URL. Six months later the page reads differently and nobody can say whether the answer was wrong or the article changed after it was given.',
+            'An operator needs access to the exact source text used for an answer. A mutable title or URL alone may not identify that text later; an immutable versioned or content-addressed URL can. A citation must resolve under the viewer’s current permissions and the archive’s retention rules, not merely look plausible.',
         },
         {
           kind: 'prose',
           body:
-            'So the thing you retrieve is not a document. It is a chunk, and a chunk you can cite carries four things beside its text: the source it came from, the version of that source, the tenant that owns it, and when the source last changed. Drop any one of the four and a whole class of question stops having an answer.',
+            'This design retrieves chunks, although other systems retrieve whole documents or structured records. Store sufficient trusted provenance to identify the source revision and span, tenant/access policy and relevant timestamps. Metadata enables lookup only when the corresponding content and resolver remain available; it does not preserve the source or establish truth by itself.',
         },
         {
           kind: 'table',
@@ -172,11 +172,11 @@ export const FDE_M05: ModuleSource = {
             [
               '`tenantId`',
               'Who owns the article, so the access filter can run inside the query',
-              'Every permission decision needs the document loaded first, which is the leak you were avoiding',
+              'A missing access key can prevent safe tenant-scoped retrieval; a separate trusted access mapping is another possible design',
             ],
             [
               '`updatedAt` and `ingestedAt`',
-              'How old the content is, and how far behind your copy of it is',
+              'The revision and ingestion times; current source/version checks are also needed to assess freshness',
               'An index rebuilt this morning from an article nobody touched in 2024 looks fresh',
             ],
             [
@@ -190,34 +190,34 @@ export const FDE_M05: ModuleSource = {
           kind: 'code',
           language: 'javascript',
           code: "const chunk = {\n  chunkId: 'KB-118#c4',\n  sourceId: 'KB-118',\n  version: 3,\n  tenantId: 'TEN-4021',\n  visibility: 'published',\n  updatedAt: '2026-03-18T11:02:00Z',  // when the article last changed\n  ingestedAt: '2026-04-02T06:00:00Z', // when this copy entered the index\n  heading: 'Returns > Chilled goods',\n  text: 'Chilled orders may be returned within 7 days of delivery.',\n};",
-          caption: 'One chunk of Marlbrook’s knowledge base. Everything except `text` exists so somebody can check the citation later.',
+          caption: 'A hypothetical chunk with provenance and access metadata. Version 3 and c4 identify it only with a defined resolver and retained source; metadata also supports ingestion, filtering and display.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Every embedding, score and retrieval result in this module is an authored fixture. Nothing here calls a provider, and no similarity number below came out of a live model. A fixture score is identical on every run, which is what makes it gradeable and exactly what a live retriever is not.',
+            'Every score and retrieval result here is an authored fixture, not live provider output or empirical retrieval evidence. A real retriever may also be deterministic for fixed inputs/index/model; repeatability alone does not distinguish a fixture from a production system.',
         },
         {
           kind: 'prose',
           body:
-            'Chunking looks like a formatting decision and behaves like a recall decision. Split a policy every 500 characters and the sentence stating the rule lands in one chunk while the sentence stating the exception lands in the next. Retrieve either one alone and the answer is confidently half right.',
+            'Chunking can affect recall and the context available for an answer. A fixed character split may separate a rule from an exception; retrieving one fragment may then be insufficient. The result could be a wrong answer or an appropriate refusal. Evaluate chunk boundaries, overlap and neighbor retrieval on representative questions rather than assuming one chunk size guarantees correctness.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: "// Fixed-size split: the exception ends up in a chunk of its own.\nconst naive = [\n  'Chilled orders may be returned within 7 days of delivery. Returns are',\n  'collected by the depot van. This does not apply to clearance orders,',\n  'which are final.',\n];\n\n// Split on the heading, with the heading carried into the embedded text.\nconst structured = [\n  {\n    heading: 'Returns > Chilled goods',\n    text: 'Returns > Chilled goods. Chilled orders may be returned within 7 days of delivery. Returns are collected by the depot van. This does not apply to clearance orders, which are final.',\n  },\n];",
-          caption: 'The same policy, split two ways. Only the second one can answer “does this apply to a clearance order?”',
+          caption: 'The complete structured chunk preserves this rule and exception together. A system can also recover context from neighboring fragments or source resolution; the fragmented layout alone does not make the answer impossible.',
         },
         {
           kind: 'prose',
           body:
-            'A chunk that has lost its heading reads as a general rule. “Returns are free of charge” is true under *Chilled goods* and false under *Clearance sales*, and once the heading is gone no ranker can tell those two apart. Carry the heading path into the text you embed, not only into a metadata column nobody scores against.',
+            'A heading can disambiguate a policy’s scope. Preserve it in retrievable context or a trusted structural field the pipeline actually uses. Removing the heading increases ambiguity, but other text, metadata, neighbor context or reranking may still distinguish the policies. Test the chosen embedding/query construction instead of claiming no ranker could recover the context.',
         },
         {
           kind: 'prose',
           body:
-            'Overlapping chunks by a sentence or two hides the seam, at the price of storing the same sentence twice and returning it twice. Deduplicate by source id before you count support, or one sentence living in three overlapping chunks reads as three independent documents agreeing with each other.',
+            'Overlap can preserve boundary context but repeats some evidence and uses storage/window space. Group support by source/revision and account for correlated or copied content; three overlapping chunks are not three independent sources. Do not blindly discard every other chunk from the same source, since different spans may be needed to support different claims.',
         },
         {
           kind: 'trace',
@@ -261,7 +261,7 @@ export const FDE_M05: ModuleSource = {
                   { index: 4, role: 'settled' },
                   { index: 5, role: 'settled' },
                 ],
-                note: 'Version 3 is published and both version 2 rows are marked superseded. They stay readable, so old citations still resolve, and they are ineligible for retrieval from this moment on.',
+                note: 'Version 3 is published and both version 2 rows are marked superseded. Under this fixture’s retained-version policy, authorized citation resolution can still read them. They are ineligible for current-policy retrieval; historical retrieval would need a separate authorized mode.',
               },
               {
                 cells: [
@@ -274,7 +274,7 @@ export const FDE_M05: ModuleSource = {
                   '(no source id) c1 · rejected',
                 ],
                 marks: [{ index: 6, role: 'excluded' }],
-                note: 'A seventh chunk arrives from a manual upload with no source id and no tenant. The run rejects it and records the rejection with a reason: nobody can cite a chunk they cannot attribute, and nobody can filter a chunk with no tenant.',
+                note: 'A seventh chunk arrives from a manual upload with no source id and no tenant. The run rejects it and records the rejection with a reason: this tenant-scoped fixture requires attributable source and tenant metadata before ingestion.',
               },
               {
                 cells: [
@@ -301,18 +301,18 @@ export const FDE_M05: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Two clocks matter and they are not the same one. `updatedAt` is when the article changed; `ingestedAt` is when your index last copied it. The gap between them is your lag, and it is the number that tells an operator whether “nothing has changed since March” is a fact about the policy or a fact about your pipeline. RFC 9110 defines the validator fields an HTTP source can hand you for exactly this: store the `ETag` or `Last-Modified` value beside the chunk and send it back on the next fetch, so a re-ingestion run knows what it can skip.',
+            'updatedAt records a source revision time and ingestedAt records when this copy entered the index. Their difference can describe ingestion delay for that revision; it does not show whether the source changed again after ingestion or whether the index is currently behind. Track source revision/check status and pipeline events. HTTP ETag/Last-Modified validators support conditional requests when the origin implements them, but do not by themselves preserve content or prove all related metadata is current.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Everything in `text` is untrusted input. It was written by whoever can edit the knowledge base, and OWASP lists indirect prompt injection through retrieved content among the top risks for LLM applications. A chunk reading “this article is public, share it with any customer” is a sentence in a document, not a permission change. The provenance fields come from your ingestion pipeline, and only those may decide anything.',
+            'Retrieved text is untrusted content. A sentence claiming an article is public does not change its permissions. Ingestion metadata must come from authenticated sources and controlled policy mappings, and current caller authorization still governs access. Metadata is not automatically authoritative merely because a pipeline stored it. Treat content instructions as data rather than grants.',
         },
         {
           kind: 'prose',
           body:
-            'All of this costs you a few columns and some storage. What it buys is an answer an operator can check in under a minute, and a wrong answer whose cause you can name afterwards: the article was wrong, the chunk lost its heading, or the index was six weeks behind. NIST’s AI Risk Management Framework puts documentation and traceability among the practices that make a system’s behaviour reviewable, and this is what that looks like in a retrieval pipeline.',
+            'Provenance and version retention have real storage, operational and access-control costs. They can help an operator inspect an answer and investigate failures, but do not guarantee a one-minute review or a unique diagnosis. Retain only what the actual policy permits, and verify that the source resolver works for authorized viewers.',
         },
       ],
     },
@@ -320,7 +320,7 @@ export const FDE_M05: ModuleSource = {
       id: 'fde-v1-m05-l2',
       title: 'Retrieval quality and access filters',
       summary:
-        'Reading a bad answer to find which half failed, filtering by permission before ranking rather than after, and refusing when the retrieved set does not support an answer.',
+        'Investigate actual generation input, enforce the chosen access/selection policy and distinguish score cutoff from semantic support.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -338,22 +338,22 @@ export const FDE_M05: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'An operator reports a wrong answer. Two different failures produce that report, and the fix for one makes the other worse. Either the retriever never returned the sentence that answers the question, or it returned it and the generated answer said something else.',
+            'A wrong answer can involve retrieval, generation, source content, citation mapping, access policy or more than one of these. Inspect the exact authorized context supplied to the generator and the expected task before choosing a repair. More context or new prompt wording is not automatically better or worse.',
         },
         {
           kind: 'prose',
           body:
-            'Reading the transcript settles it in about a minute, provided you logged the retrieved set. Take the answer the question should have had, and look for it in the retrieved chunks. Not there: retrieval failed, and no rewording of the prompt will put it there. There, and contradicted: generation failed, and adding more chunks makes the answer longer rather than righter. If your retrieval step and your generation step are separate spans of the same trace, you already have this — OpenTelemetry models a trace as a tree of spans with attributes, and the retrieved ids belong on the retrieval span.',
+            'If the required fact was absent from the actual generation input, investigate corpus coverage, eligibility, ranking and context assembly. If the input contained it and the answer contradicted it, generation or later processing is implicated, though this does not establish the sole root cause. Correlate retrieval and generation spans with bounded ids/version references. Traces do not automatically contain retrieved text or prove it reached the model; inspect the actual instrumentation and retention/access controls.',
         },
         {
           kind: 'table',
-          caption: 'Four reports that all arrive as “the answer was wrong”, and the step each one actually blames.',
+          caption: 'Five reports that can guide investigation, not prove a unique root cause from the answer alone.',
           headers: ['What you see', 'Look here first', 'What changes it'],
           rows: [
             [
               'The answer states a fact no retrieved chunk contains',
               'The retrieved set',
-              'Chunking, the query, index coverage, or a filter that removed the right document',
+              'Inspect retrieval and source coverage as well as whether generation invented an unsupported fact',
             ],
             [
               'The answer contradicts a chunk it cites',
@@ -363,7 +363,7 @@ export const FDE_M05: ModuleSource = {
             [
               'The answer is right and the citation points somewhere else',
               'How chunk ids travel from retriever to answer',
-              'The mapping. A right answer with a wrong citation is still a defect, because the operator who checks it finds nothing',
+              'The mapping. A correct statement with a wrong citation is still a defect, because the operator who checks it finds nothing',
             ],
             [
               'The answer is a general fact with no citation at all',
@@ -381,23 +381,23 @@ export const FDE_M05: ModuleSource = {
           kind: 'code',
           language: 'javascript',
           code: "const transcript = {\n  requestId: 'req-9d2f41',\n  query: 'How long do we have to return a chilled order?',\n  viewer: { tenantId: 'TEN-4021', clearances: ['kb-general'] },\n  retrieved: [\n    { sourceId: 'KB-118', version: 3, score: 0.91, text: 'Chilled orders may be returned within 7 days of delivery.' },\n    { sourceId: 'KB-204', version: 1, score: 0.74, text: 'Chilled returns are collected by the depot van.' },\n  ],\n  filteredOut: [\n    { sourceId: 'KB-901', reason: 'other-tenant' },\n    { sourceId: 'KB-118', version: 2, reason: 'superseded' },\n  ],\n  answer: 'Chilled orders can be returned within 14 days.',\n  citations: [{ sourceId: 'KB-118', version: 3 }],\n};",
-          caption: 'From the answer alone the two failures look identical. This record names the one that happened: the right chunk was retrieved, and the sentence contradicts the chunk it cites.',
+          caption: 'Assume retrieved is exactly the authorized context delivered to the generator. The answer contradicts its cited seven-day rule. This implicates synthesis or later processing without proving a sole root cause.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'The scores here and in the exercise are authored fixtures, fixed at the values you see. In a running system a score is a similarity number from an embedding model. It says this chunk reads like this query. It does not say the chunk is true, current, or about the same product as the question.',
+            'A retrieval score depends on the retrieval/reranking method: it may reflect embedding similarity, lexical matching, a hybrid score or a learned relevance estimate. Its scale and direction are implementation-specific. No generic score establishes truth, current policy, authorization or support for every answer claim. The 0.6 cutoff here is an authored selection rule, not a calibrated semantic guarantee.',
         },
         {
           kind: 'prose',
           body:
-            'A retriever hands the generator a fixed number of chunks: three, five, ten. That window is the entire budget for the answer. Every slot one document occupies is a slot a usable document does not get.',
+            'Retrieval systems may use fixed or dynamic windows. In this exercise the window holds at most three selected results; every occupied slot uses that budget. Evaluate whether this budget supplies sufficient authorized evidence rather than treating a fixed chunk count as a universal retrieval contract.',
         },
         {
           kind: 'prose',
           body:
-            'Which is why the access filter runs before ranking rather than after it. Filtering afterwards is two bugs wearing one coat. The permission bug: text the viewer may not read was fetched, scored and held by a process with no right to it, where a log line, an error message or a trace attribute can carry it out. The recall bug: those documents took the top slots, so the article that ranked seventh and the operator was entitled to read was never a candidate at all.',
+            'This workbench policy requires authorization filtering before ranking/window selection. Broad retrieval may violate that policy and can increase exposure, but does not prove every process, log or trace actually leaked rows. Taking a top-k window before filtering can also exclude lower-ranked authorized evidence. Other architectures may use trusted shared ranking or filtering with replenishment; assess their actual permissions and recall guarantees.',
         },
         {
           kind: 'trace',
@@ -439,7 +439,7 @@ export const FDE_M05: ModuleSource = {
                   { index: 1, role: 'active' },
                   { index: 2, role: 'compare' },
                 ],
-                note: 'Ranking sees three rows. KB-118 and KB-204 clear the 0.6 support threshold. KB-090 at 0.55 is about opening hours and does not.',
+                note: 'Ranking sees three rows. KB-118 and KB-204 clear the fixture 0.6 selection cutoff; KB-090 at 0.55 does not. These scores alone do not prove semantic support.',
               },
               {
                 cells: ['KB-118 · cited', 'KB-204 · cited', 'KB-090 · dropped'],
@@ -481,22 +481,22 @@ export const FDE_M05: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A retrieved document authorizes nothing. Not a line saying the article may be shared with any tenant, not a header claiming the reader is an administrator, not a note addressed to the assistant by name. Permission comes from the session the server verified and the grants attached to it. Your checks read those fields; the words inside a document are data your code never obeys.',
+            'A document does not grant its reader a role or clearance. Resolve current caller authority from the trusted server context and source access policy; text claiming administrator status supplies neither. The exercise receives a pretrusted viewer fixture and tests selection logic, not verification of a real session or grant.',
         },
         {
           kind: 'prose',
           body:
-            'A superseded article scores well because the old text still reads like the question — that similarity is why somebody wrote it in the first place. So no score penalty fixes it. A penalty is a number you tune, and a large enough score beats it; worse, once staleness and relevance are mixed into one number you can no longer say why a document was used. Eligibility is a separate question, answered before ranking: a superseded chunk is not a weaker candidate, it is not a candidate. Keep the row, so an old citation still resolves, and keep it out of the ranking.',
+            'This current-policy retrieval mode excludes superseded content by eligibility. A finite relevance penalty is not a robust substitute for that hard rule. Historical questions may legitimately use older versions under a different explicit mode and current access policy. Retaining old versions for citations also needs storage, authorization and retention rules; it is not a requirement to keep every row forever.',
         },
         {
           kind: 'prose',
           body:
-            'When nothing eligible supports an answer, refuse, and say which of the two things happened: nothing survived the filter, or what survived was too weak to carry a claim. Those point at different repairs, so collapsing them into one “I could not find anything” costs you the diagnosis. Report the abstention rate beside accuracy as well. A system that refuses a third of its questions and is right on the rest is a different product from one that answers everything and is right two thirds of the time, and a single quality average reports them the same.',
+            'Under this selection policy, distinguish no eligible results from eligible results below the score cutoff. Neither code identifies a unique root cause or proves the remaining text semantically supports a claim. Keep public error detail within the disclosure policy and use appropriate internal diagnostics. Report answered-case accuracy together with coverage and relevant slices; refusing one third with all answered cases correct differs from answering all with two-thirds correct even when correct-answer yield matches.',
         },
         {
           kind: 'prose',
           body:
-            'Last, the citation itself. It is checkable when the operator can get from it to the exact text you used: source id, version, and the chunk or span inside it. A title is a search. A URL with no version is a page that may have changed since. A quoted snippet with a score beside it and no id is not a citation at all — nothing ties it to a document that exists, and a generator that invents a plausible sentence produces one of exactly that shape.',
+            'A checkable citation resolves to the exact authorized text used: a source revision and chunk/span, immutable URL or equivalent stable reference. A mutable unversioned URL may change; a versioned immutable one may already identify the text. A score and unsupported quote do not establish provenance. Metadata alone cannot guarantee resolution, retention or that the cited text supports the answer.',
         },
       ],
     },
@@ -508,7 +508,7 @@ export const FDE_M05: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: ingestion, chunking and provenance',
-      summary: 'The four fields a citable chunk carries, headings and overlap, superseding instead of overwriting, and the two clocks that describe freshness.',
+      summary: 'Resolvable source provenance, chunk context, evidence correlation and the limits of revision/ingestion timestamps.',
       competencies: ['retrieval'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m05-l1',
@@ -519,7 +519,7 @@ export const FDE_M05: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: retrieval quality and access filters',
-      summary: 'Retrieval failure against generation failure, the window and why the filter runs before ranking, refusing with a reason, and what makes a citation checkable.',
+      summary: 'Actual generation input, retrieval/answer failure hypotheses, policy-scoped selection and bounded citation evidence.',
       competencies: ['retrieval'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m05-l2',
@@ -531,63 +531,57 @@ export const FDE_M05: ModuleSource = {
       verification: 'machine_verified',
       title: 'Grounding decisions',
       summary:
-        'Four bounded decisions: which half of the pipeline failed, what a late access filter costs, what to do with a superseded article that outranks the current one, and which citation an operator can actually check.',
+        'Four grounding decisions under explicit contracts: shown synthesis failure, pre-ranking access and coverage, current-version eligibility, and resolvable citation provenance.',
       competencies: ['retrieval'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-m05-q1',
-          prompt:
-            'A Dunfold operator reports this answer as wrong: the depot van collects chilled returns, not the delivery carrier. The transcript below is what the assistant recorded. Which step failed?',
+          prompt: "The shown authorized current chunks are exactly what generation received. An operator confirms chilled returns use the depot van, not the delivery carrier. Which shown step produced the contradiction in this transcript?",
           context: {
             language: 'json',
             code: '{\n  "query": "Which carrier collects a chilled return from the Dunfold depot?",\n  "viewer": { "tenantId": "TEN-4021", "clearances": ["kb-general"] },\n  "retrieved": [\n    { "sourceId": "KB-204", "version": 1, "score": 0.88,\n      "text": "Chilled returns are collected by the depot van, booked through the portal." },\n    { "sourceId": "KB-118", "version": 3, "score": 0.72,\n      "text": "Chilled orders may be returned within 7 days of delivery." }\n  ],\n  "answer": "Chilled returns are collected by the original delivery carrier.",\n  "citations": [{ "sourceId": "KB-204", "version": 1 }]\n}',
           },
           options: [
-            'Generation. KB-204 carries the answer, it was retrieved at the top of the window, and the sentence produced contradicts the chunk it cites.',
+            "Generation: KB-204 says depot van, while the answer says original delivery carrier.",
             'Retrieval. The right article ranked first, but 0.88 was too low for the generator to rely on it.',
             'Retrieval. Two chunks are not enough context, so the window should be widened to five.',
             'Neither. The answer is a fair paraphrase of the two chunks read together.',
           ],
           correct: 0,
-          explanation:
-            'The test is mechanical: look for the correct answer in the retrieved set. It is there, in the first chunk, and the generated sentence says the opposite while citing that chunk. The repair lives after retrieval — instruct the model to answer only from the supplied text, and check that the claim appears in the chunk you are about to cite. A score is a similarity number the generator never consults, so 0.88 being “too low” describes nothing that happens in the pipeline; and the right text was already in the window, so re-ranking has nothing left to fix. Widening the window to five adds chunks that do not contain a different answer, spends context on them, and makes a contradiction more likely rather than less. Calling it a paraphrase requires the depot van and the original delivery carrier to be the same party, which is exactly the fact the operator disputed — and the citation makes it worse, because the operator who follows it finds the opposite of what the answer claimed.',
+          explanation: "KB-204 explicitly supplies depot van, but the generated answer contradicts it while citing that same version. The transcript therefore shows a grounding failure in generation/synthesis. Validate support for the claim against the authorized source and evaluate any prompt or verification change; an instruction alone is not a guarantee. A similarity score does not establish factual support. The relevant text was already supplied, so this example does not establish that adding chunks or changing ranking is the necessary repair. More context can help or hurt in other cases and must be evaluated, rather than assumed to make contradictions more likely.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q2',
-          prompt:
-            'Marlbrook’s retriever scores every chunk in the index, takes the top five, and then drops the ones the viewer may not read. A Dunfold operator asks about return windows, and four of the top five belong to Kestrel Foods. What does that ordering cost?',
+          prompt: "Policy requires viewer access scope before chunk text enters ranking. This retriever instead loads all text, takes a global top five, then drops unauthorized chunks. Four of those five are forbidden to the viewer, and a relevant authorized article ranked sixth. What are the two problems?",
           options: [
-            'A permission problem and a recall problem at once: text this process had no right to was fetched and scored, and it consumed four of the five slots, so a Dunfold article ranked sixth was never a candidate.',
+            "It violates the pre-ranking access policy and lets forbidden chunks displace an authorized candidate.",
             'Latency only. The answer is the same either way, because the forbidden documents are removed before anything is generated.',
             'A permission problem only. Recall is unaffected, since ranking had already put the best matches at the top.',
             'Nothing, as long as the removal happens before the chunks reach the model. Filtering late is what keeps the ranker simple.',
           ],
           correct: 0,
-          explanation:
-            'The window is the whole budget, so a slot spent on a document the viewer cannot read is a slot the answer does not get. Filtering afterwards leaves this operator with one usable chunk out of five, and a thin answer or a refusal on a question the knowledge base answers. That is why “the answer is the same either way” is wrong: it is the same only when every top-ranked document happened to be permitted, which is the case that never gets reported. “Recall is unaffected” assumes best-match is measured over the whole index, but recall for this operator is measured over the documents this operator may read, and by that measure the ranker just spent 80% of the window outside it. The last option is the belief that produces the bug, and it also misses the first half: the forbidden text was already loaded, scored and held in memory, where a log line, an error message or a trace attribute can carry it into a place it does not belong.',
+          explanation: "The implementation violates the stated access boundary by loading unauthorized text into this viewer-ranking path. Late filtering also leaves one usable result and excludes the relevant authorized article at rank six; ranking within eligible content would not spend those slots on forbidden candidates. This can harm retrieval coverage even if the final response sometimes happens to be sufficient. Unnecessary text increases the surface for logging or error mistakes, but this transcript does not prove every such record leaks. A separately authorized shared ranking service may have another valid architecture; the question concerns the explicit policy given here.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q3',
-          prompt:
-            'A question about the chilled return window retrieves KB-118 version 2 at 0.94, which says 14 days, and KB-118 version 3 at 0.67, which says 7 days. Version 3 replaced version 2 six weeks ago. What should the retrieval step do?',
+          prompt: "The query asks for the current chilled-return policy. KB-118 v3 is the authorized current policy, replacing v2 six weeks ago; policy excludes superseded versions from current answers and retains an access-controlled archive for historical citations. V2 scores 0.94 and says 14 days; v3 scores 0.67 and says 7. What must retrieval do?",
           options: [
-            'Drop version 2 before ranking. A superseded chunk is not a weaker candidate, it is not a candidate, and the answer is built from version 3 alone.',
+            "Exclude v2 from current-answer candidates before ranking and use the authorized current v3.",
             'Keep both and cite both, noting that version 2 is older, so the operator can decide which number applies.',
             'Subtract a staleness penalty from version 2’s score and let the ranking sort it out.',
             'Keep version 2 as the primary source: 0.94 against 0.67 means it matches the question far better.',
           ],
           correct: 0,
-          explanation:
-            'Eligibility and ranking are different questions, and eligibility is answered first. Version 2 was replaced, so it is out of the candidate set before any score is compared — while the row itself stays in the store, so a citation written before the replacement still resolves. Citing both produces an answer that states 7 days and 14 days, which states neither, and hands the operator the retrieval work you were meant to do; the “older” note is prose rather than a control, so any summary or truncation drops it and leaves two contradictory numbers. A staleness penalty is a number you tune, and a large enough score still wins it; it also mixes recency into relevance, after which you can no longer say why a document was used. The last option mistakes similarity for currency: the old text scores well precisely because it was written to answer this question, and that is why the score cannot be the thing that protects you.',
+          explanation: "The given current-answer eligibility policy excludes v2 independently of its similarity score. Keep the archive for authorized historical references, rather than deleting history or retrieving it as current policy. A historical question could legitimately need an old revision; this one explicitly asks for the current rule. A finite staleness penalty or an older-note in prose does not enforce this hard exclusion. Combining relevance and recency can be useful elsewhere, but cannot override the stated eligibility contract. The higher score describes similarity, not authority or current applicability.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q4',
-          prompt: 'Four ways of citing the same sentence. Which one lets an operator confirm the claim without asking you?',
+          prompt: "An authorized operator can resolve immutable archived content by sourceId, version and chunkId. Which citation record supplies the stable locator and retrieval time needed to inspect the exact supporting passage after an article edit?",
           options: [
             '`{ "sourceId": "KB-118", "version": 3, "chunkId": "KB-118#c4", "retrievedAt": "2026-04-02T09:14:11Z" }`',
             '`"Source: the Dunfold chilled returns policy"`',
@@ -595,8 +589,7 @@ export const FDE_M05: ModuleSource = {
             '`{ "score": 0.91, "snippet": "Chilled orders may be returned within 7 days of delivery." }`',
           ],
           correct: 0,
-          explanation:
-            'The first names the article, the revision that was in the index, the part of it that was used and when it was read. The operator opens one chunk and either finds the sentence or does not, and either way the record survives a later edit. A title is a search: two policies can share one, and the operator guesses which. A bare URL resolves to whatever the page says today, so after an edit you cannot tell a wrong answer from a moved one — that is what the version field is for. The fourth option looks strongest because it shows the text, and it is the weakest of the four: nothing ties the snippet to a document that exists, so a generator that invents a plausible sentence produces a citation of exactly this shape, and the score beside it measures similarity rather than truth.',
+          explanation: "The sourceId/version/chunkId record locates the specific archived passage under the resolver assumed by the question, and retrievedAt records when it was used. The operator still has to inspect whether it supports the claim. Metadata alone neither preserves content nor proves truth: the system must retain authorized versions and validate citation ids against the actual retrieved source set. A title can be ambiguous; this unversioned URL may change; a detached snippet and similarity score do not establish provenance. Immutable versioned URLs or content-addressed references can also work in other citation designs.",
           competencies: ['retrieval'],
         },
       ],
@@ -608,17 +601,17 @@ export const FDE_M05: ModuleSource = {
       verification: 'machine_verified',
       title: 'Answer only from what this viewer may read',
       summary:
-        'Turn a scored result set into a cited answer or a refusal: drop what the viewer may not see before ranking, skip superseded articles, and refuse when nothing eligible supports a claim.',
+        'Select permitted scored evidence or refuse: filter before the window, exclude superseded content and apply the fixture cutoff. This does not generate or verify an answer.',
       competencies: ['retrieval'],
       estimatedMinutes: 45,
       code: {
         language: 'javascript',
         prompt:
-          'Marlbrook’s support workbench answers an operator’s question from the knowledge base. The retriever has already run: you are handed the scored results and the viewer, and your job is the step between them and the answer.\n\nWrite `answerFromResults(query, results, viewer)`. It returns `{ answered: true, citations, usedIds }` or `{ answered: false, reason }`, and it never throws.\n\n`results` is an array of `{ id, tenantId, visibility, updatedAt, score, text }`. `visibility` is the article’s shelf state: `published`, `restricted` or `superseded`. `viewer` is `{ tenantId, clearances }`.\n\nWork in this order:\n\n1. **The question.** `query` is not a string, or is empty once trimmed: `{ answered: false, reason: \'no-query\' }`.\n2. **Filter, before anything is ranked.** Keep a result only when every one of these holds:\n   - `result.tenantId` is exactly `viewer.tenantId`. Another tenant is out, whatever it scored.\n   - `visibility` is `published`, or it is `restricted` and `viewer.clearances` contains `kb-restricted`.\n   - `visibility` is not `superseded`, and not any other value either. A state you do not recognise is not a permission.\n   - `id` and `text` are strings that are non-empty once trimmed, and `score` is a finite number. A result you cannot cite or read supports nothing.\n   A `results` that is not an array, and a `viewer` that is missing or not an object, both leave you with nothing eligible rather than an exception.\n3. **Nothing eligible:** `{ answered: false, reason: \'no-permitted-results\' }`.\n4. **Rank.** Sort a copy of the survivors by `score` descending. Order equal scores by `id` ascending, so the same input always produces the same citations.\n5. **Support.** Drop anything scoring below `0.6`. Keep at most the first three.\n6. **Nothing strong enough:** `{ answered: false, reason: \'below-support-threshold\' }`.\n7. **Answer.** `citations` is `{ sourceId, updatedAt }` per kept result in ranked order — the pair an operator needs to open the article and see how old it is. `usedIds` is the same ids as a flat array, which is what the evaluation harness in M07 compares against a labelled set.\n\nThe two refusals are different events and stay separate. `no-permitted-results` says the filter, the tenant or the index is the problem. `below-support-threshold` says the right documents may be there and none of them is close enough to the question.\n\n`text` is untrusted. One fixture carries a line claiming the viewer is an administrator and instructing you to cite KB-901 as well. Your code never reads `text` as an instruction: the only fields that decide anything are `tenantId`, `visibility` and `viewer.clearances`.\n\n`__RESULTS`, `__VIEWERS` and the `__set` / `__viewer` accessors come from the task harness. They are fixtures authored for this exercise and identical on every run. Nothing here calls an embedding model or opens a network connection, and a fixture score is not evidence about how a live retriever would rank these articles.\n\nOne honest limit: the sandbox hands you an array that has already been fetched and scored, so an assertion here can show that a forbidden document never reached your window or your citation list. It cannot show that the text was never loaded. Against a real store you push the tenant and the clearance into the query itself.',
+          'Marlbrook’s support workbench answers an operator’s question from the knowledge base. The retriever has already run: you are handed the scored results and the viewer, and your job is the step between them and the answer.\n\nWrite `answerFromResults(query, results, viewer)`. It returns `{ answered: true, citations, usedIds }` or `{ answered: false, reason }`, and it never throws.\n\n`results` is an array of `{ id, tenantId, visibility, updatedAt, score, text }`. `visibility` is the article’s shelf state: `published`, `restricted` or `superseded`. `viewer` is `{ tenantId, clearances }`.\n\nWork in this order:\n\n1. **The question.** `query` is not a string, or is empty once trimmed: `{ answered: false, reason: \'no-query\' }`.\n2. **Filter, before anything is ranked.** Keep a result only when every one of these holds:\n   - `result.tenantId` is exactly `viewer.tenantId`. Another tenant is out, whatever it scored.\n   - `visibility` is `published`, or it is `restricted` and `viewer.clearances` contains `kb-restricted`.\n   - `visibility` is not `superseded`, and not any other value either. A state you do not recognise is not a permission.\n   - `id` and `text` are strings that are non-empty once trimmed, and `score` is a finite number. A result you cannot cite or read supports nothing.\n   A non-array results input or a viewer that is missing, non-object, an array, or lacks a non-empty string tenantId leaves nothing eligible. Reject an empty/whitespace-only tenantId; otherwise compare the original tenant strings exactly, without normalizing them.\n3. **Nothing eligible:** `{ answered: false, reason: \'no-permitted-results\' }`.\n4. **Rank.** Sort a copy of the survivors by `score` descending. Order equal scores by original `id` ascending in UTF-16 code-unit order, so the same input always produces the same citations.\n5. **Support.** Drop anything scoring below `0.6`. Keep at most the first three.\n6. **Nothing strong enough:** `{ answered: false, reason: \'below-support-threshold\' }`.\n7. **Answer.** `citations` is `{ sourceId, updatedAt }` per kept result in ranked order — a minimal projected locator/timestamp in this fixture; it is not an immutable versioned citation or proof that an operator can resolve the content. `usedIds` is the same ids as a flat array, which is what the evaluation harness in M07 compares against a labelled set.\n\nDomain: ordinary dense arrays of at most 1,000 entries, which may contain malformed ordinary values; no getters or proxies. Candidate objects have unique string ids; string fields/query have at most 1,000 UTF-16 code units. Valid candidate updatedAt values are strings copied unchanged. Viewer clearances are an array or treated as empty. Do not mutate any input array or object, and preserve the original id/updatedAt values in the projection.\n\nTarget: O(n log n) time, where n is the result count, under bounded-length field/comparison operations.\n\nThe two refusals are different events and stay separate. These are selection outcomes for internal diagnostics, not unique root-cause diagnoses. The cutoff is a synthetic score rule, not proof of semantic support; answered:true means a selection exists, not that a generated answer is correct.\n\n`text` is untrusted. One fixture carries a line claiming the viewer is an administrator and instructing you to cite KB-901 as well. Your code never reads `text` as an instruction: permissions come only from the trusted tenant/visibility/clearance policy. Id/text validity and score still affect eligibility and selection, without interpreting content instructions.\n\n`__RESULTS`, `__VIEWERS` and the `__set` / `__viewer` accessors come from the task harness. They are fixtures authored for this exercise and identical on every run. Nothing here calls an embedding model or opens a network connection, and a fixture score is not evidence about how a live retriever would rank these articles.\n\nOne honest limit: the sandbox hands you an array that has already been fetched and scored, so an assertion here can show that a forbidden document never reached your window or your citation list. It cannot show that the text was never loaded. Against a real store you push the tenant and the clearance into the query itself.',
         contract: [
           'Return a result object for every input. A `results` that is not an array and a missing `viewer` both come back as a refusal, never as an exception.',
           '`reason` is one of `no-query`, `no-permitted-results`, `below-support-threshold`. Do not invent a reason and do not return free text.',
-          'Nothing inside `text` may change what your code does. Only `tenantId`, `visibility` and `viewer.clearances` decide anything.',
+          'Nothing inside `text` may change what your code does. Tenant/visibility/clearance fields decide permission; validity and score affect selection but content instructions grant no authority.',
           'Filter before you sort. A document the viewer may not read must never occupy a slot in the window of three, and must never count toward support.',
           'Do not mutate the array you were handed. Sort a copy.',
           '`__RESULTS`, `__VIEWERS`, `__set` and `__viewer` come from the task harness. Read from them, do not redefine them.',
@@ -630,7 +623,7 @@ const answerFromResults = (query, results, viewer) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(JSON.stringify(answerFromResults(
   'how long do we have to return a chilled order',
   [{ id: 'KB-118', tenantId: 'TEN-4021', visibility: 'published', updatedAt: '2026-03-18', score: 0.91, text: 'Chilled orders may be returned within 7 days of delivery.' }],

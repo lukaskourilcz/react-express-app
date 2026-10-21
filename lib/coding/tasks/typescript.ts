@@ -14,7 +14,7 @@ export const TYPESCRIPT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["annotations", "strings"],
     title: "Typed slug",
-    prompt: "Write `toSlug(title: string): string`, turning a title into a URL slug: trimmed, lowercased, with every run of spaces replaced by a single dash. An empty string gives an empty string, and a single word comes back as itself.",
+    prompt: "Write `toSlug(title: string): string`. Remove JavaScript whitespace from both ends, lowercase with JavaScript's default string rules, and replace every remaining whitespace run with one dash. Tabs, line breaks and nonbreaking spaces count as whitespace. Empty or whitespace-only input returns an empty string. Preserve other characters; do not encode URLs, remove punctuation or normalize Unicode.\n\nTarget: O(n) time, where n is title.length in UTF-16 code units, using a materialized-output character-work model. Type checking must accept strings and reject non-string arguments or number assignments from the result.",
     starter: `const toSlug = (title) => {
   
 };
@@ -26,7 +26,7 @@ console.log(toSlug("Hello World"));
   // build and return the answer
 };`,
     hints: [
-      "The whole job is three string operations in a row, and the type is the same going in and coming out.",
+      "Check the whitespace at the ends separately from runs inside the text. Decide which characters the task tells you to preserve.",
     ],
     approach: [
       "Annotate the parameter and the return value first, then write the body — the compiler will tell you the moment the two disagree.",
@@ -48,6 +48,8 @@ console.log(toSlug("Hello World"));
       { call: "toSlug(\"Solo\")", expected: "solo", label: "a single word", edge: true },
     ],
     typeTests: [
+      {"code":"toSlug(null);","rejects":true,"label":"null is not a string input"},
+      {"code":"declare const text: string; const result: string = toSlug(text);","label":"accepts an arbitrary string"},
       { code: "const __slug: string = toSlug(\"Hello World\");", label: "gives back a string" },
       { code: "toSlug(42);", label: "refuses anything but a string", rejects: true },
       {
@@ -66,7 +68,7 @@ console.log(toSlug("Hello World"));
     tier: 1,
     focus: ["annotations", "sort", "slice"],
     title: "Top three scores",
-    prompt: "Write `topThree(scores: number[]): number[]`, returning the three highest values, largest first. Fewer than three values gives back all of them, largest first, and the array you were handed must not be reordered in place.",
+    prompt: "Write `topThree(scores: number[]): number[]`, returning up to three highest scores in descending numeric order. The input is a dense array of finite numbers. Keep duplicate occurrences: [7,7,3,7] returns [7,7,7]. Return a fresh array even for zero or one score; never write into the input.\n\nTarget: O(n log n) time for n ≥ 2, where n is scores.length, under a comparison-sort cost model. Small inputs take constant work. Sorting a copy is recommended; a correct faster selection is also valid. This is an authored model goal, not a universal JavaScript sort timing guarantee.",
     starter: `const topThree = (scores) => {
   
 };
@@ -78,7 +80,7 @@ console.log(topThree([5,9,1,7]));
   // build and return the answer
 };`,
     hints: [
-      "Sort reorders the array it is given, so copy first — and without a comparator it orders numbers as if they were words.",
+      "Check numeric ordering and where duplicates belong. Before using an operation, ask whether it can change the caller's array.",
     ],
     approach: [
       "Copy the array before sorting, because sort reorders the array it is given rather than returning a fresh one.",
@@ -96,6 +98,8 @@ console.log(topThree([5,9,1,7]));
       { call: "topThree([2,8])", expected: [8, 2], label: "two values, largest first", edge: true },
     ],
     typeTests: [
+      {"code":"topThree([null]);","rejects":true,"label":"null is not a numeric score"},
+      {"code":"declare const values: number[]; const result: number[] = topThree(values);","label":"accepts an arbitrary numeric array"},
       {
         code: "const __best: number[] = topThree([1, 2, 3]);",
         label: "gives back an array of numbers",
@@ -117,7 +121,7 @@ console.log(topThree([5,9,1,7]));
     tier: 1,
     focus: ["annotations", "optional"],
     title: "Greeting with a default",
-    prompt: "Write `greet(name: string, greeting?: string): string`, returning the greeting, a comma, the name and an exclamation mark — `Hello, Ada!`. The greeting is optional and falls back to `Hello`, but an empty greeting that was actually passed is used as given.",
+    prompt: "Write `greet(name: string, greeting?: string): string`, returning greeting + \", \" + name + \"!\". Use \"Hello\" only when the greeting is omitted or undefined; an empty greeting still wins. Preserve both strings exactly, including any whitespace. Reject non-string name/greeting arguments during type checking; the result must have a string type.\n\nTarget: O(n) time in a materialized-output model, where n is the combined UTF-16 length of the name, the chosen greeting and three separator characters. This describes output character work, not a guarantee about an engine's lazy string allocation.",
     starter: `const greet = (name, greeting) => {
   
 };
@@ -129,10 +133,10 @@ console.log(greet("Ada"));
   // build and return the answer
 };`,
     hints: [
-      "A default value in the parameter list is what makes an argument optional — and only a missing one is replaced by it.",
+      "Compare an omitted greeting, explicit undefined and an empty string. The fallback should apply to the first two without swallowing the third.",
     ],
     approach: [
-      "A default value in the parameter list is what makes an argument optional, and the compiler infers its type from that default.",
+      "Mark the greeting optional or provide a default value. Keep its string/undefined type consistent with the fallback.",
       "Only a missing argument or an explicit undefined triggers the default, which is why an empty greeting passed on purpose survives.",
       "Build the sentence from the greeting, a comma, the name and an exclamation mark.",
     ],
@@ -155,6 +159,11 @@ console.log(greet("Ada"));
       },
     ],
     typeTests: [
+      {"code":"greet(null);","rejects":true,"label":"null is not a string name"},
+      {"code":"greet(\"Ada\",null);","rejects":true,"label":"null is not an optional string greeting"},
+      {"code":"declare const name: string; declare const greeting: string; const result: string = greet(name,greeting);","label":"accepts arbitrary string arguments"},
+      {"code":"greet(42);","rejects":true,"label":"the name must be a string"},
+      {"code":"const wrongNumber: number = greet(\"Ada\");","rejects":true,"label":"the result does not have a number or any type"},
       { code: "const __line: string = greet(\"Ada\");", label: "the greeting can be left out" },
       { code: "greet();", label: "the name cannot be left out", rejects: true },
       { code: "greet(\"Ada\", 3);", label: "the greeting has to be text", rejects: true },
@@ -169,7 +178,7 @@ console.log(greet("Ada"));
     tier: 1,
     focus: ["interfaces"],
     title: "Person interface",
-    prompt: "Declare an interface named `Person` with `first` and `last`, both strings, then write `fullName(person: Person): string` joining them with a single space. When either half is empty the space goes too, so no answer ever starts or ends with one.",
+    prompt: "Define a named object type Person with required first and last string fields. An interface is recommended; an equivalent type alias is accepted. Write `fullName(person: Person): string`. Trim JavaScript whitespace from each field, omit any empty trimmed field, and join the remaining parts with one ordinary space. Preserve whitespace inside each trimmed part. Never write into the input object. Type checking must reject missing or non-string fields and non-string uses of the result.\n\nTarget: O(n) time, where n is first.length + last.length in UTF-16 code units, using a character-work model for trimming and materializing the result.",
     starter: `const fullName = (person) => {
   
 };
@@ -186,12 +195,12 @@ const fullName = (person: Person): string => {
   // build and return the answer
 };`,
     hints: [
-      "An interface is a named shape written once above the function, and then used wherever that shape is expected.",
+      "Work out what counts as an empty part after trimming, then decide when a separator is needed. Give the input shape a reusable name.",
     ],
     approach: [
       "Write the interface above the function: a name, then one line per property with its type.",
       "Use that name as the parameter type, and the body can read both properties without any further checks.",
-      "Join the two halves with a space, but drop the empty ones first, or a missing half leaves a space stranded at one end.",
+      "Trim each field, omit empty trimmed parts, and put one separator between the remaining parts. Keep whitespace inside each part.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -213,6 +222,12 @@ const fullName = (person: Person): string => {
       { call: "fullName({first:\"\",last:\"\"})", expected: "", label: "neither half", edge: true },
     ],
     typeTests: [
+      {"code":"fullName({first:null,last:\"Ng\"});","rejects":true,"label":"null is not a string field"},
+      {"code":"declare const part: string; const person: Person = {first:part,last:part}; const result: string = fullName(person);","label":"the named shape accepts arbitrary string fields"},
+      {"code":"fullName({first:3,last:\"Ng\"});","rejects":true,"label":"first must be a string"},
+      {"code":"fullName({first:\"Bo\",last:3});","rejects":true,"label":"last must be a string"},
+      {"code":"const wrongPerson: Person = {first:3,last:\"Ng\"};","rejects":true,"label":"the named type requires string fields"},
+      {"code":"const wrongNumber: number = fullName({first:\"Bo\",last:\"Ng\"});","rejects":true,"label":"the result does not have a number or any type"},
       {
         code: "const __shown: string = fullName({ first: \"Ada\", last: \"Lovelace\" });",
         label: "gives back a string",
@@ -233,7 +248,7 @@ const fullName = (person: Person): string => {
     tier: 1,
     focus: ["optional", "interfaces"],
     title: "Optional nickname",
-    prompt: "Declare an interface named `User` with a required `name` and an optional `nickname`, both strings, then write `displayName(user: User): string` returning the nickname when it is set (not `undefined`) and the name otherwise. A nickname that is set but empty still wins.",
+    prompt: "Define a named object type User with a required name: string and optional nickname?: string. An interface is recommended; an equivalent type alias is accepted. Write `displayName(user: User): string`. Return nickname when it is not undefined, otherwise name. Preserve the selected string exactly; an empty or whitespace-only nickname is a stored value. Never write into the input object. Type checking must reject missing names, wrong field types and non-string uses of the result.\n\nTarget: O(1) time under a constant-cost ordinary-field access model: choose an existing string value without scanning or copying its characters. Compiler work and getters/proxies are outside this runtime model.",
     starter: `const displayName = (user) => {
   
 };
@@ -250,7 +265,7 @@ const displayName = (user: User): string => {
   // build and return the answer
 };`,
     hints: [
-      "Two fallback operators look interchangeable here and are not: one gives way on any falsy value, the other only on null and undefined.",
+      "Use the same decision for an absent property and explicit undefined. Test an empty nickname separately before choosing a fallback.",
     ],
     approach: [
       "Marking a property optional with a question mark means reading it gives you the type or undefined, and the compiler makes you handle both.",
@@ -281,6 +296,12 @@ const displayName = (user: User): string => {
       },
     ],
     typeTests: [
+      {"code":"displayName({name:\"Bo\",nickname:null});","rejects":true,"label":"an optional string excludes null"},
+      {"code":"declare const name: string; const user: User = {name,nickname:name}; const result: string = displayName(user);","label":"the named shape accepts arbitrary string fields"},
+      {"code":"displayName({name:3});","rejects":true,"label":"name must be a string"},
+      {"code":"displayName({name:\"Bo\",nickname:3});","rejects":true,"label":"nickname must be a string when present"},
+      {"code":"const wrongUser: User = {name:3};","rejects":true,"label":"the named type requires a string name"},
+      {"code":"const wrongNumber: number = displayName({name:\"Bo\"});","rejects":true,"label":"the result does not have a number or any type"},
       {
         code: "const __shown: string = displayName({ name: \"Ada\" });",
         label: "gives back a string",
@@ -302,7 +323,7 @@ const displayName = (user: User): string => {
     tier: 2,
     focus: ["narrowing", "unions"],
     title: "Padded id",
-    prompt: "Write `idText(id: string | number): string`. A number comes back as text padded with leading zeros to four characters; a string comes back untouched. A number already four characters or longer keeps its own length.",
+    prompt: "Write idText(id: string | number): string. Return a string input exactly as it is. For a JavaScript number, first use its default String conversion, then add leading zeros until the text is at least four characters long. Never truncate longer text. Signs and decimal points are ordinary characters in this padding rule: -7 becomes \"00-7\", not \"-007\". The same rule handles NaN and Infinity; this is formatting practice, not validation of a real-world identifier.\n\nTarget: O(1) time in a fixed-width JavaScript Number model, with a fixed minimum output width of four. A string input is returned without scanning or copying its characters. Compiler work, coercion hooks and engine pauses are outside this model. Reject arguments outside string | number, and give the result a string type.",
     starter: `const idText = (id) => {
   
 };
@@ -341,10 +362,34 @@ console.log(idText(7));
       },
     ],
     typeTests: [
-      { code: "const __text: string = idText(7);", label: "a number gives back a string" },
-      { code: "const __same: string = idText(\"a1\");", label: "a string does too" },
-      { code: "idText(true);", label: "a boolean is not part of the union", rejects: true },
-    ],
+  {
+    "code": "const __text: string = idText(7);",
+    "label": "a number gives back a string"
+  },
+  {
+    "code": "const __same: string = idText(\"a1\");",
+    "label": "a string does too"
+  },
+  {
+    "code": "idText(true);",
+    "label": "a boolean is not part of the union",
+    "rejects": true
+  },
+  {
+    "code": "declare const __unionId: string | number; const __unionResult: string = idText(__unionId);",
+    "label": "arbitrary union input gives text"
+  },
+  {
+    "code": "const __notNumber: number = idText(7);",
+    "label": "the result is not number or any",
+    "rejects": true
+  },
+  {
+    "code": "idText(null);",
+    "label": "null is outside the input union",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-shipping-speed",
@@ -355,7 +400,7 @@ console.log(idText(7));
     tier: 1,
     focus: ["literal-types"],
     title: "Shipping speed",
-    prompt: "Declare a type alias named `Speed` allowing only `standard`, `express` or `overnight`, then write `shippingDays(speed: Speed, weekend: boolean): number` giving 5, 2 and 1 day respectively, with one extra day when the order was placed at the weekend.",
+    prompt: "Define a type alias Speed containing exactly \"standard\", \"express\" and \"overnight\". Write shippingDays(speed: Speed, weekend: boolean): number. Return 5, 2 and 1 respectively, with one extra day only when weekend is true. This is a supplied lookup rule for practice, not a real shipping forecast. The alias and function must reject other speeds; weekend accepts booleans, and the result has a number type.\n\nTarget: O(1) time: the fixed three-entry rule performs a bounded number of comparisons/field reads and one numeric adjustment. Compiler work is excluded.",
     starter: `const shippingDays = (speed, weekend) => {
   
 };
@@ -396,17 +441,39 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
       },
     ],
     typeTests: [
-      {
-        code: "const __days: number = shippingDays(\"express\", false);",
-        label: "gives back a number",
-      },
-      { code: "const __speed: Speed = \"overnight\";", label: "Speed is a type you can name" },
-      {
-        code: "shippingDays(\"next-day\", false);",
-        label: "an unlisted speed is refused",
-        rejects: true,
-      },
-    ],
+  {
+    "code": "const __days: number = shippingDays(\"express\", false);",
+    "label": "gives back a number"
+  },
+  {
+    "code": "const __speed: Speed = \"overnight\";",
+    "label": "Speed is a type you can name"
+  },
+  {
+    "code": "shippingDays(\"next-day\", false);",
+    "label": "an unlisted speed is refused",
+    "rejects": true
+  },
+  {
+    "code": "declare const __listedSpeed: Speed; declare const __weekendBoolean: boolean; const __shippingNumber: number = shippingDays(__listedSpeed, __weekendBoolean);",
+    "label": "all listed speeds and arbitrary booleans are accepted"
+  },
+  {
+    "code": "const __otherSpeed: Speed = \"next-day\";",
+    "label": "the named alias refuses unlisted values",
+    "rejects": true
+  },
+  {
+    "code": "shippingDays(\"express\", 1);",
+    "label": "weekend is boolean, not number or any",
+    "rejects": true
+  },
+  {
+    "code": "const __shippingText: string = shippingDays(\"express\", true);",
+    "label": "the result is number, not string or any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-split-a-name",
@@ -417,7 +484,7 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
     tier: 2,
     focus: ["tuples", "split"],
     title: "Split a name",
-    prompt: "Write `splitName(text: string): [string, string]`, returning a tuple of the first word and everything after it. A single word gives an empty second half, an empty string gives two empty halves, and only the first space ever splits.",
+    prompt: "Write splitName(text: string): [string, string]. Split at the first ordinary space character (U+0020), returning the exact prefix and the entire remaining suffix. Do not trim or collapse whitespace; tabs and line breaks do not split. A leading space gives an empty prefix, a trailing space gives an empty suffix, no space gives [text, \"\"], and empty text gives [\"\", \"\"]. This is a literal text-splitting exercise, not a parser for all personal names. The result must be a two-string tuple, and non-string input is refused by type checking.\n\nTarget: O(n) time in a character-work/materialized-output model, where n is text.length in UTF-16 code units. Actual engine string representation may differ; compiler work is excluded.",
     starter: `const splitName = (text) => {
   
 };
@@ -431,7 +498,7 @@ console.log(splitName("Ada Lovelace"));
     hints: ["A tuple type fixes both how many values come back and what sits at each position."],
     approach: [
       "A tuple type pins down both how many values come back and what each position holds.",
-      "Find the first space by index rather than splitting, because splitting would break a three-word name into three pieces.",
+      "Preserve the exact prefix and suffix at the first ordinary space. An index search or a split-and-rejoin method can both satisfy the contract.",
       "No space at all is its own case: the whole text is the first half and the second half is empty.",
     ],
     verify: "tests",
@@ -448,21 +515,39 @@ console.log(splitName("Ada Lovelace"));
       { call: "splitName(\"\")", expected: ["", ""], label: "empty string", edge: true },
     ],
     typeTests: [
-      {
-        code: "const __pair: [string, string] = splitName(\"Ada Lovelace\");",
-        label: "gives back exactly two strings",
-      },
-      {
-        code: "const __first: string = splitName(\"Ada Lovelace\")[0];",
-        label: "each position holds a string",
-      },
-      {
-        code: "const __three: [string, string, string] = splitName(\"Ada Lovelace\");",
-        label: "two, not three",
-        rejects: true,
-      },
-      { code: "splitName(42);", label: "only text can be split", rejects: true },
-    ],
+  {
+    "code": "const __pair: [string, string] = splitName(\"Ada Lovelace\");",
+    "label": "gives back exactly two strings"
+  },
+  {
+    "code": "const __first: string = splitName(\"Ada Lovelace\")[0];",
+    "label": "each position holds a string"
+  },
+  {
+    "code": "const __three: [string, string, string] = splitName(\"Ada Lovelace\");",
+    "label": "two, not three",
+    "rejects": true
+  },
+  {
+    "code": "splitName(42);",
+    "label": "only text can be split",
+    "rejects": true
+  },
+  {
+    "code": "declare const __anyText: string; const __fixedPair: [string,string] = splitName(__anyText);",
+    "label": "arbitrary text gives a two-string tuple"
+  },
+  {
+    "code": "const __firstNumber: number = splitName(\"a b\")[0];",
+    "label": "the first field is string, not any",
+    "rejects": true
+  },
+  {
+    "code": "const __secondNumber: number = splitName(\"a b\")[1];",
+    "label": "the second field is string, not any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-tally-votes",
@@ -473,7 +558,7 @@ console.log(splitName("Ada Lovelace"));
     tier: 2,
     focus: ["record", "for-of"],
     title: "Tally votes",
-    prompt: "Write `tally(votes: string[]): Record<string, number>`, counting how many times each string appears. The result has one key per distinct vote, and an empty list gives an object with no keys at all.",
+    prompt: "Write tally(votes: string[]): Record<string, number>. Count exact string values, including empty strings, whitespace, case differences and keys such as \"__proto__\", \"constructor\" and \"toString\". Return a fresh object with one enumerable own data key per distinct vote and its positive integer count; return no own keys for an empty list. An ordinary object or a null-prototype object is accepted. Never change the input array or sort its values. Input is a dense array of strings; the result fields have number types. Record describes the static value type, not a promise that absent keys exist at runtime.\n\nTarget: O(n) time under an average dictionary-operation model, with O(k) result entries, where n is votes.length and k is the number of distinct votes. This assumes bounded-length keys and average constant-time dictionary lookup; arbitrary key character work and engine hashing are not measured or guaranteed.",
     starter: `const tally = (votes) => {
   
 };
@@ -485,12 +570,12 @@ console.log(tally(["a","b","a"]));
   // build and return the answer
 };`,
     hints: [
-      "Record describes an object used as a lookup: what the keys are, and what every value stored under them is.",
+      "Separate an existing count from an inherited property. Think about how the result can safely store any input string as its own key.",
     ],
     approach: [
       "Record describes an object used as a lookup table: the type of its keys, then the type of every value under them.",
-      "Fold the list into an object, reading the count already stored under each vote and adding one to it.",
-      "A vote seen for the first time has no count stored yet, so treat a missing entry as zero before adding.",
+      "Make one pass over the votes and keep one local count per exact key. A safe dictionary or a Map can represent the counts.",
+      "Create each result entry as an enumerable own property. Inherited prototype names must not become starting counts, and the input stays unchanged.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -512,17 +597,35 @@ console.log(tally(["a","b","a"]));
       },
     ],
     typeTests: [
-      {
-        code: "const __counts: Record<string, number> = tally([\"a\"]);",
-        label: "gives back a lookup of numbers",
-      },
-      {
-        code: "const __texts: Record<string, string> = tally([\"a\"]);",
-        label: "the values are numbers, not strings",
-        rejects: true,
-      },
-      { code: "tally([1, 2]);", label: "the votes are strings", rejects: true },
-    ],
+  {
+    "code": "const __counts: Record<string, number> = tally([\"a\"]);",
+    "label": "gives back a lookup of numbers"
+  },
+  {
+    "code": "const __texts: Record<string, string> = tally([\"a\"]);",
+    "label": "the values are numbers, not strings",
+    "rejects": true
+  },
+  {
+    "code": "tally([1, 2]);",
+    "label": "the votes are strings",
+    "rejects": true
+  },
+  {
+    "code": "declare const __stringVotes: string[]; const __numericCounts: Record<string,number> = tally(__stringVotes);",
+    "label": "arbitrary string votes produce numeric counts"
+  },
+  {
+    "code": "const __stringCount: string = tally([\"a\"])[\"a\"];",
+    "label": "count fields are numeric, not any",
+    "rejects": true
+  },
+  {
+    "code": "tally([null]);",
+    "label": "null is not a string vote",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-rotate-a-list",
@@ -533,7 +636,7 @@ console.log(tally(["a","b","a"]));
     tier: 2,
     focus: ["readonly", "slice"],
     title: "Rotate a list",
-    prompt: "Write `rotate(items: readonly string[]): string[]`, returning a new array with the first item moved to the end. The parameter is readonly, so the array you were handed comes back unchanged; an empty list and a single item both come back as they are.",
+    prompt: "Write rotate(items: readonly string[]): string[], moving the first item to the end while keeping every other item in order. Input is a dense array of strings, including duplicates, empty strings and whitespace. Return a fresh mutable array on every call, including zero or one item. Do not change the input, even by casting away readonly; preserve each string exactly. Type checking must accept readonly string arrays, reject other element types and give the result a mutable string-array type.\n\nTarget: O(n) time and O(n) output entries, where n is items.length, under a dense-array element-work model with constant indexed reads and amortized append. Strings are existing values rather than scanned characters; compiler work and engine timing are excluded.",
     starter: `const rotate = (items) => {
   
 };
@@ -561,16 +664,34 @@ console.log(rotate(["a","b","c"]));
       { call: "rotate([])", expected: [], label: "empty input", edge: true },
     ],
     typeTests: [
-      {
-        code: "const __moved: string[] = rotate([\"a\", \"b\"]);",
-        label: "gives back a normal array of strings",
-      },
-      {
-        code: "rotate([\"a\", \"b\"] as readonly string[]);",
-        label: "a readonly array is accepted",
-      },
-      { code: "rotate([1, 2]);", label: "numbers are not strings", rejects: true },
-    ],
+  {
+    "code": "const __moved: string[] = rotate([\"a\", \"b\"]);",
+    "label": "gives back a normal array of strings"
+  },
+  {
+    "code": "rotate([\"a\", \"b\"] as readonly string[]);",
+    "label": "a readonly array is accepted"
+  },
+  {
+    "code": "rotate([1, 2]);",
+    "label": "numbers are not strings",
+    "rejects": true
+  },
+  {
+    "code": "declare const __readonlyStrings: readonly string[]; const __normalResult: string[] = rotate(__readonlyStrings); __normalResult.push(\"new\");",
+    "label": "arbitrary readonly input produces a mutable string array"
+  },
+  {
+    "code": "const __resultNumber: number = rotate([\"a\"]);",
+    "label": "the result is array, not number or any",
+    "rejects": true
+  },
+  {
+    "code": "const __numericElement: number = rotate([\"a\"])[0];",
+    "label": "result elements are strings, not any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-describe-a-value",
@@ -581,7 +702,7 @@ console.log(rotate(["a","b","c"]));
     tier: 2,
     focus: ["narrowing", "unions"],
     title: "Describe a value",
-    prompt: "Write `describeValue(value: unknown): string`, returning `nothing` for null or undefined, `a list` for an array, `text` for a string, `a number` for a number, and `something else` for anything left over.",
+    prompt: "Write `describeValue(value: unknown): string`, returning `nothing` for null or undefined, `a list` for an array, `text` for a string, `a number` for a number, and `something else` for anything left over. Domain: JavaScript values without proxies or accessors, including sparse/cyclic arrays, boxed primitives, functions, symbols, bigints, NaN and infinities. Use runtime categories: all primitive numbers, including NaN and infinities, are a number; boxed strings/numbers and non-array objects are something else. Do not inspect collection contents, call user methods or coerce the input to text/number. Leave inputs unchanged. Target: O(1) time and working state for a fixed sequence of type/category checks, independent of collection or string size.",
     starter: `const describeValue = (value) => {
   
 };
@@ -596,7 +717,7 @@ console.log(describeValue("hi"));
       "typeof reports null as an object, so ruling out the empty cases first is what stops them taking the wrong branch.",
     ],
     approach: [
-      "unknown is the safe opposite of any: anything can be assigned to it, and nothing can be done with it until it is narrowed.",
+      "Any value can be assigned to unknown. Unlike any, unknown requires a type check before you read a property or call a method.",
       "Rule out null and undefined first, because typeof reports one of them as an object and would send it down the wrong branch.",
       "Arrays are objects too, so ask whether it is an array before you fall back to the catch-all answer.",
     ],
@@ -634,7 +755,7 @@ console.log(describeValue("hi"));
     tier: 2,
     focus: ["generics"],
     title: "First item",
-    prompt: "Write `first<T>(items: T[]): T | undefined`, returning the opening item of an array of anything, and `undefined` when there is nothing in it. One type parameter is enough — the caller should get back the type they put in.",
+    prompt: "Write `first<T>(items: T[]): T | undefined`, returning the opening item of an array of anything, and `undefined` when there is nothing in it. One type parameter is enough \u2014 the caller should get back the type they put in. Domain: an ordinary native array of at most 1000 opaque values, possibly frozen or sparse, with unmodified Array methods, no accessors/proxies and no inherited numeric entries. Return the exact value at index 0, including null, undefined, symbols, functions or object references; a hole there gives undefined. Leave the array unchanged and do not inspect, clone, call or coerce the selected value or later items. Target: O(1) time and working state for selecting the first slot; work a returned function might later perform is outside this call.",
     starter: `const first = (items) => {
   
 };
@@ -693,7 +814,7 @@ console.log(first([1,2,3]));
     tier: 2,
     focus: ["unions", "generics"],
     title: "Fall back to a default",
-    prompt: "Write `orDefault<T>(value: T | null | undefined, fallback: T): T`, returning the value unless it is null or undefined, in which case the fallback. Zero, an empty string and false are real values and come back as they are.",
+    prompt: "Write `orDefault<T>(value: T | null | undefined, fallback: T): T`, returning the value unless it is null or undefined, in which case the fallback. Zero, an empty string and false are real values and come back as they are. Treat values as opaque: return the selected original value/reference without cloning, invoking, awaiting or converting it. This includes arrays, records, functions, Symbols, native Promises, NaN and signed zero. The function is synchronous and does not change either argument. T is unconstrained: callers may explicitly choose a union, including null or undefined. If the fallback itself is nullish, the result may still be nullish; the function substitutes once rather than promising a non-null result for every possible T. Target: O(1) time and retained state; neither argument is traversed.",
     starter: `const orDefault = (value, fallback) => {
   
 };
@@ -705,11 +826,11 @@ console.log(orDefault(null, 5));
   // build and return the answer
 };`,
     hints: [
-      "The point of the function is that the answer can no longer be missing, which is why the return type is the plain type.",
+      "Test only for null and undefined. Preserve falsy values such as zero, false, empty text, NaN and signed zero.",
     ],
     approach: [
-      "The value may be missing but the fallback may not, which is what makes the return type the plain type again.",
-      "Both parameters share one type parameter, so a caller cannot pass a fallback of a different type by accident.",
+      "Return the value when it is non-nullish, otherwise the fallback; the selected value keeps its exact identity.",
+      "Both parameters share T and the result returns T. Callers may choose a union; if T includes null or undefined, the fallback and result can still be nullish.",
       "Use the fallback operator that steps in only for null and undefined, or a legitimate zero gets replaced.",
     ],
     verify: "tests",
@@ -732,7 +853,7 @@ console.log(orDefault(null, 5));
       },
     ],
     typeTests: [
-      { code: "const __sure: number = orDefault(null, 5);", label: "null can never come back out" },
+      { code: "const __sure: number = orDefault(null, 5);", label: "a non-nullish fallback gives a number here" },
       {
         code: "const __word: string = orDefault(\"a\", \"b\");",
         label: "the type follows what went in",
@@ -753,7 +874,7 @@ console.log(orDefault(null, 5));
     tier: 2,
     focus: ["generics", "map"],
     title: "Transform a list",
-    prompt: "Write `transform<T, R>(items: T[], change: (item: T) => R): R[]`, running the callback over every item and collecting the results. The callback takes one argument, and the type it returns is the element type of the array that comes back.",
+    prompt: "Write `transform<T, R>(items: T[], change: (item: T) => R): R[]`, running the callback over every item and collecting the results. The callback takes one argument, and the type it returns is the element type of the array that comes back. Domain: an ordinary dense array of at most 1000 opaque values, possibly frozen at runtime. Call change once per item in ascending index order with exactly that item as its only argument; do not pass an index or the input array. change does not mutate items. Store its exact returned value/reference without awaiting or cloning it, including undefined, functions, Symbols, NaN, -0 and native Promises. A synchronous throw stops iteration and propagates the exact reason, without invoking later items. Return a fresh dense mutable result array synchronously, including for empty input; do not alter the input or returned values. Keep the input and callback-result types connected through the two generic parameters. Target: O(n) time and result space, where n is 1 + the item count, excluding callback work.",
     starter: `const transform = (items, change) => {
   
 };
@@ -810,7 +931,7 @@ console.log(transform([1,2,3], n => n * 2));
     tier: 3,
     focus: ["constraints", "sort"],
     title: "Sort by name",
-    prompt: "Write `sortByName<T extends { name: string }>(items: T[]): T[]`, returning a new array ordered A to Z by `name`. Anything with a name is allowed in, its other properties survive, and the array handed in is not reordered.",
+    prompt: "Write `sortByName<T extends { name: string }>(items: T[]): T[]`, returning a new array ordered by ascending, case-sensitive UTF-16 code-unit comparison of `name`. Anything with a name is allowed in, its other properties survive, and the array handed in is not reordered. Domain: a dense ordinary array of at most 1000 stable records, possibly frozen, with own string names of at most 200 UTF-16 units and no accessors/proxies. Use JavaScript string < and > ordering, including case, spaces and Unicode; do not trim, normalize or apply locale collation. Ties keep original order. Return a fresh mutable outer array on every call, including empty/singleton input, containing the exact original records and opaque extra fields. Leave the input order and records unchanged. Target: O(n log n) time in the comparison-sort model and O(n) output space, where n is 1 + item count and name lengths are bounded. The language specification does not promise a particular built-in sorting algorithm.",
     starter: `const sortByName = (items) => {
   
 };
@@ -891,7 +1012,7 @@ console.log(sortByName([{name:"Bo"},{name:"Ada"}]));
     tier: 3,
     focus: ["keyof", "map"],
     title: "Pluck a property",
-    prompt: "Write `pluck<T, K extends keyof T>(items: T[], key: K): T[K][]`, collecting one property from every object in the list. The key has to name a property that exists, and what comes back is an array of whatever that property holds.",
+    prompt: "Write `pluck<T, K extends keyof T>(items: T[], key: K): T[K][]`, collecting one property from every object in the list. The key has to belong to the item type, and what comes back is an array of whatever that property holds. Domain: a dense ordinary array of at most 1000 stable data objects or arrays, possibly frozen, with no accessors/proxies. The requested string, number or Symbol key belongs to T and may be an own or inherited data property on a bounded prototype chain. A missing optional property contributes undefined in its original position. Preserve exact opaque values/references, including arrays, objects, functions, symbols, null and undefined: do not clone, call, coerce or traverse them. Return a fresh mutable outer array on every call, including empty input; leave the input and its records unchanged. Target: O(n) time and output space, where n is 1 + item count under bounded property reads.",
     starter: `const pluck = (items, key) => {
   
 };
@@ -948,7 +1069,7 @@ console.log(pluck([{id:1},{id:2}], "id"));
     tier: 3,
     focus: ["utility-types", "spread"],
     title: "Apply a patch",
-    prompt: "Declare an interface named `Settings` with a `theme` string and a `fontSize` number, then write `applyPatch(settings: Settings, patch: Partial<Settings>): Settings`, returning a new settings object with whatever the patch supplies written over the original.",
+    prompt: "Declare an interface named `Settings` with a `theme` string and a `fontSize` number, then write `applyPatch(settings: Settings, patch: Partial<Settings>): Settings`, returning a new settings object with whatever the patch supplies written over the original. Policy: ignore an own patch field whose value is undefined, so the required Settings stays complete; inherited patch fields do not apply. Domain: stable ordinary/null-prototype settings with own theme text and a finite fontSize from -1000000000 through 1000000000, plus up to 100 own enumerable string/Symbol metadata fields with opaque values. A patch carries only theme and/or fontSize data, optionally undefined. Inputs may be frozen and have no accessors/proxies. Return a fresh plain mutable object even for an empty/no-op patch, preserving own enumerable metadata shallowly, including a literal __proto__ field, while excluding inherited metadata. Do not mutate sources or traverse opaque values. Target: O(n) time and output space, where n is 1 + the number of source/patch own enumerable fields under bounded property-key operations.",
     starter: `const applyPatch = (settings, patch) => {
   
 };
@@ -964,38 +1085,11 @@ console.log(applyPatch({theme:"dark",fontSize:14}, {fontSize:16}));
 const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   // build and return the answer
 };`,
-    hints: [
-      "Partial takes a type you already have and makes every property optional, which is exactly what a patch is.",
-    ],
-    approach: [
-      "Partial rewrites an existing type with every property optional, so a patch never needs a type of its own.",
-      "Spread the original first and the patch second, so anything the patch supplies wins.",
-      "Build a new object rather than assigning into the original, or the caller’s settings change under them.",
-    ],
+    hints: ["Partial makes properties optional, but an explicit undefined still type-checks here. Filter own entries to values other than undefined before spreading them after the source; defined empty text and zero must still win."],
+    approach: ["Keep only own patch entries whose values are not undefined.", "Spread the original settings first and the defined patch entries second.", "Return the new settings object even for an empty patch; leave both sources unchanged."],
     verify: "tests",
     estimatedMinutes: 10,
-    tests: [
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:16})",
-        expected: { theme: "dark", fontSize: 16 },
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {theme:\"light\",fontSize:12})",
-        expected: { theme: "light", fontSize: 12 },
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {})",
-        expected: { theme: "dark", fontSize: 14 },
-        label: "an empty patch changes nothing",
-        edge: true,
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:0})",
-        expected: { theme: "dark", fontSize: 0 },
-        label: "zero still overwrites",
-        edge: true,
-      },
-    ],
+    tests: [{"call": "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:16})", "expected": {"theme": "dark", "fontSize": 16}}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {theme:\"light\",fontSize:12})", "expected": {"theme": "light", "fontSize": 12}}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {})", "expected": {"theme": "dark", "fontSize": 14}, "label": "an empty patch changes nothing", "edge": true}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:0})", "expected": {"theme": "dark", "fontSize": 0}, "label": "zero still overwrites", "edge": true}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {theme:undefined,fontSize:undefined})", "expected": {"theme": "dark", "fontSize": 14}, "label": "undefined keeps the original settings", "edge": true}],
     typeTests: [
       {
         code: "const __next: Settings = applyPatch({ theme: \"dark\", fontSize: 14 }, { fontSize: 16 });",
@@ -1018,7 +1112,7 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
     tier: 3,
     focus: ["utility-types", "destructuring"],
     title: "Hide the password",
-    prompt: "Declare an interface named `Account` with a numeric `id` and string `email` and `password`, then write `publicUser(account: Account): Omit<Account, \"password\">`, returning a copy with the password removed rather than blanked.",
+    prompt: "Declare an interface named `Account` with a numeric `id` and string `email` and `password`, then write `publicUser(account: Account): Omit<Account, \"password\">`, returning a copy with the password removed rather than blanked. Domain: a stable ordinary or null-prototype Account with own data fields and up to 100 extra own enumerable string/Symbol metadata fields, possibly frozen, with no accessors/proxies. Preserve every other own enumerable field and its exact opaque value, including a literal __proto__ field; inherited metadata is not copied. Remove the password key entirely, without mutating the source or blanking it. Return a fresh plain mutable object every call. This helper removes that single field; Omit itself changes only the static view. Target: O(n) time and output space, where n is 1 + source own enumerable field count under bounded property-key operations, excluding opaque value contents.",
     starter: `const publicUser = (account) => {
   
 };
@@ -1093,7 +1187,7 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
     tier: 3,
     focus: ["unions", "narrowing"],
     title: "Area of a shape",
-    prompt: "Declare a type alias named `Shape` for a square with a `side`, a rectangle with `width` and `height`, or a triangle with `base` and `height`, each tagged with a `kind`. Then write `area(shape: Shape): number` returning the area of whichever it turns out to be.",
+    prompt: "Declare a type alias named `Shape` for a square with a `side`, a rectangle with `width` and `height`, or a triangle with `base` and `height`, each tagged with a `kind`. Then write `area(shape: Shape): number` returning the area of whichever it turns out to be. Domain: shape is a stable ordinary or null-prototype data record of exactly one declared kind, possibly frozen, with finite nonnegative dimensions from 0 through 1000000. Leave all fields and opaque metadata unchanged. Use the square, rectangle and triangle formulas directly with Number arithmetic; do not round the area to a whole number. Unknown tags and malformed shapes are outside this task. Target: O(1) time and working state for one fixed tag decision and a bounded number of arithmetic operations.",
     starter: `const area = (shape) => {
   
 };
@@ -1162,7 +1256,7 @@ const area = (shape: Shape): number => {
     tier: 3,
     focus: ["type-guards", "filter"],
     title: "Only the strings",
-    prompt: "Write `isString(value: unknown): value is string`, then use it in `onlyStrings(values: unknown[]): string[]` to keep only the strings from a mixed list, in their original order. Without the predicate on the first, what the second filters out stays unknown to the compiler.",
+    prompt: "Write `isString(value: unknown): value is string`, then use it in `onlyStrings(values: unknown[]): string[]` to keep only the strings from a mixed list, in their original order. Use a reusable named guard to make the narrowing contract clear. Current TypeScript can infer a predicate from some simple typeof functions; the explicit predicate form is the focus of this exercise. Domain: values is a dense array of at most 1000 unknown values, possibly frozen. Keep only primitive strings, preserving their exact text, duplicates and order. Boxed String objects are objects, not primitive strings. Other values may contain cyclic data or methods that throw if called; ignore their contents without coercion or invoking methods. Leave input values and order unchanged. Return a fresh mutable string array every call, including when empty; strings have at most 200 UTF-16 units. Target: O(n) time and worst-case O(n) output space, where n is 1 + element count; typeof does not traverse values or string contents.",
     starter: `const isString = (value) => {
   
 };
@@ -1185,7 +1279,7 @@ const onlyStrings = (values: unknown[]): string[] => {
     approach: [
       "A type predicate is an ordinary boolean function whose return type tells the compiler what a true answer proves about its argument.",
       "Write the check first, as its own named function, and then hand that function to filter.",
-      "Filtering with a plain inline test would leave the result as wide as it started, which is the whole reason the predicate exists.",
+      "Current TypeScript can infer a predicate from simple typeof checks. An explicit named predicate documents the narrowing contract and can be reused by callers.",
     ],
     verify: "tests",
     estimatedMinutes: 10,

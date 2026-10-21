@@ -11,13 +11,19 @@ import type { CodingSolution } from '../types';
 export const EASY_REACT_B_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── useRef ───────────────────────────────────────────────────────── */
   'react-easy3-send-latest-draft': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState('');
   // Every render shares this one object, so the timeout can read what was typed after the click.
   const draftRef = useRef('');
+  const pendingRef = useRef(new Set());
+
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => { pending.forEach(clearTimeout); pending.clear(); };
+  }, []);
 
   const change = (event) => {
     setDraft(event.target.value);
@@ -26,7 +32,11 @@ const App = () => {
 
   const sendLater = () => {
     // draft would be the text of the render that made this handler; the ref holds the text now.
-    setTimeout(() => setSent(draftRef.current), 300);
+    const timer = setTimeout(() => {
+      pendingRef.current.delete(timer);
+      setSent(draftRef.current);
+    }, 300);
+    pendingRef.current.add(timer);
   };
 
   return <main>
@@ -38,12 +48,18 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState('');
   const draftRef = useRef('');
+  const pendingRef = useRef(new Set());
+
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => { pending.forEach(clearTimeout); pending.clear(); };
+  }, []);
 
   const change = (event) => {
     const value = event.target.value;
@@ -52,10 +68,12 @@ const App = () => {
   };
 
   const sendLater = () => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      pendingRef.current.delete(timer);
       const latest = draftRef.current;
       setSent(latest);
     }, 300);
+    pendingRef.current.add(timer);
   };
 
   let message = '';
@@ -84,7 +102,6 @@ const App = () => {
   const draftRef = useRef(draft);
   const pendingRef = useRef(new Set());
 
-  // Sends still waiting when the page closes go with it.
   useEffect(() => {
     const pending = pendingRef.current;
     return () => pending.forEach(clearTimeout);
@@ -143,7 +160,22 @@ test('text typed after a send waits for the next one', async () => {
   send();
   await wait(350);
   expect(line(container)).toBe('Sent: second');
-});`,
+});
+
+
+test('each pending click reads the current draft at its own deadline',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('old');send();await clock.tick(100);send();type('  newest 🦈  ');await clock.tick(199);expect(line(view.container)).toBe('');await clock.tick(1);expect(line(view.container)).toBe('Sent:   newest 🦈  ');type('second');await clock.tick(99);expect(line(view.container)).toBe('Sent:   newest 🦈  ');await clock.tick(1);expect(line(view.container)).toBe('Sent: second');
+ const values=['',' ','  raw  ','<tag>literal</tag>','🦈漢字','x'.repeat(2000),'0','false'];
+ for(let i=0;i<16;i++){const value=values[i%values.length];const before=line(view.container);type('outdated');send();type(value);view.rerender(<App data-parent={i}/>);await clock.tick(299);expect(line(view.container)).toBe(before);await clock.tick(1);expect(line(view.container)).toBe(value===''?'':'Sent: '+value);expect(clock.pending()).toBe(0);}
+ view.unmount();
+}));
+test('emptying a pending message clears the previous sent line at the deadline',()=>withAuditClock(async clock=>{
+ const view=render(<App/>);type('sent');send();await clock.tick(300);type('next');send();type('');await clock.tick(299);expect(line(view.container)).toBe('Sent: sent');await clock.tick(1);expect(line(view.container)).toBe('');expect(clock.pending()).toBe(0);
+}));
+test('independent sends and removal do not retain pending timeouts or old text',()=>withAuditClock(async clock=>{
+ const a=render(<App/>),b=render(<App/>);const first=within(a.container),second=within(b.container);fireEvent.change(first.getByLabelText('Message'),{target:{value:'A'}});fireEvent.click(first.getByRole('button',{name:'Send later'}));fireEvent.change(second.getByLabelText('Message'),{target:{value:'B'}});fireEvent.click(second.getByRole('button',{name:'Send later'}));expect(clock.pending()).toBe(2);a.unmount();expect(clock.pending()).toBe(1);await clock.tick(300);expect(line(b.container)).toBe('Sent: B');b.unmount();expect(clock.pending()).toBe(0);const fresh=render(<App/>);expect(line(fresh.container)).toBe('');expect(screen.getByLabelText('Message').value).toBe('');fresh.unmount();
+}));
+`,
   },
   'react-easy3-give-focus-back': {
     solution: `import React, { useRef, useState } from 'react';
@@ -254,7 +286,6 @@ const App = () => {
   const renameRef = useRef(null);
   const editing = draft !== null;
 
-  // One way out of the form, whichever control the user leaves by.
   const close = () => {
     setDraft(null);
     renameRef.current?.focus();
@@ -312,7 +343,20 @@ test('Escape on the Cancel button closes the form too', () => {
   fireEvent.keyDown(screen.getByRole('button', { name: 'Cancel' }), { key: 'Escape' });
   expect(field()).toBe(null);
   expect(document.activeElement).toBe(rename());
-});`,
+});
+
+
+test('twenty-four edit cycles preserve raw saved names and discard Cancel or Escape drafts',()=>{
+ const view=render(<App/>);const values=['',' ','  unchanged spacing  ','0','<b>plain text</b>','🦈漢字','x'.repeat(2000),'Name'];let saved='Reef survey';
+ for(let i=0;i<24;i++){fireEvent.click(rename());expect(field().value).toBe(saved);expect(document.activeElement).toBe(field());const value=values[i%values.length];fireEvent.change(field(),{target:{value}});view.rerender(<App data-parent={i}/>);expect(field().value).toBe(value);expect(document.activeElement).toBe(field());fireEvent.keyDown(field(),{key:'ArrowLeft'});expect(field()).toBeTruthy();if(i%3===0){fireEvent.click(screen.getByRole('button',{name:'Save'}));saved=value;}else if(i%3===1)fireEvent.click(screen.getByRole('button',{name:'Cancel'}));else fireEvent.keyDown(i%2===0?field():screen.getByRole('button',{name:'Save'}),{key:'Escape'});expect(field()).toBeNull();expect(view.container.querySelector('p').textContent).toBe('Project: '+saved);expect(document.activeElement).toBe(rename());}
+});
+test('each editor returns focus to its own Rename button and keeps the other saved name',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.click(one.getByRole('button',{name:'Rename'}));fireEvent.change(one.getByLabelText('New name'),{target:{value:'Alpha'}});fireEvent.click(one.getByRole('button',{name:'Save'}));fireEvent.click(two.getByRole('button',{name:'Rename'}));fireEvent.change(two.getByLabelText('New name'),{target:{value:'Beta'}});fireEvent.click(two.getByRole('button',{name:'Cancel'}));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename'}));expect(a.container.querySelector('p').textContent).toBe('Project: Alpha');expect(b.container.querySelector('p').textContent).toBe('Project: Reef survey');a.unmount();fireEvent.click(two.getByRole('button',{name:'Rename'}));fireEvent.click(two.getByRole('button',{name:'Cancel'}));expect(document.activeElement).toBe(two.getByRole('button',{name:'Rename'}));b.unmount();
+});
+test('a real submit event prevents navigation and a fresh editor does not keep old state',()=>{
+ const view=render(<App/>);fireEvent.click(rename());fireEvent.change(field(),{target:{value:' submitted '}});const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>view.container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);expect(view.container.querySelector('p').textContent).toBe('Project:  submitted ');expect(document.activeElement).toBe(rename());view.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('Project: Reef survey');expect(field()).toBeNull();fresh.unmount();
+});
+`,
   },
 
   /* ── custom hooks ─────────────────────────────────────────────────── */
@@ -413,7 +457,6 @@ export default App;`,
     senior: `import React, { useEffect, useRef, useState } from 'react';
 
 export const useOutsideClick = (ref, onOutside) => {
-  // The newest handler lives in a ref, so an inline arrow does not re-subscribe on every render.
   const handlerRef = useRef(onOutside);
   useEffect(() => {
     handlerRef.current = onOutside;
@@ -512,7 +555,19 @@ test('leaving the page removes the listener it added', () => {
       target.removeEventListener = real[index][1];
     });
   }
-});`,
+});
+
+
+test('twenty current callbacks and changing ref targets distinguish every contained node',()=>{
+ const seen=[],ref=React.createRef();const Probe=({source,target})=>{useOutsideClick(ref,()=>seen.push(source));return <main><section ref={target==='one'?ref:null}><span><b>first deep</b></span></section><section ref={target==='two'?ref:null}><span><i>second deep</i></span></section><p>outside</p></main>;};const view=render(<Probe source={-1} target="one"/>);for(let i=0;i<20;i++){const target=i%3===0?'none':i%2?'two':'one';view.rerender(<Probe source={i} target={target}/>);const sections=[...view.container.querySelectorAll('section')],before=seen.length;for(const node of target==='none'?[]:[ref.current,ref.current.querySelector('span'),ref.current.querySelector('span').firstChild]){fireEvent.mouseDown(node);expect(seen).toHaveLength(before);}fireEvent.mouseDown(view.container.querySelector('p'));if(target==='none')expect(seen).toHaveLength(before);else{expect(seen).toHaveLength(before+1);expect(seen[before]).toBe(i);fireEvent.mouseDown(sections[target==='one'?1:0]);expect(seen[before+1]).toBe(i);}}
+});
+test('subscriptions use matching capture options,track ref-object replacements and remove on unmount',()=>{
+ const watch=watchLiveListeners(document,'mousedown'),first=React.createRef(),second=React.createRef(),seen=[];try{const Probe=({refObject,source})=>{useOutsideClick(refObject,()=>seen.push(source));return <p ref={refObject}>inside</p>;};const view=render(<Probe refObject={first} source={0}/>);expect(watch.active()).toBe(1);for(let i=1;i<=12;i++){const refObject=i%2?second:first;view.rerender(<Probe refObject={refObject} source={i}/>);expect(watch.active()).toBe(1);fireEvent.mouseDown(refObject.current);expect(seen).toHaveLength(i-1);fireEvent.mouseDown(document.body);expect(seen[i-1]).toBe(i);}view.unmount();expect(watch.active()).toBe(0);const before=seen.length;fireEvent.mouseDown(document.body);expect(seen).toHaveLength(before);}finally{watch.restore();}
+});
+test('independent hooks and repeated App panels clean up their own listeners',()=>{
+ const watch=watchLiveListeners(document,'mousedown');try{const a=render(<App/>),b=render(<App/>);expect([1,2].includes(watch.active())).toBe(true);const one=within(a.container),two=within(b.container);for(let i=0;i<12;i++){fireEvent.click(one.getByRole('button',{name:'Filters'}));expect(one.getByRole('button',{name:'Filters'}).getAttribute('aria-expanded')).toBe('true');fireEvent.mouseDown(one.getByLabelText('On sale'));expect(one.queryByLabelText('On sale')).not.toBeNull();fireEvent.mouseDown(a.container.querySelector('p'));expect(one.queryByLabelText('On sale')).toBeNull();expect(two.queryByLabelText('On sale')).toBeNull();a.rerender(<App data-parent={i}/>);expect([1,2].includes(watch.active())).toBe(true);}a.unmount();expect(watch.active()).toBe(1);fireEvent.click(two.getByRole('button',{name:'Filters'}));fireEvent.mouseDown(two.getByRole('button',{name:'Filters'}));fireEvent.click(two.getByRole('button',{name:'Filters'}));expect(two.queryByLabelText('On sale')).toBeNull();b.unmount();expect(watch.active()).toBe(0);const fresh=render(<App/>);expect(isOpen()).toBe(false);fresh.unmount();expect(watch.active()).toBe(0);}finally{watch.restore();}
+});
+`,
   },
   'react-easy3-use-theme-guard': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -613,7 +668,6 @@ const ThemeContext = createContext(null);
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('dark');
   const toggle = useCallback(() => setTheme((previous) => (previous === 'dark' ? 'light' : 'dark')), []);
-  // A new object on every render would re-render every consumer; this one changes with the theme only.
   const value = useMemo(() => ({ theme, toggle }), [theme, toggle]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -672,7 +726,20 @@ test('the value carries toggle as well', () => {
   render(<ThemeProvider><Probe /></ThemeProvider>);
   fireEvent.click(screen.getByRole('button'));
   expect(screen.getByRole('button').textContent).toBe('light');
-});`,
+});
+
+
+test('twenty-four switches return the actual shared current provider value and callback',()=>{
+ const seen=[];const Probe=()=>{const a=useTheme(),b=useTheme();seen.push([a,b]);return <button onClick={a.toggle}>{a.theme}</button>;};const view=render(<ThemeProvider><Probe/></ThemeProvider>),button=view.container.querySelector('button');for(let i=0;i<24;i++){const pair=seen[seen.length-1];expect(pair[0]).toBe(pair[1]);expect(typeof pair[0].toggle).toBe('function');expect(button.textContent).toBe(i%2?'light':'dark');fireEvent.click(button);view.rerender(<ThemeProvider><Probe/></ThemeProvider>);}expect(button.textContent).toBe('dark');
+});
+test('nearest nested providers,two independent roots and fresh mounting own their theme',()=>{
+ const Probe=({label})=>{const{theme,toggle}=useTheme();return <button onClick={toggle}>{label}:{theme}</button>;};const a=render(<ThemeProvider><Probe label="outer"/><ThemeProvider><Probe label="inner"/></ThemeProvider></ThemeProvider>),b=render(<ThemeProvider><Probe label="separate"/></ThemeProvider>);const one=within(a.container),two=within(b.container);for(let i=0;i<18;i++){fireEvent.click(one.getByRole('button',{name:/^inner:/}));expect(one.getByRole('button',{name:/^inner:/}).textContent).toBe('inner:'+(i%2?'dark':'light'));expect(one.getByRole('button',{name:/^outer:/}).textContent).toBe('outer:dark');expect(two.getByRole('button').textContent).toBe('separate:dark');}fireEvent.click(one.getByRole('button',{name:/^outer:/}));expect(one.getByRole('button',{name:/^inner:/}).textContent).toBe('inner:dark');a.unmount();b.unmount();const fresh=render(<App/>);expect(fresh.container.querySelector('p').textContent).toBe('Theme: dark');fresh.unmount();
+});
+test('both the public hook and Badge render under an Error boundary with the authored missing-provider error',()=>{
+ class Boundary extends React.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return{error};}render(){return this.state.error?<output>{this.state.error instanceof Error?this.state.error.message:'not an Error'}</output>:this.props.children;}}
+ const Probe=()=> <p>{useTheme().theme}</p>;for(const child of [<Probe/>,<Badge/>]){const view=render(<Boundary>{child}</Boundary>);expect(view.container.textContent).toBe('useTheme must be used inside ThemeProvider');view.unmount();}
+});
+`,
   },
   'react-easy3-use-interval': {
     solution: `import React, { useEffect, useRef, useState } from 'react';
@@ -773,7 +840,6 @@ const TICK_MS = 100;
 export const useInterval = (callback, delay) => {
   const savedCallback = useRef(callback);
 
-  // A layout effect puts the newest callback in place before any timer can fire.
   useLayoutEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
@@ -851,7 +917,19 @@ test('leaving the page stops the ticks', async () => {
   unmount();
   await wait(250);
   expect(ticks).toBe(0);
-});`,
+});
+
+
+test('twenty-four positive-delay,same-delay and pause changes follow their current timer model',()=>withClock(async clock=>{
+ const seen=[],expected=[],Probe=({delay,label})=>{useInterval(()=>seen.push([label,clock.now()]),delay);return null;};const view=render(<Probe delay={null} label="initial"/>);let prior=null,next=null,now=0;const delays=[null,37,37,83,null,1,1,250,11,null,1000,43];for(let i=0;i<24;i++){const delay=delays[i%delays.length],label='callback-'+i,advance=delay===null?75:i%2?Math.max(1,delay-1):delay+3;if(delay!==prior)next=delay===null?null:now+delay;prior=delay;view.rerender(<Probe delay={delay} label={label}/>);expect(clock.active()).toBe(delay===null?0:1);const end=now+advance;while(next!==null&&next<=end){expected.push([label,next]);next+=delay;}await clock.tick(advance);now=end;expect(seen).toEqual(expected);}view.unmount();expect(clock.active()).toBe(0);await clock.tick(1000);expect(seen).toEqual(expected);
+}));
+test('frequent callback changes keep the original deadline and call the latest committed callback',()=>withClock(async clock=>{
+ const seen=[],expected=[],Probe=({label})=>{useInterval(()=>seen.push([label,clock.now()]),100);return null;};const view=render(<Probe label="first"/>);let now=0,next=100;for(let i=0;i<32;i++){view.rerender(<Probe label={'latest-'+i}/>);const end=now+17;while(next<=end){expected.push(['latest-'+i,next]);next+=100;}await clock.tick(17);now=end;expect(seen).toEqual(expected);expect(clock.active()).toBe(1);}view.unmount();expect(clock.active()).toBe(0);
+}));
+test('independent intervals,fresh hooks and App pause/resume own their timers',()=>withClock(async clock=>{
+ const seenA=[],seenB=[],Probe=({label})=>{useInterval(()=>{(label==='A'?seenA:seenB).push(clock.now());},label==='A'?37:53);return null;};const a=render(<Probe label="A"/>),b=render(<Probe label="B"/>);expect(clock.active()).toBe(2);await clock.tick(200);expect(seenA).toHaveLength(5);expect(seenB).toHaveLength(3);a.unmount();expect(clock.active()).toBe(1);await clock.tick(53);expect(seenA).toHaveLength(5);expect(seenB).toHaveLength(4);b.unmount();expect(clock.active()).toBe(0);const app=render(<App/>);expect(count(app.container)).toBe(0);let total=0;for(let i=0;i<12;i++){await clock.tick(99);expect(count(app.container)).toBe(total);await clock.tick(1);total++;expect(count(app.container)).toBe(total);fireEvent.click(screen.getByRole('button',{name:'Pause'}));expect(clock.active()).toBe(0);await clock.tick(137);expect(count(app.container)).toBe(total);app.rerender(<App data-parent={i}/>);fireEvent.click(screen.getByRole('button',{name:'Resume'}));expect(clock.active()).toBe(1);}app.unmount();expect(clock.active()).toBe(0);const fresh=render(<App/>);expect(count(fresh.container)).toBe(0);await clock.tick(100);expect(count(fresh.container)).toBe(1);fresh.unmount();expect(clock.active()).toBe(0);
+}));
+`,
   },
 
   /* ── abort ────────────────────────────────────────────────────────── */
@@ -996,27 +1074,40 @@ test('an answer after the give-up changes nothing', () => withFetch(async calls 
   await wait(350);
   await act(async () => { calls[0].respond({ name: 'Ada' }); });
   expect(status(container)).toBe('The server is taking too long');
-}));`,
+}));` + `
+test('the deadline covers pending JSON and a body completed at299ms clears it',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);load();await phaseHeaders(calls[0]);await clock.tick(299);expect(status(root.container)).toBe('Loading…');await clock.tick(1);expect(status(root.container)).toBe('The server is taking too long');expect(clock.pending()).toBe(0);load();await phaseHeaders(calls[1]);await clock.tick(299);await phaseBody(calls[1],{name:'<b>Literal user</b>'});expect(status(root.container)).toBe('Hello, <b>Literal user</b>');expect(root.container.querySelector('p b')).toBeNull();expect(clock.pending()).toBe(0);await clock.tick(1000);expect(calls[1].signal.aborted).toBe(false);expect(status(root.container)).toBe('Hello, <b>Literal user</b>');root.unmount();})));
+test('network and JSON failures finish their deadline without a later abort',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);for(const failure of['network','json']){const n=calls.length;load();if(failure==='network')await act(async()=>calls[n].fail(new TypeError('Offline')));else{await phaseHeaders(calls[n]);await act(async()=>calls[n].badJSON());}expect(status(root.container)).toBe('Could not load the user');expect(clock.pending()).toBe(0);await clock.tick(350);expect(calls[n].signal.aborted).toBe(false);expect(status(root.container)).toBe('Could not load the user');}root.unmount();})));
+test('sixteen sequential loads own fresh controllers and parent renders keep the deadline',()=>withStepClock(async clock=>withPhaseResponses(async calls=>{const root=render(<App/>);for(let n=0;n<16;n++){load();expect(calls).toHaveLength(n+1);expect(calls[n].url).toBe('/api/users/1');expect(calls[n].signal.aborted).toBe(false);await clock.tick(150);for(let i=0;i<4;i++)root.rerender(<App/>);await clock.tick(149);expect(status(root.container)).toBe('Loading…');if(n%3===0){await phaseDone(calls[n],{name:n===0?'':'Name '+n});expect(status(root.container)).toBe('Hello, '+(n===0?'':'Name '+n));await clock.tick(1);expect(calls[n].signal.aborted).toBe(false);}else if(n%3===1){await clock.tick(1);expect(status(root.container)).toBe('The server is taking too long');}else{await act(async()=>calls[n].fail(new TypeError('Offline')));expect(status(root.container)).toBe('Could not load the user');}expect(clock.pending()).toBe(0);}expect(new Set(calls.map(c=>c.signal)).size).toBe(16);root.unmount();})));
+`,
   },
   'react-easy3-one-stop-two-requests': {
-    solution: `import React, { useRef, useState } from 'react';
+    solution: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     // One controller for this load; its signal goes to both requests.
     const controller = new AbortController();
     controllerRef.current = controller;
     setStatus('Loading…');
     try {
       const [user, posts] = await Promise.all([
-        fetch('/api/users/1', { signal: controller.signal }).then((response) => response.json()),
-        fetch('/api/posts?userId=1', { signal: controller.signal }).then((response) => response.json()),
+        fetch('/api/users/1', { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); }),
+        fetch('/api/posts?userId=1', { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); }),
       ]);
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current === controller) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current === controller)) return;
+      controller.abort();
       setStatus(error.name === 'AbortError' ? 'Stopped' : 'Could not load');
     }
   };
@@ -1035,26 +1126,35 @@ const App = () => {
 };
 
 export default App;`,
-    junior: `import React, { useRef, useState } from 'react';
+    junior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
     const signal = controller.signal;
     setStatus('Loading…');
 
     try {
-      const userRequest = fetch('/api/users/1', { signal: signal }).then((response) => response.json());
-      const postsRequest = fetch('/api/posts?userId=1', { signal: signal }).then((response) => response.json());
+      const userRequest = fetch('/api/users/1', { signal: signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
+      const postsRequest = fetch('/api/posts?userId=1', { signal: signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
       const results = await Promise.all([userRequest, postsRequest]);
       const user = results[0];
       const posts = results[1];
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current === controller) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current === controller)) return;
+      controller.abort();
       if (error.name === 'AbortError') {
         setStatus('Stopped');
       } else {
@@ -1080,22 +1180,31 @@ const App = () => {
 };
 
 export default App;`,
-    senior: `import React, { useRef, useState } from 'react';
+    senior: `import React, { useEffect, useRef, useState } from 'react';
 
 const App = () => {
   const [status, setStatus] = useState('');
   const controllerRef = useRef(null);
 
+  useEffect(() => () => {
+    const previous = controllerRef.current;
+    controllerRef.current = null;
+    previous?.abort();
+  }, []);
+
   const load = async () => {
+    controllerRef.current?.abort();
     controllerRef.current = new AbortController();
     const { signal } = controllerRef.current;
-    const getJson = (url) => fetch(url, { signal }).then((response) => response.json());
+    const getJson = (url) => fetch(url, { signal }).then((response) => { if (!response.ok) throw new Error('Request failed'); return response.json(); });
 
     setStatus('Loading…');
     try {
       const [user, posts] = await Promise.all([getJson('/api/users/1'), getJson('/api/posts?userId=1')]);
-      setStatus(user.name + ', ' + posts.length + ' posts');
+      if (controllerRef.current?.signal === signal) setStatus(user.name + ', ' + posts.length + ' posts');
     } catch (error) {
+      if (!(controllerRef.current?.signal === signal)) return;
+      controllerRef.current.abort();
       setStatus(error.name === 'AbortError' ? 'Stopped' : 'Could not load');
     }
   };
@@ -1141,7 +1250,12 @@ test('each load gets a signal of its own', () => withFetch(async calls => {
     forUrl(later, '/api/posts?userId=1').respond([{ id: 4 }, { id: 5 }]);
   });
   expect(status(container)).toBe('Grace, 2 posts');
-}));`,
+}));` + `
+const pairIn=calls=>({user:calls.find(c=>c.url==='/api/users/1'),posts:calls.find(c=>c.url==='/api/posts?userId=1')});
+test('sixteen loads start both requests together with a fresh shared signal and await both parsed bodies',()=>withPhaseResponses(async calls=>{const root=render(<App/>);expect(calls).toHaveLength(0);for(let n=0;n<16;n++){press('Load');expect(calls).toHaveLength(2*(n+1));const pair=calls.slice(2*n),{user,posts}=pairIn(pair);expect(Boolean(user&&posts)).toBe(true);expect(user.signal).toBe(posts.signal);expect(user.signal.aborted).toBe(false);if(n)expect(user.signal).not.toBe(calls[2*n-2].signal);await phaseHeaders(user);await phaseHeaders(posts);const name=n===4?'':'<b>User '+n+'</b>',data=Array.from({length:n===5?100:n%7},()=>({opaque:true}));if(n%2){await phaseBody(posts,data);expect(status(root.container)).toBe('Loading…');await phaseBody(user,{name});}else{await phaseBody(user,{name});expect(status(root.container)).toBe('Loading…');await phaseBody(posts,data);}expect(status(root.container)).toBe(name+', '+data.length+' posts');expect(root.container.querySelector('p b')).toBeNull();root.rerender(<App/>);expect(calls).toHaveLength(2*(n+1));await act(async()=>press('Stop'));expect(status(root.container)).toBe(name+', '+data.length+' posts');}}));
+test('failure or Stop aborts the unfinished pair and a fresh Load can recover',()=>withPhaseResponses(async calls=>{const root=render(<App/>);for(const failure of['http','network','json','stop']){const index=calls.length;press('Load');const {user,posts}=pairIn(calls.slice(index));if(failure==='http')await phaseDone(user,{name:'Failed body'},500);else if(failure==='network')await act(async()=>posts.fail(new TypeError('Offline')));else if(failure==='json'){await phaseHeaders(user);await act(async()=>user.badJSON());}else{await phaseDone(user,{name:'Partial'});await phaseHeaders(posts);await act(async()=>press('Stop'));}expect(status(root.container)).toBe(failure==='stop'?'Stopped':'Could not load');expect(user.signal.aborted).toBe(true);expect(posts.signal.aborted).toBe(true);const next=calls.length;press('Load');const recovery=pairIn(calls.slice(next));await phaseDone(recovery.user,{name:'Recovered'});await phaseDone(recovery.posts,[{}]);expect(status(root.container)).toBe('Recovered, 1 posts');}}));
+test('older completed work cannot replace a new load and unmount aborts only its own pair',()=>withPhaseResponses(async calls=>{const root=render(<App/>);press('Load');await phaseHeaders(calls[0]);await phaseHeaders(calls[1]);await act(async()=>{calls[0].body({name:'Old'});calls[1].body([{},{}]);press('Load');});expect(calls).toHaveLength(4);expect(status(root.container)).toBe('Loading…');expect(calls[0].signal.aborted).toBe(true);root.unmount();expect(calls[2].signal.aborted).toBe(true);expect(calls[3].signal.aborted).toBe(true);const fresh=render(<App/>);expect(status(fresh.container)).toBe('');expect(calls).toHaveLength(4);fireEvent.click(within(fresh.container).getByRole('button',{name:'Load'}));const pair=pairIn(calls.slice(4));expect(pair.user.signal.aborted).toBe(false);await phaseDone(pair.posts,[]);await phaseDone(pair.user,{name:'Fresh'});expect(status(fresh.container)).toBe('Fresh, 0 posts');}));
+`,
   },
   'react-easy3-listeners-one-abort': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -1256,7 +1370,11 @@ test('the status starts at none and follows the latest input', () => {
   fireEvent.mouseMove(window);
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(line(container)).toBe('Last input: keyboard');
-});`,
+});` + `
+test('thirty-six mixed keys and mouse events always follow the latest event',()=>{const root=render(<App/>);const keys=['Escape','ArrowLeft','Tab','Home','F4',' ','Z','Enter','Shift'];for(let i=0;i<36;i++){fireEvent.mouseMove(window);expect(line(root.container)).toBe('Last input: mouse');fireEvent.keyDown(window,{key:keys[i%keys.length]});expect(line(root.container)).toBe('Last input: keyboard');}});
+test('parent renders keep the same two listeners and aborted callbacks never run afterward',()=>{const trace=traceInputListeners();let root;try{root=render(<App/>);expect(trace.records).toHaveLength(2);const signal=trace.records[0].signal;expect(signal).toBe(trace.records[1].signal);for(let i=0;i<12;i++){fireEvent.mouseMove(window);fireEvent.keyDown(window,{key:'Escape'});root.rerender(<App/>);}expect(trace.records).toHaveLength(2);expect(trace.records.every(r=>r.signal===signal)).toBe(true);const before=trace.records.map(r=>r.calls);root.unmount();expect(signal.aborted).toBe(true);fireEvent.mouseMove(window);fireEvent.keyDown(window,{key:'Escape'});expect(trace.records.map(r=>r.calls)).toEqual(before);}finally{root?.unmount();trace.restore();}});
+test('independent instances own separate shared signals and fresh status starts none',()=>{const trace=traceInputListeners();let a,b,fresh;try{a=render(<App/>);b=render(<App/>);expect(trace.records).toHaveLength(4);const first=trace.records[0].signal,second=trace.records[2].signal;expect(first).not.toBe(second);expect(trace.records[1].signal).toBe(first);expect(trace.records[3].signal).toBe(second);fireEvent.keyDown(window,{key:'Escape'});expect(line(a.container)).toBe('Last input: keyboard');expect(line(b.container)).toBe('Last input: keyboard');a.unmount();expect(first.aborted).toBe(true);expect(second.aborted).toBe(false);fireEvent.mouseMove(window);expect(line(b.container)).toBe('Last input: mouse');fresh=render(<App/>);expect(line(fresh.container)).toBe('Last input: none');expect(trace.records).toHaveLength(6);expect(trace.records[4].signal).not.toBe(second);expect(trace.records[4].signal.aborted).toBe(false);}finally{a?.unmount();b?.unmount();fresh?.unmount();trace.restore();}});
+`,
   },
 
   /* ── pagination ───────────────────────────────────────────────────── */
@@ -1281,7 +1399,7 @@ const App = ({ recipes = allRecipes }) => {
   return <main>
     <h2>The results line</h2>
     <ul>
-      {recipes.slice(start, start + PAGE_SIZE).map((recipe) => <li key={recipe}>{recipe}</li>)}
+      {recipes.slice(start, start + PAGE_SIZE).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
     </ul>
     <p>{line}</p>
     <button type="button" disabled={page <= 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1319,7 +1437,7 @@ const App = ({ recipes = allRecipes }) => {
     <main>
       <h2>The results line</h2>
       <ul>
-        {visible.map((recipe) => <li key={recipe}>{recipe}</li>)}
+        {visible.map((recipe, index) => <li key={start + index}>{recipe}</li>)}
       </ul>
       <p>{line}</p>
       <button type="button" disabled={isFirstPage} onClick={() => setPage(page - 1)}>Previous</button>
@@ -1348,7 +1466,7 @@ const App = ({ recipes = allRecipes }) => {
     <main>
       <h2>The results line</h2>
       <ul>
-        {recipes.slice(start, end).map((recipe) => <li key={recipe}>{recipe}</li>)}
+        {recipes.slice(start, end).map((recipe, index) => <li key={start + index}>{recipe}</li>)}
       </ul>
       <p>{describeRange(start + 1, end, total)}</p>
       <button type="button" disabled={page <= 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1382,7 +1500,13 @@ test('one short page', () => {
   const { container } = render(<App recipes={['A', 'B', 'C']} />);
   expect(line(container)).toBe('Showing 1 to 3 of 3 recipes');
   expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true);
-});`,
+});
+
+
+test('all boundary lengths and duplicate literal rows agree with their ranges',()=>{for(const size of [0,1,4,5,8,10,37]){const recipes=Object.freeze(Array.from({length:size},(_,i)=>i%3===0?' repeat ':i%3===1?' repeat ':'<recipe>&'+i+'x'.repeat(i===2?450:0)));const view=render(<App recipes={recipes}/>),count=Math.max(1,Math.ceil(size/4));for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(recipes.slice((page-1)*4,page*4));expect(view.container.querySelector('p').textContent).toBe(size?'Showing '+((page-1)*4+1)+' to '+Math.min(page*4,size)+' of '+size+' recipes':'No recipes');expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');expect(auditRows(view)).toEqual(recipes.slice((count-1)*4));for(let page=count;page>1;page--)auditClick(view,'Previous');auditClick(view,'Previous');expect(auditRows(view)).toEqual(recipes.slice(0,4));view.unmount();}});
+test('same-length duplicate replacements derive the current page from current data',()=>{const a=Object.freeze(['x','x','y','y','a','a','b','b','z','z','z','z']),b=Object.freeze(['q','q','r','r','<new>','<new>',' ',' ','t','t','t','t']);const view=render(<App recipes={a}/>);auditClick(view,'Next');view.rerender(<App recipes={b}/>);expect(auditRows(view)).toEqual(b.slice(4,8));auditClick(view,'Next');expect(auditRows(view)).toEqual(b.slice(8,12));view.rerender(<App recipes={a}/>);auditClick(view,'Previous');expect(auditRows(view)).toEqual(a.slice(4,8));});
+test('separate and fresh recipe pagers retain only their own page',()=>{const recipes=Object.freeze(Array.from({length:21},(_,i)=>'R'+i));const a=render(<App recipes={recipes}/>),b=render(<App recipes={recipes}/>);auditClick(a,'Next');a.rerender(<App recipes={recipes}/>);expect(auditRows(a)).toEqual(recipes.slice(4,8));expect(auditRows(b)).toEqual(recipes.slice(0,4));auditClick(b,'Next');auditClick(b,'Next');expect(auditRows(a)).toEqual(recipes.slice(4,8));a.unmount();b.unmount();const fresh=render(<App recipes={recipes}/>);expect(auditRows(fresh)).toEqual(recipes.slice(0,4));});
+`,
   },
   'react-easy3-rows-per-page': {
     solution: `import React, { useState } from 'react';
@@ -1410,7 +1534,7 @@ const App = ({ orders = allOrders }) => {
       <option value="20">20</option>
     </select></label>
     <ul>
-      {orders.slice(start, start + rowsPerPage).map((order) => <li key={order}>{order}</li>)}
+      {orders.slice(start, start + rowsPerPage).map((order, index) => <li key={start + index}>{order}</li>)}
     </ul>
     <p>Page {page} of {pageCount}</p>
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
@@ -1460,7 +1584,7 @@ const App = ({ orders = allOrders }) => {
         <option value="20">20</option>
       </select></label>
       <ul>
-        {visibleOrders.map((order) => <li key={order}>{order}</li>)}
+        {visibleOrders.map((order, index) => <li key={start + index}>{order}</li>)}
       </ul>
       <p>Page {page} of {pageCount}</p>
       <button type="button" disabled={page === 1} onClick={goBack}>Previous</button>
@@ -1476,7 +1600,6 @@ const allOrders = Array.from({ length: 23 }, (_, index) => 'Order ' + (index + 1
 const SIZES = [5, 10, 20];
 
 const App = ({ orders = allOrders }) => {
-  // Size and page change together, so they live together.
   const [view, setView] = useState({ page: 1, rowsPerPage: SIZES[0] });
   const { page, rowsPerPage } = view;
   const pageCount = Math.max(1, Math.ceil(orders.length / rowsPerPage));
@@ -1493,7 +1616,7 @@ const App = ({ orders = allOrders }) => {
         {SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
       </select></label>
       <ul>
-        {orders.slice(start, start + rowsPerPage).map((order) => <li key={order}>{order}</li>)}
+        {orders.slice(start, start + rowsPerPage).map((order, index) => <li key={start + index}>{order}</li>)}
       </ul>
       <p>Page {page} of {pageCount}</p>
       <button type="button" disabled={page === 1} onClick={() => goTo(page - 1)}>Previous</button>
@@ -1530,7 +1653,13 @@ test('a smaller size also goes back to page 1', () => {
   press('Next');
   pickSize('5');
   expect(rows(container)).toEqual(range(1, 5));
-});`,
+});
+
+
+test('all offered sizes preserve exact ordered data and handle short or empty boundaries',()=>{for(const length of [0,1,5,6,10,20,21,73]){const orders=Object.freeze(Array.from({length},(_,i)=>i%3===0?' repeat ':i%3===1?' repeat ':'<order>&'+i+'x'.repeat(i===2?450:0)));const view=render(<App orders={orders}/>);for(const size of [5,20,10,5]){fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:String(size)}});const count=Math.max(1,Math.ceil(length/size));for(let page=1;page<=count;page++){expect(auditRows(view)).toEqual(orders.slice((page-1)*size,page*size));expect(view.container.querySelector('p').textContent).toBe('Page '+page+' of '+count);expect(auditButton(view,'Previous').disabled).toBe(page===1);expect(auditButton(view,'Next').disabled).toBe(page===count);if(page<count)auditClick(view,'Next');}auditClick(view,'Next');expect(auditRows(view)).toEqual(orders.slice((count-1)*size));}view.unmount();}});
+test('current same-length duplicate data replaces the chosen slice without resetting',()=>{const orders=Object.freeze(Array.from({length:23},(_,i)=>i%2?'same':'same')),updated=Object.freeze(Array.from({length:23},(_,i)=>i%3?'new':'<different>'));const view=render(<App orders={orders}/>);auditClick(view,'Next');view.rerender(<App orders={updated}/>);expect(auditRows(view)).toEqual(updated.slice(5,10));expect(view.container.querySelector('p').textContent).toBe('Page 2 of 5');fireEvent.change(within(view.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'10'}});expect(auditRows(view)).toEqual(updated.slice(0,10));auditClick(view,'Next');expect(auditRows(view)).toEqual(updated.slice(10,20));});
+test('separate or fresh order pagers keep independent page and size choices',()=>{const orders=Object.freeze(Array.from({length:41},(_,i)=>'Order '+i));const a=render(<App orders={orders}/>),b=render(<App orders={orders}/>);fireEvent.change(within(a.container).getByRole('combobox',{name:'Rows per page'}),{target:{value:'20'}});auditClick(a,'Next');a.rerender(<App orders={orders}/>);expect(auditRows(a)).toEqual(orders.slice(20,40));expect(auditRows(b)).toEqual(orders.slice(0,5));a.unmount();b.unmount();const fresh=render(<App orders={orders}/>);expect(auditRows(fresh)).toEqual(orders.slice(0,5));});
+`,
   },
   'react-easy3-fetch-a-page': {
     solution: `import React, { useEffect, useState } from 'react';
@@ -1540,13 +1669,27 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   // Runs after the first render and after every render in which page changed.
   useEffect(() => {
+    let current = true;
+    setPosts([]);
+    setStatus('loading');
     fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-      .then((response) => response.json())
-      .then((data) => setPosts(data));
-  }, [page]);
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
+      .then((data) => {
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (current) setStatus('error'); });
+    return () => { current = false; };
+  }, [page, attempt]);
 
   // The server gives no total: a page shorter than PAGE_SIZE is the last one.
   const lastPage = posts.length < PAGE_SIZE;
@@ -1557,8 +1700,10 @@ const App = () => {
       {posts.map((post) => <li key={post.id}>{post.title}</li>)}
     </ul>
     <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
     <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
-    <button type="button" disabled={lastPage} onClick={() => setPage((previous) => previous + 1)}>Next</button>
+    <button type="button" disabled={status !== 'ready' || lastPage} onClick={() => setPage((previous) => previous + 1)}>Next</button>
   </main>;
 };
 
@@ -1570,18 +1715,28 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const url = '/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE;
-
+    let current = true;
+    setPosts([]);
+    setStatus('loading');
     async function loadPage() {
-      const response = await fetch(url);
-      const data = await response.json();
-      setPosts(data);
+      try {
+        const response = await fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      } catch {
+        if (current) setStatus('error');
+      }
     }
-
     loadPage();
-  }, [page]);
+    return () => { current = false; };
+  }, [page, attempt]);
 
   let isFirstPage = false;
   if (page === 1) {
@@ -1600,8 +1755,10 @@ const App = () => {
         {posts.map((post) => <li key={post.id}>{post.title}</li>)}
       </ul>
       <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
       <button type="button" disabled={isFirstPage} onClick={() => setPage(page - 1)}>Previous</button>
-      <button type="button" disabled={isLastPage} onClick={() => setPage(page + 1)}>Next</button>
+      <button type="button" disabled={status !== 'ready' || isLastPage} onClick={() => setPage(page + 1)}>Next</button>
     </main>
   );
 };
@@ -1614,19 +1771,26 @@ const PAGE_SIZE = 5;
 const App = () => {
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    // A slow answer for a page the reader already left must not replace the current one.
     let current = true;
+    setPosts([]);
+    setStatus('loading');
     fetch('/api/posts?_page=' + page + '&_limit=' + PAGE_SIZE)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error('Request failed');
+        return response.json();
+      })
       .then((data) => {
-        if (current) setPosts(data);
-      });
-    return () => {
-      current = false;
-    };
-  }, [page]);
+        if (!current) return;
+        setPosts(data);
+        setStatus('ready');
+      })
+      .catch(() => { if (current) setStatus('error'); });
+    return () => { current = false; };
+  }, [page, attempt]);
 
   return (
     <main>
@@ -1635,8 +1799,10 @@ const App = () => {
         {posts.map((post) => <li key={post.id}>{post.title}</li>)}
       </ul>
       <p>Page {page}</p>
+      {status === 'loading' && <p role="status">Loading…</p>}
+      {status === 'error' && <><p role="alert">Could not load posts</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></>}
       <button type="button" disabled={page === 1} onClick={() => setPage((previous) => previous - 1)}>Previous</button>
-      <button type="button" disabled={posts.length < PAGE_SIZE} onClick={() => setPage((previous) => previous + 1)}>Next</button>
+      <button type="button" disabled={status !== 'ready' || posts.length < PAGE_SIZE} onClick={() => setPage((previous) => previous + 1)}>Next</button>
     </main>
   );
 };
@@ -1655,7 +1821,7 @@ test('Previous fetches the page before', () => withFetch(async calls => {
   fireEvent.click(button('Next'));
   await act(async () => { calls[1].respond(posts(6, 5)); });
   fireEvent.click(button('Previous'));
-  expect(calls[2].url).toBe('/api/posts?_page=1&_limit=5');
+  checkPageUrl(calls[2].url, 1);
   await act(async () => { calls[2].respond(posts(1, 5)); });
   expect(titles(container)[0]).toBe('Post 1');
 }));
@@ -1673,7 +1839,13 @@ test('an empty page disables Next', () => withFetch(async calls => {
   await act(async () => { calls[0].respond([]); });
   expect(titles(container)).toEqual([]);
   expect(button('Next').disabled).toBe(true);
-}));`,
+}));
+
+
+test('a late former page cannot overwrite the current page or its error state',()=>auditTransport(async calls=>{const view=render(<App/>),first=auditData(1,5),latest=auditData(80,5);await auditReply(calls[0],first);auditClick(view,'Next');expect(auditRows(view)).toEqual([]);expect(auditButton(view,'Next').disabled).toBe(true);expect(auditButton(view,'Previous').disabled).toBe(false);auditClick(view,'Previous');expect(calls).toHaveLength(3);auditPageUrl(calls[2].url,1);await auditReply(calls[2],latest);await auditReply(calls[1],auditData(200,2));expect(auditRows(view)).toEqual(latest.map(x=>x.title));expect(auditButton(view,'Next').disabled).toBe(false);auditClick(view,'Next');auditClick(view,'Previous');await auditReply(calls[4],first);await act(async()=>{calls[3].fail();});expect(auditRows(view)).toEqual(first.map(x=>x.title));expect(within(view.container).queryByRole('alert')).toBeNull();}));
+test('HTTP, JSON and transport failures retry the same page and clear the alert',()=>auditTransport(async calls=>{const view=render(<App/>);for(let failure=0;failure<3;failure++){const call=calls[calls.length-1];auditPageUrl(call.url,1);await act(async()=>{if(failure===0)call.reply(auditData(1,5),false);else if(failure===1)call.badJson();else call.fail();});expect(auditRows(view)).toEqual([]);expect(within(view.container).getByRole('alert').textContent).toBe('Could not load posts');expect(auditButton(view,'Next').disabled).toBe(true);auditClick(view,'Try again');expect(within(view.container).queryByRole('alert')).toBeNull();}await auditReply(calls[calls.length-1],auditData(1,5));for(let page=2;page<=5;page++){auditClick(view,'Next');const call=calls[calls.length-1];auditPageUrl(call.url,page);const data=auditData(page*100,page===5?0:5);await auditReply(call,data);expect(auditRows(view)).toEqual(data.map(x=>x.title));}expect(auditButton(view,'Next').disabled).toBe(true);}));
+test('normal rerenders do not fetch and separate or fresh pagers have their own requests',()=>auditTransport(async calls=>{const a=render(<App/>),b=render(<App/>);expect(calls).toHaveLength(2);await auditReply(calls[0],auditData(10,5));await auditReply(calls[1],auditData(20,2));a.rerender(<App/>);expect(calls).toHaveLength(2);auditClick(a,'Next');expect(calls).toHaveLength(3);a.unmount();await auditReply(calls[2],auditData(30,5));expect(auditRows(b)).toEqual(auditData(20,2).map(x=>x.title));b.unmount();const fresh=render(<App/>);expect(calls).toHaveLength(4);auditPageUrl(calls[3].url,1);await auditReply(calls[3],[]);expect(auditRows(fresh)).toEqual([]);expect(auditButton(fresh,'Previous').disabled).toBe(true);}));
+`,
   },
 
   /* ── slice ────────────────────────────────────────────────────────── */
@@ -1681,7 +1853,7 @@ test('an empty page disables Next', () => withFetch(async calls => {
     solution: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
   // Worked out on every render, so the crumbs always match the path.
   // filter(Boolean) drops the empty strings the leading and trailing slashes leave.
   const parts = path.split('/').filter(Boolean);
@@ -1709,7 +1881,7 @@ export default App;`,
     junior: `import React, { useState } from 'react';
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
 
   const pieces = path.split('/');
   const parts = [];
@@ -1753,14 +1925,13 @@ const App = ({ start = '/docs/react/hooks' }) => {
 export default App;`,
     senior: `import React, { useState } from 'react';
 
-// Each crumb with the path up to and including it.
 const toCrumbs = (path) => {
   const parts = path.split('/').filter(Boolean);
   return parts.map((label, index) => ({ label, href: '/' + parts.slice(0, index + 1).join('/') }));
 };
 
 const App = ({ start = '/docs/react/hooks' }) => {
-  const [path, setPath] = useState(start);
+  const [path, setPath] = useState(() => '/' + start.split('/').filter(Boolean).join('/'));
   const crumbs = toCrumbs(path);
 
   return (
@@ -1811,7 +1982,13 @@ test('going up to the top empties the crumbs', () => {
   expect(links(container)).toEqual([]);
   fireEvent.click(screen.getByRole('button', { name: 'Go up' }));
   expect(crumbs(container)).toEqual([]);
-});`,
+});
+
+const checkCrumbState=(scope,parts)=>{const nav=within(scope).getByRole('navigation',{name:'Breadcrumb'});expect(nav.querySelectorAll('ol')).toHaveLength(1);expect(Array.from(nav.querySelectorAll('li')).map(li=>li.textContent)).toEqual(parts);expect(Array.from(nav.querySelectorAll('a')).map(a=>a.getAttribute('href'))).toEqual(parts.slice(0,-1).map((_,i)=>'/'+parts.slice(0,i+1).join('/')));expect(nav.querySelectorAll('li')).toHaveLength(parts.length);if(parts.length)expect(nav.querySelector('li:last-child a')).toBeNull();const b=within(scope).getByRole('button',{name:'Go up'});expect(b.type).toBe('button');expect(b.disabled).toBe(parts.length===0);return b;};
+test('normalized paths climb one real segment per click and clamp at root',()=>{for(const start of['/','///','/single/','//docs///react//hooks///','/a/a/b/a/','/'+Array.from({length:40},(_,i)=>'part-'+i).join('/')+'/']){const root=render(<App start={start}/>),scope=root.container;let parts=start.split('/').filter(Boolean);let b=checkCrumbState(scope,parts);while(parts.length){fireEvent.click(b);parts=parts.slice(0,-1);b=checkCrumbState(scope,parts);}fireEvent.click(b);checkCrumbState(scope,[]);root.unmount();}});
+test('parent renders preserve the current path and start is initial-only',()=>{const {container,rerender}=render(<App start="/one/two/three/"/>);fireEvent.click(checkCrumbState(container,['one','two','three']));checkCrumbState(container,['one','two']);rerender(<App start="/replacement/path"/>);checkCrumbState(container,['one','two']);fireEvent.click(container.querySelector('button'));checkCrumbState(container,['one']);});
+test('concurrent and fresh breadcrumbs do not share navigation state',()=>{const root=render(<><section data-scope="a"><App start="/a/b/c"/></section><section data-scope="b"><App start="/d/e"/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(checkCrumbState(a,['a','b','c']));checkCrumbState(a,['a','b']);checkCrumbState(b,['d','e']);root.unmount();checkCrumbState(render(<App start="/a/b/c"/>).container,['a','b','c']);});
+`,
   },
   'react-easy3-read-more': {
     solution: `import React, { useState } from 'react';
@@ -1915,7 +2092,12 @@ test('the sample review starts folded', () => {
   const { container } = render(<App />);
   expect(text(container).endsWith('...')).toBe(true);
   expect(text(container).length).toBe(63);
-});`,
+});
+
+test('exact UTF16 slicing,literal text,empty and boundary lengths',()=>{for(const value of['','a'.repeat(59),'b'.repeat(60),'c'.repeat(61),'🌊'.repeat(31),'<b>'+LONG+'</b>',' x '.repeat(666)]){const root=render(<App text={value}/>);expect(text(root.container)).toBe(value.length>60?value.slice(0,60)+'...':value);expect(root.container.querySelector('p b')).toBeNull();expect(root.container.querySelectorAll('button')).toHaveLength(value.length>60?1:0);if(value.length>60){fireEvent.click(root.container.querySelector('button'));expect(text(root.container)).toBe(value);}root.unmount();}});
+test('twenty toggles and prop changes preserve open state while showing current text',()=>{const {container,rerender}=render(<App text={LONG}/>);let open=false,current=LONG;for(let i=0;i<20;i++){const b=screen.getByRole('button');expect(b.type).toBe('button');expect(b.textContent).toBe(open?'Show less':'Read more');fireEvent.click(b);open=!open;expect(text(container)).toBe(open?current:current.slice(0,60)+'...');current='Revision '+i+' '+LONG;rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');if(i%3===0){rerender(<App text="short"/>);expect(text(container)).toBe('short');expect(container.querySelector('button')).toBeNull();rerender(<App text={current}/>);expect(text(container)).toBe(open?current:current.slice(0,60)+'...');}}});
+test('separate and fresh reviews fold independently',()=>{const root=render(<><section data-scope="a"><App text={LONG}/></section><section data-scope="b"><App text={LONG}/></section></>),a=root.container.querySelector('[data-scope="a"]'),b=root.container.querySelector('[data-scope="b"]');fireEvent.click(a.querySelector('button'));expect(text(a)).toBe(LONG);expect(text(b)).toBe(LONG.slice(0,60)+'...');root.unmount();expect(text(render(<App text={LONG}/>).container)).toBe(LONG.slice(0,60)+'...');});
+`,
   },
 
   /* ── accessibility ────────────────────────────────────────────────── */
@@ -2031,7 +2213,13 @@ test('three clicks leave it pressed', () => {
   fireEvent.click(button('Bold'));
   fireEvent.click(button('Bold'));
   expect(pressed('Bold')).toBe('true');
-});`,
+});
+
+const checkFormatting=(scope,bold,italic)=>{const bar=within(scope).getByRole('toolbar',{name:'Formatting'}),boldButton=within(bar).getByRole('button',{name:'Bold'}),italicButton=within(bar).getByRole('button',{name:'Italic'});expect(bar.querySelectorAll('button')).toHaveLength(2);for(const [b,on,label]of[[boldButton,bold,'Bold'],[italicButton,italic,'Italic']]){expect(b.type).toBe('button');expect(b.textContent).toBe(label);expect(b.getAttribute('aria-pressed')).toBe(String(on));}expect(scope.querySelector('p').textContent).toBe('The tide turns at noon.');expect(scope.querySelector('p').style.fontWeight).toBe(bold?'bold':'normal');expect(scope.querySelector('p').style.fontStyle).toBe(italic?'italic':'normal');return [boldButton,italicButton];};
+test('every mixed formatting action updates only its own state',()=>{const {container,rerender}=render(<App/>);let bold=false,italic=false;let bs=checkFormatting(container,bold,italic);for(const i of [1,1,0,0,0,1,0,1,1,0,0,1,0,1,0,0,0,1,1,1,0,1,0,1,0,0,1,0]){fireEvent.click(bs[i]);if(i===0)bold=!bold;else italic=!italic;bs=checkFormatting(container,bold,italic);rerender(<App/>);checkFormatting(container,bold,italic);}});
+test('two toolbars keep independent combinations',()=>{const {container}=render(<><section data-scope="a"><App/></section><section data-scope="b"><App/></section></>);const a=container.querySelector('[data-scope="a"]'),b=container.querySelector('[data-scope="b"]');const aa=checkFormatting(a,false,false),bb=checkFormatting(b,false,false);fireEvent.click(aa[0]);fireEvent.click(bb[1]);checkFormatting(a,true,false);checkFormatting(b,false,true);fireEvent.click(aa[1]);checkFormatting(a,true,true);checkFormatting(b,false,true);});
+test('new toolbar starts with neither style',()=>{const a=render(<App/>);const bs=checkFormatting(a.container,false,false);fireEvent.click(bs[0]);fireEvent.click(bs[1]);a.unmount();checkFormatting(render(<App/>).container,false,false);});
+`,
   },
   'react-easy3-name-the-remove-buttons': {
     solution: `import React, { useState } from 'react';
@@ -2169,7 +2357,13 @@ test('the last song can go', () => {
   const { container } = render(<App songs={[{ id: 7, title: 'Ebb' }]} />);
   fireEvent.click(screen.getByRole('button', { name: 'Remove Ebb' }));
   expect(titles(container)).toEqual([]);
-});`,
+});
+
+
+test('twenty-four positional removals keep raw titles and labels aligned without mutating frozen songs',()=>{const songs=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'song-'+i,title:i%4?' Track '+i+' 🦈 ':'Duplicate'}))),before=JSON.stringify(songs),expected=songs.map(song=>song.title),view=render(<App songs={songs}/>);for(let step=0;expected.length;step++){const buttons=[...view.container.querySelectorAll('button')];expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(expected.map(title=>'Remove '+title));expect(buttons.every(button=>button.textContent==='×')).toBe(true);const index=(step*5+9)%expected.length;expected.splice(index,1);fireEvent.click(buttons[index]);expect(titles(view.container)).toEqual(expected);expect(JSON.stringify(songs)).toBe(before);}});
+test('empty,single,long and duplicate playlists preserve the requested snapshot through parents',()=>{for(const names of [[],['x'.repeat(500)],['same','middle','same'],['"quoted"','<i>raw</i>']]){const songs=names.map((title,i)=>({id:i,title})),view=render(<App songs={songs}/>);expect(titles(view.container)).toEqual(names);if(names.length){fireEvent.click(view.container.querySelectorAll('button')[names.length-1]);expect(titles(view.container)).toEqual(names.slice(0,-1));}view.rerender(<App songs={[{id:'replacement',title:'new prop'}]}/>);expect(titles(view.container)).toEqual(names.slice(0,-1));expect(view.container.querySelector('i')).toBeNull();view.unmount();}});
+test('separate playlists and a fresh mount own their removals',()=>{const songs=[{id:1,title:'one'},{id:2,title:'two'}],a=render(<App songs={songs}/>),b=render(<App songs={songs}/>);fireEvent.click(a.container.querySelector('button'));expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one','two']);fireEvent.click(b.container.querySelectorAll('button')[1]);expect(titles(a.container)).toEqual(['two']);expect(titles(b.container)).toEqual(['one']);a.unmount();b.unmount();const fresh=render(<App songs={songs}/>);expect(titles(fresh.container)).toEqual(['one','two']);});
+`,
   },
 
   /* ── derived state ────────────────────────────────────────────────── */
@@ -2186,6 +2380,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (text.length === 0 || left < 0) return;
     setPosts((previous) => [...previous, text]);
     setText('');
   };
@@ -2233,6 +2428,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (!canPost) return;
     setPosts([...posts, text]);
     setText('');
   };
@@ -2272,6 +2468,7 @@ const App = () => {
 
   const post = (event) => {
     event.preventDefault();
+    if (!sendable) return;
     setPosts((previous) => [...previous, text]);
     setText('');
   };
@@ -2320,7 +2517,21 @@ test('deleting text gives the characters back', () => {
   type('x'.repeat(10));
   expect(line(container)).toBe('Characters left: 70');
   expect(postButton().disabled).toBe(false);
-});`,
+});
+
+
+const directPost=container=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>container.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('direct empty or over-limit submissions keep the draft and add no post',()=>{
+ const view=render(<App/>);for(const value of ['', 'x'.repeat(81),'🦈'.repeat(41),'x'.repeat(2000)]){type(value);expect(postButton().disabled).toBe(true);directPost(view.container);expect(screen.getByLabelText('Post').value).toBe(value);expect(screen.queryAllByRole('listitem')).toHaveLength(0);expect(line(view.container)).toBe(value.length>80?'Too long by '+(value.length-80):'Characters left: 80');}
+});
+test('twenty-four count and post cycles preserve raw text, UTF-16 boundaries and prior rows',()=>{
+ const view=render(<App/>);const values=['',' ','  raw  ','<b>literal</b>','first\\nsecond','🦈'.repeat(40),'🦈'.repeat(40)+'a','x'.repeat(79),'x'.repeat(80),'x'.repeat(81),'x'.repeat(2000)];const posts=[];
+ for(let i=0;i<24;i++){const value=values[i%values.length];type(value);view.rerender(<App data-parent={i}/>);const left=80-value.length;expect(line(view.container)).toBe(left<0?'Too long by '+(-left):'Characters left: '+left);expect(postButton().disabled).toBe(value.length===0||left<0);const oldRows=screen.queryAllByRole('listitem');directPost(view.container);if(value.length>0&&left>=0){posts.push(value);expect(screen.getByLabelText('Post').value).toBe('');expect(line(view.container)).toBe('Characters left: 80');}else expect(screen.getByLabelText('Post').value).toBe(value);expect(screen.queryAllByRole('listitem').map(li=>li.textContent)).toEqual(posts);oldRows.forEach((node,index)=>expect(screen.queryAllByRole('listitem')[index]).toBe(node));}
+});
+test('separate post forms and fresh mounts do not share posts or draft text',()=>{
+ const a=render(<App/>),b=render(<App/>),one=within(a.container),two=within(b.container);fireEvent.change(one.getByLabelText('Post'),{target:{value:'Alpha'}});directPost(a.container);fireEvent.change(two.getByLabelText('Post'),{target:{value:'Beta'}});directPost(b.container);expect(one.getAllByRole('listitem').map(li=>li.textContent)).toEqual(['Alpha']);expect(two.getAllByRole('listitem').map(li=>li.textContent)).toEqual(['Beta']);a.unmount();b.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Post').value).toBe('');expect(screen.queryAllByRole('listitem')).toHaveLength(0);fresh.unmount();
+});
+`,
   },
 
   /* ── splice ───────────────────────────────────────────────────────── */
@@ -2494,7 +2705,13 @@ test('Undo works again after the next removal', () => {
   removeTask('Three');
   undo();
   expect(texts(container)).toEqual(['One', 'Two', 'Three']);
-});`,
+});
+
+
+test('sixty current removals and latest-only undos follow an immutable positional model',()=>{const initial=Object.freeze(Array.from({length:24},(_,i)=>Object.freeze({id:'task-'+i,text:i%4?'Task '+i:'duplicate'}))),before=JSON.stringify(initial),model=initial.map(task=>({...task})),view=render(<App initialTasks={initial}/>);let last=null;for(let step=0;step<60;step++){if(last&&(step%3===2||model.length===0)){fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));model.splice(last.index,0,last.task);last=null;}else if(model.length){const index=(step*5+7)%model.length;last={index,task:model[index]};fireEvent.click(view.container.querySelectorAll('li button')[index]);model.splice(index,1);}expect(texts(view.container)).toEqual(model.map(task=>task.text));expect(Boolean(within(view.container).queryByRole('button',{name:'Undo'}))).toBe(Boolean(last));expect(JSON.stringify(initial)).toBe(before);}});
+test('empty,single,duplicate and literal task snapshots retain their own latest removal through parents',()=>{for(const names of [[],['x'.repeat(500)],['same','middle','same'],['<b>raw</b>','"quoted" 🦈']]){const items=names.map((text,i)=>({id:i,text})),view=render(<App initialTasks={items}/>);expect(texts(view.container)).toEqual(names);expect(within(view.container).queryByRole('button',{name:'Undo'})).toBeNull();if(names.length){fireEvent.click(view.container.querySelectorAll('li button')[names.length-1]);view.rerender(<App initialTasks={[{id:'new',text:'replacement'}]}/>);expect(texts(view.container)).toEqual(names.slice(0,-1));fireEvent.click(within(view.container).getByRole('button',{name:'Undo'}));expect(texts(view.container)).toEqual(names);}expect(view.container.querySelector('b')).toBeNull();view.unmount();}});
+test('separate Apps own undo memory and fresh mounts recover their initial snapshot',()=>{const items=[{id:1,text:'one'},{id:2,text:'two'}],a=render(<App initialTasks={items}/>),b=render(<App initialTasks={items}/>);fireEvent.click(a.container.querySelector('li button'));expect(texts(a.container)).toEqual(['two']);expect(texts(b.container)).toEqual(['one','two']);expect(within(b.container).queryByRole('button',{name:'Undo'})).toBeNull();fireEvent.click(b.container.querySelectorAll('li button')[1]);fireEvent.click(within(a.container).getByRole('button',{name:'Undo'}));expect(texts(a.container)).toEqual(['one','two']);expect(texts(b.container)).toEqual(['one']);a.unmount();b.unmount();const fresh=render(<App initialTasks={items}/>);expect(texts(fresh.container)).toEqual(['one','two']);expect(within(fresh.container).queryByRole('button',{name:'Undo'})).toBeNull();});
+`,
   },
   'react-easy3-split-a-line': {
     solution: `import React, { useState } from 'react';
@@ -2619,7 +2836,13 @@ test('the items prop is left alone', () => {
   render(<App items={items} />);
   splitLine('Oil and vinegar');
   expect(items).toEqual(['Oil and vinegar']);
-});`,
+});
+
+
+test('all matching lines split in their current places without changing frozen input',()=>{const items=Object.freeze(Array.from({length:24},(_,i)=>i%3?'fixed-'+i:'left-'+i+' and middle-'+i+' and right-'+i+' and end-'+i)),before=JSON.stringify(items),expected=[...items],view=render(<App items={items}/>);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and ')),parts=expected[index].split(' and '),row=view.container.querySelectorAll('li')[index];fireEvent.click(within(row).getByRole('button',{name:'Split'}));expected.splice(index,1,...parts);expect(lines(view.container)).toEqual(expected);expect(JSON.stringify(items)).toBe(before);}expect(view.container.querySelectorAll('button')).toHaveLength(0);});
+test('only the exact delimiter splits and empty pieces are retained as separate lines',()=>{for(const items of [[],['candy','a AND b','one and two'],[' and ',' and end','start and '],[' a  and  b ','a and b and c and d and e and f']]){const expected=[...items],view=render(<App items={items}/>);expect(view.container.querySelectorAll('button')).toHaveLength(items.filter(item=>item.includes(' and ')).length);while(expected.some(item=>item.includes(' and '))){const index=expected.findIndex(item=>item.includes(' and '));fireEvent.click(view.container.querySelectorAll('li')[index].querySelector('button'));expected.splice(index,1,...expected[index].split(' and '));expect(lines(view.container)).toEqual(expected);}view.unmount();}});
+test('parent renders,separate lists and fresh snapshots do not share edits',()=>{const items=['one and two','three'],a=render(<App items={items}/>),b=render(<App items={items}/>);fireEvent.click(a.container.querySelector('button'));a.rerender(<App items={['replacement']}/>);expect(lines(a.container)).toEqual(['one','two','three']);expect(lines(b.container)).toEqual(items);a.unmount();b.unmount();const fresh=render(<App items={items}/>);expect(lines(fresh.container)).toEqual(items);});
+`,
   },
 
   /* ── useContext ───────────────────────────────────────────────────── */
@@ -2871,7 +3094,21 @@ test('a ticked task can be unticked', () => {
   render(<App />);
   fireEvent.click(boxes()[1]);
   expect(boxes()[1].checked).toBe(false);
-});`,
+});
+
+
+const submitTask=root=>{const event=new Event('submit',{bubbles:true,cancelable:true});act(()=>root.querySelector('form').dispatchEvent(event));expect(event.defaultPrevented).toBe(true);};
+test('current provider callbacks receive exact actions from stable AddTask and TaskItem consumers',()=>{
+ const seen=[],obsolete=()=>{throw new Error('onDispatch prop is obsolete');},child=<AddTask onDispatch={obsolete}/>;const view=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}>{child}</TasksDispatchContext.Provider>);const field=within(view.container).getByLabelText('New task'),raw=['',' ','  raw <b>  ','🦈漢字','0','r'.repeat(2000)];for(let i=0;i<20;i++){const value=raw[i%raw.length];fireEvent.change(field,{target:{value}});view.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}>{child}</TasksDispatchContext.Provider>);expect(within(view.container).getByLabelText('New task')).toBe(field);expect(field.value).toBe(value);submitTask(view.container);expect(seen[i]).toEqual({source:i,action:{type:'added',text:value}});expect(field.value).toBe('');}view.unmount();
+ const item=render(<TasksDispatchContext.Provider value={action=>seen.push({source:-1,action})}><ul><TaskItem task={{id:1,text:'first',done:false}} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);for(let i=0;i<18;i++){const task=Object.freeze({id:i%2?'id-'+i:901+i,text:'  Item <b> 🦈 '+i+'  ',done:i%2===0});item.rerender(<TasksDispatchContext.Provider value={action=>seen.push({source:i,action})}><ul><TaskItem task={task} onDispatch={obsolete}/></ul></TasksDispatchContext.Provider>);const checkbox=item.container.querySelector('input');expect(checkbox.checked).toBe(task.done);expect(item.container.querySelector('li').textContent).toBe(task.text);fireEvent.click(checkbox);expect(seen[20+i]).toEqual({source:i,action:{type:'toggled',id:task.id}});expect(task.done).toBe(i%2===0);}item.unmount();
+});
+test('twenty-four additions and toggles retain raw task order,state and prior rows',()=>{
+ const view=render(<App/>),expected=[{text:'Rinse the regulator',done:false},{text:'Log the dive',done:true}],raw=['',' ','  exact <b>  ','🦈漢字','duplicate','x'.repeat(2000)];for(let i=0;i<24;i++){const rows=[...view.container.querySelectorAll('li')],value=raw[i%raw.length];fireEvent.change(screen.getByLabelText('New task'),{target:{value}});submitTask(view.container);expected.push({text:value,done:false});const next=[...view.container.querySelectorAll('li')];rows.forEach((node,index)=>expect(next[index]).toBe(node));const index=(i*5)%expected.length;fireEvent.click(next[index].querySelector('input'));expected[index].done=!expected[index].done;expect(next.map(node=>node.textContent)).toEqual(expected.map(row=>row.text));expect(next.map(node=>node.querySelector('input').checked)).toEqual(expected.map(row=>row.done));view.rerender(<App data-parent={i}/>);expect(screen.getByLabelText('New task').value).toBe('');}
+});
+test('two task apps and a fresh mount own separate reducers and drafts',()=>{
+ const a=render(<App/>),b=render(<App/>);fireEvent.change(within(a.container).getByLabelText('New task'),{target:{value:'Alpha'}});fireEvent.change(within(b.container).getByLabelText('New task'),{target:{value:'Beta'}});submitTask(a.container);expect(a.container.textContent).toContain('Alpha');expect(b.container.querySelectorAll('li')).toHaveLength(2);expect(within(b.container).getByLabelText('New task').value).toBe('Beta');submitTask(b.container);fireEvent.click(a.container.querySelector('input[type=checkbox]'));expect(a.container.querySelector('input[type=checkbox]').checked).toBe(true);expect(b.container.querySelector('input[type=checkbox]').checked).toBe(false);a.unmount();b.unmount();const fresh=render(<App/>);expect([...fresh.container.querySelectorAll('li')].map(node=>node.textContent)).toEqual(['Rinse the regulator','Log the dive']);expect(screen.getByLabelText('New task').value).toBe('');fresh.unmount();
+});
+`,
   },
   'react-easy3-radio-group': {
     solution: `import React, { createContext, useContext, useState } from 'react';
@@ -2977,7 +3214,6 @@ export default App;`,
 export const RadioContext = createContext(null);
 
 export const RadioGroup = ({ name, value, onChange, legend, children }) => {
-  // A new object on every render would re-render every Radio; this one changes with its fields.
   const group = useMemo(() => ({ name, value, onChange }), [name, value, onChange]);
   return (
     <RadioContext.Provider value={group}>
@@ -3075,6 +3311,18 @@ test('a value set from outside checks the matching radio', () => {
   rerender(group('L'));
   expect(screen.getByLabelText('Large').checked).toBe(true);
   expect(screen.getByLabelText('Small').checked).toBe(false);
-});`,
+});
+
+
+test('twenty controlled name,value and callback changes reach the same children',()=>{
+ const values=['',0,'0',-1,'reef-🦈',42],seen=[],children=values.map((value,i)=><Radio key={i} value={value}>{'Option '+i+' <b> 🦈'}</Radio>);const view=render(<RadioGroup name="initial" value={values[0]} onChange={value=>seen.push({source:-1,value})} legend="Initial">{children}</RadioGroup>);const first=[...view.container.querySelectorAll('input')];for(let i=0;i<20;i++){const chosen=i%values.length,name='group-'+i;view.rerender(<RadioGroup name={name} value={values[chosen]} onChange={value=>seen.push({source:i,value})} legend={'Legend '+i}>{children}</RadioGroup>);const inputs=[...view.container.querySelectorAll('input')];expect(inputs).toEqual(first);expect(inputs.map(node=>node.name)).toEqual(values.map(()=>name));expect(inputs.map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));expect(view.container.querySelector('legend').textContent).toBe('Legend '+i);expect([...view.container.querySelectorAll('label')].map(node=>node.control)).toEqual(inputs);const next=(chosen+1)%values.length;fireEvent.click(inputs[next]);expect(seen[i]).toEqual({source:i,value:values[next]});}
+});
+test('the nearest and sibling groups keep names,chosen values and callbacks local',()=>{
+ const seen=[],view=render(<RadioContext.Provider value={{name:'outer',value:'a',onChange:value=>seen.push(['outer',value])}}><Radio value="b">Outer B</Radio><RadioGroup name="inner" value="a" onChange={value=>seen.push(['inner',value])} legend="Inner"><Radio value="a">Inner A</Radio><Radio value="b">Inner B</Radio></RadioGroup><RadioGroup name="side" value="b" onChange={value=>seen.push(['side',value])} legend="Side"><Radio value="a">Side A</Radio><Radio value="b">Side B</Radio></RadioGroup></RadioContext.Provider>);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual([false,true,false,false,true]);fireEvent.click(within(view.container).getByLabelText('Outer B'));fireEvent.click(within(view.container).getByLabelText('Inner B'));fireEvent.click(within(view.container).getByLabelText('Side A'));expect(seen).toEqual([['outer','b'],['inner','b'],['side','a']]);
+});
+test('forty-eight App choices and fresh mounting retain controlled state',()=>{
+ const view=render(<App/>),labels=['Small','Medium','Large'],values=['S','M','L'];for(let i=0;i<48;i++){const chosen=(i*2)%3;fireEvent.click(screen.getByLabelText(labels[chosen]));expect(view.container.querySelector('p').textContent).toBe('Chosen size: '+values[chosen]);expect([...view.container.querySelectorAll('input')].map(node=>node.checked)).toEqual(values.map((_,j)=>j===chosen));view.rerender(<App data-parent={i}/>);}view.unmount();const fresh=render(<App/>);expect(screen.getByLabelText('Medium').checked).toBe(true);expect(fresh.container.querySelector('p').textContent).toBe('Chosen size: M');fresh.unmount();
+});
+`,
   },
 };

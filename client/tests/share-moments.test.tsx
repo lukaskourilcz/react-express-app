@@ -119,13 +119,13 @@ describe('the result card', () => {
     expect(data.files?.[0]?.name).toBe('devshark-challenge.png');
   });
 
-  it('appears under a scored typing race', async () => {
+  it('leaves sharing off a scored typing race', async () => {
     render(<TypingRacer />, { wrapper });
     const input = await screen.findByRole('textbox', { name: 'Type this' });
     const snippet = document.querySelector('.ss-typing__guide')!.textContent!;
     fireEvent.change(input, { target: { value: snippet } });
-    fireEvent.click(await screen.findByRole('button', { name: 'Download card' }));
-    await waitFor(() => expect(card.create).toHaveBeenCalled());
-    expect(card.create.mock.calls[0][0]).toMatchObject({ label: 'Typing racer', detail: '100% accuracy', fileSuffix: 'typing' });
+    expect(await screen.findByRole('button', { name: 'Race again' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Download card' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Share result' })).toBeNull();
   });
 });

@@ -13,9 +13,10 @@
  * name. The grader uses that prefix to split the run: visible cases go back
  * with their names and errors, hidden ones only as a count.
  *
- * The cases run in the same VM as the learner's component, so this keeps them
- * out of the page, not away from a component written to go looking for them.
- * The grading operations note says the same of the whole React boundary. */
+ * Trusted suites run in the grader's page realm; learner components execute
+ * in QuickJS/WASM through serialized capabilities (react-learner.ts). Learner
+ * code cannot access the tests or result authority. Production additionally
+ * runs that grader in a fresh network-denied microVM (react-isolated.ts). */
 
 export const HIDDEN_CASE_PREFIX = '[hidden]';
 

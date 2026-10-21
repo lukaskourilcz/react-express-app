@@ -47,7 +47,12 @@ const missingFields = (draft: Partial<Post>): string[] => {
 
 const missingFields = (draft: Partial<Post>): (keyof Post)[] =>
   (["title", "body", "tags"] as const).filter((field) => draft[field] === undefined);`,
+    hiddenTypeTests: [{"code": "missingFields({tags:null});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const tags=Object.freeze([]),draft=Object.freeze({title:undefined,body:'',tags}),a=missingFields(draft),b=missingFields(draft);a.push('body');return [b,Reflect.ownKeys(draft),draft.title===undefined,draft.tags===tags,tags.length,a!==b];})()", expected: [["title"], ["title", "body", "tags"], true, true, 0, true] },
+      { call: "(()=>{const inherited=Object.freeze(Object.create({title:'',body:'b',tags:[]})),empty=Object.freeze(Object.create(null)),a=missingFields(inherited),b=missingFields(inherited);a.push('title');return [b,missingFields(empty),a!==b,Reflect.ownKeys(empty).length,Reflect.ownKeys(inherited).length];})()", expected: [[], ["title", "body", "tags"], true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},draft={};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);return [missingFields(draft),Reflect.ownKeys(draft).length,draft.x99===meta];})()", expected: [["title", "body", "tags"], 100, true] },
+
       { call: 'missingFields({ tags: [] })', expected: ['title', 'body'] },
       { call: 'missingFields({ body: "" })', expected: ['title', 'tags'] },
       { call: 'missingFields({ title: "T", body: "B" })', expected: ['tags'] },
@@ -96,7 +101,12 @@ type Preview = Pick<Article, "id" | "title">;
 const toPreview = ({ id, title }: Article): Preview => ({ id, title });
 
 const toPreviews = (articles: readonly Article[]): Preview[] => articles.map(toPreview);`,
+    hiddenTypeTests: [{"code": "const __audit=toPreviews([{id:1,title:\"x\",body:\"b\",author:\"a\"}]); const __body:string=__audit[0].body;", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('secret'),secret={},article=Object.freeze({id:1,title:'x',body:'b',author:'a',internal:secret,[sym]:secret,['__proto__']:secret}),input=Object.freeze([article,article]),out=toPreviews(input),again=toPreviews(input);out[0].title='changed';return [out!==input,out!==again,out[0]!==out[1],again[0]!==out[0],Reflect.ownKeys(out[1]).sort(),out[1].title,Object.getPrototypeOf(out[1])===Object.prototype,input[0]===article,article.title,article[sym]===secret];})()", expected: [true, true, true, true, ["id", "title"], "x", true, true, "x", true] },
+      { call: "(()=>{const article=Object.freeze(Object.create({id:0,title:' ',body:'b',author:'a'})),out=toPreviews(Object.freeze([article])),a=toPreviews([]),b=toPreviews([]);a.push(out[0]);return [out[0].id,out[0].title,Reflect.ownKeys(out[0]).sort(),a!==b,b.length,Reflect.ownKeys(article).length];})()", expected: [0, " ", ["id", "title"], true, 0, 0] },
+      { call: "(()=>{const article=Object.freeze({id:-1,title:'',body:'x',author:'y'}),input=Object.freeze(Array(1000).fill(article)),out=toPreviews(input);return [out.length,new Set(out).size,out.every(item=>item.id===-1&&item.title===''&&Reflect.ownKeys(item).length===2),input.length];})()", expected: [1000, 1000, true, 1000] },
+
       { call: 'toPreviews([{ id: 7, title: "A", body: "", author: "" }, { id: 3, title: "B", body: "x", author: "y" }, { id: 7, title: "C", body: "z", author: "w" }])', expected: [{ id: 7, title: 'A' }, { id: 3, title: 'B' }, { id: 7, title: 'C' }] },
       { call: 'Object.keys(toPreviews([{ id: 2, title: "T", body: "B", author: "A" }])[0]).sort()', expected: ['id', 'title'] },
       { call: '(() => { const list = [{ id: 1, title: "x", body: "y", author: "z" }]; toPreviews(list); return list[0]; })()', expected: { id: 1, title: 'x', body: 'y', author: 'z' } },
@@ -130,11 +140,15 @@ const WEEKEND: ReadonlySet<Day> = new Set<Day>(["sat", "sun"]);
 
 const isWeekday = (day: Day): day is Weekday => !WEEKEND.has(day);`,
     hiddenTests: [
+      { call: "(()=>{const days=Object.freeze(['mon','tue','wed','thu','fri','sat','sun']);return [days.map(day=>isWeekday(day)),days.map(day=>isWeekday(day)),days.every(day=>typeof isWeekday(day)==='boolean'),days.length];})()", expected: [[true, true, true, true, true, false, false], [true, true, true, true, true, false, false], true, 7] },
+
       { call: '["mon", "tue", "wed", "thu", "fri", "sat", "sun"].filter(isWeekday)', expected: ['mon', 'tue', 'wed', 'thu', 'fri'] },
       { call: 'isWeekday("tue")', expected: true },
       { call: 'isWeekday("thu")', expected: true },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditDays:Weekday[]=[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]; const __auditNarrow=(day:Day)=>{if(isWeekday(day)){const yes:Weekday=day;return yes;}const no:\"sat\"|\"sun\"=day;return no;};"},
+
       { code: 'const __sat: Weekday = "sat";', label: 'Saturday is not a Weekday', rejects: true },
       { code: 'const __mon: Weekday = "mon";', label: 'Monday is a Weekday' },
     ],
@@ -152,10 +166,14 @@ const longer = <T extends { length: number }>(a: T, b: T): T => (b.length > a.le
   }
   return a;
 };`,
-    senior: `function longer<T extends { length: number }>(a: T, b: T): T {
-  return a.length >= b.length ? a : b;
-}`,
+    senior: "function longer<T extends { length: number }>(a: T, b: T): T {\n  return b.length > a.length ? b : a;\n}",
+    hiddenTypeTests: [{"code": "const __auditLabel: string = longer({length:1,label:\"a\"},{length:2,label:\"b\"}).label;"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({length:2,label:'a'}),b=Object.freeze({length:2,label:'b'}),c=Object.freeze({length:3,label:'c'});return [longer(a,b)===a,longer(a,c)===c,a.length,b.label];})()", expected: [true, true, 2, "b"] },
+      { call: "(()=>{const a={length:NaN},b={length:3},c={length:Infinity},d={length:Infinity},z={length:-0},zero={length:0};return [longer(a,b)===a,longer(b,a)===b,longer(c,d)===c,longer(b,c)===c,longer(z,zero)===z];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const a=Object.freeze(Object.assign(Object.create({length:-2.5}),{extra:1})),b=Object.freeze({length:-1.5}),fn=()=>{throw Error('called');};return [longer(a,b)===b,longer(fn,fn)===fn,longer('\ud83e\udd88','ab'),a.extra];})()", expected: [true, true, "\ud83e\udd88", 1] },
+      { call: "(()=>{const a=Object.freeze([1]),b=Object.freeze([2,3]);return [longer(a,b)===b,a.length,b.length];})()", expected: [true, 1, 2] },
+
       { call: 'longer("same", "four")', expected: 'same' },
       { call: 'longer(["a"], ["b", "c"])', expected: ['b', 'c'] },
       { call: 'longer("abc", "")', expected: 'abc' },
@@ -177,7 +195,12 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
     senior: `function onlyActive<T extends { active: boolean }>(items: readonly T[]): T[] {
   return items.filter(({ active }) => active);
 }`,
+    hiddenTypeTests: [{"code": "const __auditSymbol: symbol = onlyActive([{active:true,payload:Symbol()}])[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({active:true,meta}),off=Object.freeze({active:false}),b=Object.freeze(Object.assign(Object.create({active:true}),{id:1})),input=Object.freeze([off,a,b,a]),out=onlyActive(input),again=onlyActive(input);out.push(a);return [out!==again,again.length,again[0]===a,again[1]===b,again[2]===a,again[0].meta===meta,input[0]===off,off.active];})()", expected: [true, 3, true, true, true, true, true, false] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({active:i%2===1,id:i}))),out=onlyActive(input);return [out.length,out.every((item,i)=>item===input[i*2+1]),input.length,input[0].active];})()", expected: [500, true, 1000, false] },
+      { call: "(()=>{const a=onlyActive([]),b=onlyActive([{active:false}]);a.push({active:true});return [a.length,b.length,a!==onlyActive([])];})()", expected: [1, 0, true] },
+
       { call: 'onlyActive([{ id: 3, active: true }, { id: 1, active: false }, { id: 2, active: true }]).map((item) => item.id)', expected: [3, 2] },
       { call: '(() => { const a = { active: true }; return onlyActive([a])[0] === a; })()', expected: true },
       { call: 'onlyActive([{ sku: "x", active: false }, { sku: "y", active: false }])', expected: [] },
@@ -190,21 +213,15 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
   // Strictly lower, so the first of two equal prices stays.
   return items.reduce((best, item) => (item.price < best.price ? item : best));
 };`,
-    junior: `const cheapest = <T extends { price: number }>(items: T[]): T | null => {
-  if (items.length === 0) {
-    return null;
-  }
-  let best = items[0];
-  for (let i = 1; i < items.length; i++) {
-    if (items[i].price < best.price) {
-      best = items[i];
-    }
-  }
-  return best;
-};`,
+    junior: "const cheapest = <T extends { price: number }>(items: T[]): T | null => {\n  if (items.length === 0) return null;\n  return items.reduce((best, item) => {\n    if (item.price < best.price) return item;\n    return best;\n  });\n};",
     senior: `const cheapest = <T extends { price: number }>(items: readonly T[]): T | null =>
   items.reduce<T | null>((best, item) => (best === null || item.price < best.price ? item : best), null);`,
+    hiddenTypeTests: [{"code": "const __auditWinner = cheapest([{price:1,payload:Symbol()}]); if (__auditWinner !== null) { const __auditSymbol: symbol = __auditWinner.payload; }"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({price:3,id:'a'}),b=Object.freeze({price:1,id:'b'}),input=Object.freeze([a,b]);return [cheapest(input)===b,input[0]===a,input[1]===b,input.length];})()", expected: [true, true, true, 2] },
+      { call: "(()=>{const meta={},a=Object.freeze({price:-0,meta}),b=Object.freeze({price:0}),c=Object.freeze(Object.assign(Object.create({price:-0.5}),{meta}));return [cheapest([a,b])===a,Object.is(cheapest([a,b]).price,-0),cheapest([a,c])===c,c.meta===meta];})()", expected: [true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({price:1000-i,id:i})));return [cheapest(input)===input[999],input[0].price,input.length,cheapest([])];})()", expected: [true, 1000, 1000, null] },
+
       { call: 'cheapest([{ name: "a", price: 4 }, { name: "b", price: 4 }, { name: "c", price: 3 }, { name: "d", price: 3 }])', expected: { name: 'c', price: 3 } },
       { call: 'cheapest([{ name: "z", price: 1 }, { name: "y", price: 9 }])', expected: { name: 'z', price: 1 } },
       { call: 'cheapest([{ name: "free", price: 0 }, { name: "a", price: 5 }])', expected: { name: 'free', price: 0 } },
@@ -216,16 +233,16 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
   'ts-easy2-flip-a-pair': {
     solution: `// The pattern [first, second] is annotated as a whole, after the brackets.
 const flip = <A, B>([first, second]: [A, B]): [B, A] => [second, first];`,
-    junior: `const flip = <A, B>(pair: [A, B]): [B, A] => {
-  const first = pair[0];
-  const second = pair[1];
-  const flipped: [B, A] = [second, first];
-  return flipped;
-};`,
+    junior: "const flip = <A, B>([first, second]: [A, B]): [B, A] => {\n  const flipped: [B, A] = [second, first];\n  return flipped;\n};",
     senior: `function flip<A, B>([first, second]: readonly [A, B]): [B, A] {
   return [second, first];
 }`,
+    hiddenTypeTests: [{"code": "const __auditExact: [true, 'a'] = flip(['a' as const, true as const]);"}, {"code": "const __auditPair: [number, string] = flip<number, string>([1, \"a\"]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const record=Object.freeze({a:1}),array=Object.freeze([2]),input=Object.freeze([record,array]),a=flip(input),b=flip(input);a.push(3);return [a!==b,b!==input,b.length,b[0]===array,b[1]===record,input[0]===record,a.length];})()", expected: [true, true, 2, true, true, true, 3] },
+      { call: "(()=>{const fn=()=>1,symbol=Symbol('x'),pairs=[[fn,symbol],[undefined,NaN],[-0,null]];return pairs.every(pair=>{const result=flip(Object.freeze(pair));return result.length===2&&Object.is(result[0],pair[1])&&Object.is(result[1],pair[0]);});})()", expected: true },
+      { call: "(()=>{const value=Object.freeze({}),pair=Object.freeze([value,value]),a=flip(pair),b=flip(pair);return a!==b&&a[0]===value&&a[1]===value;})()", expected: true },
+
       { call: 'flip(["", 1])', expected: [1, ''] },
       { call: 'flip([[1], { a: 2 }])', expected: [{ a: 2 }, [1]] },
       { call: '(() => { const pair = [1, 2]; return flip(pair) !== pair; })()', expected: true },
@@ -237,25 +254,20 @@ const flip = <A, B>([first, second]: [A, B]): [B, A] => [second, first];`,
   const [header = [], ...body] = rows;
   return { header, body };
 };`,
-    junior: `const splitHeader = (rows: string[][]): { header: string[]; body: string[][] } => {
-  let header: string[] = [];
-  const body: string[][] = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (i === 0) {
-      header = rows[i];
-    } else {
-      body.push(rows[i]);
-    }
-  }
-  return { header: header, body: body };
-};`,
+    junior: "const splitHeader = (rows: string[][]): { header: string[]; body: string[][] } => {\n  const [header = [], ...remainingRows] = rows;\n  const body = remainingRows;\n  return { header: header, body: body };\n};",
     senior: `interface Table {
   header: string[];
   body: string[][];
 }
 
 const splitHeader = ([header = [], ...body]: readonly string[][]): Table => ({ header, body });`,
+    hiddenTypeTests: [{"code": "const __auditWrongBody: string[] = splitHeader([[\"a\"]]).body;", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const header=Object.freeze([' h ','\ud83e\udd88']),row=Object.freeze(['','1']),rows=Object.freeze([header,row]),a=splitHeader(rows),b=splitHeader(rows);a.body.push(['new']);return [a!==b,a.header===header,a.body[0]===row,a.body!==rows,a.body!==b.body,b.body.length,rows.length,Object.keys(a).sort().join(',')];})()", expected: [true, true, true, true, true, 1, 2, "body,header"] },
+      { call: "(()=>{const row=Object.freeze([]),rows=Object.freeze([row]),out=splitHeader(rows);return [out.header===row,out.body.length,out.body!==row];})()", expected: [true, 0, true] },
+      { call: "(()=>{const a=splitHeader(Object.freeze([])),b=splitHeader(Object.freeze([]));a.header.push('x');a.body.push(['y']);return [a.header!==a.body,a.header!==b.header,a.body!==b.body,b.header.length,b.body.length];})()", expected: [true, true, true, 0, 0] },
+      { call: "(()=>{const rows=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze([String(i)]))),out=splitHeader(rows);return [out.header===rows[0],out.body.length,out.body[998]===rows[999],rows.length];})()", expected: [true, 999, true, 1000] },
+
       { call: 'splitHeader([[], ["x"]])', expected: { header: [], body: [['x']] } },
       { call: '(() => { const rows = [["h"], ["1"], ["2"]]; return splitHeader(rows).body !== rows; })()', expected: true },
       { call: 'splitHeader([["a", "b"], ["1", "2"], ["3", "4"], ["5", "6"]]).body.length', expected: 3 },
@@ -278,36 +290,14 @@ const toProfile = (raw: ApiUser): Profile => {
   const { user_name: name, avatar_url: avatar = null } = raw;
   return { name, avatar };
 };`,
-    junior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = (raw: ApiUser): Profile => {
-  const name = raw.user_name;
-  let avatar: string | null = null;
-  if (raw.avatar_url !== undefined) {
-    avatar = raw.avatar_url;
-  }
-  return { name: name, avatar: avatar };
-};`,
-    senior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user_name, avatar: avatar_url ?? null });`,
+    junior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\n\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\n\nconst toProfile = (raw: ApiUser): Profile => {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  const profile: Profile = { name: name, avatar: avatar };\n  return profile;\n};",
+    senior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\nfunction toProfile(raw: ApiUser): Profile {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  return { name, avatar };\n}",
+    hiddenTypeTests: [{"code": "const __auditOptional: Profile = toProfile({user_name:\"a\",avatar_url:undefined});"}, {"code": "toProfile({user_name:\"a\",avatar_url:42});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const raw=Object.assign(Object.create(null),{user_name:' Ada \ud83e\udd88 ',avatar_url:' /a.png ',extra:'ignore'});Object.freeze(raw);const a=toProfile(raw),b=toProfile(raw);a.name='changed';return [a!==b,b.name,b.avatar,raw.user_name,Object.keys(b).sort().join(','),Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, " Ada \ud83e\udd88 ", " /a.png ", " Ada \ud83e\udd88 ", "avatar,name", true] },
+      { call: "[toProfile(Object.freeze({user_name:'',avatar_url:undefined})),toProfile(Object.freeze({user_name:'x',avatar_url:''})),toProfile(Object.freeze({user_name:'x'}))]", expected: [{"name": "", "avatar": null}, {"name": "x", "avatar": ""}, {"name": "x", "avatar": null}] },
+      { call: "(()=>{const name='x'.repeat(200),avatar='y'.repeat(200),out=toProfile({user_name:name,avatar_url:avatar});return [out.name===name,out.avatar===avatar];})()", expected: [true, true] },
+
       { call: 'toProfile({ user_name: "dee", avatar_url: undefined })', expected: { name: 'dee', avatar: null } },
       { call: 'Object.keys(toProfile({ user_name: "e", avatar_url: "/e.png" })).sort()', expected: ['avatar', 'name'] },
       { call: 'toProfile({ user_name: "f g", avatar_url: "https://x.dev/f.png" })', expected: { name: 'f g', avatar: 'https://x.dev/f.png' } },
@@ -341,7 +331,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
 };`,
     senior: `const routeNames = (route: string, airports: ReadonlyMap<string, string>): string[] =>
   route ? route.split("-").map((code) => airports.get(code.toUpperCase()) ?? code) : [];`,
+    hiddenTypeTests: [{"code": "routeNames(42,new Map<string,string>());", "rejects": true}],
     hiddenTests: [
+      { call: "routeNames('-prg--xyz-',new Map([['PRG','Prague'],['','Gap']]))", expected: ["Gap", "Prague", "Gap", "xyz", "Gap"] },
+      { call: "routeNames(' prg -\u00df-__proto__-x',new Map([[' PRG ','SpacePrague'],['SS','DoubleS'],['__PROTO__','ProtoAirport'],['X','']]))", expected: ["SpacePrague", "DoubleS", "ProtoAirport", ""] },
+      { call: "(()=>{const map=new Map([['P','Place']]),out=routeNames('p-'.repeat(1000),map);return [out.length,out.slice(0,1000).every(x=>x==='Place'),out[1000],map.size,map.get('P')];})()", expected: [1001, true, "", 1, "Place"] },
+      { call: "(()=>{const map=new Map([['','Empty']]),a=routeNames('',map),b=routeNames('',map);a.push('x');return [a!==b,b.length,a.length,map.get('')];})()", expected: [true, 0, 1, "Empty"] },
+
       { call: 'routeNames("JFK-PRG-JFK", new Map([["JFK", "New York JFK"], ["PRG", "Prague"]]))', expected: ['New York JFK', 'Prague', 'New York JFK'] },
       { call: 'routeNames("PrG", new Map([["PRG", "Prague"]]))', expected: ['Prague'] },
       { call: 'routeNames("LHR", new Map([["LHR", ""]]))', expected: [''] },
@@ -376,7 +372,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
   if (!next.delete(id)) next.add(id);
   return next;
 };`,
+    hiddenTypeTests: [{"code": "const __auditSource: ReadonlySet<string> = new Set([\"a\"]); toggle(__auditSource,\"b\").add(\"c\");"}],
     hiddenTests: [
+      { call: "[...toggle(new Set(['z','a']), 'm')]", expected: ["z", "a", "m"] },
+      { call: "[...toggle(new Set([' A ','a','','A']), 'a')]", expected: [" A ", "", "A"] },
+      { call: "(()=>{const input=Object.freeze(new Set(['z','a'])),a=toggle(input,'z'),b=toggle(input,'z');a.add('changed');return [a instanceof Set,a!==input,a!==b,[...input],[...b],a.size];})()", expected: [true, true, true, ["z", "a"], ["a"], 2] },
+      { call: "(()=>{const input=new Set(Array.from({length:1000},(_,i)=>String(999-i))),out=toggle(input,'1000');return [input.size,out.size,[...out][0],[...out][1000],out.has('1000'),input.has('1000')];})()", expected: [1000, 1001, "999", "1000", true, false] },
+
       { call: '(() => { const selected = new Set(["a"]); return toggle(selected, "b") !== selected; })()', expected: true },
       { call: '[...toggle(toggle(new Set(["x"]), "y"), "y")]', expected: ['x'] },
       { call: 'toggle(new Set(["a", "b", "c"]), "b").size', expected: 2 },
@@ -391,18 +393,7 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
     if (price === undefined) throw new Error(\`No price for \${product}\`);
     return total + price;
   }, 0);`,
-    junior: `const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number => {
-  let total = 0;
-  for (let i = 0; i < basket.length; i++) {
-    const product = basket[i];
-    if (!prices.has(product)) {
-      throw new Error("No price for " + product);
-    }
-    const price = prices.get(product) as number;
-    total = total + price;
-  }
-  return total;
-};`,
+    junior: "const basketTotal = (prices: ReadonlyMap<string, number>, basket: string[]): number =>\n  basket.reduce((total, product) => {\n    const price = prices.get(product);\n    if (price === undefined) {\n      throw new Error(\"No price for \" + product);\n    }\n    return total + price;\n  }, 0);",
     senior: `const priceOf = (prices: ReadonlyMap<string, number>, product: string): number => {
   const price = prices.get(product);
   if (price === undefined) throw new Error(\`No price for \${product}\`);
@@ -411,7 +402,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
 
 const basketTotal = (prices: ReadonlyMap<string, number>, basket: readonly string[]): number =>
   basket.reduce((total, product) => total + priceOf(prices, product), 0);`,
+    hiddenTypeTests: [{"code": "basketTotal(new Map<string,string>([[\"a\",\"1\"]]),[\"a\"]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{try{basketTotal(new Map(),['z','a']);return false;}catch(e){return e instanceof Error&&e.message==='No price for z';}})()", expected: true },
+      { call: "(()=>{const prices=new Map([['',0],[' A ',7],['a',11],['__proto__',13]]),basket=Object.freeze(['',' A ','a','__proto__',' A ']),before=JSON.stringify([...prices]),out=basketTotal(prices,basket);return [out,JSON.stringify([...prices])===before,basket.length,basket[0]];})()", expected: [38, true, 5, ""] },
+      { call: "(()=>{try{basketTotal(new Map(),['']);return false;}catch(e){return e instanceof Error&&e.message==='No price for ';}})()", expected: true },
+      { call: "basketTotal(new Map([['a',1000000000]]),Object.freeze(Array(1000).fill('a')))", expected: 1000000000000 },
+
       { call: 'basketTotal(new Map([["a", 1], ["b", 10], ["c", 100]]), ["c", "b", "a", "a"])', expected: 112 },
       { call: '(() => { try { basketTotal(new Map(), ["x"]); return "no error"; } catch (error) { return error instanceof Error; } })()', expected: true },
       { call: '(() => { try { return basketTotal(new Map([["tea", 350]]), ["cake", "tea"]); } catch (error) { return error.message; } })()', expected: 'No price for cake' },
@@ -432,21 +429,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
   // slice copies, and end + 1 keeps the line at end.
   return lines.slice(start, end + 1);
 };`,
-    junior: `const trimBlank = (lines: readonly string[]): string[] => {
-  let start = 0;
-  while (start < lines.length && lines[start].trim() === "") {
-    start = start + 1;
-  }
-  let end = lines.length - 1;
-  while (end >= start && lines[end].trim() === "") {
-    end = end - 1;
-  }
-  const kept: string[] = [];
-  for (let i = start; i <= end; i++) {
-    kept.push(lines[i]);
-  }
-  return kept;
-};`,
+    junior: "const trimBlank = (lines: readonly string[]): string[] => {\n  let start = 0;\n  while (start < lines.length && lines[start].trim() === \"\") {\n    start = start + 1;\n  }\n  let end = lines.length - 1;\n  while (end >= start && lines[end].trim() === \"\") {\n    end = end - 1;\n  }\n  return lines.slice(start, end + 1);\n};",
     senior: `const trimBlank = (lines: readonly string[]): string[] => {
   const blank = (index: number): boolean => lines[index].trim() === "";
   let start = 0;
@@ -456,6 +439,10 @@ const trimBlank = (lines: readonly string[]): string[] => {
   return lines.slice(start, end);
 };`,
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['\\t','\\u00a0','\\ufeff','  x  ','\\t','\\u200b','\\r\\n']),a=trimBlank(input),b=trimBlank(input);a.pop();return [b,a!==b,input.length,input[3]];})()", expected: [["  x  ", "\t", "\u200b"], true, 7, "  x  "] },
+      { call: "(()=>{const input=Object.freeze(['x','y']),a=trimBlank(input),b=trimBlank(input),empty=Object.freeze([]),c=trimBlank(empty),d=trimBlank(empty);a.push('later');c.push('later');return [a!==input,a!==b,b,c!==empty,c!==d,d.length,input.length];})()", expected: [true, true, ["x", "y"], true, true, 0, 2] },
+      { call: "(()=>{const all=Object.freeze(Array(1000).fill('\\t ')),input=Object.freeze(['',...Array(998).fill('  x  '),' ']),out=trimBlank(input);return [trimBlank(all).length,out.length,out.every(line=>line==='  x  '),all.length,input.length];})()", expected: [0, 998, true, 1000, 1000] },
+
       { call: 'trimBlank(["", "", "a", "", "", "b", "", ""])', expected: ['a', '', '', 'b'] },
       { call: '(() => { const lines = ["", "a", ""]; trimBlank(lines); return lines; })()', expected: ['', 'a', ''] },
       { call: 'trimBlank(["x"])', expected: ['x'] },
@@ -511,6 +498,10 @@ const trimBlank = (lines: readonly string[]): string[] => {
   return both;
 };`,
     hiddenTests: [
+      { call: "(()=>{const mine=Object.freeze([1,7,35,1000000000]),yours=Object.freeze([2,7,1000000000]),a=freeBoth(mine,yours),b=freeBoth(mine,yours);a.push(99);return [b,a!==b,mine,yours];})()", expected: [[7, 1000000000], true, [1, 7, 35, 1000000000], [2, 7, 1000000000]] },
+      { call: "(()=>{const input=Object.freeze([1,2]),a=freeBoth(input,input),b=freeBoth(input,input),empty=Object.freeze([]),c=freeBoth(empty,input),d=freeBoth(input,empty);a.push(3);c.push(1);return [a!==input,a!==b,b,c!==empty,d!==empty,c!==d,d.length,input.length];})()", expected: [true, true, [1, 2], true, true, true, 0, 2] },
+      { call: "(()=>{const mine=Object.freeze(Array.from({length:1000},(_,i)=>i+1)),yours=Object.freeze(Array.from({length:1000},(_,i)=>2*(i+1))),out=freeBoth(mine,yours);return [out.length,out.every((day,i)=>day===2*(i+1)),mine.length,yours.length,freeBoth([999999999],[1000000000]).length];})()", expected: [500, true, 1000, 1000, 0] },
+
       { call: 'freeBoth([1, 2, 3, 4, 5, 6], [2, 4, 6, 8])', expected: [2, 4, 6] },
       { call: 'freeBoth([10, 20, 30], [5, 10, 15, 20, 25, 30, 35])', expected: [10, 20, 30] },
       { call: '(() => { const mine = [1, 2]; const yours = [2, 3]; freeBoth(mine, yours); return [mine, yours]; })()', expected: [[1, 2], [2, 3]] },
@@ -518,41 +509,15 @@ const trimBlank = (lines: readonly string[]): string[] => {
     ],
   },
   'ts-easy2-where-a-value-sits': {
-    solution: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  let start = 0;
-  let end = sorted.length - 1;
-  while (start <= end && sorted[start] !== value) start++;
-  // start passed end: the value is not in the list.
-  if (start > end) return null;
-  // start found the value, so end stops at start at the latest.
-  while (sorted[end] !== value) end--;
-  return [start, end];
-};`,
-    junior: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  let first = -1;
-  for (let i = 0; i < sorted.length; i++) {
-    if (sorted[i] === value) {
-      first = i;
-      break;
-    }
-  }
-  if (first === -1) {
-    return null;
-  }
-  let last = first;
-  for (let i = sorted.length - 1; i >= first; i--) {
-    if (sorted[i] === value) {
-      last = i;
-      break;
-    }
-  }
-  return [first, last];
-};`,
-    senior: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
-  const start = sorted.indexOf(value);
-  return start === -1 ? null : [start, sorted.lastIndexOf(value)];
-};`,
+    solution: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  let start = 0;\n  let end = sorted.length - 1;\n  while (start <= end && sorted[start] !== value) start++;\n  // start passed end: the value is not in the list.\n  if (start > end) return null;\n  // start found the value, so end stops at start at the latest.\n  while (sorted[end] !== value) end--;\n  return [start, end];\n};",
+    junior: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  let first = -1;\n  for (let i = 0; i < sorted.length; i++) {\n    if (sorted[i] === value) {\n      first = i;\n      break;\n    }\n  }\n  if (first === -1) {\n    return null;\n  }\n  let last = first;\n  for (let i = sorted.length - 1; i >= first; i--) {\n    if (sorted[i] === value) {\n      last = i;\n      break;\n    }\n  }\n  return [first, last];\n};",
+    senior: "const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {\n  const start = sorted.indexOf(value);\n  return start === -1 ? null : [start, sorted.lastIndexOf(value)];\n};",
+    hiddenTypeTests: [{"code": "const __b065Readonly:readonly number[]=[1];const __b065Pair=spanOf(__b065Readonly,1);if(__b065Pair){__b065Pair[0]=2;const __b065Index:number=__b065Pair[1];}"}],
     hiddenTests: [
+      { call: "[spanOf(Object.freeze([-2,-0,0,0.5,0.5,3]),0),spanOf(Object.freeze([-2,-0,0,0.5,0.5,3]),0.5),spanOf(Object.freeze([-1]),-1),spanOf(Object.freeze([]),2),spanOf([-2,0,1],-3)]", expected: [[1, 2], [3, 4], [0, 0], null, null] },
+      { call: "(() => { const input=[1,2,2,3];const a=spanOf(input,2);const b=spanOf(input,2);a[0]=99;return [input,a!==b,b]; })()", expected: [[1, 2, 2, 3], true, [1, 2]] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},()=>7));return [spanOf(input,7),spanOf(input,8),input.length];})()", expected: [[0, 999], null, 1000] },
+
       { call: 'spanOf([0, 0, 1], 0)', expected: [0, 1] },
       { call: 'spanOf([1, 2, 3], 1)', expected: [0, 0] },
       { call: 'spanOf([1, 2, 3], 3)', expected: [2, 2] },
@@ -562,20 +527,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
 
   /* ── keyof ────────────────────────────────────────────────────────── */
   'ts-easy2-sort-by-a-column': {
-    solution: `interface Player {
-  name: string;
-  score: number;
-  country: string;
-}
-
-const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
-  // A readonly array has no sort, so sort a copy. < and > compare numbers by
-  // value and strings by character code, and sort keeps ties in order.
-  [...rows].sort((a, b) => {
-    if (a[column] < b[column]) return -1;
-    if (a[column] > b[column]) return 1;
-    return 0;
-  });`,
+    solution: "interface Player {\n  name: string;\n  score: number;\n  country: string;\n}\n\nconst sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>\n  // The readonly type omits mutating sort, so sort a copy. < and > compare numbers by\n  // value and strings by character code, and sort keeps ties in order.\n  [...rows].sort((a, b) => {\n    if (a[column] < b[column]) return -1;\n    if (a[column] > b[column]) return 1;\n    return 0;\n  });",
     junior: `interface Player {
   name: string;
   score: number;
@@ -608,47 +560,20 @@ const sortRows = (rows: readonly Player[], column: keyof Player): Player[] => {
 
 const sortRows = (rows: readonly Player[], column: keyof Player): Player[] =>
   [...rows].sort((a, b) => (a[column] < b[column] ? -1 : a[column] > b[column] ? 1 : 0));`,
+    hiddenTypeTests: [{"code": "const __auditRows: readonly Player[] = [{name:\"a\",score:1,country:\"X\"}]; const __auditOut: Player[] = sortRows(__auditRows,\"name\"); __auditOut.push({name:\"b\",score:2,country:\"Y\"});"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['a','Z',' A','\u00e9','A'].map((text,i)=>Object.freeze({name:text,country:text,score:i})));return ['name','country'].map(key=>sortRows(input,key).map(row=>row[key]));})()", expected: [[" A", "A", "Z", "a", "\u00e9"], [" A", "A", "Z", "a", "\u00e9"]] },
+      { call: "(()=>{const meta={},input=Object.freeze([-0,0,-0.5,1.5,-1000000000,1000000000].map((score,i)=>Object.freeze({name:'same',country:'',score,meta,id:i}))),out=sortRows(input,'score'),again=sortRows(input,'score');out.pop();return [again.map(row=>row.id),again.every(row=>row===input[row.id]),Object.is(again[2].score,-0),again[0].meta===meta,input[0].id,input.length,out!==again,again.length];})()", expected: [[4, 2, 0, 1, 3, 5], true, true, true, 0, 6, true, 6] },
+      { call: "(()=>{const empty=Object.freeze([]),a=sortRows(empty,'name'),b=sortRows(empty,'score'),input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:'same',score:0,country:'X',id:i}))),out=sortRows(input,'country');a.push(input[0]);return [a!==empty,a!==b,b.length,out.length,out.every((row,i)=>row===input[i]),input.length];})()", expected: [true, true, 0, 1000, true, 1000] },
+
       { call: '(() => { const rows = [{ name: "B", score: 1, country: "X" }, { name: "A", score: 2, country: "Y" }]; sortRows(rows, "name"); return rows.map((row) => row.name); })()', expected: ['B', 'A'] },
       { call: 'sortRows([{ name: "a", score: 0, country: "SE" }, { name: "b", score: 0, country: "CZ" }, { name: "c", score: 0, country: "GB" }], "country").map((row) => row.country)', expected: ['CZ', 'GB', 'SE'] },
       { call: 'sortRows([{ name: "a", score: -1, country: "X" }, { name: "b", score: 0, country: "X" }, { name: "c", score: -5, country: "X" }], "score").map((row) => row.score)', expected: [-5, -1, 0] },
     ],
   },
   'ts-easy2-column-headings': {
-    solution: `interface Contact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-// The Record type makes a missing or an extra heading a compile error.
-const LABELS: Record<keyof Contact, string> = {
-  name: "Full name",
-  email: "Email",
-  phone: "Phone number",
-};
-
-const headings = (columns: (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);`,
-    junior: `interface Contact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-const LABELS: Record<keyof Contact, string> = {
-  name: "Full name",
-  email: "Email",
-  phone: "Phone number",
-};
-
-const headings = (columns: (keyof Contact)[]): string[] => {
-  const result: string[] = [];
-  for (const column of columns) {
-    const label = LABELS[column];
-    result.push(label);
-  }
-  return result;
-};`,
+    solution: "interface Contact {\n  name: string;\n  email: string;\n  phone: string;\n}\n\n// The fresh literal is checked for missing and excess heading keys.\nconst LABELS: Record<keyof Contact, string> = {\n  name: \"Full name\",\n  email: \"Email\",\n  phone: \"Phone number\",\n};\n\nconst headings = (columns: (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);",
+    junior: "interface Contact {\n  name: string;\n  email: string;\n  phone: string;\n}\n\nconst LABELS: Record<keyof Contact, string> = {\n  name: \"Full name\",\n  email: \"Email\",\n  phone: \"Phone number\",\n};\n\nconst headings = (columns: (keyof Contact)[]): string[] => {\n  return columns.map((column) => {\n    const label = LABELS[column];\n    return label;\n  });\n};",
     senior: `interface Contact {
   name: string;
   email: string;
@@ -658,7 +583,12 @@ const headings = (columns: (keyof Contact)[]): string[] => {
 const LABELS = { name: "Full name", email: "Email", phone: "Phone number" } as const satisfies Record<keyof Contact, string>;
 
 const headings = (columns: readonly (keyof Contact)[]): string[] => columns.map((column) => LABELS[column]);`,
+    hiddenTypeTests: [{"code": "const __auditExtra:Record<keyof Contact,string>={name:\"n\",email:\"e\",phone:\"p\",age:\"a\"};", "rejects": true}, {"code": "const __auditWide={name:\"n\",email:\"e\",phone:\"p\",extra:\"x\"}; const __auditLabels:Record<keyof Contact,string>=__auditWide;"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['name','phone','name']),a=headings(input),b=headings(input);a[0]='changed';a.pop();return [a!==b,b,input,Reflect.ownKeys(LABELS).sort(),LABELS.name,LABELS.phone];})()", expected: [true, ["Full name", "Phone number", "Full name"], ["name", "phone", "name"], ["email", "name", "phone"], "Full name", "Phone number"] },
+      { call: "(()=>{const a=headings([]),b=headings([]);a.push('changed');return [a!==b,b.length,LABELS.email];})()", expected: [true, 0, "Email"] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>['name','email','phone'][i%3])),out=headings(input);return [out.length,out.every((label,i)=>label===['Full name','Email','Phone number'][i%3]),input.length];})()", expected: [1000, true, 1000] },
+
       { call: 'headings(["phone", "email", "name"])', expected: ['Phone number', 'Email', 'Full name'] },
       { call: 'Object.keys(LABELS).sort()', expected: ['email', 'name', 'phone'] },
       { call: 'headings(["email", "email", "phone"])', expected: ['Email', 'Email', 'Phone number'] },
@@ -676,24 +606,7 @@ const headings = (columns: readonly (keyof Contact)[]): string[] => columns.map(
 // The spread copies the todo, then done: true overwrites one property of the copy.
 const markDone = (todos: readonly Todo[], id: number): Todo[] =>
   todos.map((todo) => (todo.id === id ? { ...todo, done: true } : todo));`,
-    junior: `interface Todo {
-  id: number;
-  text: string;
-  done: boolean;
-}
-
-const markDone = (todos: readonly Todo[], id: number): Todo[] => {
-  const result: Todo[] = [];
-  for (const todo of todos) {
-    if (todo.id === id) {
-      const changed: Todo = { id: todo.id, text: todo.text, done: true };
-      result.push(changed);
-    } else {
-      result.push(todo);
-    }
-  }
-  return result;
-};`,
+    junior: "interface Todo {\n  id: number;\n  text: string;\n  done: boolean;\n}\n\n// The spread copies the todo, then done: true overwrites one property of the copy.\nconst markDone = (todos: readonly Todo[], id: number): Todo[] => {\n  const result: Todo[] = [];\n  for (const todo of todos) {\n    if (todo.id === id) {\n      const changed: Todo = { ...todo, done: true };\n      result.push(changed);\n    } else result.push(todo);\n  }\n  return result;\n};",
     senior: `interface Todo {
   id: number;
   text: string;
@@ -702,7 +615,13 @@ const markDone = (todos: readonly Todo[], id: number): Todo[] => {
 
 const markDone = (todos: readonly Todo[], id: number): Todo[] =>
   todos.map((todo) => (todo.id === id && !todo.done ? { ...todo, done: true } : todo));`,
+    hiddenTypeTests: [{"code": "const __auditTodos: readonly Todo[] = [Object.freeze({id:1,text:\"a\",done:true})]; const __auditDone: Todo[] = markDone(__auditTodos,1);"}],
     hiddenTests: [
+      { call: "(()=>{const nested=Object.freeze({tag:'x'}),key=Symbol('meta'),match=Object.assign(Object.create(null),{id:1,text:'',done:false,nested});match[key]=nested;Object.defineProperty(match,'__proto__',{value:nested,enumerable:true});Object.freeze(match);const other=Object.freeze({id:2,text:'x',done:false}),input=Object.freeze([match,other]),a=markDone(input,1),b=markDone(input,1);a[0].text='changed';return [a!==input,a!==b,a[0]!==match,a[0]!==b[0],a[1]===other,b[0].nested===nested,b[0][key]===nested,Object.hasOwn(b[0],'__proto__'),b[0].__proto__===nested,Object.getPrototypeOf(b[0])===Object.prototype,match.text,b[0].done];})()", expected: [true, true, true, true, true, true, true, true, true, true, "", true] },
+      { call: "(()=>{const a=Object.freeze({id:0,text:'a',done:false}),b=Object.freeze({id:0,text:'b',done:true}),input=Object.freeze([a,b]),out=markDone(input,0);return [out.length,out[0]!==a,out[1].done&&out[1].text===b.text,out.every(x=>x.done),a.done,b.done];})()", expected: [2, true, true, true, false, true] },
+      { call: "(()=>{const item=Object.freeze({id:1,text:'x',done:false}),input=Object.freeze([item]),a=markDone(input,9),empty=markDone([],9);a.push(item);return [a!==input,a[0]===item,input.length,empty!==markDone([],9),empty.length];})()", expected: [true, true, 1, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i,text:String(i),done:false,meta:i}))),out=markDone(input,999);return [out.length,out[0]===input[0],out[999]!==input[999],out[999].done,out[999].meta,input[999].done];})()", expected: [1000, true, true, true, 999, false] },
+
       { call: '(() => { const todos = [{ id: 1, text: "a", done: false }]; return markDone(todos, 1) !== todos; })()', expected: true },
       { call: 'markDone([{ id: 3, text: "c", done: false }, { id: 1, text: "a", done: false }, { id: 2, text: "b", done: true }], 1)', expected: [{ id: 3, text: 'c', done: false }, { id: 1, text: 'a', done: true }, { id: 2, text: 'b', done: true }] },
       { call: '(() => { const todo = { id: 1, text: "a", done: false }; const [next] = markDone([todo], 1); return [todo.done, next.done, next === todo]; })()', expected: [false, true, false] },
@@ -720,24 +639,7 @@ const addTag = (note: Note, tag: string): Note => {
   // A new note and a new tag list: the caller's note is never touched.
   return { ...note, tags: [...note.tags, tag] };
 };`,
-    junior: `interface Note {
-  readonly title: string;
-  readonly tags: readonly string[];
-}
-
-const addTag = (note: Note, tag: string): Note => {
-  for (const existing of note.tags) {
-    if (existing === tag) {
-      return note;
-    }
-  }
-  const tags: string[] = [];
-  for (const existing of note.tags) {
-    tags.push(existing);
-  }
-  tags.push(tag);
-  return { title: note.title, tags: tags };
-};`,
+    junior: "interface Note {\n  readonly title: string;\n  readonly tags: readonly string[];\n}\n\nconst addTag = (note: Note, tag: string): Note => {\n  for (const existing of note.tags) {\n    if (existing === tag) return note;\n  }\n  return { ...note, tags: [...note.tags, tag] };\n};",
     senior: `interface Note {
   readonly title: string;
   readonly tags: readonly string[];
@@ -746,6 +648,10 @@ const addTag = (note: Note, tag: string): Note => {
 const addTag = (note: Note, tag: string): Note =>
   note.tags.includes(tag) ? note : { ...note, tags: [...note.tags, tag] };`,
     hiddenTests: [
+      { call: "(()=>{const extra=Object.freeze({}),sym=Symbol('meta'),note=Object.assign(Object.create(null),{title:' Ideas \ud83e\udd88 ',tags:Object.freeze(['','work','work']),extra});Object.defineProperty(note,'__proto__',{value:extra,enumerable:true});note[sym]=extra;Object.freeze(note);const out=addTag(note,'WORK');return [out!==note,out.tags!==note.tags,out.tags,addTag(note,'work')===note,out.extra===extra,out[sym]===extra,Object.hasOwn(out,'__proto__'),out.__proto__===extra,Object.getPrototypeOf(out)===Object.prototype,note.title,note.tags.length];})()", expected: [true, true, ["", "work", "work", "WORK"], true, true, true, true, true, true, " Ideas \ud83e\udd88 ", 3] },
+      { call: "(()=>{const inherited={ignored:'no'},note=Object.assign(Object.create(inherited),{title:'',tags:Object.freeze([])}),out=addTag(note,'');return [out.tags,addTag(out,'')===out,Object.hasOwn(out,'ignored'),note.tags.length];})()", expected: [[""], true, false, 0] },
+      { call: "(()=>{const note={title:'t',tags:Object.freeze(Array.from({length:1000},(_,i)=>String(i)))};for(let i=0;i<100;i++)note['extra'+i]=i;Object.freeze(note);const out=addTag(note,'new');return [out.tags.length,out.tags[1000],out.extra99,note.tags.length,Object.keys(out).length];})()", expected: [1001, "new", 99, 1000, 102] },
+
       { call: '(() => { const note = { title: "a", tags: ["x"] }; return addTag(note, "x") === note; })()', expected: true },
       { call: '(() => { const note = { title: "a", tags: ["x"] }; const next = addTag(note, "y"); return [next === note, next.tags === note.tags]; })()', expected: [false, false] },
       { call: 'addTag({ title: "t", tags: ["a", "b"] }, "c")', expected: { title: 't', tags: ['a', 'b', 'c'] } },
@@ -757,58 +663,16 @@ const addTag = (note: Note, tag: string): Note =>
 
   /* ── while, reduce, sort and strings ──────────────────────────────── */
   'ts-easy2-path-to-the-root': {
-    solution: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  const names: string[] = [];
-  // Typed Folder | null so it can hold the root's null parent.
-  let current: Folder | null = folder;
-  // Inside the loop the check has narrowed current to a Folder.
-  while (current !== null) {
-    names.unshift(current.name);
-    current = current.parent;
-  }
-  return names.join("/");
-};`,
-    junior: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  const upward: string[] = [];
-  let current: Folder | null = folder;
-  while (current !== null) {
-    upward.push(current.name);
-    current = current.parent;
-  }
-  let path = "";
-  for (let i = upward.length - 1; i >= 0; i--) {
-    if (path !== "") {
-      path = path + "/";
-    }
-    path = path + upward[i];
-  }
-  return path;
-};`,
-    senior: `interface Folder {
-  name: string;
-  parent: Folder | null;
-}
-
-const pathOf = (folder: Folder): string => {
-  let path = folder.name;
-  let up = folder.parent;
-  while (up) {
-    path = \`\${up.name}/\${path}\`;
-    up = up.parent;
-  }
-  return path;
-};`,
+    solution: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const names: string[] = [];\n  let current: Folder | null = folder;\n  // The null check narrows current to Folder inside the loop.\n  while (current !== null) {\n    names.push(current.name);\n    current = current.parent;\n  }\n  return names.reverse().join(\"/\");\n};",
+    junior: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const upward: string[] = [];\n  let current: Folder | null = folder;\n  while (current !== null) {\n    upward.push(current.name);\n    current = current.parent;\n  }\n  const downward: string[] = [];\n  for (let i = upward.length - 1; i >= 0; i--) {\n    downward.push(upward[i]);\n  }\n  return downward.join(\"/\");\n};",
+    senior: "interface Folder {\n  name: string;\n  parent: Folder | null;\n}\n\nconst pathOf = (folder: Folder): string => {\n  const names: string[] = [];\n  let current: Folder | null = folder;\n  while (current !== null) {\n    names.push(current.name);\n    current = current.parent;\n  }\n  names.reverse();\n  return names.join(\"/\");\n};",
+    hiddenTypeTests: [{"code": "pathOf(null);", "rejects": true}],
     hiddenTests: [
+      { call: "[pathOf({name:'child',parent:{name:'',parent:null}}),pathOf({name:'',parent:{name:'',parent:null}}),pathOf({name:'',parent:null})]", expected: ["/child", "/", ""] },
+      { call: "pathOf({name:'./leaf',parent:{name:' a/b ',parent:{name:'\ud83e\udd88',parent:null}}})", expected: "\ud83e\udd88/ a/b /./leaf" },
+      { call: "(()=>{const root=Object.freeze({name:'',parent:null}),leaf=Object.freeze({name:' x ',parent:root});return [pathOf(leaf),leaf.parent===root,root.name,leaf.name];})()", expected: ["/ x ", true, "", " x "] },
+      { call: "(()=>{let node=null;const names=[];for(let i=0;i<1000;i++){const name=i%2===0?'':String(i);names.push(name);node=Object.freeze({name,parent:node});}const out=pathOf(node);return [out===names.join('/'),out.split('/').length,node.name];})()", expected: [true, 1000, "999"] },
+
       { call: 'pathOf({ name: "e", parent: { name: "d", parent: { name: "c", parent: { name: "b", parent: { name: "a", parent: null } } } } })', expected: 'a/b/c/d/e' },
       { call: '(() => { const root = { name: "r", parent: null }; return [pathOf({ name: "x", parent: root }), pathOf({ name: "y", parent: root })]; })()', expected: ['r/x', 'r/y'] },
       { call: '(() => { const folder = { name: "c", parent: { name: "b", parent: { name: "a", parent: null } } }; pathOf(folder); return folder.parent.parent.name; })()', expected: 'a' },
@@ -821,16 +685,7 @@ const pathOf = (folder: Folder): string => {
     const [minutes, seconds] = track.split(":").map(Number);
     return total + minutes * 60 + seconds;
   }, 0);`,
-    junior: `const playlistSeconds = (tracks: string[]): number => {
-  let total = 0;
-  for (const track of tracks) {
-    const parts = track.split(":");
-    const minutes = parseInt(parts[0], 10);
-    const seconds = parseInt(parts[1], 10);
-    total = total + minutes * 60 + seconds;
-  }
-  return total;
-};`,
+    junior: "const playlistSeconds = (tracks: string[]): number =>\n  tracks.reduce((total, track) => {\n    const parts = track.split(\":\");\n    const minutes = Number(parts[0]);\n    const seconds = Number(parts[1]);\n    return total + minutes * 60 + seconds;\n  }, 0);",
     senior: `const toSeconds = (track: string): number => {
   const [minutes, seconds] = track.split(":").map(Number);
   return minutes * 60 + seconds;
@@ -838,7 +693,12 @@ const pathOf = (folder: Folder): string => {
 
 const playlistSeconds = (tracks: readonly string[]): number =>
   tracks.reduce((total, track) => total + toSeconds(track), 0);`,
+    hiddenTypeTests: [{"code": "playlistSeconds([null]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['000001:01','72:00','0:00']),out=playlistSeconds(input);return [out,input.length,input[0],input[1]];})()", expected: [4381, 3, "000001:01", "72:00"] },
+      { call: "playlistSeconds(Object.freeze(Array(1000).fill('999999:59')))", expected: 59999999000 },
+      { call: "(()=>{const input=['2:00','1:00','2:00'],a=playlistSeconds(input),b=playlistSeconds(input);return [a,b,input];})()", expected: [300, 300, ["2:00", "1:00", "2:00"]] },
+
       { call: 'playlistSeconds(["1:01", "1:01", "1:01"])', expected: 183 },
       { call: 'playlistSeconds(["10:59", "0:01"])', expected: 660 },
       { call: 'playlistSeconds(["0:00"])', expected: 0 },
@@ -858,44 +718,14 @@ const RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 const byPriority = (tasks: readonly Task[]): Task[] =>
   [...tasks].sort((a, b) => RANK[a.priority] - RANK[b.priority]);`,
-    junior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const byPriority = (tasks: readonly Task[]): Task[] => {
-  const result: Task[] = [];
-  for (const task of tasks) {
-    if (task.priority === "high") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "medium") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "low") {
-      result.push(task);
-    }
-  }
-  return result;
-};`,
-    senior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const ORDER: readonly Priority[] = ["high", "medium", "low"];
-
-const byPriority = (tasks: readonly Task[]): Task[] =>
-  [...tasks].sort((a, b) => ORDER.indexOf(a.priority) - ORDER.indexOf(b.priority));`,
+    junior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };\nconst byPriority = (tasks: readonly Task[]): Task[] => {\n  const result: Task[] = [];\n  for (const task of tasks) result.push(task);\n  result.sort((left, right) => RANK[left.priority] - RANK[right.priority]);\n  return result;\n};",
+    senior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Readonly<Record<Priority, number>> = { high: 0, medium: 1, low: 2 };\nfunction byPriority(tasks: readonly Task[]): Task[] {\n  return tasks.toSorted((left, right) => RANK[left.priority] - RANK[right.priority]);\n}",
+    hiddenTypeTests: [{"code": "const __auditTasks: readonly Task[] = [{title:\"a\",priority:\"high\"}]; const __auditSorted: Task[] = byPriority(__auditTasks);"}],
     hiddenTests: [
+      { call: "(()=>{const extra=Object.freeze({}),a=Object.freeze({title:'same',priority:'low',extra}),b=Object.freeze({title:'same',priority:'high',extra}),c=Object.freeze({title:'same',priority:'high',extra}),input=Object.freeze([a,b,c,b]),out=byPriority(input),again=byPriority(input);out.push(a);return [out!==input,out!==again,again.length,again[0]===b,again[1]===c,again[2]===b,again[3]===a,again[0].extra===extra,input[0]===a];})()", expected: [true, true, 4, true, true, true, true, true, true] },
+      { call: "(()=>{const item=Object.freeze({title:'',priority:'medium'}),input=Object.freeze([item]),out=byPriority(input),empty=byPriority([]);out.push(item);return [out!==input,out[0]===item,input.length,empty!==byPriority([]),empty.length];})()", expected: [true, true, 1, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({title:String(i),priority:['low','high','medium'][i%3]}))),out=byPriority(input);const groups=['high','medium','low'];let ok=true,offset=0;for(const p of groups){for(const task of input)if(task.priority===p){ok=ok&&out[offset]===task;offset++;}}return [out.length,offset,ok,input[0].priority];})()", expected: [1000, 1000, true, "low"] },
+
       { call: 'byPriority([{ title: "a", priority: "medium" }, { title: "b", priority: "medium" }]).map((task) => task.title)', expected: ['a', 'b'] },
       { call: '(() => { const tasks = [{ title: "a", priority: "low" }, { title: "b", priority: "high" }]; byPriority(tasks); return tasks.map((task) => task.title); })()', expected: ['a', 'b'] },
       { call: 'byPriority([{ title: "1", priority: "low" }, { title: "2", priority: "medium" }, { title: "3", priority: "high" }, { title: "4", priority: "medium" }, { title: "5", priority: "low" }, { title: "6", priority: "high" }]).map((task) => task.title)', expected: ['3', '6', '2', '4', '1', '5'] },
@@ -926,7 +756,12 @@ type Accent = (typeof ACCENTS)[number];
 const ACCENT_SET: ReadonlySet<string> = new Set(ACCENTS);
 
 const isAccent = (value: string): value is Accent => ACCENT_SET.has(value);`,
+    hiddenTypeTests: [{"code": "const __auditGuard: (value:string)=>value is Accent = isAccent;"}, {"code": "ACCENTS.push(\"teal\");", "rejects": true}],
     hiddenTests: [
+      { call: "['teal ','coral\\t','gold\\n','TEAL','tealcoral','teal','coral','gold'].map(isAccent)", expected: [false, false, false, false, false, true, true, true] },
+      { call: "(()=>{const before=JSON.stringify(ACCENTS);for(let i=0;i<30;i++){isAccent('other');isAccent('coral');}return [JSON.stringify(ACCENTS)===before,isAccent('x'.repeat(200)),isAccent('__proto__'),isAccent('constructor')];})()", expected: [true, false, false, false] },
+      { call: "[' teAL ','golden','coral reef','\\u0074eal',''].map(isAccent)", expected: [false, false, false, true, false] },
+
       { call: '["teal", "coral", "gold", "red"].filter(isAccent)', expected: ['teal', 'coral', 'gold'] },
       { call: 'isAccent("coral")', expected: true },
       { call: 'isAccent(" teal")', expected: false },
@@ -943,23 +778,14 @@ const firstError = (results: Result[]): string | null => {
   }
   return null;
 };`,
-    junior: `type Result = { ok: true; value: number } | { ok: false; error: string };
-
-const firstError = (results: Result[]): string | null => {
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.ok === false) {
-      return result.error;
-    }
-  }
-  return null;
-};`,
-    senior: `type Result = { ok: true; value: number } | { ok: false; error: string };
-type Failure = Extract<Result, { ok: false }>;
-
-const firstError = (results: readonly Result[]): string | null =>
-  results.find((result): result is Failure => !result.ok)?.error ?? null;`,
+    junior: "type Result = { ok: true; value: number } | { ok: false; error: string };\n\nconst firstError = (results: Result[]): string | null => {\n  for (const result of results) {\n    if (result.ok === false) {\n      return result.error;\n    }\n  }\n  return null;\n};",
+    senior: "type Result = { ok: true; value: number } | { ok: false; error: string };\n\nconst firstError = (results: readonly Result[]): string | null => {\n  for (const result of results) {\n    if (result.ok === false) return result.error;\n  }\n  return null;\n};",
+    hiddenTypeTests: [{"code": "firstError([{ok:true,value:\"x\"}]);", "rejects": true}],
     hiddenTests: [
+      { call: "firstError(Object.freeze([Object.freeze({ok:true,value:0}),Object.freeze({ok:false,error:'  \ud83e\udd88  '}),Object.freeze({ok:false,error:'later'})]))", expected: "  \ud83e\udd88  " },
+      { call: "(()=>{const error=Object.freeze({ok:false,error:' '}),input=Object.freeze([error]);return [firstError(input),input[0]===error,error.error];})()", expected: [" ", true, " "] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i===999?{ok:false,error:''}:{ok:true,value:i})));return [firstError(input),firstError(input.slice(0,999)),input.length,input[999].error];})()", expected: ["", null, 1000, ""] },
+
       { call: 'firstError([{ ok: false, error: "a" }, { ok: true, value: 1 }, { ok: false, error: "b" }])', expected: 'a' },
       { call: 'firstError([{ ok: true, value: 0 }, { ok: true, value: -1 }, { ok: false, error: "late" }])', expected: 'late' },
       { call: 'firstError([{ ok: true, value: 5 }])', expected: null },
@@ -974,23 +800,18 @@ const firstError = (results: readonly Result[]): string | null =>
   }
   return pairs.join("&");
 };`,
-    junior: `const toQuery = (params: Record<string, string | number>): string => {
-  let query = "";
-  const keys = Object.keys(params);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (i > 0) {
-      query = query + "&";
-    }
-    query = query + encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
-  }
-  return query;
-};`,
+    junior: "const toQuery = (params: Record<string, string | number>): string => {\n  const pairs: string[] = [];\n  for (const [key, value] of Object.entries(params)) {\n    const encodedKey = encodeURIComponent(key);\n    const encodedValue = encodeURIComponent(value);\n    pairs.push(encodedKey + \"=\" + encodedValue);\n  }\n  return pairs.join(\"&\");\n};",
     senior: `const toQuery = (params: Readonly<Record<string, string | number>>): string =>
   Object.entries(params)
     .map(([key, value]) => \`\${encodeURIComponent(key)}=\${encodeURIComponent(value)}\`)
     .join("&");`,
+    hiddenTypeTests: [{"code": "toQuery({empty:null});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('ignore'),params=Object.create({inherited:'ignored'});params['2']='b';params['1']='a';params['__proto__']='lost';Object.defineProperty(params,'__proto__',{value:'kept',enumerable:true});params.a='';params[sym]='hidden';Object.defineProperty(params,'hidden',{value:'skip',enumerable:false});Object.freeze(params);return [toQuery(params),params.a,Object.getOwnPropertySymbols(params).length];})()", expected: ["1=a&2=b&__proto__=kept&a=", "", 1] },
+      { call: "(()=>{return [toQuery({'\u00e9':'\ud83d\ude00',\"!~*'()\":'a+b=% /'}),toQuery({n:NaN,i:Infinity,m:-Infinity,z:-0})];})()", expected: ["%C3%A9=%F0%9F%98%80&!~*'()=a%2Bb%3D%25%20%2F", "n=NaN&i=Infinity&m=-Infinity&z=0"] },
+      { call: "(()=>{const check=(params)=>{try{toQuery(params);return false}catch(error){return error instanceof URIError}};return [check({q:'\\ud800'}),check({['\\udc00']:'x'}),toQuery(Object.freeze(Object.create(null)))];})()", expected: [true, true, ""] },
+      { call: "(()=>{const params=Object.freeze(Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i]))),text=toQuery(params);return [text.split('&').length,text.startsWith('p0=0&'),text.endsWith('&p999=999'),Object.keys(params).length];})()", expected: [1000, true, true, 1000] },
+
       { call: 'toQuery({ "first name": "Ada", age: 36 })', expected: 'first%20name=Ada&age=36' },
       { call: 'toQuery({ a: "", b: "x" })', expected: 'a=&b=x' },
       { call: 'toQuery({ path: "a/b?c=d" })', expected: 'path=a%2Fb%3Fc%3Dd' },

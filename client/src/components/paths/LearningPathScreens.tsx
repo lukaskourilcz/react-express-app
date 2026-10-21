@@ -17,11 +17,14 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
+import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { ApiError, friendlyError } from '../../lib/api';
 import { isBarred, useLocks } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
+import { CodingCompletion } from '../../coding/CodingCompletion';
+import { announceVerifiedQuestXp, syncXpWithServer } from '../../lib/xp';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import {
@@ -252,6 +255,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   // path, or a lapsed plan, keeps its outline and evidence without dead ends.
   const reachable = Boolean(enrollment) && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
+  const diagnosticModule = manifest.diagnosticActivityId
+    ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
+    : undefined;
 
   return (
     <div className="lp-page">
@@ -377,6 +383,34 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
             </>
           )}
           <p className="lp-completion__note">{t('paths.completionNote')}</p>
+        </section>
+      )}
+
+      {progress.data && diagnosticModule && progress.data.competencies.length > 0 && (
+        <section className="lp-card lp-section" aria-labelledby="path-diagnostic-title">
+          <h2 id="path-diagnostic-title">{pathCopy['paths.diagnosticTitle']}</h2>
+          <p className="lp-lead">{pathCopy['paths.diagnosticNote']}</p>
+          <ul className="lp-list">
+            {progress.data.competencies.map(result => {
+              const competency = manifest.competencies.find(one => one.id === result.competencyId);
+              if (!competency) return null;
+              return (
+                <li key={result.competencyId}>
+                  <strong>{loc(competency.title)}</strong>{' — '}
+                  {pathCopy[`paths.competency.${result.state}`]}
+                  {result.score !== null && result.assessedItems > 0 && (
+                    <> · {pathCopy['paths.diagnosticItems'].replace('{percent}', String(Math.round(result.score * 100))).replace('{count}', String(result.assessedItems))}</>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="lp-note">{pathCopy['paths.diagnosticRetakeNote']}</p>
+          {reachable && manifest.diagnosticActivityId && (
+            <Link to={activityHref(pathId, diagnosticModule.id, manifest.diagnosticActivityId)}>
+              {pathCopy['paths.openDiagnostic']}
+            </Link>
+          )}
         </section>
       )}
 
@@ -511,6 +545,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // result instead of grading twice.
   const attempt = useRef<Attempt | null>(null);
   const [attemptUsedUp, setAttemptUsedUp] = useState(false);
+  const [briefChanged, setBriefChanged] = useState(false);
   // The autosave for the open activity: one save in flight at a time, the
   // revision the next one expects, and the newest content waiting behind it.
   const drafts = useRef<DraftChannel | null>(null);
@@ -524,6 +559,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     // editor's source, a form's fields, a check's answers) carries into the
     // next activity or is autosaved as its draft.
     setOpen(null);
+    setBriefChanged(false);
     setResult(null);
     setAttemptUsedUp(false);
     attempt.current = null;
@@ -646,10 +682,26 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     setError(null);
   }, [open]);
 
+  const refreshBrief = async () => {
+    const current = attempt.current;
+    if (!open || !enrollment || !current || busy) return;
+    setBusy(true);
+    try {
+      const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
+      if (attempt.current !== current) return;
+      attempt.current = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
+      setOpen(fresh);
+      setBriefChanged(false);
+      setError(null);
+      setResult(null);
+    } catch (caught) { setError(friendlyError(caught)); }
+    finally { setBusy(false); }
+  };
+
   const submit = useCallback(
     async (payload: Record<string, unknown>) => {
       const current = attempt.current;
-      if (!open || !enrollment || !current) return;
+      if (!open || !enrollment || !current || briefChanged) return;
       const expired = Date.parse(current.expiresAt) <= Date.now();
       // A check's answers index its own attempt's order, so a check whose
       // attempt is used up is dealt again rather than resubmitted.
@@ -662,10 +714,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       try {
         let target = current;
         if (current.usedUp || expired) {
-          const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
+          const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id, previousSession: current.session });
           if (attempt.current !== current) return;
           target = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
           attempt.current = target;
+          if (fresh.needsBriefReview) {
+            setOpen(fresh);
+            setBriefChanged(true);
+            setError(t('coding.verdict.taskChanged'));
+            return;
+          }
         }
         const graded = await submitActivity({
           session: target.session,
@@ -677,6 +735,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         if (attempt.current !== target) return;
         setAttemptUsedUp(false);
         setResult(graded);
+        if (!graded.replayed && graded.xpAwarded > 0) {
+          announceVerifiedQuestXp(graded.xpAwarded);
+          void syncXpWithServer({ announceRankUp: true });
+        }
         if (graded.state === 'verified_pass') {
           capturePathEvent('learning_path_activity_verified', {
             pathId,
@@ -695,12 +757,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           attempt.current.usedUp = true;
           setAttemptUsedUp(true);
         }
+        if (caught instanceof ApiError && caught.code === 'task_changed') setBriefChanged(true);
         setError(friendlyError(caught));
       } finally {
         setBusy(false);
       }
     },
-    [open, enrollment, retry, queryClient, userId, pathId],
+    [open, enrollment, retry, queryClient, userId, pathId, briefChanged, t],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
@@ -805,6 +868,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
                 !
               </span>
               <span>{error}</span>
+              {briefChanged && <Button className="lp-brief-refresh" variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
             </div>
           )}
 
@@ -847,10 +911,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {open?.code && (
+          {open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed' && <CodingCompletion
+            xp={result.xpAwarded} complexity={result.complexity} backHref={moduleHref(pathId,module.id)}
+            nextHref={result.nextActivityId && result.nextActivityId !== open.activity.id ? (() => {
+              const nextModule = entry.manifest.modules.find(one => one.activities.some(activity => activity.id === result.nextActivityId));
+              return nextModule ? activityHref(pathId,nextModule.id,result.nextActivityId!) : undefined;
+            })() : undefined} />}
+          {open?.code && !(result?.state === 'verified_pass' && result.code?.outcome === 'passed') && (
             <CodeActivity
               key={open.activity.id}
               code={open.code}
+              submitBlocked={briefChanged}
               draft={draft}
               result={result}
               busy={busy}
@@ -874,7 +945,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {result && (
+          {result && !(open?.code && result.state === 'verified_pass' && result.code?.outcome === 'passed') && (
             <section className="lp-card lp-section">
               <div className="lp-completion__line">
                 <h2>{t('paths.result')}</h2>

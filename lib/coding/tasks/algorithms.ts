@@ -8,7 +8,8 @@
 // English is the source of truth; Czech copy lives in algorithms.cs.ts.
 //
 // These are practice rather than a curriculum: the track carries no Learn
-// level of its own and no tier gate, so every challenge is open from the start.
+// level of its own. Access follows shared/tiers.ts and server issuance;
+// each task retains its authored tier.
 //
 // Every prompt ends with the cost the interviewer is listening for, because
 // "it works" and "it works in linear time" are different answers.
@@ -25,7 +26,7 @@ export const ALGORITHM_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['map-set', 'objects'],
     title: 'Two sum',
-    prompt: 'Write `twoSum(numbers, target)`, returning the indices of the two values that add up to `target`, smaller index first. `twoSum([2, 7, 11, 15], 9)` gives `[0, 1]`; `twoSum([3, 2, 4], 6)` gives `[1, 2]`. An index is never paired with itself, and an array with no such pair — an empty one included — gives `[]`. Target: O(n) time and O(n) space, so one pass that remembers what it has seen rather than two nested loops.',
+    prompt: "Write `twoSum(numbers, target)`, returning the indices of the two values that add up to `target`, smaller index first. `twoSum([2, 7, 11, 15], 9)` gives `[0, 1]`; `twoSum([3, 2, 4], 6)` gives `[1, 2]`. An index is never paired with itself, and an array with no such pair \u2014 an empty one included \u2014 gives `[]`. Target: O(n) time and O(n) space, so one pass that remembers what it has seen rather than two nested loops. Selection rule: choose the pair with the smallest right index; when several left indices complete that pair, choose the smallest left index. Keep the first stored index for each value. For example, [1,2,3,4] with target 5 gives [1,2], and [1,1,2] with target 3 gives [0,2]. Domain: a dense ordinary readonly array of at most 1000 safe integers in [-1000000000,1000000000], possibly frozen, without accessors/proxies; target is an integer in [-2000000000,2000000000]. These bounds make addition/subtraction exact. Preserve input values/order and return a fresh mutable pair or empty array on every call. n is 1 + array length, with average constant Map operations; no index can be reused.",
     starter: `const twoSum = (numbers, target) => {
 
 };
@@ -44,14 +45,16 @@ console.log(twoSum([2, 7, 11, 15], 9));
 };`,
     hints: ['For each value you only need to ask one question: has the number that completes the target already gone past? A Map from value to index answers it without a second loop.'],
     approach: [
-      'Walk the array once, keeping a Map from each value you have passed to the index it sat at.',
+      'Walk the array once, keeping a Map from each value you have passed to the first index it sat at.',
       'At every value, work out what its partner would have to be — the target minus this value — and look that partner up in the Map.',
       'A hit means the partner came earlier, so its stored index is the smaller one and goes first.',
-      'Only store the current value after the lookup, or a value whose double is the target would match itself.',
+      'Only store a new value after the lookup, retaining its first index; otherwise duplicates can replace the earliest left partner or match themselves.',
     ],
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      { call: "twoSum([1, 2, 3, 4], 5)", expected: [1, 2], label: "the smallest right index completes the first pair" },
+      { call: "twoSum([1, 1, 2], 3)", expected: [0, 2], label: "keep the first left index for duplicate values" },
       { call: 'twoSum([2, 7, 11, 15], 9)', expected: [0, 1] },
       { call: 'twoSum([3, 2, 4], 6)', expected: [1, 2] },
       { call: 'twoSum([], 5)', expected: [], label: 'empty input', edge: true },
@@ -73,7 +76,7 @@ console.log(twoSum([2, 7, 11, 15], 9));
     tier: 2,
     focus: ['map-set', 'sort', 'strings'],
     title: 'Group anagrams',
-    prompt: 'Write `groupAnagrams(words)`, gathering words that are rearrangements of one another. `groupAnagrams(["eat", "tea", "tan", "ate", "nat", "bat"])` gives `[["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]`. Two words belong together when their sorted letters match, so build that key once per word and use it in a Map. Groups come out in the order their first word appeared and each group keeps its words in input order, so the answer is never ambiguous. An empty list gives `[]`. Target: O(n · k log k) time for n words of length k, and O(n · k) space.',
+    prompt: "Write `groupAnagrams(words)`, gathering words that are rearrangements of one another. `groupAnagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"])` gives `[[\"eat\", \"tea\", \"ate\"], [\"tan\", \"nat\"], [\"bat\"]]`. Two words belong together when their sorted letters match, so build that key once per word and use it in a Map. Groups come out in the order their first word appeared and each group keeps its words in input order, so the answer is never ambiguous. An empty list gives `[]`. Target: O(n \u00b7 k log k) time for n words of length k, and O(n \u00b7 k) space. Domain: a dense ordinary readonly array of at most 1000 primitive well-formed Unicode strings, each at most 100 UTF-16 units, possibly frozen, with no accessors/proxies. A letter here is one Unicode code point, not one UTF-16 unit or an entire grapheme; use Array.from(word) or [...word], not split(\"\"). Compare exact case/text without normalization. n=max(1,word count) and k=max(2,longest code-point count), so the stated comparison-sort bound includes empty and one-character words. Compute each word key once; append to an existing group without copying its accumulated contents every time. Preserve input order/values and return fresh mutable outer/group arrays across calls, including empty input. An alternative exact frequency signature is valid too.",
     starter: `const groupAnagrams = words => {
 
 };
@@ -93,7 +96,7 @@ console.log(groupAnagrams(["eat", "tea", "tan"]));
 };`,
     hints: ['Anagrams differ only in order, so anything that erases order — sorting the letters — turns every member of a group into the same key.'],
     approach: [
-      'Split a word into characters, sort them and join them back: every anagram of that word produces the same string.',
+      'Use Array.from(word) or [...word] to collect full iterated characters, sort them and join them back; do not split supplementary characters into UTF-16 halves.',
       'Keep a Map from that key to the list of words that produced it.',
       'A Map remembers insertion order, so reading its values back gives the groups in the order their first word appeared, and pushing keeps each group in input order.',
     ],
@@ -121,7 +124,7 @@ console.log(groupAnagrams(["eat", "tea", "tan"]));
     tier: 2,
     focus: ['map-set', 'strings'],
     title: 'First non-repeating character',
-    prompt: 'Write `firstUniqueChar(text)`, returning the first character that appears exactly once, or `null` when every character repeats. `firstUniqueChar("swiss")` gives `"w"`; `firstUniqueChar("aabb")` gives `null`. Count every character first, then walk the string a second time in order — the first character whose count is one is the answer, and only a second pass can know that. Characters compare exactly, so case and spaces count, and an empty string gives `null`. Target: O(n) time and O(k) space for k distinct characters.',
+    prompt: "Write `firstUniqueChar(text)`, returning the first character that appears exactly once, or `null` when every character repeats. `firstUniqueChar(\"swiss\")` gives `\"w\"`; `firstUniqueChar(\"aabb\")` gives `null`. Count each character, then find the first character whose total count is one. A second ordered scan of the string is a simple way to do that. Characters compare exactly, so case and spaces count, and an empty string gives `null`. Target: O(n) time and O(k) space for k distinct characters. text is primitive text of at most 1000 UTF-16 units. A character is one string-iterator element (a Unicode code point or unpaired surrogate), not one UTF-16 unit or an entire grapheme. Preserve exact case, spaces and combining marks without normalization; return the full first unique iterated character. A frequency Map followed by first-seen Map-entry iteration is also valid; a second traversal of the source string is not mandatory. n is 1 + iterated character count and k is 1 + distinct character count with average constant Map operations. Keep only counts/ordered distinct keys for O(k) auxiliary space, rather than copying the entire source into an array.",
     starter: `const firstUniqueChar = text => {
 
 };
@@ -167,7 +170,7 @@ console.log(firstUniqueChar("swiss"));
     tier: 3,
     focus: ['map-set', 'sort'],
     title: 'Top K frequent elements',
-    prompt: 'Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort — bucketing by count reaches O(n) if you want it.',
+    prompt: "Write `topKFrequent(numbers, k)`, returning the `k` most frequent values, most frequent first. `topKFrequent([1, 1, 1, 2, 2, 3], 2)` gives `[1, 2]`. Values that tie on count keep the order in which they first appeared, so there is exactly one right answer. A `k` of zero gives `[]`, a `k` past the number of distinct values gives all of them, and an empty array gives `[]`. Target: O(n log n) time with a count map and a sort \u2014 bucketing by count reaches O(n) if you want it. Domain: a dense ordinary readonly array of at most 1000 primitive Numbers, possibly frozen, with no accessors/proxies; all Number values are valid, including fractions, NaN, infinities and signed zero. Use Map/SameValueZero classes; returned Map keys canonicalize zero to +0. k is an integer from 0 through 2000. Preserve inputs and return a fresh mutable array every call, including k=0 and empty input. Equal frequencies retain the first appearance of each distinct key, without numeric-value tie sorting. n=max(2,input length), and O(n) auxiliary space is allowed; average constant Map operations and a comparison-sort model give the stated bound, while bucketing is also valid.",
     starter: `const topKFrequent = (numbers, k) => {
 
 };
@@ -212,7 +215,7 @@ console.log(topKFrequent([1, 1, 1, 2, 2, 3], 2));
     tier: 3,
     focus: ['map-set'],
     title: 'Longest consecutive sequence',
-    prompt: 'Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive whole numbers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space.',
+    prompt: "Write `longestConsecutive(numbers)`, returning the length of the longest run of consecutive integers the array contains, in any order. `longestConsecutive([100, 4, 200, 1, 3, 2])` gives 4, for 1, 2, 3, 4. Sorting would be O(n log n); put the values in a `Set` instead and start counting only from a value whose predecessor is missing, which makes every run walked exactly once. Duplicates count once and an empty array gives 0. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 safe integers in [-1000000000,1000000000], possibly frozen, without accessors/proxies. Only exact +1 adjacency counts; duplicates and -0/+0 represent one integer. Leave input values and order unchanged. These bounds make predecessor/successor arithmetic exact and advancing a run safe. n is 1 + input length under average constant Set/Map operations. The nested loops are amortized linear because only starts walk a run; an interval-endpoint Map merge with equivalent behavior is valid too.",
     starter: `const longestConsecutive = numbers => {
 
 };
@@ -263,7 +266,7 @@ console.log(longestConsecutive([100, 4, 200, 1, 3, 2]));
     tier: 1,
     focus: ['two-pointer', 'strings'],
     title: 'Valid palindrome',
-    prompt: 'Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not a letter or a digit is ignored and case is set aside. `isPalindrome("A man, a plan, a canal: Panama")` gives `true`; `isPalindrome("race a car")` gives `false`. Digits count as content, so `"0P"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy.',
+    prompt: "Write `isPalindrome(text)`, deciding whether the text reads the same both ways once everything that is not an ASCII letter or an ASCII digit is ignored and ASCII case is set aside. `isPalindrome(\"A man, a plan, a canal: Panama\")` gives `true`; `isPalindrome(\"race a car\")` gives `false`. Digits count as content, so `\"0P\"` is not a palindrome. An empty string, and a string of punctuation alone, both are. Target: O(n) time, and O(1) extra space if you walk a pointer in from each end instead of building a cleaned copy. The exercise uses ASCII letters A-Z/a-z and ASCII digits 0-9 only; all other UTF-16 units, including non-ASCII letters/digits, emoji and combining marks, are ignored. Classify the original characters before converting retained ASCII letters to lowercase: Unicode characters such as the Kelvin sign must not become new ASCII content through lowercasing. No Unicode normalization or full-language case folding is intended. text is a primitive string of at most 1000 UTF-16 units; n is 1 + that length. Return an actual boolean without retaining cross-call state. The pointer solution meets O(1) auxiliary space; a cleaned-copy solution is behaviorally valid and O(n) time, but uses O(n) auxiliary space.",
     starter: `const isPalindrome = text => {
 
 };
@@ -293,6 +296,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      { call: "isPalindrome(\"\u212aa\")", expected: true, label: "filter original ASCII content before folding case", edge: true },
       { call: 'isPalindrome("A man, a plan, a canal: Panama")', expected: true },
       { call: 'isPalindrome("race a car")', expected: false },
       { call: 'isPalindrome("")', expected: true, label: 'empty input is a palindrome', edge: true },
@@ -314,7 +318,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     tier: 2,
     focus: ['strings', 'split', 'join'],
     title: 'Reverse words in a string',
-    prompt: 'Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords("  the sky   is blue ")` gives `"blue is sky the"`. Leading, trailing and repeated spaces all disappear, so splitting on a single space is not enough — trim first and split on runs of whitespace, or filter the empty pieces out. The letters inside a word are not touched, and a string of spaces alone gives `""`. Target: O(n) time and O(n) space.',
+    prompt: "Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords(\"  the sky   is blue \")` gives `\"blue is sky the\"`. Use runs of JavaScript whitespace as delimiters. Trim first, or discard empty edge pieces; splitting only on literal spaces misses other whitespace. The letters inside a word are not touched, and a string of spaces alone gives `\"\"`. Target: O(n) time and O(n) space. text is primitive text of at most 1000 UTF-16 units. Delimiters are exactly JavaScript /\\s/ characters, including tabs, line breaks, nonbreaking spaces and BOM; zero-width space and U+0085 are not delimiters. A word is a maximal nonempty run of non-whitespace units and its exact text/case is preserved, including Unicode or unpaired surrogates. Join reversed words with one ASCII space and keep no cross-call state. n is 1 + text UTF-16 length; scanning from right to left is another valid linear approach.",
     starter: `const reverseWords = text => {
 
 };
@@ -327,12 +331,12 @@ console.log(reverseWords("  the sky   is blue "));
 
   return words.reverse().join(" ");
 };`,
-    hints: ['Splitting "a  b" on a single space leaves an empty string between the words. Split on a run of whitespace instead, or drop the empty pieces before joining.'],
+    hints: ["Use a whitespace-run split such as /\\s+/ or a non-whitespace match such as /\\S+/g. Without trimming, drop empty edge pieces. Splitting only on a literal space misses tabs and line breaks."],
     approach: [
       'Trim the ends so a leading or trailing space cannot become an empty word.',
       'Split on one-or-more whitespace characters rather than on a single space, which collapses the runs between words.',
       'Reverse the list of words and join it with a single space.',
-      'A string that is only whitespace trims to nothing and gives an empty list, which joins to the empty string.',
+      'Whitespace-only input returns an empty string. After trimming, split may leave one empty placeholder that joins back to empty; filtering empty pieces is another valid approach.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -358,7 +362,7 @@ console.log(reverseWords("  the sky   is blue "));
     tier: 1,
     focus: ['slice', 'for'],
     title: 'Chunk an array',
-    prompt: 'Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` — the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space.',
+    prompt: "Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` \u2014 the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 stable opaque items with standard array methods, possibly frozen, without accessors/proxies. Preserve exact values/references, including undefined, null, Symbols, functions and signed zero; do not clone or inspect item fields. size may be any value: accept only a primitive finite Number for which Number.isInteger(size) is true and size>0, with no coercion. A huge finite integer size is valid and gives one short piece for nonempty input. Return a fresh mutable outer array and fresh independent mutable piece arrays on every call; empty/invalid-size results are fresh too. n is 1 + input length and output reference copies are included in O(n) space.",
     starter: `const chunk = (items, size) => {
 
 };
@@ -386,6 +390,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "chunk([1, 2], \"2\")", "expected": [], "label": "a numeric string is not a Number size", "edge": true},
       { call: 'chunk([1, 2, 3, 4, 5], 2)', expected: [[1, 2], [3, 4], [5]] },
       { call: 'chunk([1, 2, 3, 4], 2)', expected: [[1, 2], [3, 4]] },
       { call: 'chunk([], 3)', expected: [], label: 'empty input', edge: true },
@@ -407,7 +412,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ['two-pointer', 'while'],
     title: 'Merge two sorted arrays',
-    prompt: 'Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space — sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know.',
+    prompt: "Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space \u2014 sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know. Domain: dense ordinary readonly arrays of at most 1000 finite Numbers each, within [-1000000000,1000000000] and already nondecreasing, possibly frozen, without accessors/proxies. Fractions and signed zero are valid; NaN is outside this ordering domain. Preserve exact values, duplicates and both inputs, including when they are the same array. When values compare equal take from a first, preserving order within each side and the signs of zeros. Return a fresh mutable array every call, including empty/one-sided inputs. n is 1 + a.length and m is 1 + b.length; a generator-based nonmutating merge is also valid, with no sort call.",
     starter: `const mergeSorted = (a, b) => {
 
 };
@@ -427,7 +432,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
   // one side is spent; append the rest of the other
   return merged;
 };`,
-    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, exactly one array has values left — append them as they are, since they are already in order.'],
+    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, at most one array has values left — append them as they are, since they are already in order.'],
     approach: [
       'Keep an index into each array and build a third array to write into.',
       'While both indices are still inside their array, compare the two heads and push the smaller one, advancing only the pointer you took from.',
@@ -460,7 +465,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
     tier: 3,
     focus: ['two-pointer', 'for'],
     title: 'Rotate an array in place',
-    prompt: 'Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in — not a copy — and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately.',
+    prompt: "Write `rotate(numbers, k)`, moving every value `k` places to the right in the array that was passed in \u2014 not a copy \u2014 and returning that same array. `rotate([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A `k` larger than the length wraps around, a `k` of zero leaves the array alone, and an empty array stays empty. Target: O(n) time and O(1) extra space, which the three-reversal trick gives you: reverse the whole array, then reverse the first `k` and the rest separately. Input is a dense mutable array of at most 2000 values; treat each value as opaque and preserve object identity, duplicates, undefined and signed zero. k is any safe-integer Number; negative k rotates left, so rotate([1,2,3], -1) gives [2,3,1]. Preserve the length and return the exact input array even for an empty input or full turn. n is numbers.length. The three-reversal method is one option; a cycle-based rotation is also valid. Correct copying solutions can pass correctness, but the space goal is constant auxiliary storage.",
     starter: `const rotate = (numbers, k) => {
 
 };
@@ -481,7 +486,7 @@ console.log(values);
 };`,
     hints: ['Reversing the whole array puts the last k values at the front, but backwards. Reversing each of the two pieces separately then puts them the right way round.'],
     approach: [
-      'Take k modulo the length first, so a k past the end wraps and an empty array never divides by zero.',
+      'Return the input immediately when it is empty. Otherwise normalize with ((k % length) + length) % length, so negative and oversized steps wrap safely.',
       'Write a helper that reverses a stretch of the array in place by swapping the two ends and walking inwards.',
       'Reverse the whole array, which brings the last k values to the front in reverse order.',
       'Reverse the first k values, then reverse the rest; both pieces come out in their original order, now rotated.',
@@ -490,6 +495,7 @@ console.log(values);
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "rotate([1, 2, 3], -1)", "expected": [2, 3, 1], "label": "a negative step rotates left", "edge": true},
       { call: '(() => { const values = [1, 2, 3, 4, 5]; const returned = rotate(values, 2); return [values, returned === values]; })()', expected: [[4, 5, 1, 2, 3], true], label: 'it rotates in place and returns the same array' },
       { call: '(() => { const values = [1, 2]; rotate(values, 3); return values; })()', expected: [2, 1] },
       { call: '(() => { const values = []; rotate(values, 2); return values; })()', expected: [], label: 'empty input', edge: true },
@@ -511,7 +517,7 @@ console.log(values);
     tier: 1,
     focus: ['reduce', 'for'],
     title: 'Missing number',
-    prompt: 'Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 — the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space.',
+    prompt: "Write `missingNumber(numbers)`, returning the one value missing from `0` through `n`, where the array holds `n` distinct numbers out of that range. `missingNumber([3, 0, 1])` gives 2, and `missingNumber([0, 1])` gives 2 \u2014 the missing value may be `n` itself, which is the case a loop over the array alone will miss. An empty array gives 0. Compare the total the full range should have with the total the array actually has. Target: O(n) time and O(1) space. Input is a dense array of at most 2000 distinct integer Numbers, all in 0..n with exactly one absent. It may be frozen and must stay unchanged. These bounds keep the sum and 32-bit XOR alternatives exact; validation, coercion and duplicate handling are not part of this task. n is numbers.length. The sum is one approach; a correct XOR scan is also accepted.",
     starter: `const missingNumber = numbers => {
 
 };
@@ -557,7 +563,7 @@ console.log(missingNumber([3, 0, 1]));
     tier: 3,
     focus: ['two-pointer', 'map-set', 'strings'],
     title: 'Longest substring without repeating characters',
-    prompt: 'Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring("abcabcbb")` gives 3, for `"abc"`; `lengthOfLongestSubstring("bbbbb")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position — but never backwards, which is what `"abba"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters.',
+    prompt: "Write `lengthOfLongestSubstring(text)`, returning the length of the longest stretch of neighbouring characters with no repeat. `lengthOfLongestSubstring(\"abcabcbb\")` gives 3, for `\"abc\"`; `lengthOfLongestSubstring(\"bbbbb\")` gives 1. Slide a window and remember where each character last sat; when one repeats, move the window start past that position \u2014 but never backwards, which is what `\"abba\"` is there to catch. An empty string gives 0 and spaces count as characters. Target: O(n) time and O(k) space for k distinct characters. A character means one value from the JavaScript string iterator (for...of): a Unicode code point, including a lone surrogate as one value. Count length in those iterator values, not UTF-16 units or displayed grapheme clusters. Do not normalize or fold case; combining marks and spaces count separately. Input has at most 4000 UTF-16 units; n is the number of iterator values and k the number of distinct values. For example, lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\") is 2. An equivalent moving Set window is also valid, and each edge advances only forward.",
     starter: `const lengthOfLongestSubstring = text => {
 
 };
@@ -565,17 +571,7 @@ console.log(missingNumber([3, 0, 1]));
 // Scratch pad — change this and press Run.
 console.log(lengthOfLongestSubstring("abcabcbb"));
 `,
-    skeleton: `const lengthOfLongestSubstring = text => {
-  const lastSeen = new Map(); // character -> the index it last sat at
-  let start = 0;
-  let longest = 0;
-
-  for (let end = 0; end < text.length; end += 1) {
-    // move start past a repeat, then measure the window
-  }
-
-  return longest;
-};`,
+    skeleton: "const lengthOfLongestSubstring = text => {\n  const lastSeen = new Map(); // iterator character -> last position\n  let start = 0, end = 0, longest = 0;\n  for (const character of text) {\n    // move start past a repeat, then measure the window\n    end += 1;\n  }\n  return longest;\n};",
     hints: ['In "abba", by the time the second "a" arrives the window has already moved past the first one. Only move the start forward — take the larger of where it is and just past the repeat.'],
     approach: [
       'Keep a Map from each character to the index it was last seen at, and an index where the current window starts.',
@@ -586,6 +582,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "lengthOfLongestSubstring(\"\ud83d\ude00\ud83d\ude03\")", "expected": 2, "label": "count iterator characters, not UTF-16 units", "edge": true},
       { call: 'lengthOfLongestSubstring("abcabcbb")', expected: 3 },
       { call: 'lengthOfLongestSubstring("bbbbb")', expected: 1 },
       { call: 'lengthOfLongestSubstring("")', expected: 0, label: 'empty input', edge: true },
@@ -607,7 +604,7 @@ console.log(lengthOfLongestSubstring("abcabcbb"));
     tier: 2,
     focus: ['two-pointer', 'for'],
     title: 'Max sum subarray of size K',
-    prompt: 'Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n · k).',
+    prompt: "Write `maxSumSubarray(numbers, k)`, returning the largest sum of any `k` neighbouring values. `maxSumSubarray([2, 1, 5, 1, 3, 2], 3)` gives 9, for `5 + 1 + 3`. Add the first window once, then slide it: add the value coming in and subtract the one going out, so each value is touched twice rather than `k` times. When the array is shorter than `k`, or `k` is not a positive whole number, give `null`. Target: O(n) time and O(1) space; re-adding every window would be O(n \u00b7 k). Input is a dense array of at most 2000 integer Numbers in [-1000000,1000000], possibly frozen, and must stay unchanged. These bounds make every window and sliding update exact; fractional values and nonfinite values are outside this task. k may be any value, but only a positive primitive Number integer not greater than numbers.length is usable; otherwise return null without coercion or reading array elements. n is numbers.length. Correctness does not require one particular loop syntax.",
     starter: `const maxSumSubarray = (numbers, k) => {
 
 };
@@ -658,7 +655,7 @@ console.log(maxSumSubarray([2, 1, 5, 1, 3, 2], 3));
     tier: 3,
     focus: ['two-pointer', 'while'],
     title: 'Container with most water',
-    prompt: 'Write `maxArea(heights)`, returning the most water two of the lines can hold between them: the distance between their positions times the shorter of the two heights. `maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])` gives 49. Start with a pointer at each end and always move the shorter one inwards — moving the taller one can only lose width without ever gaining height, which is why one pass is enough. Fewer than two lines hold nothing, so give 0. Target: O(n) time and O(1) space; every pair would be O(n²).',
+    prompt: "Write `maxArea(heights)`, returning the most water two of the lines can hold between them: the distance between their positions times the shorter of the two heights. `maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])` gives 49. Start with a pointer at each end and always move the shorter one inwards \u2014 moving the taller one can only lose width without ever gaining height, which is why one pass is enough. Fewer than two lines hold nothing, so give 0. Target: O(n) time and O(1) space; every pair would be O(n\u00b2). Input is a dense array of at most 2000 finite Number heights in 0..1000000, including fractional heights and signed zero. It may be frozen and must stay unchanged. Use ordinary Number multiplication for each candidate area, with no extra rounding; either zero sign is equivalent. The line positions are consecutive array indices, so width is right - left, not an inclusive count. When heights tie either pointer may move. n is heights.length.",
     starter: `const maxArea = heights => {
 
 };
@@ -708,7 +705,7 @@ console.log(maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7]));
     tier: 2,
     focus: ['two-pointer', 'for'],
     title: 'Move zeroes to the end',
-    prompt: 'Write `moveZeroes(numbers)`, moving every zero to the end of the array that was passed in while the other values keep their order, and returning that same array. `moveZeroes([0, 1, 0, 3, 12])` gives `[1, 3, 12, 0, 0]`. Keep a write position, copy each non-zero value into it, then fill whatever is left with zeros. An array of zeros alone, and an empty array, both come back unchanged. Target: O(n) time and O(1) extra space — building a filtered copy and reassigning would not change the caller\'s array at all.',
+    prompt: "Write `moveZeroes(numbers)`, moving every zero to the end of the array that was passed in while the other values keep their order, and returning that same array. `moveZeroes([0, 1, 0, 3, 12])` gives `[1, 3, 12, 0, 0]`. Keep a write position, copy each non-zero value into it, then fill whatever is left with zeros. An array of zeros alone, and an empty array, both come back unchanged. Target: O(n) time and O(1) extra space \u2014 building a filtered copy and reassigning would not change the caller's array at all. Input is a dense mutable array of at most 2000 primitive Numbers. NaN, infinities, fractions and signed zero are valid. A zero means value === 0, so both signs move to the end and either sign in that tail is acceptable. NaN and every other nonzero value keep their original order; truthiness is not the zero test. Preserve the exact array identity, length and nonzero numeric values. The empty/all-zero promise is numeric, without preserving zero signs. n is numbers.length; a stable in-place swap or block-copy approach is also valid.",
     starter: `const moveZeroes = numbers => {
 
 };
@@ -738,6 +735,7 @@ console.log(values);
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "(() => {const values=[NaN,0,1];moveZeroes(values);return [Number.isNaN(values[0]),values[1],values[2]];})()", "expected": [true, 1, 0], "label": "NaN is a nonzero Number"},
       { call: '(() => { const values = [0, 1, 0, 3, 12]; const returned = moveZeroes(values); return [values, returned === values]; })()', expected: [[1, 3, 12, 0, 0], true], label: 'it moves them in place and returns the same array' },
       { call: '(() => { const values = [1, 2, 3]; moveZeroes(values); return values; })()', expected: [1, 2, 3] },
       { call: '(() => { const values = []; moveZeroes(values); return values; })()', expected: [], label: 'empty input', edge: true },
@@ -759,7 +757,7 @@ console.log(values);
     tier: 2,
     focus: ['push', 'pop', 'map-set'],
     title: 'Valid parentheses',
-    prompt: 'Write `isValid(text)`, deciding whether every bracket is closed by the matching kind in the right order, across `()`, `[]` and `{}`. `isValid("{[]()}")` gives `true`; `isValid("([)]")` gives `false`, because the brackets close out of order even though the counts match — which is why counting cannot do this job. Push each opening bracket onto a stack, and on a closing one check the top matches before popping it; anything still on the stack at the end means something was never closed. An empty string is valid, and the string holds nothing but brackets. Target: O(n) time and O(n) space.',
+    prompt: "Write `isValid(text)`, deciding whether every bracket is closed by the matching kind in the right order, across `()`, `[]` and `{}`. `isValid(\"{[]()}\")` gives `true`; `isValid(\"([)]\")` gives `false`, because the brackets close out of order even though the counts match \u2014 which is why counting cannot do this job. Push each opening bracket onto a stack, and on a closing one check the top matches before popping it; anything still on the stack at the end means something was never closed. An empty string is valid, and the string holds nothing but brackets. Target: O(n) time and O(n) space. `text` is a primitive string of at most 20,000 ASCII bracket characters from ()[]{}; no other input needs validation. n is text.length. The return value is a Boolean. There is no fixed nesting cap: every depth fitting that length must work.",
     starter: `const isValid = text => {
 
 };
@@ -808,7 +806,7 @@ console.log(isValid("{[]()}"));
     tier: 3,
     focus: ['sort', 'for'],
     title: 'Merge intervals',
-    prompt: 'Write `mergeIntervals(intervals)`, merging every group of `[start, end]` ranges that overlap or touch and returning the result ordered by start. `mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])` gives `[[1, 6], [8, 10], [15, 18]]`, and `[[1, 4], [4, 5]]` merges into `[[1, 5]]` because touching counts. Sort by start first, then walk once, extending the last range whenever the next one begins at or before its end. `sort` reorders in place, so copy before sorting — the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space.',
+    prompt: "Write `mergeIntervals(intervals)`, merging every group of `[start, end]` ranges that overlap or touch and returning the result ordered by start. `mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])` gives `[[1, 6], [8, 10], [15, 18]]`, and `[[1, 4], [4, 5]]` merges into `[[1, 5]]` because touching counts. Sort by start first, then walk once, extending the last range whenever the next one begins at or before its end. `sort` reorders in place, so copy before sorting \u2014 the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2,000 closed [start,end] ranges with finite Number endpoints in [-1000000000,1000000000] and start <= end; fractions are valid. A zero-width range retains its point and merges when it touches or lies inside another range. The input array and pairs may be frozen and must remain unchanged. Return a fresh mutable outer array containing fresh mutable pairs; no returned pair may alias an input pair or another output pair. Either sign of a zero output endpoint is equivalent; preserve input zero signs. n is intervals.length.",
     starter: `const mergeIntervals = intervals => {
 
 };
@@ -836,6 +834,7 @@ console.log(mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]));
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "(() => {const source=[[0,1]],result=mergeIntervals(source);result[0][1]=2;return source[0][1];})()", "expected": 1, "label": "result pairs do not alias input pairs"},
       { call: 'mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]])', expected: [[1, 6], [8, 10], [15, 18]] },
       { call: 'mergeIntervals([[1, 4], [4, 5]])', expected: [[1, 5]], label: 'ranges that only touch still merge' },
       { call: 'mergeIntervals([])', expected: [], label: 'empty input', edge: true },
@@ -857,7 +856,7 @@ console.log(mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]));
     tier: 3,
     focus: ['sort', 'objects'],
     title: 'Sort by several keys',
-    prompt: 'Write `sortTasks(tasks)`, returning a new array of `{ name, priority }` objects ordered by `priority` from high to low and, where two share a priority, by `name` from A to Z. `sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])` puts the priority-10 task first. Pass a comparator: the default `sort` compares values as text, which orders 100, 10, 2 as 10, 100, 2. Return the difference for the numbers and fall through to the names only when it is zero. `sort` reorders in place, so copy first — the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space.',
+    prompt: "Write `sortTasks(tasks)`, returning a new array of `{ name, priority }` objects ordered by `priority` from high to low and, where two share a priority, by `name` in ascending JavaScript string order. `sortTasks([{ name: \"b\", priority: 2 }, { name: \"a\", priority: 10 }])` puts the priority-10 task first. Pass a comparator: the default `sort` compares values as text, which orders 100, 10, 2 as 10, 100, 2. Return the difference for the numbers and fall through to the names only when it is zero. `sort` reorders in place, so copy first \u2014 the array passed in is never changed. An empty list gives `[]`. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2,000 plain or null-prototype records with own name and priority fields. name is a primitive string of at most 80 UTF-16 code units; empty names, mixed case, Unicode and lone surrogates are valid. priority is a finite Number in [-1000000000,1000000000], including fractions and signed zero. Compare names with JavaScript < and > (raw UTF-16 order), without locale rules, case folding or normalization. A complete priority/name tie preserves input order. Return a fresh mutable array of the exact original record objects; input array/records may be frozen and every field, extra payload and identity must stay unchanged. n is tasks.length; the fixed name-length bound keeps string comparison cost bounded.",
     starter: `const sortTasks = tasks => {
 
 };
@@ -874,12 +873,13 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
     approach: [
       'Copy the array with a spread before sorting, since sort reorders the array it is given.',
       'In the comparator, compare the priorities first: right minus left puts the larger priority earlier.',
-      'When that difference is zero the two tie, so compare the names instead — returning a negative number when the left name comes first alphabetically.',
-      'Returning the raw subtraction rather than a hand-rolled -1 / 0 / 1 keeps the comparator honest about equality, which is what preserves the tie for the name to settle.',
+      'When that difference is zero the two tie, so compare the names instead — returning a negative number when the left name comes first in raw UTF-16 order.',
+      "Both a numeric difference and explicit negative/zero/positive results are valid. Return zero for a complete tie so stable sorting keeps the original record order.",
     ],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "sortTasks([{name:\"a\",priority:1},{name:\"Z\",priority:1}]).map(task=>task.name)", "expected": ["Z", "a"], "label": "names use raw JavaScript string order"},
       { call: 'sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])', expected: [{ name: 'a', priority: 10 }, { name: 'b', priority: 2 }] },
       { call: 'sortTasks([{ name: "crawl", priority: 2 }, { name: "parse", priority: 100 }, { name: "store", priority: 10 }])', expected: [{ name: 'parse', priority: 100 }, { name: 'store', priority: 10 }, { name: 'crawl', priority: 2 }], label: 'the default text sort would order these 10, 100, 2' },
       { call: 'sortTasks([])', expected: [], label: 'empty input', edge: true },
@@ -903,7 +903,7 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
     tier: 3,
     focus: ['recursion', 'for-of'],
     title: 'Deep flatten',
-    prompt: 'Write `deepFlatten(items)`, returning every value from an array nested to any depth, in order, without calling `flat` or `flatMap`. `deepFlatten([1, [2, [3, [4]], 5]])` gives `[1, 2, 3, 4, 5]`. Recurse into anything `Array.isArray` accepts and keep everything else as it is — `null`, `false` and `0` are values, not empties, so none of them may be dropped. Empty arrays at any depth simply add nothing. Target: O(n) time in the total number of values and O(d) stack space for depth d.',
+    prompt: "Write `deepFlatten(items)`, returning the non-array values from nested arrays in order, without native `Array.prototype.flat` or `flatMap`. For example, deepFlatten([1, [2, [3, [4]], 5]]) gives [1, 2, 3, 4, 5]. Walk anything Array.isArray accepts and keep every other value unchanged, including undefined, null, false, zero signs, NaN, infinities, BigInts, Symbols, functions and object identities. Non-array values are opaque: do not call them or traverse their properties. Empty arrays add nothing. Use one output accumulator shared by the whole walk rather than copying each child result or the growing output. An iterative stack of array/index frames is also valid. Input is a dense acyclic array structure whose arrays may be frozen or have null prototypes. Shared subarrays are visited once per occurrence, preserving repeated leaf references; cycles through arrays are outside this task. At most 20,000 array slots are visited in total, counting shared arrays again per occurrence. Depth d is at most 64, including the root array. n counts the root plus those visited slots. Preserve every input slot/value/link and return a fresh mutable dense array, including for empty input. Target: O(n) time and O(d) extra space, excluding the output. Native flatten methods are unavailable only in this exercise, in Run, Submit and reused Learn.",
     starter: `const deepFlatten = items => {
 
 };
@@ -912,24 +912,22 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
 console.log(deepFlatten([1, [2, [3, [4]], 5]]));
 `,
     skeleton: `const deepFlatten = items => {
-  const flat = [];
-
-  for (const item of items) {
-    // an array is walked into; anything else is kept
-  }
-
-  return flat;
+  const output = [];
+  const visit = values => {
+    for (let index = 0; index < values.length; index++) {
+      const value = values[index];
+      // visit an array; otherwise push the exact leaf into output
+    }
+  };
+  visit(items);
+  return output;
 };`,
-    hints: ['Array.isArray is the only test that matters — typeof calls an array an object, and a truthiness check would quietly drop 0, false and null.'],
-    approach: [
-      'Build a result array and walk the input one item at a time.',
-      'When the item is an array, flatten it the same way and append everything that comes back.',
-      'When it is not, push it unchanged — decide that with Array.isArray, so a falsy value is still a value.',
-      'An empty array at any depth contributes nothing, which needs no special case at all.',
-    ],
+    hints: ["Array.isArray decides whether to walk deeper. Every other value is pushed unchanged, including undefined, Symbols and opaque objects.", "Share one output array across the whole traversal. Copying a child result at each parent or copying a growing prefix can repeat work."],
+    approach: ["Create one output array and an indexed visit(values) helper.", "For each slot, recurse into an actual array or push the exact non-array value.", "Use numeric indices so dense arrays with null prototypes also work.", "Return the output once the root has been walked. Call frames or explicit array/index frames need O(d) extra space; no child result arrays are copied."],
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "(() => {const leaf={id:1};return deepFlatten([[leaf]])[0]===leaf;})()", "expected": true, "label": "an object leaf keeps its identity"},
       { call: 'deepFlatten([1, [2, [3, [4]], 5]])', expected: [1, 2, 3, 4, 5] },
       { call: 'deepFlatten([[1], [2], [3]])', expected: [1, 2, 3] },
       { call: 'deepFlatten([])', expected: [], label: 'empty input', edge: true },
@@ -951,16 +949,14 @@ console.log(deepFlatten([1, [2, [3, [4]], 5]]));
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Deep clone',
-    prompt: 'Write `deepClone(value)`, returning a copy that shares no array or object with the original, without `JSON.parse(JSON.stringify(...))` and without `structuredClone`. Arrays clone into arrays, plain objects into objects, and everything else — numbers, strings, booleans, `null`, `undefined` — comes back as it is, since there is nothing to copy. Changing a nested value on the copy must leave the original alone. Mind that `typeof null` is `"object"`, so a null check has to come first. Target: O(n) time and O(n) space in the number of values.',
+    prompt: "Write `deepClone(value)`, copying arrays and data objects without native cloning shortcuts. JSON.parse and structuredClone are unavailable in this exercise, in Run, Submit and reused Learn. JSON.stringify remains available for debugging. Copy dense arrays by their numeric slots; copy an object's enumerable own string-keyed data properties. Ignore inherited, nonenumerable and symbol-keyed properties, and non-index array extras. Primitive leaves, including undefined, NaN, infinities, zero signs, BigInts and Symbols, return unchanged; functions are opaque leaves retained by identity. Containers are arrays or ordinary/null-prototype data objects, may be frozen, and must stay unchanged. Arrays may have null prototypes. Do not invoke functions or accessors; input accessors and other exotic objects are outside this task. Return fresh mutable containers with no original-container aliases; output object prototypes may be Object.prototype or null. Preserve an own `__proto__` key as data, without changing a prototype. Distinct source containers must not be merged into one output container. A repeated source container may be cloned independently or retain aliases within the copy; each call must still have entirely fresh output containers. Container cycles are outside this task. Array length is at most 20,000 and container depth at most 64. n counts visited values and inspected own slots, including repeated shared occurrences and ignored metadata, at most 50,000. Target: O(n) time and O(n) space, including the returned copy. A null/type check ends recursion for leaves; an explicit work stack is also valid.",
     starter: `const deepClone = value => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad: inspect the copy without assuming an unfinished function works.
 const source = { a: [1, { b: 2 }] };
-const copy = deepClone(source);
-copy.a[1].b = 99;
-console.log(source.a[1].b, copy.a[1].b);
+console.log(source, deepClone(source));
 `,
     skeleton: `const deepClone = value => {
   if (value === null || typeof value !== "object") return value;
@@ -973,12 +969,13 @@ console.log(source.a[1].b, copy.a[1].b);
     approach: [
       'Return the value untouched when it is null or not an object; that covers every primitive and ends the recursion.',
       'Check Array.isArray next, and build a new array whose items are clones of the originals.',
-      'Otherwise build a new object and clone each own value under the same key.',
-      'Because every branch makes a fresh container, no array or object is ever shared with the original.',
+      "Otherwise clone each enumerable own string key. A null-prototype output object keeps an own `__proto__` key as ordinary data.",
+      'Create a new container for each copied array or object. Return primitive and function leaves unchanged.',
     ],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "(() => {const source=Object.defineProperty({},\"__proto__\",{value:{x:1},enumerable:true});return Object.hasOwn(deepClone(source),\"__proto__\");})()", "expected": true, "label": "an own __proto__ key stays data"},
       { call: '(() => { const source = { a: [1, { b: 2 }] }; const copy = deepClone(source); copy.a[1].b = 99; return [source.a[1].b, copy.a[1].b]; })()', expected: [2, 99], label: 'changing the copy leaves the original alone' },
       { call: '(() => { const source = { a: 1 }; const copy = deepClone(source); return [copy, copy === source]; })()', expected: [{ a: 1 }, false], label: 'equal in value, not the same object' },
       { call: 'deepClone(null)', expected: null, label: 'null is not an object to walk into', edge: true },
@@ -1001,7 +998,7 @@ console.log(source.a[1].b, copy.a[1].b);
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Sum the numbers in a nested object',
-    prompt: 'Write `sumValues(value)`, adding up every number anywhere inside a structure of nested objects and arrays. `sumValues({ a: 1, b: { c: 2, d: [3, 4] } })` gives 10. Walk arrays and objects, add numbers, and ignore strings, booleans, `null` and `undefined` rather than coercing them — `"5"` contributes nothing. `NaN` is a number as far as `typeof` is concerned, so leave it out explicitly or one bad value poisons the total. An empty object or array totals 0. Target: O(n) time and O(d) stack space for depth d.',
+    prompt: "Write `sumValues(value)`, adding up every number anywhere inside a structure of nested objects and arrays. `sumValues({ a: 1, b: { c: 2, d: [3, 4] } })` gives 10. Walk arrays and objects, add numbers, and ignore strings, booleans, `null` and `undefined` rather than coercing them \u2014 `\"5\"` contributes nothing. `NaN` is a number as far as `typeof` is concerned, so leave it out explicitly or one bad value poisons the total. An empty object or array totals 0. Target: O(n) time and O(n) extra space; the call stack alone has depth O(d), while retained Object.values lists can use O(n) storage. Visit only enumerable own string-keyed data properties of objects; arrays use the same enumeration, including enumerable extras and ignoring holes. Inherited, nonenumerable and symbol-keyed properties contribute nothing. Functions and primitive non-Numbers are ignored, without invocation or coercion. Objects are used only as data property bags; accessors and exotic proxies are outside this task. Number leaves contribute themselves except NaN, which contributes 0; infinities are valid and ordinary addition may still produce NaN from opposing infinities. Within each container, add recursively computed child subtotals left-to-right from 0 in Object.values order, using ordinary Number rounding. Either zero sign in the result is equivalent. Preserve every input field; frozen and null-prototype containers are valid. Selected container links are acyclic; shared containers count again for every occurrence. Array length is at most 20,000, depth d at most 64. n counts visited values and inspected own slots/array lengths, including repeat visits and ignored metadata, at most 50,000. An iterative postorder stack preserving the same grouping is also valid.",
     starter: `const sumValues = value => {
 
 };
@@ -1025,6 +1022,7 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "sumValues(Object.assign(Object.create({ignored:100}),{own:2}))", "expected": 2, "label": "only own enumerable values contribute"},
       { call: 'sumValues({ a: 1, b: { c: 2, d: [3, 4] } })', expected: 10 },
       { call: 'sumValues([1, [2, [3]]])', expected: 6 },
       { call: 'sumValues({})', expected: 0, label: 'empty input', edge: true },
@@ -1044,9 +1042,9 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
     topic: 'algorithms',
     level: 22,
     tier: 4,
-    focus: ['map-set', 'while', 'shift'],
+    focus: ['map-set', 'while', 'for'],
     title: 'Shortest path in a crawl graph',
-    prompt: 'Write `shortestPath(graph, start, goal)` for an unweighted graph given as an adjacency list — `{ a: ["b", "c"], b: ["d"] }` — returning one shortest route from `start` to `goal` as an array of nodes, or `null` when none exists. `shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c")` gives `["a", "b", "c"]`. Go breadth first with a queue of routes and a `visited` set, marking a node when it is queued rather than when it is taken, so a link cycle cannot send the crawl round for ever. Breadth first is what makes the first route that reaches the goal a shortest one. `start` equal to `goal` gives `[start]`, and a node with no entry in the graph has no neighbours. Target: O(V + E) time and O(V) space.',
+    prompt: "Write `shortestPath(graph, start, goal)` for a directed unweighted graph given as an adjacency-list data object, returning any shortest route from start to goal as an array of node names, or null when none exists. For example, {a:[\"b\"],b:[\"c\"],c:[]} from \"a\" to \"c\" gives [\"a\",\"b\",\"c\"]. Tied shortest routes are equally valid. Use breadth-first traversal: queue node names with a head index, record each predecessor when first queued, and reconstruct the route only once at the goal. Marking on enqueue keeps cycles and duplicate links finite; copying a full route at each step or shifting a growing queue can exceed the target. Read only own adjacency entries; an absent or inherited entry has no neighbours. The graph is an ordinary or null-prototype object with dense ordinary arrays of string neighbours. Names, start and goal are primitive strings of at most 80 UTF-16 code units; empty text and names such as \"__proto__\" and \"constructor\" are valid. Self-links, duplicate links and cycles are valid. V counts all own entry names, neighbour names and both endpoints, at most 2,000; E counts all stored adjacency slots, at most 10,000. The graph and arrays may be frozen and must stay unchanged. start===goal returns a fresh [start], even without an entry. Every returned route is fresh and mutable. Target: O(V + E) time and O(V) auxiliary space, excluding the input. A layered frontier with predecessors is also valid.",
     starter: `const shortestPath = (graph, start, goal) => {
 
 };
@@ -1055,29 +1053,22 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
 console.log(shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c"));
 `,
     skeleton: `const shortestPath = (graph, start, goal) => {
-  const visited = new Set([start]);
-  const queue = [[start]];
-
-  while (queue.length > 0) {
-    const route = queue.shift();
-    // the goal ends it; otherwise queue each unvisited neighbour
+  const previous = new Map([[start, null]]);
+  const queue = [start];
+  for (let head = 0; head < queue.length; head += 1) {
+    const node = queue[head];
+    // At the goal, reconstruct through previous and reverse once.
+    // Otherwise queue each unseen own-entry neighbour, recording its predecessor.
   }
-
   return null;
 };`,
     hints: ['Mark a node as visited the moment you queue it, not when you take it off. Marking late lets the same node be queued several times before any of them is examined.'],
-    approach: [
-      'Seed a queue with the one-node route that is just the start, and a visited set holding the start.',
-      'Take the first route off the queue; if its last node is the goal, that route is a shortest one, because breadth first reaches every node by its shortest route first.',
-      'Otherwise look up that node\'s neighbours, treating a node missing from the graph as having none.',
-      'Queue each unvisited neighbour as the current route plus that neighbour, and mark it visited as you queue it, which is what keeps a cycle finite.',
-      'An empty queue means the goal was never reachable.',
-    ],
+    approach: ["Seed a node queue and a predecessor Map with start mapped to null. Advance a head index instead of shifting the queue.", "When the goal is taken, follow predecessors into a new array, then reverse it once.", "Read neighbours only when Object.hasOwn(graph,node); a missing or inherited entry has none.", "For each unseen neighbour, record its predecessor and queue it immediately. The Map also marks visited nodes.", "An exhausted queue means no route exists. Each node is queued once; each stored outgoing link is considered at most once."],
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
       { call: 'shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c")', expected: ['a', 'b', 'c'] },
-      { call: 'shortestPath({ a: ["b", "c"], b: ["d"], c: ["d"], d: [] }, "a", "d")', expected: ['a', 'b', 'd'], label: 'the first of two equally short routes' },
+      {"call": "(() => {const graph={a:[\"b\",\"c\"],b:[\"d\"],c:[\"d\"],d:[]},route=shortestPath(graph,\"a\",\"d\");return Array.isArray(route)&&route.length===3&&route[0]===\"a\"&&route[2]===\"d\"&&graph.a.includes(route[1])&&graph[route[1]].includes(\"d\");})()", "expected": true, "label": "either equally short route is valid"},
       { call: 'shortestPath({}, "a", "b")', expected: null, label: 'empty input', edge: true },
       { call: 'shortestPath({ a: [] }, "a", "a")', expected: ['a'], label: 'the start is already the goal', edge: true },
       { call: 'shortestPath({ a: ["b"], b: ["a"] }, "a", "z")', expected: null, label: 'a cycle must not loop for ever', edge: true },
@@ -1095,9 +1086,9 @@ console.log(shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c"));
     topic: 'algorithms',
     level: 23,
     tier: 4,
-    focus: ['while', 'shift', 'objects'],
+    focus: ['while', 'for', 'objects'],
     title: 'Binary tree level-order traversal',
-    prompt: 'Write `levelOrder(root)` for a binary tree of `{ value, left, right }` nodes, returning one array of values per depth, top to bottom and left to right within a level. A root of 3 with children 9 and 20 gives `[[3], [9, 20]]`. The trick is knowing where a level ends: record how many nodes the queue holds before you start the level, and take exactly that many. A `null` root gives `[]`, and a missing child is `null` rather than absent. Target: O(n) time and O(n) space.',
+    prompt: "Write `levelOrder(root)` for a binary tree of `{ value, left, right }` nodes, returning one array of values per depth, top to bottom and left to right within a level. A root of 3 with children 9 and 20 gives `[[3], [9, 20]]`. The trick is knowing where a level ends: record how many unprocessed nodes the queue holds before you start the level, and take exactly that many. A `null` or `undefined` root gives `[]`, and a missing child is `null` rather than absent. Target: O(n) time and O(n) space. Input is an acyclic tree of at most 20,000 distinct ordinary/null-prototype nodes without shared children, with height at most 512. Children are a node or null; undefined is allowed only for the root. n is the node count. Nodes may be frozen and every source field must remain unchanged. Values are opaque: retain exact object/function/Symbol/BigInt/undefined/zero identities without cloning or invoking them. Return a fresh mutable outer array and fresh mutable level arrays on every call. Use a queue head index or separate current/next level arrays to avoid moving the remaining queue with shift. An iterative depth-first traversal collecting values by depth is also valid.",
     starter: `const levelOrder = root => {
 
 };
@@ -1111,24 +1102,26 @@ console.log(levelOrder(node(3, node(9), node(20))));
   const levels = [];
   const queue = [root];
 
-  while (queue.length > 0) {
-    const width = queue.length; // how many nodes this level holds
+  let head = 0;
+  while (head < queue.length) {
+    const width = queue.length - head; // unprocessed nodes in this level
     // take exactly that many, collecting values and queueing children
   }
 
   return levels;
 };`,
-    hints: ['Everything in the queue when a level begins belongs to that level. Read the length into a variable first — the queue grows as you add children, so reading it inside the loop would run the levels together.'],
+    hints: ['Every unprocessed queue entry when a level begins belongs to that level. Read queue.length - head into a variable first — the queue grows as you add children, so reading it inside the loop would run the levels together.'],
     approach: [
       'A missing root has no levels at all, so answer with an empty array before anything else.',
-      'Seed a queue with the root, and loop while the queue still holds nodes.',
-      'At the top of each pass, record the queue length: those nodes, and only those, are the current level.',
-      'Take that many nodes off the front, collect their values into one array, and push each non-null child onto the back for the next level.',
+      'Seed a queue with the root, and loop while unprocessed nodes remain.',
+      'At the top of each pass, record queue.length - head: those nodes, and only those, are the current level.',
+      'Read that many nodes while advancing the head index, collect their values into one array, and push each non-null child onto the back for the next level.',
       'Push the collected values as one level and let the loop carry on with whatever the children left behind.',
     ],
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "(() => {const payload={id:1};return levelOrder({value:payload,left:null,right:null})[0][0]===payload;})()", "expected": true, "label": "retain opaque payload identity"},
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(3, node(9), node(20, node(15), node(7)))); })()', expected: [[3], [9, 20], [15, 7]] },
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(1)); })()', expected: [[1]], label: 'a root with no children is one level' },
       { call: 'levelOrder(null)', expected: [], label: 'empty input', edge: true },
@@ -1152,8 +1145,8 @@ console.log(levelOrder(node(3, node(9), node(20))));
     tier: 4,
     focus: ['promises', 'async-await'],
     title: 'Promise pool with a concurrency limit',
-    prompt: 'Write `promisePool(tasks, limit)`, running an array of functions that each return a promise, with at most `limit` of them in flight at once, and resolving to their results in the order the tasks were given — not the order they finished. `promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)` resolves to `[1, 2]`. Start `limit` workers that each pull the next index off a shared counter and write their result into the slot that index owns; handing the whole batch to `Promise.all` would start everything at once and defeat the point. An empty task list resolves to `[]`, and a `limit` past the number of tasks simply runs them all. Target: O(n) time in the number of tasks and O(n) space for the results.',
-    starter: `const promisePool = (tasks, limit) => {
+    prompt: "Write `promisePool(tasks, limit)`, running an array of functions that each return a promise, with at most `limit` of them in flight at once, and resolving to their results in the order the tasks were given \u2014 not the order they finished. `promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)` resolves to `[1, 2]`. Start `limit` workers that each pull the next index off a shared counter and write their result into the slot that index owns; handing the whole batch to `Promise.all` would start everything at once and defeat the point. An empty task list resolves to `[]`, and a `limit` past the number of tasks simply runs them all. Target: O(n) time for scheduling overhead and O(n) extra space, where n is tasks.length; task work and elapsed waits are excluded from this time bound. tasks is a dense ordinary array of at most 2000 zero-argument functions; it may be frozen and must stay unchanged. limit is a primitive integer in 1..1000000000000. Invoke each function as a bare call with no arguments. It returns a native Promise that eventually settles. On a fully successful run, invoke every task exactly once and preserve every result value by identity, including undefined, Symbols and objects. Results are a fresh mutable dense array in input order. If a task rejects, reject with the same reason; other already-started workers need not be canceled and may continue. No all-or-nothing side-effect or cancellation guarantee is required. Batches that stay within the limit are valid too.",
+    starter: `const promisePool = async (tasks, limit) => {
 
 };
 
@@ -1186,6 +1179,7 @@ promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1).then(result
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "(async()=>{const value={ok:true};const result=await promisePool([()=>Promise.resolve(value)],1);return result[0]===value;})()", "expected": true, "label": "preserve result identity", "async": true},
       { call: 'promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1)', expected: [1, 2], async: true },
       { call: '(async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const tasks = [async () => { await wait(30); return "slow"; }, async () => { await wait(5); return "fast"; }]; return promisePool(tasks, 2); })()', expected: ['slow', 'fast'], label: 'results keep task order, not finishing order', async: true },
       { call: 'promisePool([], 3)', expected: [], label: 'empty input', async: true, edge: true },
@@ -1206,8 +1200,8 @@ promisePool([() => Promise.resolve(1), () => Promise.resolve(2)], 1).then(result
     tier: 4,
     focus: ['promises', 'timers', 'async-await'],
     title: 'Retry with exponential backoff',
-    prompt: 'Write `retryWithBackoff(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out, waiting 100 ms before the second attempt, 200 ms before the third, 400 ms before the fourth, and so on — each wait twice the one before. Resolve with the first success; when every attempt fails, reject with the error from the last one rather than the first. There is no wait before the first attempt and none after the final failure, so a run that succeeds on the third attempt has waited 300 ms in total. An `attempts` below one means no call at all and a rejection. Target: O(attempts) calls and O(1) space.',
-    starter: `const retryWithBackoff = (fn, attempts) => {
+    prompt: "Write `retryWithBackoff(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out, waiting 100 ms before the second attempt, 200 ms before the third, 400 ms before the fourth, and so on \u2014 each wait twice the one before. Resolve with the first success; when every attempt fails, reject with the error from the last one rather than the first. There is no wait before the first attempt and none after the final failure, so a run that succeeds on the third attempt has waited 300 ms in total. An `attempts` below one means no call at all and a rejection. Target: O(a) time for call/scheduling overhead and O(1) space for live state, where a = max(0, attempts). Callback work and waits are excluded: after a failed positive budget, the requested waits total 100 * (2 ** (a - 1) - 1) ms. attempts is a primitive integer in [-1000000000000,5]; either zero sign means no attempts. fn is a zero-argument function returning a native Promise that eventually settles; invoke it as a bare call with no arguments, and never overlap attempts. Synchronous throws and non-Promise returns are outside this exercise. Preserve the exact successful value or final rejection reason, including objects, Symbols, undefined and other falsy values. With no attempts, reject with an Error; its message is not prescribed. Timer callbacks may run later than their requested delay.",
+    starter: `const retryWithBackoff = async (fn, attempts) => {
 
 };
 
@@ -1235,6 +1229,7 @@ retryWithBackoff(async () => "ok", 3).then(result => console.log(result));
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "(async()=>{const reason={code:1};try{await retryWithBackoff(()=>Promise.reject(reason),1);}catch(error){return error===reason;}return false;})()", "expected": true, "label": "preserve the rejection reason", "async": true},
       { call: 'retryWithBackoff(async () => "ok", 3)', expected: 'ok', async: true },
       { call: '(() => { let runs = 0; return retryWithBackoff(async () => { runs += 1; if (runs < 3) throw new Error("flaky"); return "ok on " + runs; }, 5); })()', expected: 'ok on 3', label: 'it stops retrying the moment one succeeds', async: true },
       { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 3) throw new Error("flaky"); return runs; }, 5); const elapsed = Date.now() - started; return elapsed >= 250 && elapsed < 1200; })()', expected: true, label: 'the waits double: 100 ms, then 200 ms', async: true, edge: true },

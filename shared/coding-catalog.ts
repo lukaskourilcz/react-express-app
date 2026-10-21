@@ -334,9 +334,9 @@ export const isCodingTechnique = (tag: string): boolean => TECHNIQUE_GROUP.has(t
 export const LOOP_TAGS: readonly string[] = CODING_TECHNIQUE_GROUPS.loops;
 export const METHOD_TAGS: readonly string[] = CODING_TECHNIQUE_GROUPS['array-methods'];
 
-/** XP for a first verified pass, by tier. Level XP in Learn is 50 × difficulty,
+/** Base XP for a verified pass. Level XP in Learn is 50 × difficulty,
  * so a foundation task is worth half a level. */
-export const CODING_TASK_XP: Record<CodingTier, number> = { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 };
+export const CODING_TASK_XP: Record<CodingTier, number> = { 1: 25, 2: 25, 3: 25, 4: 25, 5: 25 };
 
 /** Learn levels of the `javascript` topic that count as the foundations.
  * Clearing them opens JavaScript tier 3, and no other track's. */

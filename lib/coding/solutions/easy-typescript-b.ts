@@ -8,92 +8,28 @@ import type { CodingSolution } from '../types';
 export const EASY_TYPESCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── utility types ────────────────────────────────────────────────── */
   'ts-easy3-save-a-new-todo': {
-    solution: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-// The caller cannot pick an id: Omit takes it out of the type.
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  // Starting from 0 means an empty list hands out id 1.
-  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;
-  // A new array, so the list passed in keeps its length.
-  return [...todos, { id, ...draft }];
-};`,
-    junior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  let highest = 0;
-  for (const todo of todos) {
-    if (todo.id > highest) {
-      highest = todo.id;
-    }
-  }
-  const todo: Todo = { id: highest + 1, title: draft.title, done: draft.done };
-  const next: Todo[] = [...todos];
-  next.push(todo);
-  return next;
-};`,
-    senior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const nextId = (todos: readonly Todo[]): number =>
-  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [
-  ...todos,
-  { id: nextId(todos), ...draft },
-];`,
+    solution: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\n// Omit removes id from the view; it does not strip wider objects at runtime.\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  // Starting from 0 means an empty list hands out id 1.\n  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;\n  // A new array, so the list passed in keeps its length.\n  return [...todos, { ...draft, id }];\n};",
+    junior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  let highest = 0;\n  for (const todo of todos) {\n    if (todo.id > highest) {\n      highest = todo.id;\n    }\n  }\n  const todo: Todo = { ...draft, id: highest + 1 };\n  const next: Todo[] = [...todos];\n  next.push(todo);\n  return next;\n};",
+    senior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst nextId = (todos: readonly Todo[]): number =>\n  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [\n  ...todos,\n  { ...draft, id: nextId(todos) },\n];",
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},draft=Object.freeze({id:999,title:'',done:false,extra:meta,[sym]:meta,['__proto__']:meta}),old=Object.freeze({id:7,title:'old',done:true}),input=Object.freeze([old]),a=addTodo(input,draft),b=addTodo(input,draft);a[1].title='later';a.push(old);return [a!==input,a!==b,a[0]===old,b[0]===old,b[1]!==draft,b[1]!==a[1],b[1].id,b[1].extra===meta,b[1][sym]===meta,Object.hasOwn(b[1],'__proto__'),b[1].__proto__===meta,Object.getPrototypeOf(b[1])===Object.prototype,b[1].title,draft.id,input.length];})()", expected: [true, true, true, true, true, true, 8, true, true, true, true, true, "", 999, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i%2?1:1000000000,title:String(i),done:false}))),draft=Object.freeze(Object.assign(Object.create(null),{title:'new',done:true})),out=addTodo(input,draft);return [out.length,out.slice(0,1000).every((todo,i)=>todo===input[i]),out[1000].id,input[0].id,Reflect.ownKeys(draft)];})()", expected: [1001, true, 1000000001, 1000000000, ["title", "done"]] },
+      { call: "(()=>{const meta={},draft={title:'new',done:false};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);const a=addTodo([],draft),b=addTodo([],draft);return [a!==b,a[0]!==b[0],a[0].id,Reflect.ownKeys(a[0]).length,Array.from({length:100},(_,i)=>a[0]['x'+i]===meta).every(Boolean),!Object.hasOwn(draft,'id')];})()", expected: [true, true, 1, 103, true, true] },
+
       { call: 'addTodo(Object.freeze([{ id: 2, title: "x", done: false }]), { title: "y", done: true })', expected: [{ id: 2, title: 'x', done: false }, { id: 3, title: 'y', done: true }] },
       { call: 'addTodo([{ id: 10, title: "a", done: false }, { id: 11, title: "b", done: false }, { id: 4, title: "c", done: false }], { title: "d", done: false })[3]', expected: { id: 12, title: 'd', done: false } },
       { call: '(() => { const draft = { title: "z", done: false }; addTodo([], draft); return draft; })()', expected: { title: 'z', done: false } },
       { call: 'addTodo([{ id: 1, title: "a", done: false }], { title: "a", done: false }).length', expected: 2 },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditWide={id:999,title:\"x\",done:false}; const __auditDraft:NewTodo=__auditWide; const __auditSource:readonly Todo[]=[]; const __auditOut:Todo[]=addTodo(__auditSource,__auditDraft); __auditOut.push({id:1,title:\"y\",done:true});"},
+
       { code: 'const __n: NewTodo = { title: "a", done: false, id: 1 };', label: 'NewTodo has no id', rejects: true },
     ],
   },
   'ts-easy3-only-the-clicks': {
-    solution: `type UiEvent =
-  | { kind: "click"; x: number; y: number }
-  | { kind: "key"; key: string };
-
-// Extract keeps the union members that fit the shape: here, only the click.
-type Click = Extract<UiEvent, { kind: "click" }>;
-
-const clicks = (events: readonly UiEvent[]): Click[] =>
-  // The predicate return type is what types the filtered array as Click[].
-  events.filter((event): event is Click => event.kind === "click");`,
-    junior: `type UiEvent =
-  | { kind: "click"; x: number; y: number }
-  | { kind: "key"; key: string };
-
-type Click = Extract<UiEvent, { kind: "click" }>;
-
-const clicks = (events: readonly UiEvent[]): Click[] => {
-  const result: Click[] = [];
-  for (const event of events) {
-    if (event.kind === "click") {
-      result.push(event);
-    }
-  }
-  return result;
-};`,
+    solution: "type UiEvent =\n  | { kind: \"click\"; x: number; y: number }\n  | { kind: \"key\"; key: string };\n\n// Extract keeps the union members that fit the shape: here, only the click.\ntype Click = Extract<UiEvent, { kind: \"click\" }>;\n\nconst clicks = (events: readonly UiEvent[]): Click[] =>\n  // This explicit predicate types the filtered array as Click[].\n  events.filter((event): event is Click => event.kind === \"click\");",
+    junior: "type UiEvent =\n  | { kind: \"click\"; x: number; y: number }\n  | { kind: \"key\"; key: string };\n\ntype Click = Extract<UiEvent, { kind: \"click\" }>;\n\nconst clicks = (events: readonly UiEvent[]): Click[] => {\n  return events.filter((event): event is Click => {\n    return event.kind === \"click\";\n  });\n};",
     senior: `type UiEvent =
   | { kind: "click"; x: number; y: number }
   | { kind: "key"; key: string };
@@ -103,7 +39,12 @@ type Click = Extract<UiEvent, { kind: "click" }>;
 const isClick = (event: UiEvent): event is Click => event.kind === "click";
 
 const clicks = (events: readonly UiEvent[]): Click[] => events.filter(isClick);`,
+    hiddenTypeTests: [{"code": "const __auditInput: readonly UiEvent[]=[{kind:\"click\",x:1,y:2}]; const __auditOutput:Click[]=clicks(__auditInput); __auditOutput.push({kind:\"click\",x:0,y:0}); const __auditKind:\"click\"=__auditOutput[0].kind;"}],
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({kind:'click',x:-0,y:NaN,meta}),key=Object.freeze({kind:'key',key:'Enter'}),input=Object.freeze([a,key,a]),out=clicks(input),again=clicks(input);out.pop();return [again[0]===a,again[1]===a,again[0].meta===meta,Object.is(again[0].x,-0),Number.isNaN(again[0].y),out!==input,out!==again,input.length,again.length];})()", expected: [true, true, true, true, true, true, true, 3, 2] },
+      { call: "(()=>{const a=Object.freeze(Object.assign(Object.create({kind:'click'}),{x:Infinity,y:-Infinity})),input=Object.freeze([a]),out=clicks(input),none=Object.freeze([{kind:'key',key:''}]),empty=clicks(none),again=clicks(none);empty.push(a);return [out[0]===a,out[0].x===Infinity,out[0].y===-Infinity,empty!==again,again.length,none.length,clicks([])!==clicks([])];})()", expected: [true, true, true, true, 0, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{kind:'key',key:String(i)}:{kind:'click',x:i,y:0}))),out=clicks(input);return [out.length,out.every((event,i)=>event===input[2*i]),input.length];})()", expected: [500, true, 1000] },
+
       { call: 'clicks([{ kind: "key", key: "a" }, { kind: "click", x: 3, y: 4 }, { kind: "key", key: "b" }, { kind: "click", x: 9, y: 9 }]).map((click) => click.x)', expected: [3, 9] },
       { call: '(() => { const events = [{ kind: "click", x: 1, y: 1 }]; return clicks(events) !== events; })()', expected: true },
       { call: 'clicks([{ kind: "click", x: -2, y: 7 }, { kind: "click", x: 4, y: -1 }])', expected: [{ kind: 'click', x: -2, y: 7 }, { kind: 'click', x: 4, y: -1 }] },
@@ -145,12 +86,18 @@ const isComplete = (profile: Profile): profile is Required<Profile> => {
 const isComplete = (profile: Profile): profile is Required<Profile> =>
   Boolean(profile.email && profile.phone);`,
     hiddenTests: [
+      { call: "(()=>{return [isComplete({name:'',email:' ',phone:'\\t'}),isComplete({name:'',email:'0',phone:'0'}),isComplete({name:'x',email:'\u00e9',phone:'\ud83d\ude00'}),isComplete({name:'x',email:'',phone:' '})];})()", expected: [true, true, true, false] },
+      { call: "(()=>{const meta={},profile=Object.freeze(Object.assign(Object.create({email:' ',phone:'0'}),{name:'',meta})),empty=Object.freeze(Object.assign(Object.create(null),{name:'x',email:undefined,phone:'p'}));return [isComplete(profile),isComplete(profile),profile.meta===meta,Reflect.ownKeys(profile),isComplete(empty),empty.email===undefined];})()", expected: [true, true, true, ["name", "meta"], false, true] },
+      { call: "(()=>{const values=[undefined,'',' ','0','\u00e9'];return values.map(email=>values.map(phone=>{const p=Object.freeze({name:'x',email,phone});return isComplete(p)===(email!==undefined&&email!==''&&phone!==undefined&&phone!=='');})).every(row=>row.every(Boolean));})()", expected: true },
+
       { call: 'isComplete({ name: "Bo", phone: "555 0101" })', expected: false },
       { call: 'isComplete({ name: "Bo", email: "bo@example.com", phone: "" })', expected: false },
       { call: 'isComplete({ name: "Cy", email: "cy@example.com", phone: "0" })', expected: true },
       { call: '[{ name: "A", email: "a@example.com", phone: "1" }, { name: "B" }, { name: "C", email: "c@example.com", phone: "3" }].filter(isComplete).map((p) => p.name)', expected: ['A', 'C'] },
     ],
     hiddenTypeTests: [
+      {"code": "const __audit:Profile={name:\"x\"}; if(isComplete(__audit)){const __phone:string=__audit.phone; const __full:Required<Profile>=__audit;}"},
+
       { code: 'const __g: (p: Profile) => p is Required<Profile> = isComplete;', label: 'isComplete is a type predicate' },
     ],
   },
@@ -166,21 +113,7 @@ type Line = ReturnType<typeof parseLine>;
 const orderTotal = (lines: readonly Line[]): number =>
   // The 0 is the total of an empty receipt, and reduce needs it to start from.
   lines.reduce((total, line) => total + line.qty * line.cents, 0);`,
-    junior: `const parseLine = (line: string) => {
-  const [name, qty, cents] = line.split(",");
-  return { name, qty: Number(qty), cents: Number(cents) };
-};
-
-type Line = ReturnType<typeof parseLine>;
-
-const orderTotal = (lines: readonly Line[]): number => {
-  let total = 0;
-  for (const line of lines) {
-    const cost = line.qty * line.cents;
-    total = total + cost;
-  }
-  return total;
-};`,
+    junior: "const parseLine = (line: string) => {\n  const [name, qty, cents] = line.split(\",\");\n  return { name, qty: Number(qty), cents: Number(cents) };\n};\n\ntype Line = ReturnType<typeof parseLine>;\n\nconst orderTotal = (lines: readonly Line[]): number => {\n  return lines.reduce((total, line) => {\n    const cost = line.qty * line.cents;\n    return total + cost;\n  }, 0);\n};",
     senior: `const parseLine = (line: string) => {
   const [name, qty, cents] = line.split(",");
   return { name, qty: Number(qty), cents: Number(cents) };
@@ -193,11 +126,17 @@ const lineCost = ({ qty, cents }: Line): number => qty * cents;
 const orderTotal = (lines: readonly Line[]): number =>
   lines.reduce((total, line) => total + lineCost(line), 0);`,
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({name:' x ',qty:2,cents:125,meta}),b=Object.freeze({name:'',qty:0,cents:99,meta}),input=Object.freeze([a,b,a]),first=orderTotal(input),second=orderTotal(input);return [first,second,input[0]===a,a.qty,a.cents,b.qty,a.meta===meta];})()", expected: [500, 500, true, 2, 125, 0, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},()=>Object.freeze({name:'x',qty:1000000,cents:1000000})));return [orderTotal(input),input[0].qty,input.length,Number.isSafeInteger(orderTotal(input))];})()", expected: [1000000000000000, 1000000, 1000, true] },
+      { call: "(()=>{return [Object.is(orderTotal([]),0),Object.is(orderTotal([{name:'x',qty:0,cents:0}]),0),orderTotal([parseLine('tea,0002,000350')])];})()", expected: [true, true, 700] },
+
       { call: 'orderTotal([parseLine("a,1,1"), parseLine("b,2,2"), parseLine("c,3,3")])', expected: 14 },
       { call: 'orderTotal([parseLine("gift,5,0")])', expected: 0 },
       { call: 'orderTotal(Object.freeze([parseLine("x,10,99")]))', expected: 990 },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditInput:readonly Line[]=[parseLine(\"x,1,2\")]; const __auditTotal:number=orderTotal(__auditInput);"},
+
       { code: 'const __m: Line = { name: "x", qty: 1 };', label: 'a line needs its price', rejects: true },
     ],
   },
@@ -216,31 +155,15 @@ const orderTotal = (lines: readonly Line[]): number =>
   }
   return [...byId.values()];
 };`,
-    junior: `const latest = <T extends { id: string; version: number }>(records: readonly T[]): T[] => {
-  const result: T[] = [];
-  for (const record of records) {
-    let found = -1;
-    for (let i = 0; i < result.length; i++) {
-      if (result[i].id === record.id) {
-        found = i;
-      }
-    }
-    if (found === -1) {
-      result.push(record);
-    } else if (record.version > result[found].version) {
-      result[found] = record;
-    }
-  }
-  return result;
-};`,
-    senior: `const latest = <T extends { readonly id: string; readonly version: number }>(records: readonly T[]): T[] => {
-  const byId = new Map<string, T>();
-  for (const record of records) {
-    if (record.version > (byId.get(record.id)?.version ?? -Infinity)) byId.set(record.id, record);
-  }
-  return Array.from(byId.values());
-};`,
+    junior: "const latest = <T extends { id: string; version: number }>(records: readonly T[]): T[] => {\n  const byId = new Map<string, T>();\n  for (const record of records) {\n    const previous = byId.get(record.id);\n    if (previous === undefined) {\n      byId.set(record.id, record);\n    } else if (record.version > previous.version) {\n      byId.set(record.id, record);\n    }\n  }\n  return Array.from(byId.values());\n};",
+    senior: "const latest = <T extends { readonly id: string; readonly version: number }>(records: readonly T[]): T[] => {\n  const byId = new Map<string, T>();\n  for (const record of records) {\n    const previous = byId.get(record.id);\n    if (previous === undefined || record.version > previous.version) byId.set(record.id, record);\n  }\n  return [...byId.values()];\n};",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly {id:string;version:number;payload:symbol}[] = [{id:\"a\",version:0,payload:Symbol()}]; const __auditSymbol: symbol = latest(__auditInput)[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const records=Object.freeze(['constructor','__proto__','','2','1','toString'].map(id=>Object.freeze({id,version:0}))),out=latest(records);return [out.map(x=>x.id),out.every((x,i)=>x===records[i]),records.length];})()", expected: [["constructor", "__proto__", "", "2", "1", "toString"], true, 6] },
+      { call: "(()=>{const old=Object.freeze({id:'a',version:1}),winner=Object.freeze({id:'a',version:3,meta:{}}),tie=Object.freeze({id:'a',version:3}),other=Object.freeze({id:'b',version:2}),input=Object.freeze([old,other,winner,tie]),a=latest(input),b=latest(input);a.pop();return [a!==b,b[0]===winner,b[1]===other,b[0].meta===winner.meta,input[0]===old,input.length];})()", expected: [true, true, true, true, true, 4] },
+      { call: "(()=>{const records=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:'k'+i%10,version:i}))),out=latest(records);return [out.length,out.every((record,i)=>record===records[990+i]),records[0].version,latest([])!==latest([])];})()", expected: [10, true, 0, true] },
+      { call: "latest([{id:' x ',version:1000000000},{id:'x',version:0},{id:' x ',version:999999999}]).map(x=>[x.id,x.version])", expected: [[" x ", 1000000000], ["x", 0]] },
+
       { call: 'latest([{ id: "b", version: 1 }, { id: "a", version: 5 }, { id: "b", version: 4 }, { id: "c", version: 1 }, { id: "a", version: 2 }]).map((r) => r.id + r.version)', expected: ['b4', 'a5', 'c1'] },
       { call: 'latest([{ id: "a", version: 1 }, { id: "b", version: 1 }, { id: "a", version: 9 }]).map((r) => r.id)', expected: ['a', 'b'] },
       { call: 'latest([{ id: "z", version: 1, v: "old" }, { id: "z", version: 2, v: "mid" }, { id: "z", version: 2, v: "late" }])[0].v', expected: 'mid' },
@@ -263,11 +186,13 @@ const replaceById = <T extends { id: number }>(items: readonly T[], edited: T): 
   }
   return result;
 };`,
-    senior: `const replaceById = <T extends { readonly id: number }>(items: readonly T[], edited: T): T[] => {
-  const index = items.findIndex(({ id }) => id === edited.id);
-  return index === -1 ? [...items] : items.with(index, edited);
-};`,
+    senior: "const replaceById = <T extends { readonly id: number }>(items: readonly T[], edited: T): T[] =>\n  items.map((item) => item.id === edited.id ? edited : item);",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly {id:number;payload:symbol}[] = [{id:1,payload:Symbol()}]; const __auditSymbol: symbol = replaceById(__auditInput,{id:1,payload:Symbol()})[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({id:0}),b=Object.freeze({id:1}),c=Object.freeze({id:-0}),edited=Object.freeze({id:0}),input=Object.freeze([a,b,c]),out=replaceById(input,edited);return [out[0]===edited,out[1]===b,out[2]===edited,input[0]===a,input[2]===c];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const meta={},record=Object.freeze({id:-1,meta}),edited=Object.freeze({id:9,meta}),input=Object.freeze([record]),a=replaceById(input,edited),b=replaceById(input,edited);a.push(edited);return [a!==input,a!==b,b[0]===record,b[0].meta===meta,b.length,input.length,replaceById([],edited)!==replaceById([],edited)];})()", expected: [true, true, true, true, 1, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i%2,n:i}))),edited=Object.freeze({id:0,n:-1}),out=replaceById(input,edited);return [out.length,out.every((item,i)=>i%2?item===input[i]:item===edited),input[0].n,input[998].n];})()", expected: [1000, true, 0, 998] },
+
       { call: '(() => { const a = { id: 1 }; const b = { id: 2 }; const out = replaceById([a, b], { id: 2 }); return out[0] === a; })()', expected: true },
       { call: '(() => { const list = [{ id: 1 }]; return replaceById(list, { id: 5 }) !== list; })()', expected: true },
       { call: 'replaceById([{ id: 4, v: "a" }, { id: 5, v: "b" }, { id: 6, v: "c" }], { id: 6, v: "z" }).map((x) => x.v)', expected: ['a', 'b', 'z'] },
@@ -298,43 +223,29 @@ const replaceById = <T extends { id: number }>(items: readonly T[], edited: T): 
   }
   return pairs;
 };`,
-    senior: `const legs = (stops: readonly string[]): [string, string][] =>
-  stops.slice(1).map((to, i): [string, string] => [stops[i], to]);`,
+    senior: "function legs(stops: readonly string[]): [string, string][] {\n  const pairs: [string, string][] = [];\n  for (let from = 0; from + 1 < stops.length; from += 1) {\n    pairs.push([stops[from], stops[from + 1]]);\n  }\n  return pairs;\n}",
+    hiddenTypeTests: [{"code": "const __auditLegs: [string,string][] = legs(['','x'] as const);"}],
     hiddenTests: [
+      { call: "legs(Object.freeze(['',' B ','','\ud83e\udd88']))", expected: [["", " B "], [" B ", ""], ["", "\ud83e\udd88"]] },
+      { call: "(()=>{const input=Object.freeze(['a','a','a']),a=legs(input),b=legs(input);a[0][1]='changed';a.push(['x','y']);return [a!==b,b[0]!==b[1],b[0]!==a[0],b,input.join(',')];})()", expected: [true, true, true, [["a", "a"], ["a", "a"]], "a,a,a"] },
+      { call: "(()=>{const a=legs([]),b=legs(['']);a.push(['x','y']);return [a!==legs([]),b!==legs(['']),b.length,a.length];})()", expected: [true, true, 0, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>String(i))),out=legs(input);return [out.length,out[0],out[998],new Set(out).size,input.length];})()", expected: [999, ["0", "1"], ["998", "999"], 999, 1000] },
+
       { call: 'legs(["a", "b", "c", "d"]).length', expected: 3 },
       { call: 'legs(["x", "y", "z", "w"])[2]', expected: ['z', 'w'] },
       { call: 'legs(Object.freeze(["p", "q"]))', expected: [['p', 'q']] },
     ],
   },
   'ts-easy3-every-nth': {
-    solution: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
-  const picked: T[] = [];
-  // Below 1, i += n would never move forward.
-  if (n < 1) return picked;
-  // Position n, counting from 1, is index n - 1; each step jumps n places.
-  for (let i = n - 1; i < items.length; i += n) {
-    picked.push(items[i]);
-  }
-  return picked;
-};`,
-    junior: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
-  const picked: T[] = [];
-  if (n < 1) {
-    return picked;
-  }
-  let count = 0;
-  for (let i = 0; i < items.length; i++) {
-    count = count + 1;
-    if (count === n) {
-      picked.push(items[i]);
-      count = 0;
-    }
-  }
-  return picked;
-};`,
-    senior: `const everyNth = <T>(items: readonly T[], n: number): T[] =>
-  n < 1 ? [] : items.filter((_, index) => (index + 1) % n === 0);`,
+    solution: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const picked: T[] = [];\n  // Below 1, i += step would never move forward.\n  if (step < 1) return picked;\n  // Position step, counting from 1, is index step - 1; each step jumps step places.\n  for (let i = step - 1; i < items.length; i += step) {\n    picked.push(items[i]);\n  }\n  return picked;\n};",
+    junior: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const result: T[] = [];\n  if (step < 1) return result;\n  for (let index = step - 1; index < items.length; index += step) {\n    result.push(items[index]);\n  }\n  return result;\n};",
+    senior: "const everyNth = <T>(items: readonly T[], step: number): T[] => {\n  const result: T[] = [];\n  if (step < 1) return result;\n  for (let index = step - 1; index < items.length; index += step) result.push(items[index]);\n  return result;\n};",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly (null | undefined)[] = [null,undefined]; const __auditOut: (null | undefined)[] = everyNth(__auditInput,1);"}],
     hiddenTests: [
+      { call: "(()=>{const object=Object.freeze({}),fn=()=>{throw Error('called');},symbol=Symbol('x'),input=Object.freeze([0,object,null,fn,undefined,symbol]),out=everyNth(input,2);out.push('later');return [out[0]===object,out[1]===fn,out[2]===symbol,out.length,input.length,everyNth(input,1)!==input];})()", expected: [true, true, true, 4, 6, true] },
+      { call: "(()=>{const input=Object.freeze([undefined,null]),a=everyNth(input,1),b=everyNth(input,1);return [a!==b,a.length,a[0]===undefined,a[1]===null,everyNth(input,-1000000000),everyNth(input,1000000000),everyNth([],0)!==everyNth([],0)];})()", expected: [true, 2, true, true, [], [], true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=everyNth(input,333);return [out,input.length,input[0]];})()", expected: [[332, 665, 998], 1000, 0] },
+
       { call: 'everyNth([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 2)', expected: [1, 3, 5, 7, 9] },
       { call: 'everyNth(["a", "b", "c"], 3)', expected: ['c'] },
       { call: 'everyNth([1, 2, 3], -2)', expected: [] },
@@ -382,7 +293,12 @@ const DEFAULTS: Readonly<Settings> = { theme: "light", fontSize: 16, sounds: tru
 function settingOr<K extends keyof Settings>(saved: Readonly<Partial<Settings>>, key: K): Settings[K] {
   return saved[key] ?? DEFAULTS[key];
 }`,
+    hiddenTypeTests: [{"code": "settingOr({fontSize:null},\"fontSize\");", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const saved=Object.freeze({fontSize:undefined,theme:'dark',sounds:false}),before=Reflect.ownKeys(saved);const values=[settingOr(saved,'fontSize'),settingOr(saved,'theme'),settingOr(saved,'sounds')];return [values,Reflect.ownKeys(saved),before,saved.fontSize===undefined,DEFAULTS.theme,DEFAULTS.fontSize,DEFAULTS.sounds];})()", expected: [[16, "dark", false], ["fontSize", "theme", "sounds"], ["fontSize", "theme", "sounds"], true, "light", 16, true] },
+      { call: "(()=>{const saved=Object.freeze(Object.create({fontSize:-0,sounds:false})),empty=Object.freeze(Object.create(null));return [Object.is(settingOr(saved,'fontSize'),-0),settingOr(saved,'sounds'),settingOr(empty,'theme'),settingOr(empty,'fontSize'),settingOr(empty,'sounds'),Reflect.ownKeys(saved).length,Reflect.ownKeys(empty).length];})()", expected: [true, false, "light", 16, true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},saved={fontSize:-0.5};for(let i=0;i<100;i++)saved['x'+i]=meta;Object.freeze(saved);const values=[settingOr(saved,'sounds'),settingOr(saved,'fontSize'),settingOr(saved,'theme')];return [values,Reflect.ownKeys(saved).length,saved.x99===meta,!Object.hasOwn(saved,'sounds'),!Object.hasOwn(saved,'theme')];})()", expected: [[true, -0.5, "light"], 101, true, true, true] },
+
       { call: 'settingOr({ theme: "dark", fontSize: 12 }, "theme")', expected: 'dark' },
       { call: 'settingOr({ theme: "dark" }, "fontSize")', expected: 16 },
       { call: 'settingOr({ fontSize: undefined }, "fontSize")', expected: 16 },
@@ -411,22 +327,20 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
   copy[key] = value;
   return copy;
 };`,
-    senior: `interface Product {
-  name: string;
-  price: number;
-  inStock: boolean;
-}
-
-function setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {
-  return Object.assign({}, product, { [key]: value });
-}`,
+    senior: "interface Product {\n  name: string;\n  price: number;\n  inStock: boolean;\n}\n\nfunction setField<K extends keyof Product>(product: Readonly<Product>, key: K, value: Product[K]): Product {\n  return { ...product, [key]: value };\n}",
     hiddenTests: [
+      { call: "(()=>{const s=Symbol('meta'),meta={},proto={inherited:9},p=Object.create(proto);Object.assign(p,{name:'Mug',price:-0,inStock:false});Object.defineProperty(p,'__proto__',{value:meta,enumerable:true});p[s]=meta;p.extra=meta;Object.freeze(p);const out=setField(p,'price',-0);return [out!==p,Object.getPrototypeOf(out)===Object.prototype,Object.hasOwn(out,'__proto__'),out.__proto__===meta,out[s]===meta,out.extra===meta,!Object.hasOwn(out,'inherited'),Object.is(out.price,-0),Object.is(p.price,-0)];})()", expected: [true, true, true, true, true, true, true, true, true] },
+      { call: "(()=>{const p=Object.freeze(Object.assign(Object.create(null),{name:'',price:-0.5,inStock:false})),a=setField(p,'name',''),b=setField(p,'inStock',true);a.name='later';return [a!==b,b.name,p.name,b.price,b.inStock,p.inStock,Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, "", "", -0.5, true, false, true] },
+      { call: "(()=>{const meta={},p={name:'x',price:1,inStock:true};for(let i=0;i<100;i++)p['x'+i]=meta;Object.freeze(p);const out=setField(p,'price',1000000000);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),p.price,out.price];})()", expected: [103, true, 1, 1000000000] },
+
       { call: '(() => { const p = { name: "a", price: 1, inStock: true }; return setField(p, "name", "b") !== p; })()', expected: true },
       { call: 'Object.keys(setField({ name: "a", price: 1, inStock: true }, "name", "z"))', expected: ['name', 'price', 'inStock'] },
       { call: 'setField(setField({ name: "a", price: 1, inStock: true }, "price", 5), "name", "z")', expected: { name: 'z', price: 5, inStock: true } },
       { call: 'setField({ name: "a", price: 1, inStock: true }, "price", 0)', expected: { name: 'a', price: 0, inStock: true } },
     ],
     hiddenTypeTests: [
+      {"code": "setField({name:\"x\",price:1,inStock:true},\"inStock\",\"false\");", "rejects": true},
+
       { code: 'setField({ name: "a", price: 1, inStock: true }, "name", 3);', label: 'the name takes text', rejects: true },
     ],
   },
@@ -456,7 +370,13 @@ function setField<K extends keyof Product>(product: Readonly<Product>, key: K, v
 };`,
     senior: `const pinToTop = (chats: readonly string[], chat: string): string[] =>
   chats.includes(chat) ? [chat, ...chats.filter((other) => other !== chat)] : [...chats];`,
+    hiddenTypeTests: [{"code": "const __auditPinned = pinToTop([\"a\",\"b\"] as const,\"a\"); __auditPinned.push(\"c\");"}],
     hiddenTests: [
+      { call: "pinToTop(Object.freeze(['','a','','b','a','']), '')", expected: ["", "a", "b", "a"] },
+      { call: "[pinToTop(['A','a',' A ','a'],'a'),pinToTop(['A','a'],' A ')]", expected: [["a", "A", " A "], ["A", "a"]] },
+      { call: "(()=>{const input=Object.freeze(['a','b']),a=pinToTop(input,'a'),b=pinToTop(input,'x'),empty=pinToTop(Object.freeze([]),'');a.push('c');b[0]='changed';return [a!==input,b!==input,empty!==pinToTop([],''),input.join(','),a.length,b.length,empty.length];})()", expected: [true, true, true, "a,b", 3, 2, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?'other':'pin')),out=pinToTop(input,'pin');return [out.length,out[0],out.slice(1).every(x=>x==='other'),input.length];})()", expected: [501, "pin", true, 1000] },
+
       { call: 'pinToTop(Object.freeze(["a", "b", "c", "d"]), "c")', expected: ['c', 'a', 'b', 'd'] },
       { call: '(() => { const chats = ["a", "b"]; return pinToTop(chats, "x") !== chats; })()', expected: true },
       { call: 'pinToTop(["solo"], "solo")', expected: ['solo'] },
@@ -479,27 +399,7 @@ const moveTo = (user: User, city: string): User => ({
   // A second spread: without it the new user would share the old address object.
   address: { ...user.address, city },
 });`,
-    junior: `interface Address {
-  street: string;
-  city: string;
-}
-
-interface User {
-  name: string;
-  address: Address;
-}
-
-const moveTo = (user: User, city: string): User => {
-  const address: Address = {
-    street: user.address.street,
-    city: city,
-  };
-  const moved: User = {
-    name: user.name,
-    address: address,
-  };
-  return moved;
-};`,
+    junior: "interface Address {\n  street: string;\n  city: string;\n}\n\ninterface User {\n  name: string;\n  address: Address;\n}\n\nconst moveTo = (user: User, city: string): User => {\n  const address: Address = { ...user.address, city };\n  const moved: User = { ...user, address };\n  return moved;\n};",
     senior: `interface Address {
   street: string;
   city: string;
@@ -515,6 +415,10 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
   address: { ...address, city },
 });`,
     hiddenTests: [
+      { call: "(()=>{const nested=Object.freeze({x:1}),key=Symbol('meta'),address=Object.assign(Object.create(null),{street:' s ',city:' old ',zone:nested}),user=Object.assign(Object.create(null),{name:'',address,prefs:nested});user[key]=nested;Object.defineProperty(address,'__proto__',{value:nested,enumerable:true});Object.freeze(address);Object.freeze(user);const a=moveTo(user,' new '),b=moveTo(user,' new ');a.name='changed';return [a!==user,a!==b,a.address!==address,a.address!==b.address,b.name,b.address.street,b.address.city,b.prefs===nested,b[key]===nested,b.address.zone===nested,Object.hasOwn(b.address,'__proto__'),b.address.__proto__===nested,Object.getPrototypeOf(b.address)===Object.prototype,user.name,address.city];})()", expected: [true, true, true, true, "", " s ", " new ", true, true, true, true, true, true, "", " old "] },
+      { call: "(()=>{const user=Object.freeze({name:'\ud83e\udd88',address:Object.freeze({street:'',city:'same'})}),a=moveTo(user,'same');a.address.street='new';return [a!==user,a.address!==user.address,user.address.street,a.address.city];})()", expected: [true, true, "", "same"] },
+      { call: "(()=>{const address={street:'s',city:'c'},user={name:'a',address};for(let i=0;i<100;i++){address['a'+i]=i;user['u'+i]=i;}Object.freeze(address);Object.freeze(user);const out=moveTo(user,'z');return [out.u99,out.address.a99,Object.keys(out).length,Object.keys(out.address).length,out.address.city,address.city];})()", expected: [99, 99, 102, 102, "z", "c"] },
+
       { call: '(() => { const u = { name: "Cy", address: { street: "3 Row", city: "Hull" } }; return moveTo(u, "Ely") !== u; })()', expected: true },
       { call: 'moveTo({ name: "Dee", address: { street: "", city: "" } }, "Wells")', expected: { name: 'Dee', address: { street: '', city: 'Wells' } } },
       { call: '(() => { const u = { name: "Eve", address: { street: "5 Lane", city: "Kent" } }; const moved = moveTo(u, "Ayr"); return [u.name, u.address.street, u.address.city, moved.address.street]; })()', expected: ['Eve', '5 Lane', 'Kent', '5 Lane'] },
@@ -543,7 +447,13 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
 };`,
     senior: `const ranked = (scores: Readonly<Record<string, number>>): [string, number][] =>
   Object.entries(scores).sort(([, a], [, b]) => b - a);`,
+    hiddenTypeTests: [{"code": "const __auditBad: [number,string][] = ranked({a:1});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const scores=Object.assign(Object.create({inherited:999}),{b:2,a:2});Object.defineProperty(scores,'hidden',{value:1000,enumerable:false});scores[Symbol('meta')]=1001;Object.freeze(scores);return ranked(scores);})()", expected: [["b", 2], ["a", 2]] },
+      { call: "(()=>{const scores=Object.create(null);scores.z=5;scores['10']=5;scores['2']=5;scores.__proto__=5;return ranked(Object.freeze(scores)).map(([name])=>name);})()", expected: ["2", "10", "z", "__proto__"] },
+      { call: "(()=>{const input=Object.freeze({a:-0,b:0}),a=ranked(input),b=ranked(input);a[0][1]=99;a.push(['later',1]);return [a!==b,a[0]!==b[0],a[0]!==a[1],b.length,Object.is(b[0][1],-0),Object.is(input.a,-0),ranked({})!==ranked({})];})()", expected: [true, true, true, 2, true, true, true] },
+      { call: "(()=>{const scores=Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i%2]));Object.freeze(scores);const out=ranked(scores);return [out.length,out[0][0],out[499][0],out[500][0],out[999][0],scores.p0];})()", expected: [1000, "p1", "p999", "p0", "p998", 0] },
+
       { call: 'ranked({ a: 10, b: 9, c: 100, d: 2 }).map(([name]) => name)', expected: ['c', 'a', 'b', 'd'] },
       { call: 'ranked({ x: -1, y: 1 })', expected: [['y', 1], ['x', -1]] },
       { call: '(() => { const scores = { a: 1, b: 2 }; ranked(scores); return Object.keys(scores); })()', expected: ['a', 'b'] },
@@ -561,7 +471,7 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
     const right = b.toLowerCase();
     if (left < right) return -1;
     if (left > right) return 1;
-    // 0 for titles that differ only in case keeps them in their order.
+    // 0 for equal lower-case keys keeps their input order.
     return 0;
   });`,
     junior: `const sortTitles = (titles: readonly string[]): string[] => {
@@ -587,6 +497,11 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
 
 const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLowerCase);`,
     hiddenTests: [
+      { call: "sortTitles(Object.freeze(['Z',' z','a',' A ','',' ']))", expected: ["", " ", " A ", " z", "a", "Z"] },
+      { call: "sortTitles(['\ud83e\udd88','\u00e9','\u00e4','Zebra','\u00c4','a','\ud800'])", expected: ["a", "Zebra", "\u00e4", "\u00c4", "\u00e9", "\ud800", "\ud83e\udd88"] },
+      { call: "sortTitles(['\u0130','i','I','e\u0301','\u00e9'])", expected: ["e\u0301", "i", "I", "\u0130", "\u00e9"] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>['B','b','A','a'][i%4])),out=sortTitles(input),empty=sortTitles([]),single=Object.freeze(['x']),one=sortTitles(single);one.push('y');return [out.length,out.every((x,i)=>i<500?x===(i%2?'a':'A'):x===(i%2?'b':'B')),input[0],out!==input,empty!==sortTitles([]),one!==single,one.length];})()", expected: [1000, true, "B", true, true, true, 2] },
+
       { call: 'sortTitles(["the Hobbit", "The Road", "the end"])', expected: ['the end', 'the Hobbit', 'The Road'] },
       { call: 'sortTitles(Object.freeze(["c", "B", "a"]))', expected: ['a', 'B', 'c'] },
       { call: 'sortTitles(["ab", "AA", "Ac"])', expected: ['AA', 'ab', 'Ac'] },
@@ -623,12 +538,13 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
   }
   return delays;
 };`,
-    senior: `const retryDelays = (first: number, cap: number): readonly number[] => {
-  const delays: number[] = [];
-  for (let wait = first; first > 0 && wait <= cap; wait *= 2) delays.push(wait);
-  return Object.freeze(delays);
-};`,
+    senior: "function retryDelays(first: number, cap: number): readonly number[] {\n  const delays: number[] = [];\n  if (first <= 0) return Object.freeze(delays);\n  let wait = first;\n  while (wait <= cap) {\n    delays.push(wait);\n    wait *= 2;\n  }\n  return Object.freeze(delays);\n}",
+    hiddenTypeTests: [{"code": "const __auditMutable: number[] = retryDelays(1,8);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=retryDelays(1,8),b=retryDelays(5,5),c=retryDelays(0,100);return [Array.isArray(a),a,b,c];})()", expected: [true, [1, 2, 4, 8], [5], []] },
+      { call: "(()=>{const result=retryDelays(1,1000000000);return [result.length,result[0],result[result.length-1],result.every((x,i)=>x===2**i)];})()", expected: [30, 1, 536870912, true] },
+      { call: "[retryDelays(1,-1),retryDelays(-1,-1),retryDelays(1000000000,1000000000),retryDelays(1000000000,999999999)]", expected: [[], [], [1000000000], []] },
+
       { call: 'retryDelays(1, 10)', expected: [1, 2, 4, 8] },
       { call: 'retryDelays(5, 5)', expected: [5] },
       { call: 'retryDelays(-10, 100)', expected: [] },
@@ -636,46 +552,16 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
     ],
   },
   'ts-easy3-read-headers': {
-    solution: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
-  let i = 0;
-  // The blank line ends the headers; everything after it is the body.
-  while (i < lines.length && lines[i] !== "") {
-    const line = lines[i];
-    // Only the first ": " separates: a value may hold its own.
-    const at = line.indexOf(": ");
-    headers[line.slice(0, at).toLowerCase()] = line.slice(at + 2);
-    i++;
-  }
-  return headers;
-};`,
-    junior: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line === "") {
-      break;
-    }
-    const parts = line.split(": ");
-    const name = parts[0].toLowerCase();
-    const value = parts.slice(1).join(": ");
-    headers[name] = value;
-    i = i + 1;
-  }
-  return headers;
-};`,
-    senior: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const end = lines.indexOf("");
-  const block = end === -1 ? lines : lines.slice(0, end);
-  return Object.fromEntries(
-    block.map((line) => {
-      const at = line.indexOf(": ");
-      return [line.slice(0, at).toLowerCase(), line.slice(at + 2)];
-    }),
-  );
-};`,
+    solution: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const headers = Object.create(null) as Partial<Record<string, string>>;\n  let i = 0;\n  while (i < lines.length && lines[i] !== \"\") {\n    const line = lines[i];\n    const at = line.indexOf(\": \");\n    headers[line.slice(0, at).toLowerCase()] = line.slice(at + 2);\n    i += 1;\n  }\n  return headers;\n};",
+    junior: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const headers = Object.create(null) as Partial<Record<string, string>>;\n  let i = 0;\n  while (i < lines.length) {\n    const line = lines[i];\n    if (line === \"\") break;\n    const at = line.indexOf(\": \");\n    const name = line.slice(0, at).toLowerCase();\n    const value = line.slice(at + 2);\n    headers[name] = value;\n    i += 1;\n  }\n  return headers;\n};",
+    senior: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const end = lines.indexOf(\"\");\n  const block = end === -1 ? lines : lines.slice(0, end);\n  return Object.assign(Object.create(null), Object.fromEntries(\n    block.map((line) => {\n      const at = line.indexOf(\": \");\n      return [line.slice(0, at).toLowerCase(), line.slice(at + 2)];\n    }),\n  ));\n};",
+    hiddenTypeTests: [{"code": "const __auditLookup=(key:string):string|undefined=>readHeaders([])[key]; const __auditInput:readonly string[]=[\"A: 1\"]; readHeaders(__auditInput);"}],
     hiddenTests: [
+      { call: "(()=>{const lines=Object.freeze(['__proto__: p','CONSTRUCTOR: c','Host: first','host:  last: value  ','Empty: ','']);const out=readHeaders(lines),none=readHeaders([]);return [Object.hasOwn(out,'__proto__'),out.__proto__,Object.hasOwn(out,'constructor'),out.constructor,out.host,out.empty,none.constructor===undefined,none.toString===undefined,Reflect.ownKeys(none).length];})()", expected: [true, "p", true, "c", " last: value  ", "", true, true, 0] },
+      { call: "(()=>{let reads=0;const lines=['A: 1',''];Object.defineProperty(lines,2,{get(){reads++;throw 'body'},enumerable:true});Object.freeze(lines);const a=readHeaders(lines),b=readHeaders(lines);a.a='changed';return [reads,a!==b,b.a,lines[0],lines.length];})()", expected: [0, true, "1", "A: 1", 3] },
+      { call: "(()=>{const a=readHeaders(Object.freeze([''])),b=readHeaders([]);a.new='later';return [a!==b,Reflect.ownKeys(b).length,readHeaders(['A: ','a: 0']).a];})()", expected: [true, 0, "0"] },
+      { call: "(()=>{const lines=Object.freeze(Array.from({length:1000},(_,i)=>'X-'+i+': '+i)),out=readHeaders(lines);return [Object.keys(out).length,out['x-999'],lines[0],lines.length];})()", expected: [1000, "999", "X-0: 0", 1000] },
+
       { call: 'readHeaders(["ACCEPT: */*", "User-Agent: shark/1.0", ""])', expected: { accept: '*/*', 'user-agent': 'shark/1.0' } },
       { call: 'readHeaders([])', expected: {} },
       { call: 'readHeaders(["Retry-After: 120", "", "", "X: y"])', expected: { 'retry-after': '120' } },
@@ -693,24 +579,17 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
   }
   return names;
 };`,
-    junior: `const passed = (scores: Record<string, number>, mark: number): string[] => {
-  const names: string[] = [];
-  const entries = Object.entries(scores);
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const name = entry[0];
-    const score = entry[1];
-    if (score >= mark) {
-      names.push(name);
-    }
-  }
-  return names;
-};`,
+    junior: "const passed = (scores: Record<string, number>, mark: number): string[] => {\n  const names: string[] = [];\n  for (const [name, score] of Object.entries(scores)) {\n    if (score >= mark) names.push(name);\n  }\n  return names;\n};",
     senior: `const passed = (scores: Readonly<Record<string, number>>, mark: number): string[] =>
   Object.entries(scores)
     .filter(([, score]) => score >= mark)
     .map(([name]) => name);`,
+    hiddenTypeTests: [{"code": "const __auditScores:Readonly<Record<string,number>>={a:1}; const __auditNames:string[]=passed(__auditScores,1);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('ignore'),scores=Object.create({inherited:100});scores['10']=9;scores['2']=7;scores.z=3;scores.a=2;scores[sym]=100;Object.defineProperty(scores,'hidden',{value:100,enumerable:false});Object.freeze(scores);return [passed(scores,2),scores.z,Object.getOwnPropertySymbols(scores).length];})()", expected: [["2", "10", "z", "a"], 3, 1] },
+      { call: "(()=>{const scores=Object.freeze(Object.assign(Object.create(null),{' x ':-0,x:0.5,X:-0.25})),a=passed(scores,0),b=passed(scores,0);a.push('changed');const empty=passed({},0),again=passed({},0);empty.push('x');return [b,a!==b,empty!==again,again.length,Object.is(scores[' x '],-0)];})()", expected: [[" x ", "x"], true, true, 0, true] },
+      { call: "(()=>{const scores=Object.freeze(Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i-500]))),out=passed(scores,0);return [out.length,out[0],out[499],Object.keys(scores).length];})()", expected: [500, "p500", "p999", 1000] },
+
       { call: 'passed({ Zed: 99, Amy: 99, Kai: 0 }, 99)', expected: ['Zed', 'Amy'] },
       { call: 'passed({ Ada: 0 }, 0)', expected: ['Ada'] },
       { call: 'passed({ a: 51, b: 50, c: 49, d: 100 }, 50)', expected: ['a', 'b', 'd'] },
@@ -728,32 +607,14 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
   const word = items.length === 1 ? "item" : "items";
   return \`#\${id} \${name}, \${items.length} \${word}\`;
 };`,
-    junior: `interface Order {
-  id: number;
-  customer: { name: string; email: string };
-  items: string[];
-}
-
-const orderLine = (order: Order): string => {
-  const { id, customer, items } = order;
-  const { name } = customer;
-  let word = "items";
-  if (items.length === 1) {
-    word = "item";
-  }
-  return "#" + id + " " + name + ", " + items.length + " " + word;
-};`,
-    senior: `interface Order {
-  id: number;
-  customer: { name: string; email: string };
-  items: string[];
-}
-
-const counted = (count: number, word: string): string => \`\${count} \${word}\${count === 1 ? "" : "s"}\`;
-
-const orderLine = ({ id, customer: { name }, items: { length } }: Order): string =>
-  \`#\${id} \${name}, \${counted(length, "item")}\`;`,
+    junior: "interface Order {\n  id: number;\n  customer: { name: string; email: string };\n  items: string[];\n}\nconst orderLine = ({ id, customer: { name }, items }: Order): string => {\n  let word = \"items\";\n  if (items.length === 1) word = \"item\";\n  return `#${id} ${name}, ${items.length} ${word}`;\n};",
+    senior: "interface Order {\n  id: number;\n  customer: { name: string; email: string };\n  items: string[];\n}\n\nconst counted = (count: number, word: string): string => `${count} ${word}${count === 1 ? \"\" : \"s\"}`;\n\nconst orderLine = ({ id, customer: { name }, items }: Order): string =>\n  `#${id} ${name}, ${counted(items.length, \"item\")}`;",
+    hiddenTypeTests: [{"code": "orderLine({id:1,customer:{name:\"a\",email:\"e\"},items:[1]});", "rejects": true}],
     hiddenTests: [
+      { call: "[orderLine({id:1,customer:{name:' Ada ',email:'private@example.test'},items:['','x']}),orderLine({id:0,customer:{name:'',email:''},items:[]})]", expected: ["#1  Ada , 2 items", "#0 , 0 items"] },
+      { call: "(()=>{const items=Array(5);items[2]='';Object.freeze(items);const customer=Object.freeze({name:'\ud83e\udd88',email:'do-not-print'}),order=Object.freeze({id:9,customer,items});const output=orderLine(order);return [output,items.length,2 in items,0 in items,order.customer===customer];})()", expected: ["#9 \ud83e\udd88, 5 items", 5, true, false, true] },
+      { call: "orderLine(Object.freeze({id:1000000000,customer:Object.freeze({name:'\ud83e\udd88',email:''}),items:Object.freeze(Array(10000).fill('same'))}))", expected: "#1000000000 \ud83e\udd88, 10000 items" },
+
       { call: 'orderLine({ id: 0, customer: { name: "Eve", email: "" }, items: ["x", "y", "z", "w"] })', expected: '#0 Eve, 4 items' },
       { call: 'orderLine({ id: 45, customer: { name: "Fay", email: "fay@example.com" }, items: ["one"] })', expected: '#45 Fay, 1 item' },
       { call: 'orderLine({ id: 9, customer: { name: "Gus", email: "gus@example.com" }, items: ["a", "a"] })', expected: '#9 Gus, 2 items' },
@@ -762,15 +623,7 @@ const orderLine = ({ id, customer: { name }, items: { length } }: Order): string
 
   /* ── Map and Set ──────────────────────────────────────────────────── */
   'ts-easy3-squares-visited': {
-    solution: `const visited = (path: readonly [number, number][]): number => {
-  // Strings compare by value; two [x, y] arrays never do.
-  const seen = new Set<string>();
-  for (const [x, y] of path) {
-    // The comma keeps [1, 23] and [12, 3] apart.
-    seen.add(\`\${x},\${y}\`);
-  }
-  return seen.size;
-};`,
+    solution: "const visited = (path: readonly [number, number][]): number => {\n  // Strings compare by value; distinct [x, y] arrays compare by identity.\n  const seen = new Set<string>();\n  for (const [x, y] of path) {\n    // The comma keeps [1, 23] and [12, 3] apart.\n    seen.add(`${x},${y}`);\n  }\n  return seen.size;\n};",
     junior: `const visited = (path: readonly [number, number][]): number => {
   const seen = new Set<string>();
   for (let i = 0; i < path.length; i++) {
@@ -783,7 +636,12 @@ const orderLine = ({ id, customer: { name }, items: { length } }: Order): string
 };`,
     senior: `const visited = (path: readonly (readonly [number, number])[]): number =>
   new Set(path.map(([x, y]) => \`\${x},\${y}\`)).size;`,
+    hiddenTypeTests: [{"code": "const __auditText: string = visited([[0,0]]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze([1,23]),b=Object.freeze([12,3]),path=Object.freeze([a,a,Object.freeze([1,23]),b]);return [visited(path),path.length,path[0]===a,path[3]===b];})()", expected: [2, 4, true, true] },
+      { call: "[visited(Object.freeze([Object.freeze([0,-0]),Object.freeze([-0,0])])),visited([[-1000000000,1000000000],[1000000000,-1000000000]])]", expected: [1, 2] },
+      { call: "(()=>{const path=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze([i%100,Math.floor(i/100)%2])));return [visited(path),path.length,path[999][0],path[999][1]];})()", expected: [200, 1000, 99, 1] },
+
       { call: 'visited([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, 0]])', expected: 4 },
       { call: 'visited([[0, 0], [0, 0], [0, 1], [0, 0], [0, 1]])', expected: 2 },
       { call: 'visited([[1, 23], [12, 3]])', expected: 2 },
@@ -805,35 +663,14 @@ const orderLine = ({ id, customer: { name }, items: { length } }: Order): string
   }
   return runs.join(", ");
 };`,
-    junior: `const toRanges = (pages: readonly number[]): string => {
-  let text = "";
-  let start = 0;
-  while (start < pages.length) {
-    let end = start;
-    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) {
-      end = end + 1;
-    }
-    let run = String(pages[start]);
-    if (end > start) {
-      run = run + "-" + pages[end];
-    }
-    if (text !== "") {
-      text = text + ", ";
-    }
-    text = text + run;
-    start = end + 1;
-  }
-  return text;
-};`,
-    senior: `const toRanges = (pages: readonly number[]): string => {
-  const runs: string[] = [];
-  for (let start = 0, end = 0; start < pages.length; start = ++end) {
-    while (pages[end + 1] === pages[end] + 1) end++;
-    runs.push(start === end ? String(pages[start]) : \`\${pages[start]}-\${pages[end]}\`);
-  }
-  return runs.join(", ");
-};`,
+    junior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  let start = 0;\n  while (start < pages.length) {\n    let end = start;\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end += 1;\n    let run = String(pages[start]);\n    if (end > start) run = run + \"-\" + pages[end];\n    runs.push(run);\n    start = end + 1;\n  }\n  return runs.join(\", \");\n};",
+    senior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  for (let start = 0, end = 0; start < pages.length; start = ++end) {\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end++;\n    runs.push(start === end ? String(pages[start]) : `${pages[start]}-${pages[end]}`);\n  }\n  return runs.join(\", \");\n};",
     hiddenTests: [
+      { call: "(()=>{const input=[0,1,3,4],text=toRanges(input);return [text,input,input.length];})()", expected: ["0-1, 3-4", [0, 1, 3, 4], 4] },
+      { call: "(()=>{const input=Object.freeze([0,1,3,999999999,1000000000]),text=toRanges(input);return [text,input, toRanges(Object.freeze([0])),toRanges(Object.freeze([]))];})()", expected: ["0-1, 3, 999999999-1000000000", [0, 1, 3, 999999999, 1000000000], "0", ""] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),text=toRanges(input);return [text,input[0],input[999],input.length];})()", expected: ["0-999", 0, 999, 1000] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i*2)),text=toRanges(input);return [text.split(', ').length,text.startsWith('0, 2, '),text.endsWith(', 1998'),input.length];})()", expected: [1000, true, true, 1000] },
+
       { call: 'toRanges([9, 10, 12, 13, 14, 20])', expected: '9-10, 12-14, 20' },
       { call: 'toRanges([1, 2, 4])', expected: '1-2, 4' },
       { call: 'toRanges([100, 101])', expected: '100-101' },
@@ -841,42 +678,16 @@ const orderLine = ({ id, customer: { name }, items: { length } }: Order): string
     ],
   },
   'ts-easy3-alternate-playlists': {
-    solution: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
-  const mixed: T[] = [];
-  let i = 0;
-  let j = 0;
-  // Go on until both lists are used up; each index moves only when its list gives an item.
-  while (i < a.length || j < b.length) {
-    // Test the index, not the item: "" and 0 are items too.
-    if (i < a.length) mixed.push(a[i++]);
-    if (j < b.length) mixed.push(b[j++]);
-  }
-  return mixed;
-};`,
-    junior: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
-  const mixed: T[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    mixed.push(a[i]);
-    mixed.push(b[j]);
-    i = i + 1;
-    j = j + 1;
-  }
-  while (i < a.length) {
-    mixed.push(a[i]);
-    i = i + 1;
-  }
-  while (j < b.length) {
-    mixed.push(b[j]);
-    j = j + 1;
-  }
-  return mixed;
-};`,
-    senior: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] =>
-  Array.from({ length: Math.max(a.length, b.length) }, (_, k) => k)
-    .flatMap((k) => [...a.slice(k, k + 1), ...b.slice(k, k + 1)]);`,
+    solution: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n  const mixed: T[] = [];\n  let i = 0;\n  let j = 0;\n  // Go on until both lists are used up; each index moves only when its list gives an item.\n  while (i < a.length || j < b.length) {\n    // Test the index, not the item: \"\" and 0 are items too.\n    if (i < a.length) mixed.push(a[i++]);\n    if (j < b.length) mixed.push(b[j++]);\n  }\n  return mixed;\n};",
+    junior: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n  const mixed: T[] = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length && j < b.length) {\n    mixed.push(a[i]);\n    mixed.push(b[j]);\n    i = i + 1;\n    j = j + 1;\n  }\n  while (i < a.length) {\n    mixed.push(a[i]);\n    i = i + 1;\n  }\n  while (j < b.length) {\n    mixed.push(b[j]);\n    j = j + 1;\n  }\n  return mixed;\n};",
+    senior: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] =>\n  Array.from({ length: Math.max(a.length, b.length) }, (_, k) => k)\n    .flatMap((k) => [...a.slice(k, k + 1), ...b.slice(k, k + 1)]);",
+    hiddenTypeTests: [{"code": "const __b065Mixed:(string|number)[]=alternate<string|number>(Object.freeze([\"x\"]),Object.freeze([1]));__b065Mixed.push(2);"}],
     hiddenTests: [
+      { call: "(() => { const obj=Object.freeze({x:1}),fn=()=>0,sym=Symbol(\"x\"),arr=Object.freeze([1]);const a=Object.freeze([obj,undefined,sym]),b=Object.freeze([fn,null,arr]);const out=alternate(a,b);return [out.length,out[0]===obj,out[1]===fn,out[2]===undefined,out[3]===null,out[4]===sym,out[5]===arr,a[0]===obj,b[2]===arr]; })()", expected: [6, true, true, true, true, true, true, true, true] },
+      { call: "(() => {const empty=Object.freeze([]);const a=alternate(empty,empty),b=alternate(empty,empty);const other=Object.freeze([0,1]);const one=alternate(empty,other);a.push(7);one.push(8);return [a!==b,a!==empty,b.length,one,other];})()", expected: [true, true, 0, [0, 1, 8], [0, 1]] },
+      { call: "(() => {const x={x:1};const list=Object.freeze([x,x]);const out=alternate(list,list);return [out.length,out.every(item=>item===x),out!==list,alternate([false,false],[false]).length];})()", expected: [4, true, true, 3] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>-i));const out=alternate(a,b);return [out.length,out[0],Object.is(out[1],-0),out[1998],out[1999],a.length,b.length];})()", expected: [2000, 0, true, 999, -999, 1000, 1000] },
+
       { call: 'alternate([], [])', expected: [] },
       { call: 'alternate([0, 0, 0], [7])', expected: [0, 7, 0, 0] },
       { call: 'alternate(["", "b"], ["c", ""])', expected: ['', 'c', 'b', ''] },
@@ -951,6 +762,11 @@ const readUser = (text: string): User | null => {
   return isUser(value) ? value : null;
 };`,
     hiddenTests: [
+      { call: "(()=>{const proto=Object.freeze({name:' inherited ',age:NaN}),value=Object.freeze(Object.create(proto)),array=Object.assign([],{name:'',age:Infinity});return [isUser(value),isUser(array),isUser({name:'x',age:-1.5}),isUser(Object.assign(()=>0,{age:1})),value.name,Number.isNaN(value.age)];})()", expected: [true, true, true, false, " inherited ", true] },
+      { call: "(()=>{const user=readUser('{\"name\":\"\",\"age\":1e400,\"extra\":{\"x\":1},\"__proto__\":{\"safe\":true}}');return [user!==null,user.name,user.age===Infinity,user.extra.x,Object.hasOwn(user,'__proto__'),Object.getPrototypeOf(user)===Object.prototype];})()", expected: [true, "", true, 1, true, true] },
+      { call: "[isUser({name:new String('x'),age:1}),isUser({name:'x',age:new Number(1)}),isUser(null),isUser([]),isUser(Object.freeze(Object.assign(Object.create(null),{name:'\ud83e\udd88',age:0})))]", expected: [false, false, false, false, true] },
+      { call: "(()=>{const text=JSON.stringify({name:'x'.repeat(200),age:0,extra:Array(1000).fill(1)}),out=readUser(text);return [out.name.length,out.extra.length,text.length<=10000];})()", expected: [200, 1000, true] },
+
       { call: 'readUser("[]")', expected: null },
       { call: 'readUser(JSON.stringify({ name: "Cy", age: 41, admin: true }))', expected: { name: 'Cy', age: 41, admin: true } },
       { call: 'readUser(JSON.stringify("Ada"))', expected: null },
@@ -987,7 +803,12 @@ type Failure = Extract<Reply, { error: string }>;
 const isFailure = (reply: Reply): reply is Failure => "error" in reply;
 
 const errorsOf = (replies: readonly Reply[]): string[] => replies.filter(isFailure).map(({ error }) => error);`,
+    hiddenTypeTests: [{"code": "const __auditRead: readonly Reply[] = [{error:\"x\"}]; const __auditOut: string[] = errorsOf(__auditRead); __auditOut.push(\"y\");"}],
     hiddenTests: [
+      { call: "errorsOf([Object.freeze({error:' x '}),Object.freeze(Object.assign(Object.create(null),{error:''})),Object.freeze({data:Object.freeze(['error'])}),Object.freeze({error:'\ud83e\udd88'}),Object.freeze({error:' x '})])", expected: [" x ", "", "\ud83e\udd88", " x "] },
+      { call: "(()=>{const data=Object.freeze(['a']),reply=Object.freeze({data}),err=Object.freeze({error:'x'}),input=Object.freeze([reply,err]),out=errorsOf(input),again=errorsOf(input);out.push('later');return [out!==again,again,input[0]===reply,reply.data===data,data.length,errorsOf([])!==errorsOf([])];})()", expected: [true, ["x"], true, true, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(i%2?{error:String(i)}:{data:[]}))),out=errorsOf(input);return [out.length,out[0],out[499],input.length];})()", expected: [500, "1", "999", 1000] },
+
       { call: 'errorsOf([{ error: "A" }, { data: ["b"] }, { error: "C" }, { data: [] }, { error: "E" }])', expected: ['A', 'C', 'E'] },
       { call: 'errorsOf([{ data: ["error"] }])', expected: [] },
       { call: 'errorsOf([{ error: "x" }, { error: "x" }])', expected: ['x', 'x'] },
@@ -1025,13 +846,13 @@ const nextLight = (light: Light, steps: number): Light => {
   }
   return current;
 };`,
-    senior: `type Light = "red" | "green" | "amber";
-
-const NEXT: Readonly<Record<Light, Light>> = { red: "green", green: "amber", amber: "red" };
-
-const nextLight = (light: Light, steps: number): Light =>
-  Array.from({ length: steps }).reduce<Light>((current) => NEXT[current], light);`,
+    senior: "type Light = \"red\" | \"green\" | \"amber\";\n\n// Record<Light, Light>: a missing light or a misspelt one is a compile error.\nconst NEXT: Record<Light, Light> = {\n  red: \"green\",\n  green: \"amber\",\n  amber: \"red\",\n};\n\nfunction nextLight(light: Light, steps: number): Light {\n  let current = light;\n  let remaining = steps;\n  while (remaining > 0) {\n    current = NEXT[current];\n    remaining -= 1;\n  }\n  return current;\n}",
+    hiddenTypeTests: [{"code": "nextLight(\"red\", \"2\");", "rejects": true}],
     hiddenTests: [
+      { call: "['red','green','amber'].map(light=>nextLight(light,10000))", expected: ["green", "amber", "red"] },
+      { call: "(()=>{const out=[];for(const start of ['red','green','amber']){let current=start;for(let i=0;i<30;i++){out.push(nextLight(start,i)===current);current=NEXT[current];}}return out.every(Boolean);})()", expected: true },
+      { call: "(()=>{const before=[NEXT.red,NEXT.green,NEXT.amber];nextLight('red',9999);nextLight('green',0);return [NEXT.red===before[0],NEXT.green===before[1],NEXT.amber===before[2],nextLight('amber',0)];})()", expected: [true, true, true, "amber"] },
+
       { call: 'nextLight("green", 2)', expected: 'red' },
       { call: 'nextLight("amber", 5)', expected: 'green' },
       { call: 'nextLight("red", 7)', expected: 'green' },
@@ -1050,22 +871,7 @@ const toCelsius = (readings: readonly Reading[]): number[] =>
     const celsius = ((reading.value - 32) * 5) / 9;
     return Math.round(celsius * 10) / 10;
   });`,
-    junior: `type Reading =
-  | { unit: "C"; value: number }
-  | { unit: "F"; value: number };
-
-const toCelsius = (readings: readonly Reading[]): number[] => {
-  const result: number[] = [];
-  for (const reading of readings) {
-    if (reading.unit === "F") {
-      const celsius = (reading.value - 32) * 5 / 9;
-      result.push(Math.round(celsius * 10) / 10);
-    } else {
-      result.push(reading.value);
-    }
-  }
-  return result;
-};`,
+    junior: "type Reading =\n  | { unit: \"C\"; value: number }\n  | { unit: \"F\"; value: number };\n\nconst toCelsius = (readings: readonly Reading[]): number[] =>\n  readings.map((reading) => {\n    if (reading.unit === \"C\") return reading.value;\n    const celsius = (reading.value - 32) * 5 / 9;\n    return Math.round(celsius * 10) / 10;\n  });",
     senior: `type Reading =
   | { unit: "C"; value: number }
   | { unit: "F"; value: number };
@@ -1074,7 +880,12 @@ const fromFahrenheit = (value: number): number => Math.round(((value - 32) * 5 /
 
 const toCelsius = (readings: readonly Reading[]): number[] =>
   readings.map(({ unit, value }) => (unit === "C" ? value : fromFahrenheit(value)));`,
+    hiddenTypeTests: [{"code": "const __auditInput: readonly Reading[] = [{unit:\"F\",value:32}]; toCelsius(__auditInput).push(1);"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([Object.freeze({unit:'F',value:50}),Object.freeze({unit:'C',value:-3.25})]),a=toCelsius(input),b=toCelsius(input);a.push(99);return [a!==b,b,input[0].value,input[1].value,input.length,toCelsius([])!==toCelsius([])];})()", expected: [true, [10, -3.25], 50, -3.25, 2, true] },
+      { call: "(()=>{const out=toCelsius([{unit:'C',value:-0},{unit:'F',value:31.99},{unit:'F',value:32}]);return [Object.is(out[0],-0),Object.is(out[1],-0),Object.is(out[2],0)];})()", expected: [true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({unit:i%2?'C':'F',value:i%2?0.123456:212}))),out=toCelsius(input);return [out.length,out.every((x,i)=>x===(i%2?0.123456:100)),input[0].value];})()", expected: [1000, true, 212] },
+
       { call: 'toCelsius([{ unit: "F", value: 32 }, { unit: "F", value: 50 }, { unit: "C", value: 0 }])', expected: [0, 10, 0] },
       { call: 'toCelsius([{ unit: "F", value: -40 }])', expected: [-40] },
       { call: 'toCelsius([{ unit: "F", value: 100 }])', expected: [37.8] },

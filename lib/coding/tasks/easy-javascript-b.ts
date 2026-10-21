@@ -29,7 +29,7 @@ export const EASY_JAVASCRIPT_B_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['regex'],
     title: 'Keep only the digits',
-    prompt: 'Write `digitsOnly(text)`, returning the text with every character that is not a digit removed, using `replace` with a regular expression. `digitsOnly("+420 777-123 456")` gives `"420777123456"`. Text with no digits gives an empty string.',
+    prompt: 'Write `digitsOnly(text)`, keeping only ASCII digits `0` through `9` in their original order. `digitsOnly("+420 777-123 456")` gives `"420777123456"`; all other characters, including other Unicode numerals, are removed. Empty text or text with no ASCII digits gives `""`. A regular expression is one useful approach. Target: O(n) time, where n is the number of JavaScript string positions.',
     starter: `const digitsOnly = text => {
 
 };
@@ -40,7 +40,7 @@ console.log(digitsOnly("+420 777-123 456"));
     skeleton: `const digitsOnly = text => {
   return text.replace(/* a pattern for one non-digit, with the g flag */, "");
 };`,
-    hints: ['`\\D` matches one character that is not a digit. Without the `g` flag, `replace` changes only the first match.'],
+    hints: ['Think about matching the characters to remove, and whether replacing one match covers the whole phone number.'],
     approach: [
       'Write a pattern that matches a single non-digit: `/\\D/`.',
       'Add the `g` flag, so `replace` removes every match and not only the first.',
@@ -63,8 +63,8 @@ console.log(digitsOnly("+420 777-123 456"));
     level: 2,
     tier: 2,
     focus: ['regex'],
-    title: 'Is it a hex colour?',
-    prompt: 'Write `isHexColour(text)`, returning `true` when the whole text is a six-digit hex colour: a `#` followed by exactly six characters from 0–9 and a–f, in either case. Use a regular expression and its `test` method. `isHexColour("#1a2b3c")` gives `true`, and `isHexColour("#12345")` gives `false`. Anything before the `#` or after the sixth digit makes it `false`.',
+    title: 'Is it a hex color?',
+    prompt: 'Write `isHexColour(text)`, returning a boolean for a string containing exactly `#` and six ASCII hexadecimal digits (`0–9`, `a–f` or `A–F`). Extra characters, whitespace and line breaks make it false. `"#1a2b3c"` is valid; `"#12345"` is not. A regular expression with `test` is one approach; CSS shorthand and other CSS color syntax are outside this exercise. Target: O(1) time: a valid candidate has exactly seven UTF-16 code units, so only that bounded number of positions needs inspection.',
     starter: `const isHexColour = text => {
 
 };
@@ -76,7 +76,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
   const pattern = /* ^ and $ around a # and six hex characters, with the i flag */;
   return pattern.test(text);
 };`,
-    hints: ['`^` pins a pattern to the start of the text and `$` to the end, so nothing else can sit around the colour. `[0-9a-f]{6}` matches six hex characters, and the `i` flag accepts capitals too.'],
+    hints: ["Check the entire input, including whitespace at either end. Which character range and exact repetition count describe the six digits?"],
     approach: [
       'Build the character class for one hex digit: `[0-9a-f]`.',
       'Ask for exactly six of them with `{6}`, after a literal `#`.',
@@ -91,6 +91,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
       { call: 'isHexColour("#12345g")', expected: false, label: 'g is not a hex digit', edge: true },
       { call: 'isHexColour("123456")', expected: false, label: 'the # is required', edge: true },
       { call: 'isHexColour("#1234567")', expected: false, label: 'a seventh digit is too many', edge: true },
+      { call: 'isHexColour("")', expected: false, label: 'empty text', edge: true },
     ],
   },
   {
@@ -101,7 +102,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
     tier: 2,
     focus: ['regex'],
     title: 'Every hashtag in a post',
-    prompt: 'Write `hashtags(text)`, returning every hashtag in the text, in order. A hashtag is a `#` followed by one or more letters, digits or underscores. Use `match` with a regular expression and the `g` flag. `hashtags("Loving #javascript and #css")` gives `["#javascript", "#css"]`. When nothing matches, `match` gives `null`; return an empty array instead.',
+    prompt: 'Write `hashtags(text)`, returning an array of matches in their original order, including duplicates and original case. For this exercise, a match is `#` followed immediately by one or more ASCII characters from `A–Z`, `a–z`, `0–9` or `_`; it ends before any other character. Tags may touch or occur inside other text. `"#one#two"` gives `["#one", "#two"]`; `"#café"` gives `["#caf"]`. No matches, including empty text, gives `[]`. Target: O(n) time, where n is the number of UTF-16 code units in text.',
     starter: `const hashtags = text => {
 
 };
@@ -113,7 +114,7 @@ console.log(hashtags("Loving #javascript and #css"));
   const found = text.match(/* a # and then one or more word characters, every match */);
   return /* found, or [] when it is null */;
 };`,
-    hints: ['`\\w` matches a letter, digit or underscore, and `\\w+` matches a run of them. With the `g` flag, `match` returns every match in an array, or `null` when nothing matches.'],
+    hints: ["A tag ends as soon as its permitted character run ends. Remember to collect later tags as well as the first, and handle no match."],
     approach: [
       'Write the pattern `/#\\w+/g`: a literal `#`, then one or more word characters, every match.',
       'Call `text.match` with it.',
@@ -126,6 +127,7 @@ console.log(hashtags("Loving #javascript and #css"));
       { call: 'hashtags("#one#two")', expected: ['#one', '#two'], label: 'tags can touch' },
       { call: 'hashtags("no tags here")', expected: [], label: 'no match gives an empty array', edge: true },
       { call: 'hashtags("a # b")', expected: [], label: 'a # on its own is not a tag', edge: true },
+      { call: 'hashtags("#café #你好 #_")', expected: ['#caf', '#_'], label: 'the stated ASCII character set', edge: true },
     ],
   },
 
@@ -138,7 +140,7 @@ console.log(hashtags("Loving #javascript and #css"));
     tier: 2,
     focus: ['split', 'objects'],
     title: 'Read a query string',
-    prompt: 'A query string looks like `"page=2&sort=new"`. Write `parseQuery(query)`, returning an object with one key per pair: split the text on `&`, then split each pair on `=`. `parseQuery("page=2&sort=new")` gives `{ page: "2", sort: "new" }`. Values stay strings. A pair with no `=` gets an empty string, a key that appears twice keeps its last value, and an empty query gives `{}`.',
+    prompt: 'Write `parseQuery(query)`, parsing a simplified raw string into an object of own string-valued properties. Split on `&` and ignore empty segments. The first `=` in each segment separates key and value; keep later `=` in the value. Without `=`, the whole segment is the key with value `""`. Keys may be empty; repeated keys keep their last value, including `__proto__`. Empty input gives `{}`. Preserve percent escapes, `+`, spaces and `?` literally: this is not a complete URL parser. `"page=2&token=a=b"` gives `{ page: "2", token: "a=b" }`. Target: O(n) time, where n is the input length in UTF-16 code units, assuming ordinary property insertion costs.',
     starter: `const parseQuery = query => {
 
 };
@@ -147,22 +149,16 @@ console.log(hashtags("Loving #javascript and #css"));
 console.log(parseQuery("page=2&sort=new"));
 `,
     skeleton: `const parseQuery = query => {
-  const result = {};
-  if (/* the query is empty */) return result;
-
+  const entries = [];
   for (const pair of query.split("&")) {
-    const [key, value] = /* the pair split on = */;
-    // store the value under the key, or "" when there is no value
+    // ignore an empty segment
+    // locate the first =, then extract the key and value
+    // add the [key, value] pair to entries
   }
-
-  return result;
+  return Object.fromEntries(entries);
 };`,
-    hints: ['`"".split("&")` gives `[""]`, not `[]`, so check for an empty query first. `const [key, value] = pair.split("=")` leaves `value` as `undefined` when the pair has no `=`.'],
-    approach: [
-      'Return `{}` straight away when the query is an empty string.',
-      'Split the query on `&` and loop over the pairs.',
-      'Split each pair on `=` and store the value under the key, using `""` when the value is missing. A later pair with the same key overwrites the earlier one.',
-    ],
+    hints: ["Separate the first delimiter from the rest of the value. Creating properties from entries also avoids an inherited setter swallowing an ordinary-looking key."],
+    approach: ["Split on & and skip empty segments. Locate the first = with indexOf.", "If no delimiter exists, pair the whole segment with an empty string. Otherwise slice the key before it and the value after it.", "Collect key/value entries and use Object.fromEntries. Repeated keys are overwritten, and __proto__ becomes an own data property."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -171,6 +167,7 @@ console.log(parseQuery("page=2&sort=new"));
       { call: 'parseQuery("flag")', expected: { flag: '' }, label: 'a key with no = gets an empty string', edge: true },
       { call: 'parseQuery("a=1&a=2")', expected: { a: '2' }, label: 'the last value wins', edge: true },
       { call: 'parseQuery("")', expected: {}, label: 'an empty query', edge: true },
+      { call: 'parseQuery("token=a=b")', expected: { token: 'a=b' }, label: 'keep later equals signs', edge: true },
     ],
   },
 
@@ -183,7 +180,7 @@ console.log(parseQuery("page=2&sort=new"));
     tier: 1,
     focus: ['concat'],
     title: 'Add to a playlist',
-    prompt: 'Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs(["Intro"], ["Wave", "Tide"])` gives `["Intro", "Wave", "Tide"]`, and `addSongs(["Intro"], "Wave")` gives `["Intro", "Wave"]`. The original playlist is not changed.',
+    prompt: "Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs([\"Intro\"], [\"Wave\", \"Tide\"])` gives `[\"Intro\", \"Wave\", \"Tide\"]`, and `addSongs([\"Intro\"], \"Wave\")` gives `[\"Intro\", \"Wave\"]`. The original playlist is not changed. Both arrays are ordinary dense arrays of primitive string titles; empty titles and repeats are valid and keep their positions. Do not change either input; frozen arrays are valid. Return a fresh array even when nothing is added. Target: O(n) time, where n is the total number of titles in the playlist and songs (one for a single title); copying a title reference takes constant time.",
     starter: `const addSongs = (playlist, songs) => {
 
 };
@@ -207,6 +204,10 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
       { call: 'addSongs(["Intro"], "Wave")', expected: ['Intro', 'Wave'], label: 'a single title' },
       { call: 'addSongs([], [])', expected: [], label: 'nothing to add to nothing', edge: true },
       { call: '(() => { const list = ["Intro"]; addSongs(list, ["Wave"]); return list; })()', expected: ['Intro'], label: 'the original playlist is unchanged', edge: true },
+      { call: "addSongs([\"a\",\"a\",\"\"], [\"a\",\"\"])", expected: ["a", "a", "", "a", ""], label: "keep duplicates and empty titles", edge: true },
+      { call: "(() => { const list=Object.freeze([\"a\"]), songs=Object.freeze([\"b\"]); const out=addSongs(list,songs); return Array.isArray(out)&&out!==list&&out!==songs&&out.join(\"|\")===\"a|b\"&&list[0]===\"a\"&&songs[0]===\"b\"; })()", expected: true, label: "frozen source arrays", edge: true },
+      { call: "(() => { const songs=[\"b\",\"c\"]; addSongs([\"a\"],songs); return songs; })()", expected: ["b", "c"], label: "songs is unchanged", edge: true },
+      { call: "(() => { const list=[],songs=[]; const out=addSongs(list,songs); return out!==list&&out!==songs&&out.length===0; })()", expected: true, label: "fresh empty playlist", edge: true },
     ],
   },
   {
@@ -217,7 +218,7 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
     tier: 2,
     focus: ['join', 'slice'],
     title: 'A list in words',
-    prompt: 'Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords(["tea", "coffee", "juice"])` gives `"tea, coffee and juice"`, and `inWords(["salt", "pepper"])` gives `"salt and pepper"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was.',
+    prompt: "Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords([\"tea\", \"coffee\", \"juice\"])` gives `\"tea, coffee and juice\"`, and `inWords([\"salt\", \"pepper\"])` gives `\"salt and pepper\"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was. `items` is an ordinary dense array of primitive strings. Preserve each string exactly, including spaces, empty strings, punctuation and repetitions; do not filter, trim or parse it. Use no comma immediately before the final `and`. Frozen arrays are valid. Target: O(n) time, where n is the number of items plus their total UTF-16 length, assuming linear slice and join operations.",
     starter: `const inWords = items => {
 
 };
@@ -231,7 +232,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
   const last = items[items.length - 1];
   return /* allButLast joined with ", ", then " and ", then last */;
 };`,
-    hints: ['`items.slice(0, -1)` copies every item except the last. `join(", ")` puts a comma and a space between the items and nothing after the final one.'],
+    hints: ["Separate the zero- and one-item cases from longer lists. For a longer list, join the prefix with comma-space and keep the last item for the final conjunction."],
     approach: [
       'Handle short lists first. With fewer than two items, `items.join("")` already gives `""` or the one item.',
       'Take every item but the last with `slice(0, -1)` and join them with `", "`.',
@@ -245,6 +246,10 @@ console.log(inWords(["tea", "coffee", "juice"]));
       { call: 'inWords(["a", "b", "c", "d"])', expected: 'a, b, c and d' },
       { call: 'inWords(["water"])', expected: 'water', label: 'one item comes back on its own', edge: true },
       { call: 'inWords([])', expected: '', label: 'no items', edge: true },
+      { call: "inWords([\"\",\"x\",\"\"])", expected: ", x and ", label: "preserve empty strings", edge: true },
+      { call: "inWords([\"a, b\",\"c and d\",\" e \"])", expected: "a, b, c and d and  e ", label: "literal punctuation and spaces", edge: true },
+      { call: "inWords(Object.freeze([\"a\",\"a\",\"a\"]))", expected: "a, a and a", label: "frozen repeated words", edge: true },
+      { call: "inWords([\"\"])", expected: "", label: "one empty string", edge: true },
     ],
   },
 
@@ -257,7 +262,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Fill in the defaults',
-    prompt: 'Write `withDefaults(settings, defaults)`, returning a new object with every key of `settings`, plus each key of `defaults` that `settings` does not have. Loop over `defaults` with `for…in`. `withDefaults({ theme: "dark" }, { theme: "light", size: 12 })` gives `{ theme: "dark", size: 12 }`. A setting of `false`, `0` or `""` is still a setting and is kept. Neither input is changed.',
+    prompt: "Write `withDefaults(settings, defaults)`, returning a fresh shallow dictionary of own enumerable string properties. Keep every such setting; copy a default only when settings has no own enumerable key with that name. Loop over defaults with `for...in`, ignoring inherited keys. `withDefaults({ theme: \"dark\" }, { theme: \"light\", size: 12 })` gives `{ theme: \"dark\", size: 12 }`. Existing false, 0, empty string, null and undefined values are all kept. Inputs are ordinary data objects with string keys and data values, without getters or proxies; inherited and non-enumerable keys are ignored, and null-prototype or frozen objects are valid. Keep original value references and do not change either input or nested values. All string names, including `__proto__` and `toString`, must work as own data keys; the result may have a null prototype. Target: O(n) time, where n counts property names and prototype objects inspected across both inputs; assume bounded-length names and average constant-time dictionary operations.",
     starter: `const withDefaults = (settings, defaults) => {
 
 };
@@ -265,21 +270,9 @@ console.log(inWords(["tea", "coffee", "juice"]));
 // Scratch pad. Change this and press Run.
 console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
 `,
-    skeleton: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-
-  for (const key in defaults) {
-    // copy defaults[key] across only when result does not have key yet
-  }
-
-  return result;
-};`,
-    hints: ['`key in result` is `true` whenever the key exists, whatever its value. Checking the value instead, as `result[key] || defaults[key]` does, would replace a `false` or a `0`.'],
-    approach: [
-      'Start from a copy of `settings`, so the original object never changes.',
-      'Loop over the keys of `defaults` with `for…in`.',
-      'When the copy does not have the key, copy the default across. Return the copy.',
-    ],
+    skeleton: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  // copy own enumerable settings\n  for (const key in defaults) {\n    // copy each own default only if result has no own key with that name\n  }\n  return result;\n};",
+    hints: ["A missing key differs from a key whose value is undefined or false. Check ownership instead of truthiness or the in operator; a dictionary without a prototype also handles names such as __proto__."],
+    approach: ["Create a null-prototype dictionary, then copy own enumerable string settings with their original value references.", "Visit defaults with for...in and ignore inherited keys with Object.hasOwn.", "Copy a default only if the result has no own key with that name. This preserves an explicitly stored undefined value and avoids inherited names blocking defaults. Return the new dictionary."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -288,6 +281,11 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
       { call: 'withDefaults({ sound: false, volume: 0 }, { sound: true, volume: 5 })', expected: { sound: false, volume: 0 }, label: 'false and 0 are kept', edge: true },
       { call: 'withDefaults({ extra: "x" }, {})', expected: { extra: 'x' }, label: 'a setting with no default stays', edge: true },
       { call: '(() => { const settings = { a: 1 }; withDefaults(settings, { b: 2 }); return settings; })()', expected: { a: 1 }, label: 'settings is not changed', edge: true },
+      { call: "(() => { const out=withDefaults({a:undefined,b:null,c:\"\"},{a:1,b:2,c:3});return Object.hasOwn(out,\"a\")&&out.a===undefined&&out.b===null&&out.c===\"\"; })()", expected: true, label: "own undefined null and empty settings remain", edge: true },
+      { call: "(() => { const out=withDefaults({},JSON.parse(\"{\\\"__proto__\\\":7,\\\"constructor\\\":8,\\\"toString\\\":9}\"));return Object.hasOwn(out,\"__proto__\")&&out.__proto__===7&&Object.hasOwn(out,\"constructor\")&&out.constructor===8&&Object.hasOwn(out,\"toString\")&&out.toString===9; })()", expected: true, label: "default names cannot be blocked by Object.prototype", edge: true },
+      { call: "(() => { const s=Object.create({inherited:1}),d=Object.create({inheritedDefault:2});s.a=3;d.b=4;Object.defineProperty(s,\"hidden\",{value:5});Object.defineProperty(d,\"secret\",{value:6});return withDefaults(s,d); })()", expected: {"a": 3, "b": 4}, label: "only own enumerable input keys", edge: true },
+      { call: "(() => { const item={id:1};const s=Object.freeze(Object.assign(Object.create(null),{a:item})),d=Object.freeze({b:item,a:0});const out=withDefaults(s,d);return out!==s&&out!==d&&out.a===item&&out.b===item&&item.id===1; })()", expected: true, label: "shallow identity and frozen inputs", edge: true },
+      { call: "(() => { const s={},d={};const out=withDefaults(s,d);return out!==s&&out!==d&&Object.keys(out).length===0; })()", expected: true, label: "fresh empty dictionary", edge: true },
     ],
   },
   {
@@ -298,7 +296,7 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
     tier: 2,
     focus: ['for-in', 'objects'],
     title: 'Count values by type',
-    prompt: 'Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: "x", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `"object"` for arrays and for `null` too, so they count there. An empty object gives `{}`.',
+    prompt: "Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: \"x\", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `\"object\"` for arrays and for `null` too, so they count there. An empty object gives `{}`. Deliberately include inherited enumerable string keys, as for...in does, with nearer properties shadowing the same inherited name. Exclude non-enumerable and symbol-keyed properties. Count exactly the eight JavaScript typeof labels; symbol-valued and bigint-valued properties count as symbol and bigint, and NaN counts as number. Inputs are ordinary data objects without getters or proxies, including frozen or null-prototype objects. Do not change input values or prototypes. Target: O(n) time, where n counts property names and prototype objects inspected, assuming constant-time typeof, indexing and count updates.",
     starter: `const countTypes = object => {
 
 };
@@ -316,12 +314,8 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
 
   return counts;
 };`,
-    hints: ['`counts[type]` is `undefined` the first time a type turns up. `(counts[type] ?? 0) + 1` starts it at 1.'],
-    approach: [
-      'Create an empty object for the counts.',
-      'Loop over the keys with `for…in` and read the type of each value with `typeof object[key]`.',
-      'Use the type as a key in the counts and add one to it, starting from 0 when it is missing.',
-    ],
+    hints: ["Use typeof for the group name, even for null and arrays. When you see a group for the first time its count is missing; decide how to turn that missing count into the first occurrence."],
+    approach: ["Create an empty object for counts. A typeof label is always one of eight fixed strings.", "Visit enumerable string keys with for...in, including inherited keys in this exercise. Read typeof object[key] without JSON conversion or custom null/array labels.", "Increment the matching group from zero and return the counts. If an application needs own properties only, add an ownership check; that would change this task."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -330,6 +324,10 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
       { call: 'countTypes({ f: () => 1, g: "x" })', expected: { function: 1, string: 1 } },
       { call: 'countTypes({ u: undefined })', expected: { undefined: 1 }, label: 'undefined is its own type', edge: true },
       { call: 'countTypes({})', expected: {}, label: 'an empty object', edge: true },
+      { call: "(() => {const o=Object.create({x:true,z:\"s\"});o.x=0;o.a=null;return countTypes(o);})()", expected: {"number": 1, "object": 1, "string": 1}, label: "inherited values and own shadowing", edge: true },
+      { call: "countTypes({a:Symbol(\"x\"),b:1n,c:NaN,d:()=>0,e:undefined,f:false,g:\"\",h:null})", expected: {"symbol": 1, "bigint": 1, "number": 1, "function": 1, "undefined": 1, "boolean": 1, "string": 1, "object": 1}, label: "all eight typeof labels", edge: true },
+      { call: "(() => {const o=Object.assign(Object.create(null),{a:1});Object.defineProperty(o,\"hidden\",{value:true});o[Symbol(\"s\")]=true;return countTypes(Object.freeze(o));})()", expected: {"number": 1}, label: "frozen null-prototype input excludes hidden and symbol keys", edge: true },
+      { call: "(() => {const o={a:1};countTypes(o);return o.a===1&&Object.keys(o).length===1;})()", expected: true, label: "do not alter values", edge: true },
     ],
   },
 
@@ -342,7 +340,7 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Column totals',
-    prompt: 'A grid is an array of rows, and every row holds the same number of numbers. Write `columnTotals(grid)`, returning the total of each column, left to right. Use a loop over the columns with a loop over the rows inside it. `columnTotals([[1, 2], [3, 4]])` gives `[4, 6]`. An empty grid gives `[]`.',
+    prompt: "A grid is an array of rows, and every row holds the same number of numbers. Write `columnTotals(grid)`, returning the total of each column, left to right. Use a loop over the columns with a loop over the rows inside it. `columnTotals([[1, 2], [3, 4]])` gives `[4, 6]`. An empty grid gives `[]`. The grid and rows are ordinary dense arrays, with 0 to 100 rows and 0 to 100 columns. All entries are integers between -1000000 and 1000000, so sums remain exact Numbers. Empty rows, such as [[], []], give []. Return a fresh array even for a single row; do not change the grid or rows, and accept frozen input. Target: O(n²) time, where n is the larger of the row and column counts: the nested traversal visits r * c cells, at most n²; indexing and integer addition take constant time.",
     starter: `const columnTotals = grid => {
 
 };
@@ -366,6 +364,7 @@ console.log(columnTotals([[1, 2], [3, 4]]));
 };`,
     hints: ['The number of columns is the length of any row, so read it from `grid[0]`. The outer loop picks a column and the inner loop walks down it with `grid[row][column]`.'],
     approach: [
+      "For r rows and c columns the loop visits r * c entries. This is at most n² when n is the larger dimension, not evidence that every pair of nested loops is quadratic in total input cells.",
       'Return `[]` for an empty grid, since it has no first row to count columns from.',
       'Loop over the column indexes, from 0 up to the length of the first row.',
       'For each column, loop over every row and add `grid[row][column]` to a sum. Push the sum when the inner loop ends.',
@@ -378,6 +377,11 @@ console.log(columnTotals([[1, 2], [3, 4]]));
       { call: 'columnTotals([[1, 2, 3]])', expected: [1, 2, 3], label: 'one row', edge: true },
       { call: 'columnTotals([[-1, 1], [1, -1]])', expected: [0, 0], label: 'negative numbers', edge: true },
       { call: 'columnTotals([])', expected: [], label: 'an empty grid', edge: true },
+      { call: "columnTotals([[],[]])", expected: [], label: "zero columns", edge: true },
+      { call: "(() => {const row=Object.freeze([2,-3,4]);const grid=Object.freeze([row]);const out=columnTotals(grid);return out!==row&&out!==grid&&out.length===3&&out[0]===2&&out[1]===-3&&out[2]===4;})()", expected: true, label: "fresh single-row result and frozen input", edge: true },
+      { call: "(() => {const row=[3,1,2],grid=[row];columnTotals(grid);return grid[0]===row&&row[0]===3&&row[1]===1&&row[2]===2;})()", expected: true, label: "preserve single-row identity and order", edge: true },
+      { call: "columnTotals([[1,2,3],[4,5,6]])", expected: [5, 7, 9], label: "rectangular grid", edge: true },
+      { call: "(() => {const out=columnTotals(Array.from({length:100},()=>[1000000,-1000000]));return out.length===2&&out[0]===100000000&&out[1]===-100000000;})()", expected: true, label: "bounded exact sums", edge: true },
     ],
   },
   {
@@ -388,7 +392,7 @@ console.log(columnTotals([[1, 2], [3, 4]]));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Every size in every colour',
-    prompt: 'Write `combinations(sizes, colours)`, returning one label for every size paired with every colour, written as `"size colour"`. Loop over the sizes, and inside that loop, over the colours. `combinations(["S", "M"], ["red", "blue"])` gives `["S red", "S blue", "M red", "M blue"]`. When either list is empty there are no combinations.',
+    prompt: "Write `combinations(sizes, colours)`, returning one label for every size paired with every colour, written as `\"size colour\"`. Loop over the sizes, and inside that loop, over the colours. `combinations([\"S\", \"M\"], [\"red\", \"blue\"])` gives `[\"S red\", \"S blue\", \"M red\", \"M blue\"]`. When either list is empty there are no combinations. Both inputs are ordinary dense arrays of at most 100 primitive strings each, with each string at most 128 UTF-16 code units. Empty strings, spaces and duplicates are valid: preserve them exactly and insert one extra space between the two strings. Keep size-first order and return a fresh array. Do not change either input; frozen arrays are valid. Target: O(n²) time, where n is the larger input length; there are sizes.length * colours.length labels, at most n², and the bounded label lengths make construction constant work per pair.",
     starter: `const combinations = (sizes, colours) => {
 
 };
@@ -409,6 +413,7 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
 };`,
     hints: ['The inner loop runs all the way through on every turn of the outer loop, so each size meets every colour before the next size starts.'],
     approach: [
+      "The exact pair count is the product of the two lengths. Using n for the larger length gives the O(n²) upper bound even when the lists have different sizes.",
       'Start an empty array for the labels.',
       'Loop over the sizes, and inside that loop, loop over the colours.',
       'In the inner loop, push `size + " " + colour`. With an empty list one of the loops never runs its body, so the result stays empty.',
@@ -421,6 +426,11 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
       { call: 'combinations(["S", "M", "L"], ["grey"])', expected: ['S grey', 'M grey', 'L grey'] },
       { call: 'combinations([], ["red"])', expected: [], label: 'no sizes', edge: true },
       { call: 'combinations(["S"], [])', expected: [], label: 'no colours', edge: true },
+      { call: "combinations([\"S\",\"S\"],[\"red\",\"red\"])", expected: ["S red", "S red", "S red", "S red"], label: "duplicate pairs remain", edge: true },
+      { call: "combinations([\"\",\" S \"],[\"\",\" blue \"])", expected: [" ", "  blue ", " S  ", " S   blue "], label: "preserve empty strings and spaces", edge: true },
+      { call: "(() => {const s=[\"M\",\"S\"],c=[\"red\",\"blue\"];const out=combinations(s,c);return out.length===4&&s[0]===\"M\"&&s[1]===\"S\"&&c[0]===\"red\"&&c[1]===\"blue\";})()", expected: true, label: "do not mutate either input", edge: true },
+      { call: "combinations(Object.freeze([\"M\"]),Object.freeze([\"black\",\"white\"]))", expected: ["M black", "M white"], label: "frozen inputs", edge: true },
+      { call: "(() => {const s=[],c=[];const out=combinations(s,c);return out!==s&&out!==c&&out.length===0;})()", expected: true, label: "fresh empty result", edge: true },
     ],
   },
 
@@ -433,7 +443,7 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
     tier: 2,
     focus: ['flat'],
     title: 'One line per item picked',
-    prompt: 'An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }])` gives `["apple", "apple", "pear"]`. An item with a `qty` of 0 adds nothing.',
+    prompt: "An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: \"apple\", qty: 2 }, { name: \"pear\", qty: 1 }])` gives `[\"apple\", \"apple\", \"pear\"]`. An item with a `qty` of 0 adds nothing. The order is an ordinary dense array of data objects with own primitive string names and integer quantities from 0 through 10000. The order has at most 10000 items, and its total quantity is at most 10000. Keep literal names, including empty strings, spaces and repeats. Do not change the order, quantities, names or other values; frozen input is valid. Always return a fresh array. Target: O(n) time, where n is the number of order records plus the sum of their quantities; copying a name reference takes constant time.",
     starter: `const pickList = order => {
 
 };
@@ -446,7 +456,7 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
     // return an array holding item.qty copies of item.name
   });
 };`,
-    hints: ['`Array(3).fill("x")` gives `["x", "x", "x"]`. When the `flatMap` callback returns an empty array, that item leaves no trace in the result.'],
+    hints: ["Think of each order record as producing its own small list, including no entries for a zero quantity. flatMap joins those per-record lists without merging repeated names."],
     approach: [
       'Call `flatMap` on the order.',
       'For each item, return an array of `item.qty` copies of `item.name`, for example `Array(item.qty).fill(item.name)`.',
@@ -459,6 +469,11 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
       { call: 'pickList([{ name: "nail", qty: 3 }])', expected: ['nail', 'nail', 'nail'] },
       { call: 'pickList([{ name: "sold out", qty: 0 }, { name: "tape", qty: 1 }])', expected: ['tape'], label: 'a quantity of 0 adds nothing', edge: true },
       { call: 'pickList([])', expected: [], label: 'an empty order', edge: true },
+      { call: "pickList([{name:\"\",qty:2},{name:\" x \",qty:1},{name:\"\",qty:1}])", expected: ["", "", " x ", ""], label: "literal empty names and repeated records", edge: true },
+      { call: "pickList(Object.freeze([Object.freeze({name:\"x\",qty:0}),Object.freeze({name:\"y\",qty:2})]))", expected: ["y", "y"], label: "frozen records", edge: true },
+      { call: "(() => {const item={name:\"x\",qty:0,extra:1},order=[item];pickList(order);return order[0]===item&&item.name===\"x\"&&item.qty===0&&item.extra===1;})()", expected: true, label: "zero-quantity source records stay unchanged", edge: true },
+      { call: "(() => {const order=[];const first=pickList(order),second=pickList(order);return first!==order&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty lists", edge: true },
+      { call: "(() => {const out=pickList([{name:\"x\",qty:10000}]);return out.length===10000&&out.every(name=>name===\"x\");})()", expected: true, label: "bounded output-size work", edge: true },
     ],
   },
 
@@ -471,7 +486,7 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
     tier: 1,
     focus: ['forEach', 'objects'],
     title: 'Discount every item',
-    prompt: 'Each item is `{ name, price }`, with the price in cents. Write `applyDiscount(items, percent)`, which lowers every item’s price by `percent` per cent in place, using `forEach`, and returns nothing. Round each new price to a whole number of cents with `Math.round`. After `applyDiscount(items, 10)`, an item priced 200 costs 180. A discount of 0 leaves every price as it was.',
+    prompt: "Each item is `{ name, price }`, with the price in cents. Write `applyDiscount(items, percent)`, which lowers every item’s price by `percent` per cent in place, using `forEach`, and returns nothing. Round each new price to a whole number of cents with `Math.round`. After `applyDiscount(items, 10)`, an item priced 200 costs 180. A discount of 0 leaves every price as it was. `percent` is an integer from 0 through 100. `items` is an ordinary dense array of distinct mutable data objects with own writable integer prices from 0 through 1000000 cents; each also has a string name and may have other properties. Preserve array order and the same item objects, names and other values; only their prices change. The outer array may be frozen because its entries need no replacement. Calculate each price as Math.round(oldPrice * (100 - percent) / 100), multiplying before dividing; this bounded integer product avoids half-cent errors from an approximate precomputed factor. Target: O(n) time, where n is the number of items and bounded price arithmetic takes constant time.",
     starter: `const applyDiscount = (items, percent) => {
 
 };
@@ -488,6 +503,7 @@ console.log(basket);
 };`,
     hints: ['`forEach` calls your function once per item and returns `undefined`, so it suits work that changes things rather than work that builds a new array. Assign to `item.price` inside the callback.'],
     approach: [
+      "Keep the multiplication before division. Rewriting the formula as price * (1 - percent / 100) can land just below a half-cent boundary in binary floating point and round to the wrong cent.",
       'Call `forEach` on the items.',
       'In the callback, work out `item.price * (100 - percent) / 100`, round it with `Math.round`, and assign it back to `item.price`.',
       'Return nothing. The caller already holds the items and sees the new prices.',
@@ -500,6 +516,10 @@ console.log(basket);
       { call: '(() => { const items = [{ name: "pen", price: 120 }]; applyDiscount(items, 0); return items; })()', expected: [{ name: 'pen', price: 120 }], label: 'no discount', edge: true },
       { call: 'applyDiscount([{ name: "cup", price: 100 }], 20)', expected: undefined, label: 'it returns nothing', edge: true },
       { call: '(() => { const items = []; applyDiscount(items, 30); return items; })()', expected: [], label: 'an empty list', edge: true },
+      { call: "(() => {const items=[{name:\"half\",price:5},{name:\"quarter\",price:25}];applyDiscount(items,90);return items.map(i=>i.price);})()", expected: [1, 3], label: "half-cent arithmetic at ninety percent", edge: true },
+      { call: "(() => {const items=[{name:\"half\",price:25}];applyDiscount(items,42);return items[0].price;})()", expected: 15, label: "multiply before dividing at a half cent", edge: true },
+      { call: "(() => {const metadata={id:1},item={name:\"tea\",price:100,metadata},items=Object.freeze([item]);const returned=applyDiscount(items,25);return returned===undefined&&items[0]===item&&item.name===\"tea\"&&item.price===75&&item.metadata===metadata&&metadata.id===1;})()", expected: true, label: "preserve item references and other fields in a frozen array", edge: true },
+      { call: "(() => {const item={name:\"zero\",price:1000000};applyDiscount([item],100);return item.price;})()", expected: 0, label: "full discount at the price bound", edge: true },
     ],
   },
 
@@ -512,7 +532,7 @@ console.log(basket);
     tier: 2,
     focus: ['sort'],
     title: 'Newest first',
-    prompt: 'Each post is `{ title, date }`, where `date` is text such as `"2026-09-01"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed.',
+    prompt: "Each post is `{ title, date }`, where `date` is text such as `\"2026-09-01\"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed. Every date is a valid Gregorian calendar date in exactly ten-character YYYY-MM-DD form, with a four-digit year from 0001 through 9999 and zero-padded month/day; there are no times or offsets to parse. Posts are ordinary data objects in a dense array. Keep the original post and nested-value references, including repeated references; only the outer order changes. Do not modify any input, and accept frozen arrays/posts. Return a fresh array even when empty or already sorted. Target: O(n log n) time in the comparison-sort model, where n is the post count and fixed-length date comparison is constant-time; assume the chosen sort implementation meets that comparison bound.",
     starter: `const newestFirst = posts => {
 
 };
@@ -539,6 +559,9 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
       { call: 'newestFirst([{ title: "x", date: "2026-05-01" }, { title: "y", date: "2026-05-01" }, { title: "z", date: "2026-06-01" }]).map(post => post.title)', expected: ['z', 'x', 'y'], label: 'posts on the same date keep their order', edge: true },
       { call: 'newestFirst([])', expected: [], label: 'no posts', edge: true },
       { call: '(() => { const posts = [{ title: "old", date: "2020-01-01" }, { title: "new", date: "2021-01-01" }]; newestFirst(posts); return posts.map(post => post.title); })()', expected: ['old', 'new'], label: 'the input keeps its order', edge: true },
+      { call: "(() => {const meta={id:1},early=Object.freeze({title:\"old\",date:\"0001-01-01\",meta}),late=Object.freeze({title:\"new\",date:\"9999-12-31\",meta}),posts=Object.freeze([early,late,late]);const out=newestFirst(posts);return out!==posts&&out.length===3&&out[0]===late&&out[1]===late&&out[2]===early&&out[0].meta===meta&&meta.id===1;})()", expected: true, label: "date bounds frozen posts and repeated identities", edge: true },
+      { call: "(() => {const posts=[];const first=newestFirst(posts),second=newestFirst(posts);return first!==posts&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "newestFirst([{title:\"leap\",date:\"2024-02-29\"},{title:\"march\",date:\"2024-03-01\"}]).map(p=>p.title)", expected: ["march", "leap"], label: "calendar boundary in fixed-width dates", edge: true },
     ],
   },
 
@@ -551,7 +574,7 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
     tier: 1,
     focus: ['includes', 'map'],
     title: 'Hide the banned words',
-    prompt: 'Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `"***"`. Check each word with `includes` inside `map`. `hideBanned(["you", "are", "silly"], ["silly"])` gives `["you", "are", "***"]`. The match is exact, so `"Silly"` is not the same word as `"silly"`.',
+    prompt: "Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `\"***\"`. Check each word with `includes` inside `map`. `hideBanned([\"you\", \"are\", \"silly\"], [\"silly\"])` gives `[\"you\", \"are\", \"***\"]`. The match is exact, so `\"Silly\"` is not the same word as `\"silly\"`. Both inputs are ordinary dense arrays of primitive strings, each string at most 128 UTF-16 units. Empty strings, spaces, punctuation and duplicates are literal data; do not treat banned entries as regular expressions or normalize spelling. Keep every word position and return a fresh array even when no words are banned. Do not change either input; frozen arrays are valid. Target: O(n²) time for the includes-in-map approach, where n is the larger array length and bounded string comparison is constant-time; the membership scans can take words.length * banned.length comparisons. A Set-based solution can use less expected work and also meets this goal.",
     starter: `const hideBanned = (words, banned) => {
 
 };
@@ -562,7 +585,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     skeleton: `const hideBanned = (words, banned) => {
   return words.map(word => /* "***" when banned includes word, otherwise word */);
 };`,
-    hints: ['`banned.includes(word)` is `true` when the word is on the banned list. A ternary in the `map` callback picks `"***"` or the word.'],
+    hints: ["The result needs one entry for every original word. Decide whether the entire string is a banned member, then choose the marker or the original string without changing either source list."],
     approach: [
       'Map over the words, because the result has one entry per word.',
       'For each word, ask `banned.includes(word)`.',
@@ -576,6 +599,11 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
       { call: 'hideBanned(["hello"], [])', expected: ['hello'], label: 'nothing banned', edge: true },
       { call: 'hideBanned(["Silly", "silly"], ["silly"])', expected: ['Silly', '***'], label: 'the match is exact', edge: true },
       { call: 'hideBanned([], ["x"])', expected: [], label: 'no words', edge: true },
+      { call: "hideBanned([\"a.*\",\"ax\",\"a\",\"\", \"é\",\"e\\u0301\"],[\"a.*\",\"\", \"é\"])", expected: ["***", "ax", "a", "***", "***", "é"], label: "literal punctuation empty strings and exact Unicode spelling", edge: true },
+      { call: "hideBanned(Object.freeze([\"z\",\"ok\",\"z\"]),Object.freeze([\"z\",\"a\",\".\"]))", expected: ["***", "ok", "***"], label: "frozen inputs and repeated matches", edge: true },
+      { call: "(() => {const words=[\"x\"],banned=[];const out=hideBanned(words,banned);return out!==words&&out.length===1&&out[0]===\"x\";})()", expected: true, label: "fresh result when nothing is banned", edge: true },
+      { call: "(() => {const banned=[\"z\",\"a\"],words=[\"z\"];hideBanned(words,banned);return banned[0]===\"z\"&&banned[1]===\"a\"&&words[0]===\"z\";})()", expected: true, label: "preserve both inputs", edge: true },
+      { call: "(() => {const words=[],banned=[];const out=hideBanned(words,banned);return out!==words&&out!==banned&&out.length===0;})()", expected: true, label: "fresh empty result", edge: true },
     ],
   },
   {
@@ -586,7 +614,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     tier: 2,
     focus: ['indexOf', 'while'],
     title: 'Every position of a value',
-    prompt: 'Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf(["a", "b", "a", "c", "a"], "a")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `"1"` is not `1`.',
+    prompt: "Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf([\"a\", \"b\", \"a\", \"c\", \"a\"], \"a\")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `\"1\"` is not `1`. Inputs are an ordinary dense array of data values and any query value. Strict equality means NaN never matches, 0 and -0 both match, and objects match only by reference. Do not change the input or nested values; frozen arrays are valid. Return a fresh positions array on every call, including empty input and no match. Target: O(n) time, where n is the input length and equality is treated as constant-time: each new indexOf starts after the previous match, so the searches scan disjoint successive portions rather than restarting at zero.",
     starter: `const positionsOf = (list, value) => {
 
 };
@@ -619,6 +647,11 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
       { call: 'positionsOf([1, 2, 3], 4)', expected: [], label: 'no match', edge: true },
       { call: 'positionsOf([1, "1", 1], 1)', expected: [0, 2], label: 'the string "1" is not the number 1', edge: true },
       { call: 'positionsOf([], "x")', expected: [], label: 'an empty list', edge: true },
+      { call: "positionsOf([NaN,NaN],NaN)", expected: [], label: "NaN never matches", edge: true },
+      { call: "positionsOf([0,-0,1],-0)", expected: [0, 1], label: "both zero signs match", edge: true },
+      { call: "(() => {const value={id:1};return positionsOf(Object.freeze([value,{id:1},value]),value);})()", expected: [0, 2], label: "frozen reference equality", edge: true },
+      { call: "(() => {const list=[2,1,2];positionsOf(list,2);return list;})()", expected: [2, 1, 2], label: "preserve source order", edge: true },
+      { call: "(() => {const list=[];const a=positionsOf(list,1),b=positionsOf(list,1);return a!==list&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty positions", edge: true },
     ],
   },
   {
@@ -629,7 +662,7 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
     tier: 1,
     focus: ['findIndex'],
     title: 'The first reading over the limit',
-    prompt: 'Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1.',
+    prompt: "Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1. readings is an ordinary dense array of finite Numbers and limit is a finite Number; fractional and negative readings are valid. Compare the supplied numbers without rounding or coercion. Do not change the array; frozen inputs are valid. Target: O(n) time in the worst case, where n is the reading count and numeric comparison is constant-time; an early match can take less.",
     starter: `const firstOverLimit = (readings, limit) => {
 
 };
@@ -654,6 +687,10 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
       { call: 'firstOverLimit([10, 11], 10)', expected: 1, label: 'equal to the limit is not over it', edge: true },
       { call: 'firstOverLimit([1, 2], 5)', expected: -1, label: 'nothing over the limit', edge: true },
       { call: 'firstOverLimit([], 0)', expected: -1, label: 'no readings', edge: true },
+      { call: "firstOverLimit([0.01,0.06,0.2],0.05)", expected: 1, label: "fractional readings are not rounded", edge: true },
+      { call: "firstOverLimit(Object.freeze([-0.5,-0.1,0]),-0.2)", expected: 1, label: "frozen fractional negative readings", edge: true },
+      { call: "(() => {const readings=[3,1,7,9];const out=firstOverLimit(readings,5);return out===2&&readings[0]===3&&readings[1]===1&&readings[2]===7&&readings[3]===9;})()", expected: true, label: "preserve original index order", edge: true },
+      { call: "firstOverLimit([0,-0],0)", expected: -1, label: "neither zero sign is over zero", edge: true },
     ],
   },
   {
@@ -664,7 +701,7 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
     tier: 1,
     focus: ['every', 'objects'],
     title: 'Every field filled in',
-    prompt: 'A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: "Ada", email: "ada@example.com" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete.',
+    prompt: "A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: \"Ada\", email: \"ada@example.com\" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete. Consider only own enumerable string-keyed fields; inherited, non-enumerable and symbol-keyed properties are ignored. Those field values are primitive strings. Blank means empty after JavaScript trim, including its whitespace and line terminators such as tabs, non-breaking spaces and BOM; a zero-width space is not removed by trim and counts as content. Inputs are ordinary data objects without getters or proxies, including frozen and null-prototype objects. Do not trim or rewrite the stored values. Target: O(n) time, where n is the number of own properties inspected plus the total UTF-16 length of included field strings, assuming linear trimming and constant-time property access.",
     starter: `const isComplete = form => {
 
 };
@@ -675,7 +712,7 @@ console.log(isComplete({ name: "Ada", email: "" }));
     skeleton: `const isComplete = form => {
   return Object.values(form).every(/* a test for a value that is not blank */);
 };`,
-    hints: ['`value.trim()` removes the spaces at both ends, so a blank value becomes `""`. The test passes when what is left is not an empty string.'],
+    hints: ["Validate the own enumerable string values, not inherited properties. Use trim only to inspect whether content remains; keep the original stored strings unchanged."],
     approach: [
       'Get the values with `Object.values(form)`.',
       'Call `every` with a test that trims each value and checks it is not `""`.',
@@ -689,6 +726,12 @@ console.log(isComplete({ name: "Ada", email: "" }));
       { call: 'isComplete({ name: "   " })', expected: false, label: 'spaces alone count as empty', edge: true },
       { call: 'isComplete({ city: "  Brno " })', expected: true, label: 'spaces around a word are fine', edge: true },
       { call: 'isComplete({})', expected: true, label: 'a form with no fields is complete', edge: true },
+      { call: "isComplete(Object.create({inherited:\" \"}))", expected: true, label: "inherited fields do not count", edge: true },
+      { call: "(() => {const form={own:\"ok\"};Object.defineProperty(form,\"hidden\",{value:\" \"});form[Symbol(\"s\")]=\" \";return isComplete(form);})()", expected: true, label: "hidden and symbol fields are excluded", edge: true },
+      { call: "isComplete({a:\"\\t\\n\\u00a0\\ufeff\"})", expected: false, label: "JavaScript whitespace-only field", edge: true },
+      { call: "isComplete({a:\"\\u200b\"})", expected: true, label: "zero-width space is content under trim", edge: true },
+      { call: "isComplete(Object.freeze(Object.assign(Object.create(null),{name:\" Ada \"})))", expected: true, label: "frozen null-prototype form", edge: true },
+      { call: "(() => {const form={name:\" Ada \"};const out=isComplete(form);return out===true&&form.name===\" Ada \";})()", expected: true, label: "validation preserves stored text", edge: true },
     ],
   },
 
@@ -701,7 +744,7 @@ console.log(isComplete({ name: "Ada", email: "" }));
     tier: 1,
     focus: ['destructuring'],
     title: 'Options with defaults',
-    prompt: 'Write `makeUser(options)`, returning `{ name, role, active }` from an options object. Destructure the options in the parameter list and give each one a default: `name` is `"Guest"`, `role` is `"viewer"` and `active` is `true`. `makeUser({ name: "Ada" })` gives `{ name: "Ada", role: "viewer", active: true }`, and `makeUser()` with no argument gives the three defaults. A default applies only when a value is missing or `undefined`, so `active: false` and `name: null` are kept.',
+    prompt: "Write `makeUser(options)`, returning a fresh object with exactly `{ name, role, active }`. Destructure those options in the parameter list with defaults: name is \"Guest\", role is \"viewer\" and active is true. Omitting options or passing undefined uses an empty object. A field default applies only when the field is missing or undefined: preserve null, false, 0 and empty strings. Return values unchanged, including object references. Read only these three fields, ignore extra fields and do not mutate input. Domain: options is omitted, undefined or an ordinary object with data properties; named fields may also be inherited data properties. Ignored extra fields may have throwing getters and the object may be frozen. A null whole argument is outside this contract. Target: O(1) time under constant-cost field access: the number of extra options does not change the three fields read.",
     starter: `const makeUser = options => {
 
 };
@@ -736,7 +779,7 @@ console.log(makeUser({ name: "Ada" }));
     tier: 1,
     focus: ['spread'],
     title: 'Highest with Math.max',
-    prompt: 'Write `highest(scores)`, returning the largest number in the array by spreading it into `Math.max`. `highest([3, 9, 4])` gives 9. `Math.max()` with no arguments gives `-Infinity`, so return `null` for an empty array instead.',
+    prompt: "Write `highest(scores)`, returning the largest number by spreading the array into Math.max. highest([3, 9, 4]) is 9. Return null for an empty array instead of Math.max()’s -Infinity. Keep Math.max numeric semantics: a mixture of -0 and +0 returns +0, while only -0 returns -0. Do not modify the array. Domain: an ordinary dense array of at most 10,000 finite Numbers, including signed zero; it may be frozen. The bound keeps the spread argument list within the exercise’s supported size; unbounded argument spreading is not safe in every engine. Target: O(n) time, where n is the score count, under unit-cost Number comparison. Spreading the argument list can also allocate O(n) temporary space.",
     starter: `const highest = scores => {
 
 };
@@ -774,7 +817,7 @@ console.log(highest([3, 9, 4]));
     tier: 2,
     focus: ['recursion'],
     title: 'Count the files in a folder tree',
-    prompt: 'A folder is `{ name, children }`, where `children` is an array of files and folders. A file is `{ name }`, with no `children`. Write `countFiles(entry)`, returning how many files `entry` holds at any depth, by recursion: a file counts as 1, and a folder adds up the files of each of its children. An empty folder holds 0 files.',
+    prompt: "A folder is `{ name, children }`, where `children` is an array of files and folders. A file is `{ name }`, with no `children`. Write `countFiles(entry)`, returning how many files `entry` holds at any depth, by recursion: a file counts as 1, and a folder adds up the files of each of its children. An empty folder holds 0 files. Domain: an ordinary acyclic tree with at most 1,000 entries and nesting depth at most 100. Each entry occurs once: a file has no children property, and a folder has a dense children array. Names can repeat and do not determine identity; count file entries, not unique names. The tree and arrays may be frozen and must not be mutated. Target: O(n) time, where n counts all visited file/folder entries under constant-cost property access; the recursive call stack uses O(h) space for height h.",
     starter: `const countFiles = entry => {
 
 };
@@ -815,7 +858,7 @@ console.log(countFiles({ name: "src", children: [{ name: "a.js" }, { name: "lib"
     tier: 2,
     focus: ['recursion'],
     title: 'How deep it goes',
-    prompt: 'Write `depth(list)`, returning how many levels of arrays there are, by recursion. An array that holds no arrays has depth 1, and an array that holds arrays is one level deeper than the deepest of them. `depth([1, [2, [3]]])` gives 3, and `depth([])` gives 1.',
+    prompt: "Write `depth(list)`, returning how many levels of arrays there are, by recursion. An array that holds no arrays has depth 1, and an array that holds arrays is one level deeper than the deepest of them. `depth([1, [2, [3]]])` gives 3, and `depth([])` gives 1. Domain: an acyclic nesting of ordinary dense arrays with at most 1,000 total arrays plus item slots and depth at most 100. Non-array values, including null, objects and strings, are opaque: do not inspect inside them. Inputs may be frozen and must not be modified. Target: O(n) time, where n is 1 plus the total visited arrays and item slots, using unit-cost Array.isArray and property access. Recursive depth is O(h); the filter/map reveal also allocates intermediate arrays.",
     starter: `const depth = list => {
 
 };
@@ -860,7 +903,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 2,
     focus: ['closures'],
     title: 'Did it change?',
-    prompt: 'Write `makeChangeWatcher()`, returning a function `changed(value)`. Its first call returns `true`. Every later call returns `true` when `value` is not strictly equal to the value of the call before it, and `false` when it is. Keep the previous value in a variable the returned function closes over. A first value of `undefined` still counts as a change, and each watcher remembers only its own values.',
+    prompt: "Write `makeChangeWatcher()`, returning a function `changed(value)`. Its first call returns `true`. Every later call returns `true` when `value` is not strictly equal to the value of the call before it, and `false` when it is. Keep the previous value in a variable the returned function closes over. A first value of `undefined` still counts as a change, and each watcher remembers only its own values. Use JavaScript !== semantics exactly: repeated NaN counts as a change, +0 and -0 compare equal, and objects/functions/symbols compare by identity rather than by their contents. Do not inspect or mutate supplied objects. Domain: at most 1,000 calls per watcher with arbitrary JavaScript values; strings have at most 1,000 UTF-16 units. Target: O(1) time per call in the unit-cost bounded-value comparison model, with O(1) stored values per watcher, independent of call history length.",
     starter: `const makeChangeWatcher = () => {
 
 };
@@ -903,7 +946,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 1,
     focus: ['higher-order', 'closures'],
     title: 'A function that makes functions',
-    prompt: 'Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor.',
+    prompt: "Write `multiplyBy(factor)`, a higher-order function that returns a new function. The new function takes one number and returns it multiplied by `factor`. `multiplyBy(3)(4)` gives 12, and `[1, 2, 3].map(multiplyBy(2))` gives `[2, 4, 6]`. Each returned function keeps its own factor. Domain: factor and each supplied value are finite Numbers from -1,000,000 through 1,000,000, including signed zero. Use ordinary Number multiplication without rounding, coercing strings or replacing falsy products. Each factory call returns a fresh function, whose factor stays fixed across repeated/interleaved calls. Target: O(1) time and O(1) state for creating a multiplier or calling it under unit-cost Number arithmetic.",
     starter: `const multiplyBy = factor => {
 
 };
@@ -940,7 +983,7 @@ console.log(depth([1, [2, [3]]]));
     tier: 1,
     focus: ['json'],
     title: 'Parse JSON safely',
-    prompt: 'Write `parseOr(text, fallback)`, returning what `JSON.parse(text)` gives, or `fallback` when the text is not valid JSON. `JSON.parse` throws on bad input, so call it inside `try` and return the fallback from `catch`. `parseOr("[1, 2]", [])` gives `[1, 2]`, and `parseOr("{bad", {})` gives `{}`. Valid JSON such as `"0"` or `"null"` parses to a real value, and that value is kept.',
+    prompt: "Write `parseOr(text, fallback)`, returning what `JSON.parse(text)` gives, or `fallback` when the text is not valid JSON. `JSON.parse` throws on bad input, so call it inside `try` and return the fallback from `catch`. `parseOr(\"[1, 2]\", [])` gives `[1, 2]`, and `parseOr(\"{bad\", {})` gives `{}`. Valid JSON such as `\"0\"` or `\"null\"` parses to a real value, and that value is kept. Domain: text is a string of at most 10,000 UTF-16 units; valid JSON has nesting depth at most 100. Use JSON.parse with no reviver. Keep every valid parsed value, including false, null, empty strings and signed zero; parsing is not schema validation. On a syntax error return the exact fallback reference/value without inspecting or cloning it. Inputs/fallback objects must not be mutated. Target: O(n) time in the usual linear JSON-parsing model, where n is 1 plus text length; parsing and output allocation belong to the built-in, not a constant-time operation.",
     starter: `const parseOr = (text, fallback) => {
 
 };
@@ -979,7 +1022,7 @@ console.log(parseOr("[1, 2]", []), parseOr("{bad", {}));
     tier: 1,
     focus: ['json'],
     title: 'Save JSON people can read',
-    prompt: 'Write `toFileText(value)`, returning `value` as JSON indented by two spaces and followed by one newline, the way a settings file is saved. Pass the indent as the third argument of `JSON.stringify`. `toFileText({ a: 1 })` gives three lines, `{`, `  "a": 1` and `}`, then a final newline.',
+    prompt: "Write `toFileText(value)`, returning `value` as JSON indented by two spaces and followed by one newline, the way a settings file is saved. Pass the indent as the third argument of `JSON.stringify`. `toFileText({ a: 1 })` gives three lines, `{`, `  \"a\": 1` and `}`, then a final newline. Domain: an acyclic ordinary JSON data value: null, Boolean, finite Number, string, dense array or object with enumerable own string-keyed data properties. No getters, toJSON hooks, undefined, functions, symbols or BigInts; nesting depth is at most 30 and the result at most 100,000 UTF-16 units. Inputs may be frozen. Preserve normal JSON property order and escaping, do not mutate or sort the input, and append exactly one LF newline. Target: O(n) time in an output-sensitive serialization model, where n is 1 plus the emitted text length, including indentation.",
     starter: `const toFileText = value => {
 
 };
@@ -990,10 +1033,10 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     skeleton: `const toFileText = value => {
   return JSON.stringify(value, /* no replacer */, /* the indent */) + /* a final newline */;
 };`,
-    hints: ['`JSON.stringify(value, null, 2)` puts each property on its own line, indented by two spaces. The second argument is a replacer, and `null` keeps everything.'],
+    hints: ['`JSON.stringify(value, null, 2)` puts each property on its own line, indented by two spaces. The second argument is a replacer; `null` means no replacer, while normal JSON serialization rules still apply.'],
     approach: [
       'Call `JSON.stringify` with `null` as the second argument and `2` as the third.',
-      'Add `"\\n"` at the end, because a text file ends with a newline.',
+      'Append exactly one LF newline (`"\\n"`) as required by this file format.',
       'Return the string. Empty objects and arrays stay on one line as `{}` and `[]`.',
     ],
     verify: 'tests',
@@ -1015,7 +1058,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['promises'],
     title: 'Which ones failed',
-    prompt: 'Write `failureMessages(promises)`. Wait for every promise to settle with `Promise.allSettled`, then resolve to the `message` of each one that rejected, in the order the promises were given. `Promise.all` would stop at the first rejection; `allSettled` waits for all of them and reports how each one ended. Every rejection is an `Error`. When nothing rejects, resolve to `[]`.',
+    prompt: "Write `failureMessages(promises)`. Wait for every promise to settle with `Promise.allSettled`, then resolve to the `message` of each one that rejected, in the order the promises were given. `Promise.all` rejects as soon as one input rejects, without cancelling the others; `allSettled` waits for every outcome. Every rejection is an `Error`. When nothing rejects, resolve to `[]`. promises is a read-only dense array of at most 1000 ordinary native Promises and may be frozen. Consume its initial membership during the call. Fulfillment values are opaque, including Error objects, and are never failures just because of their type. Rejection reasons are Error instances with ordinary string message data of at most 1000 UTF-16 code units; preserve empty and repeated messages. Read messages after all input settlements, so caller edits to an Error message before the last settlement are visible. Return a native Promise immediately and a fresh messages array on every call. Do not change the inputs. Target: O(n) time for wrapper registration/filter/map work and O(n) space for settlements/output, where n is 1 + promises.length, excluding waiting, producer work and host scheduling.",
     starter: `const failureMessages = promises => {
 
 };
@@ -1051,7 +1094,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['timers', 'promises'],
     title: 'Give up after a while',
-    prompt: 'Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection.',
+    prompt: "Write `withTimeout(promise, ms, fallback)`, resolving to what `promise` resolves to if it settles within `ms` milliseconds, and to `fallback` if it does not. Build a second promise that resolves to `fallback` from a `setTimeout`, and let `Promise.race` pick whichever settles first. A rejection that arrives in time passes through as a rejection. promise is an ordinary native Promise with standard methods. ms is an integer from 0 through 1000. fallback is any opaque nonthenable value, including a function, Symbol or frozen record; do not invoke or clone it. Preserve exact fulfilled values and rejection reasons, including object identity, NaN and -0. Return a new native Promise immediately. First observed settlement wins: an already settled input beats a zero-delay timer; a zero timeout is still deferred. A timeout does not cancel the original producer, and its later settlement must not replace the fallback. Timers may run later than requested; no exact elapsed-time deadline is promised. Target: O(1) time and retained wrapper/timer state, excluding waiting, input producer work and host scheduling.",
     starter: `const withTimeout = (promise, ms, fallback) => {
 
 };
@@ -1091,7 +1134,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['async-await'],
     title: 'Always a promise',
-    prompt: 'Write an `async` function `getValue(cache, key, load)`. When `cache` already holds `key`, return the cached value. Otherwise `await load(key)`, store the result in `cache[key]`, and return it. Because the function is `async`, the caller gets a promise both times, even when the value came straight from the cache. A cached `0` is a real value and is used.',
+    prompt: "Write an `async` function `getValue(cache, key, load)`. When `cache` already holds `key`, return the cached value. Otherwise `await load(key)`, store the result in `cache[key]`, and return it. Because the function is `async`, the caller gets a promise both times, even when the value came straight from the cache. A cached `0` is a real value and is used. cache is an extensible ordinary object or null-prototype record with ordinary writable data properties. Only own keys count: inherited toString, constructor or __proto__ are not cache hits. key is a string up to 1000 UTF-16 units, including empty text. Cached/loaded values are opaque nonthenable values, including undefined, functions, Symbols, NaN and -0; preserve their exact identities. On a miss call load once with exactly key; it returns an ordinary native Promise or throws synchronously. Store only a fulfilled result as an own writable/enumerable/configurable data property, without changing the cache prototype or other entries. Rejection/throw forwards the original reason and must not store a failed entry. Return a new native Promise immediately on both paths. This exercise does not coalesce concurrent misses. Target: O(1) time and wrapper state assuming average constant-time own-property access/definition, excluding load work, waiting and host scheduling.",
     starter: `const getValue = (cache, key, load) => {
 
 };
@@ -1106,11 +1149,11 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
   // store value in the cache
   return value;
 };`,
-    hints: ['An `async` function wraps whatever it returns in a promise, so a plain `return cache[key]` still reaches the caller as a promise. Test for the key with `key in cache` rather than by its value, so a cached `0` counts.'],
+    hints: ['An `async` function wraps whatever it returns in a promise, so a plain `return cache[key]` still reaches the caller as a promise. Use `Object.hasOwn(cache, key)`: a cached `0` or `undefined` counts, but an inherited property does not.'],
     approach: [
       'Mark the function `async`.',
-      'If the key is in the cache, return its value. The `async` keyword makes that a promise.',
-      'Otherwise `await load(key)`, save the result under the key, and return it. The next call for that key finds it in the cache.',
+      'If the cache owns the key, return its value. The `async` keyword makes that a promise.',
+      'Otherwise `await load(key)`, define the result as an own data property under the key, and return it. Use Object.defineProperty so a literal __proto__ key does not invoke an inherited setter. The next call for that key finds it in the cache.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -1130,7 +1173,7 @@ console.log(toFileText({ name: "shark", tags: ["js"] }));
     tier: 2,
     focus: ['async-await'],
     title: 'First the user, then the posts',
-    prompt: 'Write an `async` function `loadProfile(loadUser, loadPosts)`. `loadUser()` resolves to `{ id, name }`, and `loadPosts(id)` resolves to that user’s posts as an array. The second call needs the id from the first, so `await` the user before asking for the posts. Return `{ name, postCount }`. If either call rejects, the promise `loadProfile` returns rejects with the same error.',
+    prompt: "Write an `async` function `loadProfile(loadUser, loadPosts)`. `loadUser()` resolves to `{ id, name }`, and `loadPosts(id)` resolves to that user\u2019s posts as an array. The second call needs the id from the first, so `await` the user before asking for the posts. Return `{ name, postCount }`. If either call rejects, the promise `loadProfile` returns rejects with the same error. Both callbacks are supplied ordinary functions returning ordinary native Promises, or throwing synchronously. Call loadUser once with no arguments. Its fulfillment is a stable read-only record with integer id from 0 through 1000000000 and string name up to 200 UTF-16 units, including empty/Unicode text. Only after it fulfills, call loadPosts exactly once with that id as its only argument; do not call it after a user failure. It fulfills with a read-only array of at most 1000 posts, possibly sparse/frozen; postCount is its length, not the count of truthy/present entries. Leave both inputs unchanged and return a fresh plain { name, postCount } record in a new native Promise. Forward the exact original throw/rejection reason from either callback, including non-Error values. Target: O(1) time and wrapper/result state: reading array.length does not scan posts. Exclude callback work, waiting and host scheduling.",
     starter: `const loadProfile = async (loadUser, loadPosts) => {
 
 };
@@ -1169,7 +1212,7 @@ loadProfile(() => Promise.resolve({ id: 7, name: "Ada" }), id => Promise.resolve
     tier: 1,
     focus: ['sort'],
     title: 'Sort numbers as numbers',
-    prompt: 'Write `sortNumbers(numbers)`, returning a new array of the numbers from smallest to largest. Without a compare function, `sort` compares items as text, so `[10, 9, 1].sort()` gives `[1, 10, 9]`. Pass a compare function that subtracts one number from the other, and sort a copy so `numbers` itself is not changed.',
+    prompt: "Write `sortNumbers(numbers)`, returning a new array of the numbers from smallest to largest. Without a compare function, `sort` compares items as text, so `[10, 9, 1].sort()` gives `[1, 10, 9]`. Pass a compare function that subtracts one number from the other, and sort a copy so `numbers` itself is not changed. Domain: an ordinary dense array of at most 1,000 finite Numbers from -1,000,000 through 1,000,000, possibly frozen. Return a fresh array even for empty input, preserving duplicates and stable order among equal values, including the signs/order of -0 and +0. Target: O(n log n) time under the comparison-sorting model, where n is array length; the language standard does not prescribe a particular sort algorithm or engine timing. The returned copy uses O(n) result space.",
     starter: `const sortNumbers = numbers => {
 
 };

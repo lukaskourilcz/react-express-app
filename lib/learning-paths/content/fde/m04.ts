@@ -70,7 +70,7 @@ export const FDE_M04: ModuleSource = {
       id: 'fde-v1-m04-l1',
       title: 'Deterministic code, one model call, a workflow, an agent',
       summary:
-        'Four systems answer the same request. What each rung costs per ticket, which constraints knock a rung out, and why deterministic routing is so often the one left standing.',
+        'Compare measured rules, classification calls, conditional workflows and bounded agent planning against actual task constraints.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -93,7 +93,7 @@ export const FDE_M04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Marlbrook’s support lead asks for AI triage: something that reads an incoming ticket and puts it in the right queue. Four different systems answer that sentence. A lookup table decides in well under a millisecond and costs nothing per ticket. An agent that makes six model calls costs six calls and answers in seconds. Both of them are “AI triage” to the person who asked, and you are the one who has to say which one the constraints allow.',
+            'AI triage can be implemented with rules, a model call, a controlled workflow or model-directed tool selection. Compare candidates against the actual quality, coverage, latency, operational and cost constraints. A lookup still has compute, maintenance and integration costs; model-call count alone does not determine response time or total cost.',
         },
         {
           kind: 'table',
@@ -102,73 +102,73 @@ export const FDE_M04: ModuleSource = {
           rows: [
             [
               'Deterministic code',
-              'You, in advance. The same input gives the same output on every run.',
-              'The CPU it runs on, and a fraction of a millisecond.',
-              'The input carries nothing to branch on, or the rules multiply faster than anyone can maintain them.',
+              'Rules and branches written in advance; output is reproducible when input, state and rules are fixed.',
+              'Compute, integration and maintenance; measure actual latency.',
+              'Insufficient signal or unmaintainable rules may make this unsuitable alone.',
             ],
             [
               'One model call',
-              'You pick the step; the model picks the answer inside it.',
-              'One call: its tokens, its latency, and a wrong answer at a rate you have to measure.',
-              'The decision needs information the prompt does not contain, or a second decision that depends on the first.',
+              'The application chooses the task; the model proposes an answer within the supplied context.',
+              'Tokens, provider latency, validation and the cost of incorrect or missing answers.',
+              'Evaluate whether one bounded call has the information and quality required.',
             ],
             [
               'A workflow',
-              'You fix the steps and their order; the model fills in one or two of them.',
-              'One call per model step. The latency is the sum, and you know it before you ship.',
-              'The steps genuinely cannot be fixed until you see what an earlier step returned.',
+              'Application-defined steps, including conditional branches, retries and model calls where useful.',
+              'Measure each step and the combined critical path; sequential and parallel work differ.',
+              'Use when control flow can be specified and evaluated without model-directed planning.',
             ],
             [
               'An agent',
-              'The model, while it runs: which tool to call, how often, and when to stop.',
-              'An unpredictable number of calls inside whatever budget you set.',
-              'A wrong step has effects you cannot undo, or you owe someone a per-request latency target.',
+              'Model-directed choices within application-enforced tools, permissions, budgets and stop rules.',
+              'Variable work within the enforced budget; measure quality, tails and total cost.',
+              'Use only when evaluated planning benefits justify its added uncertainty and controls.',
             ],
           ],
         },
         {
           kind: 'prose',
           body:
-            'Work from the bottom and make somebody argue you off it. Marlbrook’s scenario numbers say 71 of every 100 tickets arrive through the customer portal, where the customer already picked one of four categories from a list. The support team hand-labelled 300 of those portal tickets with the queue they ended up in, and a three-entry lookup table on the picked category matched that queue 268 times. The 32 it got wrong were mostly one shape: customers pick “Other” when they are annoyed.',
+            'Start with a simple baseline. In this hypothetical population, 71% of tickets use the portal; the rest arrive by email. A separately authored sample of 300 portal tickets has 268 correct rule decisions and 32 unresolved Other selections. On that sample, rule coverage is 268/300≈89.3%, with no wrong answer among the 268 decisions. Those are sample observations, not established production rates or a guarantee about future tickets.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            "const QUEUE_BY_FORM_CATEGORY = {\n  billing: 'billing',\n  'bug-report': 'engineering',\n  'how-to': 'support',\n};\n\n// A ticket the table does not cover is not a failure. It is the operator queue.\nconst routeTicket = ticket => {\n  const queue = QUEUE_BY_FORM_CATEGORY[ticket.formCategory];\n  return queue ? { queue, decidedBy: 'rule' } : { queue: 'triage', decidedBy: 'operator' };\n};",
+            'const QUEUE_BY_FORM_CATEGORY = {\n  billing: \'billing\',\n  \'bug-report\': \'engineering\',\n  \'how-to\': \'support\',\n};\n\nconst routeTicket = ticket => {\n  const key = ticket.formCategory;\n  const known = typeof key === \'string\' &&\n    Object.prototype.hasOwnProperty.call(QUEUE_BY_FORM_CATEGORY, key);\n  return known ? {queue: QUEUE_BY_FORM_CATEGORY[key], decidedBy: \'rule\'}\n    : {queue: \'triage\', decidedBy: \'operator\'};\n};',
           caption: 'The rung most designs skip: three entries and an explicit exit for everything else.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Adding a model is not an upgrade by default. It adds a per-ticket cost, a network round trip inside your latency budget, a dependency with its own availability, and a failure mode the rule did not have: an answer that is wrong and states no doubt about it. If a rule already meets the accuracy the customer asked for, replacing it with a model call makes the system slower, more expensive and harder to explain in exchange for nothing.',
+            'A model is useful only when its measured benefit justifies its costs and risks. If a rule already satisfies the agreed requirements, replacing it without evidence adds work and dependencies. A model can also improve coverage, maintenance or quality in some cases; compare those outcomes rather than assuming every model is slower, costlier or less explainable in every system.',
         },
         {
           kind: 'prose',
           body:
-            'That leaves the other 29 tickets in every 100. They arrive by email as free text with no category at all, and no table you can write reads them. This is where one model call earns its place: a single decision, a small closed set of answers, an operator who reviews anything the system is unsure about, and no step that depends on a step before it.',
+            'Email tickets and unresolved portal selections need another path. Free text does not make deterministic processing impossible: keyword/rule baselines, better forms and operator review are alternatives. A bounded classification call is a candidate to evaluate, not an automatic winner. A self-reported confidence threshold needs evidence; a high number is not permission or a correctness guarantee.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            "const triage = async ticket => {\n  const ruled = routeTicket(ticket);\n  if (ruled.decidedBy === 'rule') return ruled;\n\n  const raw = await model.classify(ticket.body, { timeoutMs: 2000 });\n  const checked = validateTriage(raw); // the boundary you build in this module\n  if (!checked.ok) return { queue: 'triage', decidedBy: 'operator', reason: checked.reason };\n  if (checked.decision.confidence < 0.6) return { queue: 'triage', decidedBy: 'operator', reason: 'low-confidence' };\n\n  return { queue: checked.decision.category, decidedBy: 'model' };\n};",
-          caption: 'The model sees only the tickets the rule could not decide, and every path except a validated confident answer ends with a person.',
+            'const triage = async ticket => {\n  const ruled = routeTicket(ticket);\n  if (ruled.decidedBy === \'rule\') return ruled;\n  let raw;\n  try { raw = await model.classify(ticket.body, {timeoutMs: 2000}); }\n  catch { return {queue: \'triage\', decidedBy: \'operator\', reason: \'model-failed\'}; }\n  const checked = validateTriage(raw);\n  if (!checked.ok) return {queue: \'triage\', decidedBy: \'operator\', reason: checked.reason};\n  const decision = checked.decision;\n  if (decision.ticketId !== ticket.id) return {queue: \'triage\', decidedBy: \'operator\', reason: \'ticket-mismatch\'};\n  // Hypothetical threshold, to be evaluated; not proof of calibration.\n  if (decision.confidence < 0.6) return {queue: \'triage\', decidedBy: \'operator\', reason: \'low-confidence\'};\n  const queue = {billing: \'billing\', bug: \'engineering\', \'how-to\': \'support\', other: \'triage\'}[decision.category];\n  return queue === \'triage\' ? {queue, decidedBy: \'operator\'} : {queue, decidedBy: \'model\'};\n};',
+          caption: 'An illustrative caller for the full validator exercise, with matching ticket binding and category-to-queue mapping. The illustrative client must enforce timeout and return only successful complete response content; it rejects provider refusals or incomplete statuses before this call. Passing structure/threshold checks does not prove the predicted queue is correct.',
         },
         {
           kind: 'prose',
           body:
-            'A workflow is the next rung: you still write the steps and their order, and a model fills in one or two of them. Marlbrook’s draft-reply feature is one — read the ticket, look up the customer record, retrieve three knowledge-base articles, call the model once to draft a reply from those articles, check deterministically that every claim in the draft cites one of the three, then put it in front of an agent. Five steps, one model call, and a latency you can add up on paper before you build it.',
+            'A workflow fixes the control logic, not necessarily one unbranching sequence. A draft-reply workflow might load the ticket and customer context, retrieve articles, request a draft, check citation identifiers and send it to operator review. Checking that a citation refers to a supplied article is structural; it does not prove every claim is supported or true. Measure the actual critical path and latency distribution, especially when steps can overlap.',
         },
         {
           kind: 'prose',
           body:
-            'An agent moves the order itself into the model. You hand it tools and a goal, and it decides which tool to call, what to do with the result, and whether to go round again. Nobody writes that sequence in advance, which is the point of it and also the bill: you cannot say in advance how many calls one ticket will take.',
+            'An agent chooses some next steps using model output, within an application-defined control structure. The application still controls allowed tools, current authority, approvals, step/deadline budgets and stop behavior. Calls per ticket can vary, but enforceable upper bounds are possible; evaluate whether that flexibility improves the task enough to justify the added complexity.',
         },
         {
           kind: 'trace',
-          caption: 'One ticket through an agent loop with a five-call budget. Each frame shows every step taken so far.',
+          caption: 'Five model decisions in one illustrative agent run. A search/read label names the tool action chosen by that decision, not an extra model call.',
           trace: {
             shape: 'array',
             frames: [
@@ -187,7 +187,7 @@ export const FDE_M04: ModuleSource = {
               {
                 cells: ['read ticket', 'search KB “export fails”', 'search KB “scheduled job 02:00”', '', ''],
                 marks: [{ index: 2, role: 'active' }],
-                note: 'Call three: unhappy with those results, it searches again with different words. A fixed workflow would have stopped after one search; the agent chose to spend another call.',
+                note: 'Call three: unhappy with those results, it searches again with different words. The particular single-search baseline would have stopped there; other deterministic workflows can include bounded retries or query expansion.',
                 counter: { label: 'Model calls', value: 3 },
               },
               {
@@ -205,7 +205,7 @@ export const FDE_M04: ModuleSource = {
               {
                 cells: ['read ticket', 'search KB “export fails”', 'search KB “scheduled job 02:00”', 'read customer record', 'propose queue: engineering'],
                 marks: [{ index: 4, role: 'settled' }],
-                note: 'The budget is spent, so the loop stops whether or not it was finished. Five calls for one ticket the portal form would have routed for free, and the next ticket might take two calls or hit the budget with nothing to show.',
+                note: 'The budget is spent, so the loop stops whether or not it was finished. This illustrative run spent five model decisions. Tool execution is separate work, and another ticket may use fewer decisions or exhaust its budget without a usable answer.',
                 counter: { label: 'Model calls', value: 5 },
               },
             ],
@@ -217,24 +217,24 @@ export const FDE_M04: ModuleSource = {
           headers: ['The constraint you were given', 'What it rules out', 'What is usually left'],
           rows: [
             [
-              'p95 under 300 ms, inside the request the customer is waiting on',
-              'An agent, and a model call too unless the provider fits in that budget with room for a retry',
-              'A rule now, and the hard tickets queued for a person',
+              'p95 under 300 ms',
+              'Any candidate whose measured critical path misses that target',
+              'Benchmark the complete candidate; queue slower work when the product allows it.',
             ],
             [
-              'Every routing decision has to be explainable to an auditor a year from now',
-              'Any rung whose output you cannot reproduce from what you stored',
-              'A rule, or one model call whose input, output, version and validation reason you keep',
+              'Routing decisions must be auditable a year later',
+              'Any candidate without sufficient retained decision evidence under the retention policy',
+              'Preserve appropriate input/rule/model/output/validation references; replaying a nondeterministic model need not reproduce identical text.',
             ],
             [
-              'Under a cent per ticket at 40,000 tickets a month',
-              'A loop that makes an unbounded number of calls per ticket',
-              'A rule for the shapes that have structure, one call for the rest',
+              'Under one cent per ticket at 40,000 tickets/month',
+              'A candidate whose measured/upper-bounded total cost exceeds the budget',
+              'Include operational costs and retries; enforce limits and evaluate cheaper fallbacks.',
             ],
             [
-              'Which lookup comes next depends on what the last one returned',
-              'A fixed workflow, if that dependency is real and not just untidy code',
-              'An agent with a step budget, a tool allowlist and a person approving anything that acts',
+              'The next lookup depends on an earlier result',
+              'No architecture is ruled out by this fact alone',
+              'A conditional workflow can suffice; evaluate model-directed planning only if it adds useful capability.',
             ],
           ],
         },
@@ -255,7 +255,7 @@ export const FDE_M04: ModuleSource = {
       id: 'fde-v1-m04-l2',
       title: 'Structured outputs and how they fail',
       summary:
-        'Asking a model for JSON gets you a token stream that usually looks like JSON. What the boundary has to check, what a schema constraint does not promise, and what to do when the check fails.',
+        'Prompt-only JSON and explicit validation contracts, protocol/status handling, structural limits and rejection policies.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -278,7 +278,7 @@ export const FDE_M04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Your prompt ends with “Reply with JSON only.” What comes back is a token stream that usually looks like JSON. Most of the time `JSON.parse` swallows it and you never think about the sentence again. The rest of the time it throws inside a loop at two in the morning, or worse, it parses cleanly and hands you a confidence of 1.4.',
+            'A prompt asking for JSON can still return prose, malformed data or a valid object with invalid fields. Parsing and validation are separate steps: a confidence of 1.4 may parse successfully while violating the allowed range.',
         },
         {
           kind: 'code',
@@ -290,7 +290,7 @@ export const FDE_M04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'So extract before you parse. Take the first `{` and the last `}` and parse what lies between them: that survives a prose preamble, a markdown fence and a closing pleasantry, which covers most of what wrapping looks like. It is a heuristic, and it has an obvious hole — two objects in one response and you get the span from the first to the last, which parses as nothing. State the heuristic in your code, and count how often it fires so you find out when the model’s habits change.',
+            'This exercise defines a specific extraction heuristic: parse from the first opening brace to the last closing brace. It can handle the shown prose/fence wrapper, but can fail on multiple objects, unrelated braces or truncation. A production contract may instead require strict complete JSON or a supported structured response. Do not extract and silently accept a partial decision when the protocol says the response was incomplete; inspect finish/refusal status before validation.',
         },
         {
           kind: 'table',
@@ -300,32 +300,32 @@ export const FDE_M04: ModuleSource = {
             [
               'Wrapped in prose',
               'A sentence, a fenced block, another sentence',
-              'Throws on the first character, and the ticket falls out of the batch',
+              'Parsing the entire response throws unless the caller extracts or rejects the wrapper.',
             ],
             [
-              'Truncated at the token limit',
-              '`{"ticketId": "TCK-1007", "evidence": {"quote": "…"}, "confid`',
-              'Throws. There is no partly valid JSON, only invalid JSON.',
+              'The shown truncated object',
+              'An object cut inside the confidence key',
+              'This particular string is invalid JSON; other incomplete responses may still contain valid JSON.',
             ],
             [
               'A missing field',
-              '`{"ticketId": "TCK-1009", "confidence": 0.7}`',
-              'Parses. `decision.category` is `undefined` and the ticket lands in a queue called `undefined`.',
+              'An object with ticketId and confidence but no category',
+              'Parsing succeeds; a validator must catch the missing category before routing.',
             ],
             [
               'The wrong type',
-              '`{"confidence": "0.82"}`',
-              'Parses. `"0.82" < 0.6` is false, so a string sails through the confidence gate.',
+              'A confidence field containing the string 0.82',
+              'Parsing succeeds; coercive numeric comparison alone can accept this wrong type.',
             ],
             [
-              'Out of range or out of enum',
-              '`{"confidence": 1.4}` or `{"category": "escalate"}`',
-              'Parses. Every downstream comparison succeeds and routes the ticket to a queue nobody staffs.',
+              'Out of range or enum',
+              'Confidence 1.4 or category escalate',
+              'Parsing succeeds; explicit range and enum checks reject these values.',
             ],
             [
-              'A confident wrong value',
-              '`{"ticketId": "TCK-1004", "category": "billing", "confidence": 0.94}` for a bug report',
-              'Parses, validates, and is wrong. No boundary check can see this one.',
+              'A structurally valid wrong prediction',
+              'A permitted billing classification for a ticket labelled as a bug',
+              'Structural validation cannot establish classification correctness; task-specific evidence may detect errors.',
             ],
           ],
         },
@@ -333,12 +333,12 @@ export const FDE_M04: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A stronger prompt is not the fix. “Reply with JSON only, no explanation” lowers the rate of wrapped responses; it does not remove the case, and a rate is not a guarantee. Schema-constrained decoding is a real improvement and still narrower than people assume: it constrains the shape of a response that finishes, not whether the values are true, and a response cut off at the token limit is unparsable rather than partially valid. The check belongs in code, on every response, whatever the prompt says.',
+            'Prompt wording may reduce malformed output but supplies no structural guarantee. Supported schema-constrained output can enforce a defined structure for successful complete responses; provider limitations, refusals and incomplete statuses still require handling. A token limit does not imply every returned substring is invalid JSON. Shape compliance does not establish truth, authorization or confidence calibration. Validate the response and its protocol status under the actual contract.',
         },
         {
           kind: 'prose',
           body:
-            'Put it in one function, the same way M02 put the integration check in one function. Whatever arrived goes in; either a decision the rest of your code can rely on comes out, or a reason it cannot. Nothing downstream re-checks anything, and nothing downstream reads a raw response.',
+            'Centralize structural validation so downstream code can rely on the checked fields within that contract. It still needs to bind the ticket id to the current request, enforce permissions/current state, check semantic evidence and handle stale data before acting. The structural validator does not replace those checks.',
         },
         {
           kind: 'code',
@@ -350,7 +350,7 @@ export const FDE_M04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Notice that every exit is a value from a fixed list rather than a thrown error or a free-text message. A closed vocabulary is what makes the failures countable: you can graph `unparsable-json` per hour, alert when `confidence-out-of-range` jumps after a model version changes, and route each reason to a different fallback. Free-text reasons give you a log nobody can aggregate.',
+            'Notice that every exit is a value from a fixed list rather than a thrown error or a free-text message. A closed vocabulary is what makes the failures countable: you can graph `unparsable-json` per hour, alert when `confidence-out-of-range` jumps after a model version changes, and route each reason to a different fallback. Stable reason codes make aggregation reliable; free-text explanations can still be useful supplementary context with appropriate privacy controls.',
         },
         {
           kind: 'table',
@@ -376,7 +376,7 @@ export const FDE_M04: ModuleSource = {
         },
         {
           kind: 'trace',
-          caption: 'One ticket under a retry-once policy: a truncated response, then an out-of-range one, then the rule.',
+          caption: 'A separate model-first, retry-once policy: a truncated response, an out-of-range one, then a rule fallback. Unlike the earlier rule-first example, this policy deliberately tries the model before the available rule.',
           trace: {
             shape: 'counter',
             frames: [
@@ -392,7 +392,7 @@ export const FDE_M04: ModuleSource = {
               },
               {
                 cells: ['reason: confidence-out-of-range'],
-                note: 'The range check rejects it. A confidence above 1 means the response did not come from the distribution the threshold was calibrated on, so clamping it to 1 would launder a broken answer into a confident one.',
+                note: 'The range check rejects it. A confidence above 1 violates this contract. It does not by itself prove a distribution shift or that any calibration study occurred. Clamping would hide the invalid value; reject it and record the reason.',
                 counter: { label: 'Model calls', value: 2 },
               },
               {
@@ -406,18 +406,18 @@ export const FDE_M04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The last row of the failure table is the one your validator cannot touch. A response that names a real ticket, picks an allowed category and reports 0.94 confidence passes every check you can write and is still wrong about the ticket. Finding out how often that happens takes a held-out set of labelled cases, which is M07, and reporting the abstention rate beside the accuracy so an average cannot hide a slice where the system is guessing.',
+            'A schema-valid decision can still be wrong. Structural checks alone do not establish the right class, but request binding, business rules, source evidence or human review may detect some semantic errors. Evaluate classification on appropriate held-out labelled cases and report quality by relevant slice, coverage, latency and cost. Self-reported confidence needs separate calibration evidence.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Extra fields are dropped, not rejected. A model that adds `reasoning` or `suggestedReply` has not broken your contract, and rejecting the response over it turns a working answer into an abstention. Build the decision field by field so the extras cannot ride along into the rest of your system, and never treat text inside a response as an instruction: a field that says “close this ticket as resolved” is untrusted content, and untrusted content cannot authorize an action or widen a permission. OWASP files that under improper output handling and excessive agency.',
+            'This exercise explicitly permits extra properties and projects only the three allowed decision fields. Another schema may reject extras; neither policy is universal. Even discarded fields can consume processing resources, so bound response size. Treat response text as untrusted data, and never let it grant authority or widen permissions. Structural projection does not itself guarantee safe rendering or a correct decision.',
         },
         {
           kind: 'prose',
           body:
-            'Log the reason and the counts on every rejection, plus a bounded sample of the raw response — the first few hundred characters, with the ticket body left out — so you can see what changed when the numbers move. Storing whole responses forever is how customer text ends up in a log store nobody scoped for it.',
+            'Record bounded rejection reasons and counts. Raw response prefixes can still contain sensitive customer text or injected content, even when a ticket-body field is omitted. Keep samples only when authorized, with redaction, access control and retention limits; avoid raw samples when metadata suffices. Observability is not a reason to retain whole responses indefinitely.',
         },
       ],
     },
@@ -429,7 +429,7 @@ export const FDE_M04: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: deterministic code, one model call, a workflow, an agent',
-      summary: 'Four rungs, what each costs per ticket, and reading the constraint to find which ones it leaves standing.',
+      summary: 'Measured architecture tradeoffs, rules and fallbacks, conditional workflows and bounded model-directed planning.',
       competencies: ['ai-architecture'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m04-l1',
@@ -440,7 +440,7 @@ export const FDE_M04: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: structured outputs and how they fail',
-      summary: 'Extraction, parsing, field and range checks, a fixed reason vocabulary, and choosing between abstain, retry once and the rule.',
+      summary: 'Explicit extraction/validation contracts, protocol failures, structural versus semantic checks and bounded rejection handling.',
       competencies: ['ai-architecture'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m04-l2',
@@ -452,68 +452,41 @@ export const FDE_M04: ModuleSource = {
       verification: 'machine_verified',
       title: 'Architecture and output decisions',
       summary:
-        'Four bounded decisions: which rung the constraints leave standing, what a schema constraint does not promise, what to do with a response that parses but is out of range, and when an agent’s latency is worth paying.',
+        'Four architecture decisions: measured routing constraints, structure versus meaning, an explicit confidence-domain check and evidence for bounded runtime planning.',
       competencies: ['ai-architecture'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-m04-q1',
-          prompt:
-            'Marlbrook wants portal tickets routed while the customer is still on the confirmation screen: p95 under 300 ms, and the routing has to be explainable to an auditor. Every portal ticket carries a category the customer picked from four options, and on a 300-ticket hand-labelled sample a three-entry lookup table matched the operator’s final queue 268 times. The 32 misses were nearly all customers who picked “Other”. Which design do you build first?',
-          options: [
-            'The lookup table, with anything it cannot decide — including every “Other” — sent to the operator queue, and the miss rate measured again after a week.',
-            'One model call on every portal ticket, since a model reads the ticket body and the lookup table only reads a dropdown.',
-            'A workflow that calls the lookup table first and then always calls a model to double-check the table’s answer.',
-            'An agent with a knowledge-base tool, so tickets the table misroutes get investigated before anyone is disturbed.',
-          ],
+          prompt: "In this fixture, portal routing needs p95 below 300ms and an auditable decision. Of 300 held-out labelled tickets, a category lookup routed 268 correctly; the other 32 all selected Other. The lookup plus audit path measured p95 12ms; the candidate model call measured 800ms. Which design is the best first baseline, with unresolved cases sent to operators?",
+          options: ["Use the lookup for known categories, abstain on Other, and monitor outcomes by slice.", "Call the measured model on every portal ticket because it can read the body.", "Use the lookup, then always call the measured model to double-check it.", "Run a model-directed agent with a knowledge-base tool on every portal request."],
           correct: 0,
-          explanation:
-            'The constraints do the choosing here. A 300 ms p95 inside a live request leaves almost no room for a provider round trip plus a retry, and “explainable a year later” is free with a lookup table and extra work with anything else. The table already agrees with the operator on 268 of 300, and its errors concentrate in one bucket you can route to a person by name. Calling a model on every ticket spends money and latency on the 71% the dropdown already answered, and it introduces a confidently wrong answer where there was none. Double-checking the table with a model is the same cost with a worse failure mode: you now need a rule for which one wins when they disagree, and the model has no more information than the dropdown did. The agent fails the latency constraint outright, and investigating a misroute is work for the operator queue rather than for the request path. Any of the upper rungs could be right on the 29% of tickets that arrive as free-text email — a different constraint, and a different decision.',
+          explanation: "The measured lookup path fits the 300ms limit, and a recorded rule/table version can support auditability. It agreed on 268/300, about 89.3%, with all 32 remaining cases explicitly outside its covered categories. Route Other to operators and keep measuring quality, fallback volume and latency; a finite sample is not a guarantee on future tickets. The measured 800ms model call exceeds this request-path budget, whether used alone or after the lookup. The agent proposal has no evidence that it meets the budget or improves this covered task. Different measurements or a separate asynchronous workflow could lead to another design.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q2',
-          prompt:
-            'Marlbrook’s provider can constrain a response to a JSON schema: `ticketId` and `category` are required strings, `category` is an enum of four values, `confidence` is a number. Assume the response finishes rather than hitting the token limit. What does that constraint still not give you?',
-          options: [
-            'That the decision is right. A response can satisfy every property and still name a ticket closed last week, call a bug report `billing`, and report 0.94 while doing it.',
-            'That `category` is one of the four values, since an enum is part of the schema.',
-            'That `confidence` arrives as a number rather than as the string `"0.82"`.',
-            'That both required properties are present in the response.',
-          ],
+          prompt: "A successful non-refusal response has been parsed and strictly validated against a schema: ticketId and category are required strings, category has four allowed values, and confidence is a required number. What does passing that validation still not establish?",
+          options: ["That the selected ticket/category is factually correct or the reported confidence is calibrated.", "That category belongs to the schema’s four allowed values.", "That confidence is present as a number rather than a numeric string.", "That the required ticketId and category properties are present."],
           correct: 0,
-          explanation:
-            'A schema constrains shape, and shape is not truth. Nothing in an enum stops the model from picking the wrong member of it, and nothing in a number type stops 0.94 from being confidently wrong about the ticket. The other three options are exactly what the constraint does buy you on a response that finishes — which is why the question fixes that assumption, and why your code still parses defensively: a response cut off at the token limit is not a partially valid object with a missing property, it is text that does not parse at all, and your boundary reports that as a parse failure rather than as a missing field. Checking values you were promised is cheap; skipping the check because the schema promised it is how a wrong queue name reaches the router.',
+          explanation: "Validation establishes the stated structure, not the meaning of its values. A valid category can still be wrong for the ticket, an id can name the wrong record, and a self-reported number is not proved calibrated by a number type. Required fields, types and enum membership are the structural checks assumed to have passed. Refusals, transport failures and incomplete/truncated output need separate handling. Some cut-off outputs fail JSON parsing; syntactic validity alone also does not make an incomplete response acceptable. Apply the relevant entity, authorization and business checks after structural validation.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q3',
-          prompt:
-            'A triage response parses cleanly, names a real ticket and an allowed category, and reports `"confidence": 1.4`. Your accept threshold is 0.6. What should the boundary do?',
-          options: [
-            'Reject it with a stated reason, count the rejection, and take the fallback the policy defines: abstain to the operator, retry once, or use the deterministic rule.',
-            'Clamp the value to 1.0 and accept it, since the category is probably still right and 1.4 clearly means the model was sure.',
-            'Accept it as it stands, because 1.4 is above the 0.6 threshold and the threshold is what the check is for.',
-            'Retry the call until a response arrives with a confidence inside the range.',
-          ],
+          prompt: "The output contract requires finite confidence in [0,1] before applying an accept threshold of 0.6. A parsed response names a real ticket and an allowed category but reports confidence 1.4. What should the boundary do?",
+          options: ["Reject and count the contract violation, then use the policy’s bounded fallback.", "Clamp it to 1.0 and accept because the category is probably correct.", "Accept 1.4 because it exceeds the 0.6 threshold.", "Retry until confidence falls inside the range, without a limit."],
           correct: 0,
-          explanation:
-            'A confidence above 1 is evidence that this response did not come from the distribution your threshold was calibrated on, so every inference you would draw from the number is unsafe — including the inference that the category beside it is fine. Clamping to 1.0 does not repair that; it launders a broken response into the most confident answer your system can express, and it destroys the signal you would have used to notice a model change. Accepting it because it clears the threshold is the same mistake with fewer steps: the comparison is only meaningful for values inside the range the check defines. Retrying until the response is in range is unbounded work driven by a failure you have no reason to think is transient, and it burns the latency budget of a ticket that already spent it. Reject, name the reason from your fixed vocabulary so it can be counted, and let the policy decide what happens next.',
+          explanation: "1.4 violates the stated range, so the threshold comparison is not an authorization to accept it. Reject with a fixed reason such as confidence_out_of_range, count it and follow the approved fallback: for example abstain to an operator or make a bounded retry where policy permits. Silent clamping would convert invalid data into an apparently maximally confident result and hide the contract failure. The bad value does not by itself prove a particular distribution shift or calibration history. Even an in-range self-reported value needs separate evaluation before being treated as a calibrated probability. Unbounded retries provide neither a work limit nor a success guarantee.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q4',
-          prompt: 'An agent loop adds seconds of latency and an unpredictable number of model calls per request. When is that worth paying for?',
-          options: [
-            'When the steps genuinely cannot be fixed in advance because each lookup depends on what the last one returned, the loop has a step budget, and a person approves anything that acts.',
-            'When the task has more than about five steps, so a loop is less code to maintain than a chain of calls.',
-            'When accuracy matters more than latency, because an agent re-checks its own work before answering.',
-            'When the model is capable enough that pinning it to a fixed workflow would waste what it can do.',
-          ],
+          prompt: "A model-directed agent adds latency and variable tool/model calls. Policy requires human approval before external writes. Which evidence best justifies it over a simpler deterministic or fixed-branch workflow?",
+          options: ["Measured benefit on open-ended runtime planning within hard budgets, with policy-required approval before writes.", "The task has more than five steps, so any loop is easier to maintain.", "Accuracy matters more than latency, so the same model checking itself guarantees correctness.", "The model is capable, so a fixed workflow would waste its potential."],
           correct: 0,
-          explanation:
-            'The agent buys you one thing: a sequence chosen at run time. That is worth its cost only when the sequence really is unknowable in advance, and only inside limits — a step budget so one ticket cannot consume the hour, and an approval step so a wrong decision does not act before a person sees it. Step count is not the test; a fifteen-step workflow you can draw on a whiteboard is a workflow, and writing it as a loop swaps a latency you can predict for one you cannot. An agent re-reading its own output is not a correctness mechanism, since the same model that was wrong is doing the checking, and more calls raise the chance that a wrong intermediate step is carried forward. The last option picks the design from the technology rather than from the constraint, which is how a system that had to answer in 300 ms ends up taking six seconds.',
+          explanation: "Use an agent when evaluated runtime choice of steps provides enough benefit to justify its allowed latency, cost and risk, with hard call/step limits and the approval policy enforced outside model output. A lookup depending on a previous result does not by itself require an agent: deterministic conditional workflows can do that too. Step count and model capability alone do not establish value. Self-checking can be an evaluated technique, but the same model reviewing its output is not independent proof or a correctness guarantee. More calls do not automatically improve or worsen quality; compare actual outcomes and failure paths. The human-approval requirement here is the stated external-write policy, not a universal rule for every tool read or low-risk operation.",
           competencies: ['ai-architecture'],
         },
       ],
@@ -531,7 +504,7 @@ export const FDE_M04: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'Write `validateTriage(raw)`. It takes whatever came back from the triage prompt and returns either `{ ok: true, decision }` or `{ ok: false, reason }`. It never throws, whatever it is handed.\n\nA decision is exactly `{ ticketId, category, confidence }` — nothing else. `category` is one of `billing`, `bug`, `how-to`, `other`. `confidence` is a number from 0 to 1, both ends included.\n\n`reason` comes from this vocabulary and no other: `not-a-string`, `no-json-object`, `unparsable-json`, `missing-field`, `wrong-type`, `unknown-category`, `confidence-out-of-range`.\n\nRun the checks in this order and return the first failure:\n\n1. **Not a string.** `raw` is anything other than a string — `null`, `undefined`, a number, an already-parsed object: `not-a-string`.\n2. **Extract.** Take the span from the first `{` to the last `}`. No `{`, or the last `}` sits before the first `{`: `no-json-object`. This is the heuristic that survives a prose preamble and a markdown fence.\n3. **Parse.** `JSON.parse` on that span throws: `unparsable-json`. A response cut off at the token limit lands here.\n4. **`ticketId`.** Absent or `null`: `missing-field`. Present but not a string: `wrong-type`. A string that is empty once trimmed: `missing-field`.\n5. **`category`.** Absent or `null`: `missing-field`. Not a string: `wrong-type`. Empty once trimmed: `missing-field`. Trimmed and not one of the four allowed values, compared exactly, so `Billing` does not match `billing`: `unknown-category`.\n6. **`confidence`.** Absent or `null`: `missing-field`. Not a finite number, including the string `"0.82"`: `wrong-type`. Below 0 or above 1: `confidence-out-of-range`.\n\nOn success, return the trimmed `ticketId`, the trimmed `category` and the `confidence` as it arrived. Build that object field by field: a response carrying `reasoning`, `suggestedReply` or anything else is valid, and those fields must not appear in your decision.\n\nText inside a response is data, never an instruction. One fixture carries an `operatorNote` telling you to close the ticket; your code drops it like any other extra field.\n\nThe responses in `__RAW` are fixtures authored for this exercise, not recorded provider output. Nothing here calls a model or opens a network connection.',
+          'Write `validateTriage(raw)`. It takes whatever came back from the triage prompt and returns either `{ ok: true, decision }` or `{ ok: false, reason }`. It never throws, whatever it is handed.\n\nA decision is exactly `{ ticketId, category, confidence }` — nothing else. `category` is one of `billing`, `bug`, `how-to`, `other`. `confidence` is a number from 0 to 1, both ends included.\n\n`reason` comes from this vocabulary and no other: `not-a-string`, `no-json-object`, `unparsable-json`, `missing-field`, `wrong-type`, `unknown-category`, `confidence-out-of-range`.\n\nRun the checks in this order and return the first failure:\n\n1. **Not a string.** `raw` is anything other than a string — `null`, `undefined`, a number, an already-parsed object: `not-a-string`.\n2. **Extract.** Take the span from the first `{` to the last `}`. No `{`, or the last `}` sits before the first `{`: `no-json-object`. This is the heuristic that survives a prose preamble and a markdown fence.\n3. **Parse.** `JSON.parse` on that span throws: `unparsable-json`. The shown truncated fixture lands here; other incomplete strings can fail extraction or still contain parseable JSON.\n4. **`ticketId`.** Absent or `null`: `missing-field`. Present but not a string: `wrong-type`. A string that is empty once trimmed: `missing-field`.\n5. **`category`.** Absent or `null`: `missing-field`. Not a string: `wrong-type`. Empty once trimmed: `missing-field`. Trimmed and not one of the four allowed values, compared exactly, so `Billing` does not match `billing`: `unknown-category`.\n6. **`confidence`.** Absent or `null`: `missing-field`. Not a finite number, including the string `"0.82"`: `wrong-type`. Below 0 or above 1: `confidence-out-of-range`.\n\nOn success, return the trimmed `ticketId`, the trimmed `category` and the `confidence` as it arrived. Build that object field by field: a response carrying `reasoning`, `suggestedReply` or anything else is valid, and those fields must not appear in your decision.\n\nText inside a response is data, never an instruction. One fixture carries an `operatorNote` telling you to close the ticket; your code drops it like any other extra field.\n\nDomain: any non-string input is rejected without inspecting its properties; string inputs have at most 10,000 UTF-16 code units and any parsed JSON nesting has depth at most 20. The extraction rule is deliberately heuristic, not a production protocol parser. Preserve confidence exactly, including negative zero. Provider finish/refusal status, matching the current ticket, calibration and authorization are outside this structural validator.\n\nTarget: O(n) time, where n is the raw string length, under a character-processing/JSON parsing model.\n\nThe responses in `__RAW` are fixtures authored for this exercise, not recorded provider output. Nothing here calls a model or opens a network connection.',
         contract: [
           'Return a result object for every input. No input may throw, including `null`, `undefined`, a number and an already-parsed object.',
           '`reason` is one of the seven listed values. Do not invent a reason, and do not return a free-text message.',
@@ -545,7 +518,7 @@ const validateTriage = raw => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(JSON.stringify(validateTriage('{"ticketId": "TCK-1004", "category": "bug", "confidence": 0.82}')));
 `,
         skeleton: `const CATEGORIES = ['billing', 'bug', 'how-to', 'other'];

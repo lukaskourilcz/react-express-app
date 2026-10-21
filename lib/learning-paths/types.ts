@@ -22,6 +22,7 @@ import type {
   VerificationKind,
 } from '../../shared/learning-paths';
 import type { LessonSection, TraceFrame, TraceSpec } from '../../shared/learning-path-api';
+import type { TaskRuntimePolicy } from '../../shared/coding-task-runtime';
 import type { SourceCallTest, SourceTypeTest } from '../coding/types';
 
 export type { SourceCallTest, SourceTypeTest };
@@ -400,6 +401,7 @@ export interface MergedCriterion {
 }
 
 export interface MergedCode {
+  runtimePolicy?: TaskRuntimePolicy;
   language: PathCodeLanguage;
   prompt: Localized;
   starter: string;

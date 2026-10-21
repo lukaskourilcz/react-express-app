@@ -25,6 +25,8 @@ export interface GuestInput {
   suite: string;
   appSource: string;
   nonce: string;
+  compiledApp?: string;
+  compiledFixtures?: Record<string,string>;
 }
 
 /** The line that carries the result: the nonce, one space, the JSON. It

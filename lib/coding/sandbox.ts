@@ -16,11 +16,12 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
-import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
+import variant from './quickjs-variant';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
 import { UTC_TIME_SOURCE } from '../../shared/coding-utc-time';
+import { TASK_RUNTIME_POLICY_SOURCE, type TaskRuntimePolicy } from '../../shared/coding-task-runtime';
 import { LOCALE_SOURCE } from '../../shared/coding-locale';
 import { hostURL, MAX_URL_TEXT, WEB_APIS_SOURCE } from './sandbox-web-apis';
 import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
@@ -29,6 +30,7 @@ let modulePromise: Promise<QuickJSWASMModule> | null = null;
 const getModule = () => (modulePromise ??= newQuickJSWASMModuleFromVariant(variant));
 
 export interface SandboxInput {
+  runtimePolicy?: TaskRuntimePolicy;
   code: string;
   calls: string[];
   expectations: unknown[] | null;
@@ -76,7 +78,7 @@ const WEB_APIS = JSON.stringify(compact(WEB_APIS_SOURCE));
 // The learner is compiled in a separate strict function scope. This controller
 // stays in an inaccessible closure held by the host, never in VM globals.
 // Expected values and pass/fail comparison stay entirely outside QuickJS.
-function program(code: string, calls: string[], shownCalls: number): string {
+function program(code: string, calls: string[], shownCalls: number, runtimePolicy?: TaskRuntimePolicy): string {
   return `(() => {
 'use strict';
 const hostURL = globalThis.${URL_HOST_NAME};
@@ -87,7 +89,7 @@ const NativeFunction = Function;
 const string = String, number = Number, is = Object.is;
 // What a check's probe counts with, taken before the learner's code runs
 // (see PROBE_LINE).
-const probe = Object.freeze({ Proxy, get: Reflect.get, isIndex: ${PROBE_IS_INDEX_SOURCE} });
+const probe = Object.freeze({ Proxy, get: Reflect.get, isIndex: ${PROBE_IS_INDEX_SOURCE}, freeze: Object.freeze, keys: Object.keys, ownDescriptor: Object.getOwnPropertyDescriptor, setPrototypeOf: Object.setPrototypeOf, defineProperty: Object.defineProperty, deleteProperty: Reflect.deleteProperty });
 const makeArray = () => setPrototype([], null);
 const packet = (...values) => setPrototype(values, null);
 let now = 0, nextId = 1, timers = makeArray(), logs = makeArray();
@@ -222,7 +224,11 @@ globalThis.structuredClone = value => {
       out = isArray(item) ? new Array(item.length) : {};
       apply(mapSet, copies, [item, out]);
       const names = keys(item);
-      for (let i = 0; i < names.length; i++) out[names[i]] = copy(item[names[i]]);
+      // An own __proto__ key is data, including when its value points back
+      // to this clone. Assignment would invoke the inherited setter.
+      for (let i = 0; i < names.length; i++) defineProperty(out, names[i], {
+        value: copy(item[names[i]]), writable: true, enumerable: true, configurable: true,
+      });
       return out;
     }
     apply(mapSet, copies, [item, out]);
@@ -231,6 +237,7 @@ globalThis.structuredClone = value => {
   return copy(value);
 };
 globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
+(${TASK_RUNTIME_POLICY_SOURCE})(globalThis, ${JSON.stringify(runtimePolicy ?? null)});
 const evaluate = NativeFunction(${JSON.stringify(PROBE_LINE + '\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})(probe);
 const outcomes = makeArray();
 // Each call counts itself done. The controller never calls \`then\` on a
@@ -508,7 +515,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
 
   try {
     const shownCalls = Math.max(0, Math.min(input.calls.length, Math.floor(input.shownCalls ?? input.calls.length)));
-    const evaluated = vm.evalCode(program(input.code, input.calls, shownCalls), 'task.js');
+    const evaluated = vm.evalCode(program(input.code, input.calls, shownCalls, input.runtimePolicy), 'task.js');
     if (evaluated.error) {
       const error = vm.dump(evaluated.error) as { message?: string; name?: string } | string;
       evaluated.error.dispose();
@@ -592,6 +599,7 @@ export interface SandboxCheck {
  * never settled). Hidden results return in authored order.
  */
 export async function runChecks(input: {
+  runtimePolicy?: TaskRuntimePolicy;
   code: string;
   visible: readonly SandboxCheck[];
   hidden: readonly SandboxCheck[];
@@ -599,6 +607,7 @@ export async function runChecks(input: {
 }): Promise<{ visible: EvaluateResult; hidden: EvaluateResult | null }> {
   const visible = await runInSandbox({
     code: input.code,
+    runtimePolicy: input.runtimePolicy,
     calls: input.visible.map((check) => check.call),
     expectations: input.visible.map((check) => check.expected),
   });
@@ -611,6 +620,7 @@ export async function runChecks(input: {
   const order = input.shuffle(input.hidden.map((_, index) => index));
   const run = await runInSandbox({
     code: input.code,
+    runtimePolicy: input.runtimePolicy,
     calls: order.map((index) => input.hidden[index].call),
     expectations: order.map((index) => input.hidden[index].expected),
     shownCalls: 0,

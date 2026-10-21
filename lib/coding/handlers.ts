@@ -13,14 +13,17 @@ import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, wit
 import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
-import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
+import { decodeCodingSession, type CodingSession } from '../quiz-tokens';
 import { codingTaskForHistory, englishOnly, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
+import { createCodingSession, codingAttemptVersion } from './session';
 import { codingTaskReview } from '../curation';
 import { assessComplexity } from './complexity';
+import { codingPassXp, type ComplexityReport } from '../../shared/coding-complexity';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
+import { runtimePolicyForTask } from '../../shared/coding-task-runtime';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
@@ -35,7 +38,6 @@ import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
 import {
-  CODING_TASK_XP,
   CODING_TRACKS,
   isCodingTaskId,
   tierLockReason,
@@ -136,6 +138,20 @@ function sessionFrom(raw: unknown): CodingSession | null {
   return decodeCodingSession(raw);
 }
 
+async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: VercelResponse, session: CodingSession, userId: string | null): Promise<boolean> {
+  if (!session.roadmapAttemptId) return false;
+  if (session.userId !== userId) { jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.'); return true; }
+  if (!supabase) { jsonError(res, 503, 'not_configured', 'Learning progress is not configured'); return true; }
+  const row = await withTimeout(supabase.from('roadmap_attempts').select('user_id,completed_at,expires_at,coding_task_ids').eq('attempt_id', session.roadmapAttemptId).maybeSingle());
+  if (row.error) { jsonError(res, 503, 'progress_unavailable', 'Could not load the learning attempt. Try again.'); return true; }
+  const attempt = row.data;
+  if (!attempt || (attempt.user_id ?? null) !== userId || attempt.completed_at || Date.parse(attempt.expires_at) <= Date.now()
+    || !Array.isArray(attempt.coding_task_ids) || !attempt.coding_task_ids.includes(session.taskId)) {
+    jsonError(res, 409, 'invalid_session', 'This learning attempt expired or ended. Start the lesson again.'); return true;
+  }
+  return false;
+}
+
 /** What a coding session starts, for the tier gate. A task issued inside a
  * Learn level (its session names the level attempt) belongs to that level,
  * which the level seal already checked; any other task is itself, or the
@@ -214,6 +230,11 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
 
+  const linkedRaw = req.method === 'POST' ? (req.body as { session?: unknown } | undefined)?.session : undefined;
+  const linkedSession = linkedRaw === undefined ? null : sessionFrom(linkedRaw);
+  if (req.method === 'POST' && (!linkedSession?.roadmapAttemptId || linkedSession.taskId !== task.id)) return jsonError(res, 400, 'invalid_session', 'A valid Learn task link is required');
+  if (linkedSession && await refuseInvalidLearnLink(supabase, res, linkedSession, userId)) return;
+
   let progress: CodingTaskProgress | null = null;
   let draft: string | null = null;
   let draftUpdatedAt: string | null = null;
@@ -256,7 +277,8 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // Premium opens the rest of the catalogue; a guest and a free account are
   // refused it with 402. A task already passed stays open for review whatever
   // the tier.
-  if (await refuseLocked(res, userId, codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
+  if (await refuseLocked(res, userId, linkedSession ? codingSessionContent(task, linkedSession) : codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
+  if (linkedSession) locked = null;
 
   const play = playable(task);
   // What is known about this brief: the version of it, and the execution
@@ -296,7 +318,13 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       play.drill = englishOnly({ format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) });
     }
   }
-  const session = locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
+  // Reading the current brief renews a stale Learn link under the same parent
+  // and attempt id. The original owner/task/expiry checks above still apply.
+  const session = linkedSession && linkedSession.version === codingAttemptVersion(task) ? String(linkedRaw)
+    : locked ? null : createCodingSession({ taskId: task.id, track: task.track, userId,
+      ...(linkedSession ? { attemptId: linkedSession.attemptId, roadmapAttemptId: linkedSession.roadmapAttemptId } : {}),
+      ...(key ? { key } : {}),
+    });
 
   res.setHeader('Cache-Control', 'private, no-store');
   const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
@@ -393,7 +421,7 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
   // checks run in a fresh program, in an order shuffled for this submission.
-  const { visible, hidden: hiddenRun } = await runChecks({ code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
+  const { visible, hidden: hiddenRun } = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
   const run = { logs: visible.logs, codeError: visible.codeError ?? hiddenRun?.codeError ?? null, timedOut: Boolean(visible.timedOut || hiddenRun?.timedOut) };
   let verdict = codeOutcome({ visible, hidden: hiddenRun, check });
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';
@@ -490,6 +518,7 @@ interface RecordInput {
   verdict: CodingOutcome;
   verified: boolean;
   code: string | null;
+  complexity?: ComplexityReport | null;
   runCount?: number;
   hintsUsed?: number;
   durationMs?: number;
@@ -512,16 +541,8 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   const { supabase, userId, task, session } = input;
   // Only a verdict the server checked pays: an unverified pass (a checklist
   // task) records the attempt and the progress row with no XP, so no coins.
-  const xp = input.verified ? CODING_TASK_XP[task.tier] : 0;
-  // A coding task inside a Learn level links to the level attempt; the row
-  // exists once the first question was answered. Without it the verdict is
-  // still recorded, only unlinked. An unverified verdict is never linked, so
-  // it cannot complete a Learn level.
-  let roadmapAttemptId: string | null = null;
-  if (session.roadmapAttemptId && input.verified) {
-    const attempt = await withTimeout(supabase.from('roadmap_attempts').select('attempt_id').eq('attempt_id', session.roadmapAttemptId).eq('user_id', userId).maybeSingle());
-    if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
-  }
+  const xp = input.verified ? codingPassXp(input.complexity) : 0;
+  const roadmapAttemptId = input.verified ? session.roadmapAttemptId ?? null : null;
   // Whether the solution was revealed before this pass, read before the pass
   // is written, for a database without migration 058, whose routine says it
   // itself. Only a pass can forfeit XP, so nothing else pays for the read.
@@ -666,6 +687,10 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
   if (await refuseLocked(res, userId, codingSessionContent(task, session), { cleared: () => taskCleared(supabase, userId!, task.id) })) return;
+  if (await refuseInvalidLearnLink(supabase, res, session, userId)) return;
+  if (session.version !== codingAttemptVersion(task)) {
+    return jsonError(res, 409, 'task_changed', 'This task changed while you were working. Reload its latest brief before submitting. Your code has been kept.');
+  }
 
   let graded: Graded;
   let code: string | null = null;
@@ -741,6 +766,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     return res.json(verdictBody(graded, null, null, null));
   }
 
+  const complexity = code !== null ? assessComplexity(task, code) : null;
   let recorded: Recorded | null = null;
   let github: CodingGardenStatus | null = null;
   let draftUpdatedAt: string | null = null;
@@ -760,7 +786,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
         if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
     }
-    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
+    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, complexity, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
     if (!recorded) return;
     if (graded.verdict === 'passed' && recorded.applied) {
       github = await afterCodingPass(supabase, {
@@ -782,7 +808,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // an unverified pass checked nothing, so it opens nothing.
   const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
   const out: CodingVerdictResponse = verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null);
-  if (code !== null && !graded.infra) out.complexity = assessComplexity(task, code);
+  if (complexity) out.complexity = complexity;
   if (draftUpdatedAt) out.draftUpdatedAt = draftUpdatedAt;
   return res.json(out);
 }
@@ -805,6 +831,7 @@ export async function handleCodingReset(req: VercelRequest, res: VercelResponse,
   if (userId === undefined) return;
   if (!userId) return jsonError(res, 401, 'unauthorized', 'Sign in to earn XP for a task again');
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  if (await refuseInvalidLearnLink(supabase, res, session, userId)) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
   const saved = await withTimeout(supabase.rpc('record_coding_reset', { p_user_id: userId, p_task_id: task.id }));
   if (saved.error) {
@@ -840,10 +867,11 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { return jsonError(res, 500, 'db_error', 'Could not load coding progress'); }
   }
   if (progress?.status !== 'passed' && await refuseLocked(res, userId, codingSessionContent(task, session))) return;
+  if (await refuseInvalidLearnLink(supabase, res, session, userId)) return;
   const allowed = progress?.status === 'passed' || hintsUsed >= giveUpAfter(ladderLength(task));
   if (!allowed) return jsonError(res, 403, 'reveal_locked', 'Take more of the hint ladder before revealing the solution');
 
-  if (userId && supabase && progress?.status !== 'passed') {
+  if (userId && supabase && (progress?.status !== 'passed' || session.roadmapAttemptId)) {
     const marked = await withTimeout(supabase.rpc('record_coding_reveal', {
       p_user_id: userId, p_task_id: task.id, p_track: task.track, p_roadmap_attempt_id: session.roadmapAttemptId ?? null,
     }));

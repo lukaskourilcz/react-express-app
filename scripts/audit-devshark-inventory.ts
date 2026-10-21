@@ -22,11 +22,15 @@ import { buildRoadmap } from '../lib/roadmap-build';
 import { htmlSeeds } from '../lib/roadmap-questions-html';
 import { cssSeeds } from '../lib/roadmap-questions-css';
 import { topicLevels, type RoadmapTopic } from '../lib/roadmap';
-import { contentHash, translationHash } from '../lib/curation';
-import { CODING_TASKS } from '../lib/coding/catalog';
+import { contentHash, translationHash, taskHash, questionEligibility } from '../lib/curation';
+import { CODING_TASKS, englishOnly } from '../lib/coding/catalog';
+import { ACTIVE_CODING_TASKS } from '../lib/coding/active';
+import { solutionFor } from '../lib/coding/solutions';
+import { restoredLevels, restoredQuestionIds } from '../lib/roadmap-questions-restored';
 import { isRetiredTopic } from '../shared/retired-content';
 import { WEBDEV_PLAN_STAGES } from '../shared/progression';
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
+import { nativeContentHash, nativeGradingHash } from '../lib/learning-paths/audit';
 
 type Delivery =
   /** In the served pool and offered by discovery. */
@@ -52,6 +56,7 @@ interface InventoryItem {
   contentHash: string;
   csHash: string | null;
   hasCs: boolean;
+  eligible: boolean;
 }
 
 const ID_PREFIX_TOPIC: Record<string, RoadmapTopic> = {
@@ -61,14 +66,21 @@ const ID_PREFIX_TOPIC: Record<string, RoadmapTopic> = {
   'rm-sysdesign': 'system-design', 'rm-testing': 'testing', 'rm-devops': 'devops', 'rm-security': 'security',
 };
 
+const restored = new Map(restoredLevels.flatMap(entry =>
+  restoredQuestionIds(entry.topic, entry.level).map(id => [id, entry] as const)));
+
 // Retired sections keep their level titles (lib/roadmap.ts still names them)
 // while no longer being roadmap topics, so the lookup goes by prefix alone.
 function topicOf(id: string): RoadmapTopic | null {
+  const fresh = restored.get(id);
+  if (fresh) return fresh.topic as RoadmapTopic;
   const m = /^(rm-[a-z]+)-\d+$/.exec(id);
   return (m && ID_PREFIX_TOPIC[m[1]]) ?? null;
 }
 
 function levelOf(id: string): number | null {
+  const fresh = restored.get(id);
+  if (fresh) return fresh.level;
   const m = /-(\d+)$/.exec(id);
   return m && id.startsWith('rm-') ? Math.floor((Number(m[1]) - 1) / 8) + 1 : null;
 }
@@ -100,6 +112,7 @@ function describe(q: Question, source: string, delivery: Delivery, cs: Record<st
     contentHash: contentHash(q),
     csHash: translationHash(tr),
     hasCs: !!tr,
+    eligible: questionEligibility(q).active,
   };
 }
 
@@ -178,6 +191,15 @@ function main() {
   const legacyCore = coreIds.length - questions.filter((q) => q.category === 'code-snippets').length;
 
   const byDelivery = (d: Delivery) => items.filter((i) => i.delivery === d).length;
+  const activeCoding = new Set(ACTIVE_CODING_TASKS.map(task => task.id));
+  const materialHash = nativeContentHash;
+  const pathMaterials = LEARNING_PATHS.flatMap(learningPath => learningPath.modules.flatMap(module => [
+    ...module.lessons.map(lesson => ({ id: `${learningPath.id}:${lesson.id}`, path: learningPath.id, module: module.id, kind: 'lesson', contentHash: materialHash(lesson) })),
+    ...module.activities.flatMap(activity => [
+      { id: `${learningPath.id}:${activity.id}`, path: learningPath.id, module: module.id, kind: 'activity', contentHash: materialHash(activity), gradingHash: nativeGradingHash(activity) },
+      ...(activity.questions ?? []).map(question => ({ id: `${learningPath.id}:${question.id}`, path: learningPath.id, module: module.id, kind: 'check-question', contentHash: materialHash(question) })),
+    ]),
+  ]));
   const inventory = {
     generatedAt: new Date().toISOString().slice(0, 10),
     subject: 'webdev',
@@ -189,13 +211,17 @@ function main() {
       { id: 'legacy-core', description: 'lib/quiz-data.ts coreQuestions outside code-snippets: module-private, exported nowhere', items: legacyCore, countable: true },
     ],
     plans: Object.fromEntries(Object.keys(ID_PREFIX_TOPIC).map((p) => [ID_PREFIX_TOPIC[p], plansFor(ID_PREFIX_TOPIC[p])])),
-    counts: { active: byDelivery('active'), retiredSection: byDelivery('retired-section'), unreferenced: byDelivery('unreferenced'), legacyCore, codingTasks: CODING_TASKS.length },
+    counts: { active: byDelivery('active'), eligibleQuestions: items.filter(item => item.delivery === 'active' && item.eligible).length, retiredSection: byDelivery('retired-section'), unreferenced: byDelivery('unreferenced'), legacyCore, codingTasks: CODING_TASKS.length, activeCodingTasks: activeCoding.size, hiddenCodingTasks: CODING_TASKS.length - activeCoding.size, pathMaterials: pathMaterials.length },
     items,
-    codingTasks: CODING_TASKS.map((t) => ({ id: t.id, track: t.track, topic: t.topic, level: t.level, tier: t.tier, verify: t.verify, format: t.format ?? 'implement', title: t.title.en })),
+    codingTasks: CODING_TASKS.map((t) => ({ id: t.id, track: t.track, topic: t.topic, level: t.level, tier: t.tier, verify: t.verify, format: t.format ?? 'implement', title: t.title.en, contentHash: taskHash(t, solutionFor(t.id)), active: activeCoding.has(t.id) })),
+    pathMaterials,
   };
   writeFileSync(path.join(outDir, 'inventory.json'), JSON.stringify(inventory, null, 2));
   for (const [batch, list] of rows) {
     writeFileSync(path.join(outDir, `batch-${batch}.json`), JSON.stringify(list, null, 2));
+  }
+  for (const learningPath of LEARNING_PATHS) {
+    writeFileSync(path.join(outDir, `batch-path-${learningPath.id}.json`), JSON.stringify(englishOnly(learningPath), null, 2));
   }
   console.log(JSON.stringify({ counts: inventory.counts, batches: [...rows.keys()].map((k) => `${k}:${rows.get(k)!.length}`) }, null, 2));
 }

@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {solutionFor} from '../../../../lib/learning-paths/solutions';
+import {assessComplexity} from '../../../../lib/coding/complexity';
+import {codingPassXp} from '../../../../shared/coding-complexity';
+const path=LEARNING_PATHS.find(p=>p.id==='fde')!;const module=path.modules.find(m=>m.id==='fde-v1-m05')!;const lessons=module.lessons;const reads=module.activities.filter(a=>a.kind==='lesson');const activity=module.activities.find(a=>a.kind==='code')!;assert.equal(lessons.length,2);assert.equal(reads.length,2);for(const a of reads){assert.equal(a.verification,'self_reviewed');assert(lessons.some(l=>l.id===a.lessonId));}
+const worker=JSON.parse(readFileSync(process.argv[2],'utf8'));assert.equal(worker.length,6);for(const r of worker){assert.equal(r.state,r.expected);assert.equal(r.contentHash,nativeContentHash(activity));assert.equal(r.gradingHash,nativeGradingHash(activity));}
+const manual=JSON.parse(readFileSync(process.argv[3],'utf8'));for(const source of [solutionFor(activity.id)!.solution,manual[activity.id].alternative]){const report=assessComplexity({track:activity.code!.language,prompt:activity.code!.prompt,tests:activity.code!.tests},source);assert.equal(report.guidance.targetTime,'O(n log n)');assert.notEqual(report.assessment,'above-target');assert.equal(codingPassXp(report),25);}
+const codeAt=(lesson:number,index:number)=>{const s=lessons[lesson].sections[index];assert(s.kind==='code');return s.code;};
+// Syntax of manually read trusted literals; no actual index, source fetch or model.
+new Function(codeAt(0,3));const transcript=Function('return ('+codeAt(1,3).replace(/^const transcript = /,'').replace(/;$/,'')+')')();assert.equal(transcript.retrieved[0].version,3);assert(transcript.retrieved[0].text.includes('7 days'));assert(transcript.answer.includes('14 days'));
+const candidates=[{id:'other1',allowed:false,score:0.99},{id:'other2',allowed:false,score:0.95},{id:'restricted',allowed:false,score:0.93},{id:'KB-118',allowed:true,score:0.68},{id:'KB-204',allowed:true,score:0.64},{id:'KB-090',allowed:true,score:0.55}];assert.deepEqual(candidates.slice(0,3).filter(r=>r.allowed),[]);assert.deepEqual(candidates.filter(r=>r.allowed).filter(r=>r.score>=0.6).map(r=>r.id),['KB-118','KB-204']);
+// updatedAt-to-ingestedAt alone cannot tell whether a newer source revision exists.
+const revised=Date.parse('2026-03-18T11:02:00Z'),ingested=Date.parse('2026-04-02T06:00:00Z');assert(ingested>revised);const states=[{sourceVersion:3,indexVersion:3},{sourceVersion:4,indexVersion:3}];assert.equal(states[0].sourceVersion===states[0].indexVersion,true);assert.equal(states[1].sourceVersion===states[1].indexVersion,false);
+writeFileSync(process.argv[4],JSON.stringify({checkedRecords:5,records:[...lessons.map(l=>({id:l.id,contentHash:nativeContentHash(l),gradingHash:null})),...reads.map(a=>({id:a.id,contentHash:nativeContentHash(a),gradingHash:nativeGradingHash(a)})),{id:activity.id,contentHash:nativeContentHash(activity),gradingHash:nativeGradingHash(activity)}],checks:['six real sandbox verdicts including missing viewer refusal, frozen input and1000result boundary','two valid unpenalized target analyses','authored transcript contradiction, late-window filtering illustration and timestamp insufficiency counterexample','no real retriever, model, provenance archive/resolver, source authorization or retrieval-quality benchmark acceptance']},null,2),{mode:0o600});
+console.log('PASS five retrieval records, sandbox selection and bounded evidence examples');

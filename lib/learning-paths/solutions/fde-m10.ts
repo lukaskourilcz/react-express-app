@@ -51,7 +51,7 @@ const OPERATOR_SESSION = `const createOperatorSession = (deps) => {
   };
 
   const stale = (id) => inFlight !== id;
-  const messageOf = (thrown) => String((thrown && thrown.message) || thrown);
+  const messageOf = (thrown) => (thrown && typeof thrown.message === 'string' ? thrown.message : String(thrown));
 
   const load = (ticketId) => {
     if (state.status === 'loading' || state.status === 'approving') {
@@ -119,7 +119,7 @@ const OPERATOR_SESSION = `const createOperatorSession = (deps) => {
         inFlight = null;
         state.status = 'error';
         state.error = messageOf(thrown);
-        announce('The approval did not go through: ' + state.error);
+        announce('Approval request failed; check its server outcome: ' + state.error);
       },
     );
   };
@@ -145,11 +145,11 @@ const OPERATOR_SESSION = `const createOperatorSession = (deps) => {
     state.ticketId = null;
     state.error = null;
     clearProposal();
-    announce('Cancelled. The screen is back to idle and the answer to the abandoned request will be ignored.');
+    announce('Cancelled locally. Late answers will be ignored. A submitted approval may still complete; check its server status.');
   };
 
   const noteRevision = (revision) => {
-    if (state.status !== 'ready' || !state.proposal) return;
+    if (state.status !== 'ready' || !state.proposal || state.superseded) return;
     if (!(revision > state.proposal.revision)) return;
     state.superseded = true;
     announce('The ticket changed while you were reading. Load it again before approving.');
@@ -182,6 +182,14 @@ export const FDE_M10_SOLUTIONS: Record<string, PathCodeSolution> = {
   'fde-v1-m10-operator-state': {
     solution: OPERATOR_SESSION,
     hiddenTests: [
+      {"call": "(async function(){var f=__fixture();var s=createOperatorSession(f.deps);s.load('A');await __drain();s.noteRevision(8);var count=f.announcements.length;var before=JSON.stringify(s.getState());s.noteRevision(8);s.noteRevision(9);return {same:before===JSON.stringify(s.getState()),extra:f.announcements.length-count};})()", "expected": {"same": true, "extra": 0}, "label": "once superseded, later revision notices do not change state or announce again", "async": true},
+      {"call": "(async function(){var spoken=[];var s=createOperatorSession({loadProposal:function(){return Promise.reject(new Error(''));},submitApproval:function(){throw new Error('not called');},announce:function(x){spoken.push(x);}});await s.load('A');return {status:s.getState().status,error:s.getState().error,announcements:spoken.length};})()", "expected": {"status": "error", "error": "", "announcements": 2}, "label": "an empty Error message from loading remains an empty string", "async": true},
+      {"call": "(async function(){var f=__fixture();f.deps.submitApproval=function(){return Promise.reject(new Error(''));};var s=createOperatorSession(f.deps);await s.load('A');await s.approve();return {status:s.getState().status,error:s.getState().error,proposal:s.getState().proposal.ticketId};})()", "expected": {"status": "error", "error": "", "proposal": "A"}, "label": "an empty approval error message is preserved with its proposal", "async": true},
+      {"call": "(async function(){var f=__fixture({loadFails:'late failure',loadDelay:100});var s=createOperatorSession(f.deps);s.load('A');s.cancel();var before=JSON.stringify(s.getState());var count=f.announcements.length;await __drain();return {same:before===JSON.stringify(s.getState()),extra:f.announcements.length-count,abandoned:s.getState().abandoned};})()", "expected": {"same": true, "extra": 0, "abandoned": [1]}, "label": "a cancelled failing load is silent and cannot overwrite any field", "async": true},
+      {"call": "(async function(){var f=__fixture({approveFails:'late approval failure',approveDelay:300});var s=createOperatorSession(f.deps);await s.load('A');s.approve();s.cancel();await s.load('B');var before=JSON.stringify(s.getState()),count=f.announcements.length;await __drain();return {same:before===JSON.stringify(s.getState()),extra:f.announcements.length-count,abandoned:s.getState().abandoned,submitted:f.submissions};})()", "expected": {"same": true, "extra": 0, "abandoned": [2], "submitted": [{"ticketId": "A", "revision": 7}]}, "label": "late rejected approval stays silent after a new ticket is ready", "async": true},
+      {"call": "(async function(){var f=__fixture();var s=createOperatorSession(f.deps);s.cancel();s.reject();s.approve();s.load('A');s.load('B');s.cancel();await __drain();s.load('C');s.cancel();await __drain();return {abandoned:s.getState().abandoned,loads:f.loads,announcements:f.announcements.length};})()", "expected": {"abandoned": [1, 2], "loads": ["A", "C"], "announcements": 8}, "label": "refused actions do not allocate ids and every refusal is announced", "async": true},
+      {"call": "(async function(){var f=__fixture({revision:0,warnings:['one','two']});var s=createOperatorSession(f.deps);await s.load('A');var a=s.getState(),b=s.getState();await s.approve();return {fresh:a!==b,warnings:s.getState().warnings,payload:f.submissions,status:s.getState().status};})()", "expected": {"fresh": true, "warnings": ["one", "two"], "payload": [{"ticketId": "A", "revision": 0}], "status": "approved"}, "label": "zero revision, warnings and fresh top-level snapshots preserve explicit approval payload", "async": true},
+
       {
         call: '(async function () { var f = __fixture({ loadFails: "The ticket service timed out." }); var s = createOperatorSession(f.deps); __go(s.load("MB-3312")); await __drain(); return __view(s.getState()); })()',
         expected: {

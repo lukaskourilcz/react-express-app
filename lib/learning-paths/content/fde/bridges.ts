@@ -108,12 +108,12 @@ export const FDE_BRIDGES: ModuleSource = {
       code: {
         language: 'typescript',
         prompt:
-          'Brightpier Freight exports account records to your integration. The export has the shape real exports have: fields go missing, a date arrives as an empty string, the id is sometimes a number and sometimes a string of digits, and a plan name turns up that your system has never heard of.\n\nWrite `mapAccount(raw)`. It takes one raw record and returns a discriminated result: `{ ok: true, record }` when every field survives validation, and `{ ok: false, problems }` when one or more do not. Never both, and never a half-filled record sitting next to a problem list.\n\nTrim every string field before you check it. The rules:\n\n- `account_id` becomes `record.id`, a whole number. An integer passes as it is, a string of digits is converted, and anything else is the problem `account_id must be a whole number`.\n- `company_name` becomes `record.companyName` and must be non-empty after trimming, or the problem is `company_name must not be empty`.\n- `owner_email` becomes `record.ownerEmail`, trimmed and lowercased, and must contain `@`, or the problem is `owner_email must contain @`.\n- `signed_up_at` becomes `record.signedUpAt`. Missing, `null` and an empty string all mean `null` — that account never came through the sign-up portal, and filling in today’s date would invent a fact. Anything else must match `YYYY-MM-DD`, or the problem is `signed_up_at must be YYYY-MM-DD`.\n- `plan` becomes `record.plan` and must be exactly `starter`, `growth` or `enterprise`. Anything else, `Growth` included, is the problem `plan must be one of starter, growth or enterprise`.\n\nCollect every problem rather than returning the first one: whoever fixes the export wants the whole list in one pass. Sort the list alphabetically before returning it, so the same bad record always produces the same output and a difference between two runs means something actually changed.\n\nThe records here are fixtures written for this exercise. They are not live CRM traffic, and nothing calls out to a network.',
+          'Brightpier Freight exports account records to your integration. The export has the shape real exports have: fields go missing, a date arrives as an empty string, the id is sometimes a number and sometimes a string of digits, and a plan name turns up that your system has never heard of.\n\nWrite `mapAccount(raw)`. It takes one raw record and returns a discriminated result: `{ ok: true, record }` when every field survives validation, and `{ ok: false, problems }` when one or more do not. Never both, and never a half-filled record sitting next to a problem list.\n\nTrim every string field before you check it. The rules:\n\n- `account_id` becomes `record.id`, a non-negative safe integer (0 through Number.MAX_SAFE_INTEGER). A safe numeric integer passes as it is; a trimmed ASCII digit string is converted only if its result is in that range, and anything else is the problem `account_id must be a whole number`.\n- `company_name` becomes `record.companyName` and must be non-empty after trimming, or the problem is `company_name must not be empty`.\n- `owner_email` becomes `record.ownerEmail`, trimmed and lowercased, and must contain `@`, or the problem is `owner_email must contain @`.\n- `signed_up_at` becomes `record.signedUpAt`. Missing, `null` and an empty string all mean `null` — this export uses those values for an unknown sign-up date; do not infer why it is missing or invent today’s date. Any other value must be a string matching the digit pattern `YYYY-MM-DD` after trimming (shape only, not calendar-date validation), or the problem is `signed_up_at must be YYYY-MM-DD`.\n- `plan` becomes `record.plan` and must be exactly `starter`, `growth` or `enterprise`. Anything else, `Growth` included, is the problem `plan must be one of starter, growth or enterprise`.\n\nCollect every problem rather than returning the first one: whoever fixes the export wants the whole list in one pass. Sort the list alphabetically using the default string order before returning it. A fixed field-check order can also be deterministic, but this contract requires canonical alphabetical order.\n\nTarget: O(n) time, where n is the total input string length, under a character-processing model.\n\nThe records here are fixtures written for this exercise. They are not live CRM traffic, and nothing calls out to a network.',
         contract: [
           'Return `{ ok: true, record }` or `{ ok: false, problems }`, never a record and a problem list together.',
           'Collect every problem in one pass and sort the list alphabetically before returning it.',
           'Keep the supplied `RawAccount`, `Account` and `MapResult` type names and the `mapAccount` signature; the type assertions call them by name.',
-          'No imports, no network and no clock: a missing date stays `null` instead of becoming today.',
+          'No imports, no network and no clock. Input is an ordinary raw object with optional unknown-valued fields, no getters or proxies; do not mutate it. String fields have at most 1,000 UTF-16 code units. The email check is deliberately only the presence of @, not full email validation.',
         ],
         starter: `type Plan = 'starter' | 'growth' | 'enterprise';
 
@@ -139,7 +139,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(mapAccount({ account_id: '4821', company_name: 'Brightpier Freight', owner_email: 'ops@brightpier.example', signed_up_at: '', plan: 'growth' }));
 `,
         skeleton: `type Plan = 'starter' | 'growth' | 'enterprise';
@@ -180,7 +180,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
 };`,
         hints: [
           'Keep one `problems` array, push into it as each field fails, and decide at the very end which half of the result to return. A field that fails still gets checked, because whoever reads the list wants every problem at once.',
-          '`typeof value === "string" && /^\\d+$/.test(value.trim())` separates "4821" from "48a" and from an empty string, and `Number(...)` then converts it. `Number.isInteger` covers the id that already arrived as a number.',
+          '`typeof value === "string" && /^\\d+$/.test(value.trim())` separates "4821" from "48a" and from an empty string, and `Number(...)` then converts it. Check `Number.isSafeInteger` and the non-negative range after conversion, including numeric input.',
           'The narrowing the type assertions look for comes from the literal `ok` field. With `{ ok: true; record: Account } | { ok: false; problems: string[] }`, TypeScript rules out `record` on the failing branch by itself.',
         ],
         approach: [
@@ -203,7 +203,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
             label: 'Problems come back sorted, every time',
             critical: true,
             weight: 2,
-            detail: 'The problem list came back in the order the fields were checked rather than alphabetically. Two runs over the same record then differ for no reason, and a diff of the output stops meaning anything.',
+            detail: 'The problem list came back in the order the fields were checked rather than alphabetically. A fixed field-check order can be deterministic too, but it does not satisfy the required alphabetical order.',
           },
         ],
         tests: [
@@ -339,7 +339,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
       code: {
         language: 'javascript',
         prompt:
-          'An operator at Brightpier reviews a proposed refund before it happens: the screen loads a proposal, the operator approves it, and the approval goes back to the ticket service. This exercise is the state logic behind that screen. You write the reducer and the grade drives it with action lists directly, rather than rendering a component, because the transitions are what goes wrong in production and they are testable on their own.\n\nExport two things. `initialOperatorState` is the starting state: `{ status: \'idle\', requestId: null, proposal: null, error: null, abandoned: [] }`. `operatorReducer(state, action)` returns the next state and never mutates the one it was given.\n\nThe transitions:\n\n- `{ type: \'load\', requestId }` from any status except `loading` and `approving` goes to `loading`, stores `requestId`, and clears `proposal` and `error`. While a request is in flight, a second load is ignored.\n- `{ type: \'loaded\', requestId, proposal }` goes to `ready` and clears `requestId`, but only when the status is `loading` and `requestId` matches the one in state.\n- `{ type: \'approve\', requestId }` from `ready` goes to `approving`, stores the new `requestId`, and keeps the proposal on screen.\n- `{ type: \'approved\', requestId }` goes to `approved` and clears `requestId`, but only from `approving` with a matching id.\n- `{ type: \'failed\', requestId, message }` goes to `error` with `error` set to the message, but only from `loading` or `approving` with a matching id.\n- `{ type: \'cancel\' }` from `loading` or `approving` goes back to `idle`, clears `requestId`, `proposal` and `error`, and appends the abandoned request id to `abandoned`.\n\nThe part that matters: after a cancel, the response for that request can still arrive. It has to change nothing. The same goes for a response whose `requestId` does not match the one in flight, which is what a superseded request looks like.\n\nAny action the current status does not allow — an unknown type included — returns the state object it was given, unchanged and identical. React bails out of a re-render when a reducer hands back the same object, so returning a fresh copy for an ignored action repaints the screen for no reason.',
+          'An operator at Brightpier reviews a proposed refund before it happens: the screen loads a proposal, the operator approves it, and the approval goes back to the ticket service. This exercise is the state logic behind that screen. You write the reducer and the grade drives it with action lists directly, rather than rendering a component, because transition bugs are one possible production failure and they are testable on their own.\n\nExport two things. `initialOperatorState` is the starting state: `{ status: \'idle\', requestId: null, proposal: null, error: null, abandoned: [] }`. `operatorReducer(state, action)` returns the next state and never mutates the one it was given.\n\nThe transitions:\n\n- `{ type: \'load\', requestId }` from any status except `loading` and `approving` goes to `loading`, stores `requestId`, and clears `proposal` and `error`. While a request is in flight, a second load is ignored.\n- `{ type: \'loaded\', requestId, proposal }` goes to `ready` and clears `requestId`, but only when the status is `loading` and `requestId` matches the one in state.\n- `{ type: \'approve\', requestId }` from `ready` goes to `approving`, stores the new `requestId`, and keeps the proposal on screen.\n- `{ type: \'approved\', requestId }` goes to `approved` and clears `requestId`, but only from `approving` with a matching id.\n- `{ type: \'failed\', requestId, message }` goes to `error` with `error` set to the message, but only from `loading` or `approving` with a matching id.\n- `{ type: \'cancel\' }` from `loading` or `approving` goes back to `idle`, clears `requestId`, `proposal` and `error`, and appends the abandoned request id to `abandoned`.\n\nThe part that matters: after a cancel, the response for that request can still arrive. It has to change nothing. The same goes for a response whose `requestId` does not match the one in flight, which is what a superseded request looks like.\n\nDomain: state is the initial state or a prior valid reducer result, with at most 100 prior actions/abandoned ids. Actions are ordinary data with no getters/proxies; a missing/null action or a missing/nonstring type is ignored. Accepted request ids are positive safe integers allocated uniquely for the entire session by the caller, never reused after cancel. Response ids refer to those allocated requests. Proposal data is opaque and read-only, error messages are strings including empty, and all state/action arrays may be frozen. Do not mutate any input or nested abandoned list. This bounded state machine has no single input-size target.\n\nAny action the current status does not allow — an unknown type included — returns the state object it was given, unchanged and identical. React can skip committing updates to children when the next state is Object.is-equal to the current state, though it may still call the component before bailing out. A fresh object can cause unnecessary work; it does not necessarily repaint the browser. Same-object no-ops are part of this exercise contract.',
         contract: [
           'Keep the names `initialOperatorState` and `operatorReducer`; the grade drives them by name.',
           'Never mutate the state passed in. Build a new object for a real transition.',
@@ -358,7 +358,7 @@ const operatorReducer = (state, action) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(operatorReducer(initialOperatorState, { type: 'load', requestId: 1 }));
 `,
         skeleton: `const initialOperatorState = {
@@ -389,7 +389,7 @@ const operatorReducer = (state, action) => {
 };`,
         hints: [
           'Write each case as a guard first and a transition second: check the status and the request id, `return state` when either is wrong, and only then build the next object.',
-          'Clearing `requestId` on cancel is what makes a late response harmless. Every response case compares `action.requestId` against `state.requestId`, and `null` matches nothing.',
+          'Clearing `requestId` on cancel is what makes a late response harmless. Every response case compares `action.requestId` against `state.requestId`, and also checks the in-flight status. Valid request ids are positive and never reused, so null is not an accepted response id.',
           'Ignoring an action means `return state` — the same reference, not `{ ...state }`. One of the assertions compares the returned object against the one it passed in.',
         ],
         approach: [
@@ -488,24 +488,24 @@ const operatorReducer = (state, action) => {
       purpose: 'diagnostic',
       verification: 'machine_verified',
       title: 'Read an incident from its timeline',
-      summary: 'One cross-tenant cache incident, read four ways: the signal, the cause, the safe first action, and what the rollback leaves behind.',
+      summary: 'One cross-tenant cache incident: the direct correctness signal, the missing key scope, containment under stated rollback conditions, and consequences already outside the service.',
       competencies: ['operations'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-bridge-incident-q1',
-          prompt: 'Every dashboard stayed inside its normal range while the fault ran for two and a half hours. Which signal would have caught this first?',
+          prompt: 'Latency, 5xx rate and CPU stayed normal during the cross-tenant reads. Which additional signal directly tests the failure shown in the timeline?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'A check in the lookup path that compares the tenant id on the cached article against the tenant making the request, counted as a failure and alerted on.',
-            'A p95 latency alert on the article-lookup span.',
+            'Count and alert when a cached article’s tenant differs from the request’s authorized tenant.',
+            'A high-latency threshold alert on the article-lookup span.',
             'An error-rate alert on triage-api responses in the 5xx range.',
             'A CPU saturation alert on the instances serving the cache.',
           ],
           correct: 0,
           explanation:
-            'The fault produced a fast, successful, wrong answer. Only a check that compares the tenant on the returned article against the tenant asking for it can tell that apart from a correct hit, which is why the alert has to be on that comparison. Latency moved the wrong way for detection — repeated lookups dropped from 90 ms to 1 ms, so a p95 alert had less to fire on than before. No exception was raised and no 5xx was returned, so an error-rate alert had nothing to see. CPU fell too, because the cache removed work.',
+            'The returned article can be fast and have a successful HTTP response while violating tenant isolation. Comparing its tenant against the authorized request tenant directly detects that invariant violation and should also block the response. A high-latency threshold would not catch the drop from 90 ms to 1 ms. The timeline reports no increased 5xx rate or CPU saturation. Other security signals could help; these choices do not establish which alert would fire first in every deployment.',
           competencies: ['operations'],
         },
         {
@@ -513,29 +513,29 @@ const operatorReducer = (state, action) => {
           prompt: 'Which explanation fits the whole timeline?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'Change 41c7 keys the cache on the article slug alone, so the first tenant to request a slug fills an entry that every other tenant then reads.',
+            'A slug-only cache can reuse one tenant’s article for another tenant requesting that slug on the same instance.',
             'The knowledge base has NORTHWIND and CALDERA sharing an article namespace, so the lookup returned an article both tenants were entitled to.',
             'The canary at 09:02 covered 3 of 12 instances, too few for the fault to appear.',
             'Cached entries outlived their time to live and were served after the tenant session that created them had ended.',
           ],
           correct: 0,
           explanation:
-            'The 12:14 entry names the defect: the key is the slug, with no tenant id in it, so one tenant’s article answers another tenant’s lookup. A shared namespace would not have been fixed by rolling back 41c7 at 12:20, and nothing in the timeline touched the knowledge base. The canary size affects how fast a fault is noticed, not whether it exists; the fault was on all 12 instances from 09:20 and still fired no alert. A time-to-live problem serves a tenant its own stale article, which is a freshness bug rather than a boundary one.',
+            'The 12:14 entry names the defect: the key is the slug, with no tenant id in it, so one tenant’s article answers another tenant’s lookup. A shared namespace would not have been fixed by rolling back 41c7 at 12:20, and nothing in the timeline touched the knowledge base. The canary size affects how fast a fault is noticed, not whether it exists; the fault was on all 12 instances from 09:20 and still fired no alert. The timeline supplies no TTL change. Its explicit missing tenant dimension explains cross-tenant reuse without inventing expiration behavior; stale permissions can create other authorization problems, but are not the stated evidence here.',
           competencies: ['operations'],
         },
         {
           id: 'fde-v1-bridge-incident-q3',
-          prompt: 'It is 11:52. On-call has the timeline up to that point and the cross-tenant reads are still happening. What is the safe immediate action?',
+          prompt: 'It is 11:52 and cross-tenant reads continue. A tested, schema-compatible previous release is ready for immediate rollback, with no cache kill switch. Before diagnosing the exact cause, which listed action best contains the active disclosure?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'Roll 41c7 back to the previous release, then work out which replies already quoted another tenant’s article.',
+            'Restore the known-good release, verify disclosure has stopped, and investigate replies already sent.',
             'Add the tenant id to the cache key and deploy the fix forward.',
             'Flush the cache on all 12 instances and leave 41c7 running.',
             'Cut the cache time to live to 30 seconds and watch whether the reports stop.',
           ],
           correct: 0,
           explanation:
-            'Rolling back returns the service to a state that ran for months without leaking, and it stops the disclosure while the investigation continues. Fixing forward means writing, reviewing and shipping a change under time pressure with the leak still running, and a wrong cache key is easy to get wrong twice. Flushing empties the cache but the next request refills it under the same slug-only key, so the leak resumes within minutes. Cutting the time to live shortens each leaked window without closing it; a tenant boundary is not a timing question.',
+            'Under the stated conditions, restoring the tested compatible release is the available immediate containment; verify the cross-tenant responses stop rather than assuming deployment success proves it. At 11:52 the exact cache-key defect is not yet known, and writing/reviewing a forward fix would leave the disclosure active. Once the defect is established, flushing or shortening TTL still allows the same unsafe key to refill. Preserve incident evidence and investigate earlier disclosures alongside containment. A rollback is not automatically the right choice when compatibility or its ability to contain a fault is unknown.',
           competencies: ['operations'],
         },
         {
@@ -543,14 +543,14 @@ const operatorReducer = (state, action) => {
           prompt: 'The rollback finished at 12:20 and new cross-tenant reads stopped at 12:26. What has the rollback not undone?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'The two replies already sent, one of them by email, quoting CALDERA’s article to NORTHWIND. A rollback stops new reads; it cannot retract a disclosure that has already left the service.',
+            'The two replies already sent, including the email; changing deployed code cannot retract them.',
             'Nothing. All 12 instances are back on the previous release, so the incident is closed.',
             'The 90 ms repeated-lookup latency, which the rollback has now made permanent.',
             'The cached entries themselves, which survive the rollback and keep answering with CALDERA’s article.',
           ],
           correct: 0,
           explanation:
-            'A rollback restores code, not consequences. Two replies are already out, one of them in a customer’s inbox, so the incident continues into notification and tenant follow-up regardless of what the service does now. Calling it closed skips that work. The 90 ms figure is the behaviour from before 41c7 rather than a new regression, so the rollback restored it instead of making it permanent. And the cache lived in the process memory of the instances that were replaced during the rollback, which is why the reads stopped at 12:26.',
+            'The two replies are already outside the service, one in a customer inbox. Restoring code does not recall them. Assess the scope, preserve evidence and coordinate the appropriate incident and tenant follow-up; stopping new reads alone does not settle those consequences. The 90 ms figure is the behaviour from before 41c7 rather than a new regression, so the rollback restored it instead of making it permanent. The timeline says new cross-tenant reads stopped at 12:26, which contradicts the claim that those entries keep answering afterward. It does not specify the exact process-replacement or cache-cleanup mechanism, so do not infer one.',
           competencies: ['operations'],
         },
       ],
@@ -562,14 +562,14 @@ const operatorReducer = (state, action) => {
       verification: 'machine_verified',
       title: 'Read typed and asynchronous Python',
       summary:
-        'Five snippets of the kind a data team hands you: an Optional hint, a coroutine that has to be awaited, a dict reshape, an environment variable with a default, and what an HTTP client call returns. Reading is what is graded — no Python runs on the server, and any Python you run locally is your own note, recorded as self-reviewed.',
+        'Five Python reading questions: an Optional hint, a coroutine, a dict reshape, environment defaults and an HTTPX response. Multiple-choice reading is graded; the server does not execute Python. Running snippets locally is optional practice, not a separately recorded verified result. The HTTPX example uses Python 3.10 or newer.',
       competencies: ['python-reading'],
       estimatedMinutes: 20,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-bridge-python-q1',
-          prompt: 'What does this signature promise a caller about the return value?',
+          prompt: 'According to the return annotation, which values must a caller be prepared to handle? This is a static type contract; Python does not validate input or return types from annotations at runtime.',
           context: {
             language: 'python',
             code: `from typing import Optional
@@ -589,7 +589,7 @@ def owner_email(account: dict, fallback: Optional[str] = None) -> Optional[str]:
           ],
           correct: 0,
           explanation:
-            '`Optional[str]` is `str | None`, and the two returns show both: `fallback` when the key is missing, a lowercased string otherwise. The default value on the parameter is the `= None`, which is a separate thing from the annotation. `Optional` says nothing about exceptions. And the None case is the opposite way round: the function returns None when the key is missing and no fallback was passed, whereas passing a fallback is what stops it returning None.',
+            '`Optional[str]` is `str | None`, and the two returns show both: `fallback` when the key is missing, a lowercased string otherwise. The default value on the parameter is the `= None`, which is a separate thing from the annotation. `Optional` says nothing about exceptions. A missing key or a value of None returns fallback. Its default is None, and passing None explicitly still permits None; passing a string fallback supplies that string. An existing blank string instead becomes a blank string after strip/lower. These annotations do not validate arbitrary values inside the unparameterized dict; a non-string email can raise when strip is called.',
           competencies: ['python-reading'],
         },
         {
@@ -606,14 +606,14 @@ def collect(client, tenant_id: str) -> list[dict]:
     return fetch_tickets(client, tenant_id)`,
           },
           options: [
-            'A coroutine object. Nothing inside `fetch_tickets` has run, so the annotated `list[dict]` never arrives.',
+            'A coroutine object; the body has not run at this point despite the list return annotation.',
             'The list of ticket dicts. Python runs the coroutine to completion when a synchronous function calls it.',
             'An empty list, because the awaits inside it have not resolved yet.',
             'A RuntimeError, because an async function cannot be called from a synchronous one.',
           ],
           correct: 0,
           explanation:
-            'Calling an `async def` builds a coroutine and runs none of its body; the work starts at `await` or when something like `asyncio.run` drives it. The annotation on `collect` says `list[dict]` and is wrong, which is exactly the kind of thing a type checker catches and the interpreter does not. Python never runs a coroutine implicitly, and the call itself raises nothing: you get the coroutine object, plus a "coroutine was never awaited" warning when it is garbage collected.',
+            'Calling an `async def` builds a coroutine and runs none of its body; the work starts at `await` or when something like `asyncio.run` drives it. The annotation on `collect` says `list[dict]` and is wrong, which is exactly the kind of thing a type checker catches and the interpreter does not. This call does not drive the coroutine and returns its object without running the body. Awaiting or scheduling it later can produce the list. Discarding it unawaited can produce a RuntimeWarning when finalized; warning filters and collection timing affect whether and when it is seen.',
           competencies: ['python-reading'],
         },
         {
@@ -675,7 +675,7 @@ TIMEOUT = float(os.getenv("TRIAGE_TIMEOUT_SECONDS", "5"))`,
         },
         {
           id: 'fde-v1-bridge-python-q5',
-          prompt: 'What does `client.get(...)` hand back here, and what does `raise_for_status()` do to it?',
+          prompt: 'With Python 3.10+ and a synchronous HTTPX Client using its default redirect behavior, what does client.get return and what does raise_for_status check?',
           context: {
             language: 'python',
             code: `import httpx
@@ -687,14 +687,14 @@ def fetch_page(client: httpx.Client, cursor: str | None) -> dict:
     return response.json()`,
           },
           options: [
-            'A Response carrying the status, the headers and the body together. `raise_for_status()` raises for a 4xx or 5xx and returns quietly otherwise, and the parsed body appears only when `response.json()` is called.',
+            'A Response; raise_for_status raises for a non-2xx status, while json parses the body separately.',
             'The parsed JSON body. `raise_for_status()` then re-inspects that body for an "error" key and raises if it finds one.',
             'A Response. `raise_for_status()` raises for any status other than exactly 200, so a 204 or a 301 would raise as well.',
             'A coroutine that has to be awaited, because httpx is an asynchronous library.',
           ],
           correct: 0,
           explanation:
-            'A Response object holds the status code, the headers and the raw body, and `response.json()` is the separate step that parses the body; a response with a 200 and unparseable body fails there, not before. `raise_for_status()` looks at the status code alone and never at the body. It raises for 4xx and 5xx, so a 204 or a 301 passes through it untouched. And `httpx.Client` is the synchronous client, which returns the Response directly; `httpx.AsyncClient` is the one whose calls you await.',
+            'HTTPX Client is synchronous and returns a Response with status, headers and content. For a response attached to its request, raise_for_status returns that response for a 2xx status and raises HTTPStatusError for non-2xx, including 1xx and 3xx as well as 4xx/5xx. A 204 passes this status check; a 301 does not. With default redirect behavior the 301 is not automatically followed. A later json call parses the content and can still fail on invalid or empty JSON, including a typical empty 204. AsyncClient uses await; this example uses Client.',
           competencies: ['python-reading'],
         },
       ],

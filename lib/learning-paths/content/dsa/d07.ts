@@ -7,7 +7,7 @@
  *
  * The middle exercise authors no body: it reuses the ordinary JavaScript task
  * `js-binary-search`, reachable here through path enrollment rather than the
- * tier ladder, and its pass records path evidence only.
+ * tier ladder, and its pass uses the shared coding reward rules as well as path evidence.
  *
  * The two exercises that do carry a body are graded on read counts through a
  * Proxy declared in the task harness. That is a bounded contract — this
@@ -96,7 +96,7 @@ export const DSA_D07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A linear search walks the collection from one end and stops at the first element that matches. It asks nothing of the data: no order, no index, no preparation. That is its whole appeal, and it is why every other search in this path is measured against it.',
+            'A linear search walks the collection from one end and stops at the first element that matches. It needs no sorted order or prepared lookup index. The examples here use dense, stable arrays and constant-cost strict-equality comparisons. That is its whole appeal, and it is why every other search in this path is measured against it.',
         },
         {
           kind: 'code',
@@ -110,23 +110,24 @@ export const DSA_D07: ModuleSource = {
           code: `const sorted = [1, 4, 7, 9, 12, 15, 21, 30, 44, 51];
 
 const binarySearch = (values, target) => {
-  let comparisons = 0;
+  let probes = 0;
   let low = 0;
   let high = values.length - 1;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
-    comparisons += 1;
-    if (values[mid] === target) return { index: mid, comparisons };
-    if (values[mid] < target) low = mid + 1;
+    probes += 1;
+    const value = values[mid];
+    if (value === target) return { index: mid, probes };
+    if (value < target) low = mid + 1;
     else high = mid - 1;
   }
-  return { index: -1, comparisons };
+  return { index: -1, probes };
 };
 
 console.log("found 44:", binarySearch(sorted, 44));
 console.log("missing 43:", binarySearch(sorted, 43));`,
-          caption: 'Binary search over ten sorted values, counting the comparisons it actually makes.',
-          note: 'Double the length of the list and see how little the comparison count moves. Then unsort it and watch the answer stop being trustworthy.',
+          caption: 'Binary search over ten sorted values, counting one midpoint probe per iteration, not individual equality/order comparisons.',
+          note: 'Double the length of the list and see how little the midpoint-probe count moves. Then unsort it and watch the answer stop being trustworthy.',
         },
         {
           kind: 'prose',
@@ -137,7 +138,7 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
           kind: 'callout',
           tone: 'note',
           body:
-            'Those are three different cost functions on the same routine. The best case is 1 read, the worst case is n reads, and a target that is present at a uniformly random position averages about n/2. All three are O(n) as an upper bound; only the worst case makes O(n) the tightest thing you can say.',
+            'Those are three different cost functions on the same routine. The best case is 1 read, the worst case is n reads, and a target that is present at a uniformly random position averages about n/2. For a nonempty array and a uniformly distributed successful target, the mean is exactly (n + 1) / 2 reads. Best-case cost is O(1); both this average and the worst case have tight O(n) growth.',
         },
         {
           kind: 'trace',
@@ -204,29 +205,29 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'Nothing in that walk depended on the values ascending. Move the 7 anywhere and the routine still finds it, at a cost that changes but never breaks. A binary search on the same array would answer wrongly, which is the trade the next lesson spells out.',
+            'Nothing in that walk depended on the values ascending. Move the 7 anywhere and the routine still finds it, at a cost that changes but never breaks. Binary search on unsorted data can miss an existing target, which is the trade the next lesson spells out.',
         },
         {
           kind: 'prose',
           body:
-            'A linear scan is the right answer more often than its reputation suggests. Unsorted data with one lookup coming: sorting first costs more than the scan you were trying to avoid. A handful of elements: the constant factors dominate and the scan wins outright. A predicate rather than an equality test: "the first order over 500 CZK" has no sorted key to bisect on unless you built one.',
+            'A linear scan is the right answer more often than its reputation suggests. Unsorted data with one lookup coming: sorting first costs more than the scan you were trying to avoid. A handful of elements: constant factors can dominate, so measure before assuming preparation pays off. A predicate rather than an equality test: "the first order over 500 CZK" has no sorted key to bisect on unless you built one.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: 'const findFirst = (values, matches) => {\n  for (let index = 0; index < values.length; index += 1) {\n    if (matches(values[index])) return index;\n  }\n  return -1;\n};\n\nfindFirst(orders, order => order.total > 500);',
+          code: 'const orders = [{ total: 200 }, { total: 750 }, { total: 900 }];\n\nconst findFirst = (values, matches) => {\n  for (let index = 0; index < values.length; index += 1) {\n    if (matches(values[index])) return index;\n  }\n  return -1;\n};\n\nfindFirst(orders, order => order.total > 500);',
           caption: 'The same walk with a predicate. Binary search has no way in here: the array is not ordered by the thing being tested.',
         },
         {
           kind: 'prose',
           body:
-            'Structure matters too. A singly linked list has no index to bisect on, so reaching the middle node already costs a walk of half the list. Searching one is linear whatever you do, which is why D05 pairs cheap insertion at a known position with expensive lookup.',
+            'Structure matters too. A singly linked list has no index to bisect on, so reaching the middle node already costs a walk of half the list. Without an auxiliary index, a general equality search has a linear worst-case walk, which is why D05 pairs cheap insertion at a known position with expensive lookup.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Recursive "scan the rest" implementations often hide a copy. `search(values.slice(1), target)` reads and allocates the whole tail on every step, so a linear routine turns quadratic in time and linear in auxiliary space. Pass an index along instead of slicing.',
+            'Recursive "scan the rest" implementations often hide a copy. `search(values.slice(1), target)` reads and allocates the whole tail on every step, so an unsuccessful walk copies (n - 1) + (n - 2) + ... + 1 elements: O(n²) copying work. With ordinary waiting frames retaining those tails, peak auxiliary storage can also be O(n²), plus the call stack. An index avoids the tail copies; a loop also avoids the growing stack.',
         },
         {
           kind: 'table',
@@ -235,13 +236,13 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
           rows: [
             ['Linear scan', 'None', 'O(n) worst case', 'Unsorted data, few lookups, small arrays, predicate tests'],
             ['Sort once, then binary search', 'O(n log n) sort', 'O(log n)', 'Many lookups on stable data, and range or nearest-value queries'],
-            ['Build a Set, then test membership', 'O(n) insertions', 'Expected O(1), not a worst-case guarantee', 'Many equality lookups where order is irrelevant'],
+            ['Build a Set, then test membership', 'O(n) insertions', 'Expected O(1) in a hash-table model; no fixed ECMAScript time guarantee', 'Many equality lookups where order is irrelevant'],
           ],
         },
         {
           kind: 'prose',
           body:
-            '`indexOf` and `findIndex` are this scan, written for you. They still read up to n elements, so reaching for one does not change the growth class of the code around it. The exercise below asks you to write the loop because the next lesson takes it apart.',
+            '`indexOf` and `findIndex` are this scan, written for you. On the dense arrays used here they inspect up to n positions, so they retain linear worst-case scan work when the comparison or predicate has constant cost. indexOf uses strict equality and cannot find NaN. Set uses SameValueZero and can contain NaN, so membership and an indexOf scan are not interchangeable for every value. The exercise below asks you to write the loop because the next lesson takes it apart.',
         },
       ],
     },
@@ -262,24 +263,24 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'Binary search trades a requirement for a rate. Give it an array sorted ascending on the key you compare, and one comparison rules out half of what is left. Sixteen elements need at most five comparisons, a million need at most twenty, and doubling the array adds one.',
+            'Binary search trades a requirement for a rate. Use a dense, stable array of finite Numbers in nondecreasing order, and a finite Number target, with constant-cost comparisons. Each midpoint probe rules out about half of what remains unless it finds a match. Sixteen elements need at most five probes and a million at most twenty; doubling the maximum length adds about one probe.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'The precondition is not checked and cannot be. Verifying that an array is sorted costs a full pass, which is the linear scan you were avoiding. Hand unsorted data to a binary search and it returns a wrong answer quietly: no exception, no warning, just -1 for a value that is sitting in the array.',
+            'This implementation trusts the sorted-input precondition. It could validate it, but a fresh validation takes a full pass, losing the logarithmic total cost for that call. On unsorted data the search can silently miss an existing value; it may also happen to find one. There is no reliable answer without the precondition.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: 'const binarySearch = (sorted, target) => {\n  let low = 0;\n  let high = sorted.length - 1;\n\n  while (low <= high) {\n    const middle = Math.floor((low + high) / 2);\n    if (sorted[middle] === target) return middle;\n    if (sorted[middle] < target) low = middle + 1;\n    else high = middle - 1;\n  }\n\n  return -1;\n};',
+          code: 'const binarySearch = (sorted, target) => {\n  let low = 0;\n  let high = sorted.length - 1;\n\n  while (low <= high) {\n    const middle = Math.floor((low + high) / 2);\n    const value = sorted[middle];\n    if (value === target) return middle;\n    if (value < target) low = middle + 1;\n    else high = middle - 1;\n  }\n\n  return -1;\n};',
           caption: 'The inclusive form: `low` and `high` name a closed interval, and the loop runs while that interval holds at least one element.',
         },
         {
           kind: 'prose',
           body:
-            'One sentence makes the whole routine correct: if the target is in the array at all, its index is between `low` and `high` inclusive. That claim holds before the first iteration, because the interval is the whole array. Each branch keeps it true. `sorted[middle] < target` means everything at `middle` and below is too small, so moving `low` to `middle + 1` discards indices the target cannot occupy. The mirror case moves `high` to `middle - 1`.',
+            'One sentence makes the whole routine correct: if the target occurs, at least one matching index remains between `low` and `high` inclusive. That claim holds before the first iteration, because the interval is the whole array. Each branch keeps it true. `sorted[middle] < target` means everything at `middle` and below is too small, so moving `low` to `middle + 1` discards indices the target cannot occupy. The mirror case moves `high` to `middle - 1`.',
         },
         {
           kind: 'trace',
@@ -334,7 +335,7 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'Counting comparisons: each iteration at worst removes half the remaining interval, so an array of n elements takes at most ⌊log₂ n⌋ + 1 of them. That is 5 for sixteen elements and 20 for a million, and the class is O(log n) for time with O(1) auxiliary space. A recursive version returns the same answer and borrows O(log n) stack frames for the privilege.',
+            'Count midpoint probes, not individual equality/order comparisons. The cached midpoint value is read once per iteration. For n > 0 there are at most ⌊log₂ n⌋ + 1 probes; an empty array takes none. That is 5 for sixteen elements and 20 for a million, and the class is O(log n) for time with O(1) auxiliary space. A recursive version with one retained frame per call uses O(log n) auxiliary stack; tail-call behavior depends on the runtime.',
         },
         {
           kind: 'table',
@@ -356,7 +357,7 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'The fix is to stop returning on the first match. A lower-bound search never exits early: when the middle element is at least the target it pulls `high` down to the middle and keeps going, so the interval collapses onto the leftmost index whose element is not below the target. One check at the end tells you whether that index holds the target or the array simply has no such value. That variant is the third exercise below.',
+            'The fix is to stop returning on the first match. Use a half-open interval [low, high), starting with low = 0 and high = length, and loop while low < high. If the middle value is below the target, set low = middle + 1; otherwise set high = middle. This interval strictly shrinks and ends at the first position whose element is not below the target, or at length. Check that the resulting index is below length and holds the target before reporting a match. That variant is the third exercise below.',
         },
         {
           kind: 'callout',
@@ -367,12 +368,12 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'Preprocessing decides which search you should be writing. One lookup on unsorted data: the sort costs O(n log n) and the scan you replaced cost O(n), so you lost. k lookups: O(n log n + k log n) against O(kn), and the sort repays itself once k grows past roughly log n. Data that changes between lookups moves the sort back inside the loop, which usually ends the argument.',
+            'Preprocessing decides which search you should be writing. In the comparison-sort model, preparation takes O(n log n) work before the first binary lookup, while a full scan takes O(n). Across k lookups on stable data the model compares O(n log n + k log n) with O(kn). Ignoring constants and assuming full scans, the crossover is around log n lookups for large n. Big O alone does not predict a measured winner or an exact threshold. Changed data needs its own update or re-sorting strategy; preparation is not automatically free on later queries.',
         },
         {
           kind: 'prose',
           body:
-            'For plain equality lookups a Set or Map often beats both, at expected constant time per lookup rather than a worst-case guarantee. Binary search earns its keep when the order itself is the question: the first record on or after a date, the nearest price below a bid, everything between two keys. A hash table answers none of those.',
+            'For plain equality lookups a Set or Map often beats both, at expected constant lookup time in a hash-table model, not a fixed ECMAScript or worst-case guarantee. Binary search earns its keep when the order itself is the question: the first record on or after a date, the nearest price below a bid, everything between two keys. A hash table answers none of those.',
         },
       ],
     },
@@ -419,35 +420,35 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
             code: 'const binarySearch = (sorted, target) => {\n  let low = 0;\n  let high = sorted.length - 1;\n  while (low <= high) {\n    const middle = Math.floor((low + high) / 2);\n    if (sorted[middle] === target) return middle;\n    if (sorted[middle] < target) low = middle + 1;\n    else high = middle - 1;\n  }\n  return -1;\n};\n\nbinarySearch([8, 3, 5, 1, 9], 3);',
           },
           options: [
-            '-1, because each comparison discards a half on the assumption that the values ascend, and here that assumption throws away the index holding 3.',
-            '1, because the loop keeps narrowing until it reaches the only remaining index, which is where the 3 sits.',
-            '-1, because a binary search rejects an unsorted array before it compares anything.',
-            'A range error, because `low` runs past the last index of the array.',
+            'It returns -1: trusting sorted order discards index 1, even though that position holds the target.',
+            'It returns 1: narrowing always preserves the matching position, even if the initial array is unsorted.',
+            'It returns -1: it validates order first and rejects the array before reading a midpoint.',
+            'It throws a range error: moving an interval end past the array necessarily reads an invalid index.',
           ],
           correct: 0,
           explanation:
-            'The search reads index 2 (value 5), decides 3 must lie to the left, and sets `high` to 1. It then reads index 0 (value 8), decides 3 must lie further left again, and sets `high` to -1. The loop ends and the answer is -1, even though 3 is at index 1. Nothing rejects the input: checking that an array is sorted costs a full pass, so no implementation does it. And `low` and `high` only ever move inward, so the indexing stays in range and no error is thrown.',
+            'The search reads index 2 (value 5), decides 3 must lie to the left, and sets `high` to 1. It then reads index 0 (value 8), decides 3 must lie further left again, and sets `high` to -1. The loop ends and the answer is -1, even though 3 is at index 1. This implementation does not validate order. A wrapper could check it with a full pass, but that would add linear work before this search. And `low` and `high` only ever move inward, so the indexing stays in range and no error is thrown.',
           competencies: ['searching'],
         },
         {
           id: 'dsa-v1-d07-q2',
-          prompt: 'An iterative binary search keeps a `low` and a `high` index. Which statement is the loop invariant that makes the routine correct?',
+          prompt: 'For the inclusive iterative binary search on a dense, nondecreasing array of finite Numbers with a finite Number target, which statement is the loop invariant?',
           options: [
-            'If the target is in the array at all, its index is between `low` and `high` inclusive.',
+            'If the target occurs, at least one matching index remains in the live interval from low through high.',
             '`sorted[low]` is always at most the target and `sorted[high]` is always at least the target.',
             'The count of elements between `low` and `high` halves exactly on every iteration.',
             '`low` never decreases and `high` never increases, which on its own guarantees the target is found.',
           ],
           correct: 0,
           explanation:
-            'The interval claim is what every branch preserves and what makes an empty interval mean "absent". The bracketing claim about `sorted[low]` and `sorted[high]` fails as soon as the target is missing, and it is never needed. The interval does not halve exactly: integer rounding leaves one side one element larger, and the middle element is discarded as well, so it shrinks by at least about half. Monotonic movement is true but says nothing about correctness, since a routine that moved the ends the wrong way would also satisfy it.',
+            'The existence of a matching index in the interval is what every branch preserves and what makes an empty interval mean "absent". The bracketing claim about `sorted[low]` and `sorted[high]` can fail when the target is absent or outside the stored value range, and it is never needed. The interval does not halve exactly: integer rounding leaves one side one element larger, and the middle element is discarded as well, so the continuing interval has at most floor(m / 2) elements when it previously had m. Monotonic movement is true but says nothing about correctness, since a routine that moved the ends the wrong way would also satisfy it.',
           competencies: ['searching'],
         },
         {
           id: 'dsa-v1-d07-q3',
-          prompt: 'A plain binary search runs over the ascending array `[2, 4, 4, 4, 4, 7]` looking for 4, returning the middle index as soon as it matches. What does it return?',
+          prompt: 'On `[2, 4, 4, 4, 4, 7]`, binary search starts with low = 0 and high = 5, takes floor((low + high) / 2), and returns on a match. What index does it return for 4?',
           options: [
-            '2, and on a different array of the same shape it could return any index inside the run of fours.',
+            '2, because the initial lower-middle index is 2 and it already holds the target.',
             '1, because the search settles on the leftmost element of a run of equal values.',
             '4, because the search settles on the rightmost element of a run of equal values.',
             '-1, because a binary search needs distinct values to divide the array.',
@@ -459,16 +460,16 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         },
         {
           id: 'dsa-v1-d07-q4',
-          prompt: 'A list of 100 000 unsorted records is looked up by key. Under the unit-cost model, when does sorting once at O(n log n) and then binary searching beat scanning linearly each time?',
+          prompt: 'For stable unsorted records, compare one O(n log n) comparison sort plus k binary lookups with k full linear scans. Which statement accounts for preparation correctly?',
           options: [
-            'Once enough lookups accumulate that the linear scans they replace outweigh the one-off sort; a single lookup never repays it.',
-            'Always, because O(log n) per lookup is a smaller class than O(n) per lookup.',
-            'Never, because O(n log n) grows faster than the O(n) scan the sort is meant to replace.',
-            'Only when the records already arrive nearly sorted, because otherwise the sort dominates any number of lookups.',
+            'Count the sort once as well as every lookup; enough repeated lookups can amortize that preparation cost.',
+            'Ignore the preparation: O(log n) per lookup guarantees lower total work even for a single query on unsorted data.',
+            'Pay the sort again for every query, so its larger growth class prevents it from ever repaying the linear scans.',
+            'The initial disorder makes preparation dominate any number of later lookups, even if the data stays unchanged.',
           ],
           correct: 0,
           explanation:
-            'k lookups cost O(n log n + k log n) after sorting against O(kn) without, so the sort is an investment that k has to repay. For k = 1 the sort alone costs more than the single scan it saves. The per-lookup class does not settle it, because the sort is paid once and outside the comparison. And "never" mistakes a one-off cost for a per-lookup cost: a fixed O(n log n) charge is amortised across every later lookup, however unsorted the input started.',
+            'k lookups cost O(n log n + k log n) after sorting against O(kn) without, so the sort is an investment that k has to repay. For k = 1 the comparison-sort model adds asymptotically more work than one full scan; constants still matter for particular inputs. The per-lookup class does not settle it, because the sort is paid once and outside the comparison. And "never" mistakes a one-off cost for a per-lookup cost: a fixed O(n log n) charge is amortised across every later lookup, however unsorted the input started. These growth bounds describe a cost model, not an exact measured break-even threshold.',
           competencies: ['searching', 'complexity'],
         },
       ],
@@ -485,18 +486,18 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
       code: {
         language: 'javascript',
         prompt:
-          'Write `linearSearch(values, target)`, returning the index of the first element strictly equal to `target`, or -1 when nothing matches. The array can be in any order. `linearSearch([4, 9, 1, 9], 9)` gives 1, and an empty array gives -1.\n\nThe grade counts how many times you read an element by index. One walk from the left is the whole budget: at most one read per element, and a match at index 0 must cost a single read, so a scan that keeps going after it has found something goes over.',
+          "Write `linearSearch(values, target)`, returning the index of the first element strictly equal to `target`, or -1 when nothing matches. The input is an ordinary dense array of at most 10000 JavaScript values, in any order. Match objects by reference, do not coerce values, and do not change the array or its elements. An actual undefined entry is allowed; sparse holes are outside this exercise. `linearSearch([4, 9, 1, 9], 9)` gives 1, and an empty array gives -1.\n\nThe grade counts how many times you read an element by index. Use one left-to-right walk and stop at the first match. The bounded fixtures allow at most n indexed reads for n elements, one read for a match at index 0, and a matching-prefix budget in other early-hit cases. The counter totals reads; it does not prove that arbitrary code visits every position only once.\n\nTarget: O(n) time in the worst case and O(1) extra space, where n is the input length and indexed reads/strict equality count as unit operations. An early match may finish sooner; empty input is constant work.",
         contract: [
-          'Read each element at most once — the graded budget is one read per element.',
+          'Use at most one indexed read per visited element; the fixtures enforce aggregate and early-hit budgets, not a proof over every possible input.',
           'Return as soon as an element matches; running to the end anyway breaks the budget on an early match.',
-          'Compare with strict equality, so `0` and `false` are different values.',
+          'Compare with strict equality: 0 differs from false, NaN never matches itself, both signs of zero match, and objects match only the same reference.',
           'Leave the input as you found it: no sorting, no copying, no slicing.',
         ],
         starter: `const linearSearch = (values, target) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(linearSearch([4, 9, 1, 9], 9));
 `,
         skeleton: `const linearSearch = (values, target) => {
@@ -529,7 +530,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
             label: 'One read per element, and a stop at the first match',
             critical: true,
             weight: 2,
-            detail: 'The read counter went over budget. A copy of the input, a second walk, or a scan that runs on after the match all show up here.',
+            detail: 'The fixture exceeded its indexed-read budget. Copying, a second walk or continuing after a match can exceed it. These sampled aggregate counts are not a universal per-position or complexity proof.',
           },
         ],
         tests: [
@@ -561,7 +562,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
       verification: 'machine_verified',
       title: 'Binary search: the existing coding task',
       summary:
-        'The devShark JavaScript task `js-binary-search`, opened here by your path enrollment instead of the ordinary tier 3 gate. Passing it records evidence for this module only: no coding XP, and no coding tier unlocks.',
+        'Practice the existing JavaScript binary-search task through your path enrollment. A passing submission records module evidence and uses the shared coding reward rules, including repeat and revealed-solution limits. Completing the same task through another screen does not grant a second first-completion reward.',
       competencies: ['searching', 'complexity'],
       estimatedMinutes: 15,
       reuseTaskId: 'js-binary-search',
@@ -578,10 +579,10 @@ console.log(linearSearch([4, 9, 1, 9], 9));
       code: {
         language: 'javascript',
         prompt:
-          'Write `firstOccurrence(sorted, target)`, returning the index of the first element equal to `target` in an ascending array that may hold duplicates, or -1 when the target is absent. `firstOccurrence([1, 2, 2, 2, 3], 2)` gives 1, because index 1 is where the run of twos starts. An empty array gives -1.\n\nThis is the lower-bound variant of binary search, and the grade holds you to the method: on a sorted array of 64 elements the routine may read at most 20 elements. A linear scan reads up to 64. Finding any match first and then walking left along the run reads up to 32 more than the search itself. Neither fits.',
+          "Write `firstOccurrence(sorted, target)`, returning the index of the first element equal to `target` in a dense, nondecreasing array of finite Numbers that may hold duplicates, or -1 when the target is absent. `firstOccurrence([1, 2, 2, 2, 3], 2)` gives 1, because index 1 is where the run of twos starts. An empty array gives -1. The target is a finite Number; fractional values count without rounding. The array has at most 10000 elements and may be frozen.\n\nUse the lower-bound variant of binary search. The grader records bounded indexed-read evidence: on a sorted array of 64 elements the routine may read at most 20 elements. A linear scan reads up to 64. Finding any match first and then walking left along the run reads up to 32 more than the search itself. Those strategies exceed at least one fixture budget. Passing finite checks is not a proof of logarithmic behavior on every input.\n\nTarget: O(log n) time and O(1) extra space, where n is the array length under constant-cost numeric comparison and indexing. Empty input is constant work. The read-budget fixtures remain bounded examples, not a complexity proof for arbitrary source.",
         contract: [
-          'The input is ascending and may hold duplicates; you may rely on that order.',
-          'Read at most 20 elements of a 64-element array — the graded budget rules out both a linear scan and a walk back along a run of equal values.',
+          'The input is dense, nondecreasing and contains at most 10000 finite Numbers; the finite Number target may be fractional. You may rely on the order.',
+          'Read at most 20 elements of a 64-element array — the sampled budget rejects the included linear-scan and walk-left counterexamples, without proving arbitrary code logarithmic.',
           'Return the index where the run of equal values starts, not an arbitrary index inside it.',
           'Leave the input as you found it: no sorting, no copying, no slicing.',
         ],
@@ -589,7 +590,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(firstOccurrence([1, 2, 2, 2, 3], 2));
 `,
         skeleton: `const firstOccurrence = (sorted, target) => {
@@ -629,7 +630,7 @@ console.log(firstOccurrence([1, 2, 2, 2, 3], 2));
             critical: true,
             weight: 2,
             detail:
-              'The read counter went over 20 on a 64-element array. A linear scan reads up to 64, and finding any match then walking left along the run reads up to 32 more; both land here even when the index they return is right.',
+              'The read counter went over 20 on a 64-element array. A linear scan reads up to 64, and finding any match then walking left along the run reads up to 32 more; the included fixtures reject both even if the returned index is right. Other inputs or programs are not proven by this finite budget.',
           },
         ],
         tests: [

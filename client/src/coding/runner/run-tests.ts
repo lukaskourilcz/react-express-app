@@ -1,3 +1,4 @@
+import type { TaskRuntimePolicy } from '../../../../shared/coding-task-runtime';
 // Runs a JavaScript or TypeScript task in the runner worker with a hard
 // budget. Never rejects: a hung loop resolves as timed out once the worker is
 // terminated, a crash resolves as a code error, and a runner that never
@@ -33,6 +34,7 @@ export interface RunOutcome extends EvaluateResult {
 }
 
 export interface RunInput {
+  runtimePolicy?: TaskRuntimePolicy;
   track: 'javascript' | 'typescript';
   code: string;
   tests: CallTest[];
@@ -105,6 +107,7 @@ export function runCodeTests(input: RunInput): Promise<RunOutcome> {
     };
 
     const request: RunnerRequest = {
+      runtimePolicy: input.runtimePolicy,
       track: input.track,
       code: input.code,
       calls: input.tests.map((test) => test.call),

@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {gradeCheck} from '../../../../lib/learning-paths/grade';
+const activities=LEARNING_PATHS.find(p=>p.id==='fde')!.modules.flatMap(m=>m.activities);const all=activities.flatMap(a=>a.questions??[]);
+const questions=['fde-v1-bridge-python-q4','fde-v1-bridge-python-q5','fde-v1-m01-q1'].map(id=>all.find(q=>q.id===id)!);assert.deepEqual(questions.map(q=>q.correct),[0,0,0]);
+const parents=['fde-v1-bridge-python-reading','fde-v1-bridge-incident-case'].map(id=>activities.find(a=>a.id===id)!);
+for(const parent of parents){const keys=parent.questions!.map(q=>q.correct);assert.equal(gradeCheck(parent,keys,keys).state,'verified_pass');for(let i=0;i<keys.length;i++){const answers=[...keys];answers[i]=(answers[i]+1)%4;const result=gradeCheck(parent,keys,answers);assert.equal(result.state,keys.length===5?'verified_pass':'needs_revision');assert.equal(result.keyWithheld,false);}const two=[...keys];two[0]=(two[0]+1)%4;two[1]=(two[1]+1)%4;assert.equal(gradeCheck(parent,keys,two).state,'needs_revision');}
+const python=JSON.parse(readFileSync(process.argv[2],'utf8')) as {checkedRecords:number;records:{id:string;contentHash:string}[];pythonVersion:string;httpxVersion:string};assert.equal(python.checkedRecords,2);for(const record of python.records)assert.equal(nativeContentHash(questions.find(q=>q.id===record.id)!),record.contentHash);
+writeFileSync(process.argv[3],JSON.stringify({checkedRecords:5,records:[...questions.map(q=>({id:q.id,contentHash:nativeContentHash(q),gradingHash:null})),...parents.map(a=>({id:a.id,contentHash:nativeContentHash(a),gradingHash:nativeGradingHash(a)}))],pythonVersion:python.pythonVersion,httpxVersion:python.httpxVersion,checks:['actual HTTPX status/JSON distinction via MockTransport, no network','isolated environment default types','five-question 80% allows one miss; four-question 80% allows none; both reveal diagnostic feedback','parent activities grade reading rather than server Python/local-note evidence','discovery scope conclusion is manual, not a real baseline or field study']},null,2),{mode:0o600});
+console.log('PASS five FDE bridge/discovery bindings, exact HTTPX behavior and check thresholds');

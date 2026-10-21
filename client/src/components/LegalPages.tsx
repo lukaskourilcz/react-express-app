@@ -23,6 +23,7 @@ import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
 export const LEGAL_UPDATED = '2026-10-09';
+export const PRIVACY_UPDATED = '2026-10-14';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
@@ -353,7 +354,7 @@ function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKe
     monthly: PREMIUM_PRICE.monthly,
     annual: PREMIUM_PRICE.annual,
   };
-  const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${LEGAL_UPDATED}T00:00:00Z`));
+  const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${title === 'legal.privacy.title' ? PRIVACY_UPDATED : LEGAL_UPDATED}T00:00:00Z`));
 
   // Another page links to a section (/terms#trader); the app scrolls inside
   // <main>, so the browser's own jump does not happen on a client navigation.

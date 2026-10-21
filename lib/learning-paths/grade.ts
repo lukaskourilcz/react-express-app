@@ -1,3 +1,4 @@
+import { runtimePolicyForTask } from '../../shared/coding-task-runtime';
 import type { ReactSuiteOutcome } from '../coding/react-runner';
 /** Grading for learning-path activities.
  *
@@ -7,8 +8,8 @@ import type { ReactSuiteOutcome } from '../coding/react-runner';
  *
  *   - the attempt is bound to an enrollment, so a task a learner reaches
  *     through a path is authorized by that enrollment rather than by the
- *     ordinary coding tier ladder — and the pass records path evidence only,
- *     never coding XP, coding progress or a tier unlock;
+ *     ordinary coding tier ladder — and the handler records path evidence together with the shared coding
+ *     reward ledger; access still comes from the enrollment;
  *   - assertions group into named criteria, so a critical failure cannot be
  *     averaged away by a strong score elsewhere;
  *   - objective checks grade against the key sealed in the attempt session,
@@ -17,7 +18,7 @@ import type { ReactSuiteOutcome } from '../coding/react-runner';
  *     check can prove a field is non-empty; it cannot establish quality, and
  *     nothing here pretends otherwise.
  *
- * No path awards XP in v1. */
+ * Verified coding activities use the ordinary coding reward rules. */
 
 import { createHash } from 'node:crypto';
 import type {
@@ -35,6 +36,7 @@ import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
 import { solutionFor } from './solutions';
 import { solutionFor as codingSolutionFor } from '../coding/solutions';
+import { protectedPathHarness } from './harness';
 
 /** The share of non-critical weighted criteria a pass needs when the activity
  * does not state its own. Piloted, versioned with the rubric, and the same
@@ -173,7 +175,9 @@ export const pathCodeTooLarge = (code: string): boolean =>
  * criteria collapse to the single critical `core`, matching how the coding
  * section already grades it. */
 export function codeFromReusedTask(task: CodingTask): MergedCode {
+  const runtimePolicy = runtimePolicyForTask(task.id);
   return {
+    ...(runtimePolicy ? { runtimePolicy } : {}),
     language: task.track === 'react' ? 'react' : task.track === 'typescript' ? 'typescript' : 'javascript',
     prompt: task.prompt,
     starter: task.starter,
@@ -265,10 +269,9 @@ function hiddenAssertionsFor(activity: MergedActivity): PathCodeSolution | undef
 
 /**
  * Runs one code submission. The task's harness is appended *after* the
- * learner's source, so an author-supplied probe — a counted accessor, a
- * comparator that records comparisons — cannot be shadowed by a same-named
- * declaration in the submission. That is what lets a method assessment grade
- * observed operations instead of matching source text.
+ * learner's source inside a private lexical scope. Only immutable helpers
+ * needed by trusted calls or provided learner APIs leave that scope. Mutable
+ * instrumentation counters and original function references stay private.
  */
 export async function gradePathCode(
   activity: MergedActivity,
@@ -310,13 +313,17 @@ export async function gradePathCode(
     source = typed.javascript;
   }
 
-  const runnableSource = code.harness ? `${source}\n;\n${code.harness}\n` : source;
+  const harness = code.harness ? protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call), code.starter) : null;
+  // Provided APIs must exist for the starter's top-level scratch pad. Deferred
+  // wrappers run once after learner declarations, before any graded call.
+  const runnableSource = harness ? `${harness.before}\n;\n${source}\n;\n${harness.after}\n` : source;
   // The visible checks run together and their console output is what the
   // learner sees. The hidden ones run in a fresh program, shuffled for this
   // submission, as in the coding section (runChecks): a program that counted
   // its calls could otherwise answer them in authored order.
   const { visible: visibleRun, hidden: hiddenRun } = await runChecks({
     code: runnableSource,
+    runtimePolicy: code.runtimePolicy,
     visible,
     hidden,
     shuffle: secureShuffle,

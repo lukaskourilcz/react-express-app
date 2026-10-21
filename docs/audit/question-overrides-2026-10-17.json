@@ -1,0 +1,24 @@
+{
+  "schema": "devshark-override-reconciliation/v1",
+  "observedOn": "2026-10-17",
+  "sourceBankCommit": "7005e426",
+  "priorSortedIdSnapshotReusedAfterMatchingLiveFingerprint": true,
+  "databaseRead": "Production question_edits aggregate and deleted question IDs only; read-only, no learner/auth data",
+  "overrideRows": 485,
+  "deletedOverrideRows": 485,
+  "activeEditedOrCustomRows": 0,
+  "sortedDeletedIdsNewlineMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
+  "fingerprintMethod": "MD5 of lexically sorted question_id values joined by newline, with no trailing newline",
+  "sameDeletedIdentitiesAs14October": true,
+  "authoredActiveCategories": 2168,
+  "eligibleStatic": 2014,
+  "withheldByContentGate": 154,
+  "eligibleHiddenByOverrides": 194,
+  "effectiveEligible": 1820,
+  "allEffectiveItemsHaveCurrentQuestionReviews": true,
+  "limits": [
+    "Live aggregate/fingerprint matches the saved485deleted-ID snapshot; prior IDs are reused only after this exact match.",
+    "No hides lifted,export published,learner/Auth data queried or database state changed.",
+    "This reconciles existing reviews and eligibility; it is not new individual editorial approval or independent review."
+  ]
+}

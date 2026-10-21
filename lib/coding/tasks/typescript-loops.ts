@@ -12,7 +12,7 @@ export const TYPESCRIPT_LOOP_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["annotations", "for-of"],
     title: "Inferred total",
-    prompt: "Write `totalLength(words: string[]): number`, adding up the length of every word. Start the running total at `0` without a type annotation and let the compiler infer `number` from that starting value, then add each length in a `for-of` loop. `totalLength([\"hi\", \"there\"])` gives 7, and an empty list gives 0.",
+    prompt: "Write `totalLength(words: string[]): number`, adding up the length of every word. Start the running total at `0` without a type annotation and let the compiler infer `number` from that starting value, then add each length in a `for-of` loop. `totalLength([\"hi\", \"there\"])` gives 7, and an empty list gives 0. Domain: an ordinary dense array of at most 1000 strings, each at most 1000 UTF-16 code units, possibly frozen at runtime. Leave it unchanged. Count JavaScript string.length units, not Unicode code points or displayed characters: a shark emoji contributes 2 and e followed by a combining accent contributes 2. Return 0 for no words. Type inference checks the program statically; it does not add runtime guards. Target: O(n) time and O(1) accumulator space, where n is 1 + the word count; reading an existing string length does not scan its characters.",
     starter: `const totalLength = (words: string[]): number => {
 
 };
@@ -60,7 +60,7 @@ console.log(totalLength(["hi", "there"]));
     tier: 1,
     focus: ["push", "shift", "while"],
     title: "Take turns",
-    prompt: "Write `takeTurns(waiting: string[], turns: number): string[]`, serving people from a queue in a round robin: the person at the front is served, then goes to the back, until `turns` people have been served. Copy the list first so the caller's array stays as it was. `takeTurns([\"ada\", \"bo\"], 3)` gives `[\"ada\", \"bo\", \"ada\"]`, and an empty queue gives an empty list however many turns are asked for.",
+    prompt: "Write `takeTurns(waiting: string[], turns: number): string[]`, serving people from a queue in a round robin: the person at the front is served, then goes to the back, until `turns` people have been served. Keep the caller's array unchanged. `takeTurns([\"ada\", \"bo\"], 3)` gives `[\"ada\", \"bo\", \"ada\"]`, and an empty queue gives an empty list however many turns are asked for. Domain: an ordinary dense array of at most 1000 strings, each up to 200 UTF-16 units, possibly frozen at runtime, and an integer turns from 0 through 10000. Empty and repeated names are ordinary queue entries. Return a fresh dense mutable result array per call, even for zero turns or an empty queue, and leave waiting unchanged. A copied shift/push queue is the teaching approach; an index-based cycle with the same results is also valid. Target: O(n\u00b2) time as a worst-case upper bound for the copied shift/push approach, where n is 1 + waiting.length + turns. More precisely its work is O(w + t*w) for w waiting entries and t turns under a linear shift model; an index-based cycle can be faster. Queue/result storage is O(w + t).",
     starter: `const takeTurns = (waiting: string[], turns: number): string[] => {
 
 };
@@ -110,7 +110,7 @@ console.log(takeTurns(["ada", "bo"], 3));
     tier: 2,
     focus: ["readonly", "spread", "push"],
     title: "Pad a readonly list",
-    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The parameter is readonly, so `push` is not available on it and the copy has to be made with spread first. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy.",
+    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The readonly type prevents pushing onto the parameter in checked TypeScript. Make a new mutable array before padding; spread is one way to copy it. The type does not freeze an array at runtime. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy. Domain: an ordinary dense array of at most 10000 numbers, possibly frozen at runtime, and an integer size from 0 through 10000. Existing values, including NaN, infinities and signed zero, stay in order without conversion; every new padding value is +0. Never truncate scores or change input. Return a fresh mutable dense array on every call, even when no padding is needed or both input and target are empty. Target: O(n) time and output space, where n is 1 + max(scores.length, size). Equivalent nonmutating copying approaches are valid.",
     starter: `const padScores = (scores: readonly number[], size: number): number[] => {
 
 };
@@ -128,7 +128,7 @@ console.log(padScores([7, 9], 4));
   return padded;
 };`,
     hints: [
-      "The compiler removes every mutating method from a readonly array, so the only array you can push onto is the one you build yourself.",
+      "A readonly array type exposes no mutating methods; it does not freeze the array at runtime. Make a mutable copy before padding.",
     ],
     approach: [
       "Spread the readonly array into a new, ordinary number[]; the copy has push even though the original does not.",
@@ -159,7 +159,7 @@ console.log(padScores([7, 9], 4));
     tier: 1,
     focus: ["tuples", "for"],
     title: "Lowest and highest",
-    prompt: "Write `minMax(values: number[]): [number, number]`, returning the smallest and the largest value as a tuple, found in a single `for` loop over the list. `minMax([3, 1, 2])` gives `[1, 3]`, a single value is both ends, and an empty list gives `[0, 0]`.",
+    prompt: "Write `minMax(values: number[]): [number, number]`, returning the smallest and the largest value as a tuple, found in a single `for` loop over the list. `minMax([3, 1, 2])` gives `[1, 3]`, a single value is both ends, and an empty list gives `[0, 0]`. Domain: an ordinary read-only dense array of at most 10000 finite numbers between -1000000000000 and 1000000000000, possibly frozen at runtime. Do not sort or change the input. Compare using numeric < and >; on equality retain the earliest occurrence for each end, including the sign of zero. Return a fresh mutable two-element tuple on every call, including [0, 0] for empty input. Target: O(n) time and O(1) retained state besides the pair, where n is 1 + the value count. One pass is sufficient; avoid sorting to find two extremes.",
     starter: `const minMax = (values: number[]): [number, number] => {
 
 };
@@ -210,7 +210,7 @@ console.log(minMax([3, 1, 2]));
     tier: 2,
     focus: ["for-in", "keyof", "objects"],
     title: "Total expenses",
-    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100.",
+    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100. Domain: a stable ordinary data object or null-prototype record with its own enumerable rent, food and travel, each a finite number from -1000000000 through 1000000000. Other own or inherited enumerable properties may exist and must be ignored; values and prototypes may be frozen. There are at most 1000 enumerable string keys visited across a prototype chain of depth at most 20, with bounded key lengths. Read only the three own expense fields and leave input unchanged. A keyof assertion changes static checking, not runtime data: use own-property and allowed-key checks before treating an enumerated string as an expense key. Use ordinary Number addition, starting at 0, without currency rounding; different addition orders may have normal floating-point rounding differences. This is a typing exercise, not an exact decimal-money calculation. Target: O(n) time for the guarded for-in approach and O(1) retained state, where n is 1 + the enumerable string keys visited; direct reading of the three known fields is also a valid constant-time alternative.",
     starter: `interface Expenses {
   rent: number;
   food: number;
@@ -234,18 +234,18 @@ const totalExpenses = (expenses: Expenses): number => {
   let total = 0;
 
   for (const key in expenses) {
-    // add expenses[key as keyof Expenses]
+    // skip inherited and extra keys before adding expenses[key as keyof Expenses]
   }
 
   return total;
 };`,
     hints: [
-      "A for-in key is a string as far as the compiler knows, and a string is not proof that the property exists, until you assert it is one of the interface's keys.",
+      "A for-in loop can visit inherited and extra keys. Check ownership and the three allowed names before using a keyof assertion; an assertion alone does not validate runtime data.",
     ],
     approach: [
       "Write the interface with its three numeric properties, and start a running total at zero.",
       "Loop over the object with for-in; the loop variable is typed string, and the compiler refuses to index the object with it.",
-      "Assert the key as keyof Expenses inside the loop, add the value it reads, and return the total.",
+      "Skip inherited keys and names outside rent, food and travel. Assert the remaining key as keyof Expenses, add its value and return the total.",
     ],
     verify: "tests",
     estimatedMinutes: 7,
@@ -271,7 +271,7 @@ const totalExpenses = (expenses: Expenses): number => {
     tier: 2,
     focus: ["annotations", "for", "objects"],
     title: "Path length",
-    prompt: "Declare a type alias named `Point` for an object with numeric `x` and `y`, then write `pathLength(points: Point[]): number` adding up the straight-line distance between each point and the next with a `for` loop. `pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])` gives 5, and fewer than two points gives 0.",
+    prompt: "Declare a type alias named `Point` for an object with numeric `x` and `y`, then write `pathLength(points: Point[]): number` adding up the straight-line distance between each point and the next with a `for` loop. `pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])` gives 5, and fewer than two points gives 0. Domain: a dense array of at most 1000 stable Point data records with own finite coordinates from -1000000 through 1000000. The array and points may be frozen; leave them unchanged. Sum adjacent Euclidean distances only, without adding a closing edge. Return exactly 0 for fewer than two points. For other paths, return a finite number within 1e-7 + 1e-9 * abs(expected) of the mathematical length; do not round each segment. No accessors or proxies are involved. Target: O(n) time and O(1) working state, where n is 1 + point count under bounded Number arithmetic. Equivalent numerical distance formulas are accepted.",
     starter: `type Point = { x: number; y: number };
 
 const pathLength = (points: Point[]): number => {
@@ -302,14 +302,7 @@ const pathLength = (points: Point[]): number => {
     ],
     verify: "tests",
     estimatedMinutes: 8,
-    tests: [
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])", expected: 5 },
-      { call: "pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }, { x: 3, y: 10 }])", expected: 11 },
-      { call: "pathLength([{ x: 2, y: 2 }])", expected: 0, label: "a single point", edge: true },
-      { call: "pathLength([])", expected: 0, label: "empty input", edge: true },
-      { call: "pathLength([{ x: 1, y: 1 }, { x: 1, y: 1 }])", expected: 0, label: "the same point twice", edge: true },
-      { call: "pathLength([{ x: -3, y: -4 }, { x: 0, y: 0 }])", expected: 5, label: "negative coordinates", edge: true },
-    ],
+    tests: [{"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }]);return Number.isFinite(actual)&&Math.abs(actual-(5))<=1e-7+1e-9*Math.abs(5);})()", "expected": true}, {"call": "(()=>{const actual=pathLength([{ x: 0, y: 0 }, { x: 3, y: 4 }, { x: 3, y: 10 }]);return Number.isFinite(actual)&&Math.abs(actual-(11))<=1e-7+1e-9*Math.abs(11);})()", "expected": true}, {"call": "pathLength([{ x: 2, y: 2 }])", "expected": 0, "label": "a single point", "edge": true}, {"call": "pathLength([])", "expected": 0, "label": "empty input", "edge": true}, {"call": "(()=>{const actual=pathLength([{ x: 1, y: 1 }, { x: 1, y: 1 }]);return Number.isFinite(actual)&&Math.abs(actual-(0))<=1e-7+1e-9*Math.abs(0);})()", "expected": true, "label": "the same point twice", "edge": true}, {"call": "(()=>{const actual=pathLength([{ x: -3, y: -4 }, { x: 0, y: 0 }]);return Number.isFinite(actual)&&Math.abs(actual-(5))<=1e-7+1e-9*Math.abs(5);})()", "expected": true, "label": "negative coordinates", "edge": true}],
     typeTests: [
       { code: "const __point: Point = { x: 1, y: 2 };", label: "Point is a type you can name" },
       { code: "const __length: number = pathLength([{ x: 0, y: 0 }]);", label: "gives back a number" },
@@ -325,7 +318,7 @@ const pathLength = (points: Point[]): number => {
     tier: 2,
     focus: ["narrowing", "unions", "for-of"],
     title: "Mixed total",
-    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0.",
+    prompt: "Write `mixedTotal(values: (string | number)[]): number`, walking the list with `for-of` and adding each number as it is and each string as its length. Reading `.length` needs the value narrowed to a string first. `mixedTotal([1, \"abc\", 2])` gives 6, and an empty list gives 0. Domain: a dense array of at most 1000 primitive strings or finite numbers from -1000000000000 through 1000000000000, possibly frozen. Each string has at most 200 UTF-16 units. String length means the JavaScript length property in UTF-16 code units, including spaces, combining marks and surrogate pairs; do not parse numeric-looking text. Start at numeric zero and add contributions from left to right using Number arithmetic, without rounding or reordering. Leave the array unchanged. Target: O(n) time and O(1) working state, where n is 1 + element count: reading a string length does not traverse its text.",
     starter: `const mixedTotal = (values: (string | number)[]): number => {
 
 };
@@ -379,7 +372,7 @@ console.log(mixedTotal([1, "abc", 2]));
     tier: 2,
     focus: ["type-guards", "filter", "unions"],
     title: "Only the files",
-    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file.",
+    prompt: "Declare interfaces `FileEntry` (`kind: \"file\"`, a `name` and a numeric `size`) and `FolderEntry` (`kind: \"folder\"` and a `name`), plus the union `type Entry = FileEntry | FolderEntry`. Write `isFile(entry: Entry): entry is FileEntry`, then use it in `onlyFiles(entries: Entry[]): FileEntry[]` to keep the files in their original order. `onlyFiles([{ kind: \"file\", name: \"a.txt\", size: 3 }, { kind: \"folder\", name: \"src\" }])` gives just the file. Domain: a dense array of at most 1000 stable FileEntry or FolderEntry records, possibly frozen, with own declared data fields and no accessors/proxies. Names contain at most 200 UTF-16 units; file sizes are nonnegative finite integers through 1000000000000. Extra fields are opaque. Classify by kind, retain each original file reference and duplicate in input order, and leave every input record unchanged. Return a fresh mutable outer array on every call, including when no files match. Target: O(n) time and worst-case O(n) output space for onlyFiles, where n is 1 + entry count; isFile performs a constant-time tag check.",
     starter: `interface FileEntry {
   kind: "file";
   name: string;
@@ -468,7 +461,7 @@ const onlyFiles = (entries: Entry[]): FileEntry[] => {
     tier: 2,
     focus: ["literal-types", "reduce"],
     title: "Count a status",
-    prompt: "Declare a string enum `Status` with `Todo = \"todo\"`, `Doing = \"doing\"` and `Done = \"done\"`, then write `countStatus(items: Status[], wanted: Status): number` counting with `reduce` how many items equal the wanted member. `countStatus([Status.Done, Status.Todo, Status.Done], Status.Done)` gives 2, and an empty list gives 0.",
+    prompt: "Declare a string enum `Status` with `Todo = \"todo\"`, `Doing = \"doing\"` and `Done = \"done\"`, then write `countStatus(items: Status[], wanted: Status): number` counting with `reduce` how many items equal the wanted member. `countStatus([Status.Done, Status.Todo, Status.Done], Status.Done)` gives 2, and an empty list gives 0. Domain: a dense array of at most 1000 Status members, possibly frozen; wanted is one of the three Status members too. Count exact equal enum values without changing array order, members or the enum object. Calls are independent. Target: O(n) time and O(1) working state for a numeric reduce accumulator, where n is 1 + item count; no filtering or sorting is needed.",
     starter: `enum Status {
   Todo = "todo",
   Doing = "doing",
@@ -529,7 +522,7 @@ const countStatus = (items: Status[], wanted: Status): number =>
     tier: 2,
     focus: ["generics", "for", "slice"],
     title: "Chunk a list",
-    prompt: "Write `chunk<T>(items: T[], size: number): T[][]`, splitting a list into groups of `size` items with a `for` loop that steps by `size` and slices out each group; the last group holds whatever is left. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`, and an empty list gives an empty list. The size is always at least 1.",
+    prompt: "Write `chunk<T>(items: T[], size: number): T[][]`, splitting a list into groups of `size` items with a `for` loop that steps by `size` and slices out each group; the last group holds whatever is left. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`, and an empty list gives an empty list. The size is always at least 1. Domain: a dense array of at most 1000 opaque values, possibly frozen, with integer size from 1 through 1000000000. Preserve every exact element reference/value, including null, undefined, symbols and functions; do not inspect, clone, call or coerce elements. Leave the input unchanged. Return a fresh mutable outer array and distinct fresh mutable nonempty groups on every call; groups must not alias the input or a result from another call. Target: O(n) time and output space, where n is 1 + item count: the disjoint slices copy each element once in total.",
     starter: `const chunk = <T>(items: T[], size: number): T[][] => {
 
 };
@@ -578,7 +571,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ["generics", "tuples", "for"],
     title: "Zip two lists",
-    prompt: "Write `zip<A, B>(left: A[], right: B[]): [A, B][]`, pairing the items at the same index into tuples with a `for` loop and stopping at the shorter list. `zip([1, 2], [\"a\", \"b\"])` gives `[[1, \"a\"], [2, \"b\"]]`, and when either list is empty the result is empty.",
+    prompt: "Write `zip<A, B>(left: A[], right: B[]): [A, B][]`, pairing the items at the same index into tuples with a `for` loop and stopping at the shorter list. `zip([1, 2], [\"a\", \"b\"])` gives `[[1, \"a\"], [2, \"b\"]]`, and when either list is empty the result is empty. Domain: two dense arrays of at most 1000 opaque values each, possibly frozen. Keep exact values/references without inspecting, cloning, calling or coercing elements. Stop at the shorter length, without padding missing positions; null and undefined are real values. Leave both arrays unchanged. Return a fresh mutable outer array and fresh mutable pairs for each position on every call, with no pair alias across positions or calls. Target: O(n) time and output space, where n is 1 + the shorter input length; no traversal of the longer unused tail is needed.",
     starter: `const zip = <A, B>(left: A[], right: B[]): [A, B][] => {
 
 };
@@ -628,16 +621,16 @@ console.log(zip([1, 2], ["a", "b"]));
     tier: 3,
     focus: ["constraints", "record", "for-of"],
     title: "Group by key",
-    prompt: "Write `groupBy<T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]>`, collecting every item under the key the callback gives it, with a `for-of` loop. The constraint keeps the key something an object can be indexed by. `groupBy([1, 2, 3, 4], n => n % 2 === 0 ? \"even\" : \"odd\")` gives `{ odd: [1, 3], even: [2, 4] }`, and an empty list gives an empty object.",
-    starter: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
+    prompt: "Write `groupBy<T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>>`, collecting every item under the key the callback gives it, with a `for-of` loop. The constraint keeps the key something an object can be indexed by. `groupBy([1, 2, 3, 4], n => n % 2 === 0 ? \"even\" : \"odd\")` gives `{ odd: [1, 3], even: [2, 4] }`, and an empty list gives an empty object. Only keys actually returned for an item have groups. A possible key that was never observed reads as undefined, which is why the return type is Partial. Domain: a dense ordinary array of at most 1000 opaque values, possibly frozen. Call keyOf once per item, in input order, with exactly one positional argument; the synchronous callback does not change input membership. Propagate its exact thrown value and stop later calls. Keys are primitive strings of at most 200 UTF-16 units, Numbers or symbols. Numeric keys use ordinary property-key string conversion, so 1 and \"1\" share a group and signed zeros share \"0\"; symbols retain identity. Prototype-like names are valid own group keys, with no inherited groups. Missing keys read as undefined. Return a fresh mutable dictionary whose own keys are exactly the observed coerced keys, with fresh mutable group arrays across keys/calls. Preserve item values/references and duplicates without cloning or other coercion; leave input unchanged. Target: O(n) time and output space, where n is 1 + item count under bounded key hashing/property operations, excluding callback work.",
+    starter: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {
 
 };
 
 // Scratch pad — change this and press Run.
 console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
 `,
-    skeleton: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
-  const groups = {} as Record<K, T[]>;
+    skeleton: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {
+  const groups = Object.create(null) as Partial<Record<K, T[]>>;
 
   for (const item of items) {
     const key = keyOf(item);
@@ -646,14 +639,8 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
 
   return groups;
 };`,
-    hints: [
-      "PropertyKey is the union of everything that can name a property, and constraining K to it is what makes Record<K, ...> legal.",
-    ],
-    approach: [
-      "Start with an empty object asserted to the return type, because the compiler cannot see that the keys will be filled in.",
-      "Loop over the items, ask the callback for each item's key, and create an empty group the first time a key appears.",
-      "Push the item onto its group and return the object; the keys of the result are exactly the values the callback can return.",
-    ],
+    hints: ["PropertyKey is TypeScript\u2019s string | number | symbol key type. Partial means a group may be missing: read groups[key] into a variable, then create its array when it is undefined. Use a dictionary with no inherited group names so __proto__ and constructor are ordinary keys."],
+    approach: ["Create a prototype-safe empty dictionary typed Partial<Record<K, T[]>>; unobserved keys are absent.", "Loop over the items and call keyOf once for each item. Initialize the group when absent, otherwise append to it.", "Return the dictionary. Only observed keys exist, and each group keeps original items in input order."],
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
@@ -670,19 +657,7 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
         label: "whole items land in the groups",
       },
     ],
-    typeTests: [
-      {
-        code: "const __parity: Record<\"even\" | \"odd\", number[]> = groupBy([1, 2], n => n % 2 === 0 ? \"even\" : \"odd\");",
-        label: "the keys are the values the callback returns",
-      },
-      { code: "const __lengths: Record<number, string[]> = groupBy([\"a\"], w => w.length);", label: "a number can be a key too" },
-      { code: "groupBy([1], n => [n]);", label: "an array cannot be a key", rejects: true },
-      {
-        code: "const __wrong: Record<string, string[]> = groupBy([1], n => String(n));",
-        label: "the groups hold the items, not the keys",
-        rejects: true,
-      },
-    ],
+    typeTests: [{"code": "const __parity: Partial<Record<\"even\" | \"odd\", number[]>> = groupBy([1,2], n => n % 2 === 0 ? \"even\" : \"odd\");", "label": "only observed keys have groups"}, {"code": "const __lengths: Partial<Record<number, string[]>> = groupBy([\"a\"], w => w.length);", "label": "number keys are allowed"}, {"code": "groupBy([1], n => [n]);", "label": "an array is not a PropertyKey", "rejects": true}, {"code": "const __wrong: Partial<Record<string, string[]>> = groupBy([1], n => String(n));", "label": "groups retain the item type", "rejects": true}, {"code": "const __groups = groupBy([1], n => n % 2 === 0 ? \"even\" : \"odd\"); const __required: number[] = __groups.even;", "label": "a possible group may be missing", "rejects": true}],
   },
   {
     id: "ts-write-reduce",
@@ -692,7 +667,7 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 3,
     focus: ["generics", "for", "reduce"],
     title: "Write reduce by hand",
-    prompt: "Write `myReduce<T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U`, folding a list into one value with a plain `for` loop instead of calling `reduce`. The accumulator starts as `initial` and is replaced by what `step` returns for every item. `myReduce([1, 2, 3], (acc, n) => acc + n, 0)` gives 6, and an empty list gives back `initial` untouched.",
+    prompt: "Write `myReduce<T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U`, folding a list into one value with a plain `for` loop instead of calling `reduce`. The accumulator starts as `initial` and is replaced by what `step` returns for every item. `myReduce([1, 2, 3], (acc, n) => acc + n, 0)` gives 6, and an empty list gives back `initial` untouched. Domain: a dense ordinary array of at most 1000 opaque values, possibly frozen, with stable membership and no accessors/proxies. Call step exactly once per item in input order with exactly two positional arguments: current accumulator, then item. Pass the exact initial value and each returned value onward without cloning, coercion, calling or awaiting them. Empty input returns the exact initial value with no callback calls. The callback may change its own accumulator but does not change input membership; the wrapper does not reorder or modify the input array. If step throws, propagate that exact value and make no later calls. Target: O(n) time and O(1) wrapper working state, where n is 1 + item count, excluding callback work and storage it allocates for the accumulator.",
     starter: `const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {
 
 };
@@ -746,7 +721,7 @@ console.log(myReduce([1, 2, 3], (acc, n) => acc + n, 0));
     tier: 3,
     focus: ["keyof", "map"],
     title: "Pluck all the keys",
-    prompt: "Write `pluckAll<T, K extends keyof T>(items: T[], keys: K[]): T[K][][]`, returning one row per item with the values of the requested keys in the order asked, built with `map` inside `map`. The indexed access type `T[K]` is whatever those properties hold. `pluckAll([{ id: 1, name: \"a\" }], [\"id\", \"name\"])` gives `[[1, \"a\"]]`.",
+    prompt: "Write `pluckAll<T, K extends keyof T>(items: T[], keys: K[]): T[K][][]`, returning one row per item with the values of the requested keys in the order asked, built with `map` inside `map`. The indexed access type `T[K]` is whatever those properties hold. `pluckAll([{ id: 1, name: \"a\" }], [\"id\", \"name\"])` gives `[[1, \"a\"]]`. Domain: dense ordinary arrays of at most 100 stable data items and 20 primitive string/number/Symbol keys, possibly frozen, with no accessors/proxies and bounded data-property lookup. Repeated keys and items are allowed; own or inherited values are read in item order, then requested key order. Missing optional fields contribute undefined. Preserve exact opaque values/references without cloning, calling or coercion. Return a fresh mutable outer array and a fresh mutable row for every item, independent across items and calls, including when there are no keys. Leave both inputs and their records unchanged. Target: O(n*m) time and output space, where n is 1 + item count and m is 1 + key count; these offsets include the work of allocating empty rows.",
     starter: `const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] => {
 
 };
@@ -795,7 +770,7 @@ console.log(pluckAll([{ id: 1, name: "a" }, { id: 2, name: "b" }], ["id", "name"
     tier: 3,
     focus: ["utility-types", "for-of", "spread"],
     title: "Apply patches in order",
-    prompt: "Declare an interface named `Profile` with a `name` string, an `age` number and a `city` string, then write `applyPatches(profile: Profile, patches: Partial<Profile>[]): Profile`, applying every patch in order and building a new object each time, so the profile handed in is never changed. `applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }, { city: \"Paris\" }])` gives `{ name: \"Ada\", age: 37, city: \"Paris\" }`.",
+    prompt: "Declare an interface named `Profile` with a `name` string, an `age` number and a `city` string, then write `applyPatches(profile: Profile, patches: Partial<Profile>[]): Profile`, applying every patch in order and building a new object each time, so the profile handed in is never changed. `applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }, { city: \"Paris\" }])` gives `{ name: \"Ada\", age: 37, city: \"Paris\" }`. Policy: ignore an own patch field whose value is undefined, so the required Profile stays complete. Apply defined own fields only; inherited patch fields do not apply. Domain: a stable ordinary/null-prototype profile with own name/city text, finite age from -1000000000 through 1000000000, and up to 100 own enumerable string/Symbol metadata fields with opaque values. Patches form a dense ordinary array of at most 1000 stable records carrying only a subset of the three Profile keys, optionally undefined; inputs may be frozen, with no accessors/proxies. Preserve own enumerable source metadata shallowly, including a literal __proto__ field, without copying inherited metadata or mutating any input. No patches returns the exact original profile. Every supplied patch, even empty or all undefined, produces a fresh plain mutable object. Target: O(n*m) time and total allocation, where n is 1 + patch count and m is 1 + starting own enumerable field count; patches cannot add extra metadata keys, so m bounds each copy.",
     starter: `interface Profile {
   name: string;
   age: number;
@@ -819,49 +794,16 @@ const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
   let current = profile;
 
   for (const patch of patches) {
-    // replace current with a new object: current first, then the patch
+    // replace current with a new object: current, then defined own patch entries
   }
 
   return current;
 };`,
-    hints: [
-      "Partial<Profile> lets a patch carry any subset of the properties, and spreading it after the current object is what makes the later patch win.",
-    ],
-    approach: [
-      "Keep a variable holding the current profile, starting from the one passed in.",
-      "Loop over the patches with for-of and replace the current profile with a new object spread from the current one, then from the patch.",
-      "Return the current profile; when there are no patches it is the original object, and the original is never mutated.",
-    ],
+    hints: ["Partial makes properties optional, but an explicit undefined still type-checks here. Filter own entries to values other than undefined before spreading them after the source; defined empty text and zero must still win."],
+    approach: ["Start with the original profile; zero patches returns that exact object.", "For every patch in order, collect its own entries whose values are not undefined, then spread them after the current profile into a new object.", "Return the current profile, leaving every input unchanged."],
     verify: "tests",
     estimatedMinutes: 8,
-    tests: [
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }])",
-        expected: { name: "Ada", age: 37, city: "London" },
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ city: \"Paris\" }, { city: \"Rome\", age: 40 }])",
-        expected: { name: "Ada", age: 40, city: "Rome" },
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [])",
-        expected: { name: "Ada", age: 36, city: "London" },
-        label: "no patches",
-        edge: true,
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{}])",
-        expected: { name: "Ada", age: 36, city: "London" },
-        label: "an empty patch changes nothing",
-        edge: true,
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 0 }])",
-        expected: { name: "Ada", age: 0, city: "London" },
-        label: "zero still overwrites",
-        edge: true,
-      },
-    ],
+    tests: [{"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }])", "expected": {"name": "Ada", "age": 37, "city": "London"}}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ city: \"Paris\" }, { city: \"Rome\", age: 40 }])", "expected": {"name": "Ada", "age": 40, "city": "Rome"}}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [])", "expected": {"name": "Ada", "age": 36, "city": "London"}, "label": "no patches", "edge": true}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{}])", "expected": {"name": "Ada", "age": 36, "city": "London"}, "label": "an empty patch changes nothing", "edge": true}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 0 }])", "expected": {"name": "Ada", "age": 0, "city": "London"}, "label": "zero still overwrites", "edge": true}, {"call": "applyPatches({name:\"Ada\",age:36,city:\"London\"}, [{age:37},{name:undefined,age:undefined}])", "expected": {"name": "Ada", "age": 37, "city": "London"}, "label": "undefined keeps the previously applied value", "edge": true}],
     typeTests: [
       {
         code: "const __next: Profile = applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }]);",
@@ -884,13 +826,13 @@ const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
     tier: 2,
     focus: ["record", "for-of", "objects"],
     title: "Score by player",
-    prompt: "Declare an interface named `Round` with a `player` string and a `points` number, then write `scoreByPlayer(rounds: Round[]): Record<string, number>` adding up the points of every player with a `for-of` loop. A player seen for the first time has no entry yet, so treat the missing value as 0. `scoreByPlayer([{ player: \"ada\", points: 3 }, { player: \"bo\", points: 1 }, { player: \"ada\", points: 2 }])` gives `{ ada: 5, bo: 1 }`.",
+    prompt: "Declare an interface named `Round` with a `player` string and a `points` number, then write `scoreByPlayer(rounds: Round[]): Partial<Record<string, number>>` adding up the points of every player with a `for-of` loop. A player seen for the first time has no entry yet, so treat the missing value as 0. `scoreByPlayer([{ player: \"ada\", points: 3 }, { player: \"bo\", points: 1 }, { player: \"ada\", points: 2 }])` gives `{ ada: 5, bo: 1 }`. Only observed players have entries; an unobserved name reads as undefined, which is why the result is Partial. Domain: a dense ordinary array of at most 1000 stable Round records, possibly frozen, with own player strings of at most 200 UTF-16 units and finite Number points from -1000000000 through 1000000000, with no accessors/proxies. Match player names exactly, including empty text, whitespace, case, Unicode and prototype-like names. For each player, add points in original input order starting from numeric 0; this also defines signed-zero and fractional Number results. Return a fresh mutable prototype-safe dictionary every call, with own keys exactly the observed names and undefined for unobserved names, including inherited Object member names. Leave records, order and opaque metadata unchanged. Target: O(n) time and output space, where n is 1 + round count under bounded average property/hash operations.",
     starter: `interface Round {
   player: string;
   points: number;
 }
 
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
+const scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {
 
 };
 
@@ -902,8 +844,8 @@ console.log(scoreByPlayer([{ player: "ada", points: 3 }, { player: "bo", points:
   points: number;
 }
 
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
+const scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {
+  const totals = Object.create(null) as Partial<Record<string, number>>;
 
   for (const round of rounds) {
     // read the total so far, treating a missing one as 0, and store it plus the points
@@ -911,14 +853,8 @@ const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
 
   return totals;
 };`,
-    hints: [
-      "Reading a key that is not in a Record<string, number> yet gives undefined at runtime, so fall back to zero before adding.",
-    ],
-    approach: [
-      "Start an empty object typed as Record<string, number>.",
-      "Loop over the rounds with for-of, read the current total under the player's name, and treat a missing total as zero.",
-      "Store the total plus the round's points under that name and return the object.",
-    ],
+    hints: ["Partial marks unobserved players as missing. Use a dictionary with no inherited names, then read totals[player] and fall back to numeric zero before every addition."],
+    approach: ["Create a fresh prototype-safe dictionary typed Partial<Record<string, number>>.", "Loop over rounds in input order, read the previous total or zero, and add this round\u2019s points.", "Return the dictionary; only observed player names have own entries."],
     verify: "tests",
     estimatedMinutes: 7,
     tests: [
@@ -936,15 +872,7 @@ const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
         edge: true,
       },
     ],
-    typeTests: [
-      {
-        code: "const __totals: Record<string, number> = scoreByPlayer([{ player: \"ada\", points: 1 }]);",
-        label: "gives back a lookup of numbers",
-      },
-      { code: "const __ada: number = scoreByPlayer([])[\"ada\"];", label: "any name can be looked up" },
-      { code: "scoreByPlayer([{ player: \"ada\" }]);", label: "a round needs its points", rejects: true },
-      { code: "const __names: Record<string, string> = scoreByPlayer([]);", label: "the values are numbers, not strings", rejects: true },
-    ],
+    typeTests: [{"code": "const __totals: Partial<Record<string, number>> = scoreByPlayer([{ player: \"ada\", points: 1 }]);", "label": "gives back a lookup of numbers"}, {"code": "const __ada: number | undefined = scoreByPlayer([])[\"ada\"];", "label": "any name can be looked up"}, {"code": "scoreByPlayer([{ player: \"ada\" }]);", "label": "a round needs its points", "rejects": true}, {"code": "const __names: Record<string, string> = scoreByPlayer([]);", "label": "the values are numbers, not strings", "rejects": true}, {"code": "const __required:number=scoreByPlayer([])[\"absent\"];", "rejects": true, "label": "an unobserved player may be missing"}],
   },
   {
     id: "ts-freeze-a-copy",
@@ -954,7 +882,7 @@ const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
     tier: 3,
     focus: ["readonly", "for-of", "objects"],
     title: "Freeze a copy",
-    prompt: "Declare a mapped type `Frozen<T>` that keeps every property of `T` with its type but marks it `readonly`, then write `freezeCopy<T extends object>(source: T): Frozen<T>` building a fresh object from `Object.entries` in a `for-of` loop and freezing it with `Object.freeze` before returning it. `freezeCopy({ a: 1 })` gives an object equal to `{ a: 1 }` that is not the same object, and assigning to its `a` is a compile error.",
+    prompt: "Declare a mapped type `Frozen<T>` that keeps every property of `T` with its type but marks it `readonly`, then write `freezeCopy<T extends object>(source: T): Frozen<T>` building a fresh object by copying own data-property descriptors in a `for-of` loop over `Reflect.ownKeys` and freezing it with `Object.freeze` before returning it. `freezeCopy({ a: 1 })` gives an object equal to `{ a: 1 }` that is not the same object, and assigning to its `a` is a compile error. Domain: stable ordinary or null-prototype data records with at most 1000 own properties, string or Symbol, including nonenumerable data fields; source may already be frozen. No accessors, proxies, arrays, callable sources, class instances or inherited declared data fields are involved. Copy every own key and exact opaque value, preserving its enumerability, including a literal __proto__ field. Return a fresh plain frozen outer object every call, including empty input, while leaving source descriptors/extensibility and nested values unchanged. This is shallow: do not clone, call or freeze nested objects, arrays or functions. Frozen<T> changes property writability, not the nested value type. Target: O(n) time and output space, where n is 1 + own property count with bounded key/descriptor operations; opaque contents are excluded.",
     starter: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
 
 const freezeCopy = <T extends object>(source: T): Frozen<T> => {
@@ -964,25 +892,9 @@ const freezeCopy = <T extends object>(source: T): Frozen<T> => {
 // Scratch pad — change this and press Run.
 console.log(freezeCopy({ a: 1, b: "x" }));
 `,
-    skeleton: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
-
-const freezeCopy = <T extends object>(source: T): Frozen<T> => {
-  const copy = {} as { [K in keyof T]: T[K] };
-
-  for (const [key, value] of Object.entries(source)) {
-    // store value under key as keyof T
-  }
-
-  return Object.freeze(copy);
-};`,
-    hints: [
-      "A mapped type walks keyof T and can put a modifier in front of every property it produces; the loop does the same job at runtime, one entry at a time.",
-    ],
-    approach: [
-      "Write the mapped type with readonly in front of the key expression and T[K] as the value type.",
-      "Create an empty object asserted to the mutable shape, and copy every entry from Object.entries into it inside a for-of loop.",
-      "Freeze the copy and return it; the mutable shape is assignable to the readonly one, so the return type checks.",
-    ],
+    skeleton: "type Frozen<T> = { readonly [K in keyof T]: T[K] };\nconst freezeCopy = <T extends object>(source: T): Frozen<T> => {\n  const copy = {} as { -readonly [K in keyof T]: T[K] };\n  for (const key of Reflect.ownKeys(source)) {\n    // get the stable own data descriptor and define it on copy\n  }\n  return Object.freeze(copy);\n};",
+    hints: ["The mapped readonly modifier is shallow. Reflect.ownKeys includes string and Symbol keys, even hidden ones; copy their data descriptors with Object.defineProperty so enumerability and a literal __proto__ key survive without invoking a setter. Freeze only the new outer object."],
+    approach: ["Declare Frozen<T> with readonly [K in keyof T] and T[K].", "Create a fresh plain object and copy each own data-property descriptor from Reflect.ownKeys without reading or changing nested contents.", "Freeze the outer copy and return it; nested references and their value types remain unchanged."],
     verify: "tests",
     estimatedMinutes: 9,
     tests: [
@@ -1012,12 +924,12 @@ const freezeCopy = <T extends object>(source: T): Frozen<T> => {
     tier: 3,
     focus: ["generics", "filter"],
     title: "Values of a type",
-    prompt: "Declare `type TypeName = \"string\" | \"number\" | \"boolean\"` and a conditional type `OfType<N extends TypeName>` that resolves to `string`, `number` or `boolean` for the matching name. Then write `ofType<N extends TypeName>(values: unknown[], name: N): OfType<N>[]`, keeping the values whose `typeof` equals the name, in their original order, with `filter` and a type predicate. `ofType([1, \"a\", 2, true], \"number\")` gives `[1, 2]`.",
+    prompt: "Declare `type TypeName = \"string\" | \"number\" | \"boolean\"` and a conditional type `OfType<N extends TypeName>` that resolves to `string`, `number` or `boolean` for the matching name. Then write `ofType<N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[]`, keeping the values whose `typeof` equals the name, in their original order, with `filter` and a type predicate. `ofType([1, \"a\", 2, true], \"number\")` gives `[1, 2]`. Domain: a dense ordinary readonly array of at most 1000 stable values, possibly frozen, without accessors/proxies. Use exact typeof matching without coercion: NaN, infinities and signed zero are numbers; boxed primitives, null, Symbols, bigint and functions match none of the three names. Preserve order, duplicates and exact values, leaving the input unchanged. Return a fresh mutable array on every call, including empty/all-matching inputs. The conditional alias distributes over a union of names; an explicit loop is also a valid implementation. Target: O(n) time and output space, where n is 1 + input length and each typeof check is constant work.",
     starter: `type TypeName = "string" | "number" | "boolean";
 
 type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
 
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] => {
+const ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] => {
 
 };
 
@@ -1028,7 +940,7 @@ console.log(ofType([1, "a", 2, true], "number"));
 
 type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
 
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] =>
+const ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] =>
   values.filter((value): value is OfType<N> => {
     return /* typeof value compared with name */;
   });`,
@@ -1065,10 +977,10 @@ const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] =>
     tier: 3,
     focus: ["generics", "map-set", "for-of"],
     title: "Memoized run",
-    prompt: "Declare `type Output<F> = F extends (arg: number) => infer R ? R : never`, pulling the return type out of a function type with `infer`, then write `runMemoized<F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[]`. Loop over the inputs with a `Map` as a cache, so an input seen before reuses the stored result instead of calling `fn` again, and return the results in input order. `runMemoized(n => n * 2, [1, 1, 2])` gives `[2, 2, 4]` and calls `fn` twice.",
+    prompt: "Declare `type Output<F> = F extends (arg: number) => infer R ? R : never`, pulling the return type out of a function type with `infer`, then write `runMemoized<F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[]`. Loop over the inputs with a `Map` as a cache, so an input seen before reuses the stored result instead of calling `fn` again, and return the results in input order. `runMemoized(n => n * 2, [1, 1, 2])` gives `[2, 2, 4]` and calls `fn` twice. Domain: a dense ordinary readonly array of at most 1000 primitive Numbers, possibly frozen, with no accessors/proxies. Any Number is valid, including NaN, infinities and signed zero. Cache keys follow Map equality: NaN repeats hit one entry, and -0/+0 share one entry. On the first occurrence call the non-overloaded synchronous fn as a plain function, with exactly one argument: the actual first input value. Evaluate new keys in input order, cache every returned value including undefined/null/false, and reuse exact returned references. Each run has its own cache and a fresh mutable result array; do not change the inputs or returned objects. Propagate a callback exception immediately without visiting later inputs. Promises, if returned, are opaque values and are not awaited. Target: O(n) time on average for bookkeeping and output/cache space, where n is 1 + input length with average constant Map operations; the work performed inside fn is additional and excluded from this bookkeeping goal.",
     starter: `type Output<F> = F extends (arg: number) => infer R ? R : never;
 
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
+const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {
 
 };
 
@@ -1077,7 +989,7 @@ console.log(runMemoized(n => n * 2, [1, 1, 2]));
 `,
     skeleton: `type Output<F> = F extends (arg: number) => infer R ? R : never;
 
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
+const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {
   const cache = new Map<number, Output<F>>();
   const results: Output<F>[] = [];
 
@@ -1087,9 +999,7 @@ const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]
 
   return results;
 };`,
-    hints: [
-      "infer names the part of the type you want to capture, and the conditional resolves to it whenever F matches the function shape.",
-    ],
+    hints: ["infer captures the return type in Output<F>. Use cache.has(input) to test membership: a stored undefined is still a cached result. Keep the Map inside runMemoized so calls do not share cache state."],
     approach: [
       "Write the conditional type with infer R in the return position of the function type and R as the true branch.",
       "Create a Map from number to Output<F> and an empty results array, then loop over the inputs with for-of.",
@@ -1124,10 +1034,10 @@ const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]
     tier: 3,
     focus: ["literal-types", "strings", "for-of"],
     title: "Tag every id",
-    prompt: "Declare a template literal type `Tag<P extends string>` for strings shaped `${P}-${number}`, then write `tagAll<P extends string>(prefix: P, ids: number[]): Tag<P>[]` building one tag per id in a `for-of` loop with a template string. `tagAll(\"user\", [1, 2])` gives `[\"user-1\", \"user-2\"]`, and no ids gives an empty list.",
+    prompt: "Declare a template literal type `Tag<P extends string>` for strings shaped `${P}-${number}`, then write `tagAll<P extends string>(prefix: P, ids: readonly number[]): Tag<P>[]` building one tag per id in a `for-of` loop with a template string. `tagAll(\"user\", [1, 2])` gives `[\"user-1\", \"user-2\"]`, and no ids gives an empty list. Domain: prefix is any primitive string of at most 100 UTF-16 units, including empty text, spaces, Unicode and dashes. ids is a dense ordinary readonly array of at most 1000 finite safe integers from -1000000000 through 1000000000, possibly frozen, without accessors/proxies. Keep input order and duplicates and use ordinary number interpolation: -0 becomes 0 and a negative ID keeps its minus sign after the separator. Leave prefix/ids unchanged and return a fresh mutable array every call, including empty/repeated requests. The Tag alias describes a string shape, not validation of arbitrary runtime numbers; nonfinite numbers are outside this exercise. Target: O(n) time and output space, where n is 1 + ID count and prefix/ID text lengths have the fixed bounds above.",
     starter: `type Tag<P extends string> = \`\${P}-\${number}\`;
 
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
+const tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {
 
 };
 
@@ -1136,7 +1046,7 @@ console.log(tagAll("user", [1, 2]));
 `,
     skeleton: `type Tag<P extends string> = \`\${P}-\${number}\`;
 
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
+const tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {
   const tags: Tag<P>[] = [];
 
   for (const id of ids) {
@@ -1177,7 +1087,7 @@ const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
     tier: 3,
     focus: ["two-pointer", "while", "tuples"],
     title: "Pair with a sum",
-    prompt: "Write `pairWithSum(sorted: readonly number[], target: number): [number, number] | null`, finding two values in an ascending list that add up to the target with two pointers: one at each end, moved inward in a `while` loop depending on whether the current sum is too small or too large. Return the pair as a tuple, or `null` when there is none. `pairWithSum([1, 2, 3, 4, 6], 6)` gives `[2, 4]`.",
+    prompt: "Write `pairWithSum(sorted: readonly number[], target: number): [number, number] | null`, finding two values in an ascending list that add up to the target with two pointers: one at each end, moved inward in a `while` loop depending on whether the current sum is too small or too large. Return the pair as a tuple, or `null` when there is none. `pairWithSum([1, 2, 3, 4, 6], 6)` gives `[2, 4]`. sorted is a dense readonly array of at most 10000 integer Numbers from -1000000 to 1000000 in nondecreasing order; target is an integer from -2000000 to 2000000. Inputs may be frozen. Use distinct indices; duplicate values may form a pair. If several value pairs work, return the one with the smallest first value. Preserve the input and return a fresh mutable pair on each success. Either zero sign is accepted as zero. Keep the precise mutable tuple-or-null return and readonly input types. Target: O(n) time and O(1) auxiliary space, where n is one plus sorted.length.",
     starter: `const pairWithSum = (sorted: readonly number[], target: number): [number, number] | null => {
 
 };
@@ -1207,6 +1117,7 @@ console.log(pairWithSum([1, 2, 3, 4, 6], 6));
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
+      {"call": "pairWithSum([-4,-1,0,1,4],0)", "expected": [-4, 4], "label": "choose the smallest first value"},
       { call: "pairWithSum([1, 2, 3, 4, 6], 6)", expected: [2, 4] },
       { call: "pairWithSum([1, 3, 5], 8)", expected: [3, 5] },
       { call: "pairWithSum([1, 2], 10)", expected: null, label: "no pair adds up", edge: true },
@@ -1229,7 +1140,7 @@ console.log(pairWithSum([1, 2, 3, 4, 6], 6));
     tier: 3,
     focus: ["while", "readonly"],
     title: "Binary search",
-    prompt: "Write `binarySearch(sorted: readonly number[], target: number): number`, returning the index of the target in an ascending list or -1 when it is absent, by halving the search range in a `while` loop: compare the middle value, then continue in the left or the right half. `binarySearch([1, 3, 5, 7], 5)` gives 2, and an empty list gives -1.",
+    prompt: "Write `binarySearch(sorted: readonly number[], target: number): number`, returning the index of the target in an ascending list or -1 when it is absent, by halving the search range in a `while` loop: compare the middle value, then continue in the left or the right half. `binarySearch([1, 3, 5, 7], 5)` gives 2, and an empty list gives -1. sorted is a dense readonly array of at most 20000 finite Number values from -1000000000 to 1000000000 in nondecreasing order, and target is a finite Number in that range. Values may repeat and include fractions; compare with === without rounding or tolerance. Any matching index is accepted for duplicate values. Do not change the input, which may be frozen. Keep the stated readonly/number signature. Equivalent iterative or recursive halving is accepted. Target: O(log(n)) time and O(log(n)) space, a common upper bound including recursive frames, where n is two plus sorted.length; an iterative loop uses O(1) space.",
     starter: `const binarySearch = (sorted: readonly number[], target: number): number => {
 
 };
@@ -1259,6 +1170,7 @@ console.log(binarySearch([1, 3, 5, 7], 5));
     verify: "tests",
     estimatedMinutes: 9,
     tests: [
+      {"call": "binarySearch([0.25,1.5,2.75],1.5)", "expected": 1, "label": "compare the exact numeric target"},
       { call: "binarySearch([1, 3, 5, 7], 5)", expected: 2 },
       { call: "binarySearch([1, 3, 5, 7], 1)", expected: 0 },
       { call: "binarySearch([1, 3, 5, 7], 4)", expected: -1, label: "a value that is not there", edge: true },

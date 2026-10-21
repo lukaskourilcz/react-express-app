@@ -52,14 +52,14 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   { id: 'alg-retry-backoff', label: 'a linear backoff', replace: [['await wait(100 * Math.pow(2, attempt - 1));', 'await wait(100 * attempt);']] },
   { id: 'js-evolving-query-2', label: 'an offset with no default', replace: [['const offset=options.offset??0;', 'const offset=options.offset;']] },
   ...['3', '4', '5'].map((stage): KnownAnswer => ({ id: `js-evolving-query-${stage}`, label: 'deduplicating without distinct', replace: [['if(options.distinct){', 'if(true){']] })),
-  { id: 'js-evolving-events-5', label: 'replaying history to a plain subscription', replace: [['if(replay)', 'if(true)']] },
+  { id: 'js-evolving-events-5', label: 'replaying history to a plain subscription', replace: [['if(replay&&record)', 'if(record)']] },
   { id: 'alg-easy2-meetings-clash', label: 'flagging only a meeting inside the one before it', replace: [['if (sorted[i][0] < sorted[i - 1][1]) return true;', 'if (sorted[i][1] <= sorted[i - 1][1]) return true;']] },
   { id: 'alg-easy2-hand-out-snacks', label: 'sorting the appetites but not the snacks', replace: [['const sizes = [...snacks].sort((a, b) => a - b);', 'const sizes = [...snacks];']] },
   { id: 'js-mh2-folder-tree', label: 'sibling folders in insertion order', replace: [['const folders = names.filter(name => folder[name] !== null).sort();', 'const folders = names.filter(name => folder[name] !== null);']] },
   { id: 'js-path-logging-5', label: 'ranking by name with a bare sort()', replace: [['.sort((a, b) => b[1] - a[1])', '.sort()']] },
   { id: 'ts-path-generics-5', label: 'a comparator with no "less than" branch', replace: [['      if (left < right) return -1;\n', '']] },
-  { id: 'ts-mh-apply-edits', label: 'reporting the last out-of-range edit', replace: [['edits.findIndex((edit) => !(0', 'edits.findLastIndex((edit) => !(0']] },
-  { id: 'ts-mh-pick-from-warehouses', label: "working on the caller's east counts", replace: [['east: { ...stock.east },', 'east: stock.east as Record<string, number>,']] },
+  { id: 'ts-mh-apply-edits', label: 'reporting the last out-of-range edit', replace: [['edits.findIndex((edit) => !(Number.isInteger', 'edits.findLastIndex((edit) => !(Number.isInteger']] },
+  { id: 'ts-mh-pick-from-warehouses', label: "working on the caller's east counts", replace: [['east: Object.assign(Object.create(null), stock.east),', 'east: stock.east as Partial<Record<string, number>>,']] },
   { id: 'ts-evolving-schema-2', label: 'taking any non-null non-array value for an object', replace: [["if(v===null||typeof v!=='object'||Array.isArray(v))", 'if(v===null||Array.isArray(v))']] },
   { id: 'alg-max-sum-subarray', label: 'accepting a fractional k', replace: [['!Number.isInteger(k) || k < 1', 'k < 1']] },
   { id: 'js-mh2-top-scores', label: 'taking the entry below an improving player off the board', replace: [['board.splice(old, 1);', 'board.splice(old, 2);']] },
@@ -70,6 +70,7 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
 ];
 
 export const KNOWN_RIGHT_CODE: readonly KnownAnswer[] = [
+  { id: "ts-only-the-strings", label: "a simple typeof guard with its predicate inferred by current TypeScript", code: "const isString=(value:unknown)=>typeof value === \"string\"; const onlyStrings=(values:unknown[]):string[]=>values.filter(isString);" },
   { id: 'ts-easy2-article-previews', label: 'a preview written title first', replace: [['({ id, title }));', '({ title, id }));']] },
   { id: 'ts-easy2-fields-from-the-api', label: 'a profile written avatar first', code: 'type ApiUser = { user_name: string; avatar_url?: string };\ntype Profile = { avatar: string | null; name: string };\n\nfunction toProfile(raw: ApiUser): Profile {\n  const { avatar_url: avatar = null, user_name: name } = raw;\n  return { avatar, name };\n}\n' },
 ];

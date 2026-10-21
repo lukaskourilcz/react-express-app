@@ -9,6 +9,9 @@ const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))(
 ) as typeof import('@vercel/sandbox');
 import type { ReactSuiteOutcome } from './react-runner';
 import { GUEST_ENV, GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './react-guest';
+import { compileReactLearner } from './react-transpile';
+import { FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
+import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 
 // Keep operational diagnostics useful without logging learner code, SDK request
 // bodies, credentials, or arbitrary error messages.
@@ -48,6 +51,8 @@ export async function runIsolatedReactSuite(input: {
   ).catch((error) => { throw runnerFailure('Artifact', error); });
   const signal = AbortSignal.timeout(22_000);
   const nonce = randomBytes(24).toString('hex');
+  const compiledApp=compileReactLearner(input.appSource);
+  const compiledFixtures={'./fetchStub':compileReactLearner(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner(LOCAL_FETCH_SOURCE,false)};
   const credentials =
     process.env.VERCEL_TOKEN &&
     process.env.VERCEL_TEAM_ID &&
@@ -73,7 +78,7 @@ export async function runIsolatedReactSuite(input: {
         { path: '/vercel/sandbox/runner.cjs', content: runner },
         {
           path: '/vercel/sandbox/input.json',
-          content: Buffer.from(JSON.stringify({ ...input, nonce } satisfies GuestInput)),
+          content: Buffer.from(JSON.stringify({ ...input, nonce, compiledApp, compiledFixtures } satisfies GuestInput)),
         },
       ],
       { signal },

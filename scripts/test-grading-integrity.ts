@@ -1,12 +1,16 @@
+import { checkQuickjsProvenance } from './quickjs-provenance-contract';
+import { checkSortParity } from './coding-sort-contract';
+import { checkCodingTaskRuntimePolicy } from './coding-task-runtime-contracts';
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
-import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
-import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
+import { type CodingDesignKey } from '../lib/quiz-tokens';
 import { gradeDesign, prepareDesign } from '../lib/coding/grade';
 import type { DesignAnswer } from '../shared/coding-api';
 import { solutionFor } from '../lib/coding/solutions';
@@ -23,12 +27,16 @@ import { allPassed, evaluateCalls, hiddenGlobalMessage, LOG_LINE_CUT, LOG_OUTPUT
 import { CHECKER_GLOBALS, CHECKER_MEMBERS } from '../shared/coding-checker-globals';
 import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
 import { evaluateInRunRealm } from './run-realm-node';
+import { checkStructuredCloneOwnKeys } from './structured-clone-contracts';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
 // the sources under test, exactly as the deployment runs it.
+checkQuickjsProvenance();
 await buildSandboxWorker();
+await checkCodingTaskRuntimePolicy();
+await checkSortParity();
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -94,8 +102,9 @@ assert.equal(hung.timedOut, true);
 assert(!hung.logs.some((line) => line.includes('424242')), 'a hidden call that hangs still prints nothing');
 console.log('PASS integrity: hidden calls print nothing the learner sees');
 
-// The same through the Submit handler: js-digit-sum has three hidden checks
-// (99999, 305 and 10). An anonymous submit grades without a database.
+// The same through the Submit handler. Use the actual catalogue counts and
+// visible literal inputs so editorial additions do not turn this privacy
+// contract into a stale fixture-count check. Anonymous Submit needs no database.
 const response = { statusCode: 200, body: null as null | { verdict?: string; hidden?: unknown; logs?: string[] }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
 await handleCodingSubmit({
   method: 'POST', headers: {},
@@ -106,8 +115,16 @@ await handleCodingSubmit({
 } as never, response as never, null);
 assert.equal(response.statusCode, 200, JSON.stringify(response.body));
 assert.equal(response.body?.verdict, 'passed');
-assert.deepEqual(response.body?.hidden, { passed: 3, total: 3 });
-assert.deepEqual(response.body?.logs, ['digitSum of 493', 'digitSum of 1234', 'digitSum of 0', 'digitSum of 7', 'digitSum of 1000'], 'Submit returns only the visible calls\' console output');
+const loggedDigitTask = CODING_TASKS.find(task => task.id === 'js-digit-sum')!;
+const loggedDigitHidden = solutionFor(loggedDigitTask.id)!.hiddenTests!.length;
+assert(loggedDigitHidden > 0, 'the privacy probe must still exercise hidden calls');
+assert.deepEqual(response.body?.hidden, { passed: loggedDigitHidden, total: loggedDigitHidden });
+const loggedDigitExpected = loggedDigitTask.tests!.map(test => {
+  const literal = /^digitSum\((\d+)\)$/.exec(test.call);
+  assert(literal, 'Adapt the logging probe if its visible authored call shape changes');
+  return `digitSum of ${Number(literal[1])}`;
+});
+assert.deepEqual(response.body?.logs, loggedDigitExpected, 'Submit returns only the visible calls\' console output');
 console.log('PASS integrity: Submit shows the visible checks\' console only');
 
 // ── every changed submission in one session is recorded (CODE-1) ─────────
@@ -128,6 +145,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const attempts = new Set<string>();
   const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
+  const levels = new Map<string, { user_id: string; coding_task_ids: string[]; completed_at: string | null; expires_at: string }>();
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
@@ -143,7 +161,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
       eq: (column: string, value: unknown) => { filters[column] = value; return chain; },
       in: () => chain,
       maybeSingle: () => {
-        if (table === 'roadmap_attempts') return result({ attempt_id: filters.attempt_id });
+        if (table === 'roadmap_attempts') return result(levels.get(String(filters.attempt_id)) ?? null);
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
           return result(row ? progressRow(filters.task_id, row) : null);
@@ -201,14 +219,15 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     }
     return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
-  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
+  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels };
 }
 
 {
   const db = codingDatabase();
   const learner = 'user-aaaa-1111';
   const levelAttempt = 'levelattempt0123456789';
-  const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null, roadmapAttemptId: levelAttempt });
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: ['js-double-numbers'], completed_at: null, expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString() });
+  const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: learner, roadmapAttemptId: levelAttempt });
   const reference = solutionFor('js-double-numbers')!;
   type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean; progress?: { status?: string } | null };
   const submit = async (code: string) => {
@@ -620,13 +639,14 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const task = CODING_TASKS.find((one) => one.track === 'react' && one.verify === 'tests' && one.suite && isFreeCodingTask(one.id)
     && !evolvingStage(one.id) && solutionFor(one.id)?.junior && solutionFor(one.id)?.senior)!;
   const { verify, suite } = task;
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: [task.id], completed_at: null, expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString() });
   task.verify = 'checklist';
   delete task.suite;
   try {
     const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number; applied?: boolean; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
     await handleCodingSubmit({
       method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
-      body: { session: encodeCodingSession({ taskId: task.id, track: 'react', userId: null, roadmapAttemptId: levelAttempt }), code: 'const App = () => null;', user_id: learner },
+      body: { session: encodeCodingSession({ taskId: task.id, track: 'react', userId: learner, roadmapAttemptId: levelAttempt }), code: 'const App = () => null;', user_id: learner },
     } as never, out as never, db.client as never);
     assert.equal(out.statusCode, 200, JSON.stringify(out.body));
     assert.equal(out.body?.verdict, 'passed', 'the learner\'s confirmation still stands');
@@ -818,8 +838,24 @@ export default function App() {
   assert.ok(sloppy.run.results.every((one) => one.pass === false && /total/.test(one.error ?? '')), 'Run reports an undeclared assignment, as Submit does');
   const timed = await agree('js-throttle-calls', 'const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = new Date().getTime(); if (now - last >= ms) { last = now; fn(...args); } }; };');
   assert.ok(allPassed(timed.submit), `new Date() reads the same clock as the timers: ${JSON.stringify(timed.submit.results)}`);
-  const cloned = await agree('alg-deep-clone', 'const deepClone = (value) => structuredClone(value);');
-  assert.ok(allPassed(cloned.submit), `structuredClone copies like the browser's: ${JSON.stringify(cloned.submit.results)}`);
+  const capturedClock = await agree('js-throttle-calls', 'const readClock = Date.now; const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = readClock(); if (now - last >= ms) { last = now; fn(...args); } }; };');
+  assert.ok(allPassed(capturedClock.submit), `A captured Date.now alias keeps the same clock: ${JSON.stringify(capturedClock.submit.results)}`);
+  // Runtime capability is separate from the manual-copy exercise: that task
+  // retains opaque functions/Symbols, which native structuredClone rejects.
+  // Its per-task prohibition is checked by checkCodingTaskRuntimePolicy.
+  const cloneCases = [
+    { call: '(() => {const source={a:[1,{b:2}]},copy=structuredClone(source);copy.a[1].b=99;return [source.a[1].b,copy.a[1].b,copy!==source,copy.a!==source.a];})()', expected: [2, 99, true, true] },
+    { call: '(() => {const source=[],copy=structuredClone(source);return [copy,copy!==source];})()', expected: [[], true] },
+    { call: 'structuredClone(null)', expected: null },
+    { call: 'structuredClone(undefined)', expected: undefined },
+    { call: 'structuredClone([1,[2,[3]]])', expected: [1, [2, [3]]] },
+    { call: '(() => {const copy=structuredClone([NaN,Infinity,-0,3n]);return [Number.isNaN(copy[0]),copy[1]===Infinity,Object.is(copy[2],-0),copy[3]===3n];})()', expected: [true, true, true, true] },
+    { call: '(() => {try{structuredClone(Symbol("leaf"));return "cloned";}catch(error){return error.name;}})()', expected: 'DataCloneError' },
+  ];
+  const cloneInput = { code: '', calls: cloneCases.map(one => one.call), expectations: cloneCases.map(one => one.expected) };
+  for (const cloned of [await evaluateInRunRealm(cloneInput), await runInSandbox(cloneInput)]) {
+    assert.ok(allPassed(cloned), `unrestricted structuredClone semantics: ${JSON.stringify(cloned.results)}`);
+  }
   const semantics = await runInSandbox({
     code: '',
     calls: [
@@ -833,6 +869,7 @@ export default function App() {
     expectations: [true, 250, [true, 1, true], [true, 2], [true, true, 5, 'g', true, true], 'DataCloneError'],
   });
   assert.deepEqual(semantics.results.map((one) => one.pass), [true, true, true, true, true, true], JSON.stringify(semantics.results));
+  await checkStructuredCloneOwnKeys();
   console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
 }
 
@@ -922,7 +959,7 @@ function ordersPerDay(timestamps) {
   const counts = {};
   for (const stamp of timestamps) {
     const at = new Date(stamp);
-    const day = at.getFullYear() + "-" + pad(at.getMonth() + 1) + "-" + pad(at.getDate());
+    const day = String(at.getFullYear()).padStart(4, "0") + "-" + pad(at.getMonth() + 1) + "-" + pad(at.getDate());
     counts[day] = (counts[day] ?? 0) + 1;
   }
   return counts;
@@ -1061,7 +1098,15 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
 
   // C1-3: reading a query with URLSearchParams passed Run and failed Submit.
   const query = CODING_TASKS.find((task) => task.id === 'js-easy3-read-query')!;
-  const viaParams = 'const parseQuery = query => Object.fromEntries(new URLSearchParams(query));';
+  // The task now preserves raw text, while the string constructor decodes
+  // form syntax. Its iterable constructor exercises the same browser API
+  // without changing the task's literal key/value contract.
+  const viaParams = `const parseQuery = query => Object.fromEntries(new URLSearchParams(
+    query.split('&').filter(pair => pair !== '').map(pair => {
+      const index = pair.indexOf('=');
+      return index < 0 ? [pair, ''] : [pair.slice(0, index), pair.slice(index + 1)];
+    })
+  ));`;
   const querySubmit = await runChecks({ code: viaParams, visible: query.tests!, hidden: solutionFor(query.id)!.hiddenTests ?? [], shuffle: (list) => list });
   const queryRun = await evaluateInRunRealm({ code: viaParams, calls: query.tests!.map((one) => one.call), expectations: query.tests!.map((one) => one.expected) });
   assert.ok(allPassed(querySubmit.visible) && (!querySubmit.hidden || allPassed(querySubmit.hidden)), `URLSearchParams passes Submit: ${JSON.stringify(querySubmit)}`);
@@ -1176,10 +1221,25 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   const task = CODING_TASKS.find((one) => one.id === 'js-digit-sum')!;
   const hidden = solutionFor(task.id)!.hiddenTests!;
   const answers = [...task.tests!.map((one) => one.expected), ...hidden.map((one) => one.expected)];
+  const visibleInputs = task.tests!.map(test => {
+    const literal = /^digitSum\((\d+)\)$/.exec(test.call);
+    assert(literal, 'Adapt the phase probe if visible authored call shapes change');
+    return Number(literal[1]);
+  });
+  assert(hidden.every(test => test.call !== task.tests![0].call), 'the phase marker must not be a hidden input');
+  // Numeric answers can coincide across visible and hidden cases. Arm the
+  // ordered table only by seeing the visible input sequence, so a fresh
+  // hidden program deterministically returns undefined rather than scoring
+  // accidental equal answers. With a shared program and authored order this
+  // attack would pass every case.
+  const orderedAttack = `let k = 0; const A = ${JSON.stringify(answers)}; const inputs = ${JSON.stringify(visibleInputs)}; const digitSum = n => { if (k < inputs.length && n !== inputs[k]) return undefined; return A[k++]; };`;
+  const phase = await runChecks({ code: orderedAttack, visible: task.tests!, hidden, shuffle: list => list });
+  assert.ok(allPassed(phase.visible));
+  assert.equal(phase.hidden!.results.filter(result => result.pass).length, 0, 'fresh hidden state cannot inherit the armed visible phase');
   const response = { statusCode: 200, body: null as null | { verdict?: string; hidden?: { passed: number; total: number } }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
   await handleCodingSubmit({
     method: 'POST', headers: {},
-    body: { session: encodeCodingSession({ taskId: task.id, track: 'javascript', userId: null }), code: `let k = 0; const A = ${JSON.stringify(answers)}; const digitSum = () => A[k++];` },
+    body: { session: encodeCodingSession({ taskId: task.id, track: 'javascript', userId: null }), code: orderedAttack },
   } as never, response as never, null);
   assert.equal(response.statusCode, 200);
   assert.notEqual(response.body?.verdict, 'passed', 'answers served by call count do not pass');
@@ -1499,7 +1559,12 @@ const timed = <T>(run: Promise<T>) => {
     const expired = runs.filter((run) => run.busy === `${name}_wait_expired`);
     const full = runs.filter((run) => run.busy === `${name}_queue_full`);
     assert.equal(ran.length + expired.length + full.length, runs.length, `${name}: every run ran or was told the grader is busy`);
-    assert.ok(ran.length >= 1 && expired.length >= 1 && full.length >= 1, `${name}: ${ran.length} ran, ${expired.length} waited out, ${full.length} found the queue full`);
+    // A type checker can diagnose the recursive alias before its deadline,
+    // freeing its slots and legitimately finishing every queued normal check.
+    // Queue expiration is checked with held slots below, independently of
+    // compiler speed; real expirations here must still obey the production cap.
+    assert.ok(ran.length >= 1 && full.length >= 1, `${name}: ${ran.length} ran, ${expired.length} waited out, ${full.length} found the queue full`);
+    if (name === 'sandbox') assert.ok(expired.length >= 1, 'an infinite JS loop holds its slot past the queue deadline');
     assert.ok(full.every((run) => run.ms < 1_000), `${name}: a full queue refuses at once`);
     assert.ok(expired.every((run) => run.ms >= waitMs - 50 && run.ms < waitMs + 3_000), `${name}: a queued run waits its limit and no longer: ${expired.map((run) => run.ms).join(',')}`);
   }
@@ -1509,6 +1574,25 @@ const timed = <T>(run: Promise<T>) => {
   assert.ok(after.every((run) => run.results[0]?.pass === true), 'the pool is whole again');
   assert.equal((await checkTypes('const a: number = 1;', [[]])).stopped, false, 'the type-check pool is whole again');
   console.log(`PASS integrity: a queued run waits at most ${SANDBOX_SLOT_WAIT_MS} ms (types ${TS_CHECK_SLOT_WAIT_MS} ms), a full queue refuses at once, and neither is a verdict`);
+}
+
+// Exercise the actual shared queue while its only slot is explicitly held.
+// This always reaches expiry, even on a machine where TypeScript diagnoses
+// the "runaway" type before the integration burst's production wait cap.
+for (const name of ['sandbox', 'ts_check']) {
+  const waitMs = 50;
+  const slots = threadSlots({ threads: 1, waiting: 1, waitMs, name });
+  await slots.acquire();
+  const queued = timed(slots.acquire());
+  const full = await timed(slots.acquire());
+  assert.equal(full.busy, `${name}_queue_full`);
+  const expired = await queued;
+  assert.equal(expired.busy, `${name}_wait_expired`);
+  assert.ok(expired.ms >= waitMs - 5 && expired.ms < waitMs + 3_000, `${name}: held-slot waiter respects the deadline`);
+  slots.release();
+  assert.equal((await timed(slots.acquire())).busy, null, `${name}: expired waiter does not consume the released slot`);
+  slots.release();
+  console.log(`PASS integrity: ${name} held-slot queue expires, refuses overflow and recovers`);
 }
 
 // ── a thread that would not start is tried again (C1-4) ──────────────────

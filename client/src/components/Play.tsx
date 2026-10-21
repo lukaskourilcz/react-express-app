@@ -39,6 +39,7 @@ import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError, ApiError } from '../lib/api';
 import { categoryLabelKey } from '../lib/categories';
+import { TopicPill } from './ui/CategoryTag';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
 import { useLanguage, useT } from '../i18n/LanguageContext';
@@ -317,32 +318,7 @@ export function PlayLanding() {
                   {categoryOptions.map((cat) => {
                     const selected = selectedCategories.includes(cat.value);
                     return (
-                      <button
-                        key={cat.value}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={selected}
-                        className="play-category-chip"
-                        onClick={() => toggleCategory(cat.value)}
-                        style={{
-                          cursor: 'pointer',
-                          padding: '7px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: selected ? 600 : 500,
-                          // The colour lives in the border/left-accent; text stays
-                          // neutral so light brand hues never fail contrast.
-                          color: selected
-                            ? 'var(--color-text-primary, inherit)'
-                            : 'var(--astryx-color-text-secondary, inherit)',
-                          background: selected ? `${cat.color}18` : 'transparent',
-                          border: `1px solid ${selected ? cat.color : 'var(--astryx-color-border, rgba(128,128,128,0.35))'}`,
-                          borderLeft: `4px solid ${cat.color}`,
-                          borderRadius: 8,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {t(categoryLabelKey(cat.value))}
-                      </button>
+                      <TopicPill category={cat.value} selected={selected} onClick={() => toggleCategory(cat.value)} key={cat.value} />
                     );
                   })}
                 </div>

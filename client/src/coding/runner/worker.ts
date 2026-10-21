@@ -1,3 +1,4 @@
+import type { TaskRuntimePolicy } from '../../../../shared/coding-task-runtime';
 // The coding runner worker. Learner code runs here, off the main thread, so a
 // hung loop is terminated by the caller instead of freezing the page. The
 // worker is served from its own path with a policy that allows `new Function`
@@ -15,6 +16,7 @@ import type { TypeTestInput } from '../../../../shared/coding-ts-check';
 const post = self.postMessage.bind(self) as (message: unknown) => void;
 
 export interface RunnerRequest {
+  runtimePolicy?: TaskRuntimePolicy;
   track: 'javascript' | 'typescript';
   code: string;
   calls: string[];
@@ -46,13 +48,13 @@ self.onmessage = async (event: MessageEvent<RunnerRequest>) => {
       self.postMessage({ phase: 'checking' });
       const compiled = compiler.compileTypeScript(request.code, request.typeTests ?? []);
       self.postMessage({ phase: 'running' });
-      const hidden = prepareRunRealm(self);
+      const hidden = prepareRunRealm(self, request.runtimePolicy);
       const run = await evaluateCalls({ code: compiled.js, calls: request.calls, expectations: request.expectations, hidden });
       post({ phase: 'done', ...run, check: compiled.check });
       return;
     }
     self.postMessage({ phase: 'running' });
-    const hidden = prepareRunRealm(self);
+    const hidden = prepareRunRealm(self, request.runtimePolicy);
     const run = await evaluateCalls({ code: request.code, calls: request.calls, expectations: request.expectations, hidden });
     post({ phase: 'done', ...run, check: null });
   } catch (error) {

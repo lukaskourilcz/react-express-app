@@ -1,0 +1,23 @@
+{
+ "dsa-v1-d06-recursive-list-sum":{
+  "alternative":"function sumList(head){if(head===null)return 0;const rest=sumList(head.next);return head.value+rest;}",
+  "wrong-extra-field":"function sumList(head){if(head===null)return 0;head.visited=true;return head.value+sumList(head.next);}",
+  "wrong-replace-links":"function sumList(head){if(head===null)return 0;const result=head.value+sumList(head.next);if(head.next)head.next={value:head.next.value,next:head.next.next};return result;}",
+  "wrong-iterative":"function sumList(head){let total=0;for(let n=head;n;n=n.next)total+=n.value;return total;}",
+  "wrong-second-base":"function sumList(head){if(head===null)return 0;if(head.next===null)return head.value;return head.value+sumList(head.next);}",
+  "wrong-round":"function sumList(head){if(head===null)return 0;return Math.round(head.value+sumList(head.next));}"
+ },
+ "dsa-v1-d06-bounded-factorial":{
+  "alternative":"function factorial(n){if(n===0)return 1;return n*factorial(n-1);}",
+  "wrong-one-gap":"function factorial(n){if(n===4)return 25;let out=1;for(let i=2;i<=n;i++)out*=i;return out;}",
+  "wrong-zero":"function factorial(n){let out=0;for(let i=1;i<=n;i++)out*=i;return out;}",
+  "wrong-string":"function factorial(n){let out=1;for(let i=2;i<=n;i++)out*=i;return String(out);}"
+ },
+ "dsa-v1-d06-iterative-countdown":{
+  "alternative":"function countdownSteps(n){return Array.from({length:n+1},(_,i)=>n-i);}",
+  "wrong-shared-zero":"const zero=[0];function countdownSteps(n){if(n===0)return zero;return Array.from({length:n+1},(_,i)=>n-i);}",
+  "wrong-reused-buffer":"const buffer=[];function countdownSteps(n){buffer.length=0;for(let i=n;i>=0;i--)buffer.push(i);return buffer;}",
+  "wrong-omit-zero":"function countdownSteps(n){const out=[];for(let i=n;i>0;i--)out.push(i);return out;}",
+  "wrong-recursive":"function countdownSteps(n){return n===0?[0]:[n,...countdownSteps(n-1)];}"
+ }
+}

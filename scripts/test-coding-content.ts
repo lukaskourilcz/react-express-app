@@ -1,3 +1,6 @@
+import { DEFERRED_SEQUENTIAL_START, RETHROWING_SHARED_PROMISE } from './fixtures/async-contract-variants';
+import { DEFERRED_BATCH_START } from './fixtures/deferred-batch-start';
+import { runtimePolicyForTask } from '../shared/coding-task-runtime';
 // Content contract for the coding catalogue.
 //   npm run test:coding
 // Opt-in:
@@ -15,6 +18,7 @@ import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, playable }
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
+import { codingBoardContracts } from './coding-board-contract';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
   CODING_DIFFICULTIES,
@@ -213,7 +217,7 @@ const skeletonInStarter = (ts: TypeScriptApi, starter: string, skeleton: string)
  * so far close every block they open, they run on their own as the whole
  * body: a check they already throw on or answer wrongly fails every way of
  * finishing them, so that branch stops there. */
-const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): string[][] => {
+const passingArrangements = (puzzle: Pick<AuthoredPuzzle, 'lines'>, checks: readonly Check[]): string[][] => {
   const depthOf = (code: string) => {
     const bare = code.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '');
     return (bare.match(/\{/g)?.length ?? 0) - (bare.match(/\}/g)?.length ?? 0);
@@ -230,6 +234,16 @@ const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): 
   const guard = (code: string) => (/^\s*(while|for|do)\b.*\{\s*$/.test(code) ? `${code} __step();` : code);
   const callers = checks.map((check) => new Function(name, `"use strict"; return (${check.call});`) as (fn: unknown) => unknown);
   const END = Symbol('end');
+  // Authored checks may wrap a function result in an array/record to verify
+  // input preservation. Falling through an unfinished prefix then puts END
+  // inside that wrapper; it is still undecided, rather than an incorrect
+  // complete result that may prune an otherwise valid puzzle arrangement.
+  const containsEnd = (value: unknown, seen = new Set<object>()): boolean => {
+    if (value === END) return true;
+    if (value === null || typeof value !== 'object' || seen.has(value)) return false;
+    seen.add(value);
+    return Object.values(value).some(item => containsEnd(item, seen));
+  };
   // `open`: the body stops early, and falling off its end returns END.
   const run = (top: PuzzleLine[], placed: PuzzleLine[], open: boolean): 'pass' | 'fail' | 'open' => {
     const code = [...top, header, ...placed].map((line) => guard(line.code)).concat(open ? ['return __end;'] : [], footer.code).join('\n');
@@ -241,9 +255,21 @@ const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): 
     let undecided = false;
     for (const [index, call] of callers.entries()) {
       reset();
+      // A caller can turn END into false, a string, or an arithmetic error.
+      // Track the unfinished return before its wrapper consumes the value;
+      // such a prefix is undecided, not a failing complete arrangement.
+      let returnedEnd = false;
+      const tracked = (...args: unknown[]) => {
+        const result = (fn as (...args: unknown[]) => unknown)(...args);
+        if (containsEnd(result)) returnedEnd = true;
+        return result;
+      };
       let value: unknown;
-      try { value = call(fn); } catch { return 'fail'; }
-      if (value === END) undecided = true;
+      try { value = call(tracked); } catch {
+        if (returnedEnd) { undecided = true; continue; }
+        return 'fail';
+      }
+      if (returnedEnd || containsEnd(value)) undecided = true;
       else if (!deepEqual(value, checks[index].expected)) return 'fail';
     }
     return undecided ? 'open' : 'pass';
@@ -315,6 +341,7 @@ const testingLibrary = async (): Promise<AsyncWaitConfig> => {
 };
 
 async function main() {
+  codingBoardContracts();
   // The solutions are proven on the grader's worker thread, built fresh from
   // the sources under test, as the deployment runs it.
   await buildSandboxWorker();
@@ -484,15 +511,24 @@ async function main() {
 
   // The junior and senior boards are read as code after a pass, so the notes
   // that explain them in the source must not travel. `solutionFor` strips
-  // them; this asserts the text that actually ships is clean, and that
+  // them except for an explicitly required planning preface; this asserts
+  // that the rest of the text that actually ships is clean, and that
   // stripping it again would change nothing — a stripper that ate real code
   // would fail the solution proofs below instead.
   for (const id of solutionIds()) {
     const solution = solutionFor(id)!;
+    const plan = solution.boardPlan?.trim();
+    if (plan && stripComments(plan).trim() !== '') fail(`${id}: boardPlan must contain comments only`);
     for (const [kind, code] of [['junior', solution.junior], ['senior', solution.senior]] as const) {
       if (!code) continue;
-      if (stripComments(code) !== code) fail(`${id}: the ${kind} board still carries a comment`);
+      const prefix = plan ? `${plan}\n` : '';
+      if (prefix && !code.startsWith(prefix)) fail(`${id}: the ${kind} board lost its required planning comments`);
+      const body = prefix ? code.slice(prefix.length) : code;
+      if (stripComments(body) !== body) fail(`${id}: the ${kind} board still carries an authoring comment`);
     }
+  }
+  for (const id of ['react-user-directory', 'react-posts-dashboard', 'react-comments-viewer', 'react-todo-client', 'react-product-explorer']) {
+    if (!solutionFor(id)?.boardPlan?.trim()) fail(`${id}: both boards must retain the plan requested by the task`);
   }
 
   /* ── difficulty labels ─────────────────────────────────────────────── */
@@ -713,6 +749,9 @@ async function main() {
     if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
     else if (boards) fail(`${where}: missing the senior solution`);
     if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
+    if (where === 'js-run-tasks-in-order') out.push(['deferred-start', DEFERRED_SEQUENTIAL_START]);
+    if (where === 'js-mh-shared-request') out.push(['rethrowing-chain', RETHROWING_SHARED_PROMISE]);
+    if (where === 'js-mh-in-batches') out.push(['deferred-start', DEFERRED_BATCH_START]);
     return out;
   };
 
@@ -746,18 +785,18 @@ async function main() {
       }
       // The Run button's realm: UTC, the grader's built-ins and none
       // of the browser's others (scripts/run-realm-node.ts).
-      const run = await withTimeout(evaluateInRunRealm({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
+      const run = await withTimeout(evaluateInRunRealm({ runtimePolicy: runtimePolicyForTask(task.id), code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       // The production grader: the hidden checks in a fresh program and, here,
       // in reverse order, so no solution leans on the order they run in or on
       // state the visible calls left behind.
-      const server = await runChecks({ code, visible: task.tests, hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      const server = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests, hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
       if (!allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(server).slice(0,500)}`);
       if (!allPassed(run)) {
         const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);
         fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
       }
       if (solution.hiddenTests?.length) {
-        const hidden = await withTimeout(evaluateInRunRealm({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
+        const hidden = await withTimeout(evaluateInRunRealm({ runtimePolicy: runtimePolicyForTask(task.id), code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
@@ -968,7 +1007,7 @@ async function main() {
     } else {
       const typed = task.track !== 'typescript' || (typesPassed(checker.check(filled, task.typeTests ?? [])) && typesPassed(checker.check(filled, solution.hiddenTypeTests ?? [])));
       const code = task.track === 'typescript' ? checker.toJavaScript(filled) : filled;
-      const server = await runChecks({ code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      const server = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
       if (!typed || !allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${id}: the filled-in skeleton fails its checks: ${JSON.stringify(server).slice(0, 400)}`);
     }
   }
@@ -1084,6 +1123,21 @@ async function main() {
   // Every covered id is a real task; every accepted order is a permutation of
   // that puzzle's own lines; no puzzle is short enough to be guessed; and each
   // one declares what arranging it demonstrates.
+  const prefixProbe = { lines: [
+    { id: 'a', code: 'function twice(n) {' },
+    { id: 'b', code: '  const value = n * 2;' },
+    { id: 'c', code: '  const copy = value;' },
+    { id: 'd', code: '  return copy;' },
+    { id: 'e', code: '}' },
+  ] };
+  for (const call of ['twice(3) === 6', 'twice(3) + 1 === 7', 'String(twice(3)) === "6"']) {
+    assert.deepEqual(passingArrangements(prefixProbe, [{ call, expected: true }]),
+      [['a', 'b', 'c', 'd', 'e']], `puzzle prefix tracking survives ${call}`);
+  }
+  assert.deepEqual(passingArrangements(prefixProbe, [{ call: '[twice(3)]', expected: [6] }]),
+    [['a', 'b', 'c', 'd', 'e']], 'puzzle prefix tracking preserves nested sentinels');
+  assert.deepEqual(passingArrangements(prefixProbe, [{ call: 'twice(3) === 5', expected: true }]),
+    [], 'puzzle prefix tracking still rejects incorrect complete code');
   const puzzleIds = puzzleCoverage();
   const puzzlesStarted = Date.now();
   let puzzleOrders = 0;
@@ -1206,6 +1260,14 @@ async function main() {
   assert.equal(await helper('function debug(label, value) { return value; }'), false, 'returning without logging fails');
   assert.equal(await helper('function debug(label, value) { console.log(label, value); }'), false, 'logging without returning fails');
   assert.equal(await helper('function debug(label, value) { console.log(label); console.log(value); return value; }'), false, 'two lines for one value fail');
+  // The older rendered-text probe above is deliberately broad. The actual
+  // task also requires one two-argument console.log and exact value identity.
+  const exactDebug = solutionFor('js-path-logging-5')!.hiddenTests!.find((one) => one.call.includes('values=[box'))!;
+  assert.ok(exactDebug, 'the exact debug contract remains authored');
+  const exactHelper = async (code: string) => allPassed(await runInSandbox({ code, calls: [exactDebug.call], expectations: [exactDebug.expected] }));
+  assert.equal(await exactHelper('function debug(label,value){console.log(label,value);return value;}'), true, 'the exact two-argument helper passes');
+  assert.equal(await exactHelper('function debug(label,value){console.info(label,value);return value;}'), false, 'another console method fails the exact task contract');
+  assert.equal(await exactHelper('function debug(label,value){console.log({[label]:value});return value;}'), false, 'one wrapped object fails the exact argument contract');
   // The café-orders project leaves every list and nothing else: its ten
   // stages still open, grade and keep their drafts and passes (#225).
   const retiredProject = EVOLVING_CHALLENGES.find((project) => project.id === 'js-evolving-debug')!;
@@ -1362,7 +1424,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // The production grader's verdict: the visible checks and, in a fresh
   // program, the hidden ones.
   const passesChecks = async (task: ContentTask, code: string): Promise<boolean> => {
-    const run = await withTimeout(runChecks({ code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
+    const run = await withTimeout(runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
     return allPassed(run.visible) && (!run.hidden || allPassed(run.hidden));
   };
   // The same with the type tests (visible and hidden) first for TypeScript,

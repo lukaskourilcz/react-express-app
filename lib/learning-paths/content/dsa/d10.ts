@@ -157,7 +157,7 @@ export const DSA_D10: ModuleSource = {
       verification: 'machine_verified',
       title: 'Final checks across five domains',
       summary:
-        'Ten questions you have not seen: two on growth and space, two on structures, two on searching, two on sorting and two on trees. You need 80% overall, and each domain needs at least one of its two questions right, so a strong sorting score cannot cover two missed tree questions. Retry as often as you like.',
+        'Ten questions across the foundation topics: two on growth and space, two on structures, two on searching, two on sorting and two on trees. You need 80% overall, and each domain needs at least one of its two questions right, so a strong sorting score cannot cover two missed tree questions. Retry as often as you like.',
       competencies: ['complexity', 'arrays-strings', 'maps-sets', 'searching', 'sorting', 'trees'],
       estimatedMinutes: 30,
       passThreshold: 0.8,
@@ -165,7 +165,7 @@ export const DSA_D10: ModuleSource = {
       questions: [
         {
           id: 'dsa-v1-d10-q1',
-          prompt: 'The two inputs are unrelated: `spans` has n entries and `notes` has m. What is the tightest growth class for the running time of `report`?',
+          prompt: 'The independent dense arrays `spans` and `notes` have lengths n and m. Each span has ordinary finite-number start/end fields. Count field access, comparison and fixed-size pair creation as constant work, and append as amortized constant work. What is the tightest running-time growth class of `report`?',
           context: {
             language: 'javascript',
             code: 'const report = (spans, notes) => {\n  const out = [];\n\n  for (let i = 0; i < spans.length; i += 1) {\n    for (let j = i + 1; j < spans.length; j += 1) {\n      if (spans[i].end > spans[j].start) out.push([i, j]);\n    }\n  }\n\n  for (const note of notes) out.push(note);\n\n  return out;\n};',
@@ -179,7 +179,7 @@ export const DSA_D10: ModuleSource = {
         },
         {
           id: 'dsa-v1-d10-q2',
-          prompt: 'For an input of length n, what is the auxiliary space — the memory used beyond the input itself — of `buildRuns`?',
+          prompt: 'For an ordinary dense array of length n, what is the peak additional storage of `buildRuns`, including its returned arrays? Count array slots/references under the usual amortized array-storage model; input elements are not deep-copied.',
           context: {
             language: 'javascript',
             code: 'const buildRuns = values => {\n  const runs = [];\n  let current = [];\n\n  for (const value of values) {\n    if (current.length > 0 && current[current.length - 1] !== value) {\n      runs.push(current);\n      current = [];\n    }\n    current.push(value);\n  }\n\n  if (current.length > 0) runs.push(current);\n  return runs;\n};',
@@ -192,38 +192,38 @@ export const DSA_D10: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'Every element is pushed into exactly one run array, so the run arrays hold n entries between them, and there are at most n of them. Counting declarations is not counting memory: `runs` and `current` are two names for structures that both grow with the input. Nothing copies the input once per element, so the total never reaches n². And the distinct-value count does not bound it either: `[1, 2, 1, 2, 1, 2]` has two distinct values and six runs.',
+            'The returned arrays count here; some conventions exclude output from auxiliary space, which is not the measure asked for. Every element is pushed into exactly one run array, so the run arrays hold n entries between them, and there are at most n of them. Counting declarations is not counting memory: `runs` and `current` are two names for structures that both grow with the input. Nothing copies the input once per element, so the total never reaches n². And the distinct-value count does not bound it either: `[1, 2, 1, 2, 1, 2]` has two distinct values and six runs.',
           domain: 'complexity',
           competencies: ['complexity', 'arrays-strings'],
         },
         {
           id: 'dsa-v1-d10-q3',
           prompt:
-            'Handlers are stored under request ids that arrive as strings, some of them plain digit strings like `"12"` and `"305"`. The code looks a handler up by id on every request, and once a minute walks every entry in the order the handlers were registered. Which structure fits, and why?',
+            'Each distinct string request id is registered once with its handler. Ids arrive as strings, some of them plain digit strings like `"12"` and `"305"`. The code looks a handler up by id on every request, and once a minute walks every entry in the order the handlers were registered. Under the usual expected-constant hash-lookup model, which structure fits these requirements, and why?',
           options: [
-            'A `Map`: `get` is expected constant, keys iterate in insertion order whatever they look like, and an id like `"toString"` is an ordinary key.',
+            'A `Map`: it associates ids with handlers and iterates in registration order, including numeric-looking keys.',
             'A plain object: property access is expected constant and the keys come back in the order they were assigned.',
             'A `Set` of ids: membership is expected constant and iteration follows insertion order.',
             'An array of `[id, handler]` pairs: it preserves registration order exactly and a lookup is one indexed read.',
           ],
           correct: 0,
           explanation:
-            'A Map answers both requirements: expected constant lookup, and insertion-order iteration for keys of any shape. A plain object reorders keys that look like array indices, so `"12"` and `"305"` iterate first and in ascending numeric order, ahead of everything registered before them. Its prototype also already answers to names like `"toString"`, so a lookup can hand back a function nobody registered. A Set stores membership only, and there is nowhere in it to put the handler. An array of pairs keeps the order, but a lookup has to walk it, which is O(n) per request rather than expected constant.',
+            'A Map answers both requirements: expected constant lookup in the stated hash model, and insertion-order iteration for keys of any shape. JavaScript requires average sublinear access, not a universal O(1) implementation guarantee. A plain object reorders keys that look like array indices, so `"12"` and `"305"` iterate first and in ascending numeric order, ahead of everything registered before them. Its prototype also already answers to names like `"toString"`, so a lookup can hand back a function nobody registered. A Set stores membership only, and there is nowhere in it to put the handler. An array of pairs keeps the order, but a lookup has to walk it, which is O(n) per request rather than expected constant.',
           domain: 'structures',
           competencies: ['maps-sets'],
         },
         {
           id: 'dsa-v1-d10-q4',
-          prompt: 'This checker uses an array as a stack, and it is meant to return `true` only when the parentheses balance. Which input makes it return `true` when it should not?',
+          prompt: 'This checker receives a string containing only parentheses. Which input makes it return `true` for unbalanced text?',
           context: {
             language: 'javascript',
             code: "const balanced = text => {\n  const open = [];\n\n  for (const ch of text) {\n    if (ch === '(') open.push(ch);\n    else if (ch === ')') open.pop();\n  }\n\n  return open.length === 0;\n};",
           },
           options: [
-            '`"())"` — the third character pops an already empty array, which does nothing, so the stack ends empty and the check passes.',
-            '`")("` — the leading `)` pops an empty array, leaving only the `(` uncounted, so the stack ends empty.',
-            '`"(()"` — the last iteration pops the unmatched `(`, so the stack ends empty.',
-            '`"()()"` — two separate pairs cancel out, and the checker cannot tell them apart from a single nested pair.',
+            '`"())"`',
+            '`")("`',
+            '`"(()"`',
+            '`"()()"`',
           ],
           correct: 0,
           explanation:
@@ -233,7 +233,7 @@ export const DSA_D10: ModuleSource = {
         },
         {
           id: 'dsa-v1-d10-q5',
-          prompt: 'This search returns -1 for some targets that are in the array. Which description of the defect is right?',
+          prompt: 'The input is an ordinary dense array of ascending finite Numbers and the target is finite. This closed-interval search can return -1 for a present target. Which defect causes that missed match?',
           context: {
             language: 'javascript',
             code: 'const search = (sorted, target) => {\n  let low = 0;\n  let high = sorted.length - 1;\n\n  while (low < high) {\n    const middle = Math.floor((low + high) / 2);\n    if (sorted[middle] === target) return middle;\n    if (sorted[middle] < target) low = middle + 1;\n    else high = middle - 1;\n  }\n\n  return -1;\n};',
@@ -246,51 +246,51 @@ export const DSA_D10: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'With `low < high` the loop exits while `low === high`, and that surviving index is never read. `search([2], 2)` never enters the loop and returns -1; `search([1, 3, 5, 7], 7)` narrows to index 3 and then quits. Changing the condition to `low <= high` fixes it. Rounding down is correct for a closed interval, because the middle only has to land inside `[low, high]`, and it always does. `high = sorted.length - 1` is right for a closed interval; `sorted.length` belongs to the half-open variant, which pairs with `low < high` and `high = middle`. The last option describes real behaviour on runs of equal values, but it returns an index inside the run rather than -1, so it is not this defect.',
+            'With `low < high` the loop exits while `low === high`, and that surviving index is never read. `search([2], 2)` never enters the loop and returns -1; `search([1, 3, 5, 7], 7)` narrows to index 3 and then quits. Changing the condition to `low <= high` fixes it. Rounding down is correct for a closed interval, because the middle only has to land inside `[low, high]`, and it always does. `high = sorted.length - 1` is right for a closed interval; `sorted.length` belongs to the half-open variant, which pairs with `low < high` and `high = middle`. Returning the first equal value encountered can differ from returning the leftmost match, but either is a valid match here; that does not explain a -1 result for a present value.',
           domain: 'searching',
           competencies: ['searching'],
         },
         {
           id: 'dsa-v1-d10-q6',
-          prompt: 'An ascending array holds 1,000,000 elements. In the worst case, how many of them does an iterative binary search read before it can report that a target is absent?',
+          prompt: 'A dense ascending array holds the distinct Numbers 1 through 1000000. Use the taught closed-interval binary search: floor the midpoint, read its value once, and exclude that midpoint when moving a bound. Over absent finite targets, what is the maximum number of midpoint reads?',
           options: ['20', '1,000,000', '1,000', '6'],
           correct: 0,
           explanation:
-            'Each probe discards the middle element and at least half of what is left, so after k probes at most n / 2ᵏ candidates remain. 2¹⁹ = 524,288 is below a million and 2²⁰ = 1,048,576 is above it, so 20 probes are enough and 19 are not. 1,000,000 is what a linear scan reads. 1,000 is the square root of a million, and nothing in a binary search shrinks an interval that way. 6 is log₁₀ 1,000,000, which counts divisions by ten: changing the base only changes a constant factor in the growth class, but the probe count itself comes from halving, so it is base 2.',
+            'For this midpoint convention, the longest unsuccessful path takes floor(log₂ n) + 1 probes. Each probe discards the midpoint and leaves at most half the previous candidate count, so after k probes at most n / 2ᵏ candidates remain. 2¹⁹ = 524,288 is below a million and 2²⁰ = 1,048,576 is above it, so 20 probes are enough and 19 are not. 1,000,000 is what a linear scan reads. 1,000 is the square root of a million, and nothing in a binary search shrinks an interval that way. 6 is log₁₀ 1,000,000, which counts divisions by ten: changing the base only changes a constant factor in the growth class, but the probe count itself comes from halving, so it is base 2.',
           domain: 'searching',
           competencies: ['searching', 'complexity'],
         },
         {
           id: 'dsa-v1-d10-q7',
-          prompt: 'A routine is partway through sorting `[5, 3, 8, 1, 9, 2]`, and the array currently holds `[1, 3, 5, 8, 9, 2]`. Which algorithm is running, and what gives it away?',
+          prompt: 'Using this path’s exact sorting implementations, which method can leave the caller’s array `[5, 3, 8, 1, 9, 2]` as `[1, 3, 5, 8, 9, 2]` between completed passes?',
           options: [
-            'Insertion sort: the first five elements are sorted and are exactly the first five of the original, while the tail sits where it started.',
-            'Selection sort: the smallest values have already been moved to the front.',
-            'Merge sort: two sorted halves have been merged back into the array.',
-            'Bubble sort: the largest element has been carried to the end of the array.',
+            'Insertion sort: a sorted processed prefix with the untouched tail.',
+            'Selection sort: the globally smallest values are placed at the front.',
+            'Merge sort: sorted halves are written back into the caller’s array.',
+            'Bubble sort: the largest remaining value moves to the far right.',
           ],
           correct: 0,
           explanation:
-            'Insertion sort grows a sorted prefix out of the elements it has already passed and never looks ahead. `[1, 3, 5, 8, 9]` is exactly `{5, 3, 8, 1, 9}` reordered, and the 2 is still in the position it started in. Selection sort places globally smallest values from the front, so after two passes the array would begin `1, 2`; the 2 has not moved, so it is not that. The merge sort in this path builds new arrays and returns them rather than writing back into the input, and `[1, 3, 5, 8, 9]` is not a merge of the sorted halves `[3, 5, 8]` and `[1, 2, 9]` either. Bubble sort ends each pass with the largest remaining element at the far right, and here the 9 sits at index 4 with the 2 behind it.',
+            'The shown insertion sort grows a sorted prefix out of the elements it has already passed and never looks ahead. This question identifies a state of the taught implementations; a snapshot alone cannot prove which arbitrary program produced it. `[1, 3, 5, 8, 9]` is exactly `{5, 3, 8, 1, 9}` reordered, and the 2 is still in the position it started in. Selection sort places globally smallest values from the front, so after two passes the array would begin `1, 2`; the 2 has not moved, so it is not that. The merge sort in this path builds new arrays and returns them rather than writing back into the input, and `[1, 3, 5, 8, 9]` is not a merge of the sorted halves `[3, 5, 8]` and `[1, 2, 9]` either. Bubble sort ends each pass with the largest remaining element at the far right, and here the 9 sits at index 4 with the 2 behind it.',
           domain: 'sorting',
           competencies: ['sorting'],
         },
         {
           id: 'dsa-v1-d10-q8',
-          prompt: 'A team replaces a hand-written `mergeSort(rows, byName)` with the built-in `rows.sort(byName)`. What actually changes?',
+          prompt: 'For a dense mutable array of records with string names, a team replaces this path’s fresh-output `mergeSort(rows, byName)` with `rows.sort(byName)`. Which behavior is guaranteed to change? The two blocks show alternative call sites.',
           context: {
             language: 'javascript',
-            code: 'const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);\n\n// before: returns a new array and leaves rows alone\nconst sorted = mergeSort(rows, byName);\n\n// after\nconst sorted = rows.sort(byName);',
+            code: 'const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);\n\n// before: returns a new array and leaves rows alone\n{\n  const sorted = mergeSort(rows, byName);\n}\n\n// after\n{\n  const sorted = rows.sort(byName);\n}',
           },
           options: [
-            '`rows` is reordered in place and `sorted` is that same array object, where the merge sort left `rows` untouched and returned a new one.',
+            '`sorted` aliases `rows`; merge sort returned a separate array.',
             'Ties can now come out in a different order, because `Array.prototype.sort` makes no stability guarantee.',
             'The comparison count drops below n log n, because the engine sorts without comparing elements.',
             'Auxiliary space falls to O(1), because a built-in sort is required to sort in place.',
           ],
           correct: 0,
           explanation:
-            '`Array.prototype.sort` sorts the array it is called on and returns that same array, so every other reference to `rows` sees the new order. That is the change that breaks callers. Stability is not it: the language has required `sort` to be stable since ES2019, so rows with equal names keep their relative order, exactly as the merge sort did. A comparison sort cannot get below n log n comparisons in general, and the engine calls `byName` for its comparisons like any other comparator. And nothing requires constant auxiliary space: engines commonly use a merge sort variant that allocates O(n).',
+            '`Array.prototype.sort` sorts the array it is called on and returns that same array, so every other reference to `rows` sees the new order. That aliasing can affect other callers, even if the input happened to be sorted already. Stability is not it: the language has required `sort` to be stable since ES2019, so rows with equal names keep their relative order, exactly as the merge sort did. Sorting arbitrary distinct values by comparisons has a worst-case Ω(n log n) lower bound; particular inputs can need less work. The comparator is still used. The language does not prescribe the sorting algorithm or a constant auxiliary-space bound; mutating the input does not imply constant extra memory.',
           domain: 'sorting',
           competencies: ['sorting', 'complexity'],
         },
@@ -308,16 +308,16 @@ export const DSA_D10: ModuleSource = {
         {
           id: 'dsa-v1-d10-q10',
           prompt:
-            'Two functions look for a value. One walks a binary search tree and uses the ordering rule; the other walks an arbitrary binary tree that carries no ordering rule. For a tree of n nodes and height h, how many nodes does each read in the worst case?',
+            'Two functions look for a finite Number in a finite, nonempty binary tree with ordinary numeric fields. One follows the plain BST ordering rule; the other must search an arbitrary tree with no ordering rule. With n nodes and edge-height h, what are the worst-case visited-node bounds?',
           options: [
-            'The search tree walk reads at most h + 1; the arbitrary walk may read all n, because with no ordering rule neither subtree can be ruled out.',
-            'Both read at most h + 1, because any search descends a single root-to-leaf path.',
-            'The search tree walk reads at most log₂ n + 1; the arbitrary walk reads all n.',
-            'Both read all n in the worst case, because neither can confirm a value is absent until it has seen every node.',
+            'BST: at most h + 1; arbitrary tree: up to n.',
+            'Both: at most h + 1, regardless of shape or ordering.',
+            'BST: at most log₂ n + 1; arbitrary tree: up to n.',
+            'Both: exactly n, regardless of height or ordering.',
           ],
           correct: 0,
           explanation:
-            'In a search tree every comparison discards a whole subtree, so the walk follows one root-to-leaf path and reads at most h + 1 nodes, whether it finds the value or runs off the bottom. With no ordering rule there is nothing to discard, and absence is only settled once every node has been checked. The second option hands the arbitrary tree a guarantee it has not earned. The third swaps h for log₂ n: a plain BST never rebalances, and inserting ascending values builds a chain where h is n - 1. The fourth ignores what the search property buys, which is exactly that absence is settled in h + 1 reads.',
+            'An unsuccessful comparison with a BST node rules out one subtree, so the walk follows one root-to-leaf path and reads at most h + 1 nodes, whether it finds the value or runs off the bottom. With no ordering rule there is nothing to discard, and absence is only settled once every node has been checked. A single-path h + 1 bound does not hold for an arbitrary tree. Replacing h with log₂ n assumes balance: a plain BST can be a chain with h = n - 1. Conversely, a short BST can settle absence without visiting all n nodes. The h + 1 bound is an upper bound, not an exact count for every query.',
           domain: 'trees',
           competencies: ['trees', 'complexity'],
         },
@@ -329,17 +329,17 @@ export const DSA_D10: ModuleSource = {
       purpose: 'project',
       verification: 'machine_verified',
       title: 'A searchable record index',
-      summary: 'Wrap a sorted record array in a lookup that stays logarithmic, under two counted read budgets that rule out both a scan and a prebuilt copy.',
+      summary: 'Wrap a sorted record array in a lookup that stays logarithmic, under separate sampled read budgets for building and querying.',
       competencies: ['searching', 'complexity', 'arrays-strings'],
       estimatedMinutes: 30,
       code: {
         language: 'javascript',
         prompt:
-          '`buildIndex(records)` takes an array of `{ id, name }` objects already sorted ascending by `id`, and returns an object with one method: `lookup(id)`, which gives back the matching record object, or `null` when no record carries that id.\n\nThe index keeps the array it was handed and searches it; it does not build a second structure. The grade holds two budgets on a 64-record array. `buildIndex` itself may read at most 2 elements, so a copy or a `Map` built up front fails, because building one reads all 64. Each `lookup` may then read at most 20 elements, which a binary search meets with 7 and a linear scan cannot meet at all.\n\n`buildIndex([])` still returns a working index, and every lookup on it gives `null`. An id below the smallest, above the largest, or between two neighbours all give `null` as well.',
+          '`buildIndex(records)` takes an array of `{ id, name }` objects already sorted ascending by `id`, and returns an object with one method: `lookup(id)`, which gives back the matching record object, or `null` when no record carries that id.\n\nThe index keeps the array it was handed and searches it; it does not build a second structure. The grade holds two budgets on a 64-record array. `buildIndex` itself may read at most 2 elements, so a copy or a `Map` built up front fails, because building one reads all 64. Each sampled lookup on the 64-record fixture may read at most 20 elements. A cached-midpoint binary search needs at most 7; a full scan exceeds the bound for late or absent ids. These sampled counters do not prove a complexity bound for arbitrary source.\n\n`buildIndex([])` still returns a working index, and every lookup on it gives `null`. An id below the smallest, above the largest, or between two neighbours all give `null` as well.\n\nThe caller supplies an ordinary dense array of at most 1024 records with unique, strictly ascending finite Number ids and ordinary data fields. Query ids are finite Numbers, including fractions. The array and records stay unchanged for the lifetime of the index and may be frozen. Preserve their references, own properties, descriptors and prototypes; a found result is the original object. Separate indexes must keep separate state. Target: O(log n) time per lookup, where n is records.length under constant-cost field access and comparisons. Building the closure takes O(1) work and extra space; an empty lookup is constant work. Do not copy or preprocess the input into a second index.',
         contract: [
           'Return an object with a `lookup(id)` method; `lookup` gives back the record object, not its name and not its index.',
           '`buildIndex` reads at most 2 elements of the array: hold the reference, do not copy it and do not index it into a Map.',
-          'Each `lookup` reads at most 20 elements of a 64-element array, which rules out a scan.',
+          'Each sampled `lookup` reads at most 20 elements of the 64-element fixture; meet the individual budgets as well as the original aggregate budget.',
           'A missing id gives `null`, including on an index built from an empty array.',
           'Leave the records array as you found it: no sorting, no rewriting, no removing.',
         ],
@@ -347,7 +347,7 @@ export const DSA_D10: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const index = buildIndex([{ id: 1, name: 'ada' }, { id: 4, name: 'bo' }, { id: 9, name: 'cy' }]);
 console.log(index.lookup(4), index.lookup(5));
 `,
@@ -389,7 +389,7 @@ console.log(index.lookup(4), index.lookup(5));
           },
           {
             id: 'logarithmic-lookup',
-            label: 'Logarithmic lookup, with nothing built up front',
+            label: 'Meets the sampled build and lookup budgets',
             critical: true,
             weight: 2,
             detail:
@@ -427,7 +427,7 @@ console.log(index.lookup(4), index.lookup(5));
           {
             call: '__lookupReads(__records64(), buildIndex, [100, 200, 352, 999]).reads <= 80',
             expected: true,
-            label: 'four lookups read at most twenty records each',
+            label: 'four lookups use at most eighty record reads in total',
             criterion: 'logarithmic-lookup',
           },
           {
@@ -452,7 +452,7 @@ console.log(index.lookup(4), index.lookup(5));
       code: {
         language: 'javascript',
         prompt:
-          'The `levelOrder` in the starter is broken on purpose, and the task is to repair it. When it works, `levelOrder(root)` returns the values of a binary tree level by level, and left to right inside each level.\n\nA node is a plain object `{ value, left, right }`, a missing child is `null`, and a tree is its root node or `null` when empty. `levelOrder(null)` returns `[]`, and a single node returns a one-element array.\n\nThere are three defects. The pending list is read from the back with `pop`, which produces a depth-first order rather than a level-by-level one. Missing children are pushed onto the list, so a later iteration reads `value` off `null` and throws. And an empty tree puts `null` into the list before the loop even starts. Fix all three; rewriting the function completely is fine.',
+          'The `levelOrder` in the starter is broken on purpose, and the task is to repair it. When it works, `levelOrder(root)` returns the values of a binary tree level by level, and left to right inside each level.\n\nA node is a plain object `{ value, left, right }`, a missing child is `null`, and a tree is its root node or `null` when empty. `levelOrder(null)` returns `[]`, and a single node returns a one-element array.\n\nThere are three defects. The pending list is read from the back with `pop`, which produces a depth-first order rather than a level-by-level one. Missing children are pushed onto the list, so a later iteration reads `value` off `null` and throws. And an empty tree puts `null` into the list before the loop even starts. Fix all three; rewriting the function completely is fine.\n\nInputs are finite acyclic binary trees of at most 128 nodes, with one parent per non-root node, ordinary fields and finite Number values. Preserve every node, link, property, descriptor and prototype, including on frozen input; do not replace nodes. Each invocation returns its own array and cannot change earlier outputs. Target: O(n) time, where n is the node count under constant-cost field operations and amortized append. The output uses O(n) space; the shown head-index queue also retains O(n) references. Empty input is constant work.',
         contract: [
           'Return an array of values, level by level, and left to right inside each level.',
           'Take the next node from the front of the pending list rather than the back: reading from the back is what makes it depth-first.',
@@ -474,7 +474,7 @@ const levelOrder = root => {
   return out;
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = {
   value: 4,
   left: { value: 2, left: null, right: null },
@@ -499,7 +499,7 @@ console.log(levelOrder(tree));
   return out;
 };`,
         hints: [
-          'A queue is read from the front. Keep a `head` index into `queue`, read `queue[head]`, then step `head` forward. That avoids `shift`, which moves every remaining element down one place on each call.',
+          'A queue is read from the front. Keep a `head` index into `queue`, read `queue[head]`, then step `head` forward. Under the dense-array moving model, repeated shift calls can add quadratic work on a wide tree; actual engine timing can differ.',
           'Guard each child with a `!== null` test before pushing it, and the loop never meets a missing node.',
           'Handle the empty tree before the loop. Returning `[]` straight away is simpler than teaching the loop to skip a `null` root.',
         ],
@@ -566,10 +566,10 @@ console.log(levelOrder(tree));
       code: {
         language: 'javascript',
         prompt:
-          '`mostFrequent(values, queries)` takes an array of values and an array of query values, and returns an array of counts: one per query, in the same order, saying how many times that query value appears in `values`.\n\n`mostFrequent(["a", "b", "a", "c", "a"], ["a", "c", "z"])` gives `[3, 1, 0]`. A query value that never appears gives 0. An empty `queries` array gives `[]`, an empty `values` array gives a zero for every query, and a repeated query gets its own count each time. Values keep their type: the number `1` and the string `"1"` are different values and are counted separately.\n\nAnswering each query with its own scan works, and on the graded input it reads 40 × 50 = 2000 elements. Counting every value once first and then answering each query from that count reads 50. The grade counts element reads of `values` across the whole call and allows at most 200 for 40 queries against 50 values.',
+          '`mostFrequent(values, queries)` takes an array of values and an array of query values, and returns an array of counts: one per query, in the same order, saying how many times that query value appears in `values`.\n\n`mostFrequent(["a", "b", "a", "c", "a"], ["a", "c", "z"])` gives `[3, 1, 0]`. A query value that never appears gives 0. An empty `queries` array gives `[]`, an empty `values` array gives a zero for every query, and a repeated query gets its own count each time. Values keep their type: the number `1` and the string `"1"` are different values and are counted separately.\n\nAnswering each query with its own scan works, and on the graded input it reads 40 × 50 = 2000 elements. Counting every value once first and then answering each query from that count reads 50. The grade counts element reads of `values` across the whole call and allows at most 200 for 40 queries against 50 values.\n\nBoth inputs are ordinary dense arrays of at most 1000 values each and may be frozen. Values can be any JavaScript value. Use SameValueZero equality, as Map does: NaN matches NaN, +0 and -0 match, and objects, functions and symbols match only themselves. Preserve all input references, own properties, descriptors and prototypes; do not change item fields. Return a fresh result without changing prior results. Target: O(n) time, where n is values.length + queries.length under the usual expected-constant hash/key-operation and amortized append model. The result takes O(queries.length) space and the count index O(k), where k is the number of distinct values. Empty inputs are handled as above. The 200-read fixture is sampled method evidence, not proof of an arbitrary implementation’s complexity.',
         contract: [
           'Return a new array with one count per query, in the order the queries arrived.',
-          'Count each value by its own identity: `1` and `"1"` are two different values.',
+          'Use Map-style SameValueZero equality: types remain distinct, NaN matches NaN, signed zeros match, and object/function/symbol values match by identity.',
           'Read at most 200 elements of `values` across the whole call; the graded input is 40 queries against 50 values, so a scan per query cannot fit.',
           'Leave both input arrays as you found them.',
         ],
@@ -577,7 +577,7 @@ console.log(levelOrder(tree));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(mostFrequent(['a', 'b', 'a', 'c', 'a'], ['a', 'c', 'z']));
 `,
         skeleton: `const mostFrequent = (values, queries) => {
@@ -611,7 +611,7 @@ console.log(mostFrequent(['a', 'b', 'a', 'c', 'a'], ['a', 'c', 'z']));
           },
           {
             id: 'preprocessed',
-            label: 'One pass over the values, whatever the query count',
+            label: 'Meets the sampled preprocessing read budget',
             critical: true,
             weight: 2,
             detail: 'The read counter went over 200 for 40 queries against 50 values. Scanning `values` inside the query loop lands here even when every count is right.',

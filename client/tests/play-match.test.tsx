@@ -6,7 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 import { DEFAULT_CONFIG, GAME_CONFIG_KEY } from '../src/lib/gameConfig';
 import type { Match, ScoreboardEntry } from '../src/lib/play';
-import { addSheet, declared, mediaRules } from './css';
+import { addSheet } from './css';
 
 // A live room as one player sees it, with the play API and the Realtime
 // channel replaced by stand-ins the test drives.
@@ -661,9 +661,11 @@ describe('narrow screens and headings', () => {
     await mount('/play');
     const group = await screen.findByRole('group', { name: 'Time limit' });
     expect(getComputedStyle(group).flexWrap).toBe('wrap');
-    const chip = screen.getAllByRole('checkbox')[0];
-    expect(chip).toHaveClass('play-category-chip');
-    expect(declared(mediaRules(addSheet('appShell'), 'pointer: coarse'), '.play-category-chip', 'min-height')).toBe('44px');
+    const chip = screen.getByRole('button', { name: 'JavaScript' });
+    expect(chip).toHaveClass('ss-topic-pill');
+    expect(chip).toHaveAttribute('aria-pressed');
+    addSheet('appShell');
+    expect(getComputedStyle(chip).minHeight).toBe('44px');
     sheet.ownerNode?.remove();
   });
 });

@@ -7,22 +7,13 @@ import type { CodingSolution } from '../types';
 export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   "ts-typed-slug": {
     solution: "const toSlug = (title: string): string => title.trim().toLowerCase().split(/\\s+/).filter(Boolean).join(\"-\");",
-    junior: `const toSlug = (title: string): string => {
-  const words = title.trim().split(" ");
-  let slug = "";
-  for (const word of words) {
-    if (word === "") {
-      continue;
-    }
-    if (slug !== "") {
-      slug += "-";
-    }
-    slug += word.toLowerCase();
-  }
-  return slug;
-};`,
+    junior: "const toSlug = (title: string): string => {\n  const words = title.trim().split(/\\s+/);\n  let slug = \"\";\n  for (const word of words) {\n    if (word === \"\") {\n      continue;\n    }\n    if (slug !== \"\") {\n      slug += \"-\";\n    }\n    slug += word.toLowerCase();\n  }\n  return slug;\n};",
     senior: `const toSlug = (title: string): string => title.trim().toLowerCase().replace(/\\s+/g, "-");`,
     hiddenTests: [
+      {"call":"toSlug(\"\\tHello\\nWorld\\r \")","expected":"hello-world"},
+      {"call":"toSlug(\" Café Menu \")","expected":"café-menu"},
+      {"call":"toSlug(\" A+B / #C \")","expected":"a+b-/-#c"},
+      {"call":"toSlug(\"İ\")","expected":"i̇"},
       { call: "toSlug(\"My   First Post\")", expected: "my-first-post" },
       { call: "toSlug(\"   \")", expected: "" },
       { call: "toSlug(\"TypeScript\")", expected: "typescript" },
@@ -47,6 +38,10 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   // Carry only the current best three, so the whole list is never sorted.
   scores.reduce<number[]>((best, score) => [...best, score].sort((one, other) => other - one).slice(0, 3), []);`,
     hiddenTests: [
+      {"call":"(() => { const values=[]; return topThree(values)!==values; })()","expected":true},
+      {"call":"(() => { const values=[3]; return topThree(values)!==values; })()","expected":true},
+      {"call":"topThree([1.25,-2,4.5,4.5,0])","expected":[4.5,4.5,1.25]},
+      {"call":"topThree(__probe.freeze([5,1,9,9,2]))","expected":[9,9,5]},
       { call: "topThree([10,50,20,40,30])", expected: [50, 40, 30] },
       { call: "topThree([100,9,20])", expected: [100, 20, 9] },
       { call: "topThree([2,8])", expected: [8, 2] },
@@ -71,6 +66,9 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   return \`\${opener}, \${name}!\`;
 };`,
     hiddenTests: [
+      {"call":"greet(\"\", \"\")","expected":", !"},
+      {"call":"greet(\" Ada \", \" Hi \")","expected":" Hi ,  Ada !"},
+      {"call":"greet(\"Bo\", undefined)","expected":"Hello, Bo!"},
       { call: "greet(\"Eve\", \"Welcome\")", expected: "Welcome, Eve!" },
       { call: "greet(\"Fay\")", expected: "Hello, Fay!" },
       { call: "greet(\"Ivy\", \"\")", expected: ", Ivy!" },
@@ -82,29 +80,15 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   last: string;
 }
 
-const fullName = (person: Person): string => [person.first, person.last].filter(Boolean).join(" ");`,
-    junior: `interface Person {
-  first: string;
-  last: string;
-}
-
-const fullName = (person: Person): string => {
-  if (person.first === "") {
-    return person.last;
-  }
-  if (person.last === "") {
-    return person.first;
-  }
-  return person.first + " " + person.last;
-};`,
-    senior: `interface Person {
-  first: string;
-  last: string;
-}
-
-// A missing half leaves one stray space at an end, which trim() removes.
-const fullName = ({ first, last }: Person): string => \`\${first} \${last}\`.trim();`,
+const fullName = (person: Person): string => [person.first.trim(), person.last.trim()].filter(Boolean).join(" ");`,
+    junior: "interface Person { first: string; last: string; }\nconst fullName = (person: Person): string => {\n  const first = person.first.trim(), last = person.last.trim();\n  if (first === \"\") return last;\n  if (last === \"\") return first;\n  return first + \" \" + last;\n};",
+    senior: "interface Person { first: string; last: string; }\nconst fullName = ({ first, last }: Person): string => {\n  const parts = [first.trim(), last.trim()];\n  return parts.filter(part => part !== \"\").join(\" \");\n};",
     hiddenTests: [
+      {"call":"fullName({first:\"  Ada \",last:\" Lovelace  \"})","expected":"Ada Lovelace"},
+      {"call":"fullName({first:\"\\t \",last:\" Hopper \"})","expected":"Hopper"},
+      {"call":"fullName({first:\" Mary  Ann \",last:\" van Neumann \"})","expected":"Mary  Ann van Neumann"},
+      {"call":"(() => { const person={first:\" Ada \",last:\" Lovelace \"}; fullName(person); return [person.first,person.last]; })()","expected":[" Ada "," Lovelace "]},
+      {"call":"fullName(__probe.freeze({first:\" Ada \",last:\" Lovelace \"}))","expected":"Ada Lovelace"},
       { call: "fullName({first:\"Grace\",last:\"Hopper\"})", expected: "Grace Hopper" },
       { call: "fullName({first:\"\",last:\"Prince\"})", expected: "Prince" },
       { call: "fullName({first:\"Madonna\",last:\"\"})", expected: "Madonna" },
@@ -139,6 +123,12 @@ const displayName = (user: User): string => {
   return nickname;
 };`,
     hiddenTests: [
+      {"call":"displayName(__probe.freeze({name:\" Name \",nickname:\" Nick \"}))","expected":" Nick "},
+      {"call":"displayName({name:\" Name \"})","expected":" Name "},
+      {"call":"(() => { const user={name:\" Name \",nickname:undefined}; const result=displayName(user); return [result,user.name,user.nickname===undefined]; })()","expected":[" Name "," Name ",true]},
+      {"call":"displayName({name:\"Ada\",nickname:\"  \"})","expected":"  "},
+      {"call":"displayName({name:\"\",nickname:undefined})","expected":""},
+      {"call":"(() => { const user={name:\" Name \",nickname:\" Nick \"}; const result=displayName(user); return [result,user.name,user.nickname]; })()","expected":[" Nick "," Name "," Nick "]},
       { call: "displayName({name:\"Eve\",nickname:\"Evie\"})", expected: "Evie" },
       { call: "displayName({name:\"Fay\"})", expected: "Fay" },
       { call: "displayName({name:\"Gus\",nickname:\"\"})", expected: "" },
@@ -161,6 +151,13 @@ const displayName = (user: User): string => {
   return id.toString().padStart(4, "0");
 };`,
     hiddenTests: [
+      {"call": "idText(-7)", "expected": "00-7"},
+      {"call": "idText(1.5)", "expected": "01.5"},
+      {"call": "idText(NaN)", "expected": "0NaN"},
+      {"call": "idText(Infinity)", "expected": "Infinity"},
+      {"call": "idText(-0)", "expected": "0000"},
+      {"call": "idText(\" 7 \")", "expected": " 7 "},
+      {"call": "idText(\"İ💡\")", "expected": "İ💡"},
       { call: "idText(42)", expected: "0042" },
       { call: "idText(0)", expected: "0000" },
       { call: "idText(\"7\")", expected: "7" },
@@ -228,6 +225,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   return [first, rest.join(" ")];
 };`,
     hiddenTests: [
+      {"call": "splitName(\" Ada\")", "expected": ["", "Ada"]},
+      {"call": "splitName(\"Ada \")", "expected": ["Ada", ""]},
+      {"call": "splitName(\"Ada\\tLovelace\")", "expected": ["Ada\tLovelace", ""]},
+      {"call": "splitName(\"A  B  C\")", "expected": ["A", " B  C"]},
+      {"call": "splitName(\"💡 a\")", "expected": ["💡", "a"]},
       { call: "splitName(\"Grace Brewster Murray Hopper\")", expected: ["Grace", "Brewster Murray Hopper"] },
       { call: "splitName(\"Cher\")", expected: ["Cher", ""] },
       { call: "splitName(\"Jo  Smith\")", expected: ["Jo", " Smith"] },
@@ -235,9 +237,9 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
     ],
   },
   "ts-tally-votes": {
-    solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => ({...counts, [vote]: (counts[vote] ?? 0) + 1}), {});",
+    solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => { counts[vote] = (counts[vote] ?? 0) + 1; return counts; }, Object.create(null) as Record<string, number>);",
     junior: `const tally = (votes: string[]): Record<string, number> => {
-  const counts: Record<string, number> = {};
+  const counts: Record<string, number> = Object.create(null);
   for (const vote of votes) {
     if (counts[vote] === undefined) {
       counts[vote] = 1;
@@ -253,6 +255,12 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   return Object.fromEntries(counts);
 };`,
     hiddenTests: [
+      {"call": "(() => { const result = tally([\"__proto__\", \"constructor\", \"toString\", \"__proto__\"]); const keys = __probe.keys(result); return keys.length === 3 && result[\"__proto__\"] === 2 && result.constructor === 1 && result.toString === 1; })()", "expected": true},
+      {"call": "tally([\"\", \" \", \"A\", \"a\", \"\", \" \"])", "expected": {"": 2, " ": 2, "A": 1, "a": 1}},
+      {"call": "(() => { const votes = [\"z\", \"a\", \"z\"]; const result = tally(votes); return result.z === 2 && result.a === 1 && votes.length === 3 && votes[0] === \"z\" && votes[1] === \"a\" && votes[2] === \"z\"; })()", "expected": true},
+      {"call": "(() => { const votes = __probe.freeze([\"x\", \"x\"]); return tally(votes).x; })()", "expected": 2},
+      {"call": "(() => { const result = tally([\"__proto__\"]); const descriptor = __probe.ownDescriptor(result, \"__proto__\"); return !!descriptor && descriptor.enumerable && descriptor.value === 1; })()", "expected": true},
+      {"call": "(() => { const first = tally([]); const second = tally([]); return first !== second && __probe.keys(first).length === 0; })()", "expected": true},
       { call: "tally([\"yes\",\"no\",\"yes\",\"yes\"])", expected: { yes: 3, no: 1 } },
       { call: "tally([\"b\",\"a\",\"b\"])", expected: { b: 2, a: 1 } },
       { call: "tally([\"x\",\"y\",\"z\",\"x\",\"y\",\"x\"])", expected: { x: 3, y: 2, z: 1 } },
@@ -274,6 +282,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
     senior: `// Each slot takes the next item, and the modulo wraps the last slot back to the first.
 const rotate = (items: readonly string[]): string[] => items.map((_, index) => items[(index + 1) % items.length]);`,
     hiddenTests: [
+      {"call": "(() => { const values = []; return rotate(values) !== values; })()", "expected": true},
+      {"call": "(() => { const values = [\"one\"]; const result = rotate(values); return result !== values && result[0] === \"one\" && values[0] === \"one\"; })()", "expected": true},
+      {"call": "rotate([\"\", \"x\", \" \", \"x\"])", "expected": ["x", " ", "x", ""]},
+      {"call": "(() => { const values = __probe.freeze([\"a\", \"b\", \"c\"]); return rotate(values); })()", "expected": ["b", "c", "a"]},
+      {"call": "(() => { const result = rotate([\"a\", \"b\"]); result[0] = \"changed\"; return result; })()", "expected": ["changed", "a"]},
       { call: "rotate([\"x\",\"y\",\"z\",\"w\"])", expected: ["y", "z", "w", "x"] },
       { call: "(() => { const items = [\"p\",\"q\",\"r\"]; const rotated = rotate(items); return [rotated, items]; })()", expected: [["q", "r", "p"], ["p", "q", "r"]] },
       { call: "rotate([\"solo\"])", expected: ["solo"] },
@@ -314,7 +327,12 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
       return "something else";
   }
 };`,
+    hiddenTypeTests: [{"code": "const __auditBoolean: boolean = describeValue(null);", "rejects": true}],
     hiddenTests: [
+      { call: "[NaN,Infinity,-Infinity,-0,1n,Symbol('x'),()=>0,false].map(describeValue)", expected: ["a number", "a number", "a number", "a number", "something else", "something else", "something else", "something else"] },
+      { call: "[new String('x'),new Number(3),new Map(),new Set(),Object.create(null),Object.create(Array.prototype)].map(describeValue)", expected: ["something else", "something else", "something else", "something else", "something else", "something else"] },
+      { call: "(()=>{const a=[];a[2]=a;Object.freeze(a);const object=Object.freeze({valueOf(){throw Error('coerced');},toString(){throw Error('coerced');}});return [describeValue(a),a.length,a[2]===a,describeValue(object),describeValue('x'.repeat(10000))];})()", expected: ["a list", 3, true, "something else", "text"] },
+
       { call: "describeValue(0)", expected: "a number" },
       { call: "describeValue(\"\")", expected: "text" },
       { call: "describeValue([])", expected: "a list" },
@@ -331,7 +349,12 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
 };`,
     senior: `// at(0) is typed T | undefined, so an empty list needs no separate branch.
 const first = <T>(items: T[]): T | undefined => items.at(0);`,
+    hiddenTypeTests: [{"code": "const __auditInput: (null | undefined)[] = [null,undefined]; const __auditOut: null | undefined = first(__auditInput);"}],
     hiddenTests: [
+      { call: "(()=>{const value=Object.freeze({id:7}),input=Object.freeze([value,{id:8}]);return [first(input)===value,input.length,input[0]===value];})()", expected: [true, 2, true] },
+      { call: "(()=>{const fn=()=>{throw Error('called');},symbol=Symbol('x');return [first([fn])===fn,first([symbol])===symbol,first([undefined,1])===undefined,first(Array(3))===undefined,first([])===undefined];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i));return [first(input),input.length,input[999]];})()", expected: [0, 1000, 999] },
+
       { call: "first([false,true])", expected: false },
       { call: "first([\"only\"])", expected: "only" },
       { call: "first([{id:7},{id:8}])", expected: { id: 7 } },
@@ -353,7 +376,12 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   if (value == null) return fallback;
   return value;
 };`,
+    hiddenTypeTests: [{"code": "const __auditNullable: string|null = orDefault<string|null>(null,null);"}, {"code": "const __auditUndefined: undefined = orDefault<undefined>(undefined,undefined);"}, {"code": "const __auditUnion: number|string = orDefault<number|string>(1,\"fallback\");"}, {"code": "const __auditNotNullable: string = orDefault<string|null>(null,null);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const obj=Object.freeze({}),fn=()=>{throw Error('not called');},sym=Symbol('x'),promise=Promise.resolve(1),values=[obj,fn,sym,promise,NaN,-0,0,false,''];return values.every(value=>Object.is(orDefault(value,obj),value)&&Object.is(orDefault(null,value),value)&&Object.is(orDefault(undefined,value),value));})()", expected: true },
+      { call: "[orDefault(null,null)===null,orDefault(undefined,undefined)===undefined,orDefault(undefined,null)===null,orDefault(null,undefined)===undefined]", expected: [true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array(10000).fill(Object.freeze({x:1}))),fallback=Object.freeze({value:input});return [orDefault(input,fallback)===input,orDefault(null,fallback)===fallback,input.length];})()", expected: [true, true, 10000] },
+
       { call: "orDefault(false, true)", expected: false },
       { call: "orDefault(undefined, 0)", expected: 0 },
       { call: "orDefault(\"set\", \"fallback\")", expected: "set" },
@@ -371,9 +399,14 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   }
   return changed;
 };`,
-    senior: `// Array.from takes a mapper of its own, so the new list is built in one pass without a wrapper arrow.
-const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(items, change);`,
+    senior: "function transform<T, R>(items: T[], change: (item: T) => R): R[] {\n  return Array.from(items, item => change(item));\n}",
+    hiddenTypeTests: [{"code": "const __auditObjects: { id: number }[] = transform([1], n => ({ id: n }));"}, {"code": "const __auditWrongResult: string[] = transform([1], n => n + 1);", "rejects": true}, {"code": "const __auditPromises: Promise<number>[] = transform([1], n => Promise.resolve(n));"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([10,20,30]),seen=[];const output=transform(input,function(item){seen.push([item,arguments.length]);return item+1;});return [output,seen,input.join(',')];})()", expected: [[11, 21, 31], [[10, 1], [20, 1], [30, 1]], "10,20,30"] },
+      { call: "(()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),promise=Promise.resolve(1),values=Object.freeze([obj,fn,sym,undefined,NaN,-0,promise]);const a=transform(values,x=>x),b=transform(values,x=>x),empty=transform([],()=>99);a.push('new');return [a!==b,b!==values,b.length,b.every((x,i)=>Object.is(x,values[i])),empty.length,empty!==transform([],()=>0),a.length];})()", expected: [true, true, 7, true, 0, true, 8] },
+      { call: "(()=>{const reason=Symbol('stop'),seen=[];try{transform([1,2,3],item=>{seen.push(item);if(item===2)throw reason;return item;});return false;}catch(error){return [error===reason,seen];}})()", expected: [true, [1, 2]] },
+      { call: "(()=>{let calls=0;const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),output=transform(input,x=>{calls++;return x*2;});return [calls,output.length,output[0],output[999]];})()", expected: [1000, 1000, 0, 1998] },
+
       { call: "transform([3,4], n => n * n)", expected: [9, 16] },
       { call: "transform([\"x\",\"yy\",\"zzz\"], s => s.length)", expected: [1, 2, 3] },
       { call: "transform([{a:1},{a:2}], item => item.a)", expected: [1, 2] },
@@ -381,7 +414,7 @@ const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(
     ],
   },
   "ts-sort-by-name": {
-    solution: "const sortByName = <T extends {name: string}>(items: T[]): T[] => [...items].sort((one, other) => one.name.localeCompare(other.name));",
+    solution: "const sortByName = <T extends { name: string }>(items: T[]): T[] =>\n  [...items].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);",
     junior: `const sortByName = <T extends { name: string }>(items: T[]): T[] => {
   const copy: T[] = [];
   for (const item of items) {
@@ -398,9 +431,14 @@ const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(
   });
   return copy;
 };`,
-    senior: `// toSorted() returns a sorted copy, so the caller's list is never reordered under them.
-const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSorted((one, other) => one.name.localeCompare(other.name));`,
+    senior: "const sortByName = <T extends { name: string }>(items: T[]): T[] =>\n  items.toSorted((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);",
+    hiddenTypeTests: [{"code": "const __audit = sortByName([{name:\"x\",value:Symbol()}]); const __symbol: symbol = __audit[0].value; __audit.push({name:\"z\",value:Symbol()});"}],
     hiddenTests: [
+      { call: "(()=>{const names=['a','Z',' A','10','2','A','AA','\u00e9','\u00e4','\ud83d\ude00','\\uE000',''];return sortByName(names.map(name=>({name}))).map(x=>x.name);})()", expected: ["", " A", "10", "2", "A", "AA", "Z", "a", "\u00e4", "\u00e9", "\ud83d\ude00", "\ue000"] },
+      { call: "(()=>{const meta={},a=Object.freeze({name:'Z',meta}),b=Object.freeze({name:'A',meta}),c=Object.freeze({name:'A',meta}),input=Object.freeze([a,b,c,b]),out=sortByName(input),again=sortByName(input);out.pop();return [out[0]===b,out[1]===c,out[2]===b,again[3]===a,again[0].meta===meta,input[0]===a,input.length,out!==again,again.length];})()", expected: [true, true, true, true, true, true, 4, true, 4] },
+      { call: "(()=>{const item=Object.freeze({name:''}),input=Object.freeze([item]),a=sortByName(input),b=sortByName(input),x=sortByName([]),y=sortByName([]);a.push(item);x.push(item);return [a!==input,a!==b,b[0]===item,b.length,x!==y,y.length,input.length];})()", expected: [true, true, true, 1, true, 0, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:String(9-i%10),id:i}))),out=sortByName(input);return [out.length,out.every((item,i)=>item===input[9-Math.floor(i/100)+10*(i%100)]),input[0].id];})()", expected: [1000, true, 0] },
+
       { call: "sortByName([{name:\"Cy\"},{name:\"Ada\"},{name:\"Bo\"}])", expected: [{ name: "Ada" }, { name: "Bo" }, { name: "Cy" }] },
       { call: "(() => { const people = [{name:\"Zoe\"},{name:\"Amy\"}]; const sorted = sortByName(people); return [sorted.map(person => person.name), people.map(person => person.name)]; })()", expected: [["Amy", "Zoe"], ["Zoe", "Amy"]] },
       { call: "sortByName([{name:\"Bea\",score:3},{name:\"Al\",score:9}])", expected: [{ name: "Al", score: 9 }, { name: "Bea", score: 3 }] },
@@ -418,7 +456,12 @@ const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSort
 };`,
     senior: `// A computed key in the parameter pattern pulls out just the property asked for, typed T[K].
 const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({ [key]: value }) => value);`,
+    hiddenTypeTests: [{"code": "const __auditItems: {value?: string}[] = [{},{value:\"x\"}]; const __auditMaybe: (string|undefined)[] = pluck(__auditItems,\"value\"); const __auditKey = Symbol(); const __auditSymbols: symbol[] = pluck([{[__auditKey]:Symbol()}],__auditKey);"}],
     hiddenTests: [
+      { call: "(()=>{const key=Symbol('key'),meta={},arr=Object.freeze([1]),fn=()=>{throw 'do not call'},sym=Symbol('value'),values=[meta,arr,fn,sym,null,undefined],input=Object.freeze(values.map(value=>Object.freeze({[key]:value}))),out=pluck(input,key);return [out.length,out.every((value,i)=>value===values[i]),input.every((item,i)=>item[key]===values[i]),out!==input];})()", expected: [6, true, true, true] },
+      { call: "(()=>{const meta={},first=Object.freeze(Object.create({value:meta})),second=Object.freeze({value:undefined}),third=Object.freeze({}),input=Object.freeze([first,second,third]),a=pluck(input,'value'),b=pluck(input,'value');a.push(meta);return [b.length,b[0]===meta,b[1]===undefined,b[2]===undefined,Object.hasOwn(b,1),Object.hasOwn(b,2),a!==b,input.length];})()", expected: [3, true, true, true, true, true, true, 3] },
+      { call: "(()=>{const marker={},input=Object.freeze(Array.from({length:1000},()=>Object.freeze([marker]))),out=pluck(input,0),a=pluck([],'x'),b=pluck([],'x');a.push(marker);return [out.length,out.every(value=>value===marker),a!==b,b.length,input.length];})()", expected: [1000, true, true, 0, 1000] },
+
       { call: "pluck([{x:1,y:2},{x:3,y:4}], \"y\")", expected: [2, 4] },
       { call: "pluck([], \"id\")", expected: [] },
       { call: "pluck([{tags:[\"a\"]},{tags:[]}], \"tags\")", expected: [["a"], []] },
@@ -426,28 +469,8 @@ const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({
     ],
   },
   "ts-apply-a-patch": {
-    solution: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => ({...settings, ...patch});`,
-    junior: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
-  let theme = settings.theme;
-  if (patch.theme !== undefined) {
-    theme = patch.theme;
-  }
-  let fontSize = settings.fontSize;
-  if (patch.fontSize !== undefined) {
-    fontSize = patch.fontSize;
-  }
-  return { theme: theme, fontSize: fontSize };
-};`,
+    solution: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n  return { ...settings, ...defined };\n};",
+    junior: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const next: Settings = { ...settings };\n  if (Object.hasOwn(patch, \"theme\") && patch.theme !== undefined) next.theme = patch.theme;\n  if (Object.hasOwn(patch, \"fontSize\") && patch.fontSize !== undefined) next.fontSize = patch.fontSize;\n  return next;\n};",
     senior: `interface Settings {
   theme: string;
   fontSize: number;
@@ -458,7 +481,12 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
   return { ...settings, ...defined };
 };`,
+    hiddenTypeTests: [{"code": "const __auditPatch:Partial<Settings>={fontSize:undefined}; const __auditSettings:Settings=applyPatch({theme:\"x\",fontSize:1},__auditPatch);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},settings=Object.freeze({theme:' ',fontSize:-0,extra:meta,[sym]:meta,['__proto__']:meta}),patch=Object.freeze({theme:undefined,fontSize:undefined}),a=applyPatch(settings,patch),b=applyPatch(settings,{});a.theme='later';return [a!==settings,a!==b,b.theme,Object.is(b.fontSize,-0),b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,settings.theme,patch.theme===undefined];})()", expected: [true, true, " ", true, true, true, true, true, true, " ", true] },
+      { call: "(()=>{const settings=Object.freeze(Object.assign(Object.create(null),{theme:'A',fontSize:1})),patch=Object.freeze(Object.assign(Object.create({theme:'ignored'}),{fontSize:0})),out=applyPatch(settings,patch);return [out.theme,out.fontSize,settings.fontSize,Object.hasOwn(patch,'theme'),Object.getPrototypeOf(out)===Object.prototype];})()", expected: ["A", 0, 1, false, true] },
+      { call: "(()=>{const meta={},settings={theme:'A',fontSize:1};for(let i=0;i<100;i++)settings['x'+i]=meta;Object.freeze(settings);const out=applyPatch(settings,{theme:'',fontSize:-0.5});return [out.theme,out.fontSize,Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),settings.theme];})()", expected: ["", -0.5, 102, true, "A"] },
+
       { call: "(() => { const settings = {theme:\"dark\",fontSize:14}; const next = applyPatch(settings, {fontSize:20}); return [settings, next, next === settings]; })()", expected: [{ theme: "dark", fontSize: 14 }, { theme: "dark", fontSize: 20 }, false] },
       { call: "applyPatch({theme:\"light\",fontSize:10}, {theme:\"solarized\"})", expected: { theme: "solarized", fontSize: 10 } },
       { call: "applyPatch({theme:\"x\",fontSize:1}, {theme:\"\",fontSize:0})", expected: { theme: "", fontSize: 0 } },
@@ -475,19 +503,7 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
   const {password, ...rest} = account;
   return rest;
 };`,
-    junior: `interface Account {
-  id: number;
-  email: string;
-  password: string;
-}
-
-const publicUser = (account: Account): Omit<Account, "password"> => {
-  const safe = {
-    id: account.id,
-    email: account.email,
-  };
-  return safe;
-};`,
+    junior: "interface Account {\n  id: number;\n  email: string;\n  password: string;\n}\n\nconst publicUser = (account: Account): Omit<Account, \"password\"> => {\n  const safe = { ...account };\n  delete (safe as Partial<Account>).password;\n  return safe;\n};",
     senior: `interface Account {
   id: number;
   email: string;
@@ -502,7 +518,12 @@ const omit = <T extends object, K extends keyof T>(source: T, key: K): Omit<T, K
 };
 
 const publicUser = (account: Account): Omit<Account, "password"> => omit(account, "password");`,
+    hiddenTypeTests: [{"code": "const __auditWide={id:1,email:\"e\",password:\"p\",extra:Symbol()}; const __auditOut:Omit<Account,\"password\">=publicUser(__auditWide); __auditOut.email=\"new\";"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},account=Object.freeze({id:0,email:' ',password:'secret',extra:meta,[sym]:meta,['__proto__']:meta}),a=publicUser(account),b=publicUser(account);a.email='later';return [a!==account,a!==b,b.email,b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,!('password'in b),account.password];})()", expected: [true, true, " ", true, true, true, true, true, true, "secret"] },
+      { call: "(()=>{const account=Object.assign(Object.create({inherited:9}),{id:-1,email:'',password:''});Object.freeze(account);const out=publicUser(account),nil=Object.freeze(Object.assign(Object.create(null),{id:1,email:'e',password:'p'})),other=publicUser(nil);return [Reflect.ownKeys(out).sort(),!Object.hasOwn(out,'inherited'),!Object.hasOwn(out,'password'),other.id,other.email,Object.getPrototypeOf(other)===Object.prototype,account.password];})()", expected: [["email", "id"], true, true, 1, "e", true, ""] },
+      { call: "(()=>{const meta={},account={id:1,email:'e',password:'p'};for(let i=0;i<100;i++)account['x'+i]=meta;Object.freeze(account);const out=publicUser(account);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),account.password];})()", expected: [102, true, "p"] },
+
       { call: "publicUser({id:5,email:\"lin@example.dev\",password:\"pw\"})", expected: { id: 5, email: "lin@example.dev" } },
       { call: "(() => { const account = {id:6,email:\"x@example.dev\",password:\"keep\"}; publicUser(account); return account; })()", expected: { id: 6, email: "x@example.dev", password: "keep" } },
       { call: "\"password\" in publicUser({id:7,email:\"y@example.dev\",password:\"z\"})", expected: false },
@@ -555,7 +576,12 @@ const area = (shape: Shape): number => {
     }
   }
 };`,
+    hiddenTypeTests: [{"code": "area({kind:\"rectangle\",width:2});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const meta={},shape=Object.freeze(Object.assign(Object.create(null),{kind:'square',side:0.125,meta}));return [area(shape),shape.side,shape.meta===meta];})()", expected: [0.015625, 0.125, true] },
+      { call: "[area(Object.freeze({kind:'rectangle',width:0,height:1000000})),area(Object.freeze({kind:'triangle',base:1.5,height:2.5})),area({kind:'square',side:1000000})]", expected: [0, 1.875, 1000000000000] },
+      { call: "(()=>{const shape={kind:'rectangle',width:2,height:3};const a=area(shape),b=area(shape);return [a,b,shape.width,shape.height];})()", expected: [6, 6, 2, 3] },
+
       { call: "area({kind:\"rectangle\",width:1.5,height:4})", expected: 6 },
       { call: "area({kind:\"square\",side:2.5})", expected: 6.25 },
       { call: "area({kind:\"triangle\",base:10,height:0})", expected: 0 },
@@ -586,7 +612,12 @@ const onlyStrings = (values: unknown[]): string[] => {
 
 // flatMap doubles as a typed filter: the guard narrows value, and an empty array drops it.
 const onlyStrings = (values: unknown[]): string[] => values.flatMap((value) => (isString(value) ? [value] : []));`,
+    hiddenTypeTests: [{"code": "const __auditGuard: (value:unknown)=>value is string = isString;"}],
     hiddenTests: [
+      { call: "onlyStrings([new String('boxed'),'',' x ','\ud83e\udd88',1n,Symbol('x'),' x ',Object.freeze({toString(){throw Error('coerced');}})])", expected: ["", " x ", "\ud83e\udd88", " x "] },
+      { call: "(()=>{const input=Object.freeze(['b',0,'a']),a=onlyStrings(input),b=onlyStrings(input);a.push('changed');return [a!==input,a!==b,b,input[0],input.length,onlyStrings([])!==onlyStrings([])];})()", expected: [true, true, ["b", "a"], "b", 3, true] },
+      { call: "(()=>{const cycle=[];cycle.push(cycle);const input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?String(i):cycle)),out=onlyStrings(input);return [out.length,out[0],out[499],input[0]===cycle];})()", expected: [500, "1", "999", true] },
+
       { call: "onlyStrings([1,\"one\",true,\"two\",{}])", expected: ["one", "two"] },
       { call: "onlyStrings([\"\",0,false])", expected: [""] },
       { call: "onlyStrings([[\"a\"],\"b\"])", expected: ["b"] },

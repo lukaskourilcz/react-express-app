@@ -2,6 +2,7 @@
 -- that CI runs already has every one of them, so there this file changes
 -- nothing; it only lets the suite run on a bare Postgres too. Each object is
 -- created only when missing, so a real definition is never replaced.
+CREATE SCHEMA IF NOT EXISTS extensions;
 
 DO $$
 BEGIN
@@ -23,6 +24,13 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Roles belong to the cluster; default grants belong to each database. A
+-- second disposable database needs the same defaults even with existing roles.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
 
 DO $$
 BEGIN

@@ -57,7 +57,8 @@ const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathn
 const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
 const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
-const loadRoadmap = routeChunk(exact('/learn'), () => import('./components/Roadmap'));
+const loadRoadmap = routeChunk(exact('/learn', '/learn/big-o'), () => import('./components/Roadmap'));
+const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
 const loadLeaderboard = routeChunk(exact('/leaderboard'), () => import('./components/Leaderboard'));
@@ -83,6 +84,8 @@ const loadAuthPages = routeChunk(exact('/auth/confirmed', '/reset-password'), ()
 const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
 const Roadmap = lazyPage(loadRoadmap);
+const BigOPage = lazyPage(loadBigO);
+const BigOIntroduction = lazyPage(() => loadRoadmap().then((m) => ({ default: m.BigOIntroduction })));
 const CareerRoadmap = lazyPage(loadCareerRoadmap);
 const Profile = lazyPage(loadProfile);
 const Leaderboard = lazyPage(loadLeaderboard);
@@ -244,6 +247,7 @@ function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
 function App() {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
+  const startupGuidePath = useRef(/^(?:\/cs)?\/topics\//.test(location.pathname) ? location.pathname : null);
   const navigate = useNavigate();
   const { t, setLang, lang } = useLanguage();
   const config = useGameConfig();
@@ -425,7 +429,12 @@ function App() {
   useEffect(() => {
     // Route focus is intentionally pathname-only: changing language updates
     // metadata, but must not pull focus away from the language control.
+    if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
+    const preserveStartupFocus = startupGuidePath.current !== null;
     const timer = window.setTimeout(() => {
+      // The public guide's native interaction owns focus during cold startup.
+      // Once navigation leaves it, ordinary route focus resumes.
+      if (preserveStartupFocus) return;
       const main = document.getElementById('main-content');
       // Silent focus: clear the skip-link flag first so this move never paints
       // the page-wide ring (see #main-content rules in app-shell.css).
@@ -681,7 +690,9 @@ function App() {
           // viewport scroll here, keeping the chrome + ocean footer in place.
           flex: 1,
           minHeight: 0,
-          overflowY: 'auto',
+          // WebKit does not consistently reserve a stable gutter with auto.
+          // Keep the lane present as question heights change within a run.
+          overflowY: 'scroll',
           overflowX: 'hidden',
           // Reserve the scrollbar lane even on short pages, so content never
           // shifts sideways when navigating between scrolling and
@@ -767,6 +778,8 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                   <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/big-o" element={<BigOPage />} />
+                  <Route path="/learn/big-o" element={<BigOIntroduction />} />
                   <Route path="/today" element={<Today />} />
                   <Route path="/collection" element={<Collection />} />
                   <Route path="/typing" element={<TypingRacer />} />

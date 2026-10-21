@@ -139,7 +139,7 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A binary tree is built from nodes shaped `{ value, left, right }`. `left` and `right` hold the child nodes, and an absent child is `null`. One convention carries the whole module: a tree is its root node, and `null` is the empty tree. Every function below leans on it, which is why they are all four or five lines long.',
+            'A binary tree is built from nodes shaped `{ value, left, right }`. `left` and `right` hold the child nodes, and an absent child is `null`. One convention carries the whole module: a tree is its root node, and `null` is the empty tree. The examples assume finite, acyclic binary trees: every non-root node has one parent, fields are ordinary data properties and traversals leave them unchanged. Count field access and reference operations as constant work.',
         },
         {
           kind: 'code',
@@ -174,7 +174,7 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Height is the number that predicts cost. A walk from the root down to a leaf visits h + 1 nodes, so any operation that follows a single downward path costs O(h). Size tells you how much the tree holds; height tells you how far you have to travel to reach the bottom of it. The two come apart badly: six nodes can sit at height 2, as above, or at height 5 in a chain.',
+            'Height is the number that predicts cost. For a nonempty tree of edge-height h, a longest root-to-leaf walk visits h + 1 nodes. With constant work per visited node, its cost is O(h + 1), including the height-zero leaf; empty input is constant work. Size tells you how much the tree holds; height tells you how far you have to travel to reach the bottom of it. The two come apart badly: six nodes can sit at height 2, as above, or at height 5 in a chain.',
         },
         {
           kind: 'prose',
@@ -190,12 +190,12 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'On the example tree, preorder gives 8, 3, 9, 1, 5, 6; inorder gives 9, 3, 1, 8, 5, 6; postorder gives 9, 1, 3, 6, 5, 8. Which one you want follows from the job. Preorder reaches a parent before its children, which is what copying a tree or writing it out as nested markup needs. Postorder finishes both subtrees before the node, which is what tearing a tree down needs, since you cannot release a parent while its children still hang off it. Inorder is the one the next lesson turns on: run it over a binary search tree and the values come out in order.',
+            'On the example tree, preorder gives 8, 3, 9, 1, 5, 6; inorder gives 9, 3, 1, 8, 5, 6; postorder gives 9, 1, 3, 6, 5, 8. Which one you want follows from the job. Preorder reaches a parent before its children, which is what copying a tree or writing it out as nested markup needs. Postorder finishes both subtrees before the node, which is useful when parent cleanup depends on completed child work. JavaScript garbage collection does not require a manual parent/child release order. Inorder is the one the next lesson turns on: run it over a binary search tree and the values come out in order.',
         },
         {
           kind: 'prose',
           body:
-            'Level-order visits every node at depth 0, then every node at depth 1, and so on, left to right inside each level. Recursion will not hand you that, because the call stack goes down before it goes across. A queue will: take a node off the front, record it, put its children on the back. Anything already waiting is closer to the root, so it leaves first, and the levels come out in order without anyone tracking depth.',
+            'Level-order visits every node at depth 0, then every node at depth 1, and so on, left to right inside each level. The depth-first recursive functions above do not give that order; their call stacks go down before moving across. A queue will: take a node off the front, record it, put its children on the back. Anything already waiting is closer to the root, so it leaves first, and the levels come out in order without anyone tracking depth.',
         },
         {
           kind: 'code',
@@ -207,11 +207,11 @@ export const DSA_D09: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            '`queue.shift()` reads like the obvious dequeue and costs a linear pass: every remaining element moves down one place. Doing that once per node turns an O(n) traversal into an O(n²) one on a large tree. The head index above keeps each dequeue at a fixed number of steps, and pays for it by holding the whole array until the walk ends. Same traversal, different cost, and the one-word call is what hides the difference.',
+            'Under the dense-array element-moving model, shift can move every remaining queue entry. Repeating that on a wide tree can make total queue work quadratic; a chain with at most one queued node does not have that worst case. Actual engine timing can differ. The head index above keeps each dequeue at a fixed number of steps, and pays for it by holding the whole array until the walk ends. Same traversal, different cost, and the one-word call is what hides the difference.',
         },
         {
           kind: 'trace',
-          caption: 'Level-order on the example tree. Each frame shows the queue after one node has left the front and its children have joined the back.',
+          caption: 'Level-order on the example tree. Frames show the unprocessed queue frontier, not the processed entries retained in the head-index backing array.',
           trace: {
             shape: 'queue',
             frames: [
@@ -262,14 +262,14 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'All four traversals touch every node once, so all four cost O(n) in time. Their extra space differs. The three depth-first walks borrow O(h) stack frames, one per node on the path they are currently down — that is O(log n) on a balanced tree and O(n) on a chain, which is how a deep recursive walk overflows the stack. Level-order holds a queue as wide as the widest level, and the bottom level of a balanced tree holds about half its nodes, so its extra space is O(n) even when the tree is short.',
+            'Under the unit-cost model, all four walks do O(n) work and return an O(n) output array. Excluding that output, the recursive walks use O(h + 1) stack for a nonempty tree: logarithmic when balanced and linear on a chain, with engine-dependent depth limits. The shown head-index queue retains every enqueued node until the walk ends, so it uses O(n) references even on a chain. A queue that releases processed entries can instead track the active frontier, bounded by the tree width. Empty input takes constant work.',
         },
       ],
     },
     {
       id: 'dsa-v1-d09-l2',
       title: 'The search property, and the height it buys',
-      summary: 'What the binary-search-tree rule demands at every node, why search and insert cost O(h), and why h is not log n unless something keeps the tree in shape.',
+      summary: 'What the binary-search-tree rule demands at every node, why search and insert cost O(h + 1), and why h is not log n unless something keeps the tree in shape.',
       estimatedMinutes: 20,
       sources: [
         { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
@@ -279,7 +279,7 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A binary search tree adds one rule to the binary tree. For every node, every value in its left subtree is smaller than that node\'s value, and every value in its right subtree is not smaller. Two words in that sentence do the work: *every* node, and the whole *subtree* rather than the two children hanging directly off it.',
+            'A binary search tree adds one rule to the binary tree. For every node, every value in its left subtree is smaller than that node\'s value, and every value in its right subtree is not smaller. Use finite numeric values and a finite numeric query under constant-cost comparisons. Two words in that rule do the work: *every* node, and the whole *subtree* rather than the two children hanging directly off it.',
         },
         {
           kind: 'code',
@@ -291,18 +291,18 @@ export const DSA_D09: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Checking each node against its own two children is not enough. Take a root of 8 with a left child of 3, and give that 3 a right child of 10. Every parent-child pair passes: 3 is smaller than 8, and 10 is larger than 3. It is still not a search tree, because 10 sits inside the left subtree of 8, where nothing may reach 8. The damage is real rather than theoretical — a search for 10 turns left at the root, walks away from it, and reports it missing.',
+            'Checking each node against its own two children is not enough. Take a root of 8 with a left child of 3, and give that 3 a right child of 10. Every parent-child pair passes: 3 is smaller than 8, and 10 is larger than 3. It is still not a search tree, because 10 sits inside the left subtree of 8, where nothing may reach 8. The damage is real rather than theoretical — a search for 10 turns right at root 8 and cannot reach the misplaced value in its left subtree.',
         },
         {
           kind: 'prose',
           body:
-            'Searching starts at the root and compares. Equal, and you are finished. Smaller, and the value can only be in the left subtree, so the entire right subtree is ruled out without a single look inside it. Larger, and the mirror image. Every comparison discards one subtree and moves down one edge, so the walk visits at most h + 1 nodes and ends at a `null` when nothing holds the value.',
+            'Searching starts at the root and compares. Equal, and you are finished. Smaller, and the value can only be in the left subtree, so the entire right subtree is ruled out without a single look inside it. Larger, and the mirror image. Each unsuccessful comparison with a node discards one subtree and moves down one edge, so the walk visits at most h + 1 nodes and ends at a `null` when nothing holds the value.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: 'const bstSearch = (root, target) => {\n  let node = root;\n\n  while (node !== null) {\n    if (target === node.value) return node;\n    node = target < node.value ? node.left : node.right;\n  }\n\n  return null;\n};',
-          caption: 'Search as a loop: one comparison per level, no recursion, and a fixed number of references whatever the height — O(1) auxiliary space.',
+          code: 'const bstSearch = (root, target) => {\n  let node = root;\n\n  while (node !== null) {\n    const value = node.value;\n    if (target === value) return node;\n    node = target < value ? node.left : node.right;\n  }\n\n  return null;\n};',
+          caption: 'Search as a loop: one cached node value and up to two comparisons per level, with O(1) auxiliary space.',
         },
         {
           kind: 'prose',
@@ -387,12 +387,12 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Inorder emits the whole left subtree before the node and the whole right subtree after it. Everything in the left subtree is smaller and everything in the right subtree is not smaller, so the output is in order around that node — and because the same holds at every node, the whole list is in order. That gives you the cheapest correctness check available: run an inorder walk and confirm no value is smaller than the one before it.',
+            'Inorder emits the whole left subtree before the node and the whole right subtree after it. Everything in the left subtree is smaller and everything in the right subtree is not smaller, so the output is in order around that node — and because the same holds at every node, the whole list is in order. A nondecreasing inorder result is a useful necessary check, but it does not fully validate the duplicate-right policy. A root 5 with left child 5 emits [5,5] and still violates the strict-left rule. Full validation must carry ancestor bounds with the correct strict/inclusive sides.',
         },
         {
           kind: 'prose',
           body:
-            'Search and insert both cost O(h), because both follow one downward path. What h actually is depends entirely on shape. A perfectly balanced tree of 15 values has height 3, so no search reads more than 4 nodes. Insert 1 through 15 in ascending order into an empty tree and every value lands to the right of the one before it: the result is a chain of height 14, and a search for 15 reads all 15 nodes. Same values, same property, same code, and either 4 reads or 15 depending only on the order they arrived in.',
+            'Search and insert cost O(h + 1) for a nonempty tree under this unit-cost model, because both follow one downward path. The empty-tree cases are constant work. What h actually is depends entirely on shape. A perfectly balanced tree of 15 values has height 3, so no search reads more than 4 nodes. Insert 1 through 15 in ascending order into an empty tree and every value lands to the right of the one before it: the result is a chain of height 14, and a search for 15 reads all 15 nodes. Same values, same property, same code, and either 4 reads or 15 depending only on the order they arrived in.',
         },
         {
           kind: 'table',
@@ -401,7 +401,7 @@ export const DSA_D09: ModuleSource = {
           rows: [
             ['Perfectly balanced', '3', '4', 'O(log n)'],
             ['Built by inserting in ascending order', '14', '15', 'O(n)'],
-            ['Anything in between', 'Between 3 and 14', 'h + 1', 'O(h), which is the honest answer'],
+            ['Anything in between', 'Between 3 and 14', 'h + 1', 'O(h + 1); h depends on shape'],
           ],
         },
         {
@@ -419,12 +419,12 @@ export const DSA_D09: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Sorted input is the usual way to end up with the chain, and it arrives by accident. Load records already ordered by id and you build a tree with no branching in it at all, so the O(log n) you were counting on is O(n). Balanced variants — AVL and red-black trees — fix that by rotating subtrees back into shape during insert, and they are outside this path. What matters here is that a plain BST gives you O(h) and nothing in the plain version keeps h small.',
+            'Sorted input is the usual way to end up with the chain, and it arrives by accident. Load records already ordered by id and you build a tree with no branching in it at all, so the O(log n) you were counting on is O(n). Balanced variants — AVL and red-black trees — fix that by rotating subtrees back into shape during insert, and they are outside this path. What matters here is that a nonempty plain BST gives you O(h + 1) and nothing in the plain version keeps h small.',
         },
         {
           kind: 'prose',
           body:
-            'To summarise the costs: search and insert are O(h) in time, and written as loops they need O(1) auxiliary space, while the recursive versions borrow O(h) stack. A full traversal is O(n) whatever the shape, because it visits every node either way. Finding the smallest value is a walk left until `left` is `null`, which is O(h) again — cheap on a balanced tree and a full scan on a chain.',
+            'For a nonempty tree, search and insert take O(h + 1) time. The loops use O(1) auxiliary space apart from a new inserted node; ordinary recursive forms use O(h + 1) stack. Empty-tree operations are constant work. A full traversal is O(n) whatever the shape, because it visits every node either way. Finding the smallest value is a walk left until `left` is `null`, which is O(h + 1) in the worst case for a nonempty tree; a left chain reaches that bound, while a right chain has its minimum at the root.',
         },
       ],
     },
@@ -447,7 +447,7 @@ export const DSA_D09: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: the search property, and the height it buys',
-      summary: 'The BST rule at every node, search and insert in O(h), the duplicate policy, and why a skewed tree is a chain.',
+      summary: 'The BST rule at every node, nonempty search and insert in O(h + 1), the duplicate policy, and why a skewed tree is a chain.',
       competencies: ['trees', 'complexity'],
       estimatedMinutes: 20,
       lessonId: 'dsa-v1-d09-l2',
@@ -458,7 +458,7 @@ export const DSA_D09: ModuleSource = {
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Tree and BST checks',
-      summary: 'Four questions: the height of a single node, whether a tree is a search tree, what shape costs, and which traversal sorts.',
+      summary: 'Four questions: single-node height, the global BST rule, shape-dependent search cost and the ordered traversal.',
       competencies: ['trees', 'complexity'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
@@ -494,27 +494,27 @@ export const DSA_D09: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The rule applies to every descendant, not just the two nodes hanging off a parent, and 10 is a descendant of 8 on the left. A search for 10 goes left at the root and never reaches it. Having at most two children makes something a binary tree, which every example in this module already is; the search property is the extra rule on top. The parent-child check is the mistake the lesson names: 10 passes against its parent 3 and still breaks the tree. Missing children are ordinary — 12 has none either, and the tree would be a valid search tree if 10 were not there.',
+            'The rule applies to every descendant, not just the two nodes hanging off a parent, and 10 is a descendant of 8 on the left. A search for 10 goes right at 8, then left from 12 to an empty child, so it never visits the misplaced 10. Having at most two children makes something a binary tree, which every example in this module already is; the search property is the extra rule on top. The parent-child check is the mistake the lesson names: 10 passes against its parent 3 and still breaks the tree. Missing children are ordinary — 12 has none either, and the tree would be a valid search tree if 10 were not there.',
           competencies: ['trees'],
         },
         {
           id: 'dsa-v1-d09-q3',
           prompt:
-            'The same 1,023 values are loaded into two binary search trees. One comes out perfectly balanced; the other was built by inserting the values in ascending order. Counting nodes read, what does the worst-case search cost in each?',
+            'The distinct values 1 through 1023 form two BSTs. One is perfect; the other uses the plain insertion from this module, in ascending order without rebalancing. Counting visited nodes, what is the worst-case search cost in each?',
           options: [
-            'About 10 nodes when balanced and up to 1,023 in the ascending build: the cost is O(h), and h is 9 in one shape and 1,022 in the other.',
+            '10 nodes in the perfect tree and up to 1023 in the plain ascending build.',
             'About 10 nodes in both, because the search property guarantees O(log n) whatever the insertion order.',
             '1,023 nodes in both, because a search has to be ready to visit every node.',
             'About 10 nodes when balanced and about 32 in the ascending build, because a skewed tree costs the square root of n.',
           ],
           correct: 0,
           explanation:
-            'A balanced tree of 1,023 nodes has height 9, and a root-to-leaf walk reads h + 1 = 10 nodes. Ascending inserts put every value to the right of the one before it, producing a chain of height 1,022 where the last value costs all 1,023 reads. The search property alone guarantees nothing about height — keeping h near log n takes rebalancing, which a plain BST does not do. Reading every node describes a full traversal, not a search: the balanced case really does discard half the remaining tree at each step. Nothing here grows like the square root of n; that class does not come up in tree search.',
+            'The perfect tree of 1,023 nodes has height 9, and a root-to-leaf walk reads h + 1 = 10 nodes. Ascending inserts put every value to the right of the one before it, producing a chain of height 1,022 where the last value costs all 1,023 reads. The search property alone guarantees nothing about height — keeping h near log n takes rebalancing, which a plain BST does not do. Reading every node describes a full traversal, not a search: the balanced case really does discard half the remaining tree at each step. Nothing here grows like the square root of n; that class does not come up in tree search.',
           competencies: ['trees', 'complexity'],
         },
         {
           id: 'dsa-v1-d09-q4',
-          prompt: 'Which traversal of a binary search tree returns its values in ascending order?',
+          prompt: 'Which traversal guarantees nondecreasing output for every valid BST shape under this module’s duplicate-right rule?',
           options: [
             'Inorder: the whole left subtree, then the node, then the whole right subtree.',
             'Preorder: the node, then the whole left subtree, then the whole right subtree.',
@@ -523,7 +523,7 @@ export const DSA_D09: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'Inorder emits everything smaller than a node before it and everything not smaller after it, and that holds at every node, so the whole output is ordered. Preorder emits the root first, which is only the smallest value when the root has no left subtree at all. Postorder emits the root last, which fails the same way at the other end. Level-order groups by depth, and depth carries no ordering information: on the nine-node tree in the lesson it starts 8, 3, 10.',
+            'Inorder emits everything smaller than a node before it and everything not smaller after it, and that holds at every node, so the whole output is ordered. Equal values remain adjacent in the ordered result, so the guarantee is nondecreasing rather than strictly increasing. Other orders can happen to be sorted on special shapes but do not guarantee it. On the lesson tree preorder and level-order start 8,3, while postorder reaches 1,4,7,6 and decreases. Depth alone supplies no value order.',
           competencies: ['trees'],
         },
       ],
@@ -540,9 +540,9 @@ export const DSA_D09: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, left, right }`. `left` and `right` hold the child nodes, and an absent child is `null`. A tree is its root node, or `null` when the tree is empty.\n\nWrite two functions.\n\n`treeSize(root)` returns how many nodes the tree holds. `treeSize(null)` is 0.\n\n`treeHeight(root)` returns the number of edges on the longest path from the root down to a leaf. A single node has height 0, because there is no edge below it. An empty tree has height -1, which is what makes a leaf work out to `1 + Math.max(-1, -1)`.\n\nA tree can also be a chain — a root whose only child has one child, and so on. A chain of five nodes has size 5 and height 4.',
+          'A node is a plain object `{ value, left, right }`. `left` and `right` hold the child nodes, and an absent child is `null`. A tree is its root node, or `null` when the tree is empty.\n\nWrite two functions.\n\n`treeSize(root)` returns how many nodes the tree holds. `treeSize(null)` is 0.\n\n`treeHeight(root)` returns the number of edges on the longest path from the root down to a leaf. A single node has height 0, because there is no edge below it. An empty tree has height -1, which is what makes a leaf work out to `1 + Math.max(-1, -1)`.\n\nA tree can also be a chain — a root whose only child has one child, and so on. A chain of five nodes has size 5 and height 4.\n\nInputs are finite, acyclic binary trees with at most 128 nodes, one parent per non-root node and ordinary data fields; values are finite Numbers. Preserve every node, link, own property, descriptor and prototype; no marker fields or node replacements. Read-only inputs may be frozen. Target: O(n) time per function, where n is the number of nodes under constant-cost field and Number operations. The recursive approach uses O(h + 1) auxiliary stack on a nonempty tree of edge-height h; empty input is constant work.',
         contract: [
-          'Do not change the tree: no assignment to `value`, `left` or `right`.',
+          'Leave every node, link, own property, descriptor and prototype unchanged; do not replace nodes or add marker fields.',
           'Height counts edges, not nodes: one node is height 0 and the empty tree is height -1.',
           'Both functions accept `null` as the whole tree and meet it again at every absent child.',
           'Handle a lopsided tree: the taller of the two subtrees decides the height.',
@@ -555,7 +555,7 @@ const treeHeight = root => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = { value: 4, left: { value: 2, left: null, right: null }, right: null };
 console.log(treeSize(tree), treeHeight(tree));
 `,
@@ -626,9 +626,9 @@ const treeHeight = root => {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, left, right }`, an absent child is `null`, and a tree is its root node or `null` when empty.\n\nWrite four functions, each returning an array of values in the order it visits them.\n\n`inorder(root)` — the whole left subtree, then the node, then the whole right subtree.\n`preorder(root)` — the node, then the left subtree, then the right subtree.\n`postorder(root)` — the left subtree, then the right subtree, then the node.\n`levelOrder(root)` — every node at depth 0, then every node at depth 1, and so on, left to right inside each level.\n\nAll four return `[]` for an empty tree, and all four return a one-element array for a single node. The three depth-first walks fall out of recursion. `levelOrder` does not, because the call stack goes down before it goes across: hold a queue, take the node at the front, record it, and put its children on the back.',
+          'A node is a plain object `{ value, left, right }`, an absent child is `null`, and a tree is its root node or `null` when empty.\n\nWrite four functions, each returning an array of values in the order it visits them.\n\n`inorder(root)` — the whole left subtree, then the node, then the whole right subtree.\n`preorder(root)` — the node, then the left subtree, then the right subtree.\n`postorder(root)` — the left subtree, then the right subtree, then the node.\n`levelOrder(root)` — every node at depth 0, then every node at depth 1, and so on, left to right inside each level.\n\nAll four return `[]` for an empty tree, and all four return a one-element array for a single node. The three depth-first walks fall out of recursion. The simple recursive DFS pattern does not produce level-order. For level-order, use a queue: take the node at the front, record it, and put its children on the back.\n\nInputs are finite, acyclic binary trees with at most 128 nodes, one parent per non-root node and ordinary data fields; values are finite Numbers. Preserve every node, link, own property, descriptor and prototype, including on frozen input. Every invocation must return its own array, without changing arrays returned earlier. Target: O(n) time per traversal, where n is the number of nodes under constant-cost field operations and amortized array append. Every output uses O(n) space; recursive DFS uses O(h + 1) extra stack and the shown head-index queue retains O(n) extra references. Empty input is constant work.',
         contract: [
-          'Return a new array of values from each function and leave the tree unchanged.',
+          'Return a fresh array on every call; preserve earlier outputs and every input node, link, property, descriptor and prototype.',
           'Every node appears exactly once in each result, including nodes that have only one child.',
           'An empty tree returns `[]` from all four functions.',
           'Record the values, not the nodes: each array holds numbers, not `{ value, left, right }` objects.',
@@ -649,7 +649,7 @@ const levelOrder = root => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = {
   value: 4,
   left: { value: 2, left: null, right: null },
@@ -752,7 +752,7 @@ const levelOrder = root => {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, left, right }`, an absent child is `null`, and a tree is its root node or `null` when empty. In a binary search tree, every value in a node\'s left subtree is smaller than that node\'s value and every value in its right subtree is not smaller.\n\n`bstInsert(root, value)` puts `value` where the property demands and returns the root of the tree: the root you were handed, or the new node when the tree was empty. A value equal to the node you are standing at goes into the right subtree, never the left — that is this path\'s duplicate policy.\n\n`bstSearch(root, value)` returns the node object holding `value`, or `null` when no node holds it. It has to follow the property: compare, descend into one subtree, and forget the other. The grade rebuilds a balanced 15-node tree out of counted nodes and records how many of them your search touched. The budget is 4, which is the height plus one. Reading every node goes over it even when the answer is right.',
+          'A node is a plain object `{ value, left, right }`, an absent child is `null`, and a tree is its root node or `null` when empty. In a binary search tree, every value in a node\'s left subtree is smaller than that node\'s value and every value in its right subtree is not smaller.\n\n`bstInsert(root, value)` puts `value` where the property demands and returns the root of the tree: the root you were handed, or the new node when the tree was empty. A value equal to the node you are standing at goes into the right subtree, never the left — that is this path\'s duplicate policy.\n\n`bstSearch(root, value)` returns the node object holding `value`, or `null` when no node holds it. It has to follow the property: compare, descend into one subtree, and forget the other. The grade rebuilds a balanced 15-node tree out of counted nodes and records how many of them your search touched. The budget is 4, which is the height plus one. Reading every node goes over it even when the answer is right.\n\nInputs are finite, acyclic valid BSTs with ordinary mutable node fields and at most 128 nodes after insertion. Values and queries are finite Numbers, including fractions. Preserve existing node identities, values, properties, descriptors and prototypes. Insert attaches exactly one new leaf at one formerly null link; search changes nothing and returns the first equal node encountered. Target: O(n) time in the worst case for a plain tree, where n is its node count under constant-cost field operations and comparisons. The more precise nonempty bound is O(h + 1), with edge-height h; there is no balancing guarantee. The loop uses O(1) extra space apart from the new node; allowed recursion uses O(h + 1) stack. Empty input is constant work.',
         contract: [
           'Insert by walking down from the root and hanging a new leaf where the walk stops; do not rebuild the tree from a collected list of values.',
           'A value equal to the node you are at goes into the right subtree.',
@@ -768,7 +768,7 @@ const bstSearch = (root, value) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 let tree = null;
 for (const value of [8, 3, 10, 1, 6]) tree = bstInsert(tree, value);
 console.log(bstSearch(tree, 6));
@@ -825,11 +825,11 @@ const bstSearch = (root, value) => {
           },
           {
             id: 'follows-bst-path',
-            label: 'Search follows one root-to-leaf path',
+            label: 'Search meets the sampled path budget',
             critical: true,
             weight: 2,
             detail:
-              'The probe rebuilt a balanced 15-node tree out of counted nodes and recorded how many of them your search touched. The budget is 4 — the height plus one. Walking the whole tree, or collecting the values before looking, touches all 15 and lands here even when the returned node is correct.',
+              'The probe rebuilt a balanced 15-node tree out of counted nodes and recorded how many of them your search touched. The budget is 4 — the height plus one. Walking the whole tree, or collecting the values before looking, touches all 15 and fails this fixture even when the returned node is correct. These bounded probes do not prove an arbitrary algorithm uses one path on every input.',
           },
         ],
         tests: [

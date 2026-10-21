@@ -42,6 +42,7 @@ const evens = numbers => numbers.filter(isEven);`,
       { call: "evens([7,10,3,8,6])", expected: [10, 8, 6] },
       { call: "evens([-4,-1,0,5])", expected: [-4, 0] },
       { call: "evens([9])", expected: [] },
+      { call: "evens([2,2,-4,-4,0,0,1])", expected: [2, 2, -4, -4, 0, 0] },
       { call: "(() => { const numbers = [1,2,3]; const kept = evens(numbers); return [kept, numbers, kept === numbers]; })()", expected: [[2], [1, 2, 3], false] },
     ],
   },
@@ -63,6 +64,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "sum([0.5,0.25])", expected: 0.75 },
       { call: "sum([-1,-2,-3])", expected: -6 },
       { call: "sum([100])", expected: 100 },
+      { call: "(() => { const numbers = [3,1,2]; const total = sum(numbers); return [total, numbers]; })()", expected: [6, [3, 1, 2]] },
+      { call: "sum([1e16,-1e16,1])", expected: 1 },
     ],
   },
   "js-longest-word": {
@@ -77,7 +80,7 @@ const sum = numbers => numbers.reduce(add, 0);`,
   return longestWord;
 };`,
     senior: `const longest = words => {
-  const longestLength = Math.max(0, ...words.map(word => word.length));
+  const longestLength = words.reduce((best, word) => Math.max(best, word.length), 0);
   // find returns the first word of that length, which settles a tie in favour of the earlier one
   return words.find(word => word.length === longestLength) ?? "";
 };`,
@@ -86,20 +89,13 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "longest([\"abc\",\"xyz\",\"ab\"])", expected: "abc" },
       { call: "longest([\"short\",\"longest\",\"longer\"])", expected: "longest" },
       { call: "longest([\"a\",\"\",\"\"])", expected: "a" },
+      { call: "longest([\"😀\",\"ab\",\"c\"])", expected: "😀" },
+      { call: "(() => { const words = [\"a\",\"longer\",\"bb\"]; const best = longest(words); return [best, words]; })()", expected: ["longer", ["a", "longer", "bb"]] },
     ],
   },
   "js-count-vowels": {
-    solution: "const countVowels = text => [...text.toLowerCase()].filter(letter => \"aeiou\".includes(letter)).length;",
-    junior: `const countVowels = text => {
-  const vowels = ["a", "e", "i", "o", "u"];
-  let count = 0;
-  for (const character of text.toLowerCase()) {
-    if (vowels.includes(character)) {
-      count = count + 1;
-    }
-  }
-  return count;
-};`,
+    solution: "const countVowels = text => [...text].filter(letter => \"aeiouAEIOU\".includes(letter)).length;",
+    junior: "const countVowels = text => {\n  const vowels = \"aeiouAEIOU\";\n  let count = 0;\n  for (const character of text) {\n    if (vowels.includes(character)) count++;\n  }\n  return count;\n};",
     senior: `// match gives null rather than [] when nothing matches; the i flag covers uppercase.
 const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
     hiddenTests: [
@@ -112,19 +108,22 @@ const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
   "js-reverse-string": {
     solution: "const reverse = text => [...text].reverse().join(\"\");",
     junior: `const reverse = text => {
-  let reversed = "";
-  for (let index = text.length - 1; index >= 0; index -= 1) {
-    reversed = reversed + text[index];
+  const characters = Array.from(text);
+  const reversed = [];
+  for (let index = characters.length - 1; index >= 0; index -= 1) {
+    reversed.push(characters[index]);
   }
-  return reversed;
+  return reversed.join("");
 };`,
     senior: `// Spreading splits by code point, so an emoji stays whole where split("") would tear it in two.
-const reverse = text => [...text].reduceRight((reversed, character) => reversed + character, "");`,
+const reverse = text => Array.from(text).reverse().join("");`,
     hiddenTests: [
       { call: "reverse(\"stressed\")", expected: "desserts" },
       { call: "reverse(\" x\")", expected: "x " },
       { call: "reverse(\"a b c\")", expected: "c b a" },
       { call: "reverse(\"Z\")", expected: "Z" },
+      { call: "reverse(\"😀a🚀\")", expected: "🚀a😀" },
+      { call: "reverse(\"e\\u0301x\")", expected: "x́e" },
     ],
   },
   "js-positive-numbers": {
@@ -147,6 +146,9 @@ const positives = numbers => numbers.filter(above(0));`,
       { call: "positives([0,0])", expected: [] },
       { call: "positives([-0.1,4])", expected: [4] },
       { call: "(() => { const numbers = [-1,2,0]; const kept = positives(numbers); return [kept, numbers, kept === numbers]; })()", expected: [[2], [-1, 2, 0], false] },
+      { call: "(() => { const input = []; return positives(input) !== input; })()", expected: true },
+      { call: "(() => { const input = Object.freeze([2,2,0.5]); const result = positives(input); return [result, result === input, input]; })()", expected: [[2, 2, 0.5], false, [2, 2, 0.5]] },
+      { call: "positives([-0,0,-0.001,0.001,2,2])", expected: [0.001, 2, 2] },
     ],
   },
   "js-square-numbers": {
@@ -166,6 +168,10 @@ const squares = numbers => numbers.map(square);`,
       { call: "squares([0.5,10])", expected: [0.25, 100] },
       { call: "squares([1,2,3])", expected: [1, 4, 9] },
       { call: "(() => { const numbers = [-2,3]; const squared = squares(numbers); return [squared, numbers, squared === numbers]; })()", expected: [[4, 9], [-2, 3], false] },
+      { call: "(() => { const input = []; return squares(input) !== input; })()", expected: true },
+      { call: "(() => { const input = Object.freeze([2,2,0.5]); const result = squares(input); return [result, result === input, input]; })()", expected: [[4, 4, 0.25], false, [2, 2, 0.5]] },
+      { call: "squares([-0])", expected: [0] },
+      { call: "squares([1e200])[0] === Infinity", expected: true },
     ],
   },
   "js-largest-number": {
@@ -186,6 +192,10 @@ const largest = numbers => numbers.reduce((best, number) => Math.max(best, numbe
       { call: "largest([3,8,8,1])", expected: 8 },
       { call: "largest([0,-1])", expected: 0 },
       { call: "largest([1.5,1.25])", expected: 1.5 },
+      { call: "(() => { const input = Object.freeze([-0.5,-2,-0.5]); const result = largest(input); return [result,input]; })()", expected: [-0.5, [-0.5, -2, -0.5]] },
+      { call: "(() => { const input = [2,9,1,9]; const result = largest(input); return [result,input]; })()", expected: [9, [2, 9, 1, 9]] },
+      { call: "largest([-0,0]) === 0 && largest([0,-0]) === 0", expected: true },
+      { call: "largest(Array.from({length:10000},(_,i)=>i-5000))", expected: 4999 },
     ],
   },
   "js-fizz-values": {
@@ -206,6 +216,8 @@ const largest = numbers => numbers.reduce((best, number) => Math.max(best, numbe
 // The rule lives apart from the counting, so adding Buzz later touches one line.
 const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
     hiddenTests: [
+      {"call": "fizz(12)", "expected": [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz", 10, 11, "Fizz"]},
+      {"call": "(() => { const first = fizz(0); const second = fizz(0); return first !== second; })()", "expected": true},
       { call: "fizz(2)", expected: [1, 2] },
       { call: "fizz(7)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7] },
       { call: "fizz(9)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz"] },
@@ -225,24 +237,32 @@ const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
       { call: "countDown(2)", expected: [2, 1] },
       { call: "countDown(7)", expected: [7, 6, 5, 4, 3, 2, 1] },
       { call: "countDown(4)", expected: [4, 3, 2, 1] },
+      { call: "(() => { const result = countDown(128); return [result.length,result[0],result[127],result.every((value,index)=>value===128-index)]; })()", expected: [128, 128, 1, true] },
+      { call: "(() => { const result = countDown(10000); return [result.length,result[0],result[9999]]; })()", expected: [10000, 10000, 1] },
     ],
   },
   "js-first-letters": {
-    solution: "const firstLetters = words => words.map(word => word[0]);",
+    solution: "const firstLetters = words => words.map(([first = \"\"]) => first);",
     junior: `const firstLetters = words => {
   const letters = [];
   for (const word of words) {
-    const firstLetter = word.charAt(0);
+    let firstLetter = "";
+    for (const character of word) {
+      firstLetter = character;
+      break;
+    }
     letters.push(firstLetter);
   }
   return letters;
 };`,
     senior: `// A string is iterable, so destructuring its first element gives its first character.
-const firstLetters = words => words.map(([first]) => first);`,
+const firstLetters = words => words.map(word => word[Symbol.iterator]().next().value ?? "");`,
     hiddenTests: [
       { call: "firstLetters([\"apple\",\"Banana\",\"cherry\"])", expected: ["a", "B", "c"] },
       { call: "firstLetters([\"x\",\"y\"])", expected: ["x", "y"] },
       { call: "firstLetters([\"Zed\"])", expected: ["Z"] },
+      { call: "firstLetters([\"\",\"𐐨test\",\"🚀\"])", expected: ["", "𐐨", "🚀"] },
+      { call: "(() => { const words = [\"Red\",\"blue\"]; const result = firstLetters(words); return [result, words]; })()", expected: [["R", "b"], ["Red", "blue"]] },
     ],
   },
   "js-has-adult": {
@@ -263,6 +283,9 @@ const hasAdult = ages => ages.some(isAdult);`,
       { call: "hasAdult([5,17,16])", expected: false },
       { call: "hasAdult([2,65,1])", expected: true },
       { call: "hasAdult([0])", expected: false },
+      { call: "(() => { const input = Object.freeze([12,18,17]); return [hasAdult(input),input]; })()", expected: [true, [12, 18, 17]] },
+      { call: "(() => { const input = [19,12,17]; return [hasAdult(input),input]; })()", expected: [true, [19, 12, 17]] },
+      { call: "hasAdult([17.999,0])", expected: false },
     ],
   },
   "js-all-positive": {
@@ -282,6 +305,10 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
       { call: "allPositive([4,0,2])", expected: false },
       { call: "allPositive([-2])", expected: false },
       { call: "allPositive([0.1])", expected: true },
+      { call: "allPositive([-0])", expected: false },
+      { call: "allPositive([0.001,2,2])", expected: true },
+      { call: "(() => { const input=Object.freeze([3,1,2]); return [allPositive(input),input]; })()", expected: [true, [3, 1, 2]] },
+      { call: "(() => { const input=[3,1,2]; return [allPositive(input),input]; })()", expected: [true, [3, 1, 2]] },
     ],
   },
   "js-total-price": {
@@ -298,25 +325,31 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
       { call: "total([{price:4},{price:6},{price:10}])", expected: 20 },
       { call: "total([{price:0.5,name:\"a\"},{price:0.25}])", expected: 0.75 },
       { call: "total([{price:7,qty:3}])", expected: 7 },
+      { call: "total([{price:0.1},{price:0.2}])", expected: 0.30000000000000004 },
+      { call: "(() => { const a={price:3,qty:9}; const b={price:1.25}; const input=[a,b]; return [total(input),a.price,b.price,input[0]===a]; })()", expected: [4.25, 3, 1.25, true] },
+      { call: "total(Object.freeze([Object.freeze({price:2}),Object.freeze({price:0.5})]))", expected: 2.5 },
+      { call: "total([{price:0},{price:0},{price:1}])", expected: 1 },
     ],
   },
   "js-capitalize": {
-    solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";",
+    solution: "const capitalize = text => { const [first = \"\", ...rest] = text; return first.toUpperCase() + rest.join(\"\"); };",
     junior: `const capitalize = text => {
-  if (text.length === 0) {
+  const letters = Array.from(text);
+  if (letters.length === 0) {
     return "";
   }
-  const firstLetter = text.charAt(0).toUpperCase();
-  const rest = text.substring(1);
-  return firstLetter + rest;
+  letters[0] = letters[0].toUpperCase();
+  return letters.join("");
 };`,
     senior: `// charAt(0) is "" on an empty string, and so is slice(1), so no guard is needed.
-const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
+const capitalize = text => text.replace(/^./su, first => first.toUpperCase());`,
     hiddenTests: [
       { call: "capitalize(\"world\")", expected: "World" },
       { call: "capitalize(\"jAVA script\")", expected: "JAVA script" },
       { call: "capitalize(\"z\")", expected: "Z" },
       { call: "capitalize(\"already Done\")", expected: "Already Done" },
+      { call: "capitalize(\"𐐨abc\")", expected: "𐐀abc" },
+      { call: "capitalize(\"😀hello\")", expected: "😀hello" },
     ],
   },
   "js-unique-values": {
@@ -344,12 +377,15 @@ const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
       { call: "unique([\"b\",\"a\",\"b\",\"c\",\"a\"])", expected: ["b", "a", "c"] },
       { call: "unique([5,5,5])", expected: [5] },
       { call: "(() => { const values = [1,1]; const result = unique(values); return [result, values]; })()", expected: [[1], [1, 1]] },
+      { call: "unique([1,\"1\",1,\"1\",0,-0,\"0\"])", expected: [1, "1", 0, "0"] },
+      { call: "(() => { const values = [1,2]; const result = unique(values); return [result, values, result === values]; })()", expected: [[1, 2], [1, 2], false] },
+      { call: "(() => { const values = []; return unique(values) === values; })()", expected: false },
     ],
   },
   "js-word-count": {
     solution: "const wordCount = sentence => sentence.trim() ? sentence.trim().split(/\\s+/).length : 0;",
     junior: `const wordCount = sentence => {
-  const pieces = sentence.trim().split(" ");
+  const pieces = sentence.trim().split(/\\s+/);
   let count = 0;
   for (const piece of pieces) {
     if (piece !== "") {
@@ -365,6 +401,8 @@ const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
       { call: "wordCount(\"the quick brown fox\")", expected: 4 },
       { call: "wordCount(\"  lead and trail  \")", expected: 3 },
       { call: "wordCount(\"one\")", expected: 1 },
+      { call: "wordCount(\"one\\u00a0two\\tthree\")", expected: 3 },
+      { call: "wordCount(\"\\t\\n\\u00a0\")", expected: 0 },
     ],
   },
   "js-find-user": {
@@ -385,6 +423,12 @@ const findUser = (users, name) => users.find(byName(name));`,
       { call: "findUser([{name:\"Ana\",id:1},{name:\"Ana\",id:2}],\"Ana\")", expected: { name: "Ana", id: 1 } },
       { call: "findUser([{name:\"Cy\"},{name:\"Di\"},{name:\"Ed\"}],\"Ed\")", expected: { name: "Ed" } },
       { call: "findUser([{name:\"Cy\"}],\"Zed\")", expected: undefined },
+      { call: "(() => { const first={name:'Ana',id:1,meta:{active:true}}; const second={name:'Ana',id:2}; const input=Object.freeze([Object.freeze(first),Object.freeze(second)]); return findUser(input,'Ana')===first; })()", expected: true },
+      { call: "(() => { const a={name:'ana'}; const b={name:'Ana'}; return findUser([a,b],'Ana')===b; })()", expected: true },
+      { call: "(() => { const item={name:'',id:7}; return findUser([item],'')===item; })()", expected: true },
+      { call: "(() => { const a={name:' Bo '}; const b={name:'Bo'}; return findUser([a,b],'Bo')===b; })()", expected: true },
+      { call: "(() => { const a={name:'é'}; const b={name:'e\\u0301'}; return findUser([a,b],'e\\u0301')===b; })()", expected: true },
+      { call: "(() => { const a={name:'Zed'}; const b={name:'Ana'}; const input=[a,b]; const result=findUser(input,'Ana'); return [result===b,input[0]===a,a.name,b.name]; })()", expected: [true, true, "Zed", "Ana"] },
     ],
   },
   "js-odd-sum": {
@@ -406,6 +450,10 @@ const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? su
       { call: "oddSum([-5,2,3])", expected: -2 },
       { call: "oddSum([0,8])", expected: 0 },
       { call: "oddSum([7])", expected: 7 },
+      { call: "oddSum([3,3,2,-1,-1,-0])", expected: 4 },
+      { call: "(() => { const input=Object.freeze([-3,4,7]); return [oddSum(input),input]; })()", expected: [4, [-3, 4, 7]] },
+      { call: "(() => { const input=[7,-3,4]; return [oddSum(input),input]; })()", expected: [4, [7, -3, 4]] },
+      { call: "oddSum([999999,-999999,1000000,-1000000])", expected: 0 },
     ],
   },
   "js-repeat-word": {
@@ -423,6 +471,11 @@ const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? su
     senior: `// join puts the separator between items only, so once gives no space and zero gives "".
 const repeat = (word, times) => Array(times).fill(word).join(" ");`,
     hiddenTests: [
+      {"call": "repeat(\"\", 3)", "expected": "  "},
+      {"call": "repeat(\" \", 2)", "expected": "   "},
+      {"call": "repeat(\" x \", 2)", "expected": " x   x "},
+      {"call": "repeat(\"😀\", 2)", "expected": "😀 😀"},
+      {"call": "repeat(\"\", 1)", "expected": ""},
       { call: "repeat(\"go\",4)", expected: "go go go go" },
       { call: "repeat(\"yes\",1)", expected: "yes" },
       { call: "repeat(\"no\",0)", expected: "" },
@@ -448,6 +501,10 @@ const range = (start, end) => [...count(start, end)];`,
       { call: "range(-3,-1)", expected: [-3, -2, -1] },
       { call: "range(-1,2)", expected: [-1, 0, 1, 2] },
       { call: "range(0,0)", expected: [0] },
+      { call: "range(3,1)", expected: [] },
+      { call: "range(-4,-4)", expected: [-4] },
+      { call: "(() => { const values=range(-10000,10000); return [values.length,values[0],values[10000],values[20000]]; })()", expected: [20001, -10000, 0, 10000] },
+      { call: "(() => { const values=range(123,250); return values.length===128 && values.every((value,i)=>value===123+i); })()", expected: true },
     ],
   },
   "js-average": {
@@ -469,6 +526,11 @@ const average = numbers => numbers.reduce((sum, number) => sum + number, 0) / Ma
       { call: "average([10,20])", expected: 15 },
       { call: "average([-4,-2])", expected: -3 },
       { call: "average([7])", expected: 7 },
+      { call: "(() => { const result=average([0,0,1]); return typeof result==='number' && Math.abs(result-1/3)<1e-12; })()", expected: true },
+      { call: "(() => { const result=average([0.1,0.2]); return typeof result==='number' && Math.abs(result-0.15)<1e-12; })()", expected: true },
+      { call: "(() => { const input=Object.freeze([-4,0,4]); return [average(input),input]; })()", expected: [0, [-4, 0, 4]] },
+      { call: "(() => { const input=[5,1,3]; return [average(input),input]; })()", expected: [3, [5, 1, 3]] },
+      { call: "average(Array.from({length:10000},()=>1000000))", expected: 1000000 },
     ],
   },
   "js-short-words": {
@@ -490,19 +552,15 @@ const shortWords = words => words.filter(word => word.length <= MAX_SHORT_LENGTH
       { call: "shortWords([\"tree\",\"house\",\"ox\",\"plant\"])", expected: ["tree", "ox"] },
       { call: "shortWords([\"fives\",\"sixsix\"])", expected: [] },
       { call: "shortWords([\"\",\"abcd\",\"abcde\"])", expected: ["", "abcd"] },
+      { call: "shortWords(['😀😀','😀😀😀','e\\u0301abc','abcd','','ox','ox'])", expected: ["😀😀", "abcd", "", "ox", "ox"] },
+      { call: "(() => { const input=[]; return shortWords(input)!==input; })()", expected: true },
+      { call: "(() => { const input=Object.freeze(['','cat','cat']); const out=shortWords(input); return [out,out===input,input]; })()", expected: [["", "cat", "cat"], false, ["", "cat", "cat"]] },
+      { call: "(() => { const input=['horse','cat','cat']; return [shortWords(input),input]; })()", expected: [["cat", "cat"], ["horse", "cat", "cat"]] },
     ],
   },
   "js-object-keys": {
     solution: "const keys = object => Object.keys(object);",
-    junior: `const keys = object => {
-  const names = [];
-  for (const name in object) {
-    if (object.hasOwnProperty(name)) {
-      names.push(name);
-    }
-  }
-  return names;
-};`,
+    junior: "const keys = object => {\n  const names = [];\n  for (const name of Reflect.ownKeys(object)) {\n    if (typeof name === 'string' && Object.prototype.propertyIsEnumerable.call(object, name)) names.push(name);\n  }\n  return names;\n};",
     senior: `// entries keeps insertion order too; destructuring the pair takes the key and leaves the value unused.
 const keys = object => Object.entries(object).map(([key]) => key);`,
     hiddenTests: [
@@ -510,43 +568,44 @@ const keys = object => Object.entries(object).map(([key]) => key);`,
       { call: "keys({name:\"Ada\",age:36,city:\"London\"})", expected: ["name", "age", "city"] },
       { call: "keys({only:null})", expected: ["only"] },
       { call: "keys(Object.assign(Object.create({inherited:1}), {own:2}))", expected: ["own"] },
+      { call: "keys({10:'ten',2:'two',b:1,a:2})", expected: ["2", "10", "b", "a"] },
+      { call: "(() => { const o={a:1}; Object.defineProperty(o,'hidden',{value:2}); o[Symbol('tag')]=3; return keys(o); })()", expected: ["a"] },
+      { call: "(() => { const o=Object.create(null); o.a=1; o.hasOwnProperty=0; return keys(o); })()", expected: ["a", "hasOwnProperty"] },
+      { call: "keys(JSON.parse('{\"__proto__\":5,\"constructor\":3}'))", expected: ["__proto__", "constructor"] },
+      { call: "keys({b:0,'4294967295':1,'01':2,2:3,1:4})", expected: ["1", "2", "b", "4294967295", "01"] },
+      { call: "(() => { const o=Object.freeze({b:2,a:1}); return [keys(o),o.b,o.a]; })()", expected: [["b", "a"], 2, 1] },
+      { call: "(() => { const o={b:2,a:1}; const out=keys(o); return [out,o.b,o.a,Reflect.ownKeys(o)]; })()", expected: [["b", "a"], 2, 1, ["b", "a"]] },
     ],
   },
   "js-object-values": {
     solution: "const values = object => Object.values(object);",
-    junior: `const values = object => {
-  const result = [];
-  for (const key in object) {
-    if (object.hasOwnProperty(key)) {
-      result.push(object[key]);
-    }
-  }
-  return result;
-};`,
+    junior: "const values = object => {\n  const result = [];\n  for (const key of Reflect.ownKeys(object)) {\n    if (typeof key === 'string' && Object.prototype.propertyIsEnumerable.call(object, key)) result.push(object[key]);\n  }\n  return result;\n};",
     senior: `// keys + lookup was the values() idiom before ES2017 and follows the same insertion order.
 const values = object => Object.keys(object).map(key => object[key]);`,
     hiddenTests: [
       { call: "values({b:2,a:1})", expected: [2, 1] },
       { call: "values({x:null,y:0,z:\"\"})", expected: [null, 0, ""] },
       { call: "values({list:[1,2],inner:{k:1}})", expected: [[1, 2], { k: 1 }] },
+      { call: "values({10:'ten',2:'two',b:null})", expected: ["two", "ten", null] },
+      { call: "(() => { const o=Object.assign(Object.create({inherited:9}),{own:2}); Object.defineProperty(o,'hidden',{value:3}); o[Symbol('tag')]=4; return values(o); })()", expected: [2] },
+      { call: "(() => { const o=Object.create(null); o.a=null; o.hasOwnProperty=0; return values(o); })()", expected: [null, 0] },
+      { call: "(() => { const nested={n:1}; const tag=Symbol('data'); const o={a:null,b:0,c:'',d:false,e:undefined,f:NaN,g:1n,h:tag,i:nested}; const out=values(o); return out.length===9 && out[4]===undefined && Number.isNaN(out[5]) && out[6]===1n && out[7]===tag && out[8]===nested; })()", expected: true },
+      { call: "(() => { const o=Object.freeze({b:2,a:1}); return [values(o),o.b,o.a]; })()", expected: [[2, 1], 2, 1] },
+      { call: "(() => { const o={b:2,a:1}; const out=values(o); return [out,o.b,o.a,Reflect.ownKeys(o)]; })()", expected: [[2, 1], 2, 1, ["b", "a"]] },
     ],
   },
   "js-activate-user": {
     solution: "const activate = user => ({...user, active: true});",
-    junior: `const activate = user => {
-  const copy = {};
-  for (const key in user) {
-    copy[key] = user[key];
-  }
-  copy.active = true;
-  return copy;
-};`,
-    senior: `// Assigning into a fresh {} is what protects the caller's object; the later source wins on active.
-const activate = user => Object.assign({}, user, { active: true });`,
+    junior: "const activate = user => {\n  const copy = {};\n  for (const key of Reflect.ownKeys(user)) {\n    if (Object.prototype.propertyIsEnumerable.call(user, key)) {\n      Object.defineProperty(copy, key, { value: user[key], writable: true, enumerable: true, configurable: true });\n    }\n  }\n  copy.active = true;\n  return copy;\n};",
+    senior: "// A null-prototype target has no inherited __proto__ setter.\nconst activate = user => Object.assign(Object.create(null), user, { active: true });",
     hiddenTests: [
       { call: "activate({name:\"Lin\",role:\"admin\"})", expected: { name: "Lin", role: "admin", active: true } },
       { call: "(() => { const user = {name:\"Bo\",active:false}; const next = activate(user); return [user, next, next === user]; })()", expected: [{ name: "Bo", active: false }, { name: "Bo", active: true }, false] },
       { call: "activate({active:true})", expected: { active: true } },
+      { call: "(() => { const nested={n:1}; const tag=Symbol('tag'); const input={payload:nested,[tag]:7,active:false}; Object.defineProperty(input,'hidden',{value:3}); Object.freeze(input); const out=activate(input); return [out!==input,out.payload===nested,out[tag]===7,Object.prototype.hasOwnProperty.call(out,'hidden'),out.active,input.active,nested.n,Reflect.ownKeys(nested).length]; })()", expected: [true, true, true, false, true, false, 1, 1] },
+      { call: "(() => { const data={flag:true}; const input=Object.create(null); Object.defineProperty(input,'__proto__',{value:data,enumerable:true}); const out=activate(input); return [Object.prototype.hasOwnProperty.call(out,'__proto__'),out.__proto__===data,Object.getPrototypeOf(out)===data,out.active,input.active===undefined]; })()", expected: [true, true, false, true, true] },
+      { call: "(() => { const input=Object.assign(Object.create({inherited:9}),{name:'A',active:false}); const out=activate(input); return [Object.prototype.hasOwnProperty.call(out,'inherited'),out.name,out.active,input.active]; })()", expected: [false, "A", true, false] },
+      { call: "(() => { const input=Object.freeze({active:true}); const out=activate(input); return out!==input && out.active===true; })()", expected: true },
     ],
   },
   "js-palindrome": {
@@ -562,6 +621,9 @@ const activate = user => Object.assign({}, user, { active: true });`,
 const isPalindrome = text =>
   [...text].every((character, index, characters) => character === characters[characters.length - 1 - index]);`,
     hiddenTests: [
+      {"call": "isPalindrome(\"abccba\")", "expected": true},
+      {"call": "isPalindrome(\"abdcba\")", "expected": false},
+      {"call": "isPalindrome(\"aaaaab\")", "expected": false},
       { call: "isPalindrome(\"racecar\")", expected: true },
       { call: "isPalindrome(\"abca\")", expected: false },
       { call: "isPalindrome(\"ab\")", expected: false },
@@ -569,7 +631,7 @@ const isPalindrome = text =>
     ],
   },
   "js-letter-counts": {
-    solution: "const countLetters = text => [...text].reduce((counts, letter) => ({...counts, [letter]: (counts[letter] ?? 0) + 1}), {});",
+    solution: "const countLetters = text => {\n  const counts = {};\n  for (const letter of text) {\n    counts[letter] = (counts[letter] ?? 0) + 1;\n  }\n  return counts;\n};",
     junior: `const countLetters = text => {
   const counts = {};
   for (const letter of text) {
@@ -594,7 +656,7 @@ const countLetters = text =>
     ],
   },
   "js-flatten-arrays": {
-    solution: "const flatten = arrays => arrays.reduce((result, array) => [...result, ...array], []);",
+    solution: "const flatten = arrays => arrays.reduce((result, array) => {\n  for (const item of array) result.push(item);\n  return result;\n}, []);",
     junior: `const flatten = arrays => {
   const result = [];
   for (const array of arrays) {
@@ -607,6 +669,10 @@ const countLetters = text =>
     senior: `// concat unwraps exactly one level of each argument, which is the single level the task asks for.
 const flatten = arrays => [].concat(...arrays);`,
     hiddenTests: [
+      {"call": "(() => {const item=Object.freeze({id:1}),nested=Object.freeze([2]);const a=Object.freeze([item,nested,undefined,null]),b=Object.freeze([]),input=Object.freeze([a,b]);const out=flatten(input);return out!==a&&out!==input&&out.length===4&&out[0]===item&&out[1]===nested&&out[2]===undefined&&out[3]===null&&input.length===2&&a.length===4;})()", "expected": true, "label": "frozen inputs keep opaque item identities and exactly one level"},
+      {"call": "(() => {const inner=[],input=[inner];const a=flatten(input),b=flatten(input);return a!==b&&a!==inner&&b!==inner&&a.length===0&&input.length===1;})()", "expected": true, "label": "every empty result is fresh and leaves the caller arrays alone"},
+      {"call": "(() => {const input=Array.from({length:1000},(_,i)=>Object.freeze(Array.from({length:10},(_,j)=>i*10+j)));const out=flatten(Object.freeze(input));return {length:out.length,first:out[0],last:out[9999]};})()", "expected": {"length": 10000, "first": 0, "last": 9999}, "label": "one thousand inner arrays and ten thousand slots preserve order"},
+
       { call: "flatten([[1],[2,[3]]])", expected: [1, 2, [3]] },
       { call: "flatten([[\"a\",\"b\"],[],[\"c\"]])", expected: ["a", "b", "c"] },
       { call: "flatten([[[1,2]],[[3]]])", expected: [[1, 2], [3]] },
@@ -639,6 +705,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1});let n=0;const a=once(()=>{n++;return value;});const x=a(),y=a();return x===value&&y===value&&n===1;})()", "expected": true, "label": "cache the exact opaque object rather than a clone"},
+      {"call": "(() => {let n=0;const value=Object.freeze({});const a=once((...args)=>{n++;return args;});const x=a(1,undefined,3,value,5,6,7,8),y=a();return x===y&&x.length===8&&x[1]===undefined&&x[3]===value&&x[7]===8&&n===1;})()", "expected": true, "label": "forward all eight first-call arguments with exact count and references"},
+      {"call": "(() => {const values=[false,null,undefined,0,'',Symbol('x'),()=>1];return values.every(value=>{let n=0;const a=once(()=>{n++;return value;});for(let i=0;i<1000;i++)if(a(i)!==value)return false;return n===1;});})()", "expected": true, "label": "all supported cached values survive a thousand calls"},
+      {"call": "(() => {const a=once((...args)=>args.length);return [a(),a(1)];})()", "expected": [0, 0], "label": "the first empty argument list stays empty"},
       { call: "once(() => { const add = once((a, b) => a + b); return [add(2, 3), add(10, 10)]; })()", expected: [5, 5] },
       { call: "once(() => { let runs = 0; const empty = once(() => { runs += 1; return \"\"; }); return [empty(), empty(), runs]; })()", expected: ["", "", 1] },
       { call: "once(() => { let runs = 0; const nothing = once(() => { runs += 1; }); nothing(); nothing(); return runs; })()", expected: 1 },
@@ -663,26 +733,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
   return counter;
 };`,
-    senior: `class Counter {
-  #count = 0; // private, so nothing outside can change it except through the methods
-
-  increment() {
-    this.#count += 1;
-    return this;
-  }
-
-  reset() {
-    this.#count = 0;
-    return this;
-  }
-
-  value() {
-    return this.#count;
-  }
-}
-
-const makeCounter = () => new Counter();`,
+    senior: "const makeCounter = () => {\n  let count = 0;\n  const counter = {\n    increment() { count++; return counter; },\n    reset() { count = 0; return counter; },\n    value() { return count; },\n  };\n  return counter;\n};",
     hiddenTests: [
+      { call: "(() => {const a=makeCounter(),b=makeCounter();const first=a.increment(),second=a.reset();for(let i=0;i<9994;i++)a.increment();return [first===a,second===a,a!==b,a.value(),a.value(),b.value()];})()", expected: [true, true, true, 9994, 9994, 0] },
+
       { call: "(() => { const a = makeCounter(); const b = makeCounter(); a.increment(); a.increment(); b.increment(); return [a.value(), b.value()]; })()", expected: [2, 1] },
       { call: "(() => { const counter = makeCounter(); counter.increment(); counter.increment(); return counter.value(); })()", expected: 2 },
       { call: "(() => { const a = makeCounter(); a.increment().increment(); const b = makeCounter(); b.increment(); a.reset(); return [a.value(), b.value()]; })()", expected: [0, 1] },
@@ -717,26 +771,17 @@ const makeCounter = () => new Counter();`,
   };
 };`,
     hiddenTests: [
+      { call: "new Promise(done=>{const object=Object.freeze({}),symbol=Symbol(\"x\"),seen=[];const f=debounce((...args)=>{seen.push([args.length,args[0]===object,args[1]===symbol,args[2]===undefined,Object.is(args[3],-0)]);return 99;},0);for(let i=0;i<9999;i++)f(i);const result=f(object,symbol,undefined,-0);const before=seen.length;setTimeout(()=>done([result===undefined,before,seen]),80);})", expected: [true, 0, [[4, true, true, true, true]]], async: true },
+      { call: "new Promise(done=>{const seen=[];const f=debounce(value=>{seen.push(value);if(value===1)f(2);},5);f(1);setTimeout(()=>done(seen),80);})", expected: [1, 2], async: true },
+
       { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); await wait(10); save(2); await wait(10); save(3); await wait(150); return log; })()", expected: [3], async: true },
       { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); save(2); await wait(150); save(3); save(4); await wait(150); return log; })()", expected: [2, 4], async: true },
       { call: "debounce(value => value, 10) && (async () => { const log = []; const a = debounce(x => log.push(\"a\" + x), 20); const b = debounce(x => log.push(\"b\" + x), 20); a(1); b(1); a(2); await new Promise(done => setTimeout(done, 60)); return log.sort(); })()", expected: ["a2", "b1"], async: true },
     ],
   },
   "js-throttle-calls": {
-    solution: "const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { if (Date.now() - last >= ms) { last = Date.now(); fn(...args); } }; };",
-    junior: `const throttle = (fn, waitMs) => {
-  let isWaiting = false;
-  return (...args) => {
-    if (isWaiting) {
-      return;
-    }
-    isWaiting = true;
-    fn(...args);
-    setTimeout(() => {
-      isWaiting = false;
-    }, waitMs);
-  };
-};`,
+    solution: "const throttle = (fn, waitMs) => {\n  let last = -Infinity;\n  return (...args) => {\n    const now = Date.now();\n    if (now - last < waitMs) return;\n    last = now;\n    fn(...args);\n  };\n};",
+    junior: "const throttle = (fn, waitMs) => {\n  let lastRun = -Infinity;\n  return (...args) => {\n    const currentTime = Date.now();\n    const elapsed = currentTime - lastRun;\n    if (elapsed >= waitMs) {\n      lastRun = currentTime;\n      fn(...args);\n    }\n  };\n};",
     senior: `const throttle = (fn, waitMs) => {
   let windowClosesAt = 0;
   return (...args) => {
@@ -747,10 +792,76 @@ const makeCounter = () => new Counter();`,
   };
 };`,
     hiddenTests: [
-      { call: "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()", expected: [1, true], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()", expected: [1], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()", expected: [12], async: true },
+  {
+    "call": "(() => {const object=Object.freeze({}),symbol=Symbol(\"x\"),seen=[];const f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);return 99;},50);const result=f(object,symbol,undefined,-0);return [result===undefined,seen];})()",
+    "expected": [
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
+    ]
+  },
+  {
+    "call": "new Promise(done=>{const object=Object.freeze({}),symbol=Symbol(\"x\"),error=Object.freeze({}),seen=[];let f;f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);f(\"nested\");throw error;},50);let caught=false;try{f(object,symbol,undefined,-0);}catch(e){caught=e===error;}f(\"dropped\");setTimeout(()=>{let again=false;try{f(object,symbol,undefined,-0);}catch(e){again=e===error;}done([caught,again,seen]);},100);})",
+    "expected": [
+      true,
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ],
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
     ],
+    "async": true
+  },
+  {
+    "call": "(() => {const seen=[];const f=throttle(n=>seen.push(n),1);for(let i=0;i<10000;i++)f(i);return [seen.length>=1,seen[0]===0,seen.every((n,i)=>n>=0&&n<10000&&(i===0||n>seen[i-1]))];})()",
+    "expected": [
+      true,
+      true,
+      true
+    ]
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()",
+    "expected": [
+      1,
+      true
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()",
+    "expected": [
+      1
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()",
+    "expected": [
+      12
+    ],
+    "async": true
+  }
+],
   },
   "js-sleep": {
     solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));",
@@ -767,6 +878,10 @@ const sleep = async (ms = 0) => {
   await new Promise(resolve => setTimeout(resolve, ms));
 };`,
     hiddenTests: [
+      { call: "(async()=>{const a=sleep(0),b=sleep(0);let timerDone=false;a.then(()=>{timerDone=true;});const microtask=await Promise.resolve().then(()=>timerDone);const first=await a,second=await b;return [a instanceof Promise,a!==b,microtask,first===undefined,second===undefined];})()", expected: [true, true, false, true, true], async: true },
+      { call: "Promise.race([sleep(100).then(()=>'slept'),new Promise(done=>setTimeout(()=>done('other timer'),70))])", expected: "other timer", async: true },
+      { call: "(async()=>{const waits=Array.from({length:100},()=>sleep(0));for(const wait of waits)if(await wait!==undefined)return false;return new Set(waits).size===100;})()", expected: true, async: true },
+
       { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 20))])", expected: "timer first", async: true },
       { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 60))])", expected: "slept", async: true },
       { call: "(() => { const start = Date.now(); return sleep(45).then(() => Date.now() - start >= 40); })()", expected: true, async: true },
@@ -791,85 +906,46 @@ const sleep = async (ms = 0) => {
   }
   throw lastError;
 };`,
-    senior: `const retry = async (fn, attempts) => {
-  try {
-    return await fn(); // await inside the try, or a rejection would slip past the catch
-  } catch (error) {
-    if (attempts <= 1) throw error;
-    return retry(fn, attempts - 1);
-  }
-};`,
+    senior: "async function retry(fn, attempts) {\n  let last;\n  for (let i = 0; i < attempts; i++) {\n    try { return await fn(); }\n    catch (reason) { last = reason; }\n  }\n  throw last;\n}",
     hiddenTests: [
+      { call: "(async()=>{let calls=0;const result=retry(()=>{calls++;return Promise.resolve('wrong');},0);return result.then(()=>false,reason=>[reason===undefined,calls,result instanceof Promise]);})()", expected: [true, 0, true], async: true },
+      { call: "(async()=>{const reason=Symbol('last'),reasons=[Object.freeze({}),undefined,reason];let calls=0;return retry(()=>Promise.reject(reasons[calls++]),3).then(()=>false,error=>[error===reason,calls]);})()", expected: [true, 3], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),out=[];for(const value of [obj,fn,sym,undefined,NaN,-0]){let calls=0,arity=true;const result=await retry(function(){calls++;arity=arity&&arguments.length===0;if(calls===1)throw null;return Promise.resolve(value);},3);out.push([Object.is(result,value),calls,arity]);}return out;})()", expected: [[true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true]], async: true },
+      { call: "(async()=>{const reason=Object.freeze({});let calls=0,active=0,maximum=0;const result=retry(()=>{calls++;active++;maximum=Math.max(maximum,active);return Promise.resolve().then(()=>{active--;throw reason;});},1000);return result.then(()=>false,error=>[error===reason,calls,maximum,active]);})()", expected: [true, 1000, 1, 0], async: true },
+      { call: "(async()=>{let calls=0;const result=retry(()=>{calls++;return new Promise(()=>{});},5);return Promise.race([result.then(()=>false,()=>false),new Promise(done=>setTimeout(()=>done(calls),50))]);})()", expected: 1, async: true },
+
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 2) throw new Error(\"no\"); return \"yes\"; }, 5).then(value => [value, runs]); })()", expected: ["yes", 2], async: true },
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; throw new Error(\"down \" + runs); }, 4).catch(error => [error.message, runs]); })()", expected: ["down 4", 4], async: true },
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 3) throw new Error(\"not yet\"); return runs; }, 3); })()", expected: 3, async: true },
     ],
   },
   "js-clone-promise-all": {
-    solution: "const promiseAll = promises => new Promise((resolve, reject) => { const results = []; let settled = 0; if (!promises.length) resolve(results); promises.forEach((promise, index) => Promise.resolve(promise).then(value => { results[index] = value; settled += 1; if (settled === promises.length) resolve(results); }, reject)); });",
-    junior: `const promiseAll = promises => {
-  return new Promise((resolve, reject) => {
-    const results = [];
-    let finishedCount = 0;
-    if (promises.length === 0) {
-      resolve(results);
-      return;
-    }
-    for (let index = 0; index < promises.length; index += 1) {
-      Promise.resolve(promises[index])
-        .then(value => {
-          results[index] = value;
-          finishedCount = finishedCount + 1;
-          if (finishedCount === promises.length) {
-            resolve(results);
-          }
-        })
-        .catch(error => {
-          reject(error);
-        });
-    }
-  });
-};`,
-    senior: `const promiseAll = promises =>
-  new Promise((resolve, reject) => {
-    const results = [];
-    let remaining = promises.length;
-    if (remaining === 0) resolve(results);
-    // Each callback settles on its own; the shared countdown says when the last one has landed.
-    promises.forEach(async (item, index) => {
-      try {
-        results[index] = await item; // await takes plain values as well as promises
-        remaining -= 1;
-        if (remaining === 0) resolve(results);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });`,
+    solution: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let remaining = inputs.length;\n    if (remaining === 0) { resolve(results); return; }\n    inputs.forEach((item, index) => {\n      Promise.resolve(item).then(value => {\n        results[index] = value;\n        if (--remaining === 0) resolve(results);\n      }, reject);\n    });\n  });\n};",
+    junior: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let left = inputs.length;\n    if (left === 0) { resolve(results); return; }\n    inputs.forEach((item, index) => {\n      Promise.resolve(item).then(value => {\n        results[index] = value;\n        left = left - 1;\n        if (left === 0) resolve(results);\n      }, reject);\n    });\n  });\n};",
+    senior: "const promiseAll = promises => {\n  const inputs = Array.from(promises);\n  return new Promise((resolve, reject) => {\n    const results = new Array(inputs.length);\n    let remaining = inputs.length;\n    if (remaining === 0) resolve(results);\n    inputs.forEach(async (item, index) => {\n      try {\n        results[index] = await item;\n        if (--remaining === 0) resolve(results);\n      } catch (reason) {\n        reject(reason);\n      }\n    });\n  });\n};",
     hiddenTests: [
+      { call: "(async()=>{const input=Object.freeze([,Promise.resolve(2),,]);const output=promiseAll(input);return Promise.race([output.then(values=>[output instanceof Promise,values.length,Object.hasOwn(values,0),values[0]===undefined,values[1],Object.hasOwn(values,2),values[2]===undefined]),new Promise(done=>setTimeout(()=>done('pending'),100))]);})()", expected: [true, 3, true, true, 2, true, true], async: true },
+      { call: "(async()=>{let release;const inputs=[new Promise(done=>{release=done;}),2];const output=promiseAll(inputs);inputs.length=0;release(1);return Promise.race([output,new Promise(done=>setTimeout(()=>done('pending'),100))]);})()", expected: [1, 2], async: true },
+      { call: "(async()=>{const object=Object.freeze({}),fn=()=>1,symbol=Symbol('x'),values=[object,fn,symbol,NaN,-0,undefined];const out=await promiseAll(Object.freeze(values));return [out!==values,...out.map((value,index)=>Object.is(value,values[index]))];})()", expected: [true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{const value=Object.freeze({}),thenable={then(resolve,reject){resolve(value);resolve('twice');reject('ignored');throw 'also ignored';}};const result=await promiseAll([thenable,3]);return [result.length,result[0]===value,result[1]];})()", expected: [2, true, 3], async: true },
+      { call: "(async()=>{const reason=Symbol('failure'),bad=Promise.reject(reason);bad.catch(()=>{});return Promise.race([promiseAll([new Promise(()=>{}),bad]).then(()=>false,error=>error===reason),new Promise(done=>setTimeout(()=>done(false),100))]);})()", expected: true, async: true },
+      { call: "(async()=>{const value=Object.freeze({}),input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?Promise.resolve(value):i));const result=await promiseAll(input);const emptyA=await promiseAll([]),emptyB=await promiseAll([]);return [result.length,result[0],result[998],result[999]===value,emptyA!==emptyB,emptyA.length,emptyB.length];})()", expected: [1000, 0, 998, true, true, 0, 0], async: true },
+
       { call: "promiseAll([new Promise(done => setTimeout(() => done(\"a\"), 30)), new Promise(done => setTimeout(() => done(\"b\"), 10)), \"c\"])", expected: ["a", "b", "c"], async: true },
       { call: "Promise.race([promiseAll([new Promise(done => setTimeout(() => done(\"slow\"), 100)), new Promise((_, fail) => setTimeout(() => fail(new Error(\"early\")), 10))]).catch(error => \"rejected: \" + error.message), new Promise(done => setTimeout(() => done(\"waited for the slow one\"), 50))])", expected: "rejected: early", async: true },
-      { call: "(() => { const all = Promise.all; Promise.all = () => { throw new Error(\"Promise.all is off limits\"); }; try { return promiseAll([1, Promise.resolve(2)]); } finally { Promise.all = all; } })()", expected: [1, 2], async: true },
     ],
   },
   "js-run-tasks-in-order": {
-    solution: "const runSequentially = async tasks => { const results = []; for (const task of tasks) results.push(await task()); return results; };",
-    junior: `const runSequentially = async tasks => {
-  const results = [];
-  for (let index = 0; index < tasks.length; index += 1) {
-    const task = tasks[index];
-    const result = await task();
-    results.push(result);
-  }
-  return results;
-};`,
-    senior: `// Each task starts inside the then of the one before it, so no two can overlap.
-const runSequentially = tasks =>
-  tasks.reduce(
-    (chain, task) => chain.then(async results => [...results, await task()]),
-    Promise.resolve([]),
-  );`,
+    solution: "const runSequentially = async tasks => { const initial = [...tasks]; const results = []; for (const task of initial) results.push(await task()); return results; };",
+    junior: "const runSequentially = async tasks => {\n  const initialTasks = tasks.slice();\n  const results = [];\n  for (let index = 0; index < initialTasks.length; index += 1) {\n    const task = initialTasks[index];\n    results.push(await task());\n  }\n  return results;\n};",
+    senior: "const runSequentially = async tasks => {\n  const initial = Array.from(tasks);\n  const results = [];\n  // Each call happens after the preceding await, without copying growing results.\n  for (const task of initial) results.push(await task());\n  return results;\n};",
     hiddenTests: [
+      { call: "(async()=>{let release;const gate=new Promise(done=>{release=done;}),seen=[],tasks=[()=>{seen.push(1);return gate;},()=>{seen.push(2);return 2;}];const output=runSequentially(tasks);tasks[1]=()=>99;tasks.push(()=>3);release(1);return [await output,seen];})()", expected: [[1, 2], [1, 2]], async: true },
+      { call: "(async()=>{const reason=Symbol('bad'),out=[];for(const sync of [false,true]){const seen=[];const result=runSequentially([()=>{seen.push(1);if(sync)throw reason;return Promise.reject(reason);},()=>seen.push(2)]);out.push([result instanceof Promise,await result.then(()=>false,error=>error===reason),seen]);}return out;})()", expected: [[true, true, [1]], [true, true, [1]]], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),values=[obj,fn,sym,undefined,NaN,-0];let arity=true;const tasks=Object.freeze(values.map(value=>function(){arity=arity&&arguments.length===0;return value;})),a=await runSequentially(tasks),b=await runSequentially([]),c=await runSequentially([]);return [arity,a!==values,a.length,a.every((value,i)=>Object.is(value,values[i])),b!==c,b.length];})()", expected: [true, true, 6, true, true, 0], async: true },
+      { call: "(async()=>{let active=0,maximum=0,calls=0;const tasks=Object.freeze(Array.from({length:1000},(_,i)=>()=>{active++;calls++;maximum=Math.max(maximum,active);return Promise.resolve().then(()=>{active--;return i;});}));const values=await runSequentially(tasks);return [calls,maximum,active,values.length,values[0],values[999]];})()", expected: [1000, 1, 0, 1000, 0, 999], async: true },
+      { call: "(async()=>{let firstStarted,release;const started=new Promise(done=>{firstStarted=done;}),gate=new Promise(done=>{release=done;});let later=0;const result=runSequentially([()=>{firstStarted();return gate;},()=>{later++;return 2;}]);if(!await Promise.race([started.then(()=>true),Promise.resolve(result).then(()=>false,()=>false)]))return false;await Promise.resolve();const before=later;release(1);return [before,await result,later];})()", expected: [0, [1, 2], 1], async: true },
+
       { call: "(() => { let running = 0, most = 0; const task = value => async () => { running += 1; most = Math.max(most, running); await new Promise(done => setTimeout(done, 10)); running -= 1; return value; }; return runSequentially([task(\"a\"), task(\"b\"), task(\"c\")]).then(values => [values, most]); })()", expected: [["a", "b", "c"], 1], async: true },
       { call: "(() => { const log = []; const step = (name, ms) => () => new Promise(done => { log.push(\"start \" + name); setTimeout(() => { log.push(\"end \" + name); done(name); }, ms); }); return runSequentially([step(\"x\", 30), step(\"y\", 5)]).then(() => log); })()", expected: ["start x", "end x", "start y", "end y"], async: true },
       { call: "runSequentially([() => 1, async () => 2, () => \"three\"])", expected: [1, 2, "three"], async: true },
@@ -893,6 +969,9 @@ const chunk = (items, size) =>
     return chunks;
   }, []);`,
     hiddenTests: [
+      {"call": "(() => {const value=Object.freeze({id:1}),nested=Object.freeze([2]);const input=Object.freeze([value,undefined,nested,null]);const a=chunk(input,3),b=chunk(input,3);return a!==b&&a[0]!==b[0]&&a[0]!==input&&a[0][0]===value&&a[0][1]===undefined&&a[0][2]===nested&&a[1][0]===null&&input.length===4;})()", "expected": true, "label": "fresh groups, frozen input and opaque item identity"},
+      {"call": "(() => {const input=Object.freeze([1]);const a=chunk(input,10000),b=chunk([],10000),c=chunk([],10000);return a[0]!==input&&a[0][0]===1&&b!==c&&b.length===0;})()", "expected": true, "label": "oversized and empty outputs remain fresh"},
+      {"call": "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=chunk(input,17);return out.length===59&&out[58].length===14&&out.every((group,i)=>group.every((x,j)=>x===i*17+j));})()", "expected": true, "label": "thousand-item uneven split preserves every slot"},
       { call: "chunk([1,2,3,4,5,6,7], 3)", expected: [[1, 2, 3], [4, 5, 6], [7]] },
       { call: "chunk([\"a\",\"b\",\"c\",\"d\"], 4)", expected: [["a", "b", "c", "d"]] },
       { call: "chunk([1,2,3], 10)", expected: [[1, 2, 3]] },
@@ -900,9 +979,9 @@ const chunk = (items, size) =>
     ],
   },
   "js-group-by-key": {
-    solution: "const groupBy = (array, keyFn) => array.reduce((groups, item) => { const key = keyFn(item); (groups[key] ??= []).push(item); return groups; }, {});",
+    solution: "const groupBy = (items, keyFn) => items.reduce((groups, item) => {\n  const key = String(keyFn(item));\n  if (groups[key] === undefined) groups[key] = [];\n  groups[key].push(item);\n  return groups;\n}, Object.create(null));",
     junior: `const groupBy = (items, keyFn) => {
-  const groups = {};
+  const groups = Object.create(null);
   for (const item of items) {
     const key = keyFn(item);
     if (groups[key] === undefined) {
@@ -915,13 +994,19 @@ const chunk = (items, size) =>
     senior: `const groupBy = (items, keyFn) => {
   const groups = new Map();
   for (const item of items) {
-    const key = String(keyFn(item)); // an object key is a string anyway, so 1 and "1" share a group here too
+    const key = String(keyFn(item)); // numeric keys become strings under this task’s input contract
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
   }
   return Object.fromEntries(groups);
 };`,
     hiddenTests: [
+      {"call": "(() => {const keys=['__proto__','constructor','toString',''];const out=groupBy(keys,key=>key);return keys.every(key=>Object.prototype.hasOwnProperty.call(out,key)&&Array.isArray(out[key])&&out[key].length===1&&out[key][0]===key);})()", "expected": true, "label": "special and empty names are own buckets"},
+      {"call": "(() => {const items=Object.freeze([Object.freeze({id:1}),Object.freeze({id:2}),Object.freeze({id:3})]);let calls=0;const seen=[];const out=groupBy(items,item=>{calls++;seen.push(item.id);return 'all';});return calls===3&&seen.join(',')==='1,2,3'&&out.all.every((x,i)=>x===items[i]);})()", "expected": true, "label": "one callback per item in original order and original references in each group"},
+      {"call": "groupBy([1,'1',-0,0],n=>n)", "expected": {"1": [1, "1"], "0": [0, 0]}, "label": "numeric and string forms share their object-key bucket"},
+      {"call": "(() => {const a=groupBy([],()=>{throw new Error('empty callback');}),b=groupBy([],()=>0);return a!==b&&Object.keys(a).length===0;})()", "expected": true, "label": "empty input creates fresh groups without invoking the callback"},
+      {"call": "(() => {const items=Object.freeze(Array.from({length:2000},(_,i)=>i));const out=groupBy(items,n=>'K'+n);return Object.keys(out).length===2000&&items.every(n=>out['K'+n][0]===n);})()", "expected": true, "label": "two thousand distinct keys do not collide or lose items"},
+
       { call: "groupBy([3,1,2,5], n => n % 2)", expected: { "0": [2], "1": [3, 1, 5] } },
       { call: "groupBy([\"apple\",\"avocado\",\"banana\"], word => word.length)", expected: { "5": ["apple"], "6": ["banana"], "7": ["avocado"] } },
       { call: "groupBy([{t:\"x\",v:1},{t:\"y\",v:2},{t:\"x\",v:3}], item => item.t)", expected: { x: [{ t: "x", v: 1 }, { t: "x", v: 3 }], y: [{ t: "y", v: 2 }] } },
@@ -929,21 +1014,7 @@ const chunk = (items, size) =>
   },
   "js-memoize-results": {
     solution: "const memoize = fn => { const cache = new Map(); return (...args) => { if (!cache.has(args[0])) cache.set(args[0], fn(...args)); return cache.get(args[0]); }; };",
-    junior: `const memoize = fn => {
-  const seenArguments = [];
-  const seenResults = [];
-  return (...args) => {
-    const firstArgument = args[0];
-    const position = seenArguments.indexOf(firstArgument);
-    if (position !== -1) {
-      return seenResults[position];
-    }
-    const result = fn(...args);
-    seenArguments.push(firstArgument);
-    seenResults.push(result);
-    return result;
-  };
-};`,
+    junior: "const memoize = fn => {\n  const cache = new Map();\n  return (...args) => {\n    const key = args[0];\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = fn(...args);\n    cache.set(key, result);\n    return result;\n  };\n};",
     senior: `const memoizeBy = keyOf => fn => {
   const cache = new Map();
   return (...args) => {
@@ -958,67 +1029,26 @@ const chunk = (items, size) =>
 // The task keys on the first argument; the factory lets another caller key on all of them.
 const memoize = memoizeBy(([first]) => first);`,
     hiddenTests: [
+      { call: "(() => {let calls=0;const a=Object.freeze({}),b=Object.freeze({}),result=Object.freeze({}),m=memoize((...args)=>{calls++;return result;});const x=m(a,1),y=m(a,2),z=m(b),nan1=m(NaN),nan2=m(NaN),zero1=m(-0),zero2=m(0);m(\"0\");m(0);return [x===result,y===result,z===result,nan1===result,nan2===result,zero1===result,zero2===result,calls];})()", expected: [true, true, true, true, true, true, true, 5] },
+      { call: "(() => {let runs=0;const m=memoize((...args)=>{runs++;return args.length;});const a=m(),b=m(undefined,123);let u=0;const missing=memoize(()=>{u++;return undefined;});const x=missing(1),y=missing(1);return [a,b,runs,x===undefined,y===undefined,u];})()", expected: [0, 0, 1, true, true, 1] },
+      { call: "(() => {const error=Object.freeze({}),key=Object.freeze({});let calls=0;const m=memoize(x=>{calls++;if(calls<3)throw error;return x;});let same=0;for(let i=0;i<2;i++){try{m(key);}catch(e){if(e===error)same++;}}const a=m(key),b=m(key);return [same,calls,a===key,b===key];})()", expected: [2, 3, true, true] },
+      { call: "(() => {let calls=0;const m=memoize(x=>{calls++;return x;});for(let i=0;i<500;i++)m(i);for(let i=0;i<500;i++)m(i);return calls;})()", expected: 500 },
+
       { call: "memoize(() => { let runs = 0; const square = memoize(n => { runs += 1; return n * n; }); return [square(3), square(4), square(3), square(4), runs]; })()", expected: [9, 16, 9, 16, 2] },
       { call: "memoize(() => { let runs = 0; const isEmpty = memoize(text => { runs += 1; return text.length === 0; }); return [isEmpty(\"x\"), isEmpty(\"x\"), runs]; })()", expected: [false, false, 1] },
       { call: "memoize(() => { let runs = 0; const add = memoize((a, b) => { runs += 1; return a + b; }); return [add(1, 2), add(1, 100), runs]; })()", expected: [3, 3, 1] },
     ],
   },
   "js-event-emitter": {
-    solution: "const createEmitter = () => { const listeners = {}; const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => (listeners[name] ?? []).map(listener => listener(payload))}; return emitter; };",
-    junior: `const createEmitter = () => {
-  const listeners = {};
-  const emitter = {};
-  emitter.on = function (name, listener) {
-    if (listeners[name] === undefined) {
-      listeners[name] = [];
-    }
-    listeners[name].push(listener);
-    return emitter;
-  };
-  emitter.off = function (name, listener) {
-    const current = listeners[name] || [];
-    const kept = [];
-    if (listener !== undefined) {
-      for (const one of current) {
-        if (one !== listener) {
-          kept.push(one);
-        }
-      }
-    }
-    listeners[name] = kept;
-    return emitter;
-  };
-  emitter.emit = function (name, payload) {
-    const current = listeners[name] || [];
-    const results = [];
-    for (const listener of current) {
-      results.push(listener(payload));
-    }
-    return results;
-  };
-  return emitter;
-};`,
-    senior: `const createEmitter = () => {
-  const listeners = new Map();
-  const emitter = {
-    on(name, listener) {
-      if (!listeners.has(name)) listeners.set(name, []);
-      listeners.get(name).push(listener);
-      return emitter;
-    },
-    off(name, listener) {
-      // off(name) alone clears the event; with a listener it removes that one by identity
-      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];
-      listeners.set(name, kept);
-      return emitter;
-    },
-    emit(name, payload) {
-      return (listeners.get(name) ?? []).map(listener => listener(payload));
-    },
-  };
-  return emitter;
-};`,
+    solution: "const createEmitter = () => { const listeners = Object.create(null); const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => [...(listeners[name] ?? [])].map(listener => listener(payload))}; return emitter; };",
+    junior: "const createEmitter = () => {\n  const listeners = Object.create(null);\n  const emitter = {};\n  emitter.on = function (name, listener) {\n    if (listeners[name] === undefined) {\n      listeners[name] = [];\n    }\n    listeners[name].push(listener);\n    return emitter;\n  };\n  emitter.off = function (name, listener) {\n    const current = listeners[name] || [];\n    const kept = [];\n    if (listener !== undefined) {\n      for (const one of current) {\n        if (one !== listener) {\n          kept.push(one);\n        }\n      }\n    }\n    listeners[name] = kept;\n    return emitter;\n  };\n  emitter.emit = function (name, payload) {\n    const current = [...(listeners[name] || [])];\n    const results = [];\n    for (const listener of current) {\n      results.push(listener(payload));\n    }\n    return results;\n  };\n  return emitter;\n};",
+    senior: "const createEmitter = () => {\n  const listeners = new Map();\n  const emitter = {\n    on(name, listener) {\n      if (!listeners.has(name)) listeners.set(name, []);\n      listeners.get(name).push(listener);\n      return emitter;\n    },\n    off(name, listener) {\n      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];\n      listeners.set(name, kept);\n      return emitter;\n    },\n    emit(name, payload) {\n      return [...(listeners.get(name) ?? [])].map(listener => listener(payload));\n    },\n  };\n  return emitter;\n};",
     hiddenTests: [
+      { call: "(() => {const bus=createEmitter(),a=Object.freeze({}),b=Object.freeze([]);let arity;const fn=(...args)=>{arity=args.length;return args[0];};const on=bus.on(\"__proto__\",fn),off=bus.off(\"none\",fn);bus.on(\"constructor\",()=>b);const x=bus.emit(\"__proto__\",a),y=bus.emit(\"constructor\");return [on===bus,off===bus,x[0]===a,y[0]===b,arity,x!==bus.emit(\"__proto__\",a),bus.emit(\"none\")!==bus.emit(\"none\"),bus!==createEmitter()];})()", expected: [true, true, true, true, 1, true, true, true] },
+      { call: "(() => {const bus=createEmitter(),log=[];const late=()=>{log.push(\"late\");return \"late\";};const second=()=>{log.push(\"second\");return \"second\";};let first=true;bus.on(\"\",()=>{log.push(\"first\");if(first){first=false;bus.on(\"\",late).off(\"\",second);}return \"first\";}).on(\"\",second);const a=bus.emit(\"\"),b=bus.emit(\"\");return [a,b,log];})()", expected: [["first", "second"], ["first", "late"], ["first", "second", "first", "late"]] },
+      { call: "(() => {const bus=createEmitter(),error=Object.freeze({});let calls=0;const fn=()=>{calls++;return undefined;};bus.on(\"x\",fn).on(\"x\",fn);const first=bus.emit(\"x\");bus.off(\"x\",fn);const empty=bus.emit(\"x\");bus.on(\"bad\",()=>{throw error;}).on(\"bad\",()=>{calls+=100;});let same=false;try{bus.emit(\"bad\");}catch(e){same=e===error;}return [calls,first.length,first[0]===undefined,first[1]===undefined,empty.length,same];})()", expected: [2, 2, true, true, 0, true] },
+      { call: "(() => {const bus=createEmitter();for(let i=0;i<1000;i++)bus.on(\"max\",()=>i);const out=bus.emit(\"max\");return [out.length,out[0],out[999]];})()", expected: [1000, 0, 999] },
+
       { call: "(() => { const bus = createEmitter(); const double = n => n * 2; bus.on(\"x\", double).on(\"x\", n => n + 1).off(\"x\", double); return bus.emit(\"x\", 5); })()", expected: [6] },
       { call: "(() => { const bus = createEmitter(); bus.on(\"a\", n => \"a\" + n).on(\"b\", n => \"b\" + n).off(\"a\"); return [bus.emit(\"a\", 1), bus.emit(\"b\", 2)]; })()", expected: [[], ["b2"]] },
       { call: "createEmitter().on(\"e\", () => 1).on(\"e\", () => 2).on(\"e\", () => 3).emit(\"e\")", expected: [1, 2, 3] },
@@ -1057,6 +1087,10 @@ const LRUCache = strArr => {
   return [...cache].join("-");
 };`,
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['A','B','C','D','E','A','F']),copy=input.join(',');const a=LRUCache(input),b=LRUCache(Object.freeze(['Z'])),c=LRUCache(input);return [a,b,c,input.join(',')===copy,LRUCache(Object.freeze([]))];})()", expected: ["C-D-E-A-F", "Z", "C-D-E-A-F", true, ""], async: false },
+      { call: "LRUCache(Object.freeze(Array.from({length:10000},(_,i)=>String.fromCharCode(65+i%26))))", expected: "L-M-N-O-P", async: false },
+      { call: "LRUCache(Object.freeze(Array(10000).fill('A')))", expected: "A", async: false },
+
       { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"C\"])", expected: "A-B-D-E-C" },
       { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"A\",\"F\"])", expected: "C-D-E-A-F" },
       { call: "LRUCache([\"Z\",\"Y\",\"Z\",\"Y\"])", expected: "Z-Y" },

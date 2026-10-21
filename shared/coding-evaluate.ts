@@ -6,6 +6,12 @@
 
 import { learnerConsoleFactory } from './coding-console';
 
+// Captured in the controller module, never passed into learner scope.
+const collectOutcomes = Promise.all.bind(Promise);
+// Private controller capability, captured before a task can revoke the
+// learner-visible Function constructors. Never passed into learner scope.
+const compileProgram = Function;
+
 export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
@@ -36,6 +42,8 @@ export const LOG_OUTPUT_CUT = '… (output cut)';
  * line (PROBE_LINE), which the code cannot redeclare; the object is frozen.
  * Checks and path harnesses write `new __probe.Proxy(...)`,
  * `__probe.isIndex(key)` and `__probe.get(...)`.
+ * Path-harness export sealing also uses captured freeze/descriptor/key
+ * operations, so learner replacements cannot leave fixtures writable.
  */
 export const PROBE_LINE = '"use strict"; const __probe = arguments[arguments.length - 1];';
 /** Whether a property key is an array index, with no built-in method. The
@@ -51,7 +59,9 @@ const isProbeIndex = (key: unknown): boolean => {
 export const PROBE_IS_INDEX_SOURCE =
   "(key) => { if (typeof key !== 'string' || key.length === 0) return false; for (let i = 0; i < key.length; i++) { const c = key[i]; if (c < '0' || c > '9') return false; } return true; }";
 /** Taken when this module loads, before any learner code in this realm. */
-const PROBE = Object.freeze({ Proxy, get: Reflect.get, isIndex: isProbeIndex });
+const PROBE = Object.freeze({ Proxy, get: Reflect.get, isIndex: isProbeIndex,
+  freeze: Object.freeze, keys: Object.keys, ownDescriptor: Object.getOwnPropertyDescriptor, setPrototypeOf: Object.setPrototypeOf,
+  defineProperty: Object.defineProperty, deleteProperty: Reflect.deleteProperty });
 
 export interface CallOutcome {
   /** null when the run was not graded (the Run button). */
@@ -154,20 +164,13 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
   const grading = Array.isArray(input.expectations);
 
-  let evaluate: (calls: string[], console: typeof sink, probe: typeof PROBE) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
+  let evaluate: (console: typeof sink, probe: typeof PROBE) => (() => unknown)[];
   try {
-    // Declarations from the learner's code are in scope for the direct eval of
-    // each call, so a suite sees the functions the code defines. Strict mode,
-    // as in the grading sandbox: an undeclared assignment that Run let through
-    // as a stray global would otherwise fail only on Submit. The first line
-    // also declares `__probe` (PROBE_LINE), on the line "use strict" had, so
-    // the learner's line numbers stay as they were.
-    evaluate = new Function('__calls__', 'console', `${PROBE_LINE}\n${input.code}\n${[
-      'return Promise.all(__calls__.map(async source => {',
-      '  try { return { ok: true, value: await eval(source) }; }',
-      '  catch (error) { return { ok: false, error: String((error && error.message) || error) }; }',
-      '}));',
-    ].join('\n')}`) as typeof evaluate;
+    // Compile authored call expressions as closures over the learner module,
+    // as Submit does. The controller needs no learner-visible eval and retains
+    // strict mode, the probe ABI and the learner's original line offset.
+    const callbacks = input.calls.map(source => '() => (' + source.trim().replace(/;+$/, '') + '\n)').join(',');
+    evaluate = compileProgram('console', PROBE_LINE + '\n' + input.code + '\n;return [' + callbacks + '];') as typeof evaluate;
   } catch (error) {
     // Code that does not parse, named as the grading sandbox names it.
     const syntax = error instanceof Error && error.name === 'SyntaxError';
@@ -175,7 +178,11 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   }
 
   try {
-    const outcomes = await evaluate(input.calls, sink, PROBE);
+    const callbacks = evaluate(sink, PROBE);
+    const outcomes = await collectOutcomes(input.calls.map(async (_source, index) => {
+      try { return { ok: true, value: await callbacks[index](), error: undefined }; }
+      catch (error) { return { ok: false, value: undefined, error: errorText(error) }; }
+    }));
     const results = outcomes.map((outcome, index): CallOutcome => {
       if (!outcome.ok) return { pass: false, actual: null, error: explainHidden(outcome.error ?? 'Error', input.hidden) };
       return {

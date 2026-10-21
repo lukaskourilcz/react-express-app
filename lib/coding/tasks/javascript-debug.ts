@@ -25,7 +25,7 @@ export const JAVASCRIPT_DEBUG_TASKS: CodingTaskSource[] = [
     format: 'debug',
     focus: ['reduce', 'functions'],
     title: 'The average that divides by nothing',
-    prompt: '`average(numbers)` should return the mean of a list of numbers, and `0` for an empty list. It returns the right answer for ordinary lists and something strange for an empty one. Find the bug and make the smallest change that fixes it.',
+    prompt: "Fix `average(numbers)` so empty input returns `0`. For nonempty input, add the Numbers from left to right starting at `0`, then divide by the count, using JavaScript arithmetic without rounding. Input is a dense array of finite Numbers whose running total remains finite. Preserve the input array. The starter already handles ordinary nonempty lists; find its empty-case bug. Target: O(n) time, where n is the number of input entries.",
     starter: `const average = numbers => {
   const total = numbers.reduce((sum, number) => sum + number, 0);
   return total / numbers.length;
@@ -68,7 +68,7 @@ console.log(average([]));
     format: 'debug',
     focus: ['map-set', 'objects'],
     title: 'The tally that counts nothing twice',
-    prompt: '`tally(words)` should return a Map from each word to how many times it appears. Every count comes back as 1, however many times a word occurs. Find the bug and fix it.',
+    prompt: "`tally(words)` should return a Map from each word to how many times it appears. Every count comes back as 1, however many times a word occurs. Find the bug and fix it. `words` is an ordinary dense array of primitive strings, each at most 128 UTF-16 code units. Keep exact case and spelling: empty strings, spaces and names such as __proto__ are ordinary word keys. Return a fresh Map with entries in the order each distinct word first appeared. Repeated words increase the existing count without moving the entry. Do not change words; frozen input is valid. Target: O(n) time on average, where n is the number of words, assuming average constant-time Map operations and bounded-length word comparison.",
     starter: `const tally = words => {
   const counts = new Map();
   for (const word of words) {
@@ -101,6 +101,10 @@ console.log(tally(["a", "b", "a"]));
       { call: '[...tally([]).entries()]', expected: [], label: 'no words, no counts', edge: true },
       { call: '[...tally(["x"]).entries()]', expected: [['x', 1]] },
       { call: '[...tally(["a", "a", "a"]).entries()]', expected: [['a', 3]] },
+      { call: "[...tally([\"z\",\"A\",\"z\",\"a\",\"\",\"__proto__\",\"\"]).entries()]", expected: [["z", 2], ["A", 1], ["a", 1], ["", 2], ["__proto__", 1]], label: "first-seen order case and empty keys", edge: true },
+      { call: "[...tally(Object.freeze([\"é\",\"e\\u0301\",\"é\",\" \"])).entries()]", expected: [["é", 2], ["é", 1], [" ", 1]], label: "literal Unicode spelling and frozen input", edge: true },
+      { call: "(() => {const words=[\"z\",\"a\"];tally(words);return words;})()", expected: ["z", "a"], label: "do not reorder words", edge: true },
+      { call: "(() => {const first=tally([\"a\"]),second=tally([\"a\",\"a\"]);return first instanceof Map&&second instanceof Map&&first!==second&&first.get(\"a\")===1&&second.get(\"a\")===2;})()", expected: true, label: "independent Maps across calls", edge: true },
     ],
   },
   {
@@ -112,7 +116,7 @@ console.log(tally(["a", "b", "a"]));
     format: 'debug',
     focus: ['filter', 'splice'],
     title: 'The removal that changes the caller’s list',
-    prompt: '`without(items, unwanted)` should return a new list with every copy of `unwanted` removed, leaving the list it was given untouched. The returned list is right, but the caller finds their own list has changed. Fix it.',
+    prompt: "`without(items, unwanted)` should return a new list with every copy of `unwanted` removed, leaving the list it was given untouched. The returned list is right, but the caller finds their own list has changed. Fix it. Inputs are an ordinary dense array of data values and any unwanted value. Match with strict equality: NaN never matches, 0 and -0 match, and objects match only by reference. Preserve the order, original references and repeated occurrences of everything kept. Always return a fresh array, including empty input and no removal. Do not change the source or nested values; frozen arrays are valid. Target: O(n) time, where n is the input length, assuming constant-time equality and reference copying.",
     starter: `const without = (items, unwanted) => {
   for (let i = items.length - 1; i >= 0; i--) {
     if (items[i] === unwanted) items.splice(i, 1);
@@ -151,6 +155,10 @@ console.log(without(original, "a"), original);
         label: 'the list that was passed in is not changed',
         edge: true,
       },
+      { call: "(() => {const out=without([NaN,1],NaN);return out.length===2&&Number.isNaN(out[0])&&out[1]===1;})()", expected: true, label: "NaN is retained under strict equality", edge: true },
+      { call: "without([0,-0,1],-0)", expected: [1], label: "remove both zero signs", edge: true },
+      { call: "(() => {const target={id:1},kept={id:1},items=Object.freeze([target,kept,target]);const out=without(items,target);return out!==items&&out.length===1&&out[0]===kept&&kept.id===1;})()", expected: true, label: "frozen reference matching preserves distinct equal-looking objects", edge: true },
+      { call: "(() => {const items=[];const a=without(items,1),b=without(items,1);return a!==items&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
   {
@@ -160,9 +168,9 @@ console.log(without(original, "a"), original);
     level: 10,
     tier: 2,
     format: 'debug',
-    focus: ['find', 'closures'],
+    focus: ['find', 'for'],
     title: 'The search that never finds the first one',
-    prompt: '`firstLongerThan(words, length)` should return the first word longer than `length`, or `null` when there is none. It returns the last matching word instead of the first. Fix it.',
+    prompt: "`firstLongerThan(words, length)` should return the first word whose JavaScript `.length` is strictly greater than length, or null if none qualifies. The starter keeps the last matching word instead: fix it and stop reading input after the first match. String.length counts UTF-16 code units, so an emoji such as \"😀\" has length 2; do not trim, normalize or count code points instead. A negative threshold can make an empty string the valid answer: preserve it rather than replacing it with null. Do not mutate words. Domain: at most 2,000 strings, each at most 1,000 UTF-16 units, and an integer threshold from -1,000 through 1,000. The array may be frozen; entries after the first match may be getters that throw if read. Target: O(n) time in the worst case, where n is the number of words and cached string-length reads count as constant cost.",
     starter: `const firstLongerThan = (words, length) => {
   let found = null;
   for (const word of words) {

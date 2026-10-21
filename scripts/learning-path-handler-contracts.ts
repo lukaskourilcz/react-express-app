@@ -25,15 +25,18 @@ import {
   handleEnrollment,
   handleLearningPreference,
   handlePathDraft,
+  handlePathProgress,
   handlePathReward,
   moduleRequirements,
 } from '../lib/learning-paths/handlers';
 import { requestMemo, withRequestContext } from '../lib/http';
-import { encodeLearningPathSession } from '../lib/quiz-tokens';
+import { createLearningPathSession as encodeLearningPathSession } from '../lib/learning-paths/session';
 import { enterInFlight, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, gradingItem } from '../lib/coding/grader-capacity';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
 import { MERCH_ENABLED } from '../shared/rewards';
+import { diagnosticEvidence } from '../lib/learning-paths/competencies';
+import { gradeCheck } from '../lib/learning-paths/grade';
 import type { SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
@@ -68,12 +71,16 @@ function fakeSupabase(options: {
   lists?: Record<string, unknown[]>;
   rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown };
   auth?: Record<string, unknown>;
+  onQuery?: (table: string, operation: string, args: unknown[]) => void;
+  rowErrors?: Record<string, unknown>;
 }) {
   const from = (table: string) => {
     const chain = {
-      select: () => chain,
-      eq: () => chain,
-      maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: null }),
+      select: (...args: unknown[]) => { options.onQuery?.(table, 'select', args); return chain; },
+      eq: (...args: unknown[]) => { options.onQuery?.(table, 'eq', args); return chain; },
+      order: (...args: unknown[]) => { options.onQuery?.(table, 'order', args); return chain; },
+      limit: (...args: unknown[]) => { options.onQuery?.(table, 'limit', args); return chain; },
+      maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: options.rowErrors?.[table] ?? null }),
       then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: options.lists?.[table] ?? [], error: null }),
     };
     return chain;
@@ -151,6 +158,82 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
     }
 
+    /* ── diagnostic recommendations use actual latest item evidence ───── */
+    {
+      const fde = LEARNING_PATHS.find(path => path.id === 'fde')!;
+      const module = fde.modules.find(one => one.activities.some(a => a.id === fde.diagnosticActivityId))!;
+      const diagnostic = module.activities.find(a => a.id === fde.diagnosticActivityId)!;
+      const key = diagnostic.questions!.map(q => q.correct);
+      const answers = key.map((value, index) => index < 2 ? (value + 1) % 4 : value);
+      const expectedCounts = diagnosticEvidence(diagnostic, gradeCheck(diagnostic, key, answers).verdicts);
+      const id = `FDEDIAG${stamp}`.padEnd(20, 'a');
+      const row = { ...enrollmentRow('active'), enrollment_id: id, path_id: 'fde', curriculum_version: fde.version };
+      const token = encodeLearningPathSession({ attemptId: `DIAG${stamp}`.padEnd(20, 'a'), enrollmentId: id,
+        userId: learner, pathId: 'fde', activityId: diagnostic.id, activityKind: 'check', purpose: 'diagnostic',
+        curriculumVersion: fde.version, rubricVersion: fde.rubric.version, answerKey: key }).token;
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const sent: Record<string, unknown>[] = [];
+        let acceptedResult: unknown;
+        const submitDiagnostic = async () => {
+          const req = request('POST', `diagnostic-${stamp}`, { user_id: learner, session: token,
+            idempotencyKey: 'KEYdiagnostic0123456789', answers, score: 1, competencies: { integration: 1 }, domainScores: { integration: 1 } });
+          const res = response();
+          await withRequestContext(req, res as never, async () => {
+            await requestMemo(`tier:${learner}`, async () => 'premium');
+            await handleActivitySubmit(req, res as never, fakeSupabase({ rows: { learning_path_enrollments: row },
+              rpc: (name, params) => {
+                if (name !== 'accept_learning_path_result') fail(`diagnostic called unexpected RPC ${name}`);
+                sent.push(params);
+                if (!acceptedResult) acceptedResult = params.p_result;
+                return { data: { ok: true, replayed: sent.length > 1, result: acceptedResult } };
+              } }));
+          });
+          return res;
+        };
+        let res = await submitDiagnostic();
+        const result = res.body as SubmitActivityResponse;
+        if (res.statusCode !== 200 || result.state !== 'verified_pass' || result.score !== 0.8333) fail(`diagnostic aggregate contract failed: ${JSON.stringify(res.body)}`);
+        if (JSON.stringify(sent[0]?.p_domain_scores) !== JSON.stringify(expectedCounts)) fail('diagnostic did not persist trusted per-item counts');
+        if (result.domainScores || JSON.stringify(result.module).includes('diagnostic:v1:')) fail('internal diagnostic counts leaked as public domain labels');
+        if (sent[0]?.p_module_complete !== false || JSON.stringify(sent[0]?.p_module_requires) !== '[]') fail('optional diagnostic acquired completion requirements');
+        res = await submitDiagnostic();
+        if (!(res.body as SubmitActivityResponse).replayed || sent[0]?.p_request_hash !== sent[1]?.p_request_hash) fail('diagnostic replay lost the accepted result/hash contract');
+        const priorPass = { module_id: module.id, activity_states: { [diagnostic.id]: { state: 'verified_pass', score: 1, domainScores: null } }, completed_at: null };
+        for (const evidence of [expectedCounts, null]) {
+          const queries: { table: string; op: string; args: unknown[] }[] = [];
+          const req = request('GET', `diagnostic-progress-${stamp}`, { user_id: learner }, { query: { enrollmentId: id } });
+          res = response();
+          await handlePathProgress(req, res as never, fakeSupabase({ rows: { learning_path_enrollments: row,
+            learning_path_evidence: { domain_scores: evidence } }, lists: { learning_path_progress: [priorPass] },
+            onQuery: (table, op, args) => queries.push({ table, op, args }) }));
+          const body = res.body as { competencies?: { competencyId: string; state: string; score: number | null }[]; recommendedBridges?: string[] };
+          if (res.statusCode !== 200) fail(`diagnostic progress failed: ${JSON.stringify(res.body)}`);
+          if (evidence) {
+            if (body.competencies?.find(c => c.competencyId === 'integration')?.state !== 'gap'
+                || body.competencies?.find(c => c.competencyId === 'handoff')?.state !== 'demonstrated') fail('latest evidence was replaced by the best aggregate score');
+            const ranked = body.recommendedBridges ?? [];
+            if (!ranked.slice(0, 2).includes('fde-bridge-backend-data') || !ranked.slice(0, 2).includes('fde-bridge-python')
+                || ranked.indexOf('fde-bridge-backend-data') > ranked.indexOf('fde-bridge-operator-interface')) fail('bridge ranking ignored the actual integration gap');
+          } else if (!body.competencies?.every(c => c.state === 'not_assessed' && c.score === null)) fail('aggregate-only legacy progress invented competency mastery');
+          for (const [column, value] of [['user_id', learner], ['enrollment_id', id], ['activity_id', diagnostic.id]]) {
+            if (!queries.some(q => q.table === 'learning_path_evidence' && q.op === 'eq' && q.args[0] === column && q.args[1] === value)) fail(`diagnostic evidence query omitted ${column} scope`);
+          }
+          if (!queries.some(q => q.table === 'learning_path_evidence' && q.op === 'order' && q.args[0] === 'revision' && (q.args[1] as { ascending?: boolean }).ascending === false)
+              || !queries.some(q => q.table === 'learning_path_evidence' && q.op === 'limit' && q.args[0] === 1)) fail('diagnostic query did not select exactly the latest revision');
+          if (JSON.stringify(res.body).includes('diagnostic:v1:')) fail('stored internal count labels leaked into public progress');
+        }
+        res = response();
+        await handlePathProgress(request('GET', `diagnostic-offline-${stamp}`, { user_id: learner }, { query: { enrollmentId: id } }), res as never,
+          fakeSupabase({ rows: { learning_path_enrollments: row }, rowErrors: { learning_path_evidence: { message: 'offline' } } }));
+        if (res.statusCode !== 500 || code(res) !== 'db_error') fail('unavailable diagnostic evidence became a fabricated assessment');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── a burst is refused before it reaches the grader ──────────────── */
     // The coding section's grader threads take path code too. One learner may
     // have GRADING_PER_TASK submits grading at once on one activity (C1-1;
@@ -179,7 +262,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
           await requestMemo(`tier:${burster}`, async () => 'premium');
           await handleActivitySubmit(req, res as never, fakeSupabase({
             rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: burster } },
-            rpc: (name) => { written.push(name); return name === 'accept_learning_path_result' ? { data: { ok: true, replayed: false } } : {}; },
+            rpc: (name) => { written.push(name); return ['accept_learning_path_result','accept_learning_path_coding_result'].includes(name) ? { data: { ok: true, replayed: false } } : {}; },
           }));
         });
         return res;

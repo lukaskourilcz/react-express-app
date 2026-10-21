@@ -48,6 +48,12 @@ serving its unreviewed items as before, with no review claim, while the
 decisions already recorded for it hold. Adding a category to the scope without
 all of its rows withholds the rest of it, which is the intended failure.
 
+The 17 October 2026 coding wave completes all 725 currently issued tasks and
+enables the coding scope gate. A new identity or changed task, solution or grader
+therefore stays withheld until its exact version receives a passing review. The
+45 hidden system-design tasks remain unreviewed and unissued; completing the
+issued tracks does not approve them.
+
 Retirement is not deletion. A withheld item stays in its source file and in
 `getQuestionsForHistoryById`, so an old attempt still finds its explanation
 and a report still finds its summary; it is absent from every selector. A
@@ -123,6 +129,18 @@ read by a reviewer." Questions get no automated evidence, because the suites
 that cover them assert repository-wide properties rather than per-item ones, and
 claiming otherwise for four thousand items would be the exact failure this
 design exists to prevent.
+
+Coding audit waves add only individually recorded model reviews. Items with a
+passing record for their current version receive the recorded model claim;
+other issued tasks retain only their execution evidence. Current coverage is
+reported in the dated audit inventory rather than inferred from a test run.
+Each coding hash includes every revealed solution
+variant, hidden grader material, authored reference and previous requirement,
+as well as comparisons and accepted puzzle material. Its keyed public version
+derives from the same full hash. The portable audit runner uses separate visible
+and hidden programs, and includes hidden React cases, as the server does. The
+wave's final reread is explicitly labelled model self-review,
+not an independent reader or human check; the wider coding scope stays open.
 
 `itemClaim` returns one of six values and they never blur: human review
 outranks model review, which outranks machine evidence; more than once needs

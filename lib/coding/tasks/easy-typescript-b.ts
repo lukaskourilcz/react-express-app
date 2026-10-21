@@ -28,7 +28,7 @@ export const EASY_TYPESCRIPT_B_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['utility-types', 'spread'],
     title: 'Save a new todo',
-    prompt: 'A todo app hands out ids itself, so a new todo arrives without one. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, "id">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is.',
+    prompt: "A todo app chooses the id for a new todo. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, \"id\">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with a new shallow copy of the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is. Domain: a dense readonly ordinary list of at most 1000 stable Todo records, possibly frozen, with own integer ids from 1 through 1000000000, text titles and boolean done flags; duplicate ids are allowed. The stable ordinary/null-prototype draft has own title/done data fields and up to 100 extra own enumerable string/Symbol fields with opaque values; no accessors/proxies are involved. Preserve shallow draft metadata, including a literal own __proto__ field, but always set the calculated id after spreading the draft. Omit is a compile-time view, not a runtime sanitizer: a wider compatible variable can still contain an id, and that value must not win. Return a fresh mutable array with unchanged original Todo references followed by a fresh plain mutable todo; leave source order, records and draft unchanged. Target: O(n) time and output space, where n is 1 + existing todo count + copied draft-field count under bounded property-key operations, excluding opaque metadata contents.",
     starter: `interface Todo {
   id: number;
   title: string;
@@ -52,13 +52,13 @@ type NewTodo = Omit<Todo, "id">;
 
 const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
   // the next id: the highest id plus one, or 1 for an empty list
-  // a new array: every todo, then { id, ...draft }
+  // a new array: every todo, then { ...draft, id }
 };`,
-    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a caller cannot pick one. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
+    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a fresh object literal cannot include one. Wider variables can still carry extra fields; set the calculated id last. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
     approach: [
       'Declare `NewTodo` with `Omit`. The second type argument names the key to leave out.',
-      'Work out the next id: the highest id in the list plus one. Start from 0, so an empty list gives 1.',
-      'Return `[...todos, { id, ...draft }]`: a new array that ends with the new todo.',
+      'Work out the next id: the highest id in the list plus one. Start from 0; existing ids are positive, and an empty list then gives 1.',
+      'Return `[...todos, { ...draft, id }]`: a new array that ends with the new todo.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -71,7 +71,7 @@ const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
     typeTests: [
       { code: 'const __d: NewTodo = { title: "Plan", done: false };', label: 'a new todo has a title and a done flag' },
       { code: 'const __list: Todo[] = addTodo([], { title: "Plan", done: false });', label: 'gives back todos' },
-      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a new todo cannot bring its own id', rejects: true },
+      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a fresh todo literal leaves out id', rejects: true },
       { code: 'const __e: NewTodo = { title: "Plan" };', label: 'a new todo still needs its done flag', rejects: true },
     ],
   },
@@ -83,7 +83,7 @@ const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
     tier: 2,
     focus: ['utility-types', 'filter'],
     title: 'Only the clicks',
-    prompt: 'An analytics script records `UiEvent` values: clicks with an `x` and a `y`, and key presses with a `key`. Declare `type Click = Extract<UiEvent, { kind: "click" }>`: the members of the union that fit that shape. Then write `clicks(events: readonly UiEvent[]): Click[]`, returning the clicks in their original order. Give `filter` a callback whose return type is the type predicate `event is Click`, so the array it hands back holds only clicks.',
+    prompt: "An analytics script records `UiEvent` values: clicks with an `x` and a `y`, and key presses with a `key`. Declare `type Click = Extract<UiEvent, { kind: \"click\" }>`: the members of the union that fit that shape. Then write `clicks(events: readonly UiEvent[]): Click[]`, returning the clicks in their original order. Give `filter` a callback whose return type is the type predicate `event is Click`, so the array it hands back holds only clicks. Domain: a dense readonly ordinary array of at most 1000 stable UiEvent records, possibly frozen, with own or inherited data on a bounded prototype chain and no accessors/proxies. Coordinates are primitive Numbers, including signed zero and nonfinite values; select only by the exact kind, without coordinate validation. Preserve exact original click references, duplicates and opaque extra fields, leaving all inputs unchanged. Return a fresh mutable outer array every call, including empty/no-click input. The explicit predicate is a teaching form; equivalent inferred predicates are accepted by the current TypeScript checker. Target: O(n) time and output space, where n is 1 + event count under bounded property reads.",
     starter: `type UiEvent =
   | { kind: "click"; x: number; y: number }
   | { kind: "key"; key: string };
@@ -134,7 +134,7 @@ const clicks = (events: readonly UiEvent[]): Click[] =>
     tier: 2,
     focus: ['utility-types', 'type-guards'],
     title: 'Is the profile complete?',
-    prompt: 'A `Profile` needs only a `name`: the `email` and the `phone` are optional. `Required<Profile>` is the same type with every property required. Write `isComplete(profile: Profile): profile is Required<Profile>`, returning `true` when the email and the phone are both filled in, which means present and not an empty string. After `if (isComplete(profile))`, the compiler reads `profile.email` as a `string` instead of `string | undefined`.',
+    prompt: "A `Profile` needs only a `name`: the `email` and the `phone` are optional. `Required<Profile>` is the same type with every property required. Write `isComplete(profile: Profile): profile is Required<Profile>`, returning `true` when the email and the phone are both filled in, which means present and not an empty string. After `if (isComplete(profile))`, the compiler reads `profile.email` as a `string` instead of `string | undefined`. Domain: stable ordinary or null-prototype Profile records, possibly frozen, with name text and optional own or inherited email/phone data on a bounded prototype chain, with no accessors/proxies. A missing or undefined field is incomplete; null is outside Profile. Any string of positive UTF-16 length counts, including whitespace, Unicode and \"0\". Do not trim, normalize or validate real email/phone formats, and do not test the name for emptiness. Return an actual boolean without changing the record or unrelated opaque metadata. Target: O(1) time and working space for the two presence/empty-string checks; field contents are not traversed.",
     starter: `interface Profile {
   name: string;
   email?: string;
@@ -186,7 +186,7 @@ const isComplete = (profile: Profile): profile is Required<Profile> => {
     tier: 2,
     focus: ['utility-types', 'reduce'],
     title: 'A type from a function',
-    prompt: 'A till reads each receipt line with `parseLine`, written for you, which returns `{ name, qty, cents }`. Declare `type Line = ReturnType<typeof parseLine>`, so the type follows the function if it ever changes. Then write `orderTotal(lines: readonly Line[]): number`, returning the sum of `qty * cents` over every line, in cents. Use `reduce` with a start value of `0`.',
+    prompt: "A till reads each receipt line with `parseLine`, written for you, which returns `{ name, qty, cents }`. Declare `type Line = ReturnType<typeof parseLine>`, so the type follows the function if it ever changes. Then write `orderTotal(lines: readonly Line[]): number`, returning the sum of `qty * cents` over every line, in cents. Use `reduce` with a start value of `0`. Domain: a dense readonly ordinary array of at most 1000 stable Line records, possibly frozen, with own data properties and no accessors/proxies. Qty and cents are integers from 0 through 1000000, keeping every product and total within exact safe-integer range. Do not round, reorder, edit records or consume their opaque metadata. Fold from numeric 0, so empty input and a receipt of zero-cost lines return positive zero. The provided parseLine receives well-formed comma-separated name/quantity/cents text in those bounds; invalid input validation is outside this helper. Name has no comma/newline. Target: O(n) time and O(1) working state, where n is 1 + parsed line count; caller parsing work and name/metadata contents are excluded.",
     starter: `const parseLine = (line: string) => {
   const [name, qty, cents] = line.split(",");
   return { name, qty: Number(qty), cents: Number(cents) };
@@ -241,7 +241,7 @@ const orderTotal = (lines: readonly Line[]): number =>
     tier: 2,
     focus: ['map-set', 'constraints'],
     title: 'Keep the newest version',
-    prompt: 'A sync job receives records that can repeat: the same `id` may arrive more than once with a different `version`. Write `latest<T extends { id: string; version: number }>(records: readonly T[]): T[]`, keeping one record per id: the one with the highest version. When two share the highest version, keep the one that came first. Return the records in the order their ids first appeared. A `Map` from id to record does both jobs: `set` on a key it already holds replaces the value and leaves the key where it was.',
+    prompt: "A sync job receives records that can repeat: the same `id` may arrive more than once with a different `version`. Write `latest<T extends { id: string; version: number }>(records: readonly T[]): T[]`, keeping one record per id: the one with the highest version. When two share the highest version, keep the one that came first. Return the records in the order their ids first appeared. A `Map` from id to record does both jobs: `set` on a key it already holds replaces the value and leaves the key where it was. Domain: a dense readonly array of at most 1000 stable ordinary/null-prototype records, possibly frozen, with own id text of at most 200 UTF-16 units and own integer version from 0 through 1000000000. No accessors/proxies are involved. IDs match exactly, including empty text, spaces, case, numeric-looking and prototype-like names. Keep the original winning record reference with all opaque extra fields; a tie keeps the earliest record at that highest version. Output IDs stay in first-appearance order, regardless of when a winner changes. Leave inputs unchanged and return a fresh mutable outer array every call, including empty input. Target: O(n) time and worst-case O(n) storage, where n is 1 + record count under bounded key hashing and average Map operations.",
     starter: `const latest = (records) => {
 
 };
@@ -284,7 +284,7 @@ console.log(latest([{ id: "a", version: 1, text: "Hi" }, { id: "b", version: 1, 
     tier: 2,
     focus: ['constraints', 'map'],
     title: 'Swap in the edited item',
-    prompt: 'An edit form saves one item of a list. Write `replaceById<T extends { id: number }>(items: readonly T[], edited: T): T[]`, returning a new array in which the item with the same `id` as `edited` is replaced by it. Every other item stays as it was, in the same place. When no item has that id, the new array holds the same items as before. Use `map`: the constraint lets you read `.id`, and `T` keeps the caller’s own item type on the way out.',
+    prompt: "An edit form saves one item of a list. Write `replaceById<T extends { id: number }>(items: readonly T[], edited: T): T[]`, returning a new array in which the item with the same `id` as `edited` is replaced by it. Every other item stays as it was, in the same place. When no item has that id, the new array holds the same items as before. Use `map`: the constraint lets you read `.id`, and `T` keeps the caller\u2019s own item type on the way out. Domain: a dense readonly ordinary array of at most 1000 stable records, possibly frozen, with own integer ids from -1000000000 through 1000000000 and no accessors/proxies. Duplicate ids are allowed: replace every matching position with the exact edited object. Each nonmatching position keeps the exact original object; do not merge or clone record fields. Leave the input and edited record unchanged. Return a fresh mutable array on every call, including no-match and empty input. Target: O(n) time and output space, where n is 1 + item count.",
     starter: `const replaceById = (items, edited) => {
 
 };
@@ -327,7 +327,7 @@ console.log(replaceById([{ id: 1, name: "Ada" }, { id: 2, name: "Bo" }], { id: 2
     tier: 1,
     focus: ['for', 'tuples'],
     title: 'Each stop and the next',
-    prompt: 'A bus route is a list of stops in order. Write `legs(stops: readonly string[]): [string, string][]`, returning one `[from, to]` pair per leg: each stop with the stop after it. `legs(["Depot", "Park", "Station"])` gives `[["Depot", "Park"], ["Park", "Station"]]`. Use a `for` loop whose index stops one short of the last stop. A route with fewer than two stops has no legs.',
+    prompt: "A bus route is a list of stops in order. Write `legs(stops: readonly string[]): [string, string][]`, returning one `[from, to]` pair per leg: each stop with the stop after it. `legs([\"Depot\", \"Park\", \"Station\"])` gives `[[\"Depot\", \"Park\"], [\"Park\", \"Station\"]]`. Use a `for` loop whose index stops one short of the last stop. A route with fewer than two stops has no legs. Domain: a dense read-only array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Empty names, duplicates, whitespace and Unicode are ordinary stop names; determine whether a next stop exists by its index, not truthiness. Preserve names exactly and leave input unchanged. Return a fresh mutable outer array and a distinct fresh mutable two-element pair per leg on every call, even when consecutive legs have equal values. Empty/single-stop outputs are fresh empty arrays. Target: O(n) time and output space, where n is 1 + the stop count; strings are retained as values without character traversal.",
     starter: `const legs = (stops) => {
 
 };
@@ -337,7 +337,7 @@ console.log(legs(["Depot", "Park", "Station"]));
 `,
     skeleton: `const legs = (stops: readonly string[]): [string, string][] => {
   const pairs: [string, string][] = [];
-  // loop i from 0 while stops[i + 1] exists, pushing [stops[i], stops[i + 1]]
+  // loop i from 0 while i + 1 < stops.length, pushing [stops[i], stops[i + 1]]
   return pairs;
 };`,
     hints: ['Annotate the result as `[string, string][]`, a list of pairs. Without that, TypeScript infers `[a, b]` as `string[]`, which may hold any number of strings. Stop the loop at `i < stops.length - 1`, so `stops[i + 1]` always exists.'],
@@ -370,39 +370,39 @@ console.log(legs(["Depot", "Park", "Station"]));
     tier: 2,
     focus: ['for', 'generics'],
     title: 'Every nth item',
-    prompt: 'A video editor builds a preview from every third frame of a clip. Write `everyNth<T>(items: readonly T[], n: number): T[]`, returning the items at positions `n`, `2n`, `3n` and so on, counting from 1. In a `for` loop that means starting at index `n - 1` and adding `n` each time. The type parameter hands the caller back the item type they passed in. An `n` below 1 gives `[]`.',
-    starter: `const everyNth = (items, n) => {
+    prompt: "A video editor builds a preview from every third frame of a clip. Write `everyNth<T>(items: readonly T[], step: number): T[]`, returning the items at positions `step`, `2 * step`, `3 * step` and so on, counting from 1. In a `for` loop that means starting at index `step - 1` and adding `step` each time. The type parameter hands the caller back the item type they passed in. A `step` below 1 gives `[]`. Domain: step is an integer from -1000000000 through 1000000000 and items is a dense readonly array of at most 1000 opaque values, possibly frozen. Preserve selected values by exact reference or primitive value, including null, undefined, symbols and functions; do not inspect, clone, call or coerce them. Leave the input unchanged and return a fresh mutable array every call, including an empty result or step of 1. Target: O(n) time and worst-case O(n) output space, where n is 1 + item count. This input-size variable is separate from the step argument. A jumping loop visits only the selected positions; a full filtering scan is also a valid linear-time alternative.",
+    starter: `const everyNth = (items, step) => {
 
 };
 
 // Scratch pad. Change this and press Run.
 console.log(everyNth(["f1", "f2", "f3", "f4", "f5", "f6"], 3));
 `,
-    skeleton: `const everyNth = <T>(items: readonly T[], n: number): T[] => {
+    skeleton: `const everyNth = <T>(items: readonly T[], step: number): T[] => {
   const picked: T[] = [];
-  // return [] straight away when n is below 1
-  // loop i from n - 1 while it is inside the list, adding n each time, and keep items[i]
+  // return [] straight away when step is below 1
+  // loop i from step - 1 while it is inside the list, adding step each time, and keep items[i]
   return picked;
 };`,
-    hints: ['The third item sits at index 2, so the first index is `n - 1`, and `i += n` jumps straight to the next one. Check `n < 1` first: with `n` at 0, `i += n` never moves and the loop never ends.'],
+    hints: ['The third item sits at index 2, so the first index is `step - 1`, and `i += step` jumps straight to the next one. Check `step < 1` first: with `step` at 0, `i += step` never moves and the loop never ends.'],
     approach: [
-      'Return `[]` when `n` is below 1.',
-      'Loop `i` from `n - 1` while `i < items.length`, adding `n` each time.',
+      'Return `[]` when `step` is below 1.',
+      'Loop `i` from `step - 1` while `i < items.length`, adding `step` each time.',
       'Push `items[i]` on each pass, then return the list.',
     ],
     verify: 'tests',
     estimatedMinutes: 6,
     tests: [
       { call: 'everyNth(["f1", "f2", "f3", "f4", "f5", "f6", "f7"], 3)', expected: ['f3', 'f6'] },
-      { call: 'everyNth([1, 2, 3, 4], 1)', expected: [1, 2, 3, 4], label: 'n of 1 keeps everything' },
-      { call: 'everyNth([1, 2], 5)', expected: [], label: 'fewer items than n', edge: true },
-      { call: 'everyNth([1, 2, 3], 0)', expected: [], label: 'n of 0', edge: true },
+      { call: 'everyNth([1, 2, 3, 4], 1)', expected: [1, 2, 3, 4], label: 'step of 1 keeps everything' },
+      { call: 'everyNth([1, 2], 5)', expected: [], label: 'fewer items than step', edge: true },
+      { call: 'everyNth([1, 2, 3], 0)', expected: [], label: 'step of 0', edge: true },
     ],
     typeTests: [
       { code: 'const __s: string[] = everyNth(["a", "b"], 2);', label: 'strings in, strings out' },
       { code: 'const __n: number[] = everyNth([1, 2], 2);', label: 'numbers in, numbers out' },
       { code: 'const __x: number[] = everyNth(["a"], 1);', label: 'strings do not come out as numbers', rejects: true },
-      { code: 'everyNth([1], "2");', label: 'n is a number', rejects: true },
+      { code: 'everyNth([1], "2");', label: 'step is a number', rejects: true },
     ],
   },
 
@@ -415,7 +415,7 @@ console.log(everyNth(["f1", "f2", "f3", "f4", "f5", "f6"], 3));
     tier: 2,
     focus: ['keyof'],
     title: 'A setting or its default',
-    prompt: 'An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, "sounds")` is a `boolean` and `settingOr(saved, "fontSize")` is a `number`. A saved `false` or `0` is a real choice: keep it.',
+    prompt: "An app stores only the settings a user has changed, as a `Partial<Settings>`. Write `settingOr<K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K]`, returning the saved value for `key`, or the one in `DEFAULTS` when nothing is saved. The return type `Settings[K]` means the type of that one setting, so `settingOr(saved, \"sounds\")` is a `boolean` and `settingOr(saved, \"fontSize\")` is a `number`. A saved `false` or `0` is a real choice: keep it. Domain: a stable ordinary or null-prototype saved record, possibly frozen, with optional own or inherited data properties on a bounded prototype chain and no accessors/proxies. Missing or undefined values use the default; null is outside Partial<Settings>. Theme is light or dark, sounds is boolean, and fontSize is a finite Number from -1000000000 through 1000000000, including fractions, negatives and signed zero. Preserve false, 0 and -0 exactly. Do not add defaults to saved, change saved values, inspect unrelated opaque metadata or modify DEFAULTS. Target: O(1) time and working state: read one of the three fixed setting keys and at most its default, regardless of unrelated saved fields.",
     starter: `interface Settings {
   theme: "light" | "dark";
   fontSize: number;
@@ -442,7 +442,7 @@ const DEFAULTS: Settings = { theme: "light", fontSize: 16, sounds: true };
 const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): Settings[K] => {
   // the saved value when there is one, otherwise the default
 };`,
-    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`. `||` would also replace a saved `false`, and switch the sounds back on.'],
+    hints: ['`K extends keyof Settings` makes `key` one of `"theme"`, `"fontSize"` or `"sounds"`, and `Settings[K]` looks up the type that key holds. At runtime, `??` falls back only on `undefined` and `null`; this task’s typed inputs allow undefined, but not null. `||` would also replace a saved `false`, and switch the sounds back on.'],
     approach: [
       'Give the function a type parameter `K extends keyof Settings` and the return type `Settings[K]`.',
       'Read `saved[key]`.',
@@ -472,7 +472,7 @@ const settingOr = <K extends keyof Settings>(saved: Partial<Settings>, key: K): 
     tier: 2,
     focus: ['keyof', 'spread'],
     title: 'Change one field',
-    prompt: 'A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, "price", 5)` compiles and `setField(mug, "price", "5")` does not. Build the new product with spread, and leave the original as it is.',
+    prompt: "A shop admin edits one field of a product at a time. Write `setField<K extends keyof Product>(product: Product, key: K, value: Product[K]): Product`, returning a new product with that one field changed. The types tie the value to the key: `setField(mug, \"price\", 5)` compiles and `setField(mug, \"price\", \"5\")` does not. Build the new product with spread, and leave the original as it is. Domain: stable ordinary or null-prototype product records, possibly frozen, with own name text of at most 200 UTF-16 units, a finite Number price from -1000000000 through 1000000000, and a boolean inStock. Up to 100 extra own enumerable string/Symbol data fields may carry opaque values; no accessors/proxies are involved. Copy those fields shallowly, including a literal own __proto__ field, without copying inherited fields. Return a fresh plain mutable product even when the chosen value is unchanged; preserve exact metadata references and leave the source unchanged. The allowed key is one of the three Product fields with its matching value type. Target: O(n) time and output space, where n is 1 + the number of copied own enumerable fields under bounded property-key operations; do not traverse opaque values.",
     starter: `interface Product {
   name: string;
   price: number;
@@ -526,7 +526,7 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
     tier: 1,
     focus: ['spread', 'filter'],
     title: 'Pin a chat to the top',
-    prompt: 'A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is.',
+    prompt: "A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is. Domain: a dense read-only array of at most 1000 strings and a string chat, each at most 200 UTF-16 units, possibly frozen at runtime. Match exact strings without trimming or case conversion; empty names and duplicates are ordinary values. If chat occurs more than once, place exactly one copy at the front and remove every other occurrence of that same chat. Preserve the order and duplicates of all other names. Return a fresh mutable array on every call, including when chat is missing, already first or the input is empty; never change input. Target: O(n) time and output space, where n is 1 + the chat count under bounded-width string comparison.",
     starter: `const pinToTop = (chats: readonly string[], chat: string): string[] => {
 
 };
@@ -567,7 +567,7 @@ console.log(pinToTop(["Ada", "Bo", "Cy"], "Cy"));
     tier: 2,
     focus: ['spread', 'objects'],
     title: 'Move to a new city',
-    prompt: 'Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own.',
+    prompt: "Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own. Domain: stable ordinary/null-prototype data records with the declared required fields, possibly frozen. name, street, old city and new city are strings up to 200 UTF-16 units, preserved exactly without trimming or validation. User and Address may each have up to 100 extra own enumerable string/Symbol data properties with opaque values. Preserve those fields and references except the replaced address/city; ignore inherited properties when copying. Return a fresh plain user and fresh plain address every call, even if the city is unchanged. Both result objects are mutable; nested opaque fields remain shared rather than deep-cloned. Leave all input objects unchanged. Target: O(n) time and shallow output space, where n is 1 + the own enumerable field counts of user and address, under bounded-key copying.",
     starter: `interface Address {
   street: string;
   city: string;
@@ -627,7 +627,7 @@ const moveTo = (user: User, city: string): User => ({
     tier: 2,
     focus: ['sort', 'objects'],
     title: 'Rank the scores',
-    prompt: 'A quiz keeps its scores in an object from each player’s name to their points. Write `ranked(scores: Record<string, number>): [string, number][]`, returning `[name, points]` pairs from the most points to the fewest. `Object.entries(scores)` gives you the pairs; sort them by their second item. Players on the same points keep the order the object lists them in.',
+    prompt: "A quiz keeps its scores in an object from each player\u2019s name to their points. Write `ranked(scores: Record<string, number>): [string, number][]`, returning `[name, points]` pairs from the most points to the fewest. `Object.entries(scores)` gives you the pairs; sort them by their second item. Players on the same points keep the order the object lists them in. Domain: scores is a stable ordinary or null-prototype data record, possibly frozen, with at most 1000 own enumerable string-keyed scores. Player names have at most 200 UTF-16 units and scores are finite Numbers from -1000000000 through 1000000000. No accessors/proxies are involved. Ignore inherited, symbol and non-enumerable properties; at most 100 extra ignored properties are present. Ties keep Object.entries order: integer-index keys precede other string keys in their standard enumeration order. Return a fresh mutable outer array and fresh mutable pairs on every call, leaving scores unchanged. Target: O(n log n) time and O(n) output space, where n is 1 + own enumerable string-entry count under bounded numeric comparisons and the comparison-sort model.",
     starter: `const ranked = (scores) => {
 
 };
@@ -669,7 +669,7 @@ console.log(ranked({ Ada: 7, Bo: 12, Cy: 3 }));
     tier: 2,
     focus: ['sort', 'strings'],
     title: 'Sort titles, ignoring case',
-    prompt: 'A reading list shows its titles from A to Z. `sort` with no compare function orders by character code, where every capital letter comes before every lower-case one, so `"Zebra"` lands before `"apple"`. Write `sortTitles(titles: readonly string[]): string[]`, returning a new array sorted by the lower-case form of each title, compared with `<` and `>`. Titles that differ only in case keep their original order.',
+    prompt: "A reading list shows its titles from A to Z. `sort` with no compare function orders by character code, so uppercase ASCII letters come before lowercase ASCII letters, so `\"Zebra\"` lands before `\"apple\"`. Write `sortTitles(titles: readonly string[]): string[]`, returning a new array sorted by the lower-case form of each title, compared with `<` and `>`. Titles with equal lower-case keys keep their original order. Domain: an ordinary dense read-only array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Apply standard locale-independent toLowerCase to the whole string, then compare those keys lexicographically by UTF-16 units using < and >. Do not trim, normalize Unicode, use locale/dictionary ordering or alter the original strings. Empty text, whitespace, punctuation, Unicode and unpaired surrogates are ordinary data. Equal lower-case keys retain input order. Return a fresh mutable array, including for empty or singleton input, and leave input unchanged. Target: O(n log n) time in the comparison-sort model with bounded-width strings, where n is 1 + the title count. For unbounded string lengths, key creation/comparison adds a length factor; sort implementation costs are model assumptions, not an ECMAScript guarantee. Result storage is O(n).",
     starter: `const sortTitles = (titles: readonly string[]): string[] => {
 
 };
@@ -714,7 +714,7 @@ console.log(sortTitles(["Zebra", "apple", "Mango"]));
     tier: 1,
     focus: ['while', 'readonly'],
     title: 'Wait times between retries',
-    prompt: 'A client that cannot reach the server waits before it tries again, and doubles the wait each time. Write `retryDelays(first: number, cap: number): readonly number[]`, listing the waits in milliseconds: `first`, then twice that, and so on while the wait is no more than `cap`. `retryDelays(100, 1000)` gives `[100, 200, 400, 800]`. You do not know the count in advance, so use a `while` loop. A `first` of 0 or less never grows, so return `[]` for it. The `readonly` return type stops a caller from pushing a wait of their own.',
+    prompt: "A client that cannot reach the server waits before it tries again, and doubles the wait each time. Write `retryDelays(first: number, cap: number): readonly number[]`, listing the waits in milliseconds: `first`, then twice that, and so on while the wait is no more than `cap`. `retryDelays(100, 1000)` gives `[100, 200, 400, 800]`. Build the list with a `while` loop as the wait grows. A `first` of 0 or less never grows, so return `[]` for it. The `readonly` return type stops a caller from pushing a wait of their own. Domain: first and cap are finite integers from -1000000000 through 1000000000. Return [] whenever first <= 0 or the first positive wait exceeds cap; include a wait equal to cap. Every returned schedule must stay unchanged by later calls. The readonly result is a static view: runtime freezing is optional, not implied by the type. Return an array of the computed numbers without actually sleeping, scheduling retries or performing network requests. Target: O(log n) time and output space, where n is 2 + max(0, cap) as a numeric magnitude; for positive first the number of doublings is at most logarithmic in this bound.",
     starter: `const retryDelays = (first, cap) => {
 
 };
@@ -757,7 +757,7 @@ console.log(retryDelays(100, 1000));
     tier: 2,
     focus: ['while', 'record'],
     title: 'Headers until the blank line',
-    prompt: 'An HTTP response starts with header lines such as `Content-Type: text/html`, then one blank line (`""`), then the body. Write `readHeaders(lines: readonly string[]): Record<string, string>`, reading from the top with a `while` loop until it reaches the blank line or runs out of lines. Split each header at its first `": "`: the name before it, in lower case, is the key, and everything after it is the value. Nothing after the blank line is read, even when it looks like a header.',
+    prompt: "A simplified header block has lines such as `Content-Type: text/html`, then one blank line (`\"\"`), then the body. Write `readHeaders(lines: readonly string[]): Partial<Record<string, string>>`, reading from the top with a `while` loop until it reaches the blank line or runs out of lines. Split each header at its first `\": \"`: the name before it, in lower case, is the key, and everything after it is the value. Nothing after the blank line is read, even when it looks like a header. This is the header-block exercise, not a complete HTTP message parser. Only names actually read have entries; a missing name reads as undefined. Domain: a dense readonly ordinary array of at most 1000 lines. Before the first exact empty string, every line is stable text of at most 1000 UTF-16 units with a nonempty ASCII token name, a first colon-space separator and a value that may be empty. Names are case-insensitive through lowercase conversion; repeated normalized names keep their last value. Preserve all value text, including later separators and leading/trailing spaces. Do not evaluate body elements after the first blank line; they may be getters. Prefix elements have no accessors/proxies, and the input may be frozen. Return a fresh mutable prototype-safe dictionary every call, with own keys exactly the read normalized names and undefined for absent keys, including Object member names. Target: O(n) time and output space, where n is 1 + processed prefix line count + its total UTF-16 length; the body is excluded.",
     starter: `const readHeaders = (lines) => {
 
 };
@@ -765,8 +765,8 @@ console.log(retryDelays(100, 1000));
 // Scratch pad. Change this and press Run.
 console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<p>Hi</p>"]));
 `,
-    skeleton: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
+    skeleton: `const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {
+  const headers = Object.create(null) as Partial<Record<string, string>>;
   let i = 0;
   while (/* i is in range and lines[i] is not "" */) {
     const at = lines[i].indexOf(": ");
@@ -775,12 +775,8 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
   }
   return headers;
 };`,
-    hints: ['`indexOf(": ")` finds only the first separator, so a value that holds its own `": "` stays whole. `slice(0, at)` is the name and `slice(at + 2)` the value. `split(": ")` would cut such a value in pieces.'],
-    approach: [
-      'Start an empty `Record<string, string>` and an index at 0.',
-      'Loop while the index is in range and the line there is not `""`.',
-      'Split the line at its first `": "`, store the lower-case name with its value, and move to the next line.',
-    ],
+    hints: ["Use indexOf(\": \") and slice around the first separator so all remaining value text survives. Splitting and rejoining can also preserve it, but a plain split that takes only the second piece loses later separators. Partial means a header may be absent; use a prototype-safe dictionary."],
+    approach: ["Create a fresh prototype-safe Partial<Record<string, string>> dictionary and start at index zero.", "While the index is in range and its line is not the exact empty string, split at the first colon-space separator.", "Store the lowercased name and unchanged value; later duplicates replace earlier values. Stop before evaluating body entries."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -790,11 +786,7 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
       { call: 'readHeaders(["X-Note: see: below", ""])', expected: { 'x-note': 'see: below' }, label: 'a value keeps its own colons', edge: true },
       { call: 'readHeaders(["A: 1", "", "B: 2"])', expected: { a: '1' }, label: 'nothing after the blank line', edge: true },
     ],
-    typeTests: [
-      { code: 'const __h: Record<string, string> = readHeaders(["A: 1"]);', label: 'gives back a record of text' },
-      { code: 'const __v: string = readHeaders([])["host"];', label: 'every value is text' },
-      { code: 'readHeaders("A: 1");', label: 'the input is a list of lines', rejects: true },
-    ],
+    typeTests: [{"code": "const __h: Partial<Record<string, string>> = readHeaders([\"A: 1\"]);", "label": "observed headers hold text"}, {"code": "const __v: string | undefined = readHeaders([])[\"host\"];", "label": "a header lookup may be undefined"}, {"code": "readHeaders(\"A: 1\");", "label": "the input is a list of lines", "rejects": true}, {"code": "const __required:string=readHeaders([])[\"missing\"];", "rejects": true, "label": "an absent header may be missing"}],
   },
 
   /* ── destructuring ────────────────────────────────────────────────── */
@@ -806,7 +798,7 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
     tier: 2,
     focus: ['destructuring', 'record'],
     title: 'Who reached the pass mark',
-    prompt: 'Exam results arrive as a `Record<string, number>` from each student’s name to their score. Write `passed(scores: Record<string, number>, mark: number): string[]`, returning the names of the students who scored `mark` or more, in the order the record lists them. Loop over `Object.entries(scores)` with `for...of`, and destructure each entry in the loop head into a name and a score.',
+    prompt: "Exam results arrive as a `Record<string, number>` from each student\u2019s name to their score. Write `passed(scores: Record<string, number>, mark: number): string[]`, returning the names of the students who scored `mark` or more, in the order the record lists them. Loop over `Object.entries(scores)` with `for...of`, and destructure each entry in the loop head into a name and a score. Domain: a stable ordinary or null-prototype scores object with at most 1000 own enumerable string keys, possibly frozen, with no accessors/proxies. Scores and mark are finite Numbers from -1000000000 through 1000000000, including fractions and signed zero. Use the ordinary >= comparison, without rounding or validation. Visit own enumerable string entries in Object.entries order, including numeric-key ordering; ignore inherited, nonenumerable and Symbol entries. Preserve exact key text, source values and source ownership. Return a fresh mutable array every call, including no matches and empty input. Target: O(n) time and output space, where n is 1 + own enumerable string-key count under bounded key/property operations.",
     starter: `const passed = (scores, mark) => {
 
 };
@@ -849,7 +841,7 @@ console.log(passed({ Ada: 72, Bo: 48, Cy: 90 }, 50));
     tier: 1,
     focus: ['destructuring', 'strings'],
     title: 'One line per order',
-    prompt: 'An order list shows each order on one line, such as `#12 Ada, 3 items`. Write `orderLine(order: Order): string`. Destructure the `id`, the customer’s `name` and the `items` in the parameter list: a nested pattern reaches into `customer`. Write `item` for exactly one item and `items` for any other count, 0 included.',
+    prompt: "An order list shows each order on one line, such as `#12 Ada, 3 items`. Write `orderLine(order: Order): string`. Destructure the `id`, the customer\u2019s `name` and the `items` in the parameter list: a nested pattern reaches into `customer`. Write `item` for exactly one item and `items` for any other count, 0 included. Domain: stable read-only data records matching Order, possibly frozen at runtime. id is an integer from 0 through 1000000000; name and email are strings up to 200 UTF-16 units, including empty text, whitespace and Unicode. items is an array of at most 10000 entries; it may be sparse or frozen and every present entry is a string. Count items.length, including holes, empty strings and duplicates; do not scan, deduplicate or filter items. Keep the name exactly as given without trimming, use normal decimal id/count text, and do not include email. Leave all inputs unchanged. Target: O(n) time and output space for constructing the line, where n is 1 + its UTF-16 length; item contents and email are not part of that work.",
     starter: `interface Order {
   id: number;
   customer: { name: string; email: string };
@@ -902,7 +894,7 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
     tier: 2,
     focus: ['map-set', 'tuples'],
     title: 'Squares visited',
-    prompt: 'A robot on a grid logs each position it passes as an `[x, y]` pair, and it can cross the same square more than once. Write `visited(path: readonly [number, number][]): number`, returning how many different squares it visited. `new Set(path)` does not work here: two arrays holding the same numbers are still two different objects, so the Set keeps both. Turn each pair into a text key such as `"2,3"` and count the keys in a `Set<string>`.',
+    prompt: "A robot on a grid logs each position it passes as an `[x, y]` pair, and it can cross the same square more than once. Write `visited(path: readonly [number, number][]): number`, returning how many different squares it visited. `new Set(path)` does not work here: two arrays holding the same numbers are still two different objects, so the Set keeps both. Turn each pair into a text key such as `\"2,3\"` and count the keys in a `Set<string>`. Domain: a dense path of at most 1000 coordinate pairs, each exactly two finite integers from -1000000000 through 1000000000. The path and pairs may be frozen and must remain unchanged. Count coordinate values, not array identities: repeated references and different pairs holding the same values name the same square. Positive and negative zero name the same coordinate. Comma-separated number keys are unambiguous within this integer domain. Target: O(n) time and worst-case O(n) storage, where n is 1 + pair count under bounded number-to-string conversion and average Set operations.",
     starter: `const visited = (path) => {
 
 };
@@ -947,7 +939,7 @@ console.log(visited([[0, 0], [1, 0], [0, 0]]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Pages as ranges',
-    prompt: 'A print dialog shows the pages you picked as ranges: `[1, 2, 3, 7, 8, 10]` reads `"1-3, 7-8, 10"`. Write `toRanges(pages: readonly number[]): string`. The pages are sorted, with no repeats. Keep two indexes: `start` on the first page of a run, and `end`, which moves forward while the next page is one more than the page at `end`. Write the run as `"start-end"`, or as one number when it holds a single page, then begin the next run after `end`. Join the runs with `", "`. No pages give `""`.',
+    prompt: "A print dialog shows the pages you picked as ranges: `[1, 2, 3, 7, 8, 10]` reads `\"1-3, 7-8, 10\"`. Write `toRanges(pages: readonly number[]): string`. The pages are sorted, with no repeats. Keep two indexes: `start` on the first page of a run, and `end`, which moves forward while the next page is one more than the page at `end`. Write the run as `\"start-end\"`, or as one number when it holds a single page, then begin the next run after `end`. Join the runs with `\", \"`. No pages give `\"\"`. Domain: a dense readonly ordinary array of at most 1000 strictly increasing, unique nonnegative integer page labels from 0 through 1000000000, possibly frozen, with no accessors/proxies. Zero is a valid label. Preserve input order/values, without sorting or other writes. Format labels as ordinary decimal text and include both endpoints even for a run of two labels; no extra separator is added. Target: O(n) time and output space, where n is 1 + page count with bounded digit formatting. Each index advances through its run once; collect runs and join them instead of repeatedly copying a growing result string.",
     starter: `const toRanges = (pages: readonly number[]): string => {
 
 };
@@ -994,14 +986,8 @@ console.log(toRanges([1, 2, 3, 7, 8, 10]));
     tier: 2,
     focus: ['two-pointer', 'generics'],
     title: 'Alternate two playlists',
-    prompt: 'A party playlist takes turns between two guests’ lists: a song from `a`, then one from `b`, then the next from `a`, and so on. When one list runs out, the rest of the other follows in order. Write `alternate<T>(a: readonly T[], b: readonly T[]): T[]`, with one index for each list. The type parameter lets it work for song titles, ids or any other items, as long as both lists hold the same kind.',
-    starter: `const alternate = (a, b) => {
-
-};
-
-// Scratch pad. Change this and press Run.
-console.log(alternate(["Intro", "Wave"], ["Tide", "Drift", "Echo"]));
-`,
+    prompt: "A party playlist takes turns between two guests\u2019 lists: a song from `a`, then one from `b`, then the next from `a`, and so on. When one list runs out, the rest of the other follows in order. Write `alternate<T>(a: readonly T[], b: readonly T[]): T[]`, with one index for each list. The type parameter lets it work for song titles, ids or any other items, with one shared element type. Domain: dense ordinary readonly arrays of at most 1000 stable items each, possibly frozen, without accessors/proxies. Items are opaque: preserve their exact values/references without copying, coercing or reading their fields. Keep duplicates, null, undefined and falsy values in order; leave both lists unchanged. Return a fresh mutable result every call, including when either/both lists are empty or the lists are the same object. T is one shared element type, which may explicitly be a union. Target: O(n + m) time and output space, where n is 1 + a.length and m is 1 + b.length under constant item-reference operations.",
+    starter: "const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {\n\n};\n\n// Scratch pad. Change this and press Run.\nconsole.log(alternate([\"Intro\", \"Wave\"], [\"Tide\", \"Drift\", \"Echo\"]));\n",
     skeleton: `const alternate = <T>(a: readonly T[], b: readonly T[]): T[] => {
   const mixed: T[] = [];
   let i = 0;
@@ -1042,7 +1028,7 @@ console.log(alternate(["Intro", "Wave"], ["Tide", "Drift", "Echo"]));
     tier: 2,
     focus: ['type-guards', 'json'],
     title: 'Check the JSON first',
-    prompt: '`JSON.parse` returns `any`, so the compiler believes whatever you say came back. Write `isUser(value: unknown): value is User`, returning `true` only for an object whose `name` is a string and whose `age` is a number. Then write `readUser(text: string): User | null`: parse the text, which is always valid JSON, and return the result when `isUser` accepts it, or `null` when it does not. `null` is valid JSON too, and `typeof null` is `"object"`.',
+    prompt: "`JSON.parse` returns `any`, so the compiler believes whatever you say came back. Write `isUser(value: unknown): value is User`, returning `true` only for an object whose `name` is a string and whose `age` is a number. Then write `readUser(text: string): User | null`: parse the text, which is always valid JSON, and return the result when `isUser` accepts it, or `null` when it does not. `null` is valid JSON too, and `typeof null` is `\"object\"`. Domain: isUser receives stable JavaScript values without proxies/accessors. For a non-null value with typeof object, name and age may be own or inherited data properties on a prototype chain of bounded depth; arrays with those fields are objects too. Check only the stated property types: empty names, negative/fractional ages, NaN and infinities still meet string/number and are not rejected by extra business rules. Functions do not meet the object check. Leave the value unchanged. readUser receives valid JSON text of at most 10000 UTF-16 units and nesting depth at most 20. Return the whole accepted parsed object, including extra fields, without rebuilding or normalizing it. A large JSON numeric exponent may parse to Infinity, which is still a number. Invalid JSON is outside this task. Target: O(n) time and worst-case O(n) parsed storage for readUser, where n is 1 + JSON text length under the bounded-depth parsing model; isUser alone uses O(1) property/type checks under the bounded prototype-depth assumption.",
     starter: `interface User {
   name: string;
   age: number;
@@ -1105,7 +1091,7 @@ const readUser = (text: string): User | null => {
     tier: 2,
     focus: ['narrowing', 'filter'],
     title: 'Data or an error',
-    prompt: 'A batch of API replies holds two shapes: `{ data }` when a call worked and `{ error }` when it failed. There is no shared `kind` field to compare, so narrow with the `in` operator: inside `if ("error" in reply)`, TypeScript knows `reply` is the error shape. Write `errorsOf(replies: readonly Reply[]): string[]`, returning every error message, in order.',
+    prompt: "A batch of API replies holds two shapes: `{ data }` when a call worked and `{ error }` when it failed. There is no shared `kind` field to compare, so narrow with the `in` operator: inside `if (\"error\" in reply)`, TypeScript knows `reply` is the error shape. Write `errorsOf(replies: readonly Reply[]): string[]`, returning every error message, in order. Domain: a dense readonly array of at most 1000 stable ordinary or null-prototype data records, possibly frozen. Each reply has exactly one own error string or own data array as declared, with no accessors/proxies. Text has at most 200 UTF-16 units; data arrays contain at most 100 strings. Preserve error text exactly, including whitespace, empty text, Unicode and duplicate messages. Do not change replies or data. Return a fresh mutable message array each call, including when empty. Target: O(n) time and worst-case O(n) storage, where n is 1 + reply count; message strings and successful data are retained or ignored without traversing their contents.",
     starter: `type Reply = { data: string[] } | { error: string };
 
 const errorsOf = (replies) => {
@@ -1153,7 +1139,7 @@ const errorsOf = (replies: readonly Reply[]): string[] =>
     tier: 1,
     focus: ['literal-types', 'record'],
     title: 'The next traffic light',
-    prompt: 'A traffic light shows `"red"`, then `"green"`, then `"amber"`, then red again. Declare `type Light = "red" | "green" | "amber"` and a table `const NEXT: Record<Light, Light>` that maps each light to the one after it. Then write `nextLight(light: Light, steps: number): Light`, moving through the table `steps` times. Typed as `Record<Light, Light>`, the table cannot leave a light out or misspell one without a compile error.',
+    prompt: "A traffic light shows `\"red\"`, then `\"green\"`, then `\"amber\"`, then red again. Declare `type Light = \"red\" | \"green\" | \"amber\"` and a table `const NEXT: Record<Light, Light>` that maps each light to the one after it. Then write `nextLight(light: Light, steps: number): Light`, moving through the table `steps` times. Typed as `Record<Light, Light>`, the table cannot leave a light out or misspell one without a compile error. Domain: light is exactly one of the three Light values and steps is an integer from 0 through 10000. NEXT has the stated fixed transitions and must remain unchanged across calls. Calls are independent and return the resulting Light synchronously. Target: O(n) time and O(1) retained state for the table-walking approach, where n is 1 + steps as a numeric magnitude rather than bit length. An equivalent cycle-reduction shortcut is also valid.",
     starter: `const nextLight = (light, steps) => {
 
 };
@@ -1201,7 +1187,7 @@ const nextLight = (light: Light, steps: number): Light => {
     tier: 2,
     focus: ['map', 'unions'],
     title: 'Every reading in Celsius',
-    prompt: 'Weather stations report in Celsius or in Fahrenheit, and each `Reading` names its scale in `unit`. Write `toCelsius(readings: readonly Reading[]): number[]`, returning one Celsius value per reading with `map`. A Celsius reading stays as it is. A Fahrenheit one becomes `(value - 32) * 5 / 9`, rounded to one decimal place with `Math.round(celsius * 10) / 10`.',
+    prompt: "Weather stations report in Celsius or in Fahrenheit, and each `Reading` names its scale in `unit`. Write `toCelsius(readings: readonly Reading[]): number[]`, returning one Celsius value per reading with `map`. A Celsius reading stays as it is. A Fahrenheit one becomes `(value - 32) * 5 / 9`, rounded to one decimal place with `Math.round(celsius * 10) / 10`. Domain: a dense readonly array of at most 1000 stable Reading records, possibly frozen, with unit exactly C or F and finite Number values from -1000000 through 1000000. Preserve input order and leave the array and records unchanged. Return a fresh mutable number array every call, including empty input. Celsius values pass through exactly, including negative zero. Fahrenheit conversion uses the stated operation order and Math.round rule, including ties toward positive infinity and any resulting negative zero; do not use decimal-formatting rounding instead. Target: O(n) time and output space, where n is 1 + reading count under bounded Number arithmetic.",
     starter: `type Reading =
   | { unit: "C"; value: number }
   | { unit: "F"; value: number };

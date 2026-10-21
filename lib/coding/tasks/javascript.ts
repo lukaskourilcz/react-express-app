@@ -14,7 +14,7 @@ export const JAVASCRIPT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["map"],
     title: "Double numbers",
-    prompt: "Return a new, doubled array: `double(numbers)`.",
+    prompt: "Write `double(numbers)` for an array of finite numbers. Return a new array containing twice each number, in the same order, without changing the input. Empty input returns `[]`. Target: O(n) time, where n is the number of array elements.",
     starter: `const double = numbers => {
   
 };
@@ -26,7 +26,7 @@ console.log(double([1,2,3]));
   numbers.map(item => {
     return /* transformed item */;
   });`,
-    hints: ["Map returns one new value for every input value."],
+    hints: ["The result needs one position for every input position. Keep the source array separate from the values you produce."],
     approach: [
       "Reach for map, since you need exactly one output value for every input value.",
       "In the callback, return the number multiplied by two — map collects the returns into the new array for you.",
@@ -50,7 +50,7 @@ console.log(double([1,2,3]));
     tier: 1,
     focus: ["filter"],
     title: "Even numbers",
-    prompt: "Write `evens(numbers)`, returning a new array of only the even values, in their original order. Zero counts as even, negatives are judged the same way, and an array with no even values gives an empty array.",
+    prompt: "Write `evens(numbers)` for an array of integers. Return a new array containing only even values in their original order, without changing the input. Keep duplicates; zero and negative even integers qualify. No matches returns `[]`. Target: O(n) time, where n is the number of input elements.",
     starter: `const evens = numbers => {
   
 };
@@ -62,7 +62,7 @@ console.log(evens([1,2,3,4]));
   numbers.filter(item => {
     return /* true to keep this item */;
   });`,
-    hints: ["Even numbers have a remainder of 0 when divided by 2."],
+    hints: ["Decide whether to keep each value without changing it. Check your condition with zero and a negative number as well as positive values."],
     approach: [
       "Reach for filter, since you are keeping some values and dropping others rather than transforming them.",
       "Decide evenness with the remainder operator: a number divided by two leaves a remainder of zero. Watch that zero itself qualifies.",
@@ -86,7 +86,7 @@ console.log(evens([1,2,3,4]));
     tier: 1,
     focus: ["reduce"],
     title: "Sum array",
-    prompt: "Write `sum(numbers)`, returning the total of every value. An empty array totals 0, and negatives and decimals add up like anything else.",
+    prompt: "Write `sum(numbers)` for an array of finite numbers. Add them in input order using JavaScript number arithmetic, without changing the array. Empty input returns `0`; include negative values and decimals. Target: O(n) time, where n is the number of array elements.",
     starter: `const sum = numbers => {
   
 };
@@ -99,7 +99,7 @@ console.log(sum([2,3,4]));
     return /* next accumulator */;
   }, /* initial value */);`,
     hints: [
-      "You are collapsing many values into one, so reach for the method built for exactly that — and give it a starting total, or an empty array has no answer to return.",
+      "Consider what total you have before reading the first element. Keep that value as you visit the rest of the array.",
     ],
     approach: [
       "Use reduce with an accumulator that carries the running total.",
@@ -125,7 +125,7 @@ console.log(sum([2,3,4]));
     tier: 1,
     focus: ["for", "strings"],
     title: "Longest word",
-    prompt: "Write `longest(words)`, returning the longest string in the array. When two are equally long, keep the one that comes first; an empty array returns an empty string.",
+    prompt: "Write `longest(words)` for an array of strings. Compare JavaScript string lengths (UTF-16 code units, as measured by `.length`) and return the longest string. Keep the first when lengths tie. Empty input returns `\"\"`; do not change the array. Target: O(n) time, where n is the number of strings.",
     starter: `const longest = words => {
   
 };
@@ -143,7 +143,7 @@ console.log(longest(["cat","elephant","dog"]));
   return best;
 };`,
     hints: [
-      "Walk the list keeping the best candidate found so far, and replace it only when the new word is strictly longer. That “strictly” is what leaves a tie on the earlier word.",
+      "Keep a candidate while scanning. Before replacing it, consider what should happen when two strings have equal lengths.",
     ],
     approach: [
       "Track the best candidate seen so far, either in a loop variable or as a reduce accumulator.",
@@ -179,7 +179,7 @@ console.log(longest(["cat","elephant","dog"]));
     tier: 1,
     focus: ["for-of", "strings"],
     title: "Count vowels",
-    prompt: "Write `countVowels(text)`, returning how many vowels (a, e, i, o, u) the string holds. Uppercase vowels count too; a string with none, or an empty string, gives 0.",
+    prompt: "Write `countVowels(text)`, returning the number of literal ASCII vowels `a e i o u A E I O U` in a primitive string. Empty text or text with none gives 0. Count every occurrence; y, accented vowels and other Unicode letters do not count. Do not normalize text or lowercase the entire Unicode string: for example, `İ` is not ASCII I and contributes 0, while the ASCII a followed by a combining accent still contributes 1. Target: O(n) time, where n is the UTF-16 length of the input; membership in the fixed ten-character vowel set takes constant time.",
     starter: `const countVowels = text => {
   
 };
@@ -187,21 +187,9 @@ console.log(longest(["cat","elephant","dog"]));
 // Scratch pad — change this and press Run.
 console.log(countVowels("hello"));
 `,
-    skeleton: `const countVowels = text => {
-  let count = 0;
-
-  for (const letter of /* text, in lower case */) {
-    // add one to count when "aeiou" includes letter
-  }
-
-  return count;
-};`,
-    hints: ["Loop through lowercase letters and check \"aeiou\"."],
-    approach: [
-      "Lowercase the text first so uppercase vowels are counted the same way.",
-      "Walk the characters and test membership against the five vowels; a string of vowels plus includes is enough.",
-      "Return how many matched, not the matches themselves.",
-    ],
+    skeleton: "const countVowels = text => {\n  let count = 0;\n  for (const letter of text) {\n    // count membership in the fixed uppercase/lowercase ASCII vowel set\n  }\n  return count;\n};",
+    hints: ["Compare each original character with a fixed set containing both uppercase and lowercase ASCII vowels. Converting Unicode text to lowercase can introduce an ASCII letter that was not in the original input."],
+    approach: ["Use the fixed vowel set aeiouAEIOU, or a regular expression restricted to these ASCII letters.", "Walk the original string and increment a counter for each matching item. Do not count unique letters only.", "Return the count. Unicode normalization and whole-string lowercasing are unnecessary and can change which original characters match."],
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
@@ -210,6 +198,10 @@ console.log(countVowels("hello"));
       { call: "countVowels(\"\")", expected: 0, label: "empty string", edge: true },
       { call: "countVowels(\"HELLO\")", expected: 2, label: "uppercase counts too", edge: true },
       { call: "countVowels(\"xyz\")", expected: 0, label: "no vowels", edge: true },
+      { call: "countVowels(\"İıáéíóúＡＥＩＯＵ𝒜\")", expected: 0, label: "only literal ASCII vowels", edge: true },
+      { call: "countVowels(\"a\\u0301ÉIİ\")", expected: 2, label: "combining marks do not change literal ASCII matches", edge: true },
+      { call: "countVowels(\"aaAAeeEEiiIIooOOuuUU\")", expected: 20, label: "count every uppercase and lowercase occurrence", edge: true },
+      { call: "countVowels(\"🦈 yY 123 !\")", expected: 0, label: "emoji y digits and punctuation are not vowels", edge: true },
     ],
   },
   {
@@ -221,7 +213,7 @@ console.log(countVowels("hello"));
     tier: 1,
     focus: ["for", "strings"],
     title: "Reverse string",
-    prompt: "Write `reverse(text)`, returning the string with its characters in the opposite order. Spaces are characters like any other, and an empty or single-character string comes back unchanged.",
+    prompt: "Write `reverse(text)`, returning its Unicode code points in reverse order. A code point can take two JavaScript string positions: `reverse(\"a😀\")` gives `\"😀a\"`, keeping the emoji whole. Spaces count too, and an empty or single-code-point string comes back unchanged. Work with code points, not combined visual characters such as a family emoji. Target: O(n) time, where n is the number of code points.",
     starter: `const reverse = text => {
   
 };
@@ -230,13 +222,13 @@ console.log(countVowels("hello"));
 console.log(reverse("cat"));
 `,
     skeleton: `const reverse = text => {
-  const letters = /* the characters of text, as an array */;
+  const letters = /* the code points of text, as an array */;
   // reverse letters, then join them back into one string
   return /* the joined string */;
 };`,
-    hints: ["Add each letter to the front of a result string."],
+    hints: ["Compare what string indexing and string iteration give you for an emoji. Collect complete code points before changing their order."],
     approach: [
-      "Split the string into characters, since strings themselves cannot be reversed in place.",
+      "String iteration yields complete code points; spreading or Array.from avoids splitting a surrogate pair in two.",
       "Reverse the character array and join it back into a string.",
       "Check that an empty string and a single character both survive the round trip.",
     ],
@@ -248,6 +240,7 @@ console.log(reverse("cat"));
       { call: "reverse(\"\")", expected: "", label: "empty string", edge: true },
       { call: "reverse(\"a\")", expected: "a", label: "single character", edge: true },
       { call: "reverse(\"ab cd\")", expected: "dc ba", label: "keeps spaces", edge: true },
+      { call: "reverse(\"a😀\")", expected: "😀a", label: "keeps a two-position code point whole", edge: true },
     ],
   },
   {
@@ -259,7 +252,7 @@ console.log(reverse("cat"));
     tier: 1,
     focus: ["filter"],
     title: "Positive numbers",
-    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in order. Zero is not positive, and an array with none gives an empty array.",
+    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in their original order, including duplicates. Zero (including -0) is not positive. The input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Return a new array even when the input is empty or every value is positive. Target: O(n) time, where n is the number of input elements, treating Number comparisons as constant-time work.",
     starter: `const positives = numbers => {
   
 };
@@ -272,7 +265,7 @@ console.log(positives([-1,0,3]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each value, and the only subtlety is the boundary: zero is not above zero.",
+      "Decide about each occurrence independently: keeping one value should not remove an equal value later. How can you keep the selected values in order without editing the input?",
     ],
     approach: [
       "Use filter with a strict greater-than-zero test.",
@@ -286,6 +279,7 @@ console.log(positives([-1,0,3]));
       { call: "positives([])", expected: [], label: "empty input", edge: true },
       { call: "positives([0])", expected: [], label: "zero is not positive", edge: true },
       { call: "positives([-5,-1])", expected: [], label: "nothing matches", edge: true },
+      { call: "positives([2,2,0.5,-0,0])", expected: [2, 2, 0.5], label: "keep duplicates and positive fractions", edge: true },
     ],
   },
   {
@@ -297,7 +291,7 @@ console.log(positives([-1,0,3]));
     tier: 1,
     focus: ["map"],
     title: "Square numbers",
-    prompt: "Write `squares(numbers)`, returning a new array with every number multiplied by itself. A negative squares to a positive; zero and decimals square normally.",
+    prompt: "Write `squares(numbers)`, returning a new array with each input number multiplied by itself, in order and without rounding. Use JavaScript Number arithmetic: negative inputs square to nonnegative results, and zero and decimals follow the same multiplication rule. The input is a dense array of finite numbers and may be frozen; leave it unchanged. Even an empty input must give a different array. Target: O(n) time, where n is the number of elements and each Number multiplication counts as constant-time work.",
     starter: `const squares = numbers => {
   
 };
@@ -310,7 +304,7 @@ console.log(squares([2,3]));
     return /* transformed item */;
   });`,
     hints: [
-      "One output for every input, and squaring is just a number multiplied by itself — the same shape as doubling.",
+      "Keep positions aligned: output position i comes from input position i. Build the output separately so the caller's original values stay available.",
     ],
     approach: [
       "Use map, since every input produces exactly one output.",
@@ -335,7 +329,7 @@ console.log(squares([2,3]));
     tier: 1,
     focus: ["for"],
     title: "Largest number",
-    prompt: "Write `largest(numbers)`, returning the biggest value in the array. It must still work when every value is negative, and when the maximum appears more than once. Assume at least one number.",
+    prompt: "Write `largest(numbers)`, returning its numerically greatest value. The input is a dense array of 1 to 10,000 finite JavaScript numbers; leave it unchanged, including when it is frozen. Handle all-negative inputs, fractions and repeated maxima. Either sign of zero is acceptable when zero is the maximum. Target: O(n) time, where n is the number of elements and Number comparisons count as constant-time work.",
     starter: `const largest = numbers => {
   
 };
@@ -352,9 +346,9 @@ console.log(largest([4,9,2]));
 
   return best;
 };`,
-    hints: ["Compare every value with the largest seen."],
+    hints: ["What initial candidate comes from the actual data, even when all the values are negative? Compare each later value with that candidate."],
     approach: [
-      "Either track the largest seen so far in a loop, or spread the array into Math.max.",
+      "Track the largest seen in a loop or reduce from the first value. Math.max with spread also works for this bounded exercise, but a scan avoids turning all elements into function arguments.",
       "Make sure the comparison still works when every value is negative — starting from zero would be wrong.",
     ],
     verify: "tests",
@@ -376,7 +370,7 @@ console.log(largest([4,9,2]));
     tier: 1,
     focus: ["for"],
     title: "Fizz values",
-    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`. `fizz(0)` gives an empty array.",
+    prompt: "Write `fizz(n)` for a nonnegative integer n. Return a new array with one entry for each integer from 1 through n, in order: use the exact string `Fizz` for multiples of 3 and the Number itself otherwise. `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`; `fizz(0)` gives `[]`. Target: O(n) time, where n is the requested number of output entries.",
     starter: `const fizz = n => {
   
 };
@@ -388,9 +382,7 @@ console.log(fizz(5));
   const numbers = /* the numbers 1 through n, in an array */;
   return numbers.map(number => /* "Fizz" when number divides by 3, otherwise number */);
 };`,
-    hints: [
-      "Count from 1 up to n, and for each number decide whether it divides by three before you decide what to put in the array.",
-    ],
+    hints: ["Check the two endpoints of the range before deciding which values get a label. Divisibility is about a remainder, not a decimal quotient."],
     approach: [
       "Build the numbers one through n first, then transform them.",
       "For each number, return the word Fizz when it divides evenly by three, and the number itself otherwise.",
@@ -415,7 +407,7 @@ console.log(fizz(5));
     tier: 1,
     focus: ["while"],
     title: "Countdown",
-    prompt: "Write `countDown(n)`, returning an array counting down from n to 1 — `countDown(3)` gives `[3, 2, 1]`. `countDown(0)` gives an empty array.",
+    prompt: "Write `countDown(n)`, returning the integers from n down to 1, inclusive: `countDown(3)` gives `[3, 2, 1]`. The input n is an integer from 0 to 10,000; zero gives an empty array. Each value appears once and zero is never included. Target: O(n) time, where n is the requested output length, not the number of digits in the input. Count each Number operation and output append as constant-time work in this exercise's array model.",
     starter: `const countDown = n => {
   
 };
@@ -432,7 +424,7 @@ console.log(countDown(3));
 
   return result;
 };`,
-    hints: ["Push n, then decrease it while it is positive."],
+    hints: ["Think about which value must be emitted first, what makes the next value smaller, and the boundary where no values remain."],
     approach: [
       "Use a while loop that keeps going while n is still positive.",
       "Push the current value, then decrease it, so the first pushed value is n itself and the last is one.",
@@ -456,7 +448,7 @@ console.log(countDown(3));
     tier: 1,
     focus: ["map", "strings"],
     title: "First letters",
-    prompt: "Write `firstLetters(words)`, returning an array of the first character of each word, in order and with its original case.",
+    prompt: "Write `firstLetters(words)`, returning an array of each string's first Unicode code point, in order and with its original case. An empty string contributes `\"\"`; an empty array gives `[]`. `firstLetters([\"😀reef\", \"\"])` gives `[\"😀\", \"\"]`. Leave `words` unchanged. Target: O(n) time, where n is the number of strings.",
     starter: `const firstLetters = words => {
   
 };
@@ -469,11 +461,11 @@ console.log(firstLetters(["red","blue"]));
     return /* transformed item */;
   });`,
     hints: [
-      "One output per input again: each word becomes only its opening character, and a string can be indexed the way an array can.",
+      "Keep one output per input, even when a string is empty. String iteration keeps a two-position code point together; indexing does not.",
     ],
     approach: [
       "Use map, which gives exactly one letter back for every word in the list.",
-      "Index the first character of each word, and keep its original case rather than changing it.",
+      "Take the first value from each string's iterator, defaulting to an empty string when the iterator has no value. Keep its original case.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -481,6 +473,7 @@ console.log(firstLetters(["red","blue"]));
       { call: "firstLetters([\"red\",\"blue\"])", expected: ["r", "b"] },
       { call: "firstLetters([\"one\",\"two\",\"three\"])", expected: ["o", "t", "t"] },
       { call: "firstLetters([])", expected: [], label: "empty input", edge: true },
+      { call: "firstLetters([\"\",\"😀reef\"])", expected: ["", "😀"], label: "empty string and complete code point", edge: true },
       { call: "firstLetters([\"solo\"])", expected: ["s"], label: "single word", edge: true },
       {
         call: "firstLetters([\"Red\",\"blue\"])",
@@ -499,7 +492,7 @@ console.log(firstLetters(["red","blue"]));
     tier: 1,
     focus: ["some"],
     title: "Has adult",
-    prompt: "Write `hasAdult(ages)`, returning true when at least one age is 18 or more. Exactly 18 counts; an empty array is false.",
+    prompt: "For this exercise, an adult is any age at least 18. Write `hasAdult(ages)`, returning a boolean: true when at least one age qualifies, otherwise false. Exactly 18 counts and an empty array is false. Input is a dense array of finite nonnegative numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of ages and Number comparisons count as constant-time work; a match may allow an earlier return.",
     starter: `const hasAdult = ages => {
   
 };
@@ -538,7 +531,7 @@ console.log(hasAdult([12,18]));
     tier: 1,
     focus: ["every"],
     title: "All positive",
-    prompt: "Write `allPositive(numbers)`, returning true only when every value is above zero. Zero makes it false, and an empty array is true.",
+    prompt: "Write `allPositive(numbers)`, returning a boolean: true only when every value is strictly above zero. Either sign of zero makes it false; an empty array is true because it contains no counterexample. Input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of elements and each Number comparison counts as one operation; a counterexample permits an earlier return.",
     starter: `const allPositive = numbers => {
   
 };
@@ -551,7 +544,7 @@ console.log(allPositive([1,2,3]));
     return /* condition */;
   });`,
     hints: [
-      "The opposite question to the last one: every value has to qualify. Think about what that means for a list with nothing in it to disqualify.",
+      "Look for a counterexample rather than counting successes. What result remains when the search finishes without finding one, including in an empty list?",
     ],
     approach: [
       "Use every, which stops at the first failure and hands back a boolean.",
@@ -582,7 +575,7 @@ console.log(allPositive([1,2,3]));
     tier: 1,
     focus: ["reduce", "objects"],
     title: "Total price",
-    prompt: "Write `total(items)`, returning the sum of every item’s `price`. An empty array totals 0, and decimal prices add up normally.",
+    prompt: "Write `total(items)`, adding each item's price to a Number total that starts at zero, in array order. An empty array returns 0. Use ordinary JavaScript addition without rounding or applying quantity fields: 0.1 plus 0.2 gives 0.30000000000000004. Input is a dense array of plain objects with finite nonnegative numeric price properties; leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of items and property reads and Number additions count as constant-time work.",
     starter: `const total = items => {
   
 };
@@ -625,7 +618,7 @@ console.log(total([{price:2},{price:3}]));
     tier: 1,
     focus: ["strings"],
     title: "Capitalize",
-    prompt: "Write `capitalize(text)`, returning the string with only its first character uppercased and the rest left alone — `hello world` becomes `Hello world`. An empty string comes back empty.",
+    prompt: "Write `capitalize(text)`, uppercasing only its first Unicode code point and leaving everything after it unchanged: `hello world` becomes `Hello world`. A code point can take two JavaScript string positions. Use JavaScript's `toUpperCase()` mapping, which may expand one code point: `ßeta` becomes `SSeta`. An empty string comes back empty. Target: O(n) time, where n is the number of code points.",
     starter: `const capitalize = text => {
   
 };
@@ -637,10 +630,10 @@ console.log(capitalize("hello"));
   // transform or inspect text
   return /* result */;
 };`,
-    hints: ["Combine the uppercase first character with slice(1)."],
+    hints: ["Separate the first complete code point from the unchanged remainder, and consider what happens when there is no first value."],
     approach: [
-      "Take the first character, uppercase it, and concatenate the rest of the string from index one onwards.",
-      "Guard the empty string first, because indexing character zero of an empty string gives undefined.",
+      "Iterate the string by code points, uppercase the first one and join it with the unchanged remaining points.",
+      "Use an empty first value for empty input; toUpperCase may produce more than one output character.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -649,6 +642,7 @@ console.log(capitalize("hello"));
       { call: "capitalize(\"hello world\")", expected: "Hello world" },
       { call: "capitalize(\"\")", expected: "", label: "empty string", edge: true },
       { call: "capitalize(\"a\")", expected: "A", label: "single character", edge: true },
+      { call: "capitalize(\"ßeta\")", expected: "SSeta", label: "uppercase mapping can expand", edge: true },
       {
         call: "capitalize(\"HELLO\")",
         expected: "HELLO",
@@ -666,7 +660,7 @@ console.log(capitalize("hello"));
     tier: 2,
     focus: ["map-set"],
     title: "Unique values",
-    prompt: "Write `unique(values)`, returning a new array with duplicates removed, each value kept at the position it was first seen. It works for strings as well as numbers.",
+    prompt: "Write `unique(values)` for an array of strings and finite numbers. Return a new array with duplicates removed in first-seen order, without changing the input. A number and its string representation are different values; `0` and `-0` count as the same value. Empty input returns `[]`. Target: O(n) time on average, where n is the number of input elements; assume average constant-time membership checks.",
     starter: `const unique = values => {
   
 };
@@ -678,7 +672,7 @@ console.log(unique([1,1,2]));
   const seen = new Set(values);
   return /* the set, back as an array */;
 };`,
-    hints: ["Create a Set, then spread it into an array."],
+    hints: ["You need to remember which values have appeared while preserving the order of their first appearances. Keep number and string identities distinct."],
     approach: [
       "Put the values into a Set, which discards duplicates and preserves first-seen order.",
       "Spread the Set back into an array so the return type matches the input.",
@@ -702,7 +696,7 @@ console.log(unique([1,1,2]));
     tier: 1,
     focus: ["split", "strings"],
     title: "Word count",
-    prompt: "Write `wordCount(sentence)`, returning how many words the sentence holds. Surrounding whitespace does not count, repeated spaces between words do not create extra ones, and an empty string gives 0.",
+    prompt: "Write `wordCount(sentence)`, counting runs of non-whitespace characters. Any JavaScript whitespace, including spaces, tabs and line breaks, separates words. Surrounding or repeated whitespace adds no words; empty or whitespace-only text gives 0. Target: O(n) time, where n is the number of JavaScript string positions.",
     starter: `const wordCount = sentence => {
   
 };
@@ -730,6 +724,7 @@ console.log(wordCount("one two three"));
       { call: "wordCount(\"\")", expected: 0, label: "empty string returns 0", edge: true },
       { call: "wordCount(\"  hi  \")", expected: 1, label: "surrounding whitespace", edge: true },
       { call: "wordCount(\"one  two\")", expected: 2, label: "repeated spaces", edge: true },
+      { call: "wordCount(\"one\\ttwo\\nthree\")", expected: 3, label: "tabs and line breaks separate words", edge: true },
     ],
   },
   {
@@ -741,7 +736,7 @@ console.log(wordCount("one two three"));
     tier: 1,
     focus: ["find", "objects"],
     title: "Find user",
-    prompt: "Write `findUser(users, name)`, returning the first user object whose `name` matches. Return `undefined` when nothing matches, or when the list is empty.",
+    prompt: "Write `findUser(users, name)`, returning the original first object whose name is exactly equal to the query string, including case, spaces and empty strings. Preserve its identity and extra properties; return undefined for no match or an empty list. Input is a dense array of plain objects with string name properties; names and the query are at most 128 UTF-16 code units long. Leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of users; the name-length bound makes each string comparison bounded work.",
     starter: `const findUser = (users, name) => {
   
 };
@@ -784,7 +779,7 @@ console.log(findUser([{name:"Ana"}],"Ana"));
     tier: 2,
     focus: ["filter", "reduce"],
     title: "Odd sum",
-    prompt: "Write `oddSum(numbers)`, returning the total of just the odd values. Negative odds count; no odd values, or an empty array, totals 0.",
+    prompt: "Write `oddSum(numbers)`, returning the sum of every odd occurrence, including negative and repeated odd values. No odd values or an empty input returns 0. Input is a dense array of at most 10,000 JavaScript integer Numbers between -1,000,000 and 1,000,000; these bounds keep the sum exactly representable. Leave the input unchanged, including when frozen. Target: O(n) time, where n is the number of input values and Number remainder, comparison and addition count as constant-time operations.",
     starter: `const oddSum = numbers => {
   
 };
@@ -823,7 +818,7 @@ console.log(oddSum([1,2,3]));
     tier: 2,
     focus: ["for", "strings"],
     title: "Repeat word",
-    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(\"hi\", 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
+    prompt: "Write `repeat(word, times)`, where word is a string and times is a nonnegative integer. Return that many unchanged copies with one ASCII space between copies and none added around them. Preserve spaces and Unicode already in word; word may be empty. `repeat(\"hi\", 3)` gives `hi hi hi`; zero times gives `\"\"`. Target: O(n) time, where n = times × (word.length + 1) accounts for copied UTF-16 code units and separators.",
     starter: `const repeat = (word, times) => {
   
 };
@@ -865,7 +860,7 @@ console.log(repeat("hi",3));
     tier: 2,
     focus: ["for", "push"],
     title: "Number range",
-    prompt: "Write `range(start, end)`, returning every integer from start through end, both included. Start may equal end, and a negative start works the same way.",
+    prompt: "Write `range(start, end)`, returning all integers in ascending order from start through end, both included. Equal endpoints give one value; start greater than end gives an empty array. Both inputs are integer Numbers between -10,000 and 10,000. Target: O(n) time for n output elements, with constant work for an empty interval; n is max(0, end - start + 1), rather than the size of either endpoint. Count Number operations and array appends as constant-time work in this exercise's array model.",
     starter: `const range = (start, end) => {
   
 };
@@ -883,10 +878,10 @@ console.log(range(2,4));
   return result;
 };`,
     hints: [
-      "Count up from start while you have not gone past end. The boundary is the whole exercise, because end is included in the result.",
+      "Check a one-value interval and a reversed interval before choosing a loop boundary. How many values must exist when the endpoints are equal?",
     ],
     approach: [
-      "Work out how many values the range holds before you build it: end minus start, plus one.",
+      "If start is greater than end, return an empty array. Otherwise the result holds end minus start, plus one values.",
       "Generate values by adding the index to the start, so a negative start works the same way.",
       "Use an inclusive comparison so the end value is part of the result.",
     ],
@@ -908,7 +903,7 @@ console.log(range(2,4));
     tier: 2,
     focus: ["reduce"],
     title: "Average",
-    prompt: "Write `average(numbers)`, returning the mean of the array. An empty array returns 0 rather than NaN.",
+    prompt: "Write `average(numbers)`, returning the arithmetic mean using JavaScript Number arithmetic without rounding the answer. Empty input returns 0. Input is a dense array of at most 10,000 finite numbers between -1,000,000 and 1,000,000; leave it unchanged, including when frozen. Small floating-point differences are accepted in fractional checks. Target: O(n) time, where n is the number of values and Number operations count as constant-time work.",
     starter: `const average = numbers => {
   
 };
@@ -922,11 +917,11 @@ console.log(average([2,4,6]));
   return /* total divided by how many numbers there are */;
 };`,
     hints: [
-      "A mean is a total divided by a count, so the only real decision here is what to hand back when the count is zero.",
+      "Separate the empty case from the arithmetic. What two quantities describe a mean, and how can you compute them without changing the observations?",
     ],
     approach: [
       "Sum the values with reduce, then divide by how many there are.",
-      "Guard the empty array before dividing, since dividing by a length of zero yields NaN.",
+      "Guard the empty array before dividing: its total and length are both zero, and 0 / 0 is NaN.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -947,7 +942,7 @@ console.log(average([2,4,6]));
     tier: 2,
     focus: ["filter", "strings"],
     title: "Short words",
-    prompt: "Write `shortWords(words)`, returning only the words with fewer than five characters. Four characters passes, five does not.",
+    prompt: "Write `shortWords(words)`, returning a new array of strings whose JavaScript length is less than five. Measure UTF-16 code units, as String.length does: two emoji such as '😀😀' occupy four units, while three occupy six. Preserve order, duplicate occurrences and empty strings. Input is a dense string array and may be frozen; leave it unchanged, and return a new array even for empty or all-matching input. Target: O(n) time, where n is the number of strings and each stored length read counts as constant-time work.",
     starter: `const shortWords = words => {
   
 };
@@ -960,11 +955,11 @@ console.log(shortWords(["cat","elephant"]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each word using its length. Read the boundary carefully: four characters passes and five does not.",
+      "Make each keep-or-drop decision independently so equal words remain separate occurrences. Use the task's length unit; a visible emoji can occupy two UTF-16 units.",
     ],
     approach: [
       "Use filter, keeping a word only when its length passes the comparison.",
-      "The boundary matters: strictly fewer than five characters passes, so a four-letter word is kept and a five-letter word is not.",
+      "Compare the stored UTF-16 length with five. Empty strings qualify; four units qualify and five do not, regardless of how many symbols a person sees.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -995,7 +990,7 @@ console.log(shortWords(["cat","elephant"]));
     tier: 2,
     focus: ["objects"],
     title: "Object keys",
-    prompt: "Write `keys(object)`, returning an array of the object’s own key names in insertion order. An empty object gives an empty array.",
+    prompt: "Write `keys(object)`, returning a new array of its own enumerable string-keyed property names. Use JavaScript property order: array-index keys come first in ascending numeric order, followed by other strings in creation order. Ignore inherited, non-enumerable and symbol keys. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-enumeration model, where n counts all own properties examined.",
     starter: `const keys = object => {
   
 };
@@ -1008,10 +1003,10 @@ console.log(keys({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "JavaScript hands you an object’s own key names as an array already — the question is which built-in returns the names rather than what is stored under them.",
+      "Consider three traits separately: is a property on this object, is it enumerable, and is its key a string? Numeric index keys also have a defined order.",
     ],
     approach: [
-      "Object.keys hands back the property names as an array.",
+      "Object.keys returns own enumerable string keys. Array-index names are ordered numerically; other string names keep creation order.",
       "Confirm an empty object gives an empty array rather than undefined.",
     ],
     verify: "tests",
@@ -1032,7 +1027,7 @@ console.log(keys({a:1,b:2}));
     tier: 2,
     focus: ["objects"],
     title: "Object values",
-    prompt: "Write `values(object)`, returning an array of the object’s values in insertion order. `null` is a value like any other; an empty object gives an empty array.",
+    prompt: "Write `values(object)`, returning a new array of values belonging to its own enumerable string-keyed properties. Use JavaScript property order: array-index keys ascending, then other string keys in creation order. Ignore inherited, non-enumerable and symbol-keyed properties. Keep every selected value, including null, undefined and false; retain original object/array references. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-access model, where n counts all own properties examined.",
     starter: `const values = object => {
   
 };
@@ -1045,11 +1040,11 @@ console.log(values({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "The same family of built-ins as the previous challenge, but this time you want what is stored rather than what it is stored under.",
+      "Collect the values without converting or filtering them. If a selected value is an object, your result should refer to that same object.",
     ],
     approach: [
-      "Object.values hands back the property values as an array.",
-      "Remember null is a real value and must survive into the result.",
+      "Object.values reads own enumerable string-keyed properties, with array-index keys first in numeric order and other strings in creation order.",
+      "Keep null, undefined and other falsy values. This is a shallow collection: nested objects remain the original references.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -1069,7 +1064,7 @@ console.log(values({a:1,b:2}));
     tier: 2,
     focus: ["spread", "objects"],
     title: "Activate user",
-    prompt: "Write `activate(user)`, returning a new object with the same properties plus `active: true`. The original object must not be changed, and an existing `active: false` is overridden.",
+    prompt: "Write `activate(user)`, returning a new object that shallow-copies the user's own enumerable properties, including string and symbol keys, and sets its own active property to true. Override any existing active value. Keep nested values by reference, leave the input unchanged and skip inherited/non-enumerable properties. Input has ordinary data properties and may be frozen or have a null prototype. An own '__proto__' data key must remain a data key without setting the result's prototype. Target: O(n) time under a unit-cost property-copy model, where n is the number of own properties examined.",
     starter: `const activate = user => {
   
 };
@@ -1082,7 +1077,7 @@ console.log(activate({name:"Sam"}));
   return /* result */;
 };`,
     hints: [
-      "Build a new object instead of assigning onto the one you were given, and put the flag after the copied properties so it wins when both are present.",
+      "There may be two versions of active when the input already has one. Which should win, and how can you preserve nested references without assigning into the input?",
     ],
     approach: [
       "Spread the original object into a new one rather than assigning to the original, so the input is left untouched.",
@@ -1111,7 +1106,7 @@ console.log(activate({name:"Sam"}));
     tier: 2,
     focus: ["strings"],
     title: "Palindrome",
-    prompt: "Write `isPalindrome(text)`, returning true when the string reads the same backwards. Assume plain lowercase letters; an empty string and a single character are both palindromes.",
+    prompt: "Write `isPalindrome(text)`, returning a boolean for whether text reads the same forwards and backwards. Input contains only lowercase ASCII letters a–z; no normalization is needed. Empty text and one letter are palindromes. Target: O(n) time, where n is the number of letters in text.",
     starter: `const isPalindrome = text => {
   
 };
@@ -1123,7 +1118,7 @@ console.log(isPalindrome("level"));
   // transform or inspect text
   return /* result */;
 };`,
-    hints: ["Compare the word to its reversed version."],
+    hints: ["Compare matching positions from opposite ends. Decide when those positions have covered the whole word."],
     approach: [
       "Reverse the word using the same split, reverse, join route as the reverse-string challenge.",
       "Compare the reversed word with the original and return the comparison directly.",
@@ -1153,7 +1148,7 @@ console.log(isPalindrome("level"));
     tier: 2,
     focus: ["for-of", "objects"],
     title: "Letter counts",
-    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
+    prompt: "Write `countLetters(text)`, returning a fresh object that counts every item produced by the JavaScript string iterator (`for...of`), including spaces, punctuation and uppercase characters. For example, `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. A surrogate pair such as 🦈 counts as one key, while combining marks are separate keys; do not normalize text or change case. Empty text gives an empty object. `text` is a primitive string. Target: O(n) time, where n is the number of UTF-16 code units, using average constant-time dictionary updates; update the accumulator instead of copying all prior counts on each step.",
     starter: `const countLetters = text => {
   
 };
@@ -1170,14 +1165,8 @@ console.log(countLetters("aba"));
 
   return counts;
 };`,
-    hints: [
-      "Walk the characters building an object up as you go, treating a character you have not seen yet as though its count were already zero.",
-    ],
-    approach: [
-      "Build an object as you walk the characters, using reduce or a loop.",
-      "For each letter, read the existing count or fall back to zero, then store one more.",
-      "The starting value is an empty object, which is also what an empty string returns.",
-    ],
+    hints: ["Walk the string with for...of to keep surrogate pairs together. Keep one counts object, and increment the entry for the current iterator item from zero when it is missing."],
+    approach: ["Create one empty counts object.", "Walk the original text with for...of, without normalization or case conversion. The iterator preserves surrogate pairs but splits combining sequences.", "Increment the count for the current item, starting from zero. Return the same accumulator after the loop; copying the growing dictionary at every character adds unnecessary repeated work."],
     verify: "tests",
     estimatedMinutes: 20,
     tests: [
@@ -1196,6 +1185,10 @@ console.log(countLetters("aba"));
         label: "repeats accumulate",
         edge: true,
       },
+      { call: "countLetters(\"🦈a🦈A !\")", expected: {"🦈": 2, "a": 1, "A": 1, " ": 1, "!": 1}, label: "surrogate pairs case spaces and punctuation", edge: true },
+      { call: "countLetters(\"é e\\u0301\")", expected: {"é": 1, " ": 1, "e": 1, "́": 1}, label: "combining mark stays a separate key", edge: true },
+      { call: "(() => {const a=countLetters(\"\"),b=countLetters(\"\");return a!==b&&Object.keys(a).length===0&&Object.keys(b).length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const text=Array.from({length:128},(_,i)=>String.fromCodePoint(1024+i)).join(\"\");const out=countLetters(text+text);return Object.keys(out).length===128&&[...text].every(c=>out[c]===2);})()", expected: true, label: "many distinct characters", edge: true },
     ],
   },
   {
@@ -1207,7 +1200,7 @@ console.log(countLetters("aba"));
     tier: 3,
     focus: ["reduce", "flat"],
     title: "Flatten arrays",
-    prompt: "Write `flatten(arrays)`, returning one array holding the items of each inner array, in order. Flatten a single level only, and do it without `Array.prototype.flat`.",
+    prompt: "Write `flatten(arrays)`, returning a fresh array holding each inner array’s items in their original order. Flatten exactly one level, preserve item references/values and do not modify any input. Do not use Array.prototype.flat. Empty input or only empty inner arrays returns a fresh empty array. Domain: at most 1,000 ordinary dense inner arrays with at most 10,000 total item slots, no overridden iterators or concat-spread behavior; items are opaque values, including nested arrays, null and undefined. Inputs may be frozen. Target: O(n) time, where n is 1 plus the number of outer entries and total inner item slots, under amortized array append. Repeatedly copying the accumulated output can take quadratic work.",
     starter: `const flatten = arrays => {
   
 };
@@ -1215,14 +1208,11 @@ console.log(countLetters("aba"));
 // Scratch pad — change this and press Run.
 console.log(flatten([[1,2],[3]]));
 `,
-    skeleton: `const flatten = arrays =>
-  arrays.reduce((accumulator, item) => {
-    return /* next accumulator */;
-  }, /* initial value */);`,
-    hints: ["Reduce by concatenating each inner array."],
+    skeleton: "const flatten = arrays =>\n  arrays.reduce((result, array) => {\n    // append each item into this new result, then return it\n    return result;\n  }, []);",
+    hints: ["Use one fresh result array and append each inner item once; changing your own result is different from changing an input array."],
     approach: [
       "Reduce the outer array into a single result array.",
-      "At each step, concatenate the inner array onto the accumulator — spreading it works and keeps the update immutable.",
+      "Append each inner item to the same new result. Repeated spread/concat of the growing accumulator copies earlier items again and can be quadratic.",
       "Start from an empty array so both an empty input and an empty inner array behave.",
     ],
     verify: "tests",
@@ -1244,7 +1234,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["closures"],
     title: "Call once",
-    prompt: "Write `once(fn)`, returning a wrapped function that runs `fn` at most once. Every later call returns that first result without calling `fn` again — including when the first result is falsy — and each wrapper remembers its own.",
+    prompt: "Write `once(fn)`, returning a wrapped function that runs `fn` at most once. Every later call returns that first result without calling `fn` again — including when the first result is falsy — and each wrapper remembers its own. Forward every argument from the first call, preserving argument count and references. Cache and return the exact result value/reference, including undefined, false, null, zero or an object; do not clone it. Domain: fn is a synchronous nonthrowing bounded-cost function that does not rely on dynamic this or call its own wrapper; each wrapper receives at most 1,000 calls with at most 8 arguments. Exceptions and reentrant calls are outside this exercise. Target: O(1) time per wrapper call and O(1) stored state under this bounded argument/callback model. The wrapped callback is invoked only on the first call.",
     starter: `const once = fn => {
   
 };
@@ -1265,7 +1255,7 @@ console.log(flatten([[1,2],[3]]));
     approach: [
       "Keep two pieces of state in the closure: a flag saying whether the call has already happened, and the value it produced.",
       "Check that flag first on every call — only while it is unset do you run the wrapped function and store what came back.",
-      "Return the stored value either way, so the second and third callers get the first answer and the work never repeats.",
+      "Return the cached value on later calls, without repeating the wrapped work.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -1302,7 +1292,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["closures"],
     title: "Counter object",
-    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count.",
+    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count. Keep the count in the factory closure and increment it by exactly one each time. increment and reset return the exact same counter object, not a copy. Calls use the returned object as their receiver; detached method calls are outside this exercise. Each factory returns a new object whose count is private to that instance, and up to 10000 method calls may occur per instance. value reads without changing the count. Target: O(1) time and auxiliary space per factory or method call.",
     starter: `const makeCounter = () => {
   
 };
@@ -1372,7 +1362,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["timers", "closures"],
     title: "Debounce calls",
-    prompt: "Write `debounce(fn, waitMs)`, returning a debounced function. Each call restarts the timer, so only the last call in a burst runs, `waitMs` after it and with that last call’s arguments. Two debounced functions keep separate timers.",
+    prompt: "Write `debounce(fn, waitMs)`, returning a debounced function. Each call restarts the timer, so only the last call in a burst runs, `waitMs` after it and with that last call’s arguments. Two debounced functions keep separate timers. waitMs is an integer from 0 to 1000. Use host timers: even a zero delay runs later, never inline, and delays are minimum waits rather than exact deadlines. A call made while a timer is pending replaces that pending call, including all its arguments. Forward the last argument list unchanged, with exact arity and original opaque values/references; do not clone it. fn does not depend on this, returns normally and may start another burst by calling the wrapper. The wrapper returns undefined and ignores fn’s result. Each wrapper receives at most 10000 calls with at most 100 arguments each. Target: O(n) time per wrapper call and its eventual delivery under a rest/spread copying model, where n is 1 + the argument count; retain O(n) argument/timer data per pending wrapper, excluding waiting, host timer management and fn work.",
     starter: `const debounce = (fn, waitMs) => {
   
 };
@@ -1439,7 +1429,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["timers", "closures"],
     title: "Throttle calls",
-    prompt: "Write `throttle(fn, waitMs)`, returning a throttled function with a leading edge: the first call runs immediately, and any call made during the next `waitMs` is dropped rather than replayed later. Two throttled functions keep separate windows.",
+    prompt: "Write `throttle(fn, waitMs)`, returning a throttled function with a leading edge: the first call runs immediately, and any call made during the next `waitMs` is dropped rather than replayed later. Two throttled functions keep separate windows. Use clock timestamps (Date.now() or the equivalent new Date().getTime()) to decide eligibility rather than a reset timer: run when elapsed time is at least waitMs, including the exact boundary, and do not move the window when dropping a call. Read now once per call and store the accepted timestamp before calling fn, so reentrant calls see the active window. waitMs is an integer from 1 to 1000; observed clock values are nonnegative, nondecreasing integer milliseconds at most 1000000000000000. Forward exactly the accepted call’s arguments with original opaque values/references. fn does not depend on this; ignore its result and return undefined. If it throws, propagate the original value synchronously while keeping that window consumed. Each wrapper gets at most 10000 calls and 100 arguments per call. Target: O(n) time per wrapper call under a rest/spread copying model, where n is 1 + argument count, with O(1) retained timestamp state, excluding fn work.",
     starter: `const throttle = (fn, waitMs) => {
   
 };
@@ -1456,10 +1446,10 @@ console.log(flatten([[1,2],[3]]));
     // otherwise: note the time now, and call fn with args straight away
   };
 };`,
-    hints: ["Remember when the last run happened and compare it with now."],
+    hints: ["A reset timer may run late even after enough clock time has passed. Which timestamp should a dropped call leave unchanged?"],
     approach: [
       "Record the time of the last run in the closure, starting it far enough in the past that the very first call is allowed through.",
-      "Compare now against that stamp on each call: run and update it once the window has passed, and otherwise drop the call.",
+      "Compare now against that stamp on each call: once the window has passed, store the new stamp before invoking fn; otherwise drop the call.",
       "Dropped calls are forgotten rather than queued, so nothing replays them when the window reopens.",
     ],
     verify: "tests",
@@ -1507,7 +1497,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["promises", "timers"],
     title: "Sleep",
-    prompt: "Write `sleep(ms)`, returning a promise that resolves after `ms` milliseconds with no value. A zero wait still resolves.",
+    prompt: "Write `sleep(ms)`, returning a promise that resolves after `ms` milliseconds with no value. A zero wait still resolves. ms is an integer from 0 through 1000. Return a fresh native Promise immediately; independent calls must not share a promise. It fulfills with undefined, never with a timer identifier. Even sleep(0) waits for a timer turn, after already queued promise reactions; do not busy-wait or block other timers. The delay is a minimum scheduling request, not an exact wall-clock guarantee. Target: O(1) time and retained wrapper/timer state, excluding waiting and host scheduling. A larger ms increases the wait, not the amount of JavaScript computation.",
     starter: `const sleep = ms => {
   
 };
@@ -1515,10 +1505,9 @@ console.log(flatten([[1,2],[3]]));
 // Scratch pad — uncomment once your function returns something.
 // sleep(50).then(() => console.log("done waiting"));
 `,
-    skeleton: `const sleep = async ms => {
-  // await the work, and decide what happens when it rejects
-  return /* resolved value */;
-};`,
+    skeleton: `const sleep = ms => new Promise(resolve => {
+  // schedule a timer; resolve it without a value
+});`,
     hints: ["Wrap setTimeout in a promise and resolve it from the callback."],
     approach: [
       "Return the promise straight away and hand its resolve function to a timer, so the promise settles when the timer fires.",
@@ -1564,7 +1553,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["async-await", "promises"],
     title: "Retry on failure",
-    prompt: "Write `retry(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out. Resolve with the first success; when every attempt fails, reject with the last error rather than the first.",
+    prompt: "Write `retry(fn, attempts)`, calling the async `fn` until it resolves or the attempt budget runs out. Resolve with the first success; when every attempt fails, reject with the last error rather than the first. attempts is an integer from 0 through 1000. With a zero budget, never call fn and reject with undefined because no failure reason exists yet. fn is a supplied ordinary function called with no arguments; it returns an ordinary native Promise or throws synchronously. Await one attempt before starting another, with no overlap or extra call after success. A still-pending attempt consumes no further calls. Preserve the exact successful nonthenable value and final failure reason/reference, including functions, Symbols, undefined, NaN and -0; do not clone or wrap them. Each invocation has separate state and returns a new native Promise immediately. Use a loop rather than accumulating recursive calls. Target: O(n) time in the worst case and O(1) retained wrapper state, where n is 1 + attempts, excluding fn work, waiting and host scheduling.",
     starter: `const retry = (fn, attempts) => {
   
 };
@@ -1573,8 +1562,15 @@ console.log(flatten([[1,2],[3]]));
 // retry(async () => "ok", 3).then(result => console.log(result));
 `,
     skeleton: `const retry = async (fn, attempts) => {
-  // await the work, and decide what happens when it rejects
-  return /* resolved value */;
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      // await fn; return immediately on success
+    } catch (error) {
+      // remember the original reason before the next attempt
+    }
+  }
+  // no attempts, or no successes: reject with the last reason
 };`,
     hints: ["Loop over the attempts and return as soon as one resolves."],
     approach: [
@@ -1621,7 +1617,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["promises"],
     title: "Clone Promise.all",
-    prompt: "Write `promiseAll(promises)`, resolving with every value in input order, or rejecting as soon as one input rejects. Plain non-promise values are allowed, an empty array resolves to an empty array, and you may not call `Promise.all`.",
+    prompt: "Write `promiseAll(promises)`, resolving with every value in input order, or rejecting as soon as one input rejects. Plain non-promise values are allowed, an empty array resolves to an empty array, and you may not call `Promise.all`. promises is an ordinary read-only array of at most 1000 entries with default iteration and ordinary data indices, possibly sparse or frozen. Capture its initial membership and length synchronously; holes become explicit undefined values in a fresh dense output array. Ignore extra named properties. Entries may be opaque nonthenable values, ordinary native Promises or simple thenables; normalize each with Promise.resolve so only its first settlement counts. Preserve exact values and rejection reasons/references, including functions, Symbols, NaN and -0. Return a new native Promise immediately, even for empty input. Reject on the first observed rejection without waiting for any pending input, including one that never settles; this does not cancel other producers. The original native Promise.all is unavailable before your code initializes, including through saved aliases; build the aggregation yourself. This exercise accepts arrays, not arbitrary iterables. Target: O(n) time and retained result/handler space, where n is 1 + promises.length, excluding waiting, producer/thenable work and host scheduling.",
     starter: `const promiseAll = promises => {
   
 };
@@ -1629,20 +1625,21 @@ console.log(flatten([[1,2],[3]]));
 // Scratch pad — uncomment once your function returns something.
 // promiseAll([Promise.resolve(1), Promise.resolve(2)]).then(values => console.log(values));
 `,
-    skeleton: `const promiseAll = promises => new Promise((resolve, reject) => {
-  const results = [];
-  let arrived = 0;
-  if (/* there is nothing to wait for */) resolve(results);
-
-  promises.forEach((promise, index) => {
-    Promise.resolve(promise).then(value => {
-      // store value at index, count it, and resolve once every input has arrived
-    }, /* what a rejection does */);
+    skeleton: `const promiseAll = promises => {
+  const inputs = Array.from(promises); // captures length and fills holes
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let arrived = 0;
+    // handle empty input before subscribing
+    inputs.forEach((item, index) => {
+      // normalize item; store at index and count the first fulfillment
+      // reject with the original reason on failure
+    });
   });
-});`,
-    hints: ["Store each value by its index and resolve once they have all arrived."],
+};`,
+    hints: ["Capture an Array.from snapshot before subscribing, so holes become undefined and later caller edits cannot change the count. Store each fulfilled value at its original index."],
     approach: [
-      "Return a new promise, and inside it keep an array for the results plus a count of how many have arrived.",
+      "Capture Array.from(promises), then return a new promise with a fresh result array and an arrival count based on that snapshot.",
       "Subscribe to each input in turn and write its value into the results at the index it came in at, so the output order matches the input order.",
       "Resolve only once the arrival count reaches the input length, and forward any rejection straight on so the first failure settles everything.",
       "Watch the empty input: with nothing to wait for, the count never moves, so resolve before you start subscribing.",
@@ -1690,7 +1687,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["async-await", "promises"],
     title: "Run tasks in order",
-    prompt: "Write `runSequentially(tasks)`, calling an array of async functions one after another — never in parallel — and resolving with their results in order. Plain return values and an empty array both work.",
+    prompt: "Write `runSequentially(tasks)`, calling an array of async functions one after another \u2014 never in parallel \u2014 and resolving with their results in order. Plain return values and an empty array both work. Domain: tasks is an ordinary dense array of at most 1000 functions, possibly frozen. Capture its initial membership before any task is invoked; later edits to the original array must not change the run. Call each task with no arguments, only after the preceding one fulfills. A task returns an opaque nonthenable value or an ordinary native Promise, or throws synchronously. Keep exact value and rejection identities, including functions, Symbols, undefined, NaN and -0. On the first throw/rejection, reject with that original reason and start no later task. Return a new native Promise immediately and a fresh dense result array on success, even for empty input. Starting the first task after a microtask is allowed. Leave the input and values unchanged. Target: O(n) time and snapshot/result space, where n is 1 + the initial task count; exclude callback work, waiting and host scheduling.",
     starter: `const runSequentially = tasks => {
   
 };
@@ -1702,9 +1699,9 @@ console.log(flatten([[1,2],[3]]));
   // await the work, and decide what happens when it rejects
   return /* resolved value */;
 };`,
-    hints: ["Await each task inside a loop instead of starting them all at once."],
+    hints: ["Take a shallow snapshot before starting; call and await each captured task inside the loop."],
     approach: [
-      "Walk the tasks with an ordinary loop and await each one before moving on, which is what makes them run one at a time.",
+      "Capture the initial task list first, then await each task in an ordinary loop before moving on.",
       "Collect each awaited value as you go, so the results line up with the order the tasks were given in.",
       "Calling every task up front would start them all at once, so the call itself has to happen inside the loop.",
     ],
@@ -1753,7 +1750,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["slice", "for"],
     title: "Chunk an array",
-    prompt: "Write `chunk(items, size)`, splitting the array into groups of that size. A trailing group may be shorter, a size larger than the array gives one group, and an empty array gives an empty array.",
+    prompt: "Write `chunk(items, size)`, splitting the array into groups of that size. A trailing group may be shorter, a size larger than the array gives one group, and an empty array gives an empty array. Domain: an ordinary dense array with at most 1,000 opaque values and an integer size from 1 through 10,000. Zero, negative or fractional sizes are outside this exercise. Preserve every value/reference in input order, including nested arrays, undefined and null; do not mutate input. Return a fresh outer array and fresh group arrays every call, even when empty or oversized. Inputs may be frozen. Target: O(n) time, where n is 1 plus item count, under unit-cost indexed access and amortized append; disjoint slices copy each item only once. Result storage is O(n).",
     starter: `const chunk = (items, size) => {
   
 };
@@ -1819,7 +1816,7 @@ console.log(chunk([1,2,3,4], 2));
     tier: 3,
     focus: ["reduce", "objects"],
     title: "Group by key",
-    prompt: "Write `groupBy(items, keyFn)`, returning an object that groups the items by whatever `keyFn` returns for each. That return becomes an object key — so numbers arrive as strings — and each value is the array of matching items, in order.",
+    prompt: "Write `groupBy(items, keyFn)`, returning a fresh object with one own bucket array for each key. Call keyFn exactly once per item in input order. Its result is a string or finite number: numeric keys use String(result), so 1 and \"1\" share a bucket. Preserve the original item references and order within every group. Keys such as \"__proto__\", \"constructor\", \"toString\" and the empty string are ordinary group names, never inherited buckets. The result can have a null prototype or safely defined own data properties; its prototype is not graded. Do not mutate input. Empty input returns a fresh empty object. Domain: at most 2,000 dense items and keys at most 1,000 UTF-16 units; keyFn is synchronous, nonthrowing, bounded-cost and does not mutate input. Inputs/items may be frozen. Target: O(n) time, where n is the item count, using expected constant-time key lookup and amortized append.",
     starter: `const groupBy = (items, keyFn) => {
   
 };
@@ -1831,11 +1828,11 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
   // transform or inspect items
   return /* result */;
 };`,
-    hints: ["Reduce into an object, pushing each item into its key’s array."],
+    hints: ["Use an object without inherited buckets, such as Object.create(null), and append into the selected own array."],
     approach: [
-      "Fold over the items and build the result object as you go, starting from an object with no keys at all.",
+      "Fold over the items and build the result object as you go, starting from an object with no inherited bucket names, or defining every own bucket safely.",
       "Ask the key function which bucket each item belongs to, create that bucket as an empty array when it is missing, then push the item in.",
-      "Object keys are strings, so a number handed back by the key function shows up as its text form in the result.",
+      "The accepted keys are strings or finite numbers; convert numeric keys to strings so numeric 1 and string 1 share a bucket. Call keyFn once for each item.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -1886,7 +1883,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "map-set"],
     title: "Memoize results",
-    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache.",
+    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache. Keys use Map SameValueZero: NaN matches itself, +0 and -0 share a key, object/function keys match only by identity, and strings and numbers stay separate. The wrapper forwards every original argument to fn only on a miss and returns the exact cached result reference/value, including undefined, without cloning it. Calls with no arguments and an explicit first undefined share a key. Later arguments do not affect the cache key. A synchronous throw propagates unchanged and is not cached, so a retry calls fn again. fn does not depend on this or reenter the wrapper. Each wrapper has at most 1000 calls, at most 10 arguments per call and bounded 1000-character string keys; keys/results are opaque. Target: O(1) time for wrapper work per call under expected constant-cost Map access, excluding fn work; retained cache space is O(k) for k distinct successful keys. This is an access-cost model, not a language guarantee that Map operations always take constant time.",
     starter: `const memoize = fn => {
   
 };
@@ -1945,7 +1942,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "objects", "callbacks"],
     title: "Event emitter",
-    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array.",
+    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array. Event names are strings of at most 1000 characters, including empty/prototype-like names, and must not collide with inherited properties. Registering the same listener twice creates two ordered registrations; off(name, listener) removes every registration with that exact function. Omitting the listener or passing undefined clears that event. on/off return the exact emitter. emit takes a snapshot of registrations at its start: on/off changes made by a listener affect later emits, not that snapshot. Call each snapshot listener in registration order with exactly one argument, preserving the opaque payload and result references/values without cloning; stop and propagate the original synchronous error if one throws. An unknown event returns a fresh empty array. Each emitter has separate state, at most 1000 registrations and 10000 method calls. Listeners do not depend on this. Target: O(n) time for off/emit wrapper work, where n is 1 + the registrations for that event, excluding listener work and assuming bounded-name lookup; on is amortized constant work and emit uses O(n) result/snapshot space.",
     starter: `const createEmitter = () => {
   
 };
@@ -1971,12 +1968,12 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
   };
   return emitter;
 };`,
-    hints: ["Keep an object of listener arrays, one per event name."],
+    hints: ["Keep a null-prototype object or Map of listener arrays, one per event name. Copy the current array before calling listeners."],
     approach: [
-      "Keep an object in the closure mapping each event name to the array of listeners registered against it.",
+      "Keep a null-prototype object or Map in the closure mapping each event name to the array of listeners registered against it.",
       "Registering appends the listener to that name and hands the emitter back, which is what lets registrations chain.",
-      "Removal filters the listener out by identity, so the caller has to pass the very same function it registered earlier.",
-      "Emitting looks up the array for the name, calls each listener with the payload and collects what they return; an unknown name gives an empty array.",
+      "Removal filters every matching registration out by listener identity, so the caller has to pass the very same function it registered earlier.",
+      "Emitting copies the array for the name, calls each snapshot listener with the payload and collects what they return; an unknown name gives an empty array.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -2022,7 +2019,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["map-set", "for-of"],
     title: "LRU cache",
-    prompt: "Write `LRUCache(strArr)`, taking an array of letters that were accessed in order and returning what is left in a cache holding at most 5, joined with hyphens. Accessing a letter already in the cache moves it to the most recent end rather than adding it again; once the cache is full, the least recently used letter is dropped. `LRUCache([\"A\", \"B\", \"A\", \"C\", \"A\", \"B\"])` gives `\"C-A-B\"`.",
+    prompt: "Write `LRUCache(strArr)`, taking an array of letters that were accessed in order and returning what is left in a cache holding at most 5, joined with hyphens. Accessing a letter already in the cache moves it to the most recent end rather than adding it again; once the cache is full, the least recently used letter is dropped. `LRUCache([\"A\", \"B\", \"A\", \"C\", \"A\", \"B\"])` gives `\"C-A-B\"`. Domain: strArr is an ordinary read-only dense array of at most 10000 one-character uppercase ASCII letters A through Z, possibly frozen. Leave it unchanged. The cache starts empty on every call and has fixed capacity 5; return a string ordered from least to most recently used, with one hyphen between letters and no trailing hyphen. Empty input returns empty text. Target: O(n) time and O(1) retained cache space, where n is 1 + the access count. A scan, splice, shift or copy of at most five cached letters is constant work; the capacity is not an input parameter.",
     starter: `const LRUCache = strArr => {
   
 };

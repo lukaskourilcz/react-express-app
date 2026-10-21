@@ -27,6 +27,7 @@ import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } fro
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { handlerContracts } from './learning-path-handler-contracts';
+import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
@@ -299,6 +300,17 @@ async function main() {
             (graded.code.codeError ? `; ${graded.code.codeError}` : ''),
         );
       }
+      // Learners fill the starter and keep its authored examples. Those calls
+      // must see provided helpers before the grader installs instrumentation.
+      const scratchpadAt = code.starter.indexOf('// Scratch pad');
+      if (scratchpadAt >= 0) {
+        const filledStarter = solution.solution + '\n' + code.starter.slice(scratchpadAt);
+        const withExamples = await withTimeout(gradePathCode(activity, code, filledStarter, runReactSuite), 30_000, at);
+        if (withExamples.state !== 'verified_pass') {
+          fail(`${at}: the reference with its starter examples does not pass (${withExamples.code.outcome})` +
+            (withExamples.code.codeError ? `; ${withExamples.code.codeError}` : ''));
+        }
+      }
       for (const wrong of KNOWN_WRONG_PATH[activity.id] ?? []) {
         const [from, to] = wrong.replace;
         if (!solution.solution.includes(from)) {
@@ -513,6 +525,7 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
 
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
+  diagnosticCompetencyContracts();
   await handlerContracts(fail);
 
   if (failures.length > 0) {

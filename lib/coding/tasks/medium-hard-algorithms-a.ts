@@ -49,7 +49,7 @@ export const MEDIUM_HARD_ALGORITHMS_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['sort', 'two-pointer', 'while'],
     title: 'Three numbers that add up to zero',
-    prompt: 'Write `threeSum(numbers)`, returning every different triple of values from `numbers` that adds up to 0. Write each triple smallest first, and list the triples in order of their first value, then their second. `threeSum([-1, 0, 1, 2, -1, -4])` gives `[[-1, -1, 2], [-1, 0, 1]]`. A triple takes three different positions, and the same three values found again at other positions count once. Checking every three positions is O(n³), far too slow for the hidden list of 800 numbers. Sort a copy as numbers, then take each value in turn as the first of the triple and walk two pointers in from both ends of the values after it, `while` they have not met: move the left one right when the sum is too small, and the right one left when it is too big. On a match, record it and move both pointers past every repeat of their values. Skip a first value equal to the one before it. Leave `numbers` unchanged. Target: O(n²) time and O(n) extra space for the sorted copy.',
+    prompt: "Write `threeSum(numbers)`, returning every different triple of values from `numbers` that adds up to 0. Write each triple smallest first, and list the triples in order of their first value, then their second. `threeSum([-1, 0, 1, 2, -1, -4])` gives `[[-1, -1, 2], [-1, 0, 1]]`. A triple takes three different positions, and the same three values found again at other positions count once. Checking every three positions is O(n\u00b3), far too slow for the hidden list of 800 numbers. Sort a copy as numbers, then take each value in turn as the first of the triple and walk two pointers in from both ends of the values after it, `while` they have not met: move the left one right when the sum is too small, and the right one left when it is too big. On a match, record it and move both pointers past every repeat of their values. Skip a first value equal to the one before it. Leave `numbers` unchanged. Target: O(n\u00b2) time and O(n) extra space for the sorted copy. Input is a dense array of at most 800 integer Numbers in [-1000000000000,1000000000000], possibly frozen. The bounds keep triple sums exact in Number arithmetic; do not truncate to 32 bits. Each output triple uses three distinct positions but uniqueness is by numeric values, so either sign of zero is equivalent. Return a fresh mutable outer array and distinct fresh mutable triples, without shared state between calls. The O(n) auxiliary-space goal excludes the returned triples, which can take O(n\u00b2) space; n is numbers.length. Equivalent quadratic solutions are accepted.",
     starter: `const threeSum = numbers => {
 
 };
@@ -101,7 +101,7 @@ console.log(threeSum([-1, 0, 1, 2, -1, -4]));
     tier: 3,
     focus: ['sort', 'two-pointer', 'for'],
     title: 'How many meeting rooms?',
-    prompt: 'Each meeting is `[start, end]` in minutes from the start of the day. A meeting holds its room from `start` up to but not including `end`, so a meeting that ends at 10 and one that starts at 10 can use the same room. Write `roomsNeeded(meetings)`, returning the fewest rooms that fit every meeting. `roomsNeeded([[0, 30], [5, 10], [15, 20]])` gives 2. Pull the starts and the ends into two lists and sort each as numbers. Walk the starts with a `for` loop and keep a second pointer into the ends. A meeting that starts before the earliest end the pointer has not passed yet needs one more room. Otherwise some meeting has finished: move the end pointer on, and the new meeting takes that room. Leave `meetings` unchanged. Target: O(n log n) time and O(n) space.',
+    prompt: "Each meeting is `[start, end]` in minutes from the start of the day. A meeting holds its room from `start` up to but not including `end`, so a meeting that ends at 10 and one that starts at 10 can use the same room. Write `roomsNeeded(meetings)`, returning the fewest rooms that fit every meeting. `roomsNeeded([[0, 30], [5, 10], [15, 20]])` gives 2. Pull the starts and the ends into two lists and sort each as numbers. Walk the starts with a `for` loop and keep a second pointer into the ends. A meeting that starts before the earliest end the pointer has not passed yet needs one more room. Otherwise some meeting has finished: move the end pointer on, and the new meeting takes that room. Leave `meetings` unchanged. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2000 [start,end] pairs of finite Number minutes in 0..1440, with start <= end; fractional minutes are valid. An empty interval (start === end) uses no room. The outer array and its pairs may be frozen and must stay unchanged. n is meetings.length. The rooms counter in the suggested scan is maximum allocated capacity, not current occupancy; an empty interval contributes a start and an end at the same time and never raises capacity. A grouped event sweep is also valid.",
     starter: `const roomsNeeded = meetings => {
 
 };
@@ -132,6 +132,7 @@ console.log(roomsNeeded([[0, 30], [5, 10], [15, 20]]));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "roomsNeeded([[0, 0.5], [0.25, 0.75]])", "expected": 2, "label": "fractional minutes keep their boundaries"},
       { call: 'roomsNeeded([[0, 30], [5, 10], [15, 20]])', expected: 2 },
       { call: 'roomsNeeded([[7, 10], [2, 4]])', expected: 1 },
       { call: 'roomsNeeded([[1, 5], [2, 6], [3, 7], [4, 8]])', expected: 4, label: 'all at the same time' },
@@ -149,7 +150,7 @@ console.log(roomsNeeded([[0, 30], [5, 10], [15, 20]]));
     tier: 3,
     focus: ['while', 'two-pointer'],
     title: 'Search a rotated list',
-    prompt: 'A sorted list of different numbers has been rotated: part of its front was cut off and moved to the back, so `[10, 20, 30, 40, 50]` may arrive as `[40, 50, 10, 20, 30]`. Write `findRotated(values, target)`, returning the index of `target`, or -1 when it is not there. Reading every value finds it, but the checks count how many values you read, and a list of 65,536 allows at most 200 reads. A binary search still works. Keep `low` and `high`, and look at the middle `while (low <= high)`. One of the two halves around the middle is always in order: check whether the target lies inside the ordered half, and keep that half if it does and the other half if it does not. The list may not be rotated at all, and it may be empty. Target: O(log n) time and O(1) space.',
+    prompt: "A sorted list of different numbers has been rotated: part of its front was cut off and moved to the back, so `[10, 20, 30, 40, 50]` may arrive as `[40, 50, 10, 20, 30]`. Write `findRotated(values, target)`, returning the index of `target`, or -1 when it is not there. Reading every value finds it, but the checks count how many values you read, and a list of 65,536 allows at most 200 reads. A binary search still works. Keep `low` and `high`, and look at the middle `while (low <= high)`. One of the two halves around the middle is always in order: check whether the target lies inside the ordered half, and keep that half if it does and the other half if it does not. The list may not be rotated at all, and it may be empty. Target: O(log n) time and O(1) space. Input is a dense array of at most 65536 distinct finite Numbers in [-1000000000,1000000000], obtained by one rotation of a strictly increasing list. Fractions and a single signed zero are valid; zero signs compare equal, so target -0 matches a stored 0 and conversely. target is a finite Number in the same bounds. Inputs may be frozen or wrapped only to count reads; do not mutate them. For length 65536, use at most 200 numeric-index reads, including misses; other property reads do not count. n is values.length. The fixed size bound keeps the shown midpoint arithmetic exact; a pivot-first or virtual-order binary search is also valid.",
     starter: `const findRotated = (values, target) => {
 
 };
@@ -181,6 +182,7 @@ console.log(findRotated([40, 50, 10, 20, 30], 20));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "findRotated([0], -0)", "expected": 0, "label": "the sign of zero does not change membership", "edge": true},
       { call: 'findRotated([40, 50, 10, 20, 30], 20)', expected: 3 },
       { call: 'findRotated([40, 50, 10, 20, 30], 50)', expected: 1, label: 'in the part that was moved' },
       { call: 'findRotated([40, 50, 10, 20, 30], 35)', expected: -1, label: 'not in the list' },
@@ -198,7 +200,7 @@ console.log(findRotated([40, 50, 10, 20, 30], 20));
     tier: 3,
     focus: ['two-pointer', 'while', 'objects'],
     title: 'Remove the nth node from the end',
-    prompt: 'Write `removeFromEnd(head, n)` for a linked list of `{ value, next }` nodes, removing the `n`th node counted from the end, where 1 is the last node, and returning the head of the changed list. The list 1, 2, 3, 4, 5 with `n` of 2 becomes 1, 2, 3, 5. You can do it in one pass with two pointers. Move a `lead` pointer `n` nodes ahead, then move `lead` and a `trail` pointer on together `while` `lead` has a next node: `trail` then stops just before the node to remove, and `trail.next = trail.next.next` unlinks it. Removing the head is the case that needs care, because no node comes before it. A placeholder node in front of the head, `{ value: null, next: head }`, makes it the same as every other case. Change the links of the list you were given rather than building a new one. `n` is always between 1 and the length of the list. Target: O(L) time for a list of L nodes and O(1) space: a recursive walk needs a stack frame per node, and the hidden list of 5,000 nodes does not leave room for that.',
+    prompt: "Write `removeFromEnd(head, n)` for a linked list of `{ value, next }` nodes, removing the `n`th node counted from the end, where 1 is the last node, and returning the head of the changed list. The list 1, 2, 3, 4, 5 with `n` of 2 becomes 1, 2, 3, 5. You can do it in one pass with two pointers. Move a `lead` pointer `n` nodes ahead, then move `lead` and a `trail` pointer on together `while` `lead` has a next node: `trail` then stops just before the node to remove, and `trail.next = trail.next.next` unlinks it. Removing the head is the case that needs care, because no node comes before it. A placeholder node in front of the head, `{ value: null, next: head }`, makes it the same as every other case. Change the links of the list you were given rather than building a new one. `n` is always between 1 and the length of the list. Target: O(L) time for a list of L nodes and O(1) space: a recursive walk needs a stack frame per node, and the hidden list of 5,000 nodes does not leave room for that. Input is a nonempty finite acyclic chain of at most 5,000 distinct plain or null-prototype node objects. next is a node or null; value is an opaque payload, including undefined, null, NaN, Symbols or objects. n is a primitive integer in 1..L. Return the exact original surviving head (or null for the sole node). Preserve every payload and every next link except the predecessor link that bypasses the removed node; removing the head changes no original links. In particular, leave the detached node and its next link unchanged. A two-pass O(L) scan with constant auxiliary storage is also valid; the two-pointer scan avoids counting first.",
     starter: `const removeFromEnd = (head, n) => {
 
 };
@@ -231,6 +233,7 @@ console.log(JSON.stringify(removeFromEnd(list(1, 2, 3, 4, 5), 2)));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "(() => {const tail={value:3,next:null},removed={value:2,next:tail},head={value:1,next:removed};removeFromEnd(head,2);return removed.next===tail;})()", "expected": true, "label": "the detached node keeps its next link"},
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2, 3, 4, 5), 2));`), expected: [1, 2, 3, 5] },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2, 3), 1));`), expected: [1, 2], label: 'the last node' },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2), 2));`), expected: [2], label: 'the head' },
@@ -248,7 +251,7 @@ console.log(JSON.stringify(removeFromEnd(list(1, 2, 3, 4, 5), 2)));
     tier: 3,
     focus: ['map-set', 'for-of'],
     title: 'Stretches that add up to a target',
-    prompt: 'A day of account movements is a list of whole numbers, positive for money in and negative for money out. Write `countStretches(amounts, target)`, returning how many stretches of neighbouring amounts, one or more in a row, add up to exactly `target`. `countStretches([1, 1, 1], 2)` gives 2: the first two amounts, and the last two. The amounts can be negative, so a sliding window does not work: adding the next amount can make the sum smaller. Keep a running total instead. Walk the amounts with `for...of`, and keep a `Map` from each running total to how many times it has come up so far, starting with a total of 0 seen once. A stretch that ends at the current amount adds up to `target` exactly when an earlier running total equals `total - target`, so add that count before you record the new total. Target: O(n) time and O(n) space; the hidden lists hold twenty thousand amounts.',
+    prompt: "A day of account movements is a list of integers, positive for money in and negative for money out. Write `countStretches(amounts, target)`, returning how many stretches of neighbouring amounts, one or more in a row, add up to exactly `target`. `countStretches([1, 1, 1], 2)` gives 2: the first two amounts, and the last two. The amounts can be negative, so a sliding window does not work: adding the next amount can make the sum smaller. Keep a running total instead. Walk the amounts once and keep a `Map` from each running total to how many times it has come up so far, starting with a total of 0 seen once. A stretch that ends at the current amount adds up to `target` exactly when an earlier running total equals `total - target`, so add that count before you record the new total. Target: O(n) time and O(n) space; the hidden lists hold twenty thousand amounts. Input is a dense array of at most 20000 integer Numbers in [-1000000000,1000000000], possibly frozen, and must stay unchanged. target is an integer Number in [-20000000000000,20000000000000]. Prefix totals, lookup differences and the maximum possible count stay exact in Number arithmetic under these bounds; 32-bit truncation is not valid. Count nonempty stretches by their start/end positions, including overlapping stretches; do not keep state across calls. n is amounts.length. Equivalent single-pass implementations are accepted.",
     starter: `const countStretches = (amounts, target) => {
 
 };
@@ -297,7 +300,7 @@ console.log(countStretches([1, 1, 1], 2));
     tier: 3,
     focus: ['recursion', 'strings'],
     title: 'Every balanced string of brackets',
-    prompt: 'Write `balanced(pairs)`, returning every balanced string made of `pairs` opening and `pairs` closing round brackets, in alphabetical order, where `"("` comes before `")"`. `balanced(2)` gives `["(())", "()()"]`. Building every string of `(` and `)` and throwing away the unbalanced ones wastes most of the work: for 11 pairs that is over four million strings for 58,786 answers, and the hidden check asks for 11. Build each string one character at a time instead, with a recursive helper that knows how many of each bracket it has used. Add `(` while fewer than `pairs` have been opened, and add `)` only while it closes something still open. Trying `(` before `)` at every step gives the alphabetical order for free. `balanced(0)` gives `[""]`, the one empty string. Target: time in proportion to the answers, and O(n) stack depth.',
+    prompt: "Write `balanced(pairs)`, returning every balanced string made of `pairs` opening and `pairs` closing round brackets, in alphabetical order, where `\"(\"` comes before `\")\"`. `balanced(2)` gives `[\"(())\", \"()()\"]`. Building every string of `(` and `)` and throwing away the unbalanced ones wastes most of the work: for 11 pairs that is over four million strings for 58,786 answers, and the hidden check asks for 11. Build each string one character at a time instead, with a recursive helper that knows how many of each bracket it has used. Add `(` while fewer than `pairs` have been opened, and add `)` only while it closes something still open. Trying `(` before `)` at every step gives the alphabetical order for free. `balanced(0)` gives `[\"\"]`, the one empty string. Build only prefixes that can still become balanced. `pairs` is a primitive integer in 0..11. Each call returns a fresh mutable array of strings; changing a previous result must not affect later calls. Let n be pairs and C_n the number of balanced strings (the Catalan number); every answer contains 2n characters. Target: O(n * C_n) time and O(n) extra space, excluding the returned array and strings. Use one mutable character buffer with push/pop to avoid retaining a separate prefix string at every depth. An explicit depth-first stack is also valid when it retains only O(n) frames and a shared character buffer.",
     starter: `const balanced = pairs => {
 
 };
@@ -307,12 +310,13 @@ console.log(balanced(2));
 `,
     skeleton: `const balanced = pairs => {
   const found = [];
-  const build = (text, opened, closed) => {
-    // a full string: keep it
-    // room for another "(": build on with it
-    // something open to close: build on with ")"
+  const path = [];
+  const build = (opened, closed) => {
+    // every pair closed: keep path.join("")
+    // if room remains, push "(", recurse, then pop
+    // if an opener remains, push ")", recurse, then pop
   };
-  build("", 0, 0);
+  build(0, 0);
   return found;
 };`,
     hints: [
@@ -320,10 +324,11 @@ console.log(balanced(2));
       'Build with `"("` before `")"` at every step and the answers come out in alphabetical order, because `"("` is the smaller character.',
     ],
     approach: [
-      'Write `build(text, opened, closed)`. When `text.length === 2 * pairs`, push `text` and return.',
-      'If `opened < pairs`, call `build(text + "(", opened + 1, closed)`.',
-      'If `closed < opened`, call `build(text + ")", opened, closed + 1)`.',
-      'Start with `build("", 0, 0)` and return what was found.',
+      'Keep one character buffer. build(opened, closed) tracks the prefix counts.',
+      'When closed equals pairs, save path.join("").',
+      'If opened is below pairs, push "(", recurse with one more opener, then pop.',
+      'If closed is below opened, push ")", recurse with one more closer, then pop.',
+      'Try the opener first for alphabetical order. Output construction takes O(n * C_n) time; the buffer and call stack use O(n) extra space.',
     ],
     verify: 'tests',
     estimatedMinutes: 20,
@@ -344,7 +349,7 @@ console.log(balanced(2));
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Is it a search tree?',
-    prompt: 'In a binary search tree, every value in a node’s left subtree is smaller than the node’s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h.',
+    prompt: "In a binary search tree, every value in a node\u2019s left subtree is smaller than the node\u2019s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h. Input is null or an acyclic tree of at most 2,000 distinct plain or null-prototype node objects, with finite primitive Number values in [-1000000000000,1000000000000]; fractions and signed zero are valid. Each left/right is a node or null, and no node is shared by two parents. Nodes may be frozen and all values/links must remain unchanged. n is the node count and h is the number of nodes on the longest root-to-leaf path (0 for null), at most 128 so the taught recursive helper fits the practice runtime. Comparisons are strict: -0 and 0 are equal and cannot appear as a valid duplicate. An iterative traversal is also valid. A full inorder-values array uses O(n) extra space and does not meet the O(h) goal on a shallow tree; stream the previous value instead.",
     starter: `const isSearchTree = root => {
 
 };
@@ -363,7 +368,7 @@ console.log(isSearchTree(node(2, node(1), node(3))));
 };`,
     hints: [
       'Every node sits inside a range that all its ancestors set together: going left lowers the ceiling to the parent’s value, and going right raises the floor. A node’s own children cannot tell you that range.',
-      'Start with `-Infinity` and `Infinity`, so the root may hold any number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
+      'Start with `-Infinity` and `Infinity`, so the root may hold any finite Number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
     ],
     approach: [
       'Write `within(node, low, high)`. A `null` node returns `true`.',
@@ -390,7 +395,7 @@ console.log(isSearchTree(node(2, node(1), node(3))));
     tier: 3,
     focus: ['recursion', 'map-set', 'for-of'],
     title: 'Fewest coins when greedy fails',
-    prompt: 'Taking the largest coin that fits, again and again, gives the fewest coins for euro coins, but not for every set of coins: with coins of 1, 3 and 4, that way pays 6 as 4 + 1 + 1, and 3 + 3 is one coin fewer. Write `fewestCoins(coins, amount)`, returning the smallest number of coins that add up to `amount`, or -1 when no mix of the coins can. Every coin can be used any number of times. Write a recursive helper `best(left)`: 0 needs no coins, and otherwise try each coin with `for...of` and take one more than the best way to pay what is left. The same `left` comes up again and again, so keep every answer in a `Map`, the amounts that cannot be paid included, and look there first. Without it the hidden amounts of several hundred never finish. Target: O(amount × c) time for c coins, and O(amount) space.',
+    prompt: "Taking the largest fitting coin can fail: with coins 1, 3 and 4, paying 6 as 4 + 1 + 1 uses more coins than 3 + 3. Write `fewestCoins(coins, amount)`, returning the smallest number of coins that sum to amount, or -1 when it is impossible. Each denomination can be used any number of times. Build answers for amounts from 0 upward: 0 needs no coins; for each positive total, try one more coin after a reachable smaller total and keep the best count. Keep unreachable totals as Infinity too. Bottom-up dynamic programming avoids a recursive call chain proportional to amount. A memoized explicit stack or a breadth-first amount search is also valid. Input coins is a dense, possibly frozen array of at most 20 primitive positive integers in 1..10000, with duplicates and any order allowed; leave it unchanged. amount is a primitive integer in 0..10000. Empty coins pays only amount 0; either zero sign for amount is equivalent. c is coins.length. Target: O(amount \u00d7 c) time and O(amount) space for positive amount and nonempty coins; zero amount and empty coins return in O(1) time.",
     starter: `const fewestCoins = (coins, amount) => {
 
 };
@@ -399,28 +404,21 @@ console.log(isSearchTree(node(2, node(1), node(3))));
 console.log(fewestCoins([1, 3, 4], 6));
 `,
     skeleton: `const fewestCoins = (coins, amount) => {
-  const memo = new Map(); // amount left -> fewest coins, or Infinity when it cannot be paid
-  const best = left => {
-    // 0 needs no coins; below 0 cannot be paid
-    // an answer in the memo: use it
-    // otherwise try each coin, keep the smallest 1 + best(left - coin), and remember it
-  };
-  const answer = best(amount);
-  return answer === Infinity ? -1 : answer;
+  if (amount === 0) return 0;
+  if (coins.length === 0) return -1;
+  const best = Array(amount + 1).fill(Infinity);
+  best[0] = 0;
+  for (let total = 1; total <= amount; total++) {
+    // try every fitting coin after its already-solved smaller total
+  }
+  return best[amount] === Infinity ? -1 : best[amount];
 };`,
-    hints: [
-      '`best(6)` with coins 1, 3 and 4 is one more than the smallest of `best(5)`, `best(3)` and `best(2)`. Each of those asks the same question about a smaller amount, down to `best(0)`, which is 0.',
-      'Remember the amounts that cannot be paid as well: keep `Infinity` for them in the Map. If you only remember the successes, an amount like 999 with coins of 4 and 6 is worked out again every time it comes up.',
-    ],
-    approach: [
-      'Write `best(left)`: return 0 for 0, and `Infinity` for anything below 0.',
-      'Look in the Map first, and return what it holds when `left` is there.',
-      'Otherwise start from `Infinity`, and for each coin keep the smaller of that and `1 + best(left - coin)`. Store the result under `left` before you return it.',
-      'Call `best(amount)` and turn `Infinity` into -1.',
-    ],
+    hints: ["For each total from 1 through amount, try every coin no larger than that total. The smaller total has already been solved.", "Keep Infinity for unreachable totals too. Adding one coin to Infinity still cannot pay an amount."],
+    approach: ["Return 0 for zero amount and -1 for empty coins with a positive amount.", "Set best[0] to 0 and every other entry to Infinity.", "Visit totals in ascending order. For every fitting coin, consider 1 + best[total - coin].", "Return the stored minimum, replacing Infinity with -1. A Map can hold the same bottom-up states."],
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "fewestCoins([1],10000)", "expected": 10000, "label": "bottom-up states avoid a long recursive call chain"},
       { call: 'fewestCoins([1, 3, 4], 6)', expected: 2, label: 'where the largest coin first goes wrong' },
       { call: 'fewestCoins([1, 2, 5], 11)', expected: 3 },
       { call: 'fewestCoins([9, 6, 1], 12)', expected: 2, label: '6 + 6, not 9 + 1 + 1 + 1' },
@@ -438,7 +436,7 @@ console.log(fewestCoins([1, 3, 4], 6));
     tier: 4,
     focus: ['two-pointer', 'while'],
     title: 'Rain between the walls',
-    prompt: 'A row of walls, each one unit wide, is given by their heights: `[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`. After rain, water stands above each position up to the lower of two walls: the tallest one at or to its left and the tallest one at or to its right. Write `trappedWater(heights)`, returning how many units of water the row holds; that example holds 6. Looking left and right from every position is O(n²), and the hidden rows of fifty thousand walls need better. Walk two pointers in from both ends `while` they have not met, and keep the tallest wall seen from each side. Move the side whose tallest wall is lower. The water above that position is settled by its own side, because the other side is known to have a wall at least as tall. Target: O(n) time and O(1) space.',
+    prompt: "A row of walls, each one unit wide, is given by their heights: `[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`. After rain, water stands above each position up to the lower of two walls: the tallest one at or to its left and the tallest one at or to its right. Write `trappedWater(heights)`, returning how many units of water the row holds; that example holds 6. Looking left and right from every position is O(n\u00b2), and the hidden rows of fifty thousand walls need better. Walk two pointers in from both ends `while` they have not met, and keep the tallest wall seen from each side. Move the side whose tallest wall is lower. The water above that position is settled by its own side, because the other side is known to have a wall at least as tall. Target: O(n) time and O(1) space. Input is a dense array of at most 50,000 primitive nonnegative integer heights in 0..1000000. Either zero sign is equivalent; preserve the caller's exact values/order, including source zero signs. The array may be frozen. n is heights.length. Integer bounds keep every water amount and the total exact and safe; no rounding or bitwise narrowing is allowed. Fewer than three walls hold zero water. The auxiliary-space target excludes the input; a global-maximum pivot with a scan from either end is also valid.",
     starter: `const trappedWater = heights => {
 
 };
@@ -471,6 +469,7 @@ console.log(trappedWater([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]));
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
+      {"call": "trappedWater([1000000,...Array(3000).fill(0),1000000])", "expected": 3000000000, "label": "water totals can exceed 32 bits"},
       { call: 'trappedWater([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1])', expected: 6 },
       { call: 'trappedWater([4, 2, 0, 3, 2, 5])', expected: 9 },
       { call: 'trappedWater([3, 0, 3])', expected: 3, label: 'one dip' },
@@ -488,7 +487,7 @@ console.log(trappedWater([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]));
     tier: 4,
     focus: ['map-set', 'while', 'objects'],
     title: 'The fastest route between stations',
-    prompt: 'A rail map lists its tracks as `[from, to, minutes]`, and every track runs both ways. Write `fastestRoute(tracks, start, goal)`, returning `{ minutes, route }` for the quickest journey, where `route` lists the stations from `start` to `goal`, or `null` when `goal` cannot be reached. Every map in the checks has one quickest route. Breadth first finds the route with the fewest tracks, which is not always the quickest one. Use Dijkstra’s method. Build each station’s neighbours in a `Map`, keep the best time found so far to each station in a second `Map` and the station it was reached from in a third, and `while` some station that has been reached is not settled yet, settle the one with the smallest time: try every track out of it, and keep a new time only when it beats the one you had. The goal is done when it is settled, not when it is first reached. Station names can be any text, `"constructor"` included. Scanning for the smallest time is fine for a map this size; a large one would need a heap. Target: O(V² + E) time for V stations and E tracks, and O(V + E) space.',
+    prompt: "A rail map lists its tracks as `[from, to, minutes]`, and every track runs both ways. Write `fastestRoute(tracks, start, goal)`, returning `{ minutes, route }` for the quickest journey, where `route` lists the stations from `start` to `goal`, or `null` when `goal` cannot be reached. When several quickest routes tie, return any one with no repeated station. Breadth first finds the route with the fewest tracks, which is not always the quickest one. Use Dijkstra\u2019s method. Build each station\u2019s neighbours in a `Map`, keep the best time found so far to each station in a second `Map` and the station it was reached from in a third, and `while` some station that has been reached is not settled yet, settle the one with the smallest time: try every track out of it, and keep a new time only when it beats the one you had. The goal is done when it is settled, not when it is first reached. Station names can be any text, `\"constructor\"` included. Scanning for the smallest time is fine for a map this size; a large one would need a heap. Target: O(V\u00b2 + E) time for V stations and E tracks, and O(V + E) space. Tracks are a dense readonly array of at most 10,000 dense [from,to,minutes] triples. Names, start and goal are primitive strings of at most 80 UTF-16 code units, including empty text and prototype-like names. Minutes are primitive integers in 0..1000000000; zero signs compare equal. Parallel tracks and self-links are valid. V counts distinct names in tracks plus start/goal, at most 200; E is tracks.length. These bounds keep all simple-route sums exact. Input arrays/triples may be frozen and must remain unchanged. A station without tracks is still a valid endpoint; start===goal returns zero minutes and [start]. Return a fresh mutable route per call.",
     starter: `const fastestRoute = (tracks, start, goal) => {
 
 };
@@ -521,6 +520,7 @@ console.log(fastestRoute([["A", "B", 5], ["B", "C", 5], ["A", "C", 20]], "A", "C
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      {"call": "fastestRoute([[\"a\",\"b\",1000000000],[\"b\",\"c\",1000000000],[\"c\",\"d\",1000000000]],\"a\",\"d\").minutes", "expected": 3000000000, "label": "journey times can exceed 32 bits"},
       { call: 'fastestRoute([["A", "B", 5], ["B", "C", 5], ["A", "C", 20]], "A", "C")', expected: { minutes: 10, route: ['A', 'B', 'C'] }, label: 'two short tracks beat one long one' },
       { call: 'fastestRoute([["A", "B", 1], ["B", "D", 10], ["A", "C", 2], ["C", "D", 2]], "A", "D")', expected: { minutes: 4, route: ['A', 'C', 'D'] }, label: 'the quickest first track is not the way' },
       { call: 'fastestRoute([["A", "B", 4], ["A", "C", 1], ["C", "B", 1]], "B", "A")', expected: { minutes: 2, route: ['B', 'C', 'A'] }, label: 'tracks run both ways' },
@@ -537,8 +537,8 @@ console.log(fastestRoute([["A", "B", 5], ["B", "C", 5], ["A", "C", 20]], "A", "C
     level: 22,
     tier: 4,
     focus: ['while', 'two-pointer', 'for-of'],
-    title: 'The longest rising run of scores',
-    prompt: 'A player’s scores come in game by game. Write `longestRising(scores)`, returning the length of the longest strictly rising sequence you can pick from them, keeping their order but skipping any games you like. `longestRising([10, 9, 2, 5, 3, 7, 101, 18])` gives 4, for example with 2, 3, 7, 18. Comparing every game with every earlier one is O(n²), too slow for the hidden lists of twenty thousand scores. Keep a list `tails` instead, where `tails[k]` is the smallest score that ends a rising sequence of length k + 1 found so far; it is always sorted. Walk the scores with `for...of`. For each one, find the first tail that is not smaller than it with a binary search that moves `low` and `high` `while` they differ, and replace that tail with the score, or add the score at the end when every tail is smaller. The answer is the length of `tails`. Target: O(n log n) time and O(n) space.',
+    title: 'The longest rising sequence of scores',
+    prompt: "A player\u2019s scores come in game by game. Write `longestRising(scores)`, returning the length of the longest strictly rising sequence you can pick from them, keeping their order but skipping any games you like. `longestRising([10, 9, 2, 5, 3, 7, 101, 18])` gives 4, for example with 2, 3, 7, 18. Comparing every game with every earlier one is O(n\u00b2), too slow for the hidden lists of twenty thousand scores. Keep a list `tails` instead, where `tails[k]` is the smallest score that ends a rising sequence of length k + 1 found so far; it is always sorted. Walk the scores with `for...of`. For each one, find the first tail that is not smaller than it with a binary search that moves `low` and `high` `while` they differ, and replace that tail with the score, or add the score at the end when every tail is smaller. The answer is the length of `tails`. Target: O(n log n) time and O(n) space. Input is a dense ordinary array of at most 20,000 primitive finite Number scores in [-1000000000000,1000000000000], including fractions and either zero sign. n is scores.length; strictly rising means ordinary numeric <, with zero signs equal. The input may be frozen and must keep every exact value/order. No rounding, coercion or integer narrowing. Return an integer length. An equivalent O(n log n) method, such as ranked prefix maxima, is also valid.",
     starter: `const longestRising = scores => {
 
 };
@@ -571,6 +571,7 @@ console.log(longestRising([10, 9, 2, 5, 3, 7, 101, 18]));
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "longestRising([.1,.2,.3])", "expected": 3, "label": "fractional scores remain distinct"},
       { call: 'longestRising([10, 9, 2, 5, 3, 7, 101, 18])', expected: 4 },
       { call: 'longestRising([0, 1, 0, 3, 2, 3])', expected: 4 },
       { call: 'longestRising([1, 2, 3, 4, 5])', expected: 5, label: 'rising all the way' },
@@ -587,7 +588,7 @@ console.log(longestRising([10, 9, 2, 5, 3, 7, 101, 18]));
     tier: 4,
     focus: ['recursion', 'strings', 'objects'],
     title: 'Save a tree as text and read it back',
-    prompt: 'Write two functions for binary trees of `{ value, left, right }` nodes holding whole numbers. `serialize(root)` writes the tree as text: the values in preorder, a node and then its left subtree and then its right one, separated by commas, with `#` for every missing child. A root of 1 with children 2 and 3 becomes `"1,2,#,#,3,#,#"`, and an empty tree is `"#"`. `deserialize(text)` reads that text back into a tree equal to the one that was written. Both are recursive. Writing a node is its value, then the writing of its left subtree, then of its right one. Reading takes the next item from a position the whole read shares: `#` gives `null`, and anything else gives a node whose left and right come from the next two reads. Values can be negative or have several digits, so split on commas rather than reading one character at a time. Target: O(n) time and O(n) space for each.',
+    prompt: "Write two functions for binary trees of `{ value, left, right }` nodes holding whole numbers. `serialize(root)` writes the tree as text: the values in preorder, a node and then its left subtree and then its right one, separated by commas, with `#` for every missing child. A root of 1 with children 2 and 3 becomes `\"1,2,#,#,3,#,#\"`, and an empty tree is `\"#\"`. `deserialize(text)` reads that text back into a tree equal to the one that was written. Both can be recursive; an equivalent explicit work stack is also valid. Writing a node is its value, then the writing of its left subtree, then of its right one. Reading takes the next item from a position the whole read shares: `#` gives `null`, and anything else gives a node whose left and right come from the next two reads. Values can be negative or have several digits, so split on commas rather than reading one character at a time. Target: O(n) time and O(n) space for each. Input trees are null or acyclic trees of at most 2,000 distinct ordinary/null-prototype nodes, with no shared children; children are a node or null. Height is the longest root-to-leaf node count, at most 512. Node values are primitive safe integers, including either zero sign. Serialize values with String(value), so -0 writes \"0\" and zero signs are equivalent after reading. Nodes may be frozen; preserve all source fields. deserialize receives only complete valid text from this format: canonical decimal safe integers, commas and #, without whitespace or extra tokens. Malformed text is outside this task. Return fresh mutable nodes with own value/left/right fields on every read; separate reads share no output nodes. n counts tree nodes plus serialized UTF-16 code units, including markers and separators; auxiliary/output storage together is O(n). Accumulate tokens before joining rather than repeatedly copying child strings.",
     starter: `const serialize = root => {
 
 };
@@ -630,6 +631,7 @@ const deserialize = text => {
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "deserialize(\"9007199254740991,#,#\").value", "expected": 9007199254740991, "label": "safe integers need not fit 32 bits"},
       { call: withTree('serialize(node(1, node(2), node(3)))'), expected: '1,2,#,#,3,#,#' },
       { call: withTree('serialize(node(1, null, node(2, node(3))))'), expected: '1,#,2,3,#,#,#', label: 'a missing left child' },
       { call: 'deserialize("1,2,#,#,3,#,#")', expected: tree(1, tree(2), tree(3)) },
@@ -646,7 +648,7 @@ const deserialize = text => {
     tier: 4,
     focus: ['two-pointer', 'map-set', 'strings', 'while'],
     title: 'The smallest window that holds every letter',
-    prompt: 'Write `smallestWindow(text, letters)`, returning the shortest stretch of `text` that contains every character of `letters`, repeats counted: if `letters` is `"aab"`, the stretch needs two `a`s and a `b`. `smallestWindow("ADOBECODEBANC", "ABC")` gives `"BANC"`. Return `""` when no stretch holds them all or when `letters` is empty, and the leftmost one when two shortest stretches tie. Characters are case-sensitive. Trying every start and end is far too slow for the hidden text of fifty thousand characters. Count what `letters` needs in a `Map`, and keep one number for how many needed characters the window still lacks. Grow the window by moving its right edge; `while` it lacks nothing, record it if it is the shortest so far, then shrink it from the left. Each edge only ever moves forward. Target: O(n + m) time and O(k) space for k distinct letters.',
+    prompt: "Write `smallestWindow(text, letters)`, returning the shortest stretch of `text` that contains every character of `letters`, repeats counted: if `letters` is `\"aab\"`, the stretch needs two `a`s and a `b`. `smallestWindow(\"ADOBECODEBANC\", \"ABC\")` gives `\"BANC\"`. Return `\"\"` when no stretch holds them all or when `letters` is empty, and the leftmost one when two shortest stretches tie. Characters are case-sensitive. Trying every start and end is far too slow for the hidden text of fifty thousand characters. Count what `letters` needs in a `Map`, and keep one number for how many needed characters the window still lacks. Grow the window by moving its right edge; `while` it lacks nothing, record it if it is the shortest so far, then shrink it from the left. Each edge only ever moves forward. Target: O(n + m) time and O(n + m) extra space, where n and m are the UTF-16 lengths of text and letters. A streaming O(k)-space solution for k distinct wanted code points is valid too. Both inputs are primitive strings: text has at most 50,000 UTF-16 units and letters at most 20,000. A character means one item from the string iterator (for...of), including an emoji as one item and a lone surrogate as one item. Measure window length in these code points, not UTF-16 units. Compare exactly, without case folding or normalization; combining marks stay separate. Materialize text as code points, count wanted code points, and retain only the best start/length until forming the final string.",
     starter: `const smallestWindow = (text, letters) => {
 
 };
@@ -656,16 +658,17 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
 `,
     skeleton: `const smallestWindow = (text, letters) => {
   if (letters === "") return "";
+  const points = Array.from(text);
   const need = new Map(); // character -> how many more the window needs
   for (const char of letters) need.set(char, (need.get(char) ?? 0) + 1);
-  let missing = letters.length;
+  let missing = Array.from(letters).length;
   let best = "";
   let left = 0;
-  for (let right = 0; right < text.length; right++) {
-    // take text[right] in; if it was still needed, one fewer is missing
+  for (let right = 0; right < points.length; right++) {
+    // take points[right] in; if it was still needed, one fewer is missing
     while (missing === 0) {
       // keep the window if it is the shortest so far
-      // give text[left] back; if the window now lacks it, one more is missing
+      // give points[left] back; if the window now lacks it, one more is missing
       // move left on
     }
   }
@@ -675,15 +678,11 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
       'Keep a single number, `missing`: how many characters of `letters` the window still lacks, repeats counted. The window holds everything exactly when it is 0, so you never compare two Maps.',
       'Let a count in `need` go below zero when the window holds more of a character than it needs. Giving one back makes something missing only when its count goes from 0 to 1.',
     ],
-    approach: [
-      'Count what `letters` needs in a `Map`, and set `missing` to the length of `letters`.',
-      'Move the right edge along the text. When its character is in the Map, lower its count, and if the count was above 0, lower `missing` too.',
-      '`while (missing === 0)`: keep the window if it is shorter than the best so far, then give back the character at the left edge (raise its count, and if the count is now above 0, raise `missing`) and move the left edge on.',
-      'Return the best window, or `""` if the window never held everything.',
-    ],
+    approach: ["Convert text into code points; count letters by the same string iterator and initialize missing to that code-point count.", "Move right and update needed counts. While missing is zero, keep only a strictly shorter code-point range and shrink from left.", "Form the result once by joining the best code-point slice; strict improvement preserves the leftmost tie."],
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      {"call": "smallestWindow(\"x\ud83d\ude00y\",\"\ud83d\ude00\")", "expected": "\ud83d\ude00", "label": "an emoji is one character"},
       { call: 'smallestWindow("ADOBECODEBANC", "ABC")', expected: 'BANC' },
       { call: 'smallestWindow("cabwefgewcwaefgcf", "cae")', expected: 'cwae' },
       { call: 'smallestWindow("aaflslflsldkalskaaa", "aaa")', expected: 'aaa', label: 'a letter needed three times' },
@@ -700,7 +699,7 @@ console.log(smallestWindow("ADOBECODEBANC", "ABC"));
     tier: 4,
     focus: ['map-set', 'recursion', 'sort', 'objects'],
     title: 'Merge contacts that share an email',
-    prompt: 'An address book holds contacts `{ name, emails }`. Two contacts are the same person when they share an email, and that chains: if contact A shares an email with B, and B shares one with C, all three are one person even though A and C share nothing. Write `mergeContacts(contacts)`, returning one `{ name, emails }` per person, with the name of that person’s first contact in the book and every email they have, once each, sorted with `sort()`. List the people in the order their first contacts appear. Build a `Map` from each email to the contacts that list it. Then walk it with a recursive helper that visits a contact, collects its emails and visits every contact that shares one, keeping the visited contacts in a `Set` so none is visited twice. Leave `contacts` unchanged. Target: O(E log E) time for E emails in all, for the sorting, and O(E) space.',
+    prompt: "Write `mergeContacts(contacts)`. Each contact has own data fields `{ name, emails }`. Sharing an exact email joins contacts transitively. Return one fresh `{ name, emails }` per component, named after its first input contact; list components in that first-contact order. Collect each email once and sort emails with default sort(), which compares UTF-16 units. Equal names alone never join contacts. Empty-email contacts remain separate. Let N be contacts.length and E the total email occurrence count, including duplicates. The outer array and email arrays are dense ordinary arrays; N <= 2000 and E <= 10000. Names and emails are primitive strings of at most 128 UTF-16 units; empty strings, spaces, case differences, Unicode and lone surrogates are literal data. There is no address validation, trimming or normalization. Contact records may have a null prototype. The outer array, records and email arrays may be frozen; preserve all input values/order. Return fresh mutable records and email arrays on every call. Build email-to-contact adjacency, then consume each email list only once while traversing components; a stack avoids a deep recursive walk. A union-by-size disjoint-set approach is valid too. Target: O(N + E log E) time and O(N + E) extra space, using expected Map/Set access and bounded string costs; use log(E + 1) for E below 2. Sorting accounts for the logarithmic term.",
     starter: `const mergeContacts = contacts => {
 
 };
@@ -712,31 +711,20 @@ console.log(JSON.stringify(mergeContacts([
 ])));
 `,
     skeleton: `const mergeContacts = contacts => {
-  const byEmail = new Map(); // email -> the indexes of the contacts that list it
-  // fill it
+  const byEmail = new Map();
+  // Record the contact indices for each email.
   const visited = new Set();
-  const visit = (index, emails) => {
-    // mark the contact, add its emails, and visit every unvisited contact on each of them
-  };
   const people = [];
-  contacts.forEach((contact, index) => {
-    // a contact not visited yet starts a new person, named after it
-  });
+  // In book order, traverse each unseen component with a stack.
+  // Consume each email adjacency once and collect a fresh sorted email array.
   return people;
 };`,
-    hints: [
-      'Think of each contact as a point, and of each shared email as a line between two points. A person is everything you can reach from one contact by following lines, which is what a depth-first walk collects.',
-      'Going through the contacts in book order and starting a new person at each one not visited yet gives both the order of the people and their names: the first contact of each person is the one that starts it.',
-    ],
-    approach: [
-      'Build a `Map` from each email to the indexes of the contacts that list it.',
-      'Write a recursive `visit(index, emails)` that adds the index to a `visited` Set, adds the contact’s emails to a Set of emails, and visits every contact listed under each of those emails that is not visited yet.',
-      'Go through the contacts in order. Each one not visited yet starts a person: visit it, then push `{ name, emails: [...emails].sort() }`.',
-      'Return the people. Sorting a new array leaves each contact’s own `emails` as they were.',
-    ],
+    hints: ["An email connects all contacts that list it. Once its whole adjacency has been visited, delete or mark that email list so the next contact does not scan it again.", "Start components in book order to keep the first name and component order. Mark contacts when adding them to the stack, and sort a new email array."],
+    approach: ["Map each exact email to its contact indices.", "For each unseen contact in book order, mark it and start a stack; collect component emails in a Set.", "Pop contacts, consume each email adjacency at most once, and mark/push its unseen neighbors.", "Append the first name and a new default-sorted email array. A ranked disjoint-set implementation is valid too."],
     verify: 'tests',
     estimatedMinutes: 40,
     tests: [
+      {"call": "mergeContacts([{name:\" A \",emails:[\" x \"]}])", "expected": [{"name": " A ", "emails": [" x "]}], "label": "keep names and addresses literal"},
       {
         call: 'mergeContacts([{ name: "Ada", emails: ["ada@work.dev", "ada@home.dev"] }, { name: "Ada L", emails: ["lovelace@work.dev", "ada@work.dev"] }, { name: "Bo", emails: ["bo@home.dev"] }])',
         expected: [{ name: 'Ada', emails: ['ada@home.dev', 'ada@work.dev', 'lovelace@work.dev'] }, { name: 'Bo', emails: ['bo@home.dev'] }],
@@ -774,7 +762,7 @@ console.log(JSON.stringify(mergeContacts([
     tier: 4,
     focus: ['recursion', 'map-set', 'strings'],
     title: 'Split text into dictionary words',
-    prompt: 'Hashtags and domain names run words together. Write `splitWords(text, words)`, returning every way to cut `text` into words from the `words` list, each written as its words joined by single spaces, and the whole list sorted with `sort()`. `splitWords("catsanddog", ["cat", "cats", "and", "sand", "dog"])` gives `["cat sand dog", "cats and dog"]`. A word can be used any number of times, and an empty `text` has one split, the empty string. Return `[]` when there is no split. Write a recursive helper `from(start)` returning every split of the text from `start` to the end: for each word the text continues with at `start`, put that word in front of every split of what follows it. Put the words in a `Set` so each piece is one lookup. Many starts are reached along many paths, so keep each start’s answer in a `Map`, empty answers included. Without it, the hidden text of thirty `a`s followed by a `b` never finishes. Target: O(n² + the length of the answers) time for a text of n characters.',
+    prompt: "Write `splitWords(text, words)`, returning every way to cut text into dictionary words, joined by single ASCII spaces and sorted with default sort(). `splitWords(\"catsanddog\", [\"cat\", \"cats\", \"and\", \"sand\", \"dog\"])` gives `[\"cat sand dog\", \"cats and dog\"]`. Words may be reused; duplicate dictionary entries count once. Empty text has one split, `\"\"`; no split gives `[]`. Let n be text.length and D the total UTF-16 length of the dictionary entries. text is primitive with n <= 200; words is a dense ordinary array of at most 2000 nonempty primitive strings with D <= 20000. A word contains no ASCII space; other literal units, including tabs, Unicode and lone surrogates, are allowed. Match UTF-16 substrings exactly, without trimming, case folding or normalization. The dictionary may be frozen and must remain unchanged. Return a fresh mutable answer array. Let R be the answer count and L their total output length in UTF-16 units. Valid inputs have R <= 10000 and L <= 1000000. Build possible word cuts and mark which suffixes can reach the end; enumerate only those continuations, joining the chosen word list once per answer. Keep cut indices instead of storing every suffix sentence. Target: O(D + n\u00b3 + L + nR log R) time and O(D + n\u00b2 + L) total auxiliary/output space. The cubic term includes substring copying/hashing; the sort bound includes comparisons up to O(n) units long. Treat log R as log(max(2,R)); dictionary access uses the usual expected hashing model. A trie can improve cut discovery.",
     starter: `const splitWords = (text, words) => {
 
 };
@@ -784,29 +772,18 @@ console.log(splitWords("catsanddog", ["cat", "cats", "and", "sand", "dog"]));
 `,
     skeleton: `const splitWords = (text, words) => {
   const dictionary = new Set(words);
-  const memo = new Map(); // start -> every split of the text from start
-  const from = start => {
-    // the end of the text has one split: ""
-    // a start worked out before: reuse its answer
-    // for each end after start: if text.slice(start, end) is a word,
-    //   put it in front of every split from end
-    // remember the answer, empty or not
-  };
-  return /* every split from 0, sorted */;
+  const cuts = Array.from({length:text.length+1},()=>[]);
+  // From the end, record cuts whose following suffix can finish.
+  const answers = [], path = [];
+  // Walk valid cuts from zero; join path once at each complete answer.
+  return answers.sort();
 };`,
-    hints: [
-      'Every split of the text from `start` is a word the text continues with at `start`, followed by a split of what is left. So the splits from `start` are built out of the splits from later positions, and the end of the text has exactly one split, the empty one.',
-      'Store every start’s answer in the Map, empty lists included. A start with no split is the one most worth remembering: in a long run of `a`s it is reached along more paths than you could ever count.',
-    ],
-    approach: [
-      'Put the words in a `Set`. Write `from(start)`: at the end of the text return `[""]`, and return the Map’s answer when it has one.',
-      'Otherwise, for each `end` from `start + 1` to the length, when `text.slice(start, end)` is in the Set, add that word in front of every split from `end`, with a space between them unless the rest is empty.',
-      'Store the list under `start` before you return it.',
-      'Return a sorted copy of `from(0)`.',
-    ],
+    hints: ["Work backward to find word cuts that can reach the end. A suffix with no route must not be explored again during answer enumeration.", "Store cut indices, keep one current word path, and join it only for a complete answer. Sorting the final strings also takes time."],
+    approach: ["Deduplicate the nonempty dictionary in a Set.", "From the end backward, record each matching word end only when that suffix can finish. Store indices rather than every suffix sentence.", "Recursively follow those viable cuts from zero with one push/pop word path. At the end, join it with ASCII spaces.", "Default-sort the completed answers. Empty text reaches the end immediately and produces one empty string."],
     verify: 'tests',
     estimatedMinutes: 35,
     tests: [
+      {"call": "splitWords(\"\\ta\",[\"\\ta\"])", "expected": ["\ta"], "label": "a tab is literal word data"},
       { call: `splitWords("catsanddog", ${WORDS})`, expected: ['cat sand dog', 'cats and dog'] },
       { call: 'splitWords("pineapplepenapple", ["apple", "pen", "applepen", "pine", "pineapple"])', expected: ['pine apple pen apple', 'pine applepen apple', 'pineapple pen apple'] },
       { call: 'splitWords("aaaa", ["a", "aa"])', expected: ['a a a a', 'a a aa', 'a aa a', 'aa a a', 'aa aa'], label: 'words used more than once' },

@@ -20,6 +20,8 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import path from 'node:path';
+import { CLEARANCE } from './responsive-clearance.mjs';
+import { closeBrowserProcess } from './responsive-browser-process.mjs';
 
 const CHROME_CANDIDATES = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -56,6 +58,8 @@ const DEFAULT_ROUTES = [
   '/quiz',
   '/daily',
   '/learn',
+  '/big-o',
+  '/learn/big-o',
   '/today',
   '/challenge',
   '/leaderboard',
@@ -407,68 +411,6 @@ const PROBE = `(() => {
   return { winW, docW, overflow, horizOffenders, parentOffenders };
 })()`;
 
-// Scrolled to the end of a page, nothing readable may sit under the fixed
-// ocean footer. The shell reserves space for it; this proves the reserve is
-// still big enough, which is the one thing a horizontal-overflow probe cannot
-// see. The app scrolls inside <main>, not the window.
-const CLEARANCE = `(async () => {
-  const scroller = document.querySelector('main') || document.scrollingElement;
-  if (scroller) {
-    // Late query/error UI can grow the page after the first scroll. Measure
-    // the real page end, rather than mistaking that growth for covered links.
-    for (let attempt = 0; attempt < 4; attempt++) {
-      scroller.scrollTop = scroller.scrollHeight;
-      await new Promise((r) => setTimeout(r, 250));
-      if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < 2) break;
-    }
-  }
-  // The decorative overlays: fixed or absolute, ignored by the pointer, and
-  // sitting against the bottom of the viewport.
-  const overlays = [];
-  for (const el of document.querySelectorAll('body *')) {
-    const style = getComputedStyle(el);
-    if (style.position !== 'fixed' && style.position !== 'absolute') continue;
-    if (style.pointerEvents !== 'none') continue;
-    const r = el.getBoundingClientRect();
-    if (r.height === 0 || r.width < window.innerWidth * 0.5) continue;
-    if (r.bottom < window.innerHeight - 4 || r.top > window.innerHeight) continue;
-    // A band along the bottom, not a page-height decorative layer: a tall
-    // layer covers the whole viewport by definition and would flag everything.
-    if (r.height > window.innerHeight * 0.35) continue;
-    overlays.push(r);
-  }
-  if (overlays.length === 0) return { covered: [], overlays: 0 };
-
-  const TEXTY = new Set(['A', 'BUTTON', 'P', 'SPAN', 'STRONG', 'LI', 'DD', 'DT', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LABEL', 'SMALL']);
-  const covered = [];
-  for (const el of document.querySelectorAll('body *')) {
-    if (!TEXTY.has(el.tagName)) continue;
-    if (el.closest('[aria-hidden="true"]')) continue;
-    if (!el.textContent || !el.textContent.trim()) continue;
-    const style = getComputedStyle(el);
-    if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) continue;
-    const r = el.getBoundingClientRect();
-    if (r.height === 0 || r.width === 0) continue;
-    if (r.top >= window.innerHeight || r.bottom <= 0) continue;
-    // Measured against each band in turn, on both axes.
-    let overlap = 0;
-    for (const band of overlays) {
-      const vertical = Math.min(r.bottom, band.bottom) - Math.max(r.top, band.top);
-      const horizontal = Math.min(r.right, band.right) - Math.max(r.left, band.left);
-      if (vertical > 0 && horizontal > 0) overlap = Math.max(overlap, vertical);
-    }
-    if (overlap > 2) {
-      covered.push({
-        tag: el.tagName.toLowerCase(),
-        text: el.textContent.trim().slice(0, 40),
-        overlap: Math.round(overlap),
-      });
-      if (covered.length >= 6) break;
-    }
-  }
-  return { covered, overlays: overlays.length };
-})()`;
-
 // What the route drew: whether the app mounted, and its page headings.
 const RENDERED = `(() => ({
   mounted: (document.getElementById('root')?.childElementCount ?? 0) > 0,
@@ -595,11 +537,14 @@ async function openBrowser(seed, baseUrl) {
   if (IS_LINUX) chromeArgs.unshift('--no-sandbox', '--disable-dev-shm-usage');
   const chrome = spawn(CHROME, chromeArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
+  let devtoolsSocket;
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
-    try { chrome.kill('SIGKILL'); } catch { /* ignore */ }
+    // Release the control socket explicitly before shutting down its peer.
+    try { devtoolsSocket?.close(); } catch { /* ignore */ }
+    closeBrowserProcess(chrome);
     try { rmSync(userData, { recursive: true, force: true }); } catch { /* ignore */ }
   };
 
@@ -610,7 +555,7 @@ async function openBrowser(seed, baseUrl) {
     });
     const tabs = await getJSON(`http://127.0.0.1:${debugPort}/json`);
     const tab = tabs.find((t) => t.type === 'page');
-    const ws = new globalThis.WebSocket(tab.webSocketDebuggerUrl);
+    const ws = devtoolsSocket = new globalThis.WebSocket(tab.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       ws.addEventListener('open', resolve, { once: true });
       ws.addEventListener('error', () => reject(new Error('Unable to connect to Chrome DevTools.')), { once: true });

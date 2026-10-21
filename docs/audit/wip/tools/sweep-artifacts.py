@@ -36,12 +36,36 @@ PATTERNS = [
 # Matches that read as an artifact but are the item's own subject, each
 # settled by hand. Keyed by item, field and the matched text.
 ALLOW = {
+    # The export poll's latest server response, not a shuffled answer option.
+    ('react-mh-wait-for-export', 'explanation', 'the last answer'),
+    # This permutation example has nine a letters and one b: its ten
+    # distinct outputs contrast with 10! naive branches, not a Git revision.
+    ('js-mh-arrangements', 'question', 'aaaaaaaaab'),
+    # Nested repetition's decoded literal is data, not a Git revision.
+    ('alg-path-stacks-4', 'question', 'accaccacc'),
+    # Run-length encoding's literal example input and encoded output contain
+    # only hex characters. Read in this exact task, they are data, not revisions.
+    ('js-run-length-encode', 'question', 'aaabccdddd'),
+    ('js-run-length-encode', 'question', '3a1b2c4d'),
+    # The substring task's original example repeats abc; it is literal input
+    # in the brief and scratch pad, not a hexadecimal Git revision.
+    ('alg-longest-unique-substring', 'question', 'abcabcbb'),
     # OWASP ranks password hashing functions; "first choice" is its ranking,
     # not this item's option order.
     ('rm-security-25', 'explanation', 'the first choice'),
     # The Czech of the same item, same reason: OWASP's ranking of password
     # hashing functions, not this item's option order.
     ('rm-security-28', 'cs.explanation', 'první volba'),
+    # This native lesson discusses the first iteration of selection/bubble
+    # sort. Both actual trace uses were read; neither describes review work.
+    ('dsa-v1-d08-l1', 'question', 'the first pass'),
+    # The metrics harness encodes correct/abstaining/empty predictions as
+    # twelve-character c/a/e runs. These exact four runs are authored input
+    # patterns, not Git revisions; no other item/hash is exempted.
+    ('fde-v1-m07-evaluation-metrics', 'question', 'cccccccccccc'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'ccccccccaaaa'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'aaaaaaaaaaaa'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'eeeeeeeeeeee'),
 }
 
 
@@ -51,6 +75,8 @@ def scan(text, item_id, field, out):
         if m and (item_id, field, m.group(0)) not in ALLOW:
             out.append((item_id, field, name, m.group(0), context(text, m)))
     for m in HASH.finditer(text):
+        if (item_id, field, m.group(0)) in ALLOW:
+            continue
         if UUID.search(text, max(0, m.start() - 40), m.end() + 40):
             continue  # an example UUID is content, not a commit
         out.append((item_id, field, 'commit hash', m.group(0), context(text, m)))
