@@ -137,10 +137,10 @@ const isSessionRefusal = (err: unknown): boolean =>
 const isRetryable = (err: unknown): boolean =>
   !(err instanceof ApiError) || err.status === 0 || err.status === 429 || err.status >= 500;
 
-function gradeChallengeAnswer(sessionId: string, questionId: string, selectedIndex: number, lang: string) {
+function gradeChallengeAnswer(sessionId: string, questionId: string, selectedIndex: number) {
   return apiFetch<QuizResult>('/api/quiz/submit', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, answers: { [questionId]: selectedIndex }, lang }),
+    body: JSON.stringify({ sessionId, answers: { [questionId]: selectedIndex } }),
   });
 }
 
@@ -190,7 +190,7 @@ function useBoardFirstData() {
 
 export default function Challenge() {
   useBoardFirstData();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const accent = useActiveSubject().accent;
   const isMobile = useIsMobile();
@@ -316,7 +316,6 @@ export default function Challenge() {
         try {
           const batch = await fetchChallengeBatch({
             exclude: excluded,
-            lang,
             runToken: runTokenRef.current || undefined,
             categories: runTopics.current,
           });
@@ -354,7 +353,7 @@ export default function Challenge() {
         if (topupInFlight.current === p) topupInFlight.current = null;
       }
     },
-    [lang],
+    [],
   );
 
   const popNext = useCallback((): BufferedQuestion | null => {
@@ -508,19 +507,19 @@ export default function Challenge() {
     if (!sent.picks.includes(pick)) sent.picks.push(pick);
     const alreadyGraded = (err: unknown) => err instanceof ApiError && err.code === 'attempt_already_graded';
     try {
-      return { pick, result: await gradeChallengeAnswer(sessionId, question.id, pick, lang) };
+      return { pick, result: await gradeChallengeAnswer(sessionId, question.id, pick) };
     } catch (err) {
       if (!alreadyGraded(err)) throw err;
       for (const one of earlier) {
         try {
-          return { pick: one, result: await gradeChallengeAnswer(sessionId, question.id, one, lang) };
+          return { pick: one, result: await gradeChallengeAnswer(sessionId, question.id, one) };
         } catch (again) {
           if (!alreadyGraded(again)) throw again;
         }
       }
       throw err;
     }
-  }, [lang]);
+  }, []);
 
   const submitAnswer = useCallback(async () => {
     if (selected == null || !current || submitting || timeLeft <= 0) return;

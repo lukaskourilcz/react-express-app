@@ -111,13 +111,13 @@ export function fetchRoadmapStructure(signal?: AbortSignal): Promise<RoadmapStru
   return apiFetch<RoadmapStructure>('/api/quiz/roadmap', { signal });
 }
 
-export function fetchRoadmapLevel(topic: RoadmapTopic, level: number, lang: string, signal?: AbortSignal): Promise<RoadmapPlayable> {
-  const params = new URLSearchParams({ topic, level: String(level), lang });
+export function fetchRoadmapLevel(topic: RoadmapTopic, level: number, signal?: AbortSignal): Promise<RoadmapPlayable> {
+  const params = new URLSearchParams({ topic, level: String(level) });
   return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`, { signal });
 }
 
-export function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number, lang: string, signal?: AbortSignal): Promise<RoadmapPlayable> {
-  const params = new URLSearchParams({ topic, checkpoint: String(checkpoint), lang });
+export function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number, signal?: AbortSignal): Promise<RoadmapPlayable> {
+  const params = new URLSearchParams({ topic, checkpoint: String(checkpoint) });
   return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`, { signal });
 }
 
@@ -125,11 +125,10 @@ export function submitRoadmapAnswer(
   sessionId: string,
   questionId: string,
   selectedIndex: number,
-  lang: string,
 ): Promise<RoadmapAnswerResult> {
   return apiFetch<RoadmapAnswerResult>('/api/quiz/roadmap?resource=answer', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, questionId, selectedIndex, lang }),
+    body: JSON.stringify({ sessionId, questionId, selectedIndex }),
   });
 }
 
@@ -334,8 +333,8 @@ export function parsePathId(id: string): { family: RoadmapTopic; part: number } 
   return { family, part };
 }
 
-export const fetchRoadmapPartTest = (family: RoadmapTopic, part: number, lang: string, signal?: AbortSignal): Promise<RoadmapPlayable> => {
-  const params = new URLSearchParams({ topic: family, test: String(part), lang });
+export const fetchRoadmapPartTest = (family: RoadmapTopic, part: number, signal?: AbortSignal): Promise<RoadmapPlayable> => {
+  const params = new URLSearchParams({ topic: family, test: String(part) });
   return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`, { signal });
 };
 

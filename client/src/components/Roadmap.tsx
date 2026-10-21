@@ -501,8 +501,8 @@ function Roadmap() {
     const startedAt = Date.now();
     const req =
       a.kind === 'level'
-        ? fetchRoadmapLevel(topic, a.ref, lang, controller.signal)
-        : fetchRoadmapPartTest(topic, a.ref, lang, controller.signal);
+        ? fetchRoadmapLevel(topic, a.ref, controller.signal)
+        : fetchRoadmapPartTest(topic, a.ref, controller.signal);
     req
       .then(async (data) => {
         await holdLoadingScreen(startedAt);
@@ -674,7 +674,6 @@ function Roadmap() {
   if (skillCheckOpen) {
     return (
       <SkillCheckRunner
-        lang={lang}
         subject={subject}
         isAuthenticated={isAuthenticated}
         onCancel={() => setSkillCheckOpen(false)}
@@ -1443,7 +1442,7 @@ function LessonRunner({
       setAnswerError(null);
       setSelected(index);
       try {
-        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index, lang);
+        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index);
         setSelected(result.selectedIndex);
         setGrade(result);
         setRevealed(true);
@@ -1460,7 +1459,7 @@ function LessonRunner({
         setGrading(false);
       }
     },
-    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint, reportError],
+    [revealed, grading, playable.sessionId, question.id, isCheckpoint, reportError],
   );
 
   const complete = useCallback(async () => {
@@ -2097,14 +2096,12 @@ interface PlacementDone {
 type PlacementResponse = PlacementRound | PlacementDone;
 
 function SkillCheckRunner({
-  lang,
   subject,
   isAuthenticated,
   onCancel,
   onFinished,
   t,
 }: {
-  lang: string;
   subject: SubjectId;
   isAuthenticated: boolean;
   onCancel: () => void;
@@ -2191,7 +2188,7 @@ function SkillCheckRunner({
     setReview([]);
     const startedAt = Date.now();
     try {
-      const params = new URLSearchParams({ resource: 'placement', subject, lang });
+      const params = new URLSearchParams({ resource: 'placement', subject });
       const res = await apiFetch<PlacementResponse>(`/api/quiz/roadmap?${params}`);
       await holdLoadingScreen(startedAt);
       if (res.done) await finishFrom(res);
@@ -2200,7 +2197,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [subject, lang, applyRound, finishFrom]);
+  }, [subject, applyRound, finishFrom]);
 
   const submitRound = useCallback(async () => {
     if (!token) return;
@@ -2209,7 +2206,7 @@ function SkillCheckRunner({
     try {
       const res = await apiFetch<PlacementResponse>('/api/quiz/roadmap?resource=placement', {
         method: 'POST',
-        body: JSON.stringify({ placementToken: token, answers, lang }),
+        body: JSON.stringify({ placementToken: token, answers }),
       });
       setReview((previous) => [...previous, ...(res.review ?? []).flatMap((item) => {
         const question = questions.find((one) => one.id === item.questionId);
@@ -2225,7 +2222,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [token, answers, lang, difficulty, questions, applyRound, finishFrom]);
+  }, [token, answers, difficulty, questions, applyRound, finishFrom]);
 
   const current: Question | undefined = questions[qIndex];
   const roundSize = questions.length;
@@ -2468,9 +2465,9 @@ export function BigOIntroduction() {
   const [generation, setGeneration] = useState(0);
   const before = useRef(0);
   const lesson = useQuery({
-    queryKey: ['big-o-introduction', level, generation, lang, user?.id ?? null],
+    queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
     enabled: level !== null,
-    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, lang, signal),
+    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
     staleTime: 0,
     gcTime: 0,
     retry: false,

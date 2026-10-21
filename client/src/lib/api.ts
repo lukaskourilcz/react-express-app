@@ -1,5 +1,5 @@
 import { getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
-import { getStoredLang, translateStatic } from '../i18n/LanguageContext';
+import { translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { openUpgradeSheet } from './upgradeSheet';
 import { PREMIUM_REQUIRED, type GatedKind } from '../../../shared/tiers';
@@ -180,21 +180,12 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   grader_busy: 'coding.verdict.graderUnavailable',
 };
 
-// not_found spans several endpoints whose English server messages are more
-// specific than any one dictionary string — keep those for English and only
-// swap in the translated generic for Czech.
-const CS_ONLY_CODE_KEYS: Partial<Record<string, TranslationKey>> = {
-  not_found: 'error.notFound',
-};
-
 // friendlyError runs in the api layer (no React context), so it resolves the
 // shared dictionaries via translateStatic. Server messages for unmapped error
 // codes fall through as-is (English).
 export function friendlyError(err: unknown): string {
   if (err instanceof ApiError) {
-    const codeKey =
-      (err.code && CODE_KEYS[err.code]) ||
-      (getStoredLang() === 'cs' && err.code ? CS_ONLY_CODE_KEYS[err.code] : undefined);
+    const codeKey = err.code ? CODE_KEYS[err.code] : undefined;
     if (codeKey) return translateStatic(codeKey);
     if (err.status === 0) return translateStatic('error.network');
     if (err.status >= 500) return translateStatic('error.server');

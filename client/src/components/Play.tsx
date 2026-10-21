@@ -140,7 +140,7 @@ async function copyText(value: string): Promise<boolean> {
 
 export function PlayLanding() {
   const navigate = useNavigate();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
   const accent = useActiveSubject().accent;
@@ -206,7 +206,6 @@ export function PlayLanding() {
           ? selectedCategories
           : categoryOptions.map((c) => c.value),
         duration_s: durationS,
-        lang,
       });
       capture(mode === 'classroom' ? 'classroom_created' : 'multiplayer_created', { question_count: count });
       navigate(`/play/${m.code}`);

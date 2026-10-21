@@ -31,13 +31,12 @@ export interface ChallengeLeaderboard {
   champion: ChallengeScore | null;
 }
 
-export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean; assessment?: boolean; categories?: string[] } = {}): Promise<ChallengeBatch> {
+export function fetchChallengeBatch(opts: { exclude?: string[]; runToken?: string; ranked?: boolean; assessment?: boolean; categories?: string[] } = {}): Promise<ChallengeBatch> {
   const params = new URLSearchParams();
   if (opts.exclude && opts.exclude.length > 0) {
     // Cap the exclude payload — the server caps too, but no need to send more.
     params.set('exclude', opts.exclude.slice(0, 400).join(','));
   }
-  if (opts.lang) params.set('lang', opts.lang);
   if (opts.runToken) params.set('runToken', opts.runToken);
   if (opts.ranked === false) params.set('ranked', '0');
   if (opts.assessment) params.set('resource', 'assessment');

@@ -30,7 +30,7 @@ describe('requests for questions name only categories the server serves', () => 
 
   it('the daily set passes the delivery check', async () => {
     const seen = capture('*/api/quiz/daily', { date: '2026-09-25', sessionId: 's', questions: [] });
-    await getDailyChallenge('en');
+    await getDailyChallenge();
     expect(seen).toHaveLength(1);
     expect(validateCategoryScope(seen[0], { forDelivery: true }).ok).toBe(true);
   });

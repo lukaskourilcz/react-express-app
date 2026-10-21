@@ -136,7 +136,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // Its own wave from the shared bank, so the review heading does not repeat
   // the tile the kicker above it drew.
   const reviewWave = useWaveVariant();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const config = useGameConfig();
   const [state, setState] = useState<QuizState>('ready');
@@ -341,7 +341,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           count: String(count),
           difficulty,
           categories: categories.join(','),
-          lang,
         });
         const data = await apiFetch<{ sessionId: string; expiresAt?: number; questions: Question[]; hardestAvailable?: boolean }>(
           `/api/quiz/questions?${params}`,
@@ -374,7 +373,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setState('error');
       }
     },
-    [lang, t],
+    [t],
   );
 
   const startDailyChallenge = useCallback(async () => {
@@ -385,7 +384,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     capture('quiz_started', { mode: 'daily' });
     const startedAt = Date.now();
     try {
-      const data = await getDailyChallenge(lang);
+      const data = await getDailyChallenge();
       await holdLoadingScreen(startedAt);
       // Already submitted today: the grader would refuse a second run.
       if (data.completed) {
@@ -411,7 +410,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setError(friendlyError(err));
       setState('error');
     }
-  }, [lang, t]);
+  }, [t]);
 
   const startPersonalizedReview = useCallback(async () => {
     fetchAbortRef.current?.abort();
@@ -429,7 +428,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         count: String(Math.min(10, config.quiz.maxCount)),
         difficulty: 'mixed',
         categories: categories.join(','),
-        lang,
       });
       const data = await apiFetch<{
         sessionId: string;
@@ -458,7 +456,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setError(friendlyError(error));
       setState('error');
     }
-  }, [config.quiz.maxCount, lang, t, visibleCategoryOptions]);
+  }, [config.quiz.maxCount, t, visibleCategoryOptions]);
 
   // Retry after an error, and "New quiz, same settings" after an expired
   // one, repeat how the last quiz was started: a failed daily retries the
@@ -579,7 +577,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         body: JSON.stringify({
           sessionId,
           answers,
-          lang,
           hinted: hintedIds,
         }),
       });
@@ -657,7 +654,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, hintedIds]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, t, questions, mode, hintedIds]);
 
   const handleRestart = () => {
     clearProgress();
