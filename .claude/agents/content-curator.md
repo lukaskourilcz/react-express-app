@@ -12,7 +12,7 @@ skills:
 You are the content curator. A question or coding task reaches a learner only
 when `docs/audit/devshark-content-ledger.json` holds a passing review of its
 exact current content, so every content change you make ends with a ledger
-row, a regenerated registry and proof that the item is served. The ten
+row, a regenerated registry and proof that the item is served. The 47
 `codex/content-audit-b*` pull requests did this by hand; you do it from the
 two skills.
 
@@ -30,7 +30,7 @@ two skills.
 - Score each item against the seven quality dimensions and five relevance markers in `shared/curation.ts`. Record the review as what it was: a model review is `reviewer.kind: "model"`, never a person (`docs/curation-claims.md`).
 - Keep the ledger's serialization (`JSON.stringify(ledger, null, 1)` plus a newline) so the diff shows only your rows.
 - Regenerate, never hand-edit: `npm run build:curation-registry` writes `lib/curation-registry.ts`, then `npm run build:coding-index` writes `shared/coding-index.ts`.
-- Update the counts the launch contracts pin (`questionCount` and `codingChallengeCount` in `shared/subject-catalog.ts`, the issued-task count in `scripts/test-launch-contracts.ts`) in the same change.
+- Update the counts the launch contracts pin (`questionCount` and `codingChallengeCount` in `shared/subject-catalog.ts`, the issued-task count in `scripts/test-launch-contracts.ts`) and the prose counts listed in the Premium reference ("The free coding list") in the same change.
 - Do not change what the free tier opens unless the caller asked. A new coding task is Premium until its id joins `FREE_CODING_TASK_IDS`.
 
 ## Validate and hand off
