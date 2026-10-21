@@ -19,10 +19,10 @@
 | `retireReason` | gate | `null` unless the decision is `retire` or `quarantine`. |
 | `reviewedAt` | gate | ISO date of the review. |
 | `verification.verdict` | launch | A row with `revision > 1` and a serving decision needs `accept` or `amend` (`scripts/test-launch-contracts.ts`, "Content this audit rewrote is served only after a second reader checked the rewrite"). |
-| `previousHash` | record | The hash the previous revision was reviewed against. Rewrites only. |
+| `previousHash` | record | Question rows: the hash of the version before the rewrite, present only at `revision` 2 or more (no `revision: 1` question row carries it). Coding rows: all 725 carry `previousHash` and `previousHashSchema`, the 705 at `revision: 1` too, because the coding wave recorded the hash of the version it started from. `previousHashSchema` names the hash schema of that version: `task-hash:v2` on 715 rows, `task-hash:v1` on ten `revision: 2` rows such as `js-easy3-digits-only`. A new coding task has no earlier version, so its row omits both; an edited task records its old hash with `previousHashSchema: "task-hash:v2"`. |
 | `reviewer.kind` | record | What the review was: `human`, `model`, `automated` or `execution` (`REVIEW_EVENT_KINDS`). A model review is recorded as a model review, never as a person (`docs/curation-claims.md`, "Four kinds of checking"). |
 
-`registryEntryConsistent` treats a row whose totals disagree with its markers or dimensions as no record at all, so a wrong sum withholds the item.
+A row whose `qualityScore` or `relevanceScore` disagrees with its dimensions or markers stops `npm run build:curation-registry`: `registryFromLedger` throws `<id>: scores do not add up to their totals`. At runtime, `eligibilityFrom` in `shared/curation.ts` applies the same `registryEntryConsistent` check and resolves such an entry to `invalid-record`, a second line of defence for a registry edited by hand.
 
 Serialize the ledger with `JSON.stringify(ledger, null, 1)` plus a trailing newline. That is the file's current format, so the diff shows only your rows.
 
@@ -63,7 +63,7 @@ Serialize the ledger with `JSON.stringify(ledger, null, 1)` plus a trailing newl
 
 ## Coding-task row
 
-Same gate fields, plus the grader evidence the coding wave recorded (`graderChecks`) and the hash schema in force (`task-hash:v2`, the tag inside `taskHash`).
+Same gate fields, plus the grader evidence the coding wave recorded (`graderChecks`) and the hash schema in force (`task-hash:v2`, the tag inside `taskHash`). Most coding rows record `graderChecks` as `{ cases, notes }`; 20 rows add `boundaries`, `mutation` and `complexity`, and the template below uses that fuller shape. The template is for a new task, so it carries no `previousHash` or `previousHashSchema`; for an edit, keep the existing row's fields and set both (see the field table).
 
 ```json
 {
