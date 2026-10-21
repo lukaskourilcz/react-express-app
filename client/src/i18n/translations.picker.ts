@@ -73,8 +73,10 @@ export const pickerEn = {
 
 export type PickerKey = keyof typeof pickerEn;
 
-/** A picker string with its `{name}` placeholders filled, as `t()` fills them. */
+/** A picker string with its `{name}` placeholders filled, as `t()` fills them.
+ * A key with no entry (one built at runtime from an option id the dictionary
+ * does not name yet) reads as the key itself, as it does through `t()`. */
 export function pickerCopy(key: PickerKey, vars?: Record<string, string | number>): string {
-  const template: string = pickerEn[key];
+  const template: string = (pickerEn as Record<string, string>)[key] ?? key;
   return vars ? template.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match)) : template;
 }

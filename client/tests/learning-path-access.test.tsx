@@ -397,6 +397,14 @@ describe('the Profile picker', () => {
     expect(within(fde).getByText(/^Before you start:/)).toBeInTheDocument();
   });
 
+  it('a picker key with no words reads as the key, as t() does, and never throws', async () => {
+    const { pickerCopy } = await import('../src/i18n/translations.picker');
+    type Key = Parameters<typeof pickerCopy>[0];
+    expect(pickerCopy('profile.goal.something-new' as Key)).toBe('profile.goal.something-new');
+    expect(pickerCopy('profile.goal.something-new' as Key, { max: 3 })).toBe('profile.goal.something-new');
+    expect(pickerCopy('profile.picker.goalsHint', { max: 3 })).toBe('Pick up to 3.');
+  });
+
   it('saving the picker writes the Software Engineer section with the profile', async () => {
     signedInWith(profile);
     await card();

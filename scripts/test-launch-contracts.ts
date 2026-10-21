@@ -158,6 +158,9 @@ import {
 import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
 import { OPT_IN_SECTIONS as INITIAL_OPT_IN_SECTIONS } from '../shared/learn-section-ids';
 import {
+  EXPERIENCE_LEVELS,
+  LEARNER_GOALS,
+  STUDY_TIMES,
   isLearnerProfileComplete,
   missingProfileFields,
   parseLearnerProfile,
@@ -5871,9 +5874,14 @@ function consentContracts() {
     assert.ok(!(key in ENGLISH), `${key} lives in translations.picker.ts alone`);
   }
   for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.picker/, `${file} pulls the path picker's copy into the shell`);
+  // The picker and the card build these keys from the option ids, so every
+  // id needs its words here or the option reads as its raw key.
   for (const id of LEARN_SECTION_IDS) {
     assert.ok(`profile.section.${id}` in PICKER_ENGLISH, `the Profile card names the ${id} section`);
   }
+  for (const goal of LEARNER_GOALS) assert.ok(`profile.goal.${goal}` in PICKER_ENGLISH, `the picker names the ${goal} goal`);
+  for (const level of EXPERIENCE_LEVELS) assert.ok(`profile.experience.${level}` in PICKER_ENGLISH, `the picker names the ${level} experience level`);
+  for (const band of STUDY_TIMES) assert.ok(`profile.studyTime.${band}` in PICKER_ENGLISH, `the picker names the ${band} study time`);
   for (const [key, value] of Object.entries(PICKER_ENGLISH)) {
     assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
     assert.doesNotMatch(value, /certif|hired|hiring|job[- ]ready|guaranteed?|AI[- ]powered|AI tutor/i, `${key} makes a certification, hiring or AI claim`);
