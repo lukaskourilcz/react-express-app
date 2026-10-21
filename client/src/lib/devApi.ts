@@ -43,14 +43,6 @@ function adminFetch<T>(
   });
 }
 
-/** The four translatable Czech fields edited in the console. */
-export interface CsFields {
-  question: string;
-  options: string[];
-  introduction: string;
-  explanation: string;
-}
-
 export interface AdminQuestion {
   id: string;
   tags: string[];
@@ -65,14 +57,11 @@ export interface AdminQuestion {
   importance: number;
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
-  /** Current Czech translation (db override, else static bank), for editing. */
-  cs: CsFields;
   /** What the content audit says about this exact wording: served or not,
    * why, and the decision on record. Mirrors `AdminReviewState` on the server. */
   review: {
     active: boolean;
     reason: 'not-in-scope' | 'reviewed' | 'unreviewed' | 'superseded' | 'retired' | 'quarantined' | 'failed-gate' | 'invalid-record';
-    csApproved: boolean;
     decision?: 'retain' | 'rewrite' | 'retire' | 'quarantine';
     retireReason?: string;
     relevance?: number;
@@ -94,7 +83,6 @@ export interface QuestionPayload {
   difficulty: number;
   /** Optional importance override (1–10). */
   importance?: number;
-  cs?: Partial<CsFields>;
 }
 
 export interface GameSettings {
@@ -192,7 +180,7 @@ export const dismissReport = (id: string) =>
 export interface QuestionQualityIssue {
   questionId: string;
   questionHash: string;
-  kind: 'missing_translation' | 'translation_parity' | 'weak_distractor' | 'duplicate' | 'ambiguous_wording' | 'freshness_review' | 'importance_mismatch';
+  kind: 'weak_distractor' | 'duplicate' | 'ambiguous_wording' | 'freshness_review' | 'importance_mismatch';
   severity: 'high' | 'medium' | 'low';
   message: string;
   suggestion: string;

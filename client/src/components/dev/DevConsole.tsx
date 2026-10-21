@@ -20,7 +20,7 @@ type Tab = 'questions' | 'triage' | 'quality' | 'paths' | 'flags' | 'logs' | 'me
 const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'questions', label: 'Question bank', description: 'Create, filter and edit', icon: '◫' },
   { id: 'triage', label: 'Quality triage', description: 'Find content to improve', icon: '◇' },
-  { id: 'quality', label: 'Parity & quality', description: 'Validate EN/CS and wording', icon: '◎' },
+  { id: 'quality', label: 'Content quality', description: 'Validate wording and options', icon: '◎' },
   { id: 'paths', label: 'Learning paths', description: 'Content readiness and inventory', icon: '⌘' },
   { id: 'flags', label: 'Learner flags', description: 'Review reported questions', icon: '⚑' },
   { id: 'logs', label: 'Activity log', description: 'Track authentication events', icon: '≋' },
