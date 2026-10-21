@@ -5,13 +5,13 @@ description: Reproduce the `verify` CI job locally with `npm run ci:parity`, the
 
 # CI parity and pull requests
 
-`main` is protected: GitHub merges a pull request only when the `verify` and `sql` jobs of `.github/workflows/quality.yml` pass, for admins too, and refuses force-pushes (CLAUDE.md, "Git workflow"). `verify` runs 53 steps and recent runs took 40 to 45 minutes (PR #521: 44m23s; its test chain alone took 30m38s) against a 60-minute timeout. Every step you skip locally risks another cycle of that length. PR #401 failed `check:bundle` by 182 gzip bytes after passing the six commands `shark-release-validation` used to list ("15 October — PR #401 initial-load correction").
+`main` is protected: GitHub merges a pull request only when the `verify` and `sql` jobs of `.github/workflows/quality.yml` pass, for admins too, and refuses force-pushes (CLAUDE.md, "Git workflow"). The `verify` gates run 53 steps. In one job they took 40 to 45 minutes (PR #521: 44m23s), so they now run as five parallel jobs of at most 30 minutes each, and the job named `verify` passes only when all five passed. Every step you skip locally risks another cycle of that length. PR #401 failed `check:bundle` by 182 gzip bytes after passing the six commands `shark-release-validation` used to list ("15 October — PR #401 initial-load correction").
 
 `scripts/ci-parity.mjs` runs the same steps in the same order with the same environment and prints each step's real result. Before it runs anything it reads `quality.yml` and checks two things: the job's `npm` and `npx playwright` commands, in order and with their env prefixes, must equal the plan's, and every other line of the job (setup, `env:`, `if:`, shell glue) must equal `KNOWN_GLUE` in the script. On any difference it exits 2 and prints the first one. Change `PLAN` or `KNOWN_GLUE` and the table below in the same commit as the workflow.
 
 ## The `verify` sequence
 
-The order and the commands come from the `verify` job in `.github/workflows/quality.yml`. `ci:parity` step ids are in the second column.
+The commands come from `.github/workflows/quality.yml`, where the gates run as five parallel jobs: `quickjs` (steps 1-2), `static` (3-13), `tests` and `coding` (14-26), and `browser` (27-53). The job named `verify` needs all five and fails when any of them failed, was cancelled or was skipped; it is the required check. `ci:parity` runs the jobs one after another in this order, and counts a command an earlier job already ran (`npm ci`, the browser job's build) once. Step ids are in the second column.
 
 | # | Step id | Command | Notes |
 |---|---|---|---|
@@ -19,10 +19,10 @@ The order and the commands come from the `verify` job in `.github/workflows/qual
 | 2 | `check:quickjs-build` | `npm run check:quickjs-build` | CI skips it when `lib/coding/vendor`, `lib/coding/quickjs-variant.ts`, `scripts/rebuild-quickjs-sort.mjs`, `package.json`, `package-lock.json` and `client/package-lock.json` match the PR base; the script compares the working tree with `git merge-base HEAD origin/main` the same way. Any `package.json` edit, a new npm script included, triggers it. The rebuild needs Python 3.10+ (`SHARK_PYTHON`) to install the pinned emsdk, or an emsdk in `SHARK_EMSDK_DIR`; without either the step is reported as not run, and CI's result is the evidence. |
 | 3-5 | `typecheck:api`, `typecheck:scripts`, `typecheck:tooling` | `npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client` | `typecheck:tooling` lives in `client/package.json`. |
 | 6 | `audit:native-reviews` | `npm run audit:native-reviews` | |
-| 7-19 | `test:performance` to `test:client` | `test:performance`, `test:launch`, `test:coding-auth`, `test:grading-integrity`, `test:path-authority`, `test:react-authority`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks`, `test:garden`, `test:live-grading`, `test:client` | One chained CI step: in CI the first failure stops the rest. `test:coding` runs every task's reference and takes several minutes. |
-| 20-21 | `check:unused`, `check:security` | `npm run check:unused && npm run check:security` | |
-| 22-24 | `build`, `check:public`, `check:bundle` | `npm run build && npm run check:public && npm run check:bundle` | Build env below. The browser steps test this build. |
-| 25-26 | `audit:prod`, `audit:client` | `npm audit --omit=dev && npm audit --omit=dev --prefix client` | |
+| 7-8 | `check:unused`, `check:security` | `npm run check:unused && npm run check:security` | |
+| 9-11 | `build`, `check:public`, `check:bundle` | `npm run build && npm run check:public && npm run check:bundle` | Build env below. The `browser` job builds again with the same env and tests that build. |
+| 12-13 | `audit:prod`, `audit:client` | `npm audit --omit=dev && npm audit --omit=dev --prefix client` | |
+| 14-26 | `test:performance` to `test:coding` | `test:performance`, `test:launch`, `test:coding-auth`, `test:grading-integrity`, `test:path-authority`, `test:react-authority`, `test:paths`, `test:billing`, `test:fallbacks`, `test:garden`, `test:live-grading`, `test:client`, then `test:coding` | The `tests` job chains the first twelve, and the first failure stops the rest; the `coding` job runs `test:coding` alone. `test:coding` runs every task's reference and takes several minutes. |
 | 27 | `chromium` | `npx playwright install --with-deps chromium` | Locally `npx playwright install chromium` (idempotent), unless `CHROME_BIN` or `/opt/pw-browsers/chromium` exists. |
 | 28 | `preview` | `npm run preview --prefix client -- --host 0.0.0.0 --port 4173` | Started in the background and polled like `scripts/wait-for-preview.mjs`. |
 | 29-46 | `browser:<spec>` | `npm run test:browser -- tests/browser/<spec>.spec.ts` | 18 runs in workflow order, from `public` to `launch-offer`; `guide-startup` and `profile-leaderboard-preferences` share one run (`browser:guide-startup+profile-leaderboard-preferences`). |
@@ -62,7 +62,7 @@ npm run ci:parity -- --fast --bail        # stop at the first failure, as CI doe
 npm run ci:parity -- --sql                # add the sql job (DATABASE_URL set)
 ```
 
-**When to run which.** Run `--fast` while you iterate and before every push. Run the full job before you open or mark ready a pull request whose diff touches `client/`, `tests/browser/`, `vercel.json`, Storybook stories, a route, or anything a browser spec covers. Other files point here for this rule; do not restate it elsewhere.
+**When to run which.** CI is the gate; a local run is how you avoid a wasted CI cycle (owner, 21 October 2026: speed matters, so do not repeat the whole job locally by habit). Before every push, run the steps your diff touches with `--only` (types, the suites for the area, `build` and `check:bundle` when client code changed, the browser spec you added or changed on a spare port). Run `--fast` when the diff crosses areas (shared types, `package.json`, scripts other suites import), and the full job when it reworks client routes or the shell. Other files point here for this rule; do not restate it elsewhere.
 
 `--fast` skips the 18 browser specs, `test:harness` and the Storybook and performance step. It still builds, starts the preview and runs both `check:responsive` sweeps. `--only` runs the named steps and records the run as `partial`; give it its own `--log-dir` so it does not replace the summary of a full or fast run.
 
@@ -74,7 +74,7 @@ The script tests the working tree, but CI sees only committed files, so commit b
 
 1. **One branch per issue**, from a fresh `main`: `git switch main && git pull --ff-only && git switch -c claude/<issue-id>-<slug>`, for example `claude/a1-learn-sections-registry`. Do not stack a branch on another unmerged branch. When a blocker merges, rebase: `git fetch origin && git rebase origin/main`, then `git push --force-with-lease` (your feature branch only; `main` refuses force-pushes).
 2. **Small, coherent commits** that name the issue (`feat(learn): add the section registry (#487)`). End each message with the `Co-Authored-By:` trailer the session's instructions give. Prose follows `.claude/skills/stop-slop`.
-3. **Run `npm run ci:parity`** (`--fast` or full, per the rule above) on the committed head, plus anything the issue's verification plan names.
+3. **Run the local checks the rule above asks for** on the committed head, plus anything the issue's verification plan names.
 4. **Push and open the pull request** with `gh pr create --base main --head <branch> --title "<issue title>" --body-file <file>`. The body:
 
    ```markdown
@@ -99,8 +99,9 @@ The script tests the working tree, but CI sees only committed files, so commit b
    End the body with the attribution line the session's instructions give. A planning or documentation PR that only references implementation issues uses `Refs #N`, never `Closes`.
 5. **Migrations first.** When the diff adds a file under `supabase/`, the migration goes to production before the code merges (`docs/launch-runbook.md`, "Database rollout"; the `supabase-migration` skill once C2 lands). Merge only after the migration is applied, by the owner or by an agent the owner authorised for that task, and record it in `NEEDED.md` as an `[owner:me] [kind:deploy]` item until then.
 6. **Wait for the required checks**: `gh pr checks <pr> --watch --required`. Run it in the background and move on. When a check fails, read its log with `gh run view <run-id> --log-failed`, fix the cause on the branch, push, and wait again. Never merge around a red check.
-7. **Merge** with a merge commit and delete the remote branch: `gh pr merge <pr> --merge --delete-branch`. The repository merges with merge commits ("Merge pull request #518 from …").
-8. **Clean up locally**: `git switch main && git pull --ff-only && git branch -d <branch>`, and `git worktree remove <path>` for a worktree you created. Leave no stale branch behind.
+7. **Recheck a moved `main`.** Branch protection does not require an up-to-date branch, so CI tested your branch merged with the `main` of the moment it ran. If `main` has since gained changes your diff depends on (shared types, loaders, scripts, contracts), rebase, rerun the affected checks, push with `--force-with-lease` and wait for CI again. PR #527 passed CI and would have broken `typecheck:scripts` on `main` after #526 changed `loadSubjectQuestionBank`.
+8. **Merge** with a merge commit and delete the remote branch: `gh pr merge <pr> --merge --delete-branch`. The repository merges with merge commits ("Merge pull request #518 from …").
+9. **Clean up locally**: `git switch main && git pull --ff-only && git branch -d <branch>`, and `git worktree remove <path>` for a worktree you created. Leave no stale branch behind.
 
 ## After the merge
 
