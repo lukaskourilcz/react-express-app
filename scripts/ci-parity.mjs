@@ -81,7 +81,7 @@ function readVerifyJob() {
 // Every line of the verify job that is not an npm/npx command, in order. The
 // plan below reproduces what these lines do; change both together.
 const KNOWN_GLUE = [
-  'verify:', 'runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:',
+  'verify:', 'runs-on: ubuntu-latest', 'timeout-minutes: 60', 'steps:',
   '- uses: actions/checkout@v4', '- uses: actions/setup-node@v4', 'with:', 'node-version: 24', 'cache: npm',
   'cache-dependency-path: |', 'package-lock.json', 'client/package-lock.json',
   '- name: Rebuild modified QuickJS runtime from pinned sources', 'env:',

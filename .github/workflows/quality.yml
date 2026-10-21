@@ -40,8 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     # Full isolated grading, browser coverage, Storybook and performance need
     # more than the old 30-minute cap: run 38491511671 passed the preceding
-    # gates and timed out during the final Storybook/performance step.
-    timeout-minutes: 45
+    # gates and timed out during the final Storybook/performance step. The
+    # test chain alone grew from 22m18s (run 39030786250, 17 October) to
+    # 30m38s (run 39636125708, 21 October), which left verify at 44m23s of
+    # 45, so the cap is 60.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
