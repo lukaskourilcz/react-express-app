@@ -113,7 +113,7 @@ export const FDE_M08: ModuleSource = {
   ],
   competencies: ['ai-security'],
   dependsOn: ['fde-v1-m05', 'fde-v1-m06'],
-  estimatedMinutes: 160,
+  estimatedMinutes: 145,
   lessons: [
     {
       id: 'fde-v1-m08-l1',
@@ -529,7 +529,7 @@ export const FDE_M08: ModuleSource = {
             [
               'FedRAMP',
               'A US government-wide program, run within GSA, that gives agencies a standardized approach to security and risk assessment of cloud offerings',
-              'Whether each cloud service the deployment runs on holds a FedRAMP authorization the agency can build on, and which agency official decides',
+              'Whether each cloud service the deployment runs on holds a FedRAMP authorization the agency can build on',
             ],
           ],
         },
@@ -715,11 +715,11 @@ export const FDE_M08: ModuleSource = {
             'Whether your company has a SOC 2 report, since an agency accepts it in place of a FedRAMP review.',
             'Whether the agency has signed a business associate agreement, since FedRAMP builds on HIPAA’s contract rules.',
             'Whether your company can self-declare FedRAMP compliance in its contract, since the program trusts vendor statements.',
-            'Whether the cloud services the deployment runs on hold a FedRAMP authorization the agency can use, and who at the agency decides.',
+            'Whether the cloud services the deployment runs on hold a FedRAMP authorization the agency can reuse for this pilot.',
           ],
           correct: 3,
           explanation:
-            'GSA describes FedRAMP as a government-wide program giving agencies a standardized approach to security and risk assessment of cloud offerings, and its office keeps a repository of authorizations so agencies can reuse security packages. So you find out what the deployment depends on, which authorizations exist, and which agency official decides. A SOC 2 report is a different framework with a different audience. A business associate agreement is a HIPAA concept. A program built on a standardized assessment does not rest on a vendor’s own declaration.',
+            'GSA describes FedRAMP as a government-wide program giving agencies a standardized approach to security and risk assessment of cloud offerings, and its office keeps a repository of authorizations so agencies can reuse security packages. So you find out what the deployment depends on and which authorizations already exist for the agency to reuse. A SOC 2 report is a different framework with a different audience. A business associate agreement is a HIPAA concept. A program built on a standardized assessment does not rest on a vendor’s own declaration.',
           competencies: ['ai-security'],
         },
         {
