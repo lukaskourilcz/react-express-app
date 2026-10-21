@@ -12,7 +12,7 @@
 // challenge graded twice, by the runtime checks and by the compiler. The first
 // focus tag names the documentation page that ends the hint ladder. Solutions
 // live in `../solutions/easy-typescript-b.ts`, and `EASY_BAND` in
-// `../catalog.ts` lists this file. English only: there is no Czech overlay.
+// `../catalog.ts` lists this file.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

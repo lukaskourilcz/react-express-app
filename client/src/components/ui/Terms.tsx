@@ -21,7 +21,7 @@
 // question away, the question is the thing to fix.
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { useLanguage, useT } from '../../i18n/LanguageContext';
+import { useT } from '../../i18n/LanguageContext';
 import { termsInAll, type GlossaryDomain, type GlossaryEntry } from '../../../../shared/glossary';
 
 /**
@@ -62,7 +62,6 @@ export function TermsBar({
  * on Escape and returns focus where it came from. */
 function TermButton({ entry }: { entry: GlossaryEntry }) {
   const t = useT();
-  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
@@ -91,8 +90,8 @@ function TermButton({ entry }: { entry: GlossaryEntry }) {
     };
   }, [open]);
 
-  const expansion = entry.expansion ? entry.expansion[lang] || entry.expansion.en : null;
-  const meaning = entry.meaning[lang] || entry.meaning.en;
+  const expansion = entry.expansion ? entry.expansion : null;
+  const meaning = entry.meaning;
 
   return (
     <span className="ss-term">

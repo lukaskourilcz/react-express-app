@@ -4,7 +4,6 @@
 // ships no AI coach. Ported from interview-prepper and extended.
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import { docsFor } from '../../../shared/coding-docs';
-import type { Lang } from '../i18n/LanguageContext';
 
 export type LadderRung =
   | { kind: 'hint'; index: number; body: string }
@@ -16,9 +15,9 @@ export const MAX_HINTS = 5;
 /** A minute of editing counts as a genuine attempt. */
 export const MIN_ATTEMPT_MS = 60_000;
 
-export function ladderRungs(task: PlayableCodingTask, lang: Lang): LadderRung[] {
-  const hints = task.hints[lang].length > 0 ? task.hints[lang] : task.hints.en;
-  const approach = task.approach ? (task.approach[lang].length > 0 ? task.approach[lang] : task.approach.en) : [];
+export function ladderRungs(task: PlayableCodingTask): LadderRung[] {
+  const hints = task.hints;
+  const approach = task.approach ?? [];
   const rungs: LadderRung[] = [
     ...hints.slice(0, MAX_HINTS).map((body, index): LadderRung => ({ kind: 'hint', index, body })),
     ...approach.slice(0, MAX_HINTS).map((body, index): LadderRung => ({ kind: 'approach', index, body })),
@@ -27,7 +26,7 @@ export function ladderRungs(task: PlayableCodingTask, lang: Lang): LadderRung[] 
   const docs = docsFor(task.focus);
   const reference = task.references?.[0];
   // The page's own title ("Array.prototype.map()"), never the task's tag slug.
-  rungs.push({ kind: 'docs', title: reference ? reference.title[lang] || reference.title.en : docs.title, url: reference?.url ?? docs.url });
+  rungs.push({ kind: 'docs', title: reference ? reference.title : docs.title, url: reference?.url ?? docs.url });
   return rungs;
 }
 

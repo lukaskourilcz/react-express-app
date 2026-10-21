@@ -1,6 +1,5 @@
 // Loop and array-method tasks for the JavaScript track (authored for devShark).
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
-// English is the source of truth; Czech copy lives in javascript-loops.cs.ts.
 
 import type { CodingTaskSource } from '../types';
 

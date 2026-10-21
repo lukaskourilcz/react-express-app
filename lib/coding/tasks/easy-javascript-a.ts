@@ -13,7 +13,7 @@
 // Later waves copy this layout: `easy-<track>-<wave>.ts` here, the matching
 // file under `../solutions/`, and one line in `EASY_BAND` in `../catalog.ts`.
 // These challenges fill the Coding section and never enter a Learn level's
-// quota. English only: there is no Czech overlay.
+// quota.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

@@ -120,7 +120,7 @@ it('waits for a free account’s plan, then names a challenge the free plan open
   view.rerender(tree());
   expect(card()).not.toHaveAttribute('aria-busy');
   const title = card().querySelector('.cd-next__title')?.textContent ?? '';
-  const named = CODING_INDEX.find((task) => task.title.en === title);
+  const named = CODING_INDEX.find((task) => task.title === title);
   expect(named?.free).toBe(true);
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
 });

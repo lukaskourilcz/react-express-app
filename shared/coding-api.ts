@@ -3,7 +3,7 @@
  * consumes them. Answers never appear here: results, not keys. */
 
 import type { ComplexityReport } from './coding-complexity';
-import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
+import type { CodingTrack, PlayableCodingTask } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { FailureCategory } from './coding-failure';
 import type { PuzzleCompetency, PuzzleView } from './coding-puzzle';
@@ -93,12 +93,12 @@ export interface CodingVerdictResponse {
    * `DesignStepVerdict`). */
   design: DesignStepVerdict[] | null;
   /** The reference answer for a system-design task, on a pass only. */
-  designReference: Localized | null;
+  designReference: string | null;
   /** Why this attempt failed, and the authored line about that kind of
    * mistake. Null on a pass, and null when the only honest answer is "some
    * checks did not pass" — the hint ladder answers that one. It never carries
    * a hidden input, an expected value or a raw error. */
-  failureHint: { category: FailureCategory; body: Localized } | null;
+  failureHint: { category: FailureCategory; body: string } | null;
   /** Set when the submission was a code-ordering puzzle rather than code. It
    * carries what the arrangement established, which is narrower than a code
    * pass and never recorded as one. */
@@ -149,7 +149,7 @@ export interface DesignStepVerdict {
   correctIndex?: number;
   correctOrder?: number[];
   acceptedRange?: { min: number; max: number; answer: number };
-  explanation?: Localized;
+  explanation?: string;
 }
 
 /** When a task's XP opens again (`CodingVerdictResponse.repeatXp`). */
@@ -181,7 +181,7 @@ export interface CodingRevealRequest {
 export interface CodingRevealResponse {
   /** Code for the code tracks; the reference answer for system design. */
   solution: string;
-  reference: Localized | null;
+  reference: string | null;
   progress: CodingTaskProgress | null;
 }
 
@@ -367,13 +367,13 @@ export interface PracticeSessionAdvanceRequest {
 /* ── curated approach comparisons ─────────────────────────────────────── */
 
 export interface CuratedApproachView {
-  name: Localized;
+  name: string;
   code: string;
-  readability: Localized;
+  readability: string;
   time: string;
   space: string;
-  assumptions: Localized;
-  tradeoffs: Localized;
+  assumptions: string;
+  tradeoffs: string;
 }
 
 /** GET ?resource=coding-approaches&id=…
@@ -396,5 +396,5 @@ export interface CodingApproachesResponse {
 export interface PuzzleVerdict {
   accepted: boolean;
   competencies: PuzzleCompetency[];
-  claim: Localized;
+  claim: string;
 }

@@ -117,8 +117,8 @@ export function checkpointLadder(id: string): Partial<Pick<CodingTask, 'hints' |
   const ladder = LADDERS[id];
   if (!ladder) return {};
   return {
-    hints: { en: ladder.hints, cs: [] },
+    hints: ladder.hints,
     // A checkpoint must never inherit instructions for its later milestone.
-    approach: ladder.approach ? { en: ladder.approach, cs: [] } : undefined,
+    approach: ladder.approach,
   };
 }

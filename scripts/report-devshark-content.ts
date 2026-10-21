@@ -59,11 +59,11 @@ const questionFlags = questions.flatMap((question) => {
 
 const taskFlags = CODING_TASKS.flatMap((task) => {
   const flags: string[] = [];
-  if (words(task.prompt.en) > 90) flags.push(`long prompt (${words(task.prompt.en)} words)`);
-  if (boilerplate.test(task.prompt.en)) flags.push('AI-like prompt language');
-  if (task.hints.en.some((hint) => words(hint) > 38)) flags.push('long hint');
-  if (task.design?.steps.some((step) => step.explanation.en.split(/\s+/).length > 90)) flags.push('long design explanation');
-  return flags.length > 0 ? [{ id: task.id, track: task.track, flags, title: task.title.en }] : [];
+  if (words(task.prompt) > 90) flags.push(`long prompt (${words(task.prompt)} words)`);
+  if (boilerplate.test(task.prompt)) flags.push('AI-like prompt language');
+  if (task.hints.some((hint) => words(hint) > 38)) flags.push('long hint');
+  if (task.design?.steps.some((step) => step.explanation.split(/\s+/).length > 90)) flags.push('long design explanation');
+  return flags.length > 0 ? [{ id: task.id, track: task.track, flags, title: task.title }] : [];
 });
 
 // What the content-audit gate does to the static bank: per category the

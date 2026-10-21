@@ -7,10 +7,9 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CheckActivity } from '../src/components/paths/ActivityViews';
 import type { CheckQuestionPayload, SubmitActivityResponse } from '../../shared/learning-path-api';
 
-const loc = (en: string) => ({ en, cs: '' });
 const QUESTIONS: CheckQuestionPayload[] = [
-  { id: 'q1', prompt: loc('Which growth class?'), options: [loc('O(n)'), loc('O(n²)')], domain: 'complexity', competencies: [] },
-  { id: 'q2', prompt: loc('Which structure?'), options: [loc('A stack'), loc('A queue')], domain: 'structures', competencies: [] },
+  { id: 'q1', prompt: 'Which growth class?', options: ['O(n)', 'O(n²)'], domain: 'complexity', competencies: [] },
+  { id: 'q2', prompt: 'Which structure?', options: ['A stack', 'A queue'], domain: 'structures', competencies: [] },
 ];
 
 const graded = (questions: SubmitActivityResponse['questions'], state: 'verified_pass' | 'needs_revision'): SubmitActivityResponse => ({
@@ -63,8 +62,8 @@ describe('a graded check', () => {
 
   it('shows a practice check its correct options and explanations after a miss', () => {
     answerAndGrade(graded([
-      { questionId: 'q1', correct: true, correctIndex: 0, explanation: loc('One pass over the input.') },
-      { questionId: 'q2', correct: false, correctIndex: 1, explanation: loc('First in, first out.') },
+      { questionId: 'q1', correct: true, correctIndex: 0, explanation: 'One pass over the input.' },
+      { questionId: 'q2', correct: false, correctIndex: 1, explanation: 'First in, first out.' },
     ], 'needs_revision'));
     expect(within(question(/Which structure\?/)).getByText(/A queue/).closest('label')).toHaveClass('lp-option--correct');
     expect(within(question(/Which structure\?/)).getByText(/A stack/).closest('label')).toHaveClass('lp-option--wrong');
@@ -90,8 +89,8 @@ describe('a graded check', () => {
 
   it('shows the key and every explanation once the project check is passed', () => {
     answerAndGrade(graded([
-      { questionId: 'q1', correct: true, correctIndex: 0, explanation: loc('One pass over the input.') },
-      { questionId: 'q2', correct: false, correctIndex: 1, explanation: loc('First in, first out.') },
+      { questionId: 'q1', correct: true, correctIndex: 0, explanation: 'One pass over the input.' },
+      { questionId: 'q2', correct: false, correctIndex: 1, explanation: 'First in, first out.' },
     ], 'verified_pass'));
     expect(screen.getByText('One pass over the input.')).toBeInTheDocument();
     expect(screen.getByText('First in, first out.')).toBeInTheDocument();

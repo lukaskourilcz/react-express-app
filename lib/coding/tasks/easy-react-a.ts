@@ -14,7 +14,7 @@
 // a named export as well as `App`, so a check can render the part the
 // technique lives in: a context consumer, a hook inside a probe component.
 // Solutions live in `../solutions/easy-react-a.ts`, and `EASY_BAND` in
-// `../catalog.ts` lists this file. English only: there is no Czech overlay.
+// `../catalog.ts` lists this file.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

@@ -134,8 +134,8 @@ describe('a track page on the free plan', () => {
     const free = CODING_INDEX.find((task) => task.track === 'javascript' && task.difficulty === 'easy' && task.free && task.tier === 1)!;
     const premium = CODING_INDEX.find((task) => task.track === 'javascript' && task.difficulty === 'easy' && !task.free && task.tier === 1 && !task.id.includes('evolving') && !task.id.includes('-path-'))!;
     const rowOf = (title: string) => within(easy).getByText(title).closest('li')!;
-    expect(within(rowOf(free.title.en)).queryByText('Premium')).toBeNull();
-    expect(within(rowOf(premium.title.en)).getByText('Premium')).toBeInTheDocument();
+    expect(within(rowOf(free.title)).queryByText('Premium')).toBeNull();
+    expect(within(rowOf(premium.title)).getByText('Premium')).toBeInTheDocument();
   });
 });
 
@@ -157,7 +157,7 @@ describe('a track page before the plan is known', () => {
     plan.value = { ...FREE_PLAN, tier: null, failed: true, refetch };
     mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
     const easy = screen.getByRole('heading', { level: 2, name: 'Easy' }).closest('section')!;
-    const row = within(easy).getByText(premiumTask().title.en).closest('li')!;
+    const row = within(easy).getByText(premiumTask().title).closest('li')!;
     expect(within(row).queryByText('Premium')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent('We could not load your plan, so no challenge here carries the Premium mark.');
     fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Try again' }));
@@ -168,7 +168,7 @@ describe('a track page before the plan is known', () => {
     plan.value = { ...FREE_PLAN, signedIn: false };
     mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
     const easy = screen.getByRole('heading', { level: 2, name: 'Easy' }).closest('section')!;
-    const row = within(easy).getByText(premiumTask().title.en).closest('li')!;
+    const row = within(easy).getByText(premiumTask().title).closest('li')!;
     expect(within(row).getByText('Premium')).toBeInTheDocument();
     const premiumRow = row.querySelector<HTMLButtonElement>('button.cd-row--premium')!;
     expect(premiumRow).toHaveAttribute('aria-disabled', 'true');

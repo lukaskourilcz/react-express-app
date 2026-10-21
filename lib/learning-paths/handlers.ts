@@ -814,6 +814,27 @@ export function moduleRequirements(module: MergedPath['modules'][number]): { act
 }
 
 /** POST /api/quiz/roadmap?resource=learning-path-submit */
+/** A result accepted before devShark became English only (#485) stored each
+ * learner-visible string as an `{ en, cs }` pair, and the client now renders
+ * plain strings. A replay hands such a pair back as its English string, so an
+ * old attempt reads like a new one. Copy fields only: test outcomes are data. */
+function englishReplay(result: SubmitActivityResponse): SubmitActivityResponse {
+  const copy = <T>(value: T): T | string =>
+    value && typeof value === 'object' && typeof (value as { en?: unknown }).en === 'string'
+      ? (value as unknown as { en: string }).en
+      : value;
+  return {
+    ...result,
+    ...(Array.isArray(result.criteria)
+      ? { criteria: result.criteria.map((criterion) => ({ ...criterion, label: copy(criterion.label), detail: copy(criterion.detail) })) }
+      : {}),
+    ...(Array.isArray(result.questions)
+      ? { questions: result.questions.map((question) => (question.explanation === undefined ? question : { ...question, explanation: copy(question.explanation) })) }
+      : {}),
+    ...(Array.isArray(result.feedback) ? { feedback: result.feedback.map(copy) } : {}),
+  };
+}
+
 export async function handleActivitySubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
   if (req.method !== 'POST') {
@@ -886,7 +907,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       }
       if (row.accepted_result && typeof row.accepted_result === 'object') {
         res.setHeader('Cache-Control', 'private, no-store');
-        return res.json({ ...row.accepted_result, replayed: true });
+        return res.json({ ...englishReplay(row.accepted_result as SubmitActivityResponse), replayed: true });
       }
     }
     return jsonError(res, 409, 'task_changed', 'This activity changed while you were working. Load its latest brief before submitting. Your code has been kept.');
@@ -911,10 +932,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     case 'lesson': {
       if (body.acknowledged !== true) return jsonError(res, 400, 'bad_request', 'acknowledged must be true');
       state = 'self_reviewed';
-      feedback = [{
-        en: 'Marked as read. Reading is recorded for your own overview; it is not a verified check and never gates a module.',
-        cs: 'Označeno jako přečtené. Čtení se eviduje pro tvůj přehled; není to ověřená kontrola a nikdy nic neblokuje.',
-      }];
+      feedback = ['Marked as read. Reading is recorded for your own overview; it is not a verified check and never gates a module.'];
       break;
     }
     case 'check': {
@@ -934,23 +952,13 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
         diagnosticCounts = diagnosticEvidence(activity, graded.verdicts);
       }
       if (graded.failedDomains.length > 0) {
-        feedback = [{
-          en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
-          cs: 'Každá oblast musí projít prahem sama, takže silná oblast nemůže zakrýt slabou. Vrať se k oblastem uvedeným výše a zkus kontrolu znovu.',
-        }];
+        feedback = ['Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.'];
       }
       if (graded.keyWithheld) {
         // A retry deals the same questions, so the key waits for a pass.
-        feedback.push({
-          en: 'This check counts toward finishing the path, so the correct answers and their explanations appear once you pass it. The questions marked wrong show what to revisit before you try again.',
-          // English only ships (CLAUDE.md); no Czech is written for new copy.
-          cs: '',
-        });
+        feedback.push('This check counts toward finishing the path, so the correct answers and their explanations appear once you pass it. The questions marked wrong show what to revisit before you try again.');
       } else if (graded.failedDomains.length === 0 && state !== 'verified_pass') {
-        feedback = [{
-          en: 'Read the explanation under each miss before retrying — every question says why the other options fail here, not only why the right one works.',
-          cs: 'Než to zkusíš znovu, přečti si vysvětlení u každé chyby — každá otázka říká, proč tu ostatní možnosti selhávají, ne jen proč ta správná funguje.',
-        }];
+        feedback = ['Read the explanation under each miss before retrying — every question says why the other options fail here, not only why the right one works.'];
       }
       break;
     }
@@ -1105,7 +1113,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     status: 200, kind: 'submit', path: path.id, activityKind: activity.kind,
     state, replayed: outcome.replayed === true,
   });
-  const stored = (outcome.result ?? out) as SubmitActivityResponse;
+  const stored = englishReplay((outcome.result ?? out) as SubmitActivityResponse);
   if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
   }

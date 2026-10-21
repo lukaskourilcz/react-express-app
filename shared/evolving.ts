@@ -1,4 +1,4 @@
-import type { CodingTrack, Localized } from './coding-catalog';
+import type { CodingTrack } from './coding-catalog';
 
 /** `fullstack` groups the app builds on their own screen; `debugging` marks
  * the paths about finding bugs rather than writing features, listed on their
@@ -9,7 +9,7 @@ export interface EvolvingChallenge {
   id: string;
   track: CodingTrack;
   category?: EvolvingCategory;
-  title: Localized;
+  title: string;
   stages: readonly string[];
   /** A short path: five levels at most and no checkpoints, each level adding
    * one function or feature to the same file. Short paths are listed on their
@@ -21,29 +21,29 @@ export interface EvolvingChallenge {
   unlisted?: true;
 }
 
-const challenge = (id: string, track: CodingTrack, en: string, cs: string, category?: EvolvingCategory): EvolvingChallenge => ({
-  id, track, ...(category ? { category } : {}), title: { en, cs }, stages: [1, 2, 3, 4, 5].flatMap(stage => [`${id}-${stage}-start`, `${id}-${stage}`]),
+const challenge = (id: string, track: CodingTrack, title: string, category?: EvolvingCategory): EvolvingChallenge => ({
+  id, track, ...(category ? { category } : {}), title, stages: [1, 2, 3, 4, 5].flatMap(stage => [`${id}-${stage}-start`, `${id}-${stage}`]),
 });
 
-/** English only: short paths carry no Czech title. The level IDs are
- * `${id}-1` … `${id}-${levels}`; a path never grows past five levels. */
-const path = (id: string, track: CodingTrack, en: string): EvolvingChallenge => ({
-  id, track, short: true, title: { en, cs: '' }, stages: [1, 2, 3, 4, 5].map(level => `${id}-${level}`),
+/** A short path. The level IDs are `${id}-1` … `${id}-${levels}`; a path
+ * never grows past five levels. */
+const path = (id: string, track: CodingTrack, title: string): EvolvingChallenge => ({
+  id, track, short: true, title, stages: [1, 2, 3, 4, 5].map(level => `${id}-${level}`),
 });
 
 /** A short debugging path: JavaScript, listed with the debugging category on
  * the Coding home. Every level starts from code that runs and is wrong. */
-const debugPath = (id: string, en: string): EvolvingChallenge => ({ ...path(id, 'javascript', en), category: 'debugging' });
+const debugPath = (id: string, title: string): EvolvingChallenge => ({ ...path(id, 'javascript', title), category: 'debugging' });
 
 /** A short FullStack path: JavaScript first, then TypeScript, then React, one
  * level each in the order `tracks` gives. */
-const fullstackPath = (slug: string, en: string, tracks: readonly ('js' | 'ts' | 'react')[]): EvolvingChallenge => ({
-  id: `fullstack-${slug}`, category: 'fullstack', track: 'react', short: true, title: { en, cs: '' },
+const fullstackPath = (slug: string, title: string, tracks: readonly ('js' | 'ts' | 'react')[]): EvolvingChallenge => ({
+  id: `fullstack-${slug}`, category: 'fullstack', track: 'react', short: true, title,
   stages: tracks.map((prefix, index) => `${prefix}-fullstack-${slug}-${index + 1}`),
 });
 
-const fullstack = (slug: string, en: string, cs: string): EvolvingChallenge => ({
-  id: `fullstack-${slug}`, category: 'fullstack', track: 'react', title: {en,cs},
+const fullstack = (slug: string, title: string): EvolvingChallenge => ({
+  id: `fullstack-${slug}`, category: 'fullstack', track: 'react', title,
   stages: Array.from({length:8},(_,i)=>`${i===0?'js':i<4?'ts':'react'}-fullstack-${slug}-${i+1}`)
     .flatMap((id, i) => [1,4,5,7].includes(i) ? [`${id}-start`, id] : [id]),
 });
@@ -71,22 +71,22 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   debugPath('js-path-tracing', 'Trace the state'),
   debugPath('js-path-edges', 'Edges and inputs'),
   fullstackPath('links', 'Link shortener', ['js', 'ts', 'ts', 'react', 'react']),
-  fullstack('planner', 'Team task planner', 'Týmový plánovač úkolů'),
-  fullstack('stockroom', 'Stockroom manager', 'Správa skladu'),
-  fullstack('workshops', 'Workshop booking', 'Rezervace workshopů'),
-  challenge('js-evolving-calculator', 'javascript', 'Expression engine', 'Výrazový engine'),
-  challenge('js-evolving-query', 'javascript', 'Query pipeline', 'Dotazovací pipeline'),
-  challenge('js-evolving-events', 'javascript', 'Event bus', 'Sběrnice událostí'),
-  challenge('js-evolving-graph', 'javascript', 'Dependency planner', 'Plánovač závislostí'),
-  challenge('ts-evolving-result', 'typescript', 'Result pipeline', 'Pipeline výsledků'),
-  challenge('ts-evolving-store', 'typescript', 'Typed state store', 'Typovaný stavový store'),
-  challenge('ts-evolving-schema', 'typescript', 'Schema validator', 'Validátor schémat'),
-  challenge('react-evolving-board', 'react', 'Task board', 'Nástěnka úkolů'),
-  challenge('react-evolving-catalog', 'react', 'Product explorer', 'Průzkumník produktů'),
-  challenge('react-evolving-form', 'react', 'Form wizard', 'Průvodce formulářem'),
+  fullstack('planner', 'Team task planner'),
+  fullstack('stockroom', 'Stockroom manager'),
+  fullstack('workshops', 'Workshop booking'),
+  challenge('js-evolving-calculator', 'javascript', 'Expression engine'),
+  challenge('js-evolving-query', 'javascript', 'Query pipeline'),
+  challenge('js-evolving-events', 'javascript', 'Event bus'),
+  challenge('js-evolving-graph', 'javascript', 'Dependency planner'),
+  challenge('ts-evolving-result', 'typescript', 'Result pipeline'),
+  challenge('ts-evolving-store', 'typescript', 'Typed state store'),
+  challenge('ts-evolving-schema', 'typescript', 'Schema validator'),
+  challenge('react-evolving-board', 'react', 'Task board'),
+  challenge('react-evolving-catalog', 'react', 'Product explorer'),
+  challenge('react-evolving-form', 'react', 'Form wizard'),
   // Replaced on the Coding home by the three debugging paths above (#225).
   // Its ten stages stay, so a draft, a pass or a bookmark on one still opens.
-  { ...challenge('js-evolving-debug', 'javascript', 'Debugging path', 'Ladicí cesta', 'debugging'), unlisted: true },
+  { ...challenge('js-evolving-debug', 'javascript', 'Debugging path', 'debugging'), unlisted: true },
 ];
 
 /** The projects one list shows: with `track`, that section's own short paths;

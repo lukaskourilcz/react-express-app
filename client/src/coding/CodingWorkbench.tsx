@@ -31,7 +31,7 @@ import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../..
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
 import { RepeatXpNote } from './RepeatXpNote';
-import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import { complexityGuidance } from '../../../shared/coding-complexity';
@@ -148,9 +148,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction, onRefreshTask } = props;
   const evolution = evolvingStage(task.id);
   const complexity = complexityGuidance(task);
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
-  const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const online = useOnline();
   const baseId = useId();
   const isReact = task.track === 'react';
@@ -187,7 +186,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [hintsTaken, setHintsTaken] = useState(0);
   const [confirming, setConfirming] = useState<'reset' | 'reveal' | null>(null);
   const [solution, setSolution] = useState<string | null>(null);
-  const [checked, setChecked] = useState<boolean[]>(() => (task.checklist?.en ?? []).map(() => false));
+  const [checked, setChecked] = useState<boolean[]>(() => (task.checklist ?? []).map(() => false));
   const [formatError, setFormatError] = useState<string | null>(null);
   const [layout, setLayout] = useState<WorkbenchLayout>(readLayout);
   const [skipping, setSkipping] = useState(false);
@@ -227,7 +226,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     editorPaneRef.current?.focus();
   }, [pendingOnDesktop, puzzleMode]);
 
-  const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
+  const rungs = useMemo(() => ladderRungs(task), [task]);
   const taken = Math.min(hintsTaken, rungs.length);
 
   // Format the code for display once the learner pauses.
@@ -698,14 +697,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <div className="cd-resources">
         <p className="cd-shortcuts">{t('coding.resources.intro')}</p>
         <ul>
-          {task.references?.map(ref => <li key={ref.url}><a href={ref.url} target="_blank" rel="noreferrer">{L(ref.title)}</a></li>)}
+          {task.references?.map(ref => <li key={ref.url}><a href={ref.url} target="_blank" rel="noreferrer">{ref.title}</a></li>)}
           {resources.map((entry) => (
             <li key={entry.url}>
               <a href={entry.url} target="_blank" rel="noreferrer">
                 {entry.title}
               </a>
               <span className="cd-resources__source">{entry.source}</span>
-              <span className="cd-resources__blurb">{entry.blurb[lang] || entry.blurb.en}</span>
+              <span className="cd-resources__blurb">{entry.blurb}</span>
             </li>
           ))}
         </ul>
@@ -722,17 +721,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <p className="cd-shortcuts">{t('coding.approaches.intro')}</p>
       {approachList.map((approach, index) => (
         <article key={index} className="cd-approach">
-          <h4>{approach.name[lang] || approach.name.en}</h4>
+          <h4>{approach.name}</h4>
           <pre>{approach.code}</pre>
           <dl>
             <dt>{t('coding.approaches.cost')}</dt>
             <dd>{t('coding.approaches.costValue', { time: approach.time, space: approach.space })}</dd>
             <dt>{t('coding.approaches.readability')}</dt>
-            <dd>{approach.readability[lang] || approach.readability.en}</dd>
+            <dd>{approach.readability}</dd>
             <dt>{t('coding.approaches.assumptions')}</dt>
-            <dd>{approach.assumptions[lang] || approach.assumptions.en}</dd>
+            <dd>{approach.assumptions}</dd>
             <dt>{t('coding.approaches.tradeoffs')}</dt>
-            <dd>{approach.tradeoffs[lang] || approach.tradeoffs.en}</dd>
+            <dd>{approach.tradeoffs}</dd>
           </dl>
         </article>
       ))}
@@ -763,7 +762,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <li key={index} className={`cd-result cd-result--${status}`}>
         <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
         <span className="cd-result__call">{test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
-        {test.label && <span className="cd-result__label">{L(test.label)}</span>}
+        {test.label && <span className="cd-result__label">{test.label}</span>}
         <span className="cd-result__detail">
           {result?.error
             ? <><b>{t('coding.results.error')}:</b> {result.error}</>
@@ -780,7 +779,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <>
             <p className="cd-note">{t('coding.checklist.note')}</p>
             <ul className="cd-checklist">
-              {(task.checklist?.[lang].length ? task.checklist[lang] : task.checklist?.en ?? []).map((item, index) => (
+              {(task.checklist ?? []).map((item, index) => (
                 <li key={index}>
                   <label>
                     <input type="checkbox" checked={checked[index] ?? false} onChange={(e) => setChecked((prev) => prev.map((v, i) => (i === index ? e.target.checked : v)))} />
@@ -877,7 +876,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 <li key={index} className="cd-result cd-result--idle">
                   <span className="cd-result__status"><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></span>
                   <span className="cd-result__call">{typeTest.code}{typeTest.rejects && <span className="cd-result__label"> · {t('coding.types.rejects')}</span>}</span>
-                  {typeTest.label && <span className="cd-result__label">{L(typeTest.label)}</span>}
+                  {typeTest.label && <span className="cd-result__label">{typeTest.label}</span>}
                 </li>
               ))}
             </ul>
@@ -907,7 +906,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               <li key={index} className={`cd-result cd-result--${one.pass ? 'pass' : 'fail'}`}>
                 <span className="cd-result__status">{one.pass ? t('coding.results.pass') : t('coding.results.fail')}</span>
                 <span className="cd-result__call">{typeTest?.code ?? ''}{typeTest?.rejects && <span className="cd-result__label"> · {t('coding.types.rejects')}</span>}</span>
-                {typeTest?.label && <span className="cd-result__label">{L(typeTest.label)}</span>}
+                {typeTest?.label && <span className="cd-result__label">{typeTest.label}</span>}
                 {one.error && <span className="cd-result__detail">{one.error}</span>}
               </li>
             );
@@ -951,7 +950,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {/* The title already says whether the order works. */}
           {!verdict.puzzle.accepted && <p className="cd-verdict__row">{t('coding.puzzle.rejected')}</p>}
           {verdict.puzzle.accepted && (
-            <p className="cd-verdict__row">{verdict.puzzle.claim[lang] || verdict.puzzle.claim.en}</p>
+            <p className="cd-verdict__row">{verdict.puzzle.claim}</p>
           )}
         </>
       ) : (
@@ -1021,11 +1020,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     <div className="cd-brief">
       <div className="cd-brief__line">
         <span className="cd-brief__meta">{briefMeta}</span>
-        <Title id={titleId} className="cd-brief__title">{L(task.title)}</Title>
+        <Title id={titleId} className="cd-brief__title">{task.title}</Title>
         <DifficultyBadge difficulty={difficultyOf(task)} />
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
-      <Prompt className="cd-prompt" text={L(task.prompt)} />
+      <Prompt className="cd-prompt" text={task.prompt} />
       {complexity.targetTime && <div className="cd-complexity">
         <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
         <ComplexityInfo guidance={complexity} />
@@ -1038,16 +1037,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {task.previousRequirements!.map((requirement, index) => (
             <li key={index}>
               <span className="cd-previous__stage">{t(evolution?.challenge.short ? 'coding.evolving.levelShort' : 'coding.evolving.stageShort', { n: index + 1 })}</span>
-              <Prompt className="cd-prompt cd-prompt--previous" text={L(requirement)} />
+              <Prompt className="cd-prompt cd-prompt--previous" text={requirement} />
             </li>
           ))}
         </ol>
       </details>}
       {/* Beside the brief, so nothing is injected into code the learner
           is reading or about to run. */}
-      <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
+      <TermsBar texts={[task.prompt, task.title]} domain={glossaryDomainFor(task.track)} />
       {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
-      {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
+      {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{task.api.note}</p>}
       {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
       {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
     </div>
@@ -1348,7 +1347,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {tab === 'results' && shownHint && (
             <div className="cd-hint cd-hint--failure" role="status">
               <strong className="cd-hint__label">{t(`coding.failure.${shownHint.category}` as never)}</strong>
-              <Prompt text={shownHint.body[lang] || shownHint.body.en} />
+              <Prompt text={shownHint.body} />
             </div>
           )}
           </div>

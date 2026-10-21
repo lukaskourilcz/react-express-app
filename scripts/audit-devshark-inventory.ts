@@ -23,7 +23,7 @@ import { htmlSeeds } from '../lib/roadmap-questions-html';
 import { cssSeeds } from '../lib/roadmap-questions-css';
 import { topicLevels, type RoadmapTopic } from '../lib/roadmap';
 import { contentHash, translationHash, taskHash, questionEligibility } from '../lib/curation';
-import { CODING_TASKS, englishOnly } from '../lib/coding/catalog';
+import { CODING_TASKS } from '../lib/coding/catalog';
 import { ACTIVE_CODING_TASKS } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { restoredLevels, restoredQuestionIds } from '../lib/roadmap-questions-restored';
@@ -213,7 +213,7 @@ function main() {
     plans: Object.fromEntries(Object.keys(ID_PREFIX_TOPIC).map((p) => [ID_PREFIX_TOPIC[p], plansFor(ID_PREFIX_TOPIC[p])])),
     counts: { active: byDelivery('active'), eligibleQuestions: items.filter(item => item.delivery === 'active' && item.eligible).length, retiredSection: byDelivery('retired-section'), unreferenced: byDelivery('unreferenced'), legacyCore, codingTasks: CODING_TASKS.length, activeCodingTasks: activeCoding.size, hiddenCodingTasks: CODING_TASKS.length - activeCoding.size, pathMaterials: pathMaterials.length },
     items,
-    codingTasks: CODING_TASKS.map((t) => ({ id: t.id, track: t.track, topic: t.topic, level: t.level, tier: t.tier, verify: t.verify, format: t.format ?? 'implement', title: t.title.en, contentHash: taskHash(t, solutionFor(t.id)), active: activeCoding.has(t.id) })),
+    codingTasks: CODING_TASKS.map((t) => ({ id: t.id, track: t.track, topic: t.topic, level: t.level, tier: t.tier, verify: t.verify, format: t.format ?? 'implement', title: t.title, contentHash: taskHash(t, solutionFor(t.id)), active: activeCoding.has(t.id) })),
     pathMaterials,
   };
   writeFileSync(path.join(outDir, 'inventory.json'), JSON.stringify(inventory, null, 2));
@@ -221,7 +221,7 @@ function main() {
     writeFileSync(path.join(outDir, `batch-${batch}.json`), JSON.stringify(list, null, 2));
   }
   for (const learningPath of LEARNING_PATHS) {
-    writeFileSync(path.join(outDir, `batch-path-${learningPath.id}.json`), JSON.stringify(englishOnly(learningPath), null, 2));
+    writeFileSync(path.join(outDir, `batch-path-${learningPath.id}.json`), JSON.stringify(learningPath, null, 2));
   }
   console.log(JSON.stringify({ counts: inventory.counts, batches: [...rows.keys()].map((k) => `${k}:${rows.get(k)!.length}`) }, null, 2));
 }

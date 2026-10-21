@@ -11,7 +11,7 @@
  * Task bodies only. Solutions live in `lib/coding/solutions/paths-react.ts`. */
 
 import type { Spec } from './evolving';
-import { doc, en } from './path-helpers';
+import { doc } from './path-helpers';
 
 const react = (title: string, path: string) => doc(title, `https://react.dev/${path}`);
 
@@ -25,25 +25,25 @@ export default function App() {
 `,
     focus: ['useState', 'lists-keys', 'forms'],
     prompts: [
-      en('Build a guest list in the default-exported `App`. Start with no guests. Give it an input labelled "Name" and a button "Add". Add trims the name, ignores a blank one, adds the guest to a list as an `li`, and clears the input. Keep the input controlled: its value lives in state.'),
-      en('Show how many guests there are in an `output` labelled "Guests". Give every guest a button named "Remove NAME", for example "Remove Ada", that removes that guest only. Give each guest a stable id when you add them and use it as the `key`, not the array index.'),
-      en('Give every guest a checkbox labelled with their name that marks them as arrived. Show "ARRIVED of TOTAL" in an `output` labelled "Arrived", for example "1 of 3". Update a guest with a new object, `{ ...guest, arrived: !guest.arrived }`, instead of changing the old one.'),
-      en('Add a select labelled "Show" with the options "all", "arrived" and "waiting"; "all" is the default. It decides which guests are listed. Work out the visible guests while rendering rather than keeping a second list in state. "Guests" and "Arrived" still count everyone.'),
-      en('Refuse a name that is already on the list, compared trimmed and without case: "ada" matches "Ada". Show "Already on the list" in an element with `role="alert"`, leave the typed text in the input, and add nothing. The next successful add removes the message. A blank name still does nothing and shows no message.'),
+      'Build a guest list in the default-exported `App`. Start with no guests. Give it an input labelled "Name" and a button "Add". Add trims the name, ignores a blank one, adds the guest to a list as an `li`, and clears the input. Keep the input controlled: its value lives in state.',
+      'Show how many guests there are in an `output` labelled "Guests". Give every guest a button named "Remove NAME", for example "Remove Ada", that removes that guest only. Give each guest a stable id when you add them and use it as the `key`, not the array index.',
+      'Give every guest a checkbox labelled with their name that marks them as arrived. Show "ARRIVED of TOTAL" in an `output` labelled "Arrived", for example "1 of 3". Update a guest with a new object, `{ ...guest, arrived: !guest.arrived }`, instead of changing the old one.',
+      'Add a select labelled "Show" with the options "all", "arrived" and "waiting"; "all" is the default. It decides which guests are listed. Work out the visible guests while rendering rather than keeping a second list in state. "Guests" and "Arrived" still count everyone.',
+      'Refuse a name that is already on the list, compared trimmed and without case: "ada" matches "Ada". Show "Already on the list" in an element with `role="alert"`, leave the typed text in the input, and add nothing. The next successful add removes the message. A blank name still does nothing and shows no message.',
     ],
     hints: [
-      en("Keep the input text and guest list in state. Add trims both ends, ignores whitespace-only input, appends the complete literal name and clears the field. Keep separate mounted lists independent. Duplicate-name validation is introduced in a later level."),
-      en("Assign each guest a stable id at insertion, independently of its position or name. Render the whole-list length in Guests and remove by that id; two guests may currently share a name. Deleting a middle row must preserve the remaining row identities."),
-      en("Add arrived: false to each new guest and toggle only its id using a new object in a mapped array. Derive both outputs from the full list on each render. Same-name guests remain separate, and removing an arrived guest changes both counts."),
-      en("Keep only Show in state and derive visible rows from the complete guest list while rendering. Guests and Arrived always count the full list. Adding through a filtered view still creates a waiting guest; removing a visible guest must retain hidden guests."),
-      en("Compare the trimmed name against the whole list using the same lowercase operation on both names, even when the original guest is hidden by Show. Reject only an equal name, preserve the typed text on rejection, and allow the name again after removal. Successful Add clears the alert; a whitespace-only attempt adds nothing and leaves no alert."),
+      "Keep the input text and guest list in state. Add trims both ends, ignores whitespace-only input, appends the complete literal name and clears the field. Keep separate mounted lists independent. Duplicate-name validation is introduced in a later level.",
+      "Assign each guest a stable id at insertion, independently of its position or name. Render the whole-list length in Guests and remove by that id; two guests may currently share a name. Deleting a middle row must preserve the remaining row identities.",
+      "Add arrived: false to each new guest and toggle only its id using a new object in a mapped array. Derive both outputs from the full list on each render. Same-name guests remain separate, and removing an arrived guest changes both counts.",
+      "Keep only Show in state and derive visible rows from the complete guest list while rendering. Guests and Arrived always count the full list. Adding through a filtered view still creates a waiting guest; removing a visible guest must retain hidden guests.",
+      "Compare the trimmed name against the whole list using the same lowercase operation on both names, even when the original guest is hidden by Show. Reject only an equal name, preserve the typed text on rejection, and allow the name again after removal. Successful Add clears the alert; a whitespace-only attempt adds nothing and leaves no alert.",
     ],
     approaches: [
-      [en('Keep the input\'s text and the guest list in state.'), en('On Add, trim the text; stop if it is empty.'), en('Append the guest, clear the input, and render the list with `map`.')],
-      [en('Give each new guest an id from a counter.'), en('Render the count of the whole list in the output.'), en('Add a Remove button to each row that filters that id out.')],
-      [en('Store `arrived: false` on each new guest.'), en('Render a labelled checkbox that maps the list to a new one with that guest toggled.'), en('Count the arrived guests during render.')],
-      [en('Keep the select\'s value in state, starting at "all".'), en('Filter the guests for rendering by that value.'), en('Leave both outputs counting the full list.')],
-      [en('Keep an error message in state.'), en('On Add, compare the trimmed name with every guest\'s, ignoring case; on a clash, set the message and stop.'), en('On success, clear the message as well as the input. Render the alert only while there is a message.')],
+      ['Keep the input\'s text and the guest list in state.', 'On Add, trim the text; stop if it is empty.', 'Append the guest, clear the input, and render the list with `map`.'],
+      ['Give each new guest an id from a counter.', 'Render the count of the whole list in the output.', 'Add a Remove button to each row that filters that id out.'],
+      ['Store `arrived: false` on each new guest.', 'Render a labelled checkbox that maps the list to a new one with that guest toggled.', 'Count the arrived guests during render.'],
+      ['Keep the select\'s value in state, starting at "all".', 'Filter the guests for rendering by that value.', 'Leave both outputs counting the full list.'],
+      ['Keep an error message in state.', 'On Add, compare the trimmed name with every guest\'s, ignoring case; on a clash, set the message and stop.', 'On success, clear the message as well as the input. Render the alert only while there is a message.'],
     ],
     suites: [
       `const addGuest=(name)=>{fireEvent.change(screen.getByLabelText('Name'),{target:{value:name}});fireEvent.click(screen.getByRole('button',{name:'Add',exact:true}));};
@@ -84,25 +84,25 @@ export default function App({ loadUsers = sampleUsers }) {
 `,
     focus: ['useEffect', 'effect-cleanup', 'conditional'],
     prompts: [
-      en('`App` receives `loadUsers`: a function that returns a Promise of users, each `{ id, name }`. Call it once when `App` mounts, inside `useEffect`. Until it settles, show "Loading" in an element with `role="status"`; when it resolves, remove that and list each user\'s name in an `li`. An empty result shows "No users".'),
-      en('If `loadUsers` rejects, show "Could not load users" in an element with `role="alert"` and a "Retry" button. Retry shows "Loading" again and calls `loadUsers` once more; a success replaces the alert with the list.'),
-      en('Add an input labelled "Search" that filters the loaded names, trimmed, without case, matching anywhere in the name. Filter while rendering; searching never calls `loadUsers` again. When users are loaded but none match, show "No matches".'),
-      en('`loadUsers` can change while `App` is on screen, for example when a parent switches teams. Load again whenever it changes by listing it in the effect\'s dependencies. If the old request answers after the new one started, ignore that answer: set a flag in the effect\'s cleanup and check it before you update state. The same `loadUsers` on a re-render must not load again.'),
-      en('Keep the browser tab in step: once users are loaded, set `document.title` to the number of loaded users, "2 users" (or "1 user" for one), counting every user, not only the ones the search shows. When `App` unmounts, put back the title the page had before it mounted, from an effect\'s cleanup.'),
+      '`App` receives `loadUsers`: a function that returns a Promise of users, each `{ id, name }`. Call it once when `App` mounts, inside `useEffect`. Until it settles, show "Loading" in an element with `role="status"`; when it resolves, remove that and list each user\'s name in an `li`. An empty result shows "No users".',
+      'If `loadUsers` rejects, show "Could not load users" in an element with `role="alert"` and a "Retry" button. Retry shows "Loading" again and calls `loadUsers` once more; a success replaces the alert with the list.',
+      'Add an input labelled "Search" that filters the loaded names, trimmed, without case, matching anywhere in the name. Filter while rendering; searching never calls `loadUsers` again. When users are loaded but none match, show "No matches".',
+      '`loadUsers` can change while `App` is on screen, for example when a parent switches teams. Load again whenever it changes by listing it in the effect\'s dependencies. If the old request answers after the new one started, ignore that answer: set a flag in the effect\'s cleanup and check it before you update state. The same `loadUsers` on a re-render must not load again.',
+      'Keep the browser tab in step: once users are loaded, set `document.title` to the number of loaded users, "2 users" (or "1 user" for one), counting every user, not only the ones the search shows. When `App` unmounts, put back the title the page had before it mounted, from an effect\'s cleanup.',
     ],
     hints: [
-      en("Keep a loading status from the first render. Invoke the provided loader in an effect, then render every returned user with its supplied id and literal name; an empty completed result shows No users. Keep independent mounts separate. Retry, search and replacing a loader are added in later levels."),
-      en("Handle rejection as an error status regardless of the rejection value. Each Retry starts one new attempt and shows Loading again; repeated failures can be retried. A later list or empty success removes the alert. The Retry button may sit inside or outside the alert."),
-      en("Keep the search text in state and derive the visible users from the full loaded answer using the complete trimmed lowercase substring. Searching, including during Loading, must not make a new request. A loaded empty source shows No users; a nonempty source with no match shows No matches."),
-      en("Depend on the loader and retry attempt. Each effect setup owns a cleanup flag: ignore both late success and failure after replacement, across any number of requests. Empty old answers must be ignored too. Reusing the same loader does not reload; filter the current answer with the existing search."),
-      en("Capture the actual pre-mount title in one effect and restore it on unmount. A separate effect updates the title only after a successful load, counting all returned users with the correct singular or plural, including zero. Searches keep that full count; a replacement loader may change it."),
+      "Keep a loading status from the first render. Invoke the provided loader in an effect, then render every returned user with its supplied id and literal name; an empty completed result shows No users. Keep independent mounts separate. Retry, search and replacing a loader are added in later levels.",
+      "Handle rejection as an error status regardless of the rejection value. Each Retry starts one new attempt and shows Loading again; repeated failures can be retried. A later list or empty success removes the alert. The Retry button may sit inside or outside the alert.",
+      "Keep the search text in state and derive the visible users from the full loaded answer using the complete trimmed lowercase substring. Searching, including during Loading, must not make a new request. A loaded empty source shows No users; a nonempty source with no match shows No matches.",
+      "Depend on the loader and retry attempt. Each effect setup owns a cleanup flag: ignore both late success and failure after replacement, across any number of requests. Empty old answers must be ignored too. Reusing the same loader does not reload; filter the current answer with the existing search.",
+      "Capture the actual pre-mount title in one effect and restore it on unmount. A separate effect updates the title only after a successful load, counting all returned users with the correct singular or plural, including zero. Searches keep that full count; a replacement loader may change it.",
     ],
     approaches: [
-      [en('Keep the users and a status ("loading" or "ready") in state.'), en('In an effect with an empty dependency list, call `loadUsers()` and store the result.'), en('Render the status, "No users", or the list, depending on the state.')],
-      [en('Add an "error" status and a retry counter to state.'), en('Catch a rejection and set the status to "error".'), en('Retry sets "loading" and bumps the counter; the effect depends on the counter and loads again.')],
-      [en('Keep the search text in state and render a labelled input for it.'), en('Filter the loaded users by the trimmed, lower-case text while rendering.'), en('Show "No matches" when users are loaded but the filtered list is empty.')],
-      [en('Add `loadUsers` to the effect\'s dependencies.'), en('Declare `let ignore = false` in the effect and return a cleanup that sets it to `true`.'), en('Check `ignore` before every state update that follows the Promise.')],
-      [en('In an effect with `[]` dependencies, remember `document.title` and return a cleanup that restores it.'), en('In a second effect, set the title from the user count once the status is "ready".'), en('Use "user" for exactly one and "users" otherwise.')],
+      ['Keep the users and a status ("loading" or "ready") in state.', 'In an effect with an empty dependency list, call `loadUsers()` and store the result.', 'Render the status, "No users", or the list, depending on the state.'],
+      ['Add an "error" status and a retry counter to state.', 'Catch a rejection and set the status to "error".', 'Retry sets "loading" and bumps the counter; the effect depends on the counter and loads again.'],
+      ['Keep the search text in state and render a labelled input for it.', 'Filter the loaded users by the trimmed, lower-case text while rendering.', 'Show "No matches" when users are loaded but the filtered list is empty.'],
+      ['Add `loadUsers` to the effect\'s dependencies.', 'Declare `let ignore = false` in the effect and return a cleanup that sets it to `true`.', 'Check `ignore` before every state update that follows the Promise.'],
+      ['In an effect with `[]` dependencies, remember `document.title` and return a cleanup that restores it.', 'In a second effect, set the title from the user count once the status is "ready".', 'Use "user" for exactly one and "users" otherwise.'],
     ],
     suites: [
       `// A loaded list shows within milliseconds; a page that never shows it

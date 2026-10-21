@@ -10,7 +10,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from '../components/ui/RadioCards';
 import { ApiError, friendlyError } from '../lib/api';
 import { submitCoding } from './api';
-import { difficultyOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { difficultyOf, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingVerdictResponse, DesignAnswer } from '../../../shared/coding-api';
 import './Coding.css';
@@ -31,7 +31,6 @@ export interface DesignRunnerProps {
 
 export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
   const { t, lang } = useLanguage();
-  const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const baseId = useId();
   const design = task.design;
   const drill = task.drill;
@@ -90,7 +89,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
       const next = [...prev];
       [next[from], next[to]] = [next[to], next[from]];
       // Reordering is silent otherwise: say what moved and where it landed.
-      setMoved(t('coding.design.moved', { step: L(drill!.steps![next[to]]), n: to + 1, total: next.length }));
+      setMoved(t('coding.design.moved', { step: drill!.steps![next[to]], n: to + 1, total: next.length }));
       return next;
     });
   };
@@ -98,7 +97,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   const header = (
     <div className="cd-pane__head">
       <Kicker>{t('coding.track.system-design')} · {design ? t('coding.design.step', { n: Math.min(stepIndex + 1, steps.length), total: steps.length }) : t(`coding.design.format.${drill?.format ?? 'tradeoff'}` as never)}</Kicker>
-      <h2>{L(task.title)}</h2>
+      <h2>{task.title}</h2>
       <div className="cd-pane__meta">
         <DifficultyBadge difficulty={difficultyOf(task)} />
         <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
@@ -117,11 +116,11 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   );
 
   /** The learner's own answer to one step or drill, in words. */
-  const answerText = (given: DesignAnswer | null, options: readonly Localized[]): ReactNode => {
-    if (typeof given === 'number' && drill?.format === 'estimate') return `${given.toLocaleString(lang)}${drill.unit ? ` ${L(drill.unit)}` : ''}`;
-    if (typeof given === 'number') return given >= 0 && options[given] ? L(options[given]) : null;
+  const answerText = (given: DesignAnswer | null, options: readonly string[]): ReactNode => {
+    if (typeof given === 'number' && drill?.format === 'estimate') return `${given.toLocaleString(lang)}${drill.unit ? ` ${drill.unit}` : ''}`;
+    if (typeof given === 'number') return given >= 0 && options[given] ? options[given] : null;
     if (Array.isArray(given) && drill?.steps) {
-      return <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>{given.map((position) => <li key={position}>{L(drill.steps![position])}</li>)}</ol>;
+      return <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>{given.map((position) => <li key={position}>{drill.steps![position]}</li>)}</ol>;
     }
     return null;
   };
@@ -158,7 +157,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                 const answer = answerText(given, options);
                 return (
                   <div key={index} className={`cd-review__step cd-review__step--${one.correct ? 'correct' : 'incorrect'}`}>
-                    {step && <p className="cd-editor-label">{L(step.title)}: {L(step.prompt)}</p>}
+                    {step && <p className="cd-editor-label">{step.title}: {step.prompt}</p>}
                     <p className="cd-review__verdict">{one.correct ? t('coding.design.correct') : t('coding.design.incorrect')}</p>
                     {answer !== null && (Array.isArray(given)
                       ? <><p className="cd-review__explanation"><b>{t('coding.design.yourAnswer')}:</b></p>{answer}</>
@@ -168,18 +167,18 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               }
               return (
                 <div key={index} className={`cd-review__step cd-review__step--${one.correct ? 'correct' : 'incorrect'}`}>
-                  {step && <p className="cd-editor-label">{L(step.title)}: {L(step.prompt)}</p>}
+                  {step && <p className="cd-editor-label">{step.title}: {step.prompt}</p>}
                   <p className="cd-review__verdict">{one.correct ? t('coding.design.correct') : t('coding.design.incorrect')}</p>
                   {typeof one.correctIndex === 'number' && options[one.correctIndex] && (
-                    <p className="cd-review__explanation"><b>{t('coding.design.correct')}:</b> {L(options[one.correctIndex])}{!one.correct && typeof given === 'number' && given >= 0 && options[given] ? <> · <span className="cd-result__label">{L(options[given])}</span></> : null}</p>
+                    <p className="cd-review__explanation"><b>{t('coding.design.correct')}:</b> {options[one.correctIndex]}{!one.correct && typeof given === 'number' && given >= 0 && options[given] ? <> · <span className="cd-result__label">{options[given]}</span></> : null}</p>
                   )}
                   {one.acceptedRange && <p className="cd-review__explanation">{t('coding.design.estimateRange', { min: one.acceptedRange.min.toLocaleString(lang), max: one.acceptedRange.max.toLocaleString(lang), answer: one.acceptedRange.answer.toLocaleString(lang) })}</p>}
                   {one.correctOrder && drill?.steps && (
                     <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>
-                      {one.correctOrder.map((position) => <li key={position}>{L(drill.steps![position])}</li>)}
+                      {one.correctOrder.map((position) => <li key={position}>{drill.steps![position]}</li>)}
                     </ol>
                   )}
-                  {one.explanation && <p className="cd-review__explanation">{L(one.explanation)}</p>}
+                  {one.explanation && <p className="cd-review__explanation">{one.explanation}</p>}
                 </div>
               );
             })}
@@ -187,7 +186,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
           {verdict.designReference && (
             <details>
               <summary className="cd-editor-label" style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>{t('coding.design.reference')}</summary>
-              <p className="cd-reference">{L(verdict.designReference)}</p>
+              <p className="cd-reference">{verdict.designReference}</p>
             </details>
           )}
         </section>
@@ -206,24 +205,24 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
         {design && (
           <details open={stepIndex === 0}>
             <summary className="cd-editor-label" style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>{t('coding.design.brief')}</summary>
-            <p className="cd-design__brief">{L(design.scenario)}</p>
-            <p className="cd-design__brief">{L(design.brief)}</p>
+            <p className="cd-design__brief">{design.scenario}</p>
+            <p className="cd-design__brief">{design.brief}</p>
           </details>
         )}
         {drill && (
           <>
-            <p className="cd-design__brief">{L(drill.scenario)}</p>
-            <p className="cd-design__brief"><b>{L(drill.prompt)}</b></p>
+            <p className="cd-design__brief">{drill.scenario}</p>
+            <p className="cd-design__brief"><b>{drill.prompt}</b></p>
           </>
         )}
 
         {design && current && (
           <div className="cd-design__step" key={current.key}>
-            <h3 id={`${baseId}-q`} style={{ margin: 0 }}>{L(current.title)}</h3>
-            <p className="cd-design__brief">{L(current.prompt)}</p>
+            <h3 id={`${baseId}-q`} style={{ margin: 0 }}>{current.title}</h3>
+            <p className="cd-design__brief">{current.prompt}</p>
             <RadioCardGroup value={answers[stepIndex] === null ? null : String(answers[stepIndex])} onChange={(value) => setAnswers((prev) => prev.map((one, i) => (i === stepIndex ? Number(value) : one)))} labelledBy={`${baseId}-q`}>
               {current.options.map((option, index) => (
-                <RadioCard key={index} value={String(index)} index={index} label={L(option)}>{L(option)}</RadioCard>
+                <RadioCard key={index} value={String(index)} index={index} label={option}>{option}</RadioCard>
               ))}
             </RadioCardGroup>
             <div className="cd-design__nav">
@@ -241,13 +240,13 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               <div className="cd-estimate">
                 <label className="cd-editor-label" htmlFor={`${baseId}-estimate`}>{t('coding.design.estimatePlaceholder')}</label>
                 <input id={`${baseId}-estimate`} inputMode="decimal" value={estimate} onChange={(e) => setEstimate(e.target.value)} placeholder="0" />
-                {drill.unit && <span>{L(drill.unit)}</span>}
+                {drill.unit && <span>{drill.unit}</span>}
               </div>
             )}
             {(drill.format === 'tradeoff' || drill.format === 'bottleneck') && drill.options && (
-              <RadioCardGroup value={choice === null ? null : String(choice)} onChange={(value) => setChoice(Number(value))} label={L(drill.prompt)}>
+              <RadioCardGroup value={choice === null ? null : String(choice)} onChange={(value) => setChoice(Number(value))} label={drill.prompt}>
                 {drill.options.map((option, index) => (
-                  <RadioCard key={index} value={String(index)} index={index} label={L(option)}>{L(option)}</RadioCard>
+                  <RadioCard key={index} value={String(index)} index={index} label={option}>{option}</RadioCard>
                 ))}
               </RadioCardGroup>
             )}
@@ -259,9 +258,9 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                   {order.map((original, position) => (
                     <li key={original}>
                       <span className="cd-sequence__n">{position + 1}</span>
-                      <span>{L(drill.steps![original])}</span>
-                      <Button variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${L(drill.steps![original])}`}>↑</Button>
-                      <Button variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${L(drill.steps![original])}`}>↓</Button>
+                      <span>{drill.steps![original]}</span>
+                      <Button variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${drill.steps![original]}`}>↑</Button>
+                      <Button variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${drill.steps![original]}`}>↓</Button>
                     </li>
                   ))}
                 </ol>

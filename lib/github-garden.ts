@@ -13,7 +13,6 @@ export interface GardenPassInput {
   code: string;
   passedCount: number;
   totalCount: number;
-  locale: 'en' | 'cs';
   firstPass: boolean;
   codeChanged: boolean;
 }

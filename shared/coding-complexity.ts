@@ -23,8 +23,8 @@ export function codingPassXp(report: ComplexityReport | null | undefined): numbe
 }
 
 /** Only explicitly authored targets are presented as targets. */
-export function complexityGuidance(task: { track: string; prompt: { en: string }; tests?: unknown[] }): ComplexityGuidance {
-  const text = task.prompt.en;
+export function complexityGuidance(task: { track: string; prompt: string; tests?: unknown[] }): ComplexityGuidance {
+  const text = task.prompt;
   const authored = task.tests?.length && task.track !== 'react' && task.track !== 'system-design'
     ? /Target:\s*O\(/i.exec(text) : null;
   let target: string | null = null;

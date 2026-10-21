@@ -1,7 +1,5 @@
-/** Authored learning-path shapes. English is the source of truth; Czech copy
- * lives in a sibling `*.cs.ts` overlay keyed by module id, following the
- * repository's question-bank and coding-task convention. `mergeModule` joins
- * both into the localized shape the API projects from.
+/** Authored learning-path shapes. The authored English source is the only
+ * copy; `mergePath` normalizes it into the shape the API projects from.
  *
  * Everything in this file is server-side. Answer indices, explanations,
  * hidden assertions and reference solutions live here or in
@@ -15,8 +13,6 @@ import type {
   EvidenceState,
   LearningPathId,
   LearningPathKind,
-  Localized,
-  LocalizedList,
   PathCodeLanguage,
   SourceReference,
   VerificationKind,
@@ -59,24 +55,6 @@ export interface LessonSource {
   sections: LessonSectionSource[];
 }
 
-/** Czech copy for one lesson. Arrays align by index with the English source. */
-export interface LessonCs {
-  title: string;
-  summary: string;
-  /** One entry per section, in order. Sections without prose use ''. */
-  sections: {
-    body?: string;
-    caption?: string;
-    /** The example's exploration note. */
-    note?: string;
-    headers?: string[];
-    rows?: string[][];
-    notes?: string[];
-    counterLabels?: string[];
-    legend?: string[];
-  }[];
-}
-
 /* ── objective checks ─────────────────────────────────────────────────── */
 
 export interface CheckQuestionSource {
@@ -90,12 +68,6 @@ export interface CheckQuestionSource {
   /** Knowledge domain, for an activity that gates each domain separately. */
   domain?: string;
   competencies: string[];
-}
-
-export interface CheckQuestionCs {
-  prompt: string;
-  options: string[];
-  explanation: string;
 }
 
 /* ── code activities ──────────────────────────────────────────────────── */
@@ -138,17 +110,6 @@ export interface PathCallTest extends SourceCallTest {
   criterion?: string;
 }
 
-export interface PathCodeCs {
-  prompt: string;
-  hints: string[];
-  approach?: string[];
-  contract?: string[];
-  /** One entry per visible test, '' when the test has no label. */
-  testLabels?: string[];
-  typeTestLabels?: string[];
-  criteria?: { label: string; detail?: string }[];
-}
-
 /* ── artifacts ────────────────────────────────────────────────────────── */
 
 export interface ArtifactFieldSource {
@@ -164,11 +125,6 @@ export interface PathArtifactSource {
   brief: string;
   fields: ArtifactFieldSource[];
   rubricDimensions: string[];
-}
-
-export interface PathArtifactCs {
-  brief: string;
-  fields: { label: string; help: string }[];
 }
 
 /* ── activities and modules ───────────────────────────────────────────── */
@@ -200,14 +156,6 @@ export interface ActivitySource {
   artifact?: PathArtifactSource;
 }
 
-export interface ActivityCs {
-  title: string;
-  summary: string;
-  questions?: Record<string, CheckQuestionCs>;
-  code?: PathCodeCs;
-  artifact?: PathArtifactCs;
-}
-
 export interface ModuleSource {
   id: string;
   title: string;
@@ -223,13 +171,6 @@ export interface ModuleSource {
   optional?: boolean;
 }
 
-export interface ModuleCs {
-  title: string;
-  outcomes: string[];
-  lessons: Record<string, LessonCs>;
-  activities: Record<string, ActivityCs>;
-}
-
 /* ── bridges and the path itself ──────────────────────────────────────── */
 
 export interface BridgeSource {
@@ -242,30 +183,14 @@ export interface BridgeSource {
   estimatedMinutes: number;
 }
 
-export interface BridgeCs {
-  title: string;
-  summary: string;
-  referenceLabels: string[];
-}
-
 export interface CompetencySource {
   id: string;
   title: string;
   summary: string;
 }
 
-export interface CompetencyCs {
-  title: string;
-  summary: string;
-}
-
 export interface RubricDimensionSource {
   id: string;
-  title: string;
-  levels: { missing: string; partial: string; adequate: string; strong: string };
-}
-
-export interface RubricDimensionCs {
   title: string;
   levels: { missing: string; partial: string; adequate: string; strong: string };
 }
@@ -290,19 +215,6 @@ export interface PathSource {
   completionLabel: string;
 }
 
-export interface PathCs {
-  title: string;
-  summary: string;
-  outcomes: string[];
-  nonGoals: string[];
-  entryRequirement: string;
-  completionLabel: string;
-  competencies: Record<string, CompetencyCs>;
-  modules: Record<string, ModuleCs>;
-  bridges: Record<string, BridgeCs>;
-  rubric: Record<string, RubricDimensionCs>;
-}
-
 /* ── server-only answer material ──────────────────────────────────────── */
 
 /** Reference solution and hidden assertions for one code activity. Lives in
@@ -315,45 +227,42 @@ export interface PathCodeSolution {
 
 /* ── merge helpers ────────────────────────────────────────────────────── */
 
-const loc = (en: string, cs: string | undefined): Localized => ({ en, cs: cs ?? '' });
-const locList = (en: string[], cs: string[] | undefined): LocalizedList => ({ en, cs: cs ?? [] });
-
-export function mergeLessonSection(section: LessonSectionSource, cs: LessonCs['sections'][number] | undefined): LessonSection {
+export function mergeLessonSection(section: LessonSectionSource): LessonSection {
   switch (section.kind) {
     case 'prose':
-      return { kind: 'prose', body: loc(section.body, cs?.body) };
+      return { kind: 'prose', body: section.body };
     case 'callout':
-      return { kind: 'callout', tone: section.tone, body: loc(section.body, cs?.body) };
+      return { kind: 'callout', tone: section.tone, body: section.body };
     case 'code':
-      return { kind: 'code', language: section.language, code: section.code, caption: loc(section.caption, cs?.caption) };
+      return { kind: 'code', language: section.language, code: section.code, caption: section.caption };
     case 'example':
       return {
         kind: 'example',
         language: section.language,
         code: section.code,
-        caption: loc(section.caption, cs?.caption),
-        note: loc(section.note, cs?.note),
+        caption: section.caption,
+        note: section.note,
       };
     case 'table':
       return {
         kind: 'table',
-        caption: loc(section.caption, cs?.caption),
-        headers: locList(section.headers, cs?.headers),
-        rows: section.rows.map((row, index) => locList(row, cs?.rows?.[index])),
+        caption: section.caption,
+        headers: section.headers,
+        rows: section.rows,
       };
     case 'trace':
       return {
         kind: 'trace',
-        caption: loc(section.caption, cs?.caption),
+        caption: section.caption,
         trace: {
           shape: section.trace.shape,
-          ...(section.trace.legend ? { legend: locList(section.trace.legend, cs?.legend) } : {}),
-          frames: section.trace.frames.map((frame, index) => ({
+          ...(section.trace.legend ? { legend: section.trace.legend } : {}),
+          frames: section.trace.frames.map((frame) => ({
             cells: frame.cells,
             ...(frame.marks ? { marks: frame.marks } : {}),
-            note: loc(frame.note, cs?.notes?.[index]),
+            note: frame.note,
             ...(frame.counter
-              ? { counter: { label: loc(frame.counter.label, cs?.counterLabels?.[index]), value: frame.counter.value } }
+              ? { counter: { label: frame.counter.label, value: frame.counter.value } }
               : {}),
           })),
         },
@@ -363,54 +272,54 @@ export function mergeLessonSection(section: LessonSectionSource, cs: LessonCs['s
 
 export interface MergedLesson {
   id: string;
-  title: Localized;
-  summary: Localized;
+  title: string;
+  summary: string;
   estimatedMinutes: number;
   sources: SourceReference[];
   sections: LessonSection[];
 }
 
-export function mergeLesson(lesson: LessonSource, cs: LessonCs | undefined): MergedLesson {
+export function mergeLesson(lesson: LessonSource): MergedLesson {
   return {
     id: lesson.id,
-    title: loc(lesson.title, cs?.title),
-    summary: loc(lesson.summary, cs?.summary),
+    title: lesson.title,
+    summary: lesson.summary,
     estimatedMinutes: lesson.estimatedMinutes,
     sources: lesson.sources,
-    sections: lesson.sections.map((section, index) => mergeLessonSection(section, cs?.sections?.[index])),
+    sections: lesson.sections.map(mergeLessonSection),
   };
 }
 
 export interface MergedCheckQuestion {
   id: string;
-  prompt: Localized;
+  prompt: string;
   context?: { language: string; code: string };
-  options: Localized[];
+  options: string[];
   correct: number;
-  explanation: Localized;
+  explanation: string;
   domain?: string;
   competencies: string[];
 }
 
 export interface MergedCriterion {
   id: string;
-  label: Localized;
+  label: string;
   critical: boolean;
   weight: number;
-  detail: Localized | null;
+  detail: string | null;
 }
 
 export interface MergedCode {
   runtimePolicy?: TaskRuntimePolicy;
   language: PathCodeLanguage;
-  prompt: Localized;
+  prompt: string;
   starter: string;
   skeleton?: string;
-  hints: LocalizedList;
-  approach?: LocalizedList;
-  contract?: LocalizedList;
+  hints: string[];
+  approach?: string[];
+  contract?: string[];
   tests: MergedCallTest[];
-  typeTests: { code: string; label?: Localized; rejects?: boolean }[];
+  typeTests: { code: string; label?: string; rejects?: boolean }[];
   suite?: string;
   harness?: string;
   criteria: MergedCriterion[];
@@ -419,15 +328,15 @@ export interface MergedCode {
 export interface MergedCallTest {
   call: string;
   expected: unknown;
-  label?: Localized;
+  label?: string;
   edge?: boolean;
   async?: boolean;
   criterion: string;
 }
 
 export interface MergedArtifact {
-  brief: Localized;
-  fields: { id: string; label: Localized; help: Localized; kind: ArtifactFieldSource['kind']; required: boolean; maxLength: number }[];
+  brief: string;
+  fields: { id: string; label: string; help: string; kind: ArtifactFieldSource['kind']; required: boolean; maxLength: number }[];
   rubricDimensions: string[];
 }
 
@@ -436,8 +345,8 @@ export interface MergedActivity {
   kind: ActivityKind;
   purpose: ActivityPurpose;
   verification: VerificationKind;
-  title: Localized;
-  summary: Localized;
+  title: string;
+  summary: string;
   competencies: string[];
   estimatedMinutes: number;
   lessonId?: string;
@@ -454,19 +363,19 @@ export interface MergedActivity {
  * coding tasks: every assertion must pass. */
 export const DEFAULT_CRITERION = 'core';
 
-export function mergeCode(code: PathCodeSource, cs: PathCodeCs | undefined): MergedCode {
+export function mergeCode(code: PathCodeSource): MergedCode {
   const declared = code.criteria ?? [];
-  const criteria: MergedCriterion[] = declared.map((criterion, index) => ({
+  const criteria: MergedCriterion[] = declared.map((criterion) => ({
     id: criterion.id,
-    label: loc(criterion.label, cs?.criteria?.[index]?.label),
+    label: criterion.label,
     critical: criterion.critical,
     weight: criterion.weight,
-    detail: criterion.detail ? loc(criterion.detail, cs?.criteria?.[index]?.detail) : null,
+    detail: criterion.detail || null,
   }));
   if (!criteria.some((criterion) => criterion.id === DEFAULT_CRITERION)) {
     criteria.unshift({
       id: DEFAULT_CRITERION,
-      label: { en: 'Required behaviour', cs: 'Požadované chování' },
+      label: 'Required behaviour',
       critical: true,
       weight: 1,
       detail: null,
@@ -474,23 +383,23 @@ export function mergeCode(code: PathCodeSource, cs: PathCodeCs | undefined): Mer
   }
   return {
     language: code.language,
-    prompt: loc(code.prompt, cs?.prompt),
+    prompt: code.prompt,
     starter: code.starter,
     ...(code.skeleton ? { skeleton: code.skeleton } : {}),
-    hints: locList(code.hints, cs?.hints),
-    ...(code.approach ? { approach: locList(code.approach, cs?.approach) } : {}),
-    ...(code.contract ? { contract: locList(code.contract, cs?.contract) } : {}),
-    tests: (code.tests ?? []).map((test, index) => ({
+    hints: code.hints,
+    ...(code.approach ? { approach: code.approach } : {}),
+    ...(code.contract ? { contract: code.contract } : {}),
+    tests: (code.tests ?? []).map((test) => ({
       call: test.call,
       expected: test.expected,
-      ...(test.label ? { label: loc(test.label, cs?.testLabels?.[index]) } : {}),
+      ...(test.label ? { label: test.label } : {}),
       ...(test.edge ? { edge: true } : {}),
       ...(test.async ? { async: true } : {}),
       criterion: test.criterion ?? DEFAULT_CRITERION,
     })),
-    typeTests: (code.typeTests ?? []).map((test, index) => ({
+    typeTests: (code.typeTests ?? []).map((test) => ({
       code: test.code,
-      ...(test.label ? { label: loc(test.label, cs?.typeTestLabels?.[index]) } : {}),
+      ...(test.label ? { label: test.label } : {}),
       ...(test.rejects ? { rejects: true } : {}),
     })),
     ...(code.suite ? { suite: code.suite } : {}),
@@ -499,14 +408,14 @@ export function mergeCode(code: PathCodeSource, cs: PathCodeCs | undefined): Mer
   };
 }
 
-export function mergeActivity(activity: ActivitySource, cs: ActivityCs | undefined): MergedActivity {
+export function mergeActivity(activity: ActivitySource): MergedActivity {
   const merged: MergedActivity = {
     id: activity.id,
     kind: activity.kind,
     purpose: activity.purpose,
     verification: activity.verification,
-    title: loc(activity.title, cs?.title),
-    summary: loc(activity.summary, cs?.summary),
+    title: activity.title,
+    summary: activity.summary,
     competencies: activity.competencies,
     estimatedMinutes: activity.estimatedMinutes,
     ...(activity.lessonId ? { lessonId: activity.lessonId } : {}),
@@ -515,28 +424,25 @@ export function mergeActivity(activity: ActivitySource, cs: ActivityCs | undefin
     ...(activity.reuseTaskId ? { reuseTaskId: activity.reuseTaskId } : {}),
   };
   if (activity.questions) {
-    merged.questions = activity.questions.map((question) => {
-      const overlay = cs?.questions?.[question.id];
-      return {
-        id: question.id,
-        prompt: loc(question.prompt, overlay?.prompt),
-        ...(question.context ? { context: question.context } : {}),
-        options: question.options.map((option, index) => loc(option, overlay?.options?.[index])),
-        correct: question.correct,
-        explanation: loc(question.explanation, overlay?.explanation),
-        ...(question.domain ? { domain: question.domain } : {}),
-        competencies: question.competencies,
-      };
-    });
+    merged.questions = activity.questions.map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+      ...(question.context ? { context: question.context } : {}),
+      options: [...question.options],
+      correct: question.correct,
+      explanation: question.explanation,
+      ...(question.domain ? { domain: question.domain } : {}),
+      competencies: question.competencies,
+    }));
   }
-  if (activity.code) merged.code = mergeCode(activity.code, cs?.code);
+  if (activity.code) merged.code = mergeCode(activity.code);
   if (activity.artifact) {
     merged.artifact = {
-      brief: loc(activity.artifact.brief, cs?.artifact?.brief),
-      fields: activity.artifact.fields.map((field, index) => ({
+      brief: activity.artifact.brief,
+      fields: activity.artifact.fields.map((field) => ({
         id: field.id,
-        label: loc(field.label, cs?.artifact?.fields?.[index]?.label),
-        help: loc(field.help, cs?.artifact?.fields?.[index]?.help),
+        label: field.label,
+        help: field.help,
         kind: field.kind,
         required: field.required,
         maxLength: field.maxLength,
@@ -549,8 +455,8 @@ export function mergeActivity(activity: ActivitySource, cs: ActivityCs | undefin
 
 export interface MergedModule {
   id: string;
-  title: Localized;
-  outcomes: LocalizedList;
+  title: string;
+  outcomes: string[];
   competencies: string[];
   dependsOn: string[];
   lessons: MergedLesson[];
@@ -560,15 +466,15 @@ export interface MergedModule {
   optional?: boolean;
 }
 
-export function mergeModule(module: ModuleSource, cs: ModuleCs | undefined): MergedModule {
+export function mergeModule(module: ModuleSource): MergedModule {
   return {
     id: module.id,
-    title: loc(module.title, cs?.title),
-    outcomes: locList(module.outcomes, cs?.outcomes),
+    title: module.title,
+    outcomes: module.outcomes,
     competencies: module.competencies,
     dependsOn: module.dependsOn,
-    lessons: module.lessons.map((lesson) => mergeLesson(lesson, cs?.lessons?.[lesson.id])),
-    activities: module.activities.map((activity) => mergeActivity(activity, cs?.activities?.[activity.id])),
+    lessons: module.lessons.map(mergeLesson),
+    activities: module.activities.map(mergeActivity),
     requires: module.requires,
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
@@ -579,181 +485,79 @@ export interface MergedPath {
   id: LearningPathId;
   kind: LearningPathKind;
   version: number;
-  title: Localized;
-  summary: Localized;
-  outcomes: LocalizedList;
-  nonGoals: LocalizedList;
-  entryRequirement: Localized;
-  competencies: { id: string; title: Localized; summary: Localized }[];
+  title: string;
+  summary: string;
+  outcomes: string[];
+  nonGoals: string[];
+  entryRequirement: string;
+  competencies: { id: string; title: string; summary: string }[];
   modules: MergedModule[];
   bridges: {
     id: string;
-    title: Localized;
-    summary: Localized;
+    title: string;
+    summary: string;
     suggestedFor: BaseTrack[];
     competencies: string[];
-    references: { kind: BridgeSource['references'][number]['kind']; ref: string; label: Localized }[];
+    references: { kind: BridgeSource['references'][number]['kind']; ref: string; label: string }[];
     estimatedMinutes: number;
   }[];
   rubric: {
     version: number;
-    dimensions: { id: string; title: Localized; levels: { missing: Localized; partial: Localized; adequate: Localized; strong: Localized } }[];
+    dimensions: { id: string; title: string; levels: { missing: string; partial: string; adequate: string; strong: string } }[];
   };
   diagnosticActivityId: string | null;
   estimatedHours: { min: number; max: number };
   sources: SourceReference[];
   reviewedOn: string;
-  completionLabel: Localized;
+  completionLabel: string;
 }
 
-export function mergePath(path: PathSource, cs: PathCs | undefined): MergedPath {
+export function mergePath(path: PathSource): MergedPath {
   return {
     id: path.id,
     kind: path.kind,
     version: path.version,
-    title: loc(path.title, cs?.title),
-    summary: loc(path.summary, cs?.summary),
-    outcomes: locList(path.outcomes, cs?.outcomes),
-    nonGoals: locList(path.nonGoals, cs?.nonGoals),
-    entryRequirement: loc(path.entryRequirement, cs?.entryRequirement),
+    title: path.title,
+    summary: path.summary,
+    outcomes: path.outcomes,
+    nonGoals: path.nonGoals,
+    entryRequirement: path.entryRequirement,
     competencies: path.competencies.map((competency) => ({
       id: competency.id,
-      title: loc(competency.title, cs?.competencies?.[competency.id]?.title),
-      summary: loc(competency.summary, cs?.competencies?.[competency.id]?.summary),
+      title: competency.title,
+      summary: competency.summary,
     })),
-    modules: path.modules.map((module) => mergeModule(module, cs?.modules?.[module.id])),
-    bridges: path.bridges.map((bridge) => {
-      const overlay = cs?.bridges?.[bridge.id];
-      return {
-        id: bridge.id,
-        title: loc(bridge.title, overlay?.title),
-        summary: loc(bridge.summary, overlay?.summary),
-        suggestedFor: bridge.suggestedFor,
-        competencies: bridge.competencies,
-        references: bridge.references.map((reference, index) => ({
-          kind: reference.kind,
-          ref: reference.ref,
-          label: loc(reference.label, overlay?.referenceLabels?.[index]),
-        })),
-        estimatedMinutes: bridge.estimatedMinutes,
-      };
-    }),
+    modules: path.modules.map(mergeModule),
+    bridges: path.bridges.map((bridge) => ({
+      id: bridge.id,
+      title: bridge.title,
+      summary: bridge.summary,
+      suggestedFor: bridge.suggestedFor,
+      competencies: bridge.competencies,
+      references: bridge.references.map((reference) => ({
+        kind: reference.kind,
+        ref: reference.ref,
+        label: reference.label,
+      })),
+      estimatedMinutes: bridge.estimatedMinutes,
+    })),
     rubric: {
       version: path.rubric.version,
-      dimensions: path.rubric.dimensions.map((dimension) => {
-        const overlay = cs?.rubric?.[dimension.id];
-        return {
-          id: dimension.id,
-          title: loc(dimension.title, overlay?.title),
-          levels: {
-            missing: loc(dimension.levels.missing, overlay?.levels?.missing),
-            partial: loc(dimension.levels.partial, overlay?.levels?.partial),
-            adequate: loc(dimension.levels.adequate, overlay?.levels?.adequate),
-            strong: loc(dimension.levels.strong, overlay?.levels?.strong),
-          },
-        };
-      }),
+      dimensions: path.rubric.dimensions.map((dimension) => ({
+        id: dimension.id,
+        title: dimension.title,
+        levels: {
+          missing: dimension.levels.missing,
+          partial: dimension.levels.partial,
+          adequate: dimension.levels.adequate,
+          strong: dimension.levels.strong,
+        },
+      })),
     },
     diagnosticActivityId: path.diagnosticActivityId,
     estimatedHours: path.estimatedHours,
     sources: path.sources,
     reviewedOn: path.reviewedOn,
-    completionLabel: loc(path.completionLabel, cs?.completionLabel),
+    completionLabel: path.completionLabel,
   };
-}
-
-/** Every localized string of a merged path, for the EN/CS parity test. */
-export function localizedPathFields(path: MergedPath): { path: string; value: Localized }[] {
-  const out: { path: string; value: Localized }[] = [
-    { path: 'title', value: path.title },
-    { path: 'summary', value: path.summary },
-    { path: 'entryRequirement', value: path.entryRequirement },
-    { path: 'completionLabel', value: path.completionLabel },
-  ];
-  for (const competency of path.competencies) {
-    out.push({ path: `competency.${competency.id}.title`, value: competency.title });
-    out.push({ path: `competency.${competency.id}.summary`, value: competency.summary });
-  }
-  for (const dimension of path.rubric.dimensions) {
-    out.push({ path: `rubric.${dimension.id}.title`, value: dimension.title });
-    for (const level of ['missing', 'partial', 'adequate', 'strong'] as const) {
-      out.push({ path: `rubric.${dimension.id}.${level}`, value: dimension.levels[level] });
-    }
-  }
-  for (const bridge of path.bridges) {
-    out.push({ path: `bridge.${bridge.id}.title`, value: bridge.title });
-    out.push({ path: `bridge.${bridge.id}.summary`, value: bridge.summary });
-    bridge.references.forEach((reference, index) =>
-      out.push({ path: `bridge.${bridge.id}.reference[${index}]`, value: reference.label }));
-  }
-  for (const module of path.modules) {
-    out.push({ path: `${module.id}.title`, value: module.title });
-    for (const lesson of module.lessons) {
-      out.push({ path: `${lesson.id}.title`, value: lesson.title });
-      out.push({ path: `${lesson.id}.summary`, value: lesson.summary });
-      lesson.sections.forEach((section, index) => {
-        const at = `${lesson.id}.section[${index}]`;
-        if (section.kind === 'prose' || section.kind === 'callout') out.push({ path: at, value: section.body });
-        else if (section.kind === 'code') out.push({ path: `${at}.caption`, value: section.caption });
-        else if (section.kind === 'table') {
-          out.push({ path: `${at}.caption`, value: section.caption });
-        } else if (section.kind === 'trace') {
-          out.push({ path: `${at}.caption`, value: section.caption });
-          section.trace.frames.forEach((frame, frameIndex) =>
-            out.push({ path: `${at}.frame[${frameIndex}]`, value: frame.note }));
-        }
-      });
-    }
-    for (const activity of module.activities) {
-      out.push({ path: `${activity.id}.title`, value: activity.title });
-      out.push({ path: `${activity.id}.summary`, value: activity.summary });
-      activity.questions?.forEach((question) => {
-        out.push({ path: `${question.id}.prompt`, value: question.prompt });
-        out.push({ path: `${question.id}.explanation`, value: question.explanation });
-        question.options.forEach((option, index) => out.push({ path: `${question.id}.option[${index}]`, value: option }));
-      });
-      if (activity.code) {
-        out.push({ path: `${activity.id}.code.prompt`, value: activity.code.prompt });
-        activity.code.criteria.forEach((criterion) =>
-          out.push({ path: `${activity.id}.criterion.${criterion.id}`, value: criterion.label }));
-        activity.code.tests.forEach((test, index) => {
-          if (test.label) out.push({ path: `${activity.id}.test[${index}].label`, value: test.label });
-        });
-      }
-      if (activity.artifact) {
-        out.push({ path: `${activity.id}.artifact.brief`, value: activity.artifact.brief });
-        activity.artifact.fields.forEach((field) => {
-          out.push({ path: `${activity.id}.field.${field.id}.label`, value: field.label });
-          out.push({ path: `${activity.id}.field.${field.id}.help`, value: field.help });
-        });
-      }
-    }
-  }
-  return out;
-}
-
-/** Every localized list of a merged path, for the EN/CS parity test. */
-export function localizedPathLists(path: MergedPath): { path: string; value: LocalizedList }[] {
-  const out: { path: string; value: LocalizedList }[] = [
-    { path: 'outcomes', value: path.outcomes },
-    { path: 'nonGoals', value: path.nonGoals },
-  ];
-  for (const module of path.modules) {
-    out.push({ path: `${module.id}.outcomes`, value: module.outcomes });
-    for (const activity of module.activities) {
-      if (!activity.code) continue;
-      out.push({ path: `${activity.id}.hints`, value: activity.code.hints });
-      if (activity.code.approach) out.push({ path: `${activity.id}.approach`, value: activity.code.approach });
-      if (activity.code.contract) out.push({ path: `${activity.id}.contract`, value: activity.code.contract });
-    }
-    for (const lesson of module.lessons) {
-      lesson.sections.forEach((section, index) => {
-        if (section.kind !== 'table') return;
-        out.push({ path: `${lesson.id}.section[${index}].headers`, value: section.headers });
-        section.rows.forEach((row, rowIndex) =>
-          out.push({ path: `${lesson.id}.section[${index}].row[${rowIndex}]`, value: row }));
-      });
-    }
-  }
-  return out;
 }

@@ -17,7 +17,6 @@
  *      them. Every puzzle declares its competencies, and the evidence it
  *      produces is recorded as ordering evidence, distinct from a code pass. */
 
-import type { Localized } from './coding-catalog';
 
 /** One draggable, tappable, keyboard-movable line. */
 export interface PuzzleLine {
@@ -42,7 +41,7 @@ export interface PuzzleView {
   competencies: PuzzleCompetency[];
   /** The plain-language claim shown beside the result, so nobody mistakes an
    * ordering pass for having written the code. */
-  claim: Localized;
+  claim: string;
 }
 
 export const PUZZLE_MAX_LINES = 14;

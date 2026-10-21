@@ -6,9 +6,9 @@
  * alongside a learner's career path.
  *
  * This file carries the path metadata and assembles the modules. Module
- * bodies live one file per module under `./dsa/`; Czech copy lives in the
- * `.cs` siblings; reference solutions and hidden assertions live under
- * `lib/learning-paths/solutions/` and are loaded only by the grader. */
+ * bodies live one file per module under `./dsa/`; reference solutions and
+ * hidden assertions live under `lib/learning-paths/solutions/` and are loaded
+ * only by the grader. */
 
 import type { PathSource } from '../types';
 import { DSA_ENTRY } from './dsa/entry';

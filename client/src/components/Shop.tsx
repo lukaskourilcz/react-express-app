@@ -93,7 +93,7 @@ const ADDRESS_AUTOCOMPLETE: Record<keyof ShippingAddress, string> = {
 const EMPTY_ADDRESS: ShippingAddress = { name: '', line1: '', line2: '', city: '', postalCode: '', country: '' };
 const LEDGER_PREVIEW = 5;
 
-const projectTitle = (id: string): string => EVOLVING_CHALLENGES.find((one) => one.id === id)?.title.en ?? id;
+const projectTitle = (id: string): string => EVOLVING_CHALLENGES.find((one) => one.id === id)?.title ?? id;
 const percent = (rate: number): string => String(Math.round(rate * 1000) / 10);
 
 function monthLabel(month: string): string {

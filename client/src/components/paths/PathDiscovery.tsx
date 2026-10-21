@@ -16,7 +16,6 @@ import { useT } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { isBarred, useLocks } from '../../lib/locks';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
-import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 
@@ -24,7 +23,6 @@ const PATH_ORDER: LearningPathId[] = ['fde', 'dsa-foundations'];
 
 export default function PathDiscovery() {
   const t = useT();
-  const loc = useLoc();
   const { user, isAuthenticated } = useAuth();
   const catalog = usePathCatalog();
   const enrollments = useEnrollments(isAuthenticated ? user?.id : undefined);
@@ -53,7 +51,7 @@ export default function PathDiscovery() {
                   <span className="lp-module__index">
                     {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
                   </span>
-                  <Link to={pathHref(pathId)}>{loc(manifest.title)}</Link>
+                  <Link to={pathHref(pathId)}>{manifest.title}</Link>
                 </h3>
                 <span className="lp-module__meta">
                   {premium && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
@@ -67,7 +65,7 @@ export default function PathDiscovery() {
                 </span>
               </div>
               <p className="lp-lead" style={{ margin: 0 }}>
-                {loc(manifest.summary)}
+                {manifest.summary}
               </p>
               <ul className="lp-inventory">
                 <li>
@@ -90,7 +88,7 @@ export default function PathDiscovery() {
                   })}
                 </li>
               </ul>
-              <p className="lp-activity__summary">{loc(manifest.entryRequirement)}</p>
+              <p className="lp-activity__summary">{manifest.entryRequirement}</p>
             </section>
           );
         })}

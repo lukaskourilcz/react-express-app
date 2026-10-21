@@ -331,7 +331,7 @@ async function auditGateContracts() {
   const codingFixture = reviewedCoding[0];
   const codingSolution = solutionFor(codingFixture.id);
   assert.equal(codingTaskEligibility({ ...codingFixture, id: 'unreviewed-coding-gate-fixture' }, codingSolution).reason, 'unreviewed');
-  assert.equal(codingTaskEligibility({ ...codingFixture, title: { ...codingFixture.title, en: 'Changed unreviewed task' } }, codingSolution).reason, 'superseded');
+  assert.equal(codingTaskEligibility({ ...codingFixture, title: 'Changed unreviewed task' }, codingSolution).reason, 'superseded');
   assert.equal(codingTaskEligibility(codingFixture, { ...codingSolution!, solution: 'changed unreviewed solution' }).reason, 'superseded');
   for (const task of CODING_TASKS.filter(task => !isCodingSectionTrack(task.track))) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'unreviewed', `${task.id}: hidden system design is not approved by this wave`);
@@ -958,20 +958,17 @@ async function tierContracts() {
       if (after) assert.equal((await asFreeAccount(after, passed)).statusCode, 402, `${after}: Premium with every free stage of ${challenge.id} passed`);
     }
 
-    // C4-6: the app ships English only, so a task, its puzzle and a failed
-    // verdict's hint reach the browser without the retained Czech copy.
-    const bilingual = codingTaskById('js-reverse-string')!;
-    assert.ok(bilingual.prompt.cs && bilingual.hints.cs.length, 'js-reverse-string keeps its Czech overlay on the server');
+    // A task travels with its puzzle, and a failed verdict carries its hint.
+    const reverse = codingTaskById('js-reverse-string')!;
     const opened = mockResponse();
-    await roadmapHandler(guest({ resource: 'coding-task', id: bilingual.id }) as never, opened as never);
+    await roadmapHandler(guest({ resource: 'coding-task', id: reverse.id }) as never, opened as never);
     assert.equal(opened.statusCode, 200, 'a guest opens js-reverse-string');
     const openedBody = opened.body as CodingTaskResponse;
     assert.ok(openedBody.task.puzzle && openedBody.session, 'the task travels with its puzzle and a session');
-    assert.deepEqual(czechIn(openedBody), [], 'the task payload carries no Czech');
+    assert.equal(typeof openedBody.task.prompt, 'string', 'the task prompt is plain English copy');
     const failed = mockResponse();
     await roadmapHandler(post('coding-submit', { session: openedBody.session, code: 'throw new Error("not yet");' }) as never, failed as never);
     assert.equal((failed.body as CodingVerdictResponse).failureHint?.category, 'runtime', 'a throwing submit gets the runtime hint');
-    assert.deepEqual(czechIn(failed.body), [], 'the verdict carries no Czech');
     // V4-3: code that never parsed got the runtime hint, "check the values you
     // index into". The error names the line; no hint follows it.
     const unparsed = mockResponse();
@@ -3612,7 +3609,7 @@ async function main() {
     await roadmapHandler(guestAsk('coding-submit', {}, { session: sealed, answers: prepared.key.steps }) as never, submitted as never);
     assert.equal(submitted.statusCode, 400, `a sealed system design session is refused at Submit (${JSON.stringify(submitted.body)})`);
     assert.equal((submitted.body as { error: { code: string } }).error.code, 'invalid_session');
-    assert.ok(!JSON.stringify(submitted.body).includes(designTask!.design!.reference.en.slice(0, 40)), 'and nothing of the key comes back');
+    assert.ok(!JSON.stringify(submitted.body).includes(designTask!.design!.reference.slice(0, 40)), 'and nothing of the key comes back');
     const revealed = mockResponse();
     await roadmapHandler(guestAsk('coding-reveal', {}, { session: sealed, hintsUsed: 20 }) as never, revealed as never);
     assert.equal(revealed.statusCode, 400, 'and at the reveal');
@@ -4058,7 +4055,7 @@ async function main() {
     for (const module of path.modules) {
       for (const activity of module.activities) {
         for (const question of activity.questions ?? []) {
-          assert.ok(!manifestJson.includes(question.explanation.en), `${question.id}: explanation leaked into the manifest`);
+          assert.ok(!manifestJson.includes(question.explanation), `${question.id}: explanation leaked into the manifest`);
         }
       }
     }
@@ -4957,7 +4954,7 @@ async function main() {
   const npmEntry = GLOSSARY.find((one) => one.term === 'npm');
   assert.ok(npmEntry && npmEntry.expansion === undefined, 'npm is a name, not initials');
   for (const entry of GLOSSARY) {
-    assert.ok(entry.meaning.en.length > 20 && entry.meaning.cs.length > 20, `${entry.term} needs both meanings`);
+    assert.ok(entry.meaning.length > 20, `${entry.term} needs a meaning`);
     assert.ok(entry.domains.length > 0, `${entry.term} must say where it means this`);
     assert.match(entry.reviewed, /^\d{4}-\d{2}-\d{2}$/);
   }
@@ -5027,7 +5024,7 @@ async function main() {
   for (const link of CODING_DOC_LINKS) {
     assert.ok(link.url.startsWith('https://'), `${link.tag} must link over https`);
     assert.ok(link.title.length > 0, `${link.tag} needs the page's title`);
-    assert.ok(link.blurb.en.length > 10 && link.blurb.cs.length > 10, `${link.tag} needs both blurbs`);
+    assert.ok(link.blurb.length > 10, `${link.tag} needs a blurb`);
     assert.match(link.reviewed, /^\d{4}-\d{2}-\d{2}$/, `${link.tag} needs a review date`);
   }
   assert.equal(taskResources(['map', 'filter', 'reduce']).length, 3, 'a task lists every technique it declares');
@@ -5071,10 +5068,8 @@ async function main() {
       assert.equal(category, 'tests', 'only the generic category may fall through to the hint ladder');
       continue;
     }
-    for (const body of [hint.body.en, hint.body.cs]) {
-      assert.ok(body.length > 20, `${category} hint must say something`);
-      assert.ok(!/expected|hidden test|očekáv|skryt/i.test(body), `${category} hint must not mention expectations or hidden tests`);
-    }
+    assert.ok(hint.body.length > 20, `${category} hint must say something`);
+    assert.ok(!/expected|hidden test/i.test(hint.body), `${category} hint must not mention expectations or hidden tests`);
   }
 
   // ── curation claims never outrun their evidence (#181) ─────────────────
@@ -5171,7 +5166,7 @@ async function main() {
     assert.notEqual(codingTaskReview(authoredTask, changedSolution).version, reviewedVersion, 'a grader edit changes the keyed public version');
     assert.notEqual(taskHash(authoredTask, { ...authoredSolution, junior: 'changed authored variant' }), reviewedHash, 'each revealed solution variant participates in approval');
     assert.notEqual(taskHash(authoredTask, { ...authoredSolution, hiddenSuite: 'changed trusted suite' }), reviewedHash, 'hidden React grader material participates in approval');
-    assert.notEqual(taskHash({ ...authoredTask, references: [{ title: { en: 'Changed reference', cs: '' }, url: 'https://example.test/reference' }] }, authoredSolution), reviewedHash, 'authored documentation references participate in approval');
+    assert.notEqual(taskHash({ ...authoredTask, references: [{ title: 'Changed reference', url: 'https://example.test/reference' }] }, authoredSolution), reviewedHash, 'authored documentation references participate in approval');
     const comparison = approachesFor(authoredTask.id)[0];
     const previousCode = comparison.code;
     try {

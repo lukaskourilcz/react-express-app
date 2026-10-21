@@ -7,9 +7,8 @@
  * experience, and not a hiring claim.
  *
  * This file carries the path metadata and assembles the modules. Module
- * bodies live one file per module under `./fde/`; Czech copy lives in the
- * `.cs` siblings; reference solutions and hidden assertions live under
- * `lib/learning-paths/solutions/`.
+ * bodies live one file per module under `./fde/`; reference solutions and
+ * hidden assertions live under `lib/learning-paths/solutions/`.
  *
  * The core path needs no paid API, no vendor account and no live model. Model
  * responses, retrieval results and tool traffic are synthetic fixtures, and

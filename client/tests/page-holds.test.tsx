@@ -58,11 +58,11 @@ const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPerio
 const PREMIUM = { ...FREE, tier: 'premium' };
 const MANIFEST = {
   id: 'dsa-foundations', kind: 'skill_path', version: 1,
-  title: { en: 'DSA Foundations', cs: '' },
-  summary: { en: 'Data structures and algorithms from the ground up.', cs: '' },
-  entryRequirement: { en: 'No base track needed.', cs: '' },
+  title: 'DSA Foundations',
+  summary: 'Data structures and algorithms from the ground up.',
+  entryRequirement: 'No base track needed.',
   estimatedHours: { min: 20, max: 30 },
-  modules: [{ id: 'dsa-v1-entry', title: { en: 'Entry', cs: '' }, activities: [{ id: 'dsa-v1-entry-check', title: { en: 'Where you start', cs: '' } }] }],
+  modules: [{ id: 'dsa-v1-entry', title: 'Entry', activities: [{ id: 'dsa-v1-entry-check', title: 'Where you start' }] }],
 };
 const CATALOG = {
   versions: { 'dsa-foundations': 1 },

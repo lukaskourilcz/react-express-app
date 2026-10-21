@@ -5,7 +5,6 @@
 // shape a crawling and scraping team actually asks about.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
-// English is the source of truth; Czech copy lives in algorithms.cs.ts.
 //
 // These are practice rather than a curriculum: the track carries no Learn
 // level of its own. Access follows shared/tiers.ts and server issuance;

@@ -25,7 +25,7 @@ vi.mock('../src/coding/CodingWorkbench', () => ({ CodingWorkbench: ({ saveAction
 const PREMIUM = { tier: 'premium', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const DOWN = () => HttpResponse.json({ error: { code: 'db_error', message: 'Could not load' } }, { status: 500 });
 const TASK = {
-  task: { id: 'js-digit-sum', track: 'javascript', starter: '// starter', title: { en: 'Digit sum', cs: '' } },
+  task: { id: 'js-digit-sum', track: 'javascript', starter: '// starter', title: 'Digit sum' },
   session: 'session-1', locked: null, progress: null, draft: null, signedIn: true,
 };
 

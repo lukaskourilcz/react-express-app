@@ -1652,7 +1652,7 @@ function LessonRunner({
             <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
               <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
               {codingTasks.map(({ task, session }, index) => <span key={task.id}>
-                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en}</a>
+                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title}</a>
               </span>)}
             </div>
           )}
@@ -1671,7 +1671,7 @@ function LessonRunner({
 
   if (codingPhase && codingTasks[codingIndex]) {
     const current = codingTasks[codingIndex];
-    const title = current.task.title[lang === 'cs' ? 'cs' : 'en'] || current.task.title.en;
+    const title = current.task.title;
     return (
       <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

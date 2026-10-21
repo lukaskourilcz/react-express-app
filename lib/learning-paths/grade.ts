@@ -26,7 +26,7 @@ import type {
   CodeVerdictPayload,
   CriterionResult,
 } from '../../shared/learning-path-api';
-import type { EvidenceState, Localized, VerificationKind } from '../../shared/learning-paths';
+import type { EvidenceState, VerificationKind } from '../../shared/learning-paths';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 import type { CodingTask } from '../../shared/coding-catalog';
 import { runChecks } from '../coding/sandbox';
@@ -197,7 +197,7 @@ export function codeFromReusedTask(task: CodingTask): MergedCode {
     criteria: [
       {
         id: DEFAULT_CRITERION,
-        label: { en: 'Required behaviour', cs: 'Požadované chování' },
+        label: 'Required behaviour',
         critical: true,
         weight: 1,
         detail: null,
@@ -440,7 +440,7 @@ async function gradeReactActivity(code: MergedCode, submitted: string, runner?: 
 export interface ArtifactGrade {
   state: EvidenceState;
   criteria: CriterionResult[];
-  feedback: Localized[];
+  feedback: string[];
   cleaned: Record<string, string | string[]>;
 }
 
@@ -460,7 +460,7 @@ export function gradeArtifact(
   const artifact = activity.artifact;
   const given = submitted ?? {};
   const criteria: CriterionResult[] = [];
-  const feedback: Localized[] = [];
+  const feedback: string[] = [];
   const cleaned: Record<string, string | string[]> = {};
   if (!artifact) {
     return { state: 'needs_revision', criteria, feedback, cleaned };
@@ -489,24 +489,18 @@ export function gradeArtifact(
       detail: passed
         ? null
         : !withinCap
-          ? { en: `This field is limited to ${field.maxLength} characters.`, cs: `Toto pole je omezené na ${field.maxLength} znaků.` }
+          ? `This field is limited to ${field.maxLength} characters.`
           : !urlOk
-            ? { en: 'Enter a full https:// address, or leave it empty.', cs: 'Zadej celou adresu začínající https://, nebo pole nech prázdné.' }
+            ? 'Enter a full https:// address, or leave it empty.'
             : field.help,
     });
     if (present && withinCap && urlOk) cleaned[field.id] = value;
   }
 
   if (!complete) {
-    feedback.push({
-      en: 'Some required parts are missing or over their length limit. Fill them in and submit again — nothing you already wrote is lost.',
-      cs: 'Některé povinné části chybí nebo překročily limit délky. Doplň je a odešli znovu — nic z toho, co jsi už napsal, se neztratí.',
-    });
+    feedback.push('Some required parts are missing or over their length limit. Fill them in and submit again — nothing you already wrote is lost.');
   } else {
-    feedback.push({
-      en: 'Submitted and recorded as self-reviewed. Automated checks confirmed the parts are present and within their limits; they do not judge the quality of what you wrote. Compare it against the rubric yourself.',
-      cs: 'Odesláno a zaznamenáno jako vlastní revize. Automatické kontroly ověřily, že části existují a vejdou se do limitů; kvalitu toho, co jsi napsal, neposuzují. Porovnej si to sám s rubrikou.',
-    });
+    feedback.push('Submitted and recorded as self-reviewed. Automated checks confirmed the parts are present and within their limits; they do not judge the quality of what you wrote. Compare it against the rubric yourself.');
   }
 
   return {
@@ -525,20 +519,14 @@ export const requestHash = (payload: unknown): string =>
   createHash('sha256').update(JSON.stringify(payload ?? null), 'utf8').digest('base64url').slice(0, 32);
 
 /** Feedback after a graded attempt: what to look at next, never the answer. */
-export function codeFeedback(grade: PathCodeGrade): Localized[] {
+export function codeFeedback(grade: PathCodeGrade): string[] {
   if (grade.code.outcome === 'timeout') {
-    return [{
-      en: 'The run hit its time limit. Look for a loop that never ends, or work that grows much faster than the input.',
-      cs: 'Běh narazil na časový limit. Hledej cyklus, který nikdy neskončí, nebo práci, která roste mnohem rychleji než vstup.',
-    }];
+    return ['The run hit its time limit. Look for a loop that never ends, or work that grows much faster than the input.'];
   }
   // A syntax or runtime error is the learner's code, so it is recorded as an
   // attempt that needs revision; only a runner that could not start is not.
   if (grade.code.outcome === 'error' && grade.code.codeError) {
-    return [{
-      en: 'The code did not run. Fix the error above and try again.',
-      cs: 'Kód se nespustil. Oprav chybu výše a zkus to znovu.',
-    }];
+    return ['The code did not run. Fix the error above and try again.'];
   }
   const failed = grade.criteria.filter((criterion) => !criterion.passed);
   if (failed.length === 0) return [];

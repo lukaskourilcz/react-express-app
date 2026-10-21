@@ -1,5 +1,5 @@
-/** The merged learning-path catalogue: every published path with English and
- * Czech copy, plus the public projections the API serves.
+/** The learning-path catalogue: every published path, normalized from its
+ * English source, plus the public projections the API serves.
  *
  * Never imports `./solutions`, so a bundle that pulled this in by mistake
  * would still carry no reference implementation; the launch contracts forbid
@@ -17,18 +17,11 @@ import type {
 import { pathInventory, type PathInventory } from '../../shared/learning-paths';
 import type { PathAvailability } from '../../shared/learning-path-api';
 import { DSA_PATH } from './content/dsa';
-import { DSA_PATH_CS } from './content/dsa.cs';
 import { FDE_PATH } from './content/fde';
-import { FDE_PATH_CS } from './content/fde.cs';
-import { mergePath, type MergedActivity, type MergedModule, type MergedPath, type PathCs, type PathSource } from './types';
+import { mergePath, type MergedActivity, type MergedModule, type MergedPath } from './types';
 import { validatePath, type ValidationIssue } from './validate';
 
-const sources: { source: PathSource; cs: PathCs }[] = [
-  { source: DSA_PATH, cs: DSA_PATH_CS },
-  { source: FDE_PATH, cs: FDE_PATH_CS },
-];
-
-export const LEARNING_PATHS: readonly MergedPath[] = sources.map(({ source, cs }) => mergePath(source, cs));
+export const LEARNING_PATHS: readonly MergedPath[] = [DSA_PATH, FDE_PATH].map(mergePath);
 
 const BY_ID = new Map<string, MergedPath>(LEARNING_PATHS.map((path) => [path.id, path]));
 

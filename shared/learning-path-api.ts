@@ -6,7 +6,7 @@
  * the attempt session, code activities travel as prompt plus visible tests,
  * and reference material appears only in a result the learner has earned. */
 
-import type { CallTest, Localized, LocalizedList, TypeTest } from './coding-catalog';
+import type { CallTest, TypeTest } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 import type { ComplexityGuidance, ComplexityReport } from './coding-complexity';
@@ -151,14 +151,14 @@ export interface PathProgressResponse {
  * textual alternative, never a generated image. */
 export interface LessonBody {
   id: string;
-  title: Localized;
+  title: string;
   sections: LessonSection[];
   sources: { label: string; url: string; reviewedOn: string }[];
 }
 
 export type LessonSection =
-  | { kind: 'prose'; body: Localized }
-  | { kind: 'code'; language: string; code: string; caption: Localized }
+  | { kind: 'prose'; body: string }
+  | { kind: 'code'; language: string; code: string; caption: string }
   /** A snippet the learner can change and run.
    *
    * Exploration, and labelled as such: nothing here is graded, nothing is
@@ -170,10 +170,10 @@ export type LessonSection =
    * On a narrow screen the editor is not offered: the snippet stays readable
    * and runnable, and the typing waits for a keyboard, exactly as a coding
    * task does. */
-  | { kind: 'example'; language: string; code: string; caption: Localized; note: Localized }
-  | { kind: 'table'; caption: Localized; headers: LocalizedList; rows: LocalizedList[] }
-  | { kind: 'trace'; caption: Localized; trace: TraceSpec }
-  | { kind: 'callout'; tone: 'note' | 'warning'; body: Localized };
+  | { kind: 'example'; language: string; code: string; caption: string; note: string }
+  | { kind: 'table'; caption: string; headers: string[]; rows: string[][] }
+  | { kind: 'trace'; caption: string; trace: TraceSpec }
+  | { kind: 'callout'; tone: 'note' | 'warning'; body: string };
 
 /** A deterministic trace the learner can step through. Every step carries the
  * full state and a sentence describing it, so the animation is an affordance
@@ -182,7 +182,7 @@ export interface TraceSpec {
   /** What the frames show: array cells, a stack, a queue, or tree nodes. */
   shape: 'array' | 'stack' | 'queue' | 'tree' | 'counter';
   /** Column or node labels, when the shape needs them. */
-  legend?: LocalizedList;
+  legend?: string[];
   frames: TraceFrame[];
 }
 
@@ -192,19 +192,19 @@ export interface TraceFrame {
   /** Indices to mark: compared, moved, settled. */
   marks?: { index: number; role: 'active' | 'compare' | 'settled' | 'excluded' }[];
   /** One sentence describing this step; the textual alternative. */
-  note: Localized;
+  note: string;
   /** Operation counter, when the trace is teaching cost. */
-  counter?: { label: Localized; value: number };
+  counter?: { label: string; value: number };
 }
 
 /** One objective question, as the learner sees it. Options arrive shuffled and
  * the correct index lives only in the sealed session. */
 export interface CheckQuestionPayload {
   id: string;
-  prompt: Localized;
+  prompt: string;
   /** Optional code or data the question is about. */
   context?: { language: string; code: string };
-  options: Localized[];
+  options: string[];
   /** Which knowledge domain the question belongs to, when the activity gates
    * on domains separately. */
   domain?: string;
@@ -216,14 +216,14 @@ export interface CheckQuestionPayload {
 export interface PathCodePayload {
   complexityGuidance?: ComplexityGuidance;
   language: PathCodeLanguage;
-  prompt: Localized;
+  prompt: string;
   starter: string;
   skeleton?: string;
-  hints: LocalizedList;
-  approach?: LocalizedList;
+  hints: string[];
+  approach?: string[];
   /** Operations the task forbids or requires, stated in the prompt and
    * enforced by the graded contract — not by matching source text. */
-  contract?: LocalizedList;
+  contract?: string[];
   tests?: CallTest[];
   typeTests?: TypeTest[];
   suite?: string;
@@ -232,15 +232,15 @@ export interface PathCodePayload {
 /** An artifact activity: what to write, and the rubric it is judged against
  * before the learner starts. */
 export interface PathArtifactPayload {
-  brief: Localized;
+  brief: string;
   fields: ArtifactField[];
   rubricDimensions: string[];
 }
 
 export interface ArtifactField {
   id: string;
-  label: Localized;
-  help: Localized;
+  label: string;
+  help: string;
   kind: 'short-text' | 'long-text' | 'list' | 'url';
   required: boolean;
   maxLength: number;
@@ -300,19 +300,19 @@ export interface CheckQuestionVerdict {
    * explanation once the answer is in. Absent, with the explanation, after a
    * failed project check: that check keeps its key until it is passed. */
   correctIndex?: number;
-  explanation?: Localized;
+  explanation?: string;
   domain?: string;
 }
 
 export interface CriterionResult {
   id: string;
-  label: Localized;
+  label: string;
   /** A critical criterion cannot be averaged away: failing one fails the
    * activity however well the rest scored. */
   critical: boolean;
   weight: number;
   passed: boolean;
-  detail: Localized | null;
+  detail: string | null;
 }
 
 export interface CodeVerdictPayload {
@@ -340,7 +340,7 @@ export interface SubmitActivityResponse {
   questions: CheckQuestionVerdict[] | null;
   code: CodeVerdictPayload | null;
   /** Guidance after a miss; never the reference implementation. */
-  feedback: Localized[];
+  feedback: string[];
   /** Progress for the module this activity belongs to, after the write. */
   module: ModuleProgress | null;
   guidedComplete: boolean;

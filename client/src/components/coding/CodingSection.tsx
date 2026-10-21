@@ -178,11 +178,11 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   onSave?: (taskId: string, next: boolean) => void;
   saving?: boolean;
 }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const locked = status === 'locked';
   const inner = (
     <>
-      <span className="cd-row__title">{task.title[lang] || task.title.en}</span>
+      <span className="cd-row__title">{task.title}</span>
       <span className="cd-row__meta">
         {hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
@@ -227,7 +227,7 @@ function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short
  * debugging list holds its three short paths; the plain list on the Coding
  * home holds the long projects only. `listedChallenges` decides. */
 function EvolvingGallery({ passed, premiumOf, category, track }: { passed: ReadonlySet<string>; premiumOf: (taskId: string) => LockState; category?: EvolvingCategory; track?: CodingTrack }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
@@ -266,7 +266,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         <div className="cd-project__name">
         {/* On a section's own page every path is that section's, so the line would only repeat the heading. */}
         {!track && <p className="cd-project__track">{fullstack ? 'JavaScript · TypeScript · React · API' : category === 'debugging' ? `${t(`coding.track.${challenge.track}` as never)} · ${t('coding.format.debug')}` : t(`coding.track.${challenge.track}` as never)}</p>}
-        <h3>{challenge.title[lang]}</h3>
+        <h3>{challenge.title}</h3>
         </div>
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
@@ -283,7 +283,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
  * signed-in learner it waits for their progress: worked out from nothing, it
  * would name the first challenge and then swap it for the real one. */
 function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | null; state: 'loading' | 'error' | 'ready'; onRetry: () => void }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   return (
     <section className="cd-next" aria-labelledby="cd-next-label" aria-busy={state === 'loading' || undefined}>
@@ -296,7 +296,7 @@ function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | nul
           </p>
         )}
         {state === 'error' && <p className="cd-next__title cd-next__title--error" role="alert">{t('coding.discovery.failed')}</p>}
-        {state === 'ready' && <p className="cd-next__title">{next ? next.title[lang] || next.title.en : t('coding.allDone')}</p>}
+        {state === 'ready' && <p className="cd-next__title">{next ? next.title : t('coding.allDone')}</p>}
       </div>
       {state === 'error' && <Button variant="secondary" onClick={onRetry} label={t('coding.retry')} />}
       {/* Held disabled while loading, so the card keeps its size when the title arrives. */}
@@ -452,7 +452,7 @@ export function CodingTrackScreen() {
       // The title as the row shows it, plus the technique tags: the words a
       // learner actually remembers about a challenge. Never a title in a
       // language the page is not in (C3-13).
-      const haystack = `${task.title[lang] || task.title.en} ${task.focus.join(' ')}`.toLowerCase();
+      const haystack = `${task.title} ${task.focus.join(' ')}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
     if (difficulty !== 'all' && task.difficulty !== difficulty) return false;
@@ -666,7 +666,7 @@ function StageNav({ stages, short, currentId, passed, premiumOf }: { stages: rea
 }
 
 export function CodingTaskScreen() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { track: trackParam, taskId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -833,7 +833,7 @@ export function CodingTaskScreen() {
       {/* Rendered only when it has something to say: an empty row would still
           take a gap in the page's column and push the brief down for nothing. */}
       {completedTask !== taskId && (stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
-        {stage && <span>{stage.challenge.title[lang]} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
+        {stage && <span>{stage.challenge.title} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {/* A list that did not load offers to load it again; a star that did

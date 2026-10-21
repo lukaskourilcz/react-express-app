@@ -19,9 +19,9 @@ vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefi
 
 const task: PlayableCodingTask = {
   id: 'js-test-lesson-reveal', track: 'javascript', level: 1, tier: 2, difficulty: 'easy',
-  focus: ['functions'], title: { en: 'Test task', cs: '' },
-  prompt: { en: 'Return one.', cs: '' },
-  starter: 'const one = () => 0;\n', hints: { en: ['Use a function.'], cs: [] },
+  focus: ['functions'], title: 'Test task',
+  prompt: 'Return one.',
+  starter: 'const one = () => 0;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
 };
 

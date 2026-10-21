@@ -8,21 +8,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 
-const loc = (en: string) => ({ en, cs: '' });
 const A = 'dsa-v1-d01-linear-accumulator';
 const B = 'dsa-v1-d01-halving-counter';
 const C = 'dsa-v1-d01-checks';
 const ENROLLMENT = 'ENROLL0000000000aaaa';
 const summary = (id: string, title: string, kind = 'code') => ({
-  id, kind, purpose: 'exercise', verification: 'machine_verified', title: loc(title), summary: loc(`${title} summary`),
+  id, kind, purpose: 'exercise', verification: 'machine_verified', title: title, summary: `${title} summary`,
   competencies: [], estimatedMinutes: 5, ...(kind === 'code' ? { language: 'javascript' } : {}),
 });
 const manifest = {
-  id: 'dsa-foundations', kind: 'skill_path', version: 1, title: loc('DSA'), summary: loc(''), outcomes: { en: [], cs: [] }, nonGoals: { en: [], cs: [] },
-  entryRequirement: loc(''), competencies: [], bridges: [], rubric: { version: 1, dimensions: [] }, diagnosticActivityId: null,
-  estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01', completionLabel: loc('done'),
+  id: 'dsa-foundations', kind: 'skill_path', version: 1, title: 'DSA', summary: '', outcomes: [], nonGoals: [],
+  entryRequirement: '', competencies: [], bridges: [], rubric: { version: 1, dimensions: [] }, diagnosticActivityId: null,
+  estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01', completionLabel: 'done',
   modules: [{
-    id: 'dsa-v1-d01', title: loc('D01'), outcomes: { en: [], cs: [] }, competencies: [], dependsOn: [], lessons: [],
+    id: 'dsa-v1-d01', title: 'D01', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [summary(C, 'The check', 'check'), summary(A, 'Activity A'), summary(B, 'Activity B')],
     requires: [{ activityId: C, state: 'verified_pass' }, { activityId: A, state: 'verified_pass' }, { activityId: B, state: 'verified_pass' }],
     estimatedMinutes: 10,
@@ -89,9 +88,9 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         previous: null,
       };
       if (activityId === C) {
-        return { ...base, check: { questions: [{ id: 'q1', prompt: loc('Which one?'), options: [loc('Left'), loc('Right')], competencies: [] }], passThreshold: 0.8 } };
+        return { ...base, check: { questions: [{ id: 'q1', prompt: 'Which one?', options: ['Left', 'Right'], competencies: [] }], passThreshold: 0.8 } };
       }
-      return { ...base, code: { language: 'javascript', prompt: loc(`prompt ${activityId}`), starter: `STARTER_FOR_${activityId}`, hints: { en: [], cs: [] }, tests: [] } };
+      return { ...base, code: { language: 'javascript', prompt: `prompt ${activityId}`, starter: `STARTER_FOR_${activityId}`, hints: [], tests: [] } };
     }),
     submitActivity: vi.fn(async (input: Record<string, unknown>) => {
       calls.submit.push(input);
@@ -100,7 +99,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
       const check = Array.isArray(input.answers);
       return {
         activityId: check ? C : A, state: calls.codePassed ? 'verified_pass' : 'needs_revision', verification: 'machine_verified', score: 0.5, criteria: [],
-        questions: check ? [{ questionId: 'q1', correct: false, correctIndex: 1, explanation: loc('Because of the right side.') }] : null,
+        questions: check ? [{ questionId: 'q1', correct: false, correctIndex: 1, explanation: 'Because of the right side.' }] : null,
         code: check ? null : { outcome: calls.codePassed ? 'passed' : 'failed', results: [], hidden: null, check: null, logs: [], codeError: null },
         feedback: [], module: null, guidedComplete: false, nextActivityId: calls.next, replayed: false, xpAwarded: calls.codePassed ? 25 : 0,
       };

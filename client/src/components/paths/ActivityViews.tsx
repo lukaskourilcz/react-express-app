@@ -11,7 +11,6 @@ import { Editor } from '../../coding/Editor';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
 import { LessonView, RichText } from './LessonBody';
-import { useLoc, useLocList } from './localized';
 import type {
   CheckQuestionPayload,
   CheckQuestionVerdict,
@@ -22,7 +21,7 @@ import type {
   StartActivityResponse,
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
-import type { EvidenceState, Localized } from '../../../../shared/learning-paths';
+import type { EvidenceState } from '../../../../shared/learning-paths';
 import { Button } from '@astryxdesign/core/Button';
 
 /* ── shared bits ───────────────────────────────────────────────────────── */
@@ -50,7 +49,6 @@ export function StateBadge({ state }: { state: EvidenceState }) {
 
 export function CriteriaList({ criteria }: { criteria: CriterionResult[] }) {
   const t = useT();
-  const loc = useLoc();
   if (criteria.length === 0) return null;
   return (
     <ul className="lp-criteria">
@@ -61,14 +59,14 @@ export function CriteriaList({ criteria }: { criteria: CriterionResult[] }) {
           </span>
           <div className="lp-criterion__body">
             <span className="lp-criterion__label">
-              {loc(criterion.label)}
+              {criterion.label}
               <span className="ss-sr-only">
                 {' '}
                 — {criterion.passed ? t('paths.criterion.passed') : t('paths.criterion.failed')}
               </span>
             </span>
             {criterion.critical && <span className="lp-criterion__critical">{t('paths.criterion.critical')}</span>}
-            {!criterion.passed && criterion.detail && <p className="lp-criterion__detail">{loc(criterion.detail)}</p>}
+            {!criterion.passed && criterion.detail && <p className="lp-criterion__detail">{criterion.detail}</p>}
           </div>
         </li>
       ))}
@@ -76,8 +74,7 @@ export function CriteriaList({ criteria }: { criteria: CriterionResult[] }) {
   );
 }
 
-export function Feedback({ feedback }: { feedback: Localized[] }) {
-  const loc = useLoc();
+export function Feedback({ feedback }: { feedback: string[] }) {
   if (feedback.length === 0) return null;
   return (
     <div className="lp-notice lp-notice--info">
@@ -87,7 +84,7 @@ export function Feedback({ feedback }: { feedback: Localized[] }) {
       <div>
         {feedback.map((entry, index) => (
           <p key={index} style={{ margin: index === 0 ? 0 : '8px 0 0' }}>
-            {loc(entry)}
+            {entry}
           </p>
         ))}
       </div>
@@ -150,7 +147,6 @@ export function CheckActivity({
   busy: boolean;
 }) {
   const t = useT();
-  const loc = useLoc();
   const [answers, setAnswers] = useState<(number | null)[]>(() => questions.map(() => null));
   const groupName = useId();
 
@@ -184,7 +180,7 @@ export function CheckActivity({
         return (
           <fieldset key={question.id} className="lp-question" style={{ border: 0, margin: 0, padding: 0 }}>
             <legend className="lp-question__prompt">
-              {t('paths.check.questionNumber', { current: index + 1, total: questions.length })} — {loc(question.prompt)}
+              {t('paths.check.questionNumber', { current: index + 1, total: questions.length })} — {question.prompt}
             </legend>
             {question.context && (
               <pre className="lp-question__context">
@@ -226,7 +222,7 @@ export function CheckActivity({
                           {isCorrect ? '✓ ' : '✗ '}
                         </span>
                       ) : null}
-                      {loc(option)}
+                      {option}
                       {graded && isCorrect && <span className="ss-sr-only"> — {t('paths.check.correctAnswer')}</span>}
                       {graded && isWrongChoice && <span className="ss-sr-only"> — {t('paths.check.yourAnswer')}</span>}
                     </span>
@@ -234,7 +230,7 @@ export function CheckActivity({
                 );
               })}
             </div>
-            {verdict?.explanation && <p className="lp-explanation">{loc(verdict.explanation)}</p>}
+            {verdict?.explanation && <p className="lp-explanation">{verdict.explanation}</p>}
             {verdict && !verdict.explanation && !verdict.correct && (
               <p className="lp-explanation">{t('paths.check.answerWithheld')}</p>
             )}
@@ -285,15 +281,13 @@ export function CodeActivity({
   submitBlocked?: boolean;
 }) {
   const t = useT();
-  const loc = useLoc();
-  const locList = useLocList();
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
   const timer = useRef<number | null>(null);
 
-  const hints = locList(code.hints);
-  const approach = locList(code.approach);
-  const contract = locList(code.contract);
+  const hints = code.hints;
+  const approach = code.approach ?? [];
+  const contract = code.contract ?? [];
   // The ladder is hints, then the approach steps, then the skeleton. The
   // reference implementation is not part of it: a path exercise has no reveal.
   const ladder = useMemo(
@@ -319,7 +313,7 @@ export function CodeActivity({
     <div className="lp-split">
       <div className="lp-split__brief">
         <div className="lp-brief lp-card">
-          <RichText text={loc(code.prompt)} />
+          <RichText text={code.prompt} />
           {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
           {contract.length > 0 && (
             <section className="lp-section">
@@ -391,7 +385,7 @@ export function CodeActivity({
                       {outcome ? (outcome.pass ? '✓' : '✗') : '·'}
                     </span>
                     <code>{test.call}</code>
-                    {test.label && <span>— {loc(test.label)}</span>}
+                    {test.label && <span>— {test.label}</span>}
                     {outcome && (
                       <span className="ss-sr-only">
                         {outcome.pass ? t('paths.code.testPassed') : t('paths.code.testFailed')}
@@ -441,7 +435,7 @@ export function ArtifactActivity({
   busy,
 }: {
   artifact: PathArtifactPayload;
-  rubric: { id: string; title: Localized; levels: Record<string, Localized> }[];
+  rubric: { id: string; title: string; levels: Record<string, string> }[];
   draft: PathDraft | null;
   result: SubmitActivityResponse | null;
   onSubmit: (values: Record<string, string | string[]>) => void;
@@ -450,7 +444,6 @@ export function ArtifactActivity({
   busy: boolean;
 }) {
   const t = useT();
-  const loc = useLoc();
   const initial = useMemo(() => {
     const saved = (draft?.content.artifact ?? {}) as Record<string, string | string[]>;
     const out: Record<string, string> = {};
@@ -492,7 +485,7 @@ export function ArtifactActivity({
     <div className="lp-split">
       <div className="lp-split__brief">
         <div className="lp-brief lp-card">
-          <RichText text={loc(artifact.brief)} />
+          <RichText text={artifact.brief} />
           <div className="lp-notice lp-notice--info">
             <span className="lp-notice__glyph" aria-hidden="true">
               ✎
@@ -505,12 +498,12 @@ export function ArtifactActivity({
               <div className="lp-rubric">
                 {rubric.map((dimension) => (
                   <div key={dimension.id} className="lp-rubric__dimension">
-                    <strong>{loc(dimension.title)}</strong>
+                    <strong>{dimension.title}</strong>
                     <dl className="lp-rubric__levels">
                       {(['missing', 'partial', 'adequate', 'strong'] as const).map((level) => (
                         <div key={level} style={{ display: 'contents' }}>
                           <dt>{t(`paths.rubric.${level}` as never)}</dt>
-                          <dd>{loc(dimension.levels[level])}</dd>
+                          <dd>{dimension.levels[level]}</dd>
                         </div>
                       ))}
                     </dl>
@@ -538,11 +531,11 @@ export function ArtifactActivity({
             return (
               <div key={field.id} className="lp-field">
                 <label className="lp-field__label" htmlFor={`lp-field-${field.id}`}>
-                  {loc(field.label)}
+                  {field.label}
                   {!field.required && <span className="lp-criterion__critical">{t('paths.artifact.optional')}</span>}
                 </label>
                 <p className="lp-field__help" id={`lp-help-${field.id}`}>
-                  {loc(field.help)}
+                  {field.help}
                 </p>
                 {field.kind === 'long-text' || field.kind === 'list' ? (
                   <textarea
@@ -566,7 +559,7 @@ export function ArtifactActivity({
                 <span className={`lp-field__count${over ? ' lp-field__count--over' : ''}`}>
                   {t('paths.artifact.count', { used: value.length, max: field.maxLength })}
                 </span>
-                {failed?.detail && <p className="lp-field__help">{loc(failed.detail)}</p>}
+                {failed?.detail && <p className="lp-field__help">{failed.detail}</p>}
               </div>
             );
           })}

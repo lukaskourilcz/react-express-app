@@ -11,9 +11,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { runCodeTests } from '../../coding/runner/run-tests';
 import { TermsBar } from '../ui/Terms';
 import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
-import { useLanguage, useT } from '../../i18n/LanguageContext';
+import { useT } from '../../i18n/LanguageContext';
 import type { LessonBody as LessonBodyDto, LessonSection, TraceSpec } from '../../../../shared/learning-path-api';
-import type { Localized, LocalizedList } from '../../../../shared/learning-paths';
 import { Button } from '@astryxdesign/core/Button';
 
 /** Inline `code` spans, matching how the coding workbench renders a prompt. */
@@ -34,19 +33,6 @@ export function RichText({ text }: { text: string }) {
 
 const STEP_MS = 1400;
 
-function useLocalized() {
-  const { lang } = useLanguage();
-  return useCallback((value: Localized | undefined) => (value ? (lang === 'cs' ? value.cs || value.en : value.en) : ''), [lang]);
-}
-
-function useLocalizedList() {
-  const { lang } = useLanguage();
-  return useCallback(
-    (value: LocalizedList | undefined): string[] => (value ? (lang === 'cs' && value.cs.length ? value.cs : value.en) : []),
-    [lang],
-  );
-}
-
 /**
  * A deterministic trace the learner steps through. Play/pause/step/reset, plus
  * the same sequence written out underneath so the whole thing is readable with
@@ -54,15 +40,13 @@ function useLocalizedList() {
  */
 export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: string }) {
   const t = useT();
-  const loc = useLocalized();
-  const locList = useLocalizedList();
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
   const labelId = useId();
 
   const frames = trace.frames;
-  const legend = locList(trace.legend);
+  const legend = trace.legend ?? [];
   const reduceMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     [],
@@ -106,12 +90,12 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
       {/* The live region carries the step description, so stepping through with
           the keyboard announces what changed rather than leaving it to sight. */}
       <p className="lp-trace__note" aria-live="polite">
-        {loc(frame.note)}
+        {frame.note}
         {frame.counter ? (
           <>
             {' '}
             <span className="lp-trace__counter">
-              {loc(frame.counter.label)}: {frame.counter.value}
+              {frame.counter.label}: {frame.counter.value}
             </span>
           </>
         ) : null}
@@ -137,8 +121,8 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
         <ol className="lp-trace__steps">
           {frames.map((one, frameIndex) => (
             <li key={frameIndex}>
-              {loc(one.note)}
-              {one.counter ? ` (${loc(one.counter.label)}: ${one.counter.value})` : ''}
+              {one.note}
+              {one.counter ? ` (${one.counter.label}: ${one.counter.value})` : ''}
             </li>
           ))}
         </ol>
@@ -149,12 +133,10 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
 
 function Section({ section }: { section: LessonSection }) {
   const t = useT();
-  const loc = useLocalized();
-  const locList = useLocalizedList();
 
   switch (section.kind) {
     case 'prose':
-      return <RichText text={loc(section.body)} />;
+      return <RichText text={section.body} />;
     case 'callout':
       return (
         <div className={`lp-callout${section.tone === 'warning' ? ' lp-callout--warning' : ''}`}>
@@ -162,7 +144,7 @@ function Section({ section }: { section: LessonSection }) {
             {section.tone === 'warning' ? t('paths.callout.warning') : t('paths.callout.note')}
           </span>
           <div>
-            <RichText text={loc(section.body)} />
+            <RichText text={section.body} />
           </div>
         </div>
       );
@@ -172,16 +154,16 @@ function Section({ section }: { section: LessonSection }) {
           <pre>
             <code>{section.code}</code>
           </pre>
-          <figcaption>{loc(section.caption)}</figcaption>
+          <figcaption>{section.caption}</figcaption>
         </figure>
       );
     case 'table': {
-      const headers = locList(section.headers);
+      const headers = section.headers;
       return (
         <figure className="lp-figure">
           <div className="lp-table-wrap">
             <table className="lp-table">
-              <caption className="ss-sr-only">{loc(section.caption)}</caption>
+              <caption className="ss-sr-only">{section.caption}</caption>
               <thead>
                 <tr>
                   {headers.map((header, index) => (
@@ -193,7 +175,7 @@ function Section({ section }: { section: LessonSection }) {
               </thead>
               <tbody>
                 {section.rows.map((row, rowIndex) => {
-                  const cells = locList(row);
+                  const cells = row;
                   return (
                     <tr key={rowIndex}>
                       {cells.map((cell, cellIndex) =>
@@ -211,12 +193,12 @@ function Section({ section }: { section: LessonSection }) {
               </tbody>
             </table>
           </div>
-          <figcaption>{loc(section.caption)}</figcaption>
+          <figcaption>{section.caption}</figcaption>
         </figure>
       );
     }
     case 'trace':
-      return <TracePlayer trace={section.trace} caption={loc(section.caption)} />;
+      return <TracePlayer trace={section.trace} caption={section.caption} />;
     case 'example':
       return <InteractiveExample section={section} />;
   }
@@ -236,7 +218,6 @@ function Section({ section }: { section: LessonSection }) {
  */
 function InteractiveExample({ section }: { section: Extract<LessonSection, { kind: 'example' }> }) {
   const t = useT();
-  const loc = useLocalized();
   const narrow = useIsNarrowForEditor();
   const [code, setCode] = useState(section.code);
   const [output, setOutput] = useState<string[] | null>(null);
@@ -259,12 +240,12 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
 
   return (
     <figure className="lp-figure lp-example">
-      <figcaption id={labelId}>{loc(section.caption)}</figcaption>
+      <figcaption id={labelId}>{section.caption}</figcaption>
       {narrow ? (
         <pre className="lp-code"><code>{code}</code></pre>
       ) : (
         <>
-          <label className="ss-sr-only" htmlFor={`${labelId}-editor`}>{loc(section.caption)}</label>
+          <label className="ss-sr-only" htmlFor={`${labelId}-editor`}>{section.caption}</label>
           <textarea
             id={`${labelId}-editor`}
             className="lp-example__editor"
@@ -285,17 +266,16 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
           {output.length > 0 ? output.join('\n') : t('paths.example.noOutput')}
         </pre>
       )}
-      <p className="lp-example__note">{loc(section.note)}</p>
+      <p className="lp-example__note">{section.note}</p>
     </figure>
   );
 }
 
 export function LessonView({ lesson }: { lesson: LessonBodyDto }) {
   const t = useT();
-  const loc = useLocalized();
   return (
     <article className="lp-lesson">
-      <h2>{loc(lesson.title)}</h2>
+      <h2>{lesson.title}</h2>
       {lesson.sections.map((section, index) => (
         <Section key={index} section={section} />
       ))}
@@ -304,9 +284,9 @@ export function LessonView({ lesson }: { lesson: LessonBodyDto }) {
       <TermsBar
         texts={lesson.sections.flatMap((section) =>
           section.kind === 'prose' || section.kind === 'callout'
-            ? [loc(section.body)]
+            ? [section.body]
             : section.kind === 'code' || section.kind === 'example'
-              ? [loc(section.caption)]
+              ? [section.caption]
               : [])}
       />
       {lesson.sources.length > 0 && (

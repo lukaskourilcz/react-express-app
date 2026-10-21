@@ -9,12 +9,10 @@ import {
   activityIdPrefix,
   isPathContentId,
   type EvidenceState,
-  type Localized,
-  type LocalizedList,
 } from '../../shared/learning-paths';
 import { isCodingTaskId } from '../../shared/coding-catalog';
 import { isRoadmapTopic } from '../roadmap';
-import { localizedPathFields, localizedPathLists, type MergedActivity, type MergedPath } from './types';
+import type { MergedActivity, MergedPath } from './types';
 
 export interface ValidationIssue {
   level: 'error' | 'warning';
@@ -29,14 +27,103 @@ const MAX_REVIEW_AGE_DAYS = 400;
 const error = (code: string, at: string, message: string): ValidationIssue => ({ level: 'error', code, at, message });
 const warning = (code: string, at: string, message: string): ValidationIssue => ({ level: 'warning', code, at, message });
 
-const bothLocales = (value: Localized): boolean =>
-  typeof value.en === 'string' && value.en.trim().length > 0 &&
-  typeof value.cs === 'string' && value.cs.trim().length > 0;
+const hasCopy = (value: string): boolean => typeof value === 'string' && value.trim().length > 0;
 
-const listParity = (value: LocalizedList): boolean =>
-  value.en.length === value.cs.length &&
-  value.en.every((entry) => entry.trim().length > 0) &&
-  value.cs.every((entry) => entry.trim().length > 0);
+/** Every learner-visible string of a path, for the empty-copy check. */
+function pathCopyFields(path: MergedPath): { path: string; value: string }[] {
+  const out: { path: string; value: string }[] = [
+    { path: 'title', value: path.title },
+    { path: 'summary', value: path.summary },
+    { path: 'entryRequirement', value: path.entryRequirement },
+    { path: 'completionLabel', value: path.completionLabel },
+  ];
+  for (const competency of path.competencies) {
+    out.push({ path: `competency.${competency.id}.title`, value: competency.title });
+    out.push({ path: `competency.${competency.id}.summary`, value: competency.summary });
+  }
+  for (const dimension of path.rubric.dimensions) {
+    out.push({ path: `rubric.${dimension.id}.title`, value: dimension.title });
+    for (const level of ['missing', 'partial', 'adequate', 'strong'] as const) {
+      out.push({ path: `rubric.${dimension.id}.${level}`, value: dimension.levels[level] });
+    }
+  }
+  for (const bridge of path.bridges) {
+    out.push({ path: `bridge.${bridge.id}.title`, value: bridge.title });
+    out.push({ path: `bridge.${bridge.id}.summary`, value: bridge.summary });
+    bridge.references.forEach((reference, index) =>
+      out.push({ path: `bridge.${bridge.id}.reference[${index}]`, value: reference.label }));
+  }
+  for (const module of path.modules) {
+    out.push({ path: `${module.id}.title`, value: module.title });
+    for (const lesson of module.lessons) {
+      out.push({ path: `${lesson.id}.title`, value: lesson.title });
+      out.push({ path: `${lesson.id}.summary`, value: lesson.summary });
+      lesson.sections.forEach((section, index) => {
+        const at = `${lesson.id}.section[${index}]`;
+        if (section.kind === 'prose' || section.kind === 'callout') out.push({ path: at, value: section.body });
+        else if (section.kind === 'code') out.push({ path: `${at}.caption`, value: section.caption });
+        else if (section.kind === 'table') {
+          out.push({ path: `${at}.caption`, value: section.caption });
+        } else if (section.kind === 'trace') {
+          out.push({ path: `${at}.caption`, value: section.caption });
+          section.trace.frames.forEach((frame, frameIndex) =>
+            out.push({ path: `${at}.frame[${frameIndex}]`, value: frame.note }));
+        }
+      });
+    }
+    for (const activity of module.activities) {
+      out.push({ path: `${activity.id}.title`, value: activity.title });
+      out.push({ path: `${activity.id}.summary`, value: activity.summary });
+      activity.questions?.forEach((question) => {
+        out.push({ path: `${question.id}.prompt`, value: question.prompt });
+        out.push({ path: `${question.id}.explanation`, value: question.explanation });
+        question.options.forEach((option, index) => out.push({ path: `${question.id}.option[${index}]`, value: option }));
+      });
+      if (activity.code) {
+        out.push({ path: `${activity.id}.code.prompt`, value: activity.code.prompt });
+        activity.code.criteria.forEach((criterion) =>
+          out.push({ path: `${activity.id}.criterion.${criterion.id}`, value: criterion.label }));
+        activity.code.tests.forEach((test, index) => {
+          if (test.label) out.push({ path: `${activity.id}.test[${index}].label`, value: test.label });
+        });
+      }
+      if (activity.artifact) {
+        out.push({ path: `${activity.id}.artifact.brief`, value: activity.artifact.brief });
+        activity.artifact.fields.forEach((field) => {
+          out.push({ path: `${activity.id}.field.${field.id}.label`, value: field.label });
+          out.push({ path: `${activity.id}.field.${field.id}.help`, value: field.help });
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** Every learner-visible list of a path, for the empty-copy check. */
+function pathCopyLists(path: MergedPath): { path: string; value: string[] }[] {
+  const out: { path: string; value: string[] }[] = [
+    { path: 'outcomes', value: path.outcomes },
+    { path: 'nonGoals', value: path.nonGoals },
+  ];
+  for (const module of path.modules) {
+    out.push({ path: `${module.id}.outcomes`, value: module.outcomes });
+    for (const activity of module.activities) {
+      if (!activity.code) continue;
+      out.push({ path: `${activity.id}.hints`, value: activity.code.hints });
+      if (activity.code.approach) out.push({ path: `${activity.id}.approach`, value: activity.code.approach });
+      if (activity.code.contract) out.push({ path: `${activity.id}.contract`, value: activity.code.contract });
+    }
+    for (const lesson of module.lessons) {
+      lesson.sections.forEach((section, index) => {
+        if (section.kind !== 'table') return;
+        out.push({ path: `${lesson.id}.section[${index}].headers`, value: section.headers });
+        section.rows.forEach((row, rowIndex) =>
+          out.push({ path: `${lesson.id}.section[${index}].row[${rowIndex}]`, value: row }));
+      });
+    }
+  }
+  return out;
+}
 
 /** Depth-first cycle detection over the module dependency graph. */
 function findCycle(nodes: { id: string; dependsOn: string[] }[]): string[] | null {
@@ -122,7 +209,7 @@ function validateActivity(
         if (question.correct < 0 || question.correct >= question.options.length) {
           issues.push(error('bad_answer', qAt, 'correct must index an option'));
         }
-        const texts = question.options.map((option) => option.en.trim().toLowerCase());
+        const texts = question.options.map((option) => option.trim().toLowerCase());
         if (new Set(texts).size !== texts.length) issues.push(error('duplicate_option', qAt, 'options must be distinct'));
         for (const competency of question.competencies) {
           if (!competencyIds.has(competency)) issues.push(error('unknown_competency', qAt, `unknown competency ${competency}`));
@@ -157,7 +244,7 @@ function validateActivity(
         break;
       }
       if (code.starter.trim().length === 0) issues.push(error('missing_starter', at, 'a code activity needs a starter'));
-      if (code.hints.en.length === 0) issues.push(error('missing_hints', at, 'a code activity needs at least one hint'));
+      if (code.hints.length === 0) issues.push(error('missing_hints', at, 'a code activity needs at least one hint'));
       if (code.language === 'react') {
         if (!code.suite) issues.push(error('missing_suite', at, 'a React activity needs a Testing Library suite'));
       } else if (code.tests.length === 0) {
@@ -215,8 +302,8 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
   if (path.version < 1) issues.push(error('bad_version', at, 'curriculum version starts at 1'));
   if (!ISO_DATE.test(path.reviewedOn)) issues.push(error('bad_review_date', at, 'reviewedOn must be an ISO date'));
   if (path.modules.length === 0) issues.push(error('empty_path', at, 'a path needs at least one module'));
-  if (path.outcomes.en.length === 0) issues.push(error('no_outcomes', at, 'a path must state what the learner can do afterwards'));
-  if (path.nonGoals.en.length === 0) {
+  if (path.outcomes.length === 0) issues.push(error('no_outcomes', at, 'a path must state what the learner can do afterwards'));
+  if (path.nonGoals.length === 0) {
     issues.push(error('no_non_goals', at, 'a path must state what it deliberately excludes'));
   }
   if (path.kind === 'role_specialization' && path.id !== 'fde') {
@@ -244,7 +331,7 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
     if (moduleIds.has(module.id)) issues.push(error('duplicate_id', mAt, 'duplicate module id'));
     moduleIds.add(module.id);
     if (!isPathContentId(module.id)) issues.push(error('bad_id', mAt, 'module id must be a lowercase dashed slug'));
-    if (module.outcomes.en.length === 0) issues.push(error('no_outcomes', mAt, 'a module must state its outcomes'));
+    if (module.outcomes.length === 0) issues.push(error('no_outcomes', mAt, 'a module must state its outcomes'));
 
     const lessonIds = new Set<string>();
     for (const lesson of module.lessons) {
@@ -361,15 +448,11 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
     }));
   if (!reachable) issues.push(error('unreachable_completion', at, 'the path has no valid route to completion'));
 
-  for (const field of localizedPathFields(path)) {
-    if (!bothLocales(field.value)) {
-      issues.push(error('missing_translation', `${at}/${field.path}`, 'both English and Czech copy are required'));
-    }
+  for (const field of pathCopyFields(path)) {
+    if (!hasCopy(field.value)) issues.push(error('missing_copy', `${at}/${field.path}`, 'learner-visible copy must not be empty'));
   }
-  for (const list of localizedPathLists(path)) {
-    if (!listParity(list.value)) {
-      issues.push(error('translation_parity', `${at}/${list.path}`, 'English and Czech lists must align entry for entry'));
-    }
+  for (const list of pathCopyLists(path)) {
+    if (!list.value.every(hasCopy)) issues.push(error('missing_copy', `${at}/${list.path}`, 'every entry of a learner-visible list must have copy'));
   }
 
   const reviewed = Date.parse(`${path.reviewedOn}T00:00:00Z`);

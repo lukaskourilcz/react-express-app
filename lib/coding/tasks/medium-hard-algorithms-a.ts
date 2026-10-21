@@ -19,8 +19,7 @@
 // The ids start `alg-mh-`: `isCodingTaskId` only accepts the `alg-` prefix for
 // this track. Solutions live in `../solutions/medium-hard-algorithms-a.ts`, and
 // `MEDIUM_HARD_BAND` in `../catalog.ts` lists this file, which keeps these
-// challenges out of every Learn level's quota. English only: there is no Czech
-// overlay.
+// challenges out of every Learn level's quota.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

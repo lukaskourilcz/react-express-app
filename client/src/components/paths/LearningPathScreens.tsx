@@ -37,7 +37,6 @@ import {
   StateBadge,
   type DraftStatus,
 } from './ActivityViews';
-import { useLoc, useLocList } from './localized';
 import {
   activityHref,
   changeEnrollment,
@@ -64,7 +63,7 @@ import type {
   StartActivityResponse,
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
-import type { ActivitySummary, EvidenceState, LearningPathId, Localized, ModuleSummary } from '../../../../shared/learning-paths';
+import type { ActivitySummary, EvidenceState, LearningPathId, ModuleSummary } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 import { Button } from '@astryxdesign/core/Button';
 
@@ -106,14 +105,13 @@ function ActivityRow({
   interactive: boolean;
 }) {
   const t = useT();
-  const loc = useLoc();
   const body = (
     <>
       <span className="lp-activity__kind">{t(`paths.kind.${activity.kind}` as never)}</span>
-      <span className="lp-activity__title">{loc(activity.title)}</span>
+      <span className="lp-activity__title">{activity.title}</span>
       <span className="lp-activity__minutes">{t('paths.minutes', { minutes: activity.estimatedMinutes })}</span>
       <StateBadge state={state} />
-      <p className="lp-activity__summary">{loc(activity.summary)}</p>
+      <p className="lp-activity__summary">{activity.summary}</p>
     </>
   );
   if (!interactive) return <li className="lp-activity">{body}</li>;
@@ -142,8 +140,6 @@ function ModuleCard({
   interactive: boolean;
 }) {
   const t = useT();
-  const loc = useLoc();
-  const locList = useLocList();
   const className = [
     'lp-module',
     completed ? 'lp-module--done' : '',
@@ -158,7 +154,7 @@ function ModuleCard({
           <span className="lp-module__index">
             {module.optional ? t('paths.module.optional') : t('paths.module.index', { index })}
           </span>
-          {interactive ? <Link to={moduleHref(pathId, module.id)}>{loc(module.title)}</Link> : loc(module.title)}
+          {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
         <span className="lp-module__meta">
           {t('paths.minutes', { minutes: module.estimatedMinutes })}
@@ -166,7 +162,7 @@ function ModuleCard({
         </span>
       </div>
       <ul className="lp-module__outcomes">
-        {locList(module.outcomes).map((outcome, position) => (
+        {module.outcomes.map((outcome, position) => (
           <li key={position}>{outcome}</li>
         ))}
       </ul>
@@ -190,8 +186,6 @@ function ModuleCard({
 
 export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const t = useT();
-  const loc = useLoc();
-  const locList = useLocList();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
@@ -266,8 +260,8 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
           <p className="lp-kicker">
             {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
           </p>
-          <h1>{loc(manifest.title)}</h1>
-          <p className="lp-lead">{loc(manifest.summary)}</p>
+          <h1>{manifest.title}</h1>
+          <p className="lp-lead">{manifest.summary}</p>
           <ul className="lp-inventory">
             <li>
               <strong>{inventory.modules}</strong> {t('paths.inventory.modules')}
@@ -345,25 +339,25 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       <section className="lp-card lp-section">
         <h2>{t('paths.outcomes')}</h2>
         <ul className="lp-list">
-          {locList(manifest.outcomes).map((outcome, index) => (
+          {manifest.outcomes.map((outcome, index) => (
             <li key={index}>{outcome}</li>
           ))}
         </ul>
         <h2>{t('paths.nonGoals')}</h2>
         <ul className="lp-list">
-          {locList(manifest.nonGoals).map((entryText, index) => (
+          {manifest.nonGoals.map((entryText, index) => (
             <li key={index}>{entryText}</li>
           ))}
         </ul>
         <h2>{t('paths.entryRequirement')}</h2>
-        <p className="lp-lead">{loc(manifest.entryRequirement)}</p>
+        <p className="lp-lead">{manifest.entryRequirement}</p>
       </section>
 
       {progress.data && (
         <section className="lp-card lp-completion">
           <h2>{t('paths.progressTitle')}</h2>
           <div className="lp-completion__line">
-            <span className="lp-completion__label">{loc(manifest.completionLabel)}</span>
+            <span className="lp-completion__label">{manifest.completionLabel}</span>
             <StateBadge state={progress.data.guidedComplete ? 'verified_pass' : 'in_progress'} />
           </div>
           {inventory.artifacts > 0 && (
@@ -396,7 +390,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               if (!competency) return null;
               return (
                 <li key={result.competencyId}>
-                  <strong>{loc(competency.title)}</strong>{' — '}
+                  <strong>{competency.title}</strong>{' — '}
                   {pathCopy[`paths.competency.${result.state}`]}
                   {result.score !== null && result.assessedItems > 0 && (
                     <> · {pathCopy['paths.diagnosticItems'].replace('{percent}', String(Math.round(result.score * 100))).replace('{count}', String(result.assessedItems))}</>
@@ -423,21 +417,21 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
             if (!bridge) return null;
             return (
               <div key={bridge.id} className="lp-section">
-                <h3>{loc(bridge.title)}</h3>
-                <p className="lp-lead">{loc(bridge.summary)}</p>
+                <h3>{bridge.title}</h3>
+                <p className="lp-lead">{bridge.summary}</p>
                 <ul className="lp-list">
                   {bridge.references.map((reference, index) => (
                     <li key={index}>
                       {reference.kind === 'doc' ? (
                         <a href={reference.ref} target="_blank" rel="noreferrer noopener">
-                          {loc(reference.label)}
+                          {reference.label}
                         </a>
                       ) : reference.kind === 'roadmap-topic' ? (
-                        <Link to={`/learn?topic=${encodeURIComponent(reference.ref)}`}>{loc(reference.label)}</Link>
+                        <Link to={`/learn?topic=${encodeURIComponent(reference.ref)}`}>{reference.label}</Link>
                       ) : reference.kind === 'coding-task' ? (
-                        <Link to={`/coding/javascript/${encodeURIComponent(reference.ref)}`}>{loc(reference.label)}</Link>
+                        <Link to={`/coding/javascript/${encodeURIComponent(reference.ref)}`}>{reference.label}</Link>
                       ) : (
-                        loc(reference.label)
+                        reference.label
                       )}
                     </li>
                   ))}
@@ -517,8 +511,6 @@ const ATTEMPT_USED_UP = new Set(['idempotency_conflict', 'session_expired', 'att
 
 export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const t = useT();
-  const loc = useLoc();
-  const locList = useLocList();
   const { moduleId = '' } = useParams();
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
@@ -787,7 +779,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     .map((dimension) => ({
       id: dimension.id,
       title: dimension.title,
-      levels: dimension.levels as unknown as Record<string, Localized>,
+      levels: dimension.levels as unknown as Record<string, string>,
     }));
 
   return (
@@ -795,11 +787,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       <header className="lp-head">
         <div className="lp-head__text">
           <p className="lp-kicker">
-            <Link to={pathHref(pathId)}>{loc(entry.manifest.title)}</Link>
+            <Link to={pathHref(pathId)}>{entry.manifest.title}</Link>
           </p>
-          <h1>{loc(module.title)}</h1>
+          <h1>{module.title}</h1>
           <ul className="lp-module__outcomes">
-            {locList(module.outcomes).map((outcome, index) => (
+            {module.outcomes.map((outcome, index) => (
               <li key={index}>{outcome}</li>
             ))}
           </ul>
@@ -850,8 +842,8 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         <section className="lp-workspace" aria-live="polite">
           <div className="lp-head">
             <div className="lp-head__text">
-              <h2>{activity ? loc(activity.title) : ''}</h2>
-              {activity && <p className="lp-lead">{loc(activity.summary)}</p>}
+              <h2>{activity ? activity.title : ''}</h2>
+              {activity && <p className="lp-lead">{activity.summary}</p>}
             </div>
             <div className="lp-head__actions">
               <Button variant="ghost" onClick={() => {

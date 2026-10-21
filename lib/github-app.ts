@@ -14,7 +14,7 @@
 import { createSign } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CodingGardenStatus } from '../shared/coding-api';
-import { gardenPathFor, hasLearnLevel, type CodingTask, type Localized } from '../shared/coding-catalog';
+import { gardenPathFor, hasLearnLevel, type CodingTask } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
 import { withTimeout } from './http';
 
@@ -224,8 +224,6 @@ export async function putFile(token: string, repo: string, path: string, input: 
 
 /* ── file and message builders (pure) ─────────────────────────────────── */
 
-const pick = (value: Localized, locale: 'en' | 'cs') => value[locale] || value.en;
-
 const TRACK_NAMES: Record<CodingTask['track'], string> = {
   javascript: 'JavaScript',
   typescript: 'TypeScript',
@@ -236,7 +234,7 @@ const TRACK_NAMES: Record<CodingTask['track'], string> = {
 
 export function commitMessageFor(task: CodingTask): string {
   const track = TRACK_NAMES[task.track];
-  return `Complete "${task.title.en}" (${track}${hasLearnLevel(task) ? `, level ${task.level}` : ''})`;
+  return `Complete "${task.title}" (${track}${hasLearnLevel(task) ? `, level ${task.level}` : ''})`;
 }
 
 const LEVEL_TITLES: Record<string, string[]> = {
@@ -245,20 +243,20 @@ const LEVEL_TITLES: Record<string, string[]> = {
   react: ['JSX Basics', 'Components', 'Props', 'Rendering Lists', 'Conditional Rendering', 'useState: Basics', 'Event Handling', 'Updating State', 'State: Objects & Arrays', 'Derived State', 'useEffect: Basics', 'Effect Dependencies', 'Cleanup Functions', 'useRef', 'Forms & Inputs', 'Lifting State Up', 'useMemo', 'useCallback', 'useReducer', 'useContext', 'Custom Hooks', 'Keys & Reconciliation', 'Performance Patterns', 'Common Pitfalls', 'Mixed Mastery'],
 };
 
-export function buildTaskFile(task: CodingTask, code: string, verdict: { passed: number; total: number }, locale: 'en' | 'cs', date = new Date()): string {
+export function buildTaskFile(task: CodingTask, code: string, verdict: { passed: number; total: number }, date = new Date()): string {
   const day = date.toISOString().slice(0, 10);
   const trackName = TRACK_NAMES[task.track];
   const levelName = task.level > 0 ? LEVEL_TITLES[task.track]?.[task.level - 1] : undefined;
   const link = `https://devshark.app/coding/${task.track}/${task.id}`;
-  const tests = verdict.total > 0 ? `${verdict.passed}/${verdict.total} ${locale === 'cs' ? 'testů' : 'tests'}` : locale === 'cs' ? 'splněno' : 'passed';
+  const tests = verdict.total > 0 ? `${verdict.passed}/${verdict.total} tests` : 'passed';
   if (task.track === 'system-design') {
-    return `# ${pick(task.title, locale)}\n\n${locale === 'cs' ? 'devShark · Návrh systémů' : 'devShark · System design'} · ${task.tier}\n\n${locale === 'cs' ? 'Splněno' : 'Passed'} ${day} · ${tests}\n\n${link}\n`;
+    return `# ${task.title}\n\ndevShark · System design · ${task.tier}\n\nPassed ${day} · ${tests}\n\n${link}\n`;
   }
   const header = [
     '/**',
-    ` * ${pick(task.title, locale)}`,
-    ` * devShark · ${trackName}${levelName ? ` · ${locale === 'cs' ? 'Úroveň' : 'Level'} ${task.level} "${levelName}"` : ''} · ${locale === 'cs' ? 'Stupeň' : 'Tier'} ${task.tier}`,
-    ` * ${locale === 'cs' ? 'Splněno' : 'Passed'} ${day} · ${tests}`,
+    ` * ${task.title}`,
+    ` * devShark · ${trackName}${levelName ? ` · Level ${task.level} "${levelName}"` : ''} · Tier ${task.tier}`,
+    ` * Passed ${day} · ${tests}`,
     ` * ${link}`,
     ' */',
     '',
@@ -266,10 +264,8 @@ export function buildTaskFile(task: CodingTask, code: string, verdict: { passed:
   return `${header}${code.replace(/\s+$/, '')}\n`;
 }
 
-export function readmeFor(login: string, locale: 'en' | 'cs'): string {
-  return locale === 'cs'
-    ? `# devShark zahrádka\n\nKaždá splněná programovací úloha z devSharku přistane tady jako jeden soubor, jedna složka na předmět. Commity zapisuje aplikace devShark garden pod účtem ${login}.\n\nhttps://devshark.app/coding\n`
-    : `# devShark garden\n\nEvery coding task passed on devShark lands here as one file, one folder per subject. Commits are written by the devShark garden app on behalf of ${login}.\n\nhttps://devshark.app/coding\n`;
+export function readmeFor(login: string): string {
+  return `# devShark garden\n\nEvery coding task passed on devShark lands here as one file, one folder per subject. Commits are written by the devShark garden app on behalf of ${login}.\n\nhttps://devshark.app/coding\n`;
 }
 
 /* ── pipeline ─────────────────────────────────────────────────────────── */
@@ -310,7 +306,7 @@ async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row:
     const author = authorFor(connection);
     const readme = await getFile(token, repo, 'README.md', branch);
     if (!readme) {
-      await putFile(token, repo, 'README.md', { content: readmeFor(connection.account_login, 'en'), message: 'Start the devShark garden', branch, author });
+      await putFile(token, repo, 'README.md', { content: readmeFor(connection.account_login), message: 'Start the devShark garden', branch, author });
     }
     const existing = await getFile(token, repo, row.path, branch);
     if (existing && existing.content === row.content) {
@@ -341,7 +337,7 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   if (!connection) return { status: 'not_connected' };
   if (!input.firstPass && !input.codeChanged) return { status: 'skipped' };
   const path = gardenPathFor(input.task);
-  const content = buildTaskFile(input.task, input.code, { passed: input.passedCount, total: input.totalCount }, input.locale);
+  const content = buildTaskFile(input.task, input.code, { passed: input.passedCount, total: input.totalCount });
   const message = commitMessageFor(input.task);
   const inserted = await withTimeout(supabase.from('github_commits').insert({ user_id: input.userId, task_id: input.task.id, path, content, message }).select('id,path,content,message,attempts').single());
   if (inserted.error || !inserted.data) return { status: 'failed' };

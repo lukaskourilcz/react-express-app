@@ -62,7 +62,7 @@ const iso = (ms: number) => new Date(ms).toISOString();
 /** The task as the API sends it: the account draft and when it was saved. */
 function serve(draft: string | null, draftUpdatedAt: string | null) {
   mocks.response = {
-    task: { id: ID, track: 'javascript', starter: '// starter', title: { en: 'Digit sum', cs: '' } },
+    task: { id: ID, track: 'javascript', starter: '// starter', title: 'Digit sum' },
     session: 'session-1', locked: null, progress: null, draft, draftUpdatedAt, signedIn: mocks.signedIn,
   } as unknown as CodingTaskResponse;
 }

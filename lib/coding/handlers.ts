@@ -14,7 +14,7 @@ import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateL
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, type CodingSession } from '../quiz-tokens';
-import { codingTaskForHistory, englishOnly, playable } from './catalog';
+import { codingTaskForHistory, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
 import { createCodingSession, codingAttemptVersion } from './session';
 import { codingTaskReview } from '../curation';
@@ -178,7 +178,6 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
 /** How long a design session's single check is remembered: its whole life
  * (a coding session lasts three hours, lib/quiz-tokens.ts). */
 const DESIGN_SESSION_TTL_S = 3 * 60 * 60;
-const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
 /**
@@ -298,7 +297,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       variantId: 'v1',
       lines: presented.lines,
       competencies: [...authoredPuzzle.competencies],
-      claim: englishOnly(authoredPuzzle.claim),
+      claim: authoredPuzzle.claim,
     };
     key = { puzzle: presented.map };
   }
@@ -306,16 +305,16 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     const prepared = prepareDesign(task, secureShuffle);
     key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
-      play.design = englishOnly({
+      play.design = {
         scenario: prepared.design.scenario,
         brief: prepared.design.brief,
         passMark: prepared.design.passMark,
         steps: prepared.design.steps.map((step) => ({ key: step.key, title: step.title, prompt: step.prompt, options: step.options })),
-      });
+      };
     }
     if (prepared.drill) {
       const { format, scenario, prompt, unit, options, steps } = prepared.drill;
-      play.drill = englishOnly({ format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) });
+      play.drill = { format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) };
     }
   }
   // Reading the current brief renews a stale Learn link under the same parent
@@ -644,10 +643,10 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     check: graded.check,
     logs: graded.logs,
     codeError: graded.codeError,
-    design: englishOnly(graded.design),
-    designReference: englishOnly(graded.designReference),
-    failureHint: englishOnly(graded.failureHint ?? null),
-    puzzle: englishOnly(graded.puzzle ?? null),
+    design: graded.design,
+    designReference: graded.designReference,
+    failureHint: graded.failureHint ?? null,
+    puzzle: graded.puzzle ?? null,
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
@@ -795,7 +794,6 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
         code: code ?? '',
         passedCount: graded.results.filter((r) => r.pass === true).length + (graded.hidden?.passed ?? 0),
         totalCount: graded.results.length + (graded.hidden?.total ?? 0),
-        locale: readLang(body.lang),
         firstPass: recorded.firstPass,
         codeChanged: recorded.codeChanged,
       });
@@ -891,7 +889,7 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
   const reference = task.design?.reference ?? task.drill?.explanation ?? null;
   logEvent({ status: 200, kind: 'reveal', track: task.track, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
-  const out: CodingRevealResponse = { solution, reference: englishOnly(reference), progress };
+  const out: CodingRevealResponse = { solution, reference: reference, progress };
   return res.json(out);
 }
 
@@ -1032,6 +1030,6 @@ export async function handleCodingApproaches(req: VercelRequest, res: VercelResp
   }
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingApproachesResponse = { taskId: id, approaches: englishOnly(approachesFor(id)), solutions: solutionPairFor(id) };
+  const body: CodingApproachesResponse = { taskId: id, approaches: approachesFor(id), solutions: solutionPairFor(id) };
   return res.json(body);
 }

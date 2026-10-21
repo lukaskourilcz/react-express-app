@@ -30,15 +30,15 @@ vi.mock('../src/coding/useReactHarness', () => {
 
 const task: PlayableCodingTask = {
   id: 'js-test-submit', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
-  focus: ['functions'], title: { en: 'Test task', cs: 'Testovací úloha' },
-  prompt: { en: 'Return one.', cs: 'Vrať jedničku.' },
-  starter: 'const one = () => 0;\n', hints: { en: ['Use a function.'], cs: ['Použij funkci.'] },
+  focus: ['functions'], title: 'Test task',
+  prompt: 'Return one.',
+  starter: 'const one = () => 0;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
 };
 const reactTask: PlayableCodingTask = {
   id: 'react-test-submit', track: 'react', level: 1, tier: 1, difficulty: 'easy', focus: ['state'],
-  title: { en: 'Test component', cs: 'Test' }, prompt: { en: 'Render.', cs: 'Vykresli.' },
-  starter: 'export default function App() { return null; }', hints: { en: [], cs: [] },
+  title: 'Test component', prompt: 'Render.',
+  starter: 'export default function App() { return null; }', hints: [],
   verify: 'tests', estimatedMinutes: 5, suite: 'test("renders", () => {});',
 };
 

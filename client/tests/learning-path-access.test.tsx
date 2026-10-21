@@ -10,20 +10,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
 
-const loc = (en: string) => ({ en, cs: '' });
 const lesson = (id: string, title: string) => ({
-  id, kind: 'lesson', purpose: 'exercise', verification: 'self_reviewed', title: loc(title), summary: loc(title), competencies: [], estimatedMinutes: 5,
+  id, kind: 'lesson', purpose: 'exercise', verification: 'self_reviewed', title: title, summary: title, competencies: [], estimatedMinutes: 5,
 });
 const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
-  id, kind: id === 'fde' ? 'role_specialization' : 'skill_path', version: 1, title: loc(id === 'fde' ? 'Forward Deployed Engineer' : 'DSA Foundations'),
-  summary: loc(''), outcomes: { en: [], cs: [] }, nonGoals: { en: [], cs: [] }, entryRequirement: loc(''), competencies: id === 'fde' ? [{ id: 'integration', title: loc('Integration and data') }, { id: 'handoff', title: loc('Adoption and handoff') }, { id: 'python-reading', title: loc('Python comprehension') }] : [], bridges: [],
+  id, kind: id === 'fde' ? 'role_specialization' : 'skill_path', version: 1, title: id === 'fde' ? 'Forward Deployed Engineer' : 'DSA Foundations',
+  summary: '', outcomes: [], nonGoals: [], entryRequirement: '', competencies: id === 'fde' ? [{ id: 'integration', title: 'Integration and data' }, { id: 'handoff', title: 'Adoption and handoff' }, { id: 'python-reading', title: 'Python comprehension' }] : [], bridges: [],
   rubric: { version: 1, dimensions: [] }, diagnosticActivityId: id === 'fde' && state.diagnosticResults.length ? 'fde-diagnostic-check' : null, estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01',
-  completionLabel: loc('done'),
+  completionLabel: 'done',
   modules: [...(id === 'fde' && state.diagnosticResults.length ? [{
-    id: 'fde-diagnostic', title: loc('Optional diagnostic'), optional: true, outcomes: { en: [], cs: [] }, competencies: [], dependsOn: [], lessons: [],
+    id: 'fde-diagnostic', title: 'Optional diagnostic', optional: true, outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [{ ...lesson('fde-diagnostic-check', 'Diagnostic check'), kind: 'check', purpose: 'diagnostic' }], requires: [], estimatedMinutes: 10,
   }] : []), {
-    id: `${id}-m01`, title: loc('Module one'), outcomes: { en: [], cs: [] }, competencies: [], dependsOn: [], lessons: [],
+    id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
   }],
 });

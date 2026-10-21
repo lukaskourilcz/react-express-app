@@ -3,9 +3,6 @@ import { DEFERRED_BATCH_START } from './fixtures/deferred-batch-start';
 import { runtimePolicyForTask } from '../shared/coding-task-runtime';
 // Content contract for the coding catalogue.
 //   npm run test:coding
-// Opt-in:
-//   CODING_REQUIRE_CS=1         check Czech parity (the app ships English only)
-//   CODING_CS_TRACKS=a,b        with the above, check only these tracks
 // Local aids while content is being authored (never set in CI):
 //   CODING_ALLOW_LEVEL_GAPS=1   allow Learn levels without a task
 //   CODING_SKIP_INDEX=1         do not require shared/coding-index.ts to be fresh
@@ -19,7 +16,6 @@ import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { codingBoardContracts } from './coding-board-contract';
-import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
   CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
@@ -60,16 +56,7 @@ import { SKELETON_FILLS } from './fixtures/skeleton-fills';
 import { isFreeCodingTask } from '../shared/tiers';
 import { evaluateInRunRealm } from './run-realm-node';
 
-// The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
-// so Czech copy is retained work rather than a shipped surface and a new task
-// is not obliged to arrive with an overlay. The parity check is kept and can
-// still be run over whatever Czech exists — `CODING_REQUIRE_CS=1` — so the day
-// the language comes back the gaps are one command away from being listed.
-const REQUIRE_CS = process.env.CODING_REQUIRE_CS === '1';
 const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
-// Restrict the Czech parity check to some tracks, e.g.
-// CODING_CS_TRACKS=javascript,typescript.
-const CS_TRACKS = (process.env.CODING_CS_TRACKS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const SKIP_INDEX = process.env.CODING_SKIP_INDEX === '1';
 const ENFORCE_COVERAGE = COVERAGE_ENFORCED || process.env.CODING_COVERAGE_ENFORCED === '1';
 // Prove only the solutions whose task id matches, e.g. CODING_ONLY='^ts-'
@@ -85,16 +72,6 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 // server counts them. The React proofs below check the count against the
 // cases each run registered.
 const hiddenCaseCount = suiteCaseCount;
-
-// Where a browser payload still carries Czech: the path of every `{ en, cs }`
-// pair whose Czech slot is not empty. The app ships English only (C4-6).
-const czechIn = (value: unknown, at = ''): string[] => {
-  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
-  if (!value || typeof value !== 'object') return [];
-  const record = value as Record<string, unknown>;
-  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
-  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
-};
 
 // The hosts a hint ladder may end on: official documentation, never a blog.
 const OFFICIAL_DOCS = new Set(['developer.mozilla.org', 'www.typescriptlang.org', 'react.dev']);
@@ -374,13 +351,13 @@ async function main() {
       const task = CODING_TASKS.find(task => task.id === id);
       assert.ok(task, `${id}: authored task exists`);
       assert.equal(task.track, evolvingTaskTrack(id));
-      assert.ok(task.references?.length && task.references.every(ref=>ref.title.en && (!REQUIRE_CS || ref.title.cs) && ref.url.startsWith('https://')), 'each stage has localized references');
+      assert.ok(task.references?.length && task.references.every(ref=>ref.title && ref.url.startsWith('https://')), 'each stage has localized references');
       // A checkpoint is built from its milestone. Its hint ladder has to be
       // its own, or it advises work the checkpoint has not asked for yet.
       if (id.endsWith('-start')) {
         const milestone = CODING_TASKS.find(one => one.id === id.slice(0, -6))!;
-        if (!task.hints.en[0] || task.hints.en[0] === milestone.hints.en[0]) fail(`${id}: a checkpoint needs a first hint of its own, not its milestone's`);
-        if (milestone.approach && JSON.stringify(task.approach?.en) === JSON.stringify(milestone.approach.en)) fail(`${id}: a checkpoint needs method steps of its own, not its milestone's`);
+        if (!task.hints[0] || task.hints[0] === milestone.hints[0]) fail(`${id}: a checkpoint needs a first hint of its own, not its milestone's`);
+        if (milestone.approach && JSON.stringify(task.approach) === JSON.stringify(milestone.approach)) fail(`${id}: a checkpoint needs method steps of its own, not its milestone's`);
       }
       assert.equal(evolvingResume(project, passed), id, 'resume is the first unfinished stage');
       assert.equal(evolvingUnlocked(id, passed), true, 'earlier verified passes unlock the next stage');
@@ -419,7 +396,7 @@ async function main() {
   const ids = new Set<string>();
   const legacy = new Set<string>();
   for (const task of CODING_TASKS) {
-    const where = `${task.id} (${task.title.en})`;
+    const where = `${task.id} (${task.title})`;
     if (!isCodingTaskId(task.id)) fail(`${where}: id must be a track-prefixed slug`);
     if (ids.has(task.id)) fail(`${where}: duplicate id`);
     ids.add(task.id);
@@ -443,11 +420,11 @@ async function main() {
     if (task.focus.length === 0) fail(`${where}: needs at least one technique tag`);
     for (const tag of task.focus) if (!isCodingTechnique(tag)) fail(`${where}: unknown technique tag ${tag}`);
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
-    if (task.hints.en.length === 0 && task.verify !== 'drill' && task.verify !== 'guided') fail(`${where}: needs a hint`);
+    if (task.hints.length === 0 && task.verify !== 'drill' && task.verify !== 'guided') fail(`${where}: needs a hint`);
     assert.ok(docsFor(task.focus).url.startsWith('https://'), `${where}: docs link`);
     // A code example in the brief, the hints or the method steps gets copied
     // into the editor, where `repeat(“hi”, 3)` is a SyntaxError.
-    for (const text of [task.prompt.en, ...task.hints.en, ...(task.approach?.en ?? [])]) {
+    for (const text of [task.prompt, ...task.hints, ...(task.approach ?? [])]) {
       for (const span of text.split('`').filter((_, index) => index % 2 === 1)) {
         if (/[“”‘’]/.test(span)) fail(`${where}: the code example \`${span}\` uses curly quotes, which do not run`);
       }
@@ -467,7 +444,7 @@ async function main() {
         if (task.track === 'react' && !solutionFor(task.id)) fail(`${where}: missing reference solution`);
         break;
       case 'checklist':
-        if (!task.checklist || task.checklist.en.length < 2) fail(`${where}: checklist tasks need at least 2 items`);
+        if (!task.checklist || task.checklist.length < 2) fail(`${where}: checklist tasks need at least 2 items`);
         break;
       case 'guided':
         if (!task.design) { fail(`${where}: guided task needs a design`); break; }
@@ -490,17 +467,14 @@ async function main() {
         fail(`${where}: unknown verify mode ${String(task.verify)}`);
     }
 
-    // The playable projection must never carry an answer, nor the retained
-    // Czech copy while the app ships English only.
-    const czech = czechIn(playable(task));
-    if (czech.length > 0) fail(`${where}: playable payload carries Czech at ${czech.slice(0, 3).join(', ')}`);
+    // The playable projection must never carry an answer.
     const play = JSON.stringify(playable(task));
     if (task.design) {
-      if (play.includes('"correct"') || play.includes(task.design.reference.en.slice(0, 40))) fail(`${where}: playable payload leaks the design answers`);
+      if (play.includes('"correct"') || play.includes(task.design.reference.slice(0, 40))) fail(`${where}: playable payload leaks the design answers`);
     }
     if (task.drill) {
       if (play.includes('"correct"') || play.includes('"answer"') || play.includes('"min"')) fail(`${where}: playable payload leaks the drill key`);
-      if (task.drill.explanation.en && play.includes(task.drill.explanation.en.slice(0, 40))) fail(`${where}: playable payload leaks the drill explanation`);
+      if (task.drill.explanation && play.includes(task.drill.explanation.slice(0, 40))) fail(`${where}: playable payload leaks the drill explanation`);
     }
     const solution = solutionFor(task.id);
     for (const code of [solution?.solution, solution?.junior, solution?.senior]) {
@@ -584,22 +558,6 @@ async function main() {
   const labelTotal = [...labelCounts.values()].reduce((sum, n) => sum + n, 0);
   if (labelTotal !== CODING_SUMMARIES.length) fail(`difficulty labels cover ${labelTotal} of ${CODING_SUMMARIES.length} summaries`);
 
-  /* ── parity ─────────────────────────────────────────────────────────── */
-  if (REQUIRE_CS) {
-    for (const task of CODING_TASKS) {
-      if (CS_TRACKS.length > 0 && !CS_TRACKS.includes(task.track)) continue;
-      const where = `${task.id}`;
-      for (const { path: field, value } of localizedFields(task)) {
-        if (!value.en.trim()) fail(`${where}: ${field} has no English`);
-        if (!value.cs.trim()) fail(`${where}: ${field} has no Czech`);
-      }
-      for (const { path: field, value } of localizedLists(task)) {
-        if (value.en.length !== value.cs.length) fail(`${where}: ${field} has ${value.en.length} English and ${value.cs.length} Czech entries`);
-        if (value.cs.some((one) => !one.trim())) fail(`${where}: ${field} has an empty Czech entry`);
-      }
-    }
-  }
-
   /* ── Learn coverage ─────────────────────────────────────────────────── */
   for (const topic of ['javascript', 'typescript', 'react'] as const) {
     for (let level = 1; level <= 25; level++) {
@@ -641,7 +599,6 @@ async function main() {
   }
 
   /* ── index freshness ────────────────────────────────────────────────── */
-  for (const summary of CODING_SUMMARIES) if (czechIn(summary).length > 0) fail(`${summary.id}: the browser index carries a Czech title`);
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
   if (!SKIP_INDEX && (!existsSync(indexPath) || readFileSync(indexPath, 'utf8') !== renderCodingIndex(CODING_SUMMARIES))) {
     fail('shared/coding-index.ts is stale: run npm run build:coding-index');
@@ -685,7 +642,7 @@ async function main() {
     if (task.verify !== 'tests') fail(`${id}: an Easy-band task is graded by its tests`);
     const [page] = taskResources(task.focus);
     if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
-    if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 2) fail(`${id}: a hint and at least two method steps before the documentation`);
+    if (task.hints.length === 0 || (task.approach?.length ?? 0) < 2) fail(`${id}: a hint and at least two method steps before the documentation`);
     const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
     if (hiddenChecks < 3) fail(`${id}: at least three hidden checks`);
     if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: an Easy-band task never enters a Learn level's quota`);
@@ -724,7 +681,7 @@ async function main() {
     if (task.verify !== 'tests') fail(`${id}: a Medium or Hard band task is graded by its tests`);
     const [page] = taskResources(task.focus);
     if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
-    if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 3 || !task.skeleton) fail(`${id}: a hint, at least three method steps and a skeleton before the documentation`);
+    if (task.hints.length === 0 || (task.approach?.length ?? 0) < 3 || !task.skeleton) fail(`${id}: a hint, at least three method steps and a skeleton before the documentation`);
     const visibleChecks = task.track === 'react' ? hiddenCaseCount(task.suite) : (task.tests?.length ?? 0);
     const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
     if (visibleChecks < 5) fail(`${id}: at least five visible checks`);
@@ -1112,7 +1069,7 @@ async function main() {
     assert.ok(approaches.length >= 2, `${id} needs at least two approaches to compare`);
     for (const approach of approaches) {
       for (const field of [approach.name, approach.readability, approach.assumptions, approach.tradeoffs]) {
-        assert.ok(field.en.length > 0 && field.cs.length > 0, `${id}: every approach field needs EN and CS`);
+        assert.ok(field.length > 0, `${id}: every approach field needs copy`);
       }
       assert.ok(approach.code.trim().length > 0, `${id}: an approach needs code`);
       assert.ok(approach.time.length > 0 && approach.space.length > 0, `${id}: an approach must state its cost`);
@@ -1160,7 +1117,7 @@ async function main() {
       assert.equal(isAcceptedOrder(wrong, puzzle.accepted), false, `${id}: a reversed order must not pass`);
     }
     assert.ok(puzzle.competencies.length > 0, `${id}: a puzzle must declare what it demonstrates`);
-    assert.ok(puzzle.claim.en.length > 0 && puzzle.claim.cs.length > 0, `${id}: the claim needs EN and CS`);
+    assert.ok(puzzle.claim.length > 0, `${id}: the claim needs copy`);
     // Every accepted order is a working solution: put together, it passes
     // the task's own visible and hidden checks. js-word-count's puzzle was a
     // word-frequency Map that failed all of them.
@@ -1207,7 +1164,7 @@ async function main() {
     assert.ok((task.tests?.length ?? 0) >= 3, `${task.id}: a debugging task needs tests that pin the behaviour down`);
     assert.ok(task.failureHints || task.pitfall, `${task.id}: a debugging task must name the misconception it teaches`);
     for (const hint of Object.values(task.failureHints ?? {})) {
-      assert.ok(hint.en.length > 0 && hint.cs.length > 0, `${task.id}: failure hints need EN and CS`);
+      assert.ok(hint.length > 0, `${task.id}: failure hints need copy`);
     }
     const solution = solutionFor(task.id);
     assert.ok(solution, `${task.id}: a debugging task needs its reference repair`);
@@ -1239,8 +1196,8 @@ async function main() {
     for (const [index, id] of project.stages.entries()) {
       const task = byId.get(id)!;
       assert.equal(formatOf(task), 'debug', `${id}: a debugging level`);
-      assert.match(task.hints.en[0] ?? '', /console\.[a-zA-Z]+\(|structuredClone\(/, `${id}: the first hint rung names the logging technique`);
-      assert.ok(task.approach && task.approach.en.length >= 3, `${id}: method steps between the hint and the documentation`);
+      assert.match(task.hints[0] ?? '', /console\.[a-zA-Z]+\(|structuredClone\(/, `${id}: the first hint rung names the logging technique`);
+      assert.ok(task.approach && task.approach.length >= 3, `${id}: method steps between the hint and the documentation`);
       assert.ok(task.references?.[0]?.url.startsWith('https://developer.mozilla.org/'), `${id}: the ladder ends in documentation`);
       const earlier = index > 0 ? byId.get(project.stages[index - 1])!.tests!.length : 0;
       const own = task.tests!.slice(0, task.tests!.length - earlier);
@@ -1313,7 +1270,7 @@ async function main() {
   assert.deepEqual(timed.logs, ['wait: 100ms'], 'console.time reads the sandbox\'s virtual clock');
 
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), ${CODING_SUMMARIES.length} issued (${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), ${CODING_SUMMARIES.length} issued (${byLabel}), solutions proven, payloads answer-free${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 /* ── staged levels, new-array promises and typed parameters ─────────── */
@@ -1508,7 +1465,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // 2. A promised new array: an in-place version of the reference must fail.
   let promises = 0;
   for (const task of CODING_TASKS) {
-    if (task.verify !== 'tests' || task.track === 'react' || !task.tests || !ONLY.test(task.id) || !NEW_ARRAY.test(task.prompt.en)) continue;
+    if (task.verify !== 'tests' || task.track === 'react' || !task.tests || !ONLY.test(task.id) || !NEW_ARRAY.test(task.prompt)) continue;
     const solution = solutionFor(task.id);
     if (!solution) continue;
     const js = task.track === 'typescript' ? checker.toJavaScript(solution.solution) : solution.solution;
