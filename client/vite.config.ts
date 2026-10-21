@@ -9,7 +9,7 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
+import { GUIDE_LOCALES, PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en, type TranslationKey } from './src/i18n/translations';
@@ -144,8 +144,8 @@ function purgeAstryxCss(): Plugin {
 function productMetadata(env: Record<string, string>): Plugin {
   const id = resolveCatalogProductId({ lockSubject: env.VITE_LOCK_SUBJECT, product: env.VITE_PRODUCT });
   const product = PRODUCT_CATALOG[id];
-  const title = product.title.en;
-  const description = product.description.en;
+  const title = product.title;
+  const description = product.description;
   const manifest = JSON.stringify({
     name: product.brand,
     short_name: product.brand,
@@ -235,12 +235,12 @@ function productMetadata(env: Record<string, string>): Plugin {
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, 'index.html'), html);
       };
-      for (const topic of topics) for (const locale of ['en', 'cs'] as const) {
+      for (const topic of topics) for (const locale of GUIDE_LOCALES) {
         const topicTitle = `${topic.title[locale]} · ${product.brand}`;
         const description = topic.description[locale];
         const url = origin + topicPath(topic.slug, locale);
         const schema = JSON.stringify(topicSchema(topicTitle, description, url, locale)).replace(/</g, '\\u003c');
-        const links = `<link rel="canonical" href="${url}" />` + ['en', 'cs'].map(lang => `<link rel="alternate" hreflang="${lang}" href="${origin}${topicPath(topic.slug, lang as 'en' | 'cs')}" />`).join('');
+        const links = `<link rel="canonical" href="${url}" />` + GUIDE_LOCALES.map(guideLocale => `<link rel="alternate" hreflang="${guideLocale}" href="${origin}${topicPath(topic.slug, guideLocale)}" />`).join('');
         const article = renderToStaticMarkup(createElement(TopicArticle, { topic, locale, brand: product.brand, related: topics }));
         const html = indexHtml
           .replace('<html lang="en">', `<html lang="${locale}" data-public-locale="${locale}">`)

@@ -1,14 +1,17 @@
+import type { GuideLocale } from './publicMetadata';
+
+/** A public topic guide, written once per guide language. */
 export interface TopicLandingDefinition {
   slug: string;
   subject: 'webdev';
   category: string;
-  title: { en: string; cs: string };
-  description: { en: string; cs: string };
-  misconception: { en: string; cs: string };
-  explanation?: { en: string; cs: string };
+  title: Record<GuideLocale, string>;
+  description: Record<GuideLocale, string>;
+  misconception: Record<GuideLocale, string>;
+  explanation?: Record<GuideLocale, string>;
   example?: string;
   reference?: string;
-  practice: { en: Array<[string, string]>; cs: Array<[string, string]> };
+  practice: Record<GuideLocale, Array<[string, string]>>;
 }
 
 export const TOPIC_LANDINGS: TopicLandingDefinition[] = [
