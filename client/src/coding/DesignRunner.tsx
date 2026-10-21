@@ -30,7 +30,7 @@ export interface DesignRunnerProps {
 }
 
 export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const baseId = useId();
   const design = task.design;
   const drill = task.drill;
@@ -117,7 +117,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
 
   /** The learner's own answer to one step or drill, in words. */
   const answerText = (given: DesignAnswer | null, options: readonly string[]): ReactNode => {
-    if (typeof given === 'number' && drill?.format === 'estimate') return `${given.toLocaleString(lang)}${drill.unit ? ` ${drill.unit}` : ''}`;
+    if (typeof given === 'number' && drill?.format === 'estimate') return `${given.toLocaleString('en')}${drill.unit ? ` ${drill.unit}` : ''}`;
     if (typeof given === 'number') return given >= 0 && options[given] ? options[given] : null;
     if (Array.isArray(given) && drill?.steps) {
       return <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>{given.map((position) => <li key={position}>{drill.steps![position]}</li>)}</ol>;
@@ -172,7 +172,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                   {typeof one.correctIndex === 'number' && options[one.correctIndex] && (
                     <p className="cd-review__explanation"><b>{t('coding.design.correct')}:</b> {options[one.correctIndex]}{!one.correct && typeof given === 'number' && given >= 0 && options[given] ? <> · <span className="cd-result__label">{options[given]}</span></> : null}</p>
                   )}
-                  {one.acceptedRange && <p className="cd-review__explanation">{t('coding.design.estimateRange', { min: one.acceptedRange.min.toLocaleString(lang), max: one.acceptedRange.max.toLocaleString(lang), answer: one.acceptedRange.answer.toLocaleString(lang) })}</p>}
+                  {one.acceptedRange && <p className="cd-review__explanation">{t('coding.design.estimateRange', { min: one.acceptedRange.min.toLocaleString('en'), max: one.acceptedRange.max.toLocaleString('en'), answer: one.acceptedRange.answer.toLocaleString('en') })}</p>}
                   {one.correctOrder && drill?.steps && (
                     <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>
                       {one.correctOrder.map((position) => <li key={position}>{drill.steps![position]}</li>)}

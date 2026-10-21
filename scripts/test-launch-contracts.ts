@@ -856,7 +856,7 @@ async function tierContracts() {
       ['a Premium Learn level', encodeCodingSession({ taskId: levelTask.id, track: levelTask.track, userId: null, roadmapAttemptId: 'guest-attempt-0123456789' })],
     ] as const) {
       const submitted = mockResponse();
-      await roadmapHandler(post('coding-submit', { session, code: 'function solve() { return 1; }', lang: 'en' }) as never, submitted as never);
+      await roadmapHandler(post('coding-submit', { session, code: 'function solve() { return 1; }' }) as never, submitted as never);
       assert.equal(submitted.statusCode, 402, `a guest submit for ${label} is refused`);
       const revealed = mockResponse();
       await roadmapHandler(post('coding-reveal', { session, hintsUsed: 20 }) as never, revealed as never);
@@ -906,17 +906,19 @@ async function tierContracts() {
     assert.equal(((await opens('js-evolving-calculator-1', 'account')).body as CodingTaskResponse).locked, 'evolving');
     // Submit follows the same gate: a guest's session for a free stage is
     // graded (its reference passes), and one for the stage after the free
-    // ones, or for the last checkpoint, is refused.
+    // ones, or for the last checkpoint, is refused. The graded bodies carry
+    // the stray `lang` an old cached client may still send (#485): the
+    // server ignores it rather than refusing the request.
     for (const id of ['js-evolving-calculator-1', 'js-evolving-calculator-2-start']) {
       const graded = mockResponse();
       const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
-      await roadmapHandler({ ...post('coding-submit', { session, code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, graded as never);
+      await roadmapHandler({ ...post('coding-submit', { session, code: solutionFor(id)!.solution, lang: 'cs' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, graded as never);
       assert.equal(graded.statusCode, 200, `${id}: a guest submit is graded (${JSON.stringify(graded.body)})`);
       assert.equal((graded.body as CodingVerdictResponse).verdict, 'passed', `${id}: its reference passes`);
     }
     for (const id of ['js-evolving-calculator-2', 'js-evolving-calculator-5-start']) {
       const refused = mockResponse();
-      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
+      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code: solutionFor(id)!.solution }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
       assert.equal(refused.statusCode, 402, `${id}: a guest submit is refused`);
     }
     // The reachability walk through the task page: a free account whose

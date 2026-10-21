@@ -674,7 +674,7 @@ function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyErr
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
-  const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
+  const body = (req.body || {}) as Partial<CodingSubmitRequest>;
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);

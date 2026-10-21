@@ -5,7 +5,6 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { staleProfileStats } from '../lib/queryClient';
 import { announceVerifiedQuestXp, announceXpHeld, syncXpWithServer } from '../lib/xp';
-import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
   CodingDraftSaveRequest,
@@ -42,7 +41,7 @@ export function fetchCodingTask(id: string, signal?: AbortSignal, learnSession?:
 export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
   const result = await apiFetch<CodingVerdictResponse>(`${ROADMAP}?resource=coding-submit`, {
     method: 'POST',
-    body: JSON.stringify({ ...input, lang: getStoredLang() }),
+    body: JSON.stringify(input),
     timeoutMs: 50_000,
   });
   // A recorded pass is a streak day.

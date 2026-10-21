@@ -1058,7 +1058,7 @@ async function main() {
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}${CODING_SECTION_TRACKS.includes(track) ? '' : ' hidden'}`).join(', ');
   // ── approach comparisons (#158) ────────────────────────────────────────
   // Every covered id is a real task; every comparison has at least two
-  // approaches, both languages throughout, and a stated cost. Nothing here
+  // approaches and a stated cost. Nothing here
   // reaches the browser before the server sees a recorded pass.
   const coveredIds = approachCoverage();
   assert.ok(coveredIds.length > 0, 'the approach manifest must cover something');
