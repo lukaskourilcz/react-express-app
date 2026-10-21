@@ -262,6 +262,9 @@ export interface StartActivityResponse {
    * any answer key. Opaque to the browser. */
   session: string;
   expiresAt: string;
+  /** The activity's public summary. A check's `scenario` and a code
+   * activity's `fixtureNote` reach the workspace from here, as `domains` and
+   * `rubricDimensions` do, so neither payload below repeats them. */
   activity: ActivitySummary;
   purpose: ActivityPurpose;
   lesson?: LessonBody;

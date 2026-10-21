@@ -143,12 +143,38 @@ export interface ActivitySummary {
   reuseTaskId?: string;
   /** Artifacts: the rubric dimensions the learner self-reviews against. */
   rubricDimensions?: string[];
+  /** Checks only: a shared preamble shown once above the ordered questions,
+   * so a decomposition case is one check. It ships in the public manifest
+   * and must never state an answer. */
+  scenario?: string;
+  /** Code activities only: shown above the editor. It says the fixture is
+   * deliberately unfamiliar and what "done" means. */
+  fixtureNote?: string;
 }
 
 export interface ModuleRequirement {
   activityId: string;
   state: EvidenceState;
 }
+
+/** Named lists of modules the hub shows apart from the loop. Not the Learn
+ * section's shelf of paths (shared/progression.ts): this one groups modules
+ * inside one path. */
+export const MODULE_SHELVES = ['interview-prep'] as const;
+export type ModuleShelf = (typeof MODULE_SHELVES)[number];
+
+/** Whether a module sits outside the loop: optional placement and bridge
+ * modules, and every shelf module. An off-loop module never gates path
+ * completion, never supplies the next action and never counts toward the
+ * inventory's module total, which the merchandise reward compares with the
+ * completed modules. The validator also makes every shelf module optional;
+ * this checks both so the rule holds even if that ever slips.
+ *
+ * Server code and server-only shared functions only. The client must not
+ * import it as a value: this file sits in the initial chunk, so a client
+ * value import would add it to every first visit. */
+export const isOffLoopModule = ({ optional, shelf }: { optional?: boolean; shelf?: ModuleShelf }): boolean =>
+  optional === true || shelf !== undefined;
 
 export interface ModuleSummary {
   id: string;
@@ -167,6 +193,10 @@ export interface ModuleSummary {
    * entirely. An optional module never gates path completion and never
    * supplies the next required action. */
   optional?: boolean;
+  /** Listed apart from the loop (the interview-prep shelf) and always paired
+   * with `optional: true`. It never gates completion and never supplies the
+   * next action. */
+  shelf?: ModuleShelf;
 }
 
 export interface LessonSummary {
@@ -234,7 +264,7 @@ export type PathCodeLanguage = 'javascript' | 'typescript' | 'react';
 /** The real inventory of a published manifest. Every count the product shows
  * comes from here, so a screen can never advertise unbuilt content. */
 export interface PathInventory {
-  /** Modules that gate completion; optional placement/bridge modules excluded. */
+  /** Modules that gate completion; off-loop modules (optional placement, bridges, shelves) excluded. */
   modules: number;
   lessons: number;
   /** Every objective question in the path, whatever its purpose. */
@@ -266,7 +296,7 @@ export function pathInventory(manifest: LearningPathManifest): PathInventory {
   let estimatedMinutes = 0;
   let modules = 0;
   for (const module of manifest.modules) {
-    if (!module.optional) {
+    if (!isOffLoopModule(module)) {
       modules += 1;
       lessons += module.lessons.length;
       estimatedMinutes += module.estimatedMinutes;
@@ -329,8 +359,8 @@ export function moduleComplete(
   );
 }
 
-/** Guided completion: every required module's evidence is in place. Optional
- * placement and bridge modules never count. A module that requires a written
+/** Guided completion: every required module's evidence is in place. Off-loop
+ * modules (placement, bridges, shelves) never count. A module that requires a written
  * artifact at `self_reviewed` is not complete until it is submitted, so the
  * FDE path, whose modules require three such pieces, cannot complete (or earn
  * its merchandise) without them. They are still never counted as verified:
@@ -339,7 +369,7 @@ export function pathGuidedComplete(
   manifest: LearningPathManifest,
   states: ReadonlyMap<string, EvidenceState>,
 ): boolean {
-  const required = manifest.modules.filter((module) => !module.optional);
+  const required = manifest.modules.filter((module) => !isOffLoopModule(module));
   return required.length > 0 && required.every((module) => moduleComplete(module, states));
 }
 
@@ -371,7 +401,7 @@ export function nextActivityId(
   states: ReadonlyMap<string, EvidenceState>,
 ): string | null {
   for (const module of manifest.modules) {
-    if (module.optional || moduleComplete(module, states)) continue;
+    if (isOffLoopModule(module) || moduleComplete(module, states)) continue;
     const unread = module.activities.find((activity) => {
       if (activity.kind !== 'lesson') return false;
       const state = states.get(activity.id);
