@@ -627,7 +627,7 @@ export const FDE_M03: ModuleSource = {
             [
               'Replay store keyed by connection and `webhook-id`',
               'The same delivery processed twice inside the window, whether an attacker or the provider’s own retry sent it',
-              'Replays inside the window, if you expire keys sooner than the tolerance; keep them at least that long',
+              'A replay after its key expired while the timestamp still passes. Keep each key until its signed timestamp plus the tolerance has passed: with 300 seconds either way, that can be 600 seconds after arrival',
             ],
           ],
         },
@@ -931,11 +931,11 @@ export const FDE_M03: ModuleSource = {
             'The signature check, because each signature is valid only for the first request that presents it to the receiver.',
             'The timestamp tolerance, because the copy arrives 40 seconds later than the original delivery did.',
             'TLS, because the resent copy travels on a different connection, with different keys, than the original delivery.',
-            'A replay store keyed by connection and `webhook-id`, keeping each key for at least the 300-second window.',
+            'A replay store keyed by connection and `webhook-id`, keeping each key until its signed timestamp is more than 300 seconds old.',
           ],
           correct: 3,
           explanation:
-            'Inside the tolerance window, only a record of ids already processed tells the copy from the original. Key it by connection and `webhook-id`, and keep each key at least as long as the window, so the timestamp check covers what the store has forgotten. The signature is a property of the content, so an exact copy carries a valid one. Forty seconds sits inside the 300-second tolerance. TLS protects the bytes in transit; it does not stop someone who already holds a genuine delivery from sending it again on a new connection.',
+            'Inside the tolerance window, only a record of ids already processed tells the copy from the original. Key it by connection and `webhook-id`, and keep each key until the delivery’s own signed timestamp falls outside the tolerance. The tolerance runs 300 seconds in both directions, so a delivery stamped 300 seconds ahead can arrive now, and a copy of it still passes the timestamp check up to 600 seconds later. A key kept only 300 seconds from arrival would expire inside that span, and the copy would be applied. Counting from the signed timestamp, or keeping every key for twice the tolerance, leaves nothing the timestamp check does not cover. The signature is a property of the content, so an exact copy carries a valid one. Forty seconds sits inside the 300-second tolerance. TLS protects the bytes in transit; it does not stop someone who already holds a genuine delivery from sending it again on a new connection.',
           competencies: ['boundaries'],
         },
       ],
