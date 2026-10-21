@@ -27,7 +27,7 @@ The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 pra
 
 | ID | Module and lessons | Practical evidence | Dependency |
 |---|---|---|---|
-| M01 | Customer discovery: workflow and stakeholders; baseline and scope | Turn “add AI to support” into structured success metrics, questions, risks and a one-page scope. Grade bounded decision cases; retain open narrative as self-reviewed. | None |
+| M01 | Customer discovery: workflow and stakeholders; baseline, scope and the executive update | Turn “add AI to support” into a one-page scope (workflow, five questions, baseline, success metric, in scope, sequencing, non-goals, risks, acceptance) and an executive update capped at 1,700 characters (audience, decisions, open questions, next step). Grade bounded decision cases; both written pieces are required and self-reviewed (B4, #500). | None |
 | M02 | Integration/data: contracts and messy inputs; retries and idempotency | TS connector adapter handles missing fields, duplicates, pagination, throttling and repeated delivery using synthetic fixtures. | M01 |
 | M03 | Enterprise boundaries: identity and tenant access; data lifecycle and audit | Repair a tenant-scoped tool wrapper; hidden cases include cross-tenant IDs and expired permissions. | M02 |
 | M04 | AI system choices: deterministic code vs model vs workflow vs agent; structured outputs and failure modes | Select an architecture under explicit accuracy/latency/budget constraints, then validate malformed model responses. | M02 |
@@ -36,7 +36,7 @@ The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 pra
 | M07 | Evaluation: reference cases and leakage; quality/cost/latency tradeoffs | Implement a metrics function over a held-out synthetic dataset, compare two candidates against a baseline, and detect a misleading average. Distinguish retrieval failure from generation failure. | M05, M06 |
 | M08 | AI security: injection and untrusted outputs; excessive agency and adversarial tests | Fix unsafe tool/output handling in a sandbox fixture; prove malicious documents cannot authorize actions or leak another tenant's records. | M05, M06 |
 | M09 | Production delivery: observability and rollout; incident handling and rollback | Diagnose supplied traces, identify a failing dependency, propose a rollback, and implement a bounded retry/circuit-state helper. | M07, M08 |
-| M10 | Adoption and handoff: operator UX and acceptance; communication and reusable product feedback | React/operator-state exercise plus a structured UAT decision; save a demo outline, runbook and product-feedback memo. Open text remains self-reviewed. | M09 |
+| M10 | Adoption and handoff: operator UX and acceptance; communication, enablement and reusable product feedback | Operator-state exercise plus a structured UAT decision; three required self-reviewed artifacts, each with its rubric dimensions: a runbook (trigger, owner, steps, rollback), a handover workshop outline, and a push-back email to a customer asking for the wrong feature (B4, #500). Becomes M13 when curriculum v2 renumbers the modules (B9). | M09 |
 | C01 | Capstone: customer support operations workbench | Deliver the linked scenario below; combine verified task results with a clearly labeled portfolio packet. | M01–M10 required for final completion, all materials previewable |
 
 ## Capstone brief
