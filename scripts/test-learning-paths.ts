@@ -23,11 +23,12 @@ import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
-import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { isOffLoopModule, moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
+import { schemaContracts } from './learning-path-schema-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
@@ -139,7 +140,7 @@ async function main() {
         ...module.requires.map((one) => new Map([...met, [one.activityId, 'needs_revision' as EvidenceState]])),
       ];
       for (const states of cases) {
-        const expected = !module.optional && moduleComplete(module, states);
+        const expected = !isOffLoopModule(module) && moduleComplete(module, states);
         if (databaseSays(states) !== expected) {
           fail(`${where}/${module.id}: the requirements sent to the database say ${!expected} where moduleComplete says ${expected} for ${JSON.stringify([...states])}`);
         }
@@ -212,7 +213,7 @@ async function main() {
     // A lesson never gates a module, but a new learner is sent to the first
     // lesson, then the next, and only then to the first unmet requirement.
     {
-      const first = manifest.modules.find((module) => !module.optional);
+      const first = manifest.modules.find((module) => !isOffLoopModule(module));
       const lessons = first?.activities.filter((activity) => activity.kind === 'lesson') ?? [];
       const states = new Map<string, EvidenceState>();
       for (const lesson of lessons) {
@@ -526,6 +527,7 @@ async function main() {
 
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
   diagnosticCompetencyContracts();
+  schemaContracts(fail);
   await handlerContracts(fail);
 
   if (failures.length > 0) {
