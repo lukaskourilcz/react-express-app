@@ -32,8 +32,8 @@ vi.mock('../src/coding/practice', () => ({
 const response = {
   task: {
     id: 'js-test-limit', track: 'javascript', level: 1, tier: 1, difficulty: 'easy', focus: ['functions'],
-    title: { en: 'Test task', cs: '' }, prompt: { en: 'Return one.', cs: '' }, starter: 'const one = () => 0;\n',
-    hints: { en: [], cs: [] }, verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
+    title: 'Test task', prompt: 'Return one.', starter: 'const one = () => 0;\n',
+    hints: [], verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
   },
   session: 'session-1', locked: null, progress: null, draft: null, draftUpdatedAt: null, signedIn: true,
 } as unknown as CodingTaskResponse;

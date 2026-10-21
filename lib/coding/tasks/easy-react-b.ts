@@ -11,8 +11,7 @@
 // and three or more hidden cases beside the solutions (`hiddenSuite`, see
 // `../react-hidden.ts`). The suite header and the hand-answered fetch come
 // from the first wave. Solutions live in `../solutions/easy-react-b.ts`, and
-// `EASY_BAND` in `../catalog.ts` lists this file. English only: there is no
-// Czech overlay.
+// `EASY_BAND` in `../catalog.ts` lists this file.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

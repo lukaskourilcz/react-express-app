@@ -2,8 +2,6 @@ import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import {
   secureShuffle,
   weightedSample,
-  localizeQuestion,
-  normalizeLang,
   PRIVATE_CATEGORIES,
   type DifficultyMode,
   type CategoryType,
@@ -138,8 +136,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const lang = normalizeLang(req.query.lang);
-  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
+  const allQuestions = await getEffectiveQuestions(scope.subject);
   const categoryFiltered = allQuestions.filter((q) => selectedCategories.includes(q.category));
   if (categoryFiltered.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
@@ -297,11 +294,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
-  const questionsWithShuffledOptions = selected.map((base) => {
-    // Localize before shuffling: translated options are parallel to the
-    // English ones, so the correctAnswer index stays valid.
-    const q = localizeQuestion(base, lang);
-    const correctText = q.options[base.correctAnswer];
+  const questionsWithShuffledOptions = selected.map((q) => {
+    const correctText = q.options[q.correctAnswer];
     const shuffled = secureShuffle(q.options);
     sessionData.push({ questionId: q.id, correctAnswer: shuffled.indexOf(correctText) });
     return {
@@ -315,7 +309,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       // The version of this exact wording plus whatever review is recorded for
       // it. No scores, no reviewer, no report text — and never a hint at the
       // answer, since the version is a keyed digest.
-      review: itemReview(base),
+      review: itemReview(q),
     };
   });
 

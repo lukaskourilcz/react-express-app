@@ -3,7 +3,7 @@
 // Everything here is HTML and CSS. No canvas, no image, no generated picture:
 // a diagram of a box model or an execution order is a claim about behaviour,
 // and the browser laying out real boxes is both the most accurate way to show
-// one and the only way it stays readable at 200% zoom in either language.
+// one and the only way it stays readable at 200% zoom.
 //
 // Four properties the markup is written to keep:
 //
@@ -19,10 +19,10 @@
 //     all — the frames are states, not an animation.
 
 import { useId, useState, type ReactNode } from 'react';
-import { useLanguage, useT } from '../../i18n/LanguageContext';
+import { useT } from '../../i18n/LanguageContext';
 import { TermsBar } from './Terms';
 import { glossaryDomainFor } from '../../lib/glossaryDomain';
-import type { FigureText, LessonFigure as Figure } from '../../../../shared/lesson-figures';
+import type { LessonFigure as Figure } from '../../../../shared/lesson-figures';
 
 export function LessonFigures({ figures }: { figures: readonly Figure[] }) {
   if (figures.length === 0) return null;
@@ -37,25 +37,23 @@ export function LessonFigures({ figures }: { figures: readonly Figure[] }) {
 
 export function LessonFigureView({ figure }: { figure: Figure }) {
   const t = useT();
-  const { lang } = useLanguage();
-  const L = (text: FigureText) => text[lang] || text.en;
   const captionId = useId();
   const [showText, setShowText] = useState(false);
 
   return (
     <figure className="ss-figure" aria-labelledby={captionId}>
       <figcaption id={captionId} className="ss-figure__caption">
-        {L(figure.title)}
+        {figure.title}
       </figcaption>
 
-      {figure.body.kind === 'flow' && <FlowView body={figure.body} L={L} />}
-      {figure.body.kind === 'nested' && <NestedView body={figure.body} L={L} />}
-      {figure.body.kind === 'table' && <TableView body={figure.body} L={L} />}
-      {figure.body.kind === 'steps' && <StepsView body={figure.body} L={L} />}
+      {figure.body.kind === 'flow' && <FlowView body={figure.body} />}
+      {figure.body.kind === 'nested' && <NestedView body={figure.body} />}
+      {figure.body.kind === 'table' && <TableView body={figure.body} />}
+      {figure.body.kind === 'steps' && <StepsView body={figure.body} />}
 
       {figure.assumes && (
         <p className="ss-figure__assumes">
-          <span className="ss-figure__assumes-label">{t('figure.assumes')}</span> {L(figure.assumes)}
+          <span className="ss-figure__assumes-label">{t('figure.assumes')}</span> {figure.assumes}
         </p>
       )}
 
@@ -70,29 +68,27 @@ export function LessonFigureView({ figure }: { figure: Figure }) {
         >
           {t('figure.inWords')}
         </button>
-        {showText && <p className="ss-figure__alt">{L(figure.alt)}</p>}
+        {showText && <p className="ss-figure__alt">{figure.alt}</p>}
       </div>
 
       {/* Abbreviation help beside the figure, never injected into its labels. */}
       <TermsBar
-        texts={[L(figure.title), L(figure.alt)]}
+        texts={[figure.title, figure.alt]}
         domain={glossaryDomainFor(figure.topic)}
       />
     </figure>
   );
 }
 
-type Localize = (text: FigureText) => string;
-
-function FlowView({ body, L }: { body: Extract<Figure['body'], { kind: 'flow' }>; L: Localize }) {
+function FlowView({ body }: { body: Extract<Figure['body'], { kind: 'flow' }> }) {
   const label = (id: string) => body.nodes.find((node) => node.id === id);
   return (
     <div className="ss-figure__flow">
       <ol className="ss-figure__nodes">
         {body.nodes.map((node) => (
           <li key={node.id} className="ss-figure__node">
-            <span className="ss-figure__node-label">{L(node.label)}</span>
-            {node.note && <span className="ss-figure__node-note">{L(node.note)}</span>}
+            <span className="ss-figure__node-label">{node.label}</span>
+            {node.note && <span className="ss-figure__node-note">{node.note}</span>}
           </li>
         ))}
       </ol>
@@ -100,11 +96,11 @@ function FlowView({ body, L }: { body: Extract<Figure['body'], { kind: 'flow' }>
         {body.edges.map((edge, index) => (
           <li key={index}>
             <span className="ss-figure__edge-ends">
-              {L(label(edge.from)?.label ?? { en: edge.from, cs: edge.from })}
+              {label(edge.from)?.label ?? edge.from}
               <span aria-hidden="true"> → </span>
-              {L(label(edge.to)?.label ?? { en: edge.to, cs: edge.to })}
+              {label(edge.to)?.label ?? edge.to}
             </span>
-            <span className="ss-figure__edge-label">{L(edge.label)}</span>
+            <span className="ss-figure__edge-label">{edge.label}</span>
           </li>
         ))}
       </ul>
@@ -112,7 +108,7 @@ function FlowView({ body, L }: { body: Extract<Figure['body'], { kind: 'flow' }>
   );
 }
 
-function NestedView({ body, L }: { body: Extract<Figure['body'], { kind: 'nested' }>; L: Localize }) {
+function NestedView({ body }: { body: Extract<Figure['body'], { kind: 'nested' }> }) {
   // Rendered by real nesting, so the containment the figure is about is the
   // containment the browser lays out.
   const render = (index: number): ReactNode => {
@@ -121,9 +117,9 @@ function NestedView({ body, L }: { body: Extract<Figure['body'], { kind: 'nested
     return (
       <div className="ss-figure__layer">
         <span className="ss-figure__layer-head">
-          <span className="ss-figure__layer-label">{L(layer.label)}</span>
+          <span className="ss-figure__layer-label">{layer.label}</span>
           {layer.value && <span className="ss-figure__layer-value">{layer.value}</span>}
-          {layer.note && <span className="ss-figure__layer-note">{L(layer.note)}</span>}
+          {layer.note && <span className="ss-figure__layer-note">{layer.note}</span>}
         </span>
         {render(index + 1)}
       </div>
@@ -132,14 +128,14 @@ function NestedView({ body, L }: { body: Extract<Figure['body'], { kind: 'nested
   return <div className="ss-figure__nested">{render(0)}</div>;
 }
 
-function TableView({ body, L }: { body: Extract<Figure['body'], { kind: 'table' }>; L: Localize }) {
+function TableView({ body }: { body: Extract<Figure['body'], { kind: 'table' }> }) {
   return (
     <div className="ss-figure__scroll">
       <table className="ss-figure__table">
         <thead>
           <tr>
             {body.columns.map((column, index) => (
-              <th key={index} scope="col">{L(column)}</th>
+              <th key={index} scope="col">{column}</th>
             ))}
           </tr>
         </thead>
@@ -150,10 +146,10 @@ function TableView({ body, L }: { body: Extract<Figure['body'], { kind: 'table' 
               <tr key={rowIndex} className={mark ? 'ss-figure__row--marked' : undefined}>
                 {row.map((cell, cellIndex) => (
                   <td key={cellIndex}>
-                    {typeof cell === 'string' ? cell : L(cell)}
+                    {cell}
                     {/* The word is the mark; the background is decoration. */}
                     {mark && cellIndex === row.length - 1 && (
-                      <span className="ss-figure__role"> {L(mark.role)}</span>
+                      <span className="ss-figure__role"> {mark.role}</span>
                     )}
                   </td>
                 ))}
@@ -166,7 +162,7 @@ function TableView({ body, L }: { body: Extract<Figure['body'], { kind: 'table' 
   );
 }
 
-function StepsView({ body, L }: { body: Extract<Figure['body'], { kind: 'steps' }>; L: Localize }) {
+function StepsView({ body }: { body: Extract<Figure['body'], { kind: 'steps' }> }) {
   const t = useT();
   const [index, setIndex] = useState(0);
   const frame = body.frames[Math.min(index, body.frames.length - 1)];
@@ -180,10 +176,10 @@ function StepsView({ body, L }: { body: Extract<Figure['body'], { kind: 'steps' 
             return (
               <li key={cellIndex} className={`ss-figure__cell${mark ? ' ss-figure__cell--marked' : ''}`}>
                 {body.legend?.[cellIndex] && (
-                  <span className="ss-figure__role">{L(body.legend[cellIndex])}</span>
+                  <span className="ss-figure__role">{body.legend[cellIndex]}</span>
                 )}
                 <span className="ss-figure__cell-value">{cell}</span>
-                {mark && <span className="ss-figure__role">{L(mark.role)}</span>}
+                {mark && <span className="ss-figure__role">{mark.role}</span>}
               </li>
             );
           })}
@@ -192,11 +188,11 @@ function StepsView({ body, L }: { body: Extract<Figure['body'], { kind: 'steps' 
 
       {/* What changed, announced rather than left to sight. */}
       <p className="ss-figure__note" aria-live="polite">
-        {L(frame.note)}
+        {frame.note}
         {frame.counter && (
           <span className="ss-figure__counter">
             {' '}
-            {L(frame.counter.label)}: {frame.counter.value}
+            {frame.counter.label}: {frame.counter.value}
           </span>
         )}
       </p>
@@ -235,7 +231,7 @@ function StepsView({ body, L }: { body: Extract<Figure['body'], { kind: 'steps' 
           the controls at all. */}
       <ol className="ss-figure__frames">
         {body.frames.map((one, frameIndex) => (
-          <li key={frameIndex}>{L(one.note)}</li>
+          <li key={frameIndex}>{one.note}</li>
         ))}
       </ol>
     </div>

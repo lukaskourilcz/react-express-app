@@ -205,13 +205,11 @@ function ReviewCell({ review }: { review: AdminQuestion['review'] }) {
     review.active ? 'Served: this exact wording has a current passing review.' : `Not served: ${review.reason}.`,
     review.decision ? `Decision: ${review.decision}${review.retireReason ? ` (${review.retireReason})` : ''}.` : 'No decision on record.',
     review.reviewedAt ? `Reviewed ${review.reviewedAt}, revision ${review.revision ?? 1}.` : '',
-    review.active && !review.csApproved ? 'Czech translation not the reviewed one: English is served to Czech learners.' : '',
   ].filter(Boolean).join(' ');
   return (
     <span title={title} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
       <Pill label={review.reason} color={REVIEW_COLOR[review.reason]} />
       {scores && <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{scores.replace(/^ · /, '')}</span>}
-      {review.active && !review.csApproved && <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>CS → EN</span>}
     </span>
   );
 }

@@ -14,13 +14,10 @@ import * as webdevBank from '../lib/webdev-bank';
  * fails, fix the bank, or change the adapter upstream and re-import with
  * `--check` before changing this test. */
 
-/** The loaders the adapter imports by name. */
+/** The loaders the adapter imports by name. devShark ships English only
+ * (#485), so `loadWebdevTranslations` resolves to an empty record; it stays
+ * exported because the adapter still imports it by name. */
 const EXPORTS = ['loadWebdevQuestions', 'loadWebdevTranslations'] as const;
-
-/** Every key of the Czech overlay. The adapter reads question, options and
- * explanation; introduction belongs to the same overlay type. An unknown key
- * is a renamed field the adapter would silently lose. */
-const OVERLAY_KEYS = new Set(['introduction', 'question', 'options', 'explanation']);
 
 /** The upstream `FENCED_CODE` in `marketingshark/bank.ts`. `hasFencedCode`
  * tests it against the English `question` and `introduction` and nothing
@@ -39,11 +36,7 @@ export async function webdevBankContracts() {
   const questions: unknown = await webdevBank.loadWebdevQuestions();
   const translations: unknown = await webdevBank.loadWebdevTranslations();
   assert.ok(Array.isArray(questions) && questions.length > 0, 'loadWebdevQuestions resolves to a non-empty array');
-  assert.ok(
-    translations !== null && typeof translations === 'object' && !Array.isArray(translations),
-    'loadWebdevTranslations resolves to a record keyed by question id',
-  );
-  const overlays = translations as Record<string, unknown>;
+  assert.deepEqual(translations, {}, 'loadWebdevTranslations resolves to an empty record: there is no second language');
 
   const seen = new Set<string>();
   let fenced = 0;
@@ -88,23 +81,6 @@ export async function webdevBankContracts() {
     // the importer looks, or the snapshot records it as a question with no code.
     if (entry.snippet !== undefined) {
       assert.ok(hasCode, `${where} declares a snippet but has no fenced block in its question or introduction`);
-    }
-
-    const overlay = overlays[id];
-    if (overlay === undefined) continue;
-    assert.ok(overlay !== null && typeof overlay === 'object' && !Array.isArray(overlay), `${where}: the Czech overlay is an object`);
-    const czech = overlay as Record<string, unknown>;
-    for (const key of Object.keys(czech)) {
-      assert.ok(OVERLAY_KEYS.has(key), `${where}: the Czech overlay has an unknown field "${key}"`);
-    }
-    for (const key of ['introduction', 'question', 'explanation']) {
-      assert.ok(czech[key] === undefined || isString(czech[key]), `${where}: Czech ${key} is absent or a string`);
-    }
-    if (czech.options !== undefined) {
-      // correctAnswer indexes both arrays. The adapter drops Czech options of
-      // another length, so a mismatch loses the translation upstream.
-      assert.ok(isStringArray(czech.options), `${where}: Czech options is an array of strings`);
-      assert.equal(czech.options.length, options.length, `${where}: Czech options must be parallel to the English options`);
     }
   }
 

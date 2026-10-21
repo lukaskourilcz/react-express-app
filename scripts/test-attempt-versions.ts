@@ -49,15 +49,15 @@ for (const token of [
   assert.equal(errorCode(out), 'task_changed');
   assert.equal(writes, 0);
 }
-const beforePrompt = task.prompt.en;
+const beforePrompt = task.prompt;
 try {
-  task.prompt.en += '\nChanged authored requirement.';
+  task.prompt += '\nChanged authored requirement.';
   assert.notEqual(codingAttemptVersion(task), decoded.version);
   const out = res();
   await handleCodingSubmit(request(opened) as never, out as never, database as never);
   assert.equal(errorCode(out), 'task_changed');
   assert.equal(writes, 0);
-} finally { task.prompt.en = beforePrompt; }
+} finally { task.prompt = beforePrompt; }
 assert.equal(codingAttemptVersion(task), decoded.version);
 const guest = res();
 await handleCodingSubmit(request(encodeCodingSession({ ...sessionInput, userId: null }), null) as never, guest as never, database as never);
@@ -135,6 +135,31 @@ for (const sameWork of [true, false]) {
   else assert.equal(errorCode(out), 'idempotency_conflict');
   assert.equal(writes, 0);
 }
+// A result accepted before #485 stored its copy as { en, cs } pairs; the
+// replay hands the English strings back and leaves test outcomes alone.
+const legacyResult = {
+  ...replayedResult,
+  criteria: [{ id: 'core', label: { en: 'Required behaviour', cs: 'x' }, critical: true, weight: 1, passed: true, detail: null }],
+  questions: null,
+  feedback: [{ en: 'Read the explanation.', cs: 'x' }],
+  code: { outcome: 'passed', results: [{ pass: true, actual: '{"en":"a","cs":"b"}', error: null }], hidden: null, check: null, logs: [], codeError: null },
+};
+accepted = { ...accepted, accepted_result: legacyResult };
+{
+  const out = res();
+  const req = { ...request(''), body: { user_id: account, session: encodeLearningPathSession(nativeInput).token, idempotencyKey: 'version-key-0123456789', code: 'while (true) {}' } };
+  await withRequestContext(req as never, out as never, async () => {
+    await requestMemo(`tier:${account}`, async () => 'premium');
+    await handleActivitySubmit(req as never, out as never, nativeDb as never);
+  });
+  assert.deepEqual(out.body, {
+    ...legacyResult,
+    criteria: [{ ...legacyResult.criteria[0], label: 'Required behaviour' }],
+    feedback: ['Read the explanation.'],
+    replayed: true,
+  });
+  assert.equal(writes, 0);
+}
 console.log('PASS attempt versions: accepted native replay survives catalogue changes, different work is refused, no repeated XP');
 
 const renew = async (previousSession?: string) => {
@@ -150,13 +175,13 @@ const renew = async (previousSession?: string) => {
 const previousCurrent = createLearningPathSession(nativeInput).token;
 assert.equal((await renew(previousCurrent)).needsBriefReview, undefined);
 assert.equal((await renew(encodeLearningPathSession(nativeInput).token)).needsBriefReview, true);
-const savedPrompt = activity.code!.prompt.en;
+const savedPrompt = activity.code!.prompt;
 try {
-  activity.code!.prompt.en += ' Changed authored requirement.';
+  activity.code!.prompt += ' Changed authored requirement.';
   const renewed = await renew(previousCurrent);
   assert.equal(renewed.needsBriefReview, true, 'an automatic renewal cannot silently grade a changed brief');
   assert.equal(decodeLearningPathSession(renewed.session)?.version, pathCodeAttemptVersion(activity, path.rubric.version));
-} finally { activity.code!.prompt.en = savedPrompt; }
+} finally { activity.code!.prompt = savedPrompt; }
 assert.equal(openedAttempts, 3);
 assert.equal(writes, 0);
 console.log('PASS attempt versions: unchanged native renewal, legacy renewal and changed authored renewal before another Submit');

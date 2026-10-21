@@ -25,7 +25,7 @@ import { Kicker } from './landing/LandingKit';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { InitialsAvatar } from './ui/InitialsAvatar';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useT } from '../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../lib/api';
 import {
   getHandle, getIdentity, setHandle as saveHandle, setIdentity as saveIdentity,
@@ -130,7 +130,6 @@ function SharknameEditor({
   onSaved: () => void;
 }) {
   const t = useT();
-  const { lang } = useLanguage();
   const inputId = useId();
   const noteId = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -211,7 +210,7 @@ function SharknameEditor({
   };
 
   const plate = rolling ? preview(flip.name) : clean ? preview(clean) : t('sharkname.none');
-  const dateLabel = until ? new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', year: 'numeric' }).format(until) : '';
+  const dateLabel = until ? new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(until) : '';
 
   return (
     <div className="sn-editor">

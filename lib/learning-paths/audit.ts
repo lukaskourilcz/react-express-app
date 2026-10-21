@@ -1,7 +1,6 @@
 /** Exact review bindings for authored English path material. Expected values
- * and hidden assertions are data: do not apply locale filtering to them. */
+ * and hidden assertions are data and are hashed exactly as authored. */
 import { createHash } from 'node:crypto';
-import { englishOnly } from '../coding/catalog';
 import { codingTaskById } from '../coding/active';
 import { solutionFor as codingSolutionFor } from '../coding/solutions';
 import { taskHash } from '../curation';
@@ -11,13 +10,13 @@ import type { MergedActivity } from './types';
 const hash = (value: unknown): string =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
 
-export const nativeContentHash = (value: unknown): string => hash(englishOnly(value));
+export const nativeContentHash = (value: unknown): string => hash(value);
 
 export function nativeGradingHash(activity: MergedActivity): string | null {
   if (!activity.code && !activity.reuseTaskId) return null;
   const material = [
-    'native-grading:v1', englishOnly(activity),
-    activity.code?.tests.map(test => ({ ...test, label: test.label?.en })),
+    'native-grading:v1', activity,
+    activity.code?.tests,
     activity.code?.typeTests, solutionFor(activity.id),
   ];
   if (activity.reuseTaskId) {

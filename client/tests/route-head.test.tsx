@@ -11,8 +11,7 @@ import { codingShareDescription } from '../src/lib/publicMetadata';
 
 const { result: language } = renderHook(() => useLanguage(), { wrapper: LanguageProvider });
 const visit = (pathname: string, shareHead: ShareHead | null = null) => {
-  const { t, lang } = language.current;
-  applyRouteHead(pathname, t, lang, shareHead);
+  applyRouteHead(pathname, language.current.t, shareHead);
 };
 const meta = (selector: string) => document.querySelector(selector)?.getAttribute('content');
 const canonical = () => document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null;

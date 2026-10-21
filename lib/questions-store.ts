@@ -6,7 +6,7 @@
 // overrides onto the static base so the live quiz reflects admin edits, while
 // always falling back to the unmodified base set if the DB is unavailable.
 
-import type { Question, CategoryType, QuestionTranslation } from './quiz-data';
+import type { Question, CategoryType } from './quiz-data';
 import { loadDeploymentQuestionBank, loadSubjectQuestionBank } from './question-bank-loader';
 import { createServiceClient, withTimeout } from './http';
 import { computeImportance, clampImportance } from './importance';
@@ -29,6 +29,9 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'dev-world', 'code-snippets',
 ];
 
+/** A `question_edits` row as this module reads it. Rows written before
+ * devShark went English only (#485) may also carry cs_* columns; nothing
+ * reads them any more. */
 export interface QuestionEditRow {
   question_id: string;
   is_custom: boolean;
@@ -43,19 +46,7 @@ export interface QuestionEditRow {
   difficulty: number | null;
   /** Per-question importance override (1–10); null = use the hand-judged score. */
   importance?: number | null;
-  cs_question: string | null;
-  cs_options: string[] | null;
-  cs_introduction: string | null;
-  cs_explanation: string | null;
   updated_at?: string;
-}
-
-/** The four translatable Czech fields, as edited in the /dev console. */
-export interface CsFields {
-  question: string;
-  options: string[];
-  introduction: string;
-  explanation: string;
 }
 
 /** What the admin console is told about an item's review state: whether it
@@ -66,7 +57,6 @@ export interface CsFields {
 export interface AdminReviewState {
   active: boolean;
   reason: Eligibility['reason'];
-  csApproved: boolean;
   decision?: LedgerDecision;
   retireReason?: string;
   relevance?: number;
@@ -75,12 +65,10 @@ export interface AdminReviewState {
   revision?: number;
 }
 
-/** A question as shown in the admin console: full content, origin, and cs text. */
+/** A question as shown in the admin console: full content and origin. */
 export interface AdminQuestion extends Question {
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
-  /** Current Czech translation (db override, else static bank), for editing. */
-  cs: CsFields;
   review: AdminReviewState;
 }
 
@@ -89,7 +77,6 @@ function adminReviewState(q: Question): AdminReviewState {
   return {
     active: e.active,
     reason: e.reason,
-    csApproved: e.csApproved,
     ...(e.entry
       ? {
           decision: e.entry.decision,
@@ -116,12 +103,6 @@ export interface QuestionInput {
   difficulty: number;
   /** Optional importance override (1–10). Omit to keep the hand-judged score. */
   importance?: number;
-  cs?: {
-    question?: string | null;
-    options?: string[] | null;
-    introduction?: string | null;
-    explanation?: string | null;
-  };
 }
 
 const clampDifficulty = (n: number): Question['difficulty'] => {
@@ -129,44 +110,9 @@ const clampDifficulty = (n: number): Question['difficulty'] => {
   return (d < 1 ? 1 : d > 5 ? 5 : d) as Question['difficulty'];
 };
 
-// True if the row overrides any English field (vs. only cs / soft-delete).
-function hasEnglishEdit(row: QuestionEditRow): boolean {
-  return (
-    row.is_custom ||
-    row.question != null ||
-    row.options != null ||
-    row.correct_index != null ||
-    row.explanation != null ||
-    row.introduction != null ||
-    row.category != null ||
-    row.tags != null ||
-    row.difficulty != null
-  );
-}
-
-// The cs override stored on a row, or null if it carries no Czech fields.
-function csOverrideFromRow(row: QuestionEditRow): QuestionTranslation | null {
-  const tr: QuestionTranslation = {};
-  if (row.cs_question) tr.question = row.cs_question;
-  if (row.cs_options) tr.options = row.cs_options;
-  if (row.cs_introduction) tr.introduction = row.cs_introduction;
-  if (row.cs_explanation) tr.explanation = row.cs_explanation;
-  return Object.keys(tr).length > 0 ? tr : null;
-}
-
-// Merge an override row onto its base question (or build a custom question when
-// there is no base), resolving which Czech translation the localizer should use:
-//   - a cs override on the row wins;
-//   - otherwise an English-edited/custom question gets no translation (English);
-//   - a base question with only a... (handled by caller via undefined) — here a
-//     plain override row with neither falls back to the static cs bank.
+// Merge an override row onto its base question, or build a custom question
+// when there is no base. A field the row leaves null keeps the base value.
 function mergeRow(row: QuestionEditRow, base?: Question): Question {
-  const csOverride = csOverrideFromRow(row);
-  const csTranslation: QuestionTranslation | null | undefined = csOverride
-    ? csOverride
-    : hasEnglishEdit(row)
-      ? null
-      : base?.csTranslation ?? null;
   const merged: Question = {
     id: row.question_id,
     tags: row.tags ?? base?.tags ?? [],
@@ -177,7 +123,6 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     category: (row.category ?? base?.category ?? 'general') as CategoryType,
     explanation: row.explanation ?? base?.explanation ?? '',
     difficulty: clampDifficulty(row.difficulty ?? base?.difficulty ?? 1),
-    csTranslation,
   };
   // A DB importance override wins; otherwise resolve from the hand-judged map.
   merged.importance = row.importance ?? computeImportance(merged);
@@ -214,8 +159,8 @@ export async function getFreshMarketingQuestions(): Promise<{ question: Question
     if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('marketing_source_unavailable');
     return second;
   })(), 10000);
-  const bank = await loadSubjectQuestionBank('webdev', false);
-  return buildMarketingQuestionSnapshot(bank.questions, data);
+  const bank = await loadSubjectQuestionBank('webdev');
+  return buildMarketingQuestionSnapshot(bank, data);
 }
 
 /** Includes safe history for tombstones, with the exact same merge as serving. */
@@ -306,9 +251,7 @@ const inflight = new Map<string, Promise<EffectiveCache>>();
  * quarantined, edited-since-review or never-reviewed devShark item is absent
  * from every selector at once: quiz, daily, challenge, placement, Learn levels
  * and checkpoints, personalised review, Play, flashcard creation, the coverage
- * count. Subjects outside the audit pass through unchanged. A translation that
- * is not the reviewed one is dropped rather than served: the learner gets the
- * reviewed English instead of unreviewed Czech.
+ * count. Subjects outside the audit pass through unchanged.
  */
 export function applyEligibility(merged: Question[]): { list: Question[]; withheld: Map<string, Eligibility['reason']> } {
   const list: Question[] = [];
@@ -319,25 +262,21 @@ export function applyEligibility(merged: Question[]): { list: Question[]; withhe
       withheld.set(q.id, eligibility.reason);
       continue;
     }
-    list.push(eligibility.csApproved || !q.csTranslation ? q : { ...q, csTranslation: null });
+    list.push(q);
   }
   return { list, withheld };
 }
 
-async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise<EffectiveCache> {
-  const key = `${subject ?? 'deployment'}:${includeCzech ? 'cs' : 'en'}`;
+async function effective(subject?: ScopeSubjectId): Promise<EffectiveCache> {
+  const key = subject ?? 'deployment';
   const cached = caches.get(key);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached;
   const active = inflight.get(key);
   if (active) return active;
   const loading = (async () => {
-    const bank = subject
-      ? await loadSubjectQuestionBank(subject, includeCzech)
-      : await loadDeploymentQuestionBank(includeCzech);
-    const baseQuestions = bank.questions.map((question) => ({
-      ...question,
-      csTranslation: bank.translations[question.id] ?? null,
-    }));
+    const baseQuestions = subject
+      ? await loadSubjectQuestionBank(subject)
+      : await loadDeploymentQuestionBank();
     const overrides = await loadOverrides();
     const merged = overrides
       ? buildEffective(baseQuestions, overrides, subject)
@@ -359,15 +298,15 @@ async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise
 
 /** The live question set (base + overrides, eligibility applied), used by
  * every selector. */
-export async function getEffectiveQuestions(subject?: ScopeSubjectId, includeCzech = true): Promise<Question[]> {
-  return (await effective(subject, includeCzech)).list;
+export async function getEffectiveQuestions(subject?: ScopeSubjectId): Promise<Question[]> {
+  return (await effective(subject)).list;
 }
 
 /** Same set as a lookup map, for grading and explanation lookups. An id the
  * map lacks is either unknown or no longer served; graders treat both the
  * same way — the answer is void, neither counted for nor against. */
-export async function getEffectiveQuestionsById(subject?: ScopeSubjectId, includeCzech = true): Promise<Map<string, Question>> {
-  return (await effective(subject, includeCzech)).byId;
+export async function getEffectiveQuestionsById(subject?: ScopeSubjectId): Promise<Map<string, Question>> {
+  return (await effective(subject)).byId;
 }
 
 /**
@@ -376,14 +315,14 @@ export async function getEffectiveQuestionsById(subject?: ScopeSubjectId, includ
  * summary of a reported question in the admin console. Nothing selects from
  * it, which is what keeps retirement from being deletion.
  */
-export async function getQuestionsForHistoryById(subject?: ScopeSubjectId, includeCzech = true): Promise<Map<string, Question>> {
-  return (await effective(subject, includeCzech)).historyById;
+export async function getQuestionsForHistoryById(subject?: ScopeSubjectId): Promise<Map<string, Question>> {
+  return (await effective(subject)).historyById;
 }
 
 /** Ids the gate withheld from the served set, with the reason each was
  * withheld. For the admin view and the audit report. */
 export async function getWithheldQuestions(subject?: ScopeSubjectId): Promise<Map<string, Eligibility['reason']>> {
-  return (await effective(subject, false)).withheld;
+  return (await effective(subject)).withheld;
 }
 
 /**
@@ -413,52 +352,27 @@ export function invalidateQuestionsCache() {
  * applied and flagged) plus custom questions, including soft-deleted ones so
  * the admin can restore them. Always reads fresh (no serving cache).
  */
-// The Czech text to pre-fill the editor with: the db override if present, else
-// the static cs bank, with options aligned to the current English option count.
-function csFieldsFor(q: Question, row?: QuestionEditRow): CsFields {
-  const tr = (row && csOverrideFromRow(row)) ?? q.csTranslation ?? {};
-  return {
-    question: tr.question ?? '',
-    options: q.options.map((_, i) => tr.options?.[i] ?? ''),
-    introduction: tr.introduction ?? '',
-    explanation: tr.explanation ?? '',
-  };
-}
-
 export async function listAdminQuestions(): Promise<AdminQuestion[]> {
-  const bank = await loadDeploymentQuestionBank();
-  const baseQuestions = bank.questions.map((question) => ({
-    ...question,
-    csTranslation: bank.translations[question.id] ?? null,
-  }));
+  const baseQuestions = await loadDeploymentQuestionBank();
   const overrides = (await loadOverrides()) ?? new Map<string, QuestionEditRow>();
   const out: AdminQuestion[] = [];
   for (const base of baseQuestions) {
     const ov = overrides.get(base.id);
     if (ov) {
       const merged = mergeRow(ov, base);
-      out.push({ ...merged, source: 'edited', deleted: ov.deleted, cs: csFieldsFor(merged, ov), review: adminReviewState(merged) });
+      out.push({ ...merged, source: 'edited', deleted: ov.deleted, review: adminReviewState(merged) });
     } else {
       const item = withImportance(base);
-      out.push({ ...item, source: 'base', deleted: false, cs: csFieldsFor(base), review: adminReviewState(item) });
+      out.push({ ...item, source: 'base', deleted: false, review: adminReviewState(item) });
     }
   }
   for (const ov of overrides.values()) {
     if (ov.is_custom) {
       const merged = mergeRow(ov);
-      out.push({ ...merged, source: 'custom', deleted: ov.deleted, cs: csFieldsFor(merged, ov), review: adminReviewState(merged) });
+      out.push({ ...merged, source: 'custom', deleted: ov.deleted, review: adminReviewState(merged) });
     }
   }
   return out;
-}
-
-// A non-empty cs options array must stay parallel to the English options, else
-// it is dropped (the localizer keeps the English options when lengths differ).
-function normalizeCsOptions(cs: QuestionInput['cs'], optionCount: number): string[] | null {
-  const opts = cs?.options;
-  if (!opts || opts.length === 0) return null;
-  if (opts.length !== optionCount) return null;
-  return opts.map((o) => o ?? '');
 }
 
 function rowFromInput(input: QuestionInput, id: string, isCustom: boolean): QuestionEditRow {
@@ -474,10 +388,6 @@ function rowFromInput(input: QuestionInput, id: string, isCustom: boolean): Ques
     category: input.category,
     tags: input.tags,
     difficulty: clampDifficulty(input.difficulty),
-    cs_question: input.cs?.question || null,
-    cs_options: normalizeCsOptions(input.cs, input.options.length),
-    cs_introduction: input.cs?.introduction || null,
-    cs_explanation: input.cs?.explanation || null,
   };
 }
 
@@ -560,7 +470,7 @@ export async function bulkHideByImportance(maxImportance: number): Promise<numbe
   if (targets.length === 0) return 0;
 
   // Upsert minimal soft-delete markers in chunks; onConflict leaves any existing
-  // edit/translation content intact and just flips `deleted` to true.
+  // edit content intact and just flips `deleted` to true.
   const rows = targets.map((q) => ({ question_id: q.id, is_custom: false, deleted: true }));
   const CHUNK = 500;
   for (let i = 0; i < rows.length; i += CHUNK) {

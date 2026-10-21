@@ -14,17 +14,16 @@ import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/api', () => ({ submitCoding: vi.fn() }));
 
-const loc = (en: string) => ({ en, cs: en });
 const task: PlayableCodingTask = {
   id: 'sd-test-shortener', track: 'system-design', level: 0, tier: 2, difficulty: 'medium',
-  focus: ['scoping'], title: loc('Test shortener'), prompt: loc('Design it.'), starter: '',
-  hints: { en: [], cs: [] }, verify: 'guided', estimatedMinutes: 10,
+  focus: ['scoping'], title: 'Test shortener', prompt: 'Design it.', starter: '',
+  hints: [], verify: 'guided', estimatedMinutes: 10,
   design: {
-    scenario: loc('Short links for a newsletter.'), brief: loc('Keep the read path small.'), passMark: 2,
+    scenario: 'Short links for a newsletter.', brief: 'Keep the read path small.', passMark: 2,
     steps: [
-      { key: 'requirements', title: loc('What are we building'), prompt: loc('What matters most?'), options: [loc('Reads dominate'), loc('Custom aliases')] },
-      { key: 'data', title: loc('What we store'), prompt: loc('One row holds?'), options: [loc('Code and destination'), loc('Only the code')] },
-      { key: 'scale', title: loc('What breaks first'), prompt: loc('The first step?'), options: [loc('A cache'), loc('Sharding')] },
+      { key: 'requirements', title: 'What are we building', prompt: 'What matters most?', options: ['Reads dominate', 'Custom aliases'] },
+      { key: 'data', title: 'What we store', prompt: 'One row holds?', options: ['Code and destination', 'Only the code'] },
+      { key: 'scale', title: 'What breaks first', prompt: 'The first step?', options: ['A cache', 'Sharding'] },
     ],
   },
 };
@@ -84,12 +83,12 @@ it('after a failed submit shows which answers were wrong and the learner\'s own 
 
 it('after a pass shows the whole walkthrough: the right options, the explanations and the reference', async () => {
   const passed: DesignStepVerdict[] = [
-    { correct: true, given: 0, correctIndex: 0, explanation: loc('Redirects outnumber creations.') },
-    { correct: false, given: 1, correctIndex: 0, explanation: loc('The redirect needs the destination.') },
-    { correct: true, given: 0, correctIndex: 0, explanation: loc('A cache absorbs a hotspot.') },
+    { correct: true, given: 0, correctIndex: 0, explanation: 'Redirects outnumber creations.' },
+    { correct: false, given: 1, correctIndex: 0, explanation: 'The redirect needs the destination.' },
+    { correct: true, given: 0, correctIndex: 0, explanation: 'A cache absorbs a hotspot.' },
   ];
   vi.mocked(submitCoding).mockResolvedValue(verdict({
-    verdict: 'passed', design: passed, designReference: loc('Two operations, one table.'), firstPass: true, xpAwarded: 35,
+    verdict: 'passed', design: passed, designReference: 'Two operations, one table.', firstPass: true, xpAwarded: 35,
     progress: { status: 'passed', passes: 1, reviewStage: 0, nextReviewAt: null, revealCount: 0, bestPassedAt: '2026-09-29T09:00:00Z' },
   }));
   mount();
@@ -108,7 +107,7 @@ it('after a pass shows the whole walkthrough: the right options, the explanation
 it('after a missed estimate shows the learner\'s figure and no accepted range', async () => {
   const drill: PlayableCodingTask = {
     ...task, id: 'dd-test-estimate', verify: 'drill', design: undefined,
-    drill: { format: 'estimate', scenario: loc('A launch day.'), prompt: loc('Requests per second at the peak?'), unit: loc('requests per second') },
+    drill: { format: 'estimate', scenario: 'A launch day.', prompt: 'Requests per second at the peak?', unit: 'requests per second' },
   };
   vi.mocked(submitCoding).mockResolvedValue(verdict({ design: [{ correct: false, given: 90000 }] }));
   render(<MemoryRouter><LanguageProvider><DesignRunner task={drill} session="drill-session" locked={null} signedIn mode="section" onRetry={vi.fn()} /></LanguageProvider></MemoryRouter>);
@@ -123,7 +122,7 @@ it('after a missed estimate shows the learner\'s figure and no accepted range', 
 it('says a pass after a revealed solution earned no XP', async () => {
   vi.mocked(submitCoding).mockResolvedValue(verdict({
     verdict: 'passed', firstPass: true, xpAwarded: 0, xpForfeited: true,
-    design: [0, 1, 2].map((index) => ({ correct: true, given: 0, correctIndex: 0, explanation: loc(`Because ${index}.`) })),
+    design: [0, 1, 2].map((index) => ({ correct: true, given: 0, correctIndex: 0, explanation: `Because ${index}.` })),
   }));
   mount();
   const heading = await answerAndSubmit();

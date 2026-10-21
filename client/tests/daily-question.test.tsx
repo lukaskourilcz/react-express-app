@@ -81,7 +81,7 @@ describe('/daily', () => {
     fireEvent.click(check);
     expect(await screen.findByText('Right answer')).toBeInTheDocument();
     expect(screen.getByText('typeof null is "object", a historical quirk.')).toBeInTheDocument();
-    expect(sent).toEqual([{ sessionId: 'sealed-session', answers: { 'q-1': 1 }, lang: 'en' }]);
+    expect(sent).toEqual([{ sessionId: 'sealed-session', answers: { 'q-1': 1 } }]);
     expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeDisabled();
     expect(screen.getByRole('link', { name: `Practice ${trackName(today)} questions` })).toHaveAttribute('href', `/quiz?category=${qotdTrack(today)}`);
     expect(screen.getByText(/nothing is recorded/)).toBeInTheDocument();

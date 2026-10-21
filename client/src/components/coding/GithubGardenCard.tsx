@@ -36,7 +36,7 @@ function Raised({ children }: { children: ReactNode }) {
  * second device shows the same truth.
  */
 export function GithubGardenCard() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const query = useGithubConnection(isAuthenticated);
@@ -126,7 +126,7 @@ export function GithubGardenCard() {
   if (hidden) return null;
 
   const data = query.data;
-  const dateFormat = new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 
   let body: ReactNode;
   if (query.isError || !data) {

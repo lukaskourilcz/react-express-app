@@ -5,17 +5,16 @@ import { solutionFor } from '../../lib/coding/solutions';
 
 // Real built editor/iframe/navigation with deterministic API fixtures. Actual
 // server grading is independently covered by test:coding and test:react-isolation.
-// The languages loop over what the app ships (ENABLED_LANGS in the client's
-// LanguageContext); a stored Czech preference renders English today.
-for (const lang of ['en']) for (const theme of ['light', 'dark']) {
-  test(`${lang} ${theme}: React stage handoff, rerun and accessible workbench`, async ({ page }, info) => {
+// The app ships English only (#485), so the loop covers the two themes.
+for (const theme of ['light', 'dark']) {
+  test(`en ${theme}: React stage handoff, rerun and accessible workbench`, async ({ page }, info) => {
     test.setTimeout(60_000);
     page.on('pageerror',error=>console.error(error.message));
     await page.setViewportSize({width:360,height:900});
     await page.emulateMedia({colorScheme:theme as 'light'|'dark',reducedMotion:'reduce'});
-    await page.addInitScript(({lang,theme})=>{
-      try {localStorage.setItem('devquiz.lang',lang);localStorage.setItem('devquiz:color-mode',theme);} catch {}
-    },{lang,theme});
+    await page.addInitScript(({theme})=>{
+      try {localStorage.setItem('devquiz:color-mode',theme);} catch {}
+    },{theme});
     await page.route('**/api/**',async route=>{
       const url=new URL(route.request().url());
       if(url.searchParams.get('resource')==='coding-task') {
@@ -60,10 +59,10 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
     await editor.fill(source);
     await expect(editor).not.toContainText('return <main />');
-    const run=page.getByRole('button',{name:lang==='en'?'Run':'Spustit',exact:true});
+    const run=page.getByRole('button',{name:'Run',exact:true});
     await run.click();
     await expect(page.getByRole('tab',{name:/1\/1/})).toBeVisible({timeout:25_000});
-    await page.getByRole('button',{name:lang==='en'?'Submit':'Odevzdat',exact:true}).click();
+    await page.getByRole('button',{name:'Submit',exact:true}).click();
     const next=page.locator('a[href="/coding/react/react-evolving-form-1"]').last();
     await expect(next).toBeVisible();
     await next.click();
@@ -77,7 +76,7 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await editor.fill(solutionFor('react-evolving-form-1')!.solution);
     await run.click();
     await expect(page.getByRole('tab',{name:/2\/2/})).toBeVisible({timeout:25_000});
-    await page.getByRole('tab',{name:lang==='en'?'Preview':'Náhled',exact:true}).click();
+    await page.getByRole('tab',{name:'Preview',exact:true}).click();
     const preview=page.frameLocator('.cd-frame');
     await preview.getByLabel('Email',{exact:true}).fill('keyboard@example.com');
     await preview.getByLabel('Email',{exact:true}).press('Enter');

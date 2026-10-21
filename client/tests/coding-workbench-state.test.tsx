@@ -26,9 +26,9 @@ vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
 
 const task: PlayableCodingTask = {
   id: 'js-test-state', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
-  focus: ['map'], title: { en: 'Test task', cs: 'Testovací úloha' },
-  prompt: { en: 'Double the numbers.', cs: 'Zdvojnásob čísla.' },
-  starter: 'const double = (list) => list;\n', hints: { en: ['Use map.'], cs: ['Použij map.'] },
+  focus: ['map'], title: 'Test task',
+  prompt: 'Double the numbers.',
+  starter: 'const double = (list) => list;\n', hints: ['Use map.'],
   verify: 'tests', estimatedMinutes: 5,
   tests: [{ call: 'double([1])', expected: [2] }, { call: 'double([])', expected: [] }],
 };
@@ -341,11 +341,11 @@ it('shows the minimal completion for an accepted order without granting XP or re
   const puzzle = {
     taskId: 'js-test-state', variantId: 'v1',
     lines: [{ id: 'b1', code: '}' }, { id: 'b2', code: 'const one = () => {' }, { id: 'b3', code: '  return 1;' }],
-    competencies: ['sequence' as const], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' },
+    competencies: ['sequence' as const], claim: 'Arranged correctly.',
   };
   vi.mocked(submitCoding).mockResolvedValueOnce(verdict({
     results: [], progress: null, firstPass: false, xpAwarded: 0, applied: false,
-    puzzle: { accepted: true, competencies: ['sequence'], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' } },
+    puzzle: { accepted: true, competencies: ['sequence'], claim: 'Arranged correctly.' },
   }));
   mount({ subject: { ...task, puzzle } });
   fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
@@ -369,7 +369,7 @@ it('shows three landing examples while Run still checks every test', async () =>
 });
 
 it('keeps Big O space targets and guidance exclusively inside its named tooltip', () => {
-  mount({ subject: { ...task, prompt: { en: 'Target: O(n) time, and O(1) extra space.', cs: '' } } });
+  mount({ subject: { ...task, prompt: 'Target: O(n) time, and O(1) extra space.' } });
   expect(screen.getByText('Desired complexity: O(n)')).toBeVisible();
   const info = screen.getByRole('link', { name: 'About Big O complexity' });
   const tooltip = document.getElementById(info.getAttribute('aria-describedby')!)!;

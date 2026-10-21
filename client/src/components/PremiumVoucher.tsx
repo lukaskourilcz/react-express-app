@@ -65,7 +65,7 @@ const BANNER_REFUSALS: Partial<Record<VoucherRefusal, TranslationKey>> = {
 };
 
 export default function PremiumVoucher({ billingClosed }: { billingClosed: boolean }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -155,7 +155,7 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   const refusal = step.kind === 'form' ? step.refusal : undefined;
   const fieldMessage = refusal && FIELD_REFUSALS[refusal] ? t(FIELD_REFUSALS[refusal]!) : null;
   const bannerMessage = refusal && BANNER_REFUSALS[refusal] ? t(BANNER_REFUSALS[refusal]!) : null;
-  const longDate = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long' }).format(new Date(iso));
+  const longDate = (iso: string) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'long' }).format(new Date(iso));
 
   return (
     <section

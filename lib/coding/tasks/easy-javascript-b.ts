@@ -13,7 +13,7 @@
 // most), ten minutes or less, and a starter that fails its own checks. The
 // first focus tag names the documentation page that ends the hint ladder.
 // Solutions live in `../solutions/easy-javascript-b.ts`, and `EASY_BAND` in
-// `../catalog.ts` lists this file. English only: there is no Czech overlay.
+// `../catalog.ts` lists this file.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

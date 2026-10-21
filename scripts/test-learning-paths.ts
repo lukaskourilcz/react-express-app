@@ -169,10 +169,10 @@ async function main() {
           if (publicJson.includes(question.id)) {
             fail(`${where}/${question.id}: a question id reached the published manifest`);
           }
-          if (question.explanation.en.length >= LEAK_MATCH_MIN && publicJson.includes(question.explanation.en)) {
+          if (question.explanation.length >= LEAK_MATCH_MIN && publicJson.includes(question.explanation)) {
             fail(`${where}/${question.id}: an explanation reached the published manifest`);
           }
-          const correctText = question.options[question.correct]?.en ?? '';
+          const correctText = question.options[question.correct] ?? '';
           if (correctText.length >= LEAK_MATCH_MIN && publicJson.includes(correctText)) {
             fail(`${where}/${question.id}: the correct option text reached the published manifest`);
           }
@@ -330,7 +330,7 @@ async function main() {
       const broken = await gradePathCode(plain.activity, plain.activity.code!, 'const broken = (n) => { return n +; };');
       if (broken.state !== 'needs_revision') fail(`${where}: a syntax error grades as ${broken.state}, not needs_revision`);
       for (const line of codeFeedback(broken)) {
-        if (/nothing was recorded|not recorded/i.test(line.en)) fail(`${where}: a recorded syntax error says "${line.en}"`);
+        if (/nothing was recorded|not recorded/i.test(line)) fail(`${where}: a recorded syntax error says "${line}"`);
       }
     }
   }
@@ -491,7 +491,7 @@ async function main() {
       const expectedWrong = inDomain(second).map((index) => final.questions![index].id);
       if (wrongIds.join() !== expectedWrong.join()) fail(`dsa final: a failed attempt names [${wrongIds.join(', ')}] wrong, not [${expectedWrong.join(', ')}]`);
       const passedFinal = gradeCheck(final, key, missing([inDomain(first)[0]]));
-      if (passedFinal.keyWithheld || passedFinal.verdicts.some((verdict, index) => verdict.correctIndex !== key[index] || !verdict.explanation?.en)) {
+      if (passedFinal.keyWithheld || passedFinal.verdicts.some((verdict, index) => verdict.correctIndex !== key[index] || !verdict.explanation)) {
         fail('dsa final: a passed project check does not return the key and every explanation');
       }
       const practice = paths.flatMap((path) => path.modules.flatMap((module) => module.activities))
@@ -501,7 +501,7 @@ async function main() {
       } else {
         const practiceKey = practice.questions.map((one) => one.correct);
         const practiceMissed = gradeCheck(practice, practiceKey, practiceKey.map((correct) => (correct === 0 ? 1 : 0)));
-        if (practiceMissed.keyWithheld || practiceMissed.verdicts.some((verdict, index) => verdict.correctIndex !== practiceKey[index] || !verdict.explanation?.en)) {
+        if (practiceMissed.keyWithheld || practiceMissed.verdicts.some((verdict, index) => verdict.correctIndex !== practiceKey[index] || !verdict.explanation)) {
           fail(`${practice.id}: a failed exercise check no longer returns its key and explanations`);
         }
       }

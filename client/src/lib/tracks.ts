@@ -18,10 +18,10 @@ export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
 
 /*
- * i18n keys for track/topic copy. The registry fields below stay the English
- * fallbacks; user-visible surfaces render t(trackLabelKey(...)) etc. so Czech
- * users get Czech track names, blurbs, stage titles and topic details (same
- * pattern as subjectNameKey in subjects.ts).
+ * Translation keys for track/topic copy. The registry fields below are
+ * fallbacks; user-visible surfaces render t(trackLabelKey(...)) etc., so
+ * the copy lives in translations.ts (same pattern as subjectNameKey in
+ * subjects.ts).
  */
 export const trackLabelKey = (subject: SubjectId, track: Track): TranslationKey =>
   `track.${subject}.${track}.label` as TranslationKey;

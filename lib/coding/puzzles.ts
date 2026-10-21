@@ -10,7 +10,6 @@
  * every covered id is a real task, that each accepted order is a permutation of
  * that puzzle's own lines, and that no puzzle is small enough to be guessable. */
 
-import type { Localized } from '../../shared/coding-catalog';
 import type { PuzzleCompetency, PuzzleLine } from '../../shared/coding-puzzle';
 
 /** What the browser is shown: the lines under presentation ids that say
@@ -55,13 +54,10 @@ export interface AuthoredPuzzle {
    * lines can swap without changing what the code does. */
   accepted: string[][];
   competencies: PuzzleCompetency[];
-  claim: Localized;
+  claim: string;
 }
 
-const ORDERING_CLAIM: Localized = {
-  en: 'Arranged correctly. This shows you know the shape of the solution — writing it from nothing is the next step, on a bigger screen.',
-  cs: 'Správně seřazeno. Ukazuje to, že znáš tvar řešení — napsat ho od nuly je další krok, na větší obrazovce.',
-};
+const ORDERING_CLAIM: string = 'Arranged correctly. This shows you know the shape of the solution — writing it from nothing is the next step, on a bigger screen.';
 
 const PUZZLES: Record<string, AuthoredPuzzle> = {
   'js-sum-array': {

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { secureShuffle, localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
+import { secureShuffle } from '../../lib/quiz-runtime';
 import {
   supabase,
   jsonError,
@@ -207,7 +207,6 @@ async function create(req: VercelRequest, res: VercelResponse) {
     count?: unknown;
     categories?: unknown;
     duration_s?: unknown;
-    lang?: unknown;
   };
 
   const { play: playSettings } = await getGameSettings();
@@ -229,9 +228,6 @@ async function create(req: VercelRequest, res: VercelResponse) {
   let categories = Array.isArray(body.categories)
     ? body.categories.filter((c): c is string => typeof c === 'string')
     : [];
-  // Match questions are snapshotted into the row in the host's language so
-  // every player sees the same text regardless of their own setting.
-  const lang = normalizeLang(body.lang);
 
   // The client always sends the active subject's category list (or a subset
   // of it), so an empty list is a malformed request — falling back to the
@@ -246,15 +242,14 @@ async function create(req: VercelRequest, res: VercelResponse) {
   }
   categories = scope.categories;
 
-  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
+  const allQuestions = await getEffectiveQuestions(scope.subject);
   const pool = allQuestions.filter((q) => categories.includes(q.category));
   if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
   }
 
   const selected = secureShuffle(pool).slice(0, count);
-  const matchQuestions = selected.map((base) => {
-    const q = localizeQuestion(base, lang);
+  const matchQuestions = selected.map((q) => {
     const correctText = q.options[q.correctAnswer];
     const opts = secureShuffle(q.options);
     return {

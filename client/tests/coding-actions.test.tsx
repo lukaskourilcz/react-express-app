@@ -23,9 +23,9 @@ vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
 
 const task: PlayableCodingTask = {
   id: 'js-test-editor', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
-  focus: ['functions'], title: { en: 'Test task', cs: 'Testovací úloha' },
-  prompt: { en: 'Return one.', cs: 'Vrať jedničku.' },
-  starter: 'const one = () => 1;\n', hints: { en: ['Use a function.'], cs: ['Použij funkci.'] },
+  focus: ['functions'], title: 'Test task',
+  prompt: 'Return one.',
+  starter: 'const one = () => 1;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [],
 };
 function mount(onDraft = vi.fn()) {
@@ -160,11 +160,11 @@ it('formats TSX without discarding TypeScript annotations', async () => {
 });
 
 it('places authored stage links inside Resources, away from the task brief', () => {
-  const reference={title:{en:'Addition and numeric operators',cs:'Sčítání a číselné operátory'},url:'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators#arithmetic_operators'};
+  const reference={title:'Addition and numeric operators',url:'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators#arithmetic_operators'};
   render(<MemoryRouter><LanguageProvider><CodingWorkbench initialCode={null} task={{...task,references:[reference]}} session={null} locked={null} signedIn={false} mode="section" /></LanguageProvider></MemoryRouter>);
   expect(screen.queryByRole('heading',{name:'Stage references'})).toBeNull();
   fireEvent.click(screen.getByRole('tab',{name:/Resources/}));
-  const link=screen.getByRole('link',{name:reference.title.en});
+  const link=screen.getByRole('link',{name:reference.title});
   expect(link).toHaveAttribute('href',reference.url);
   expect(link.closest('[role="tabpanel"]')).toBeInTheDocument();
   expect(link.closest('.cd-brief')).toBeNull();

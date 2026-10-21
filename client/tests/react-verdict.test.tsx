@@ -16,8 +16,8 @@ vi.mock('../src/coding/useReactHarness', () => {
 });
 const task: PlayableCodingTask = {
   id:'react-test',track:'react',level:1,tier:1,difficulty:'easy',focus:['forms'],
-  title:{en:'Test form',cs:'Test formuláře'},prompt:{en:'Submit',cs:'Odešli'},
-  starter:'export default function App(){return null}',hints:{en:[],cs:[]},
+  title:'Test form',prompt:'Submit',
+  starter:'export default function App(){return null}',hints:[],
   verify:'tests',estimatedMinutes:5,suite:'test("form submits",()=>{});',
 };
 function mount() {

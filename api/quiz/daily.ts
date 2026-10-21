@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { createHash } from 'node:crypto';
 import { encodeSession, quizSessionExpiresAt, stableAttemptId } from '../../lib/quiz-tokens';
-import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
+import { PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
 import { createLogger, createServiceClient, jsonError, tryAuthOnce, withRequestContext, withTimeout } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -117,7 +117,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   const catSet = new Set(scope.categories);
 
-  const lang = normalizeLang(req.query.lang);
   let auth;
   try {
     auth = await tryAuthOnce(req);
@@ -125,7 +124,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
-  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
+  const allQuestions = await getEffectiveQuestions(scope.subject);
   const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
     // Never surface private (owner-only) categories in the shared daily mix.
@@ -147,9 +146,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   // Shuffle option order per question (also deterministic).
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
-  const dailyQuestions = selected.map((base, i) => {
-    const q = localizeQuestion(base, lang);
-    const correctText = q.options[base.correctAnswer];
+  const dailyQuestions = selected.map((q, i) => {
+    const correctText = q.options[q.correctAnswer];
     const optShuffled = dailySeededShuffle(q.options, `${dateParam}::${q.id}::opts::${i}`, dateParam);
     sessionData.push({ questionId: q.id, correctAnswer: optShuffled.indexOf(correctText) });
     return {

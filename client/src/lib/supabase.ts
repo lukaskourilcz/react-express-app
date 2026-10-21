@@ -79,12 +79,12 @@ export interface DailyChallenge {
   }>;
 }
 
-export async function getDailyChallenge(lang = 'en'): Promise<DailyChallenge> {
+export async function getDailyChallenge(): Promise<DailyChallenge> {
   // Scope the daily mix to the subject's served categories. A retired section
   // in the list gets the whole request refused.
   const categories = deliveryCategoriesForSubject(getSubject()).join(',');
   return apiFetch<DailyChallenge>(
-    `/api/quiz/daily?lang=${encodeURIComponent(lang)}&categories=${encodeURIComponent(categories)}`,
+    `/api/quiz/daily?categories=${encodeURIComponent(categories)}`,
   );
 }
 

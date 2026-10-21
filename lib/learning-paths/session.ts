@@ -5,6 +5,10 @@ import { nativeContentHash, nativeGradingHash } from './audit';
 import { activityIn, pathById } from './catalog';
 import type { MergedActivity } from './types';
 
+/** Any change to the hashed material, its shape included, gives every open
+ * attempt one 409 `task_changed` on submit and a brief review on restart. The
+ * #485 move from `{ en, cs }` copy to plain strings is one such deliberate,
+ * one-time bump: the English text is unchanged. */
 export function pathCodeAttemptVersion(activity: MergedActivity, rubricVersion: number): string | undefined {
   if (activity.kind !== 'code') return undefined;
   return createHash('sha256').update(JSON.stringify([

@@ -10,7 +10,6 @@ import {
   stableAttemptId,
   type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
-import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import { AuthError, tryAuth } from '../../lib/auth';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
@@ -102,8 +101,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // again below, once the session and the account are known.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSubmit))) return;
 
-  const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
-  const lang = normalizeLang((body as { lang?: unknown })?.lang);
+  const body = req.body as { sessionId?: unknown; answers?: unknown };
   if (!body || typeof body !== 'object') {
     return jsonError(res, 400, 'bad_request', 'Body must be JSON');
   }
@@ -242,13 +240,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 409, 'attempt_already_graded', 'This answer has already been graded and cannot be changed');
   }
   // Effective question set (base + /dev overrides, eligibility applied) for
-  // localized explanations — and for the one grading decision the sealed key
+  // explanations, and for the one grading decision the sealed key
   // cannot make on its own. A question that was retired between the session
   // being issued and the answers arriving is void: it is neither counted for
   // nor against the learner, it earns no proof, and it is reported back so
   // the result screen can say why the total is short. The key stays sealed
   // either way; nothing here reveals it.
-  const questionsById = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const questionsById = await getEffectiveQuestionsById(subject);
   const voided = validated.filter(({ questionId }) => !questionsById.has(questionId)).map(({ questionId }) => questionId);
   const gradable = validated.filter(({ questionId }) => questionsById.has(questionId));
 
@@ -263,7 +261,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       selectedIndex,
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
-      explanation: q ? localizeQuestion(q, lang).explanation : '',
+      explanation: q?.explanation ?? '',
       answerProof: sessionQ && session.scope !== 'qotd' ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
     };
     return session.scope === 'challenge' && session.runId && sessionQ

@@ -26,9 +26,9 @@ vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
 
 const task: PlayableCodingTask = {
   id: 'js-test-repeat', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
-  focus: ['functions'], title: { en: 'Test task', cs: 'Testovací úloha' },
-  prompt: { en: 'Return one.', cs: 'Vrať jedničku.' },
-  starter: 'const one = () => 0;\n', hints: { en: ['Use a function.'], cs: ['Použij funkci.'] },
+  focus: ['functions'], title: 'Test task',
+  prompt: 'Return one.',
+  starter: 'const one = () => 0;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
 };
 const passed: CodingTaskProgress = { status: 'passed', passes: 1, reviewStage: 0, nextReviewAt: null, revealCount: 0, bestPassedAt: null };

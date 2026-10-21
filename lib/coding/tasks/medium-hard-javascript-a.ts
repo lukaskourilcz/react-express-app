@@ -12,7 +12,7 @@
 // checks aimed at the shortcut the visible ones leave open. Solutions live in
 // `../solutions/medium-hard-javascript-a.ts`, and `MEDIUM_HARD_BAND` in
 // `../catalog.ts` lists this file, which keeps these challenges out of every
-// Learn level's quota. English only: there is no Czech overlay.
+// Learn level's quota.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 

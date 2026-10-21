@@ -2,7 +2,7 @@
  *
  * Eligibility is decided from already-verified stats (never from client claims),
  * so the API can recompute the earned set and persist it with a stable
- * earned_at. Localized labels/descriptions live in the client i18n tables under
+ * earned_at. string labels/descriptions live in the client i18n tables under
  * `badge.<id>.label` / `badge.<id>.desc`; this module owns only ids, tiers, and
  * the threshold predicates. Purely-cosmetic client-only signals (a perfect quiz,
  * bookmarks) are layered on in the client and are intentionally not here. */

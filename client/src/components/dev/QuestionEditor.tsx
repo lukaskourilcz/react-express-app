@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Banner } from '@astryxdesign/core/Banner';
-import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { Button } from '@astryxdesign/core/Button';
@@ -35,10 +34,6 @@ interface FormState {
   difficulty: number;
   importance: number;
   tags: string;
-  csQuestion: string;
-  csOptions: string[];
-  csIntroduction: string;
-  csExplanation: string;
 }
 
 const blankForm = (categories: string[]): FormState => ({
@@ -51,10 +46,6 @@ const blankForm = (categories: string[]): FormState => ({
   difficulty: 1,
   importance: 5,
   tags: '',
-  csQuestion: '',
-  csOptions: ['', ''],
-  csIntroduction: '',
-  csExplanation: '',
 });
 
 const seedForm = (q: AdminQuestion): FormState => {
@@ -69,11 +60,6 @@ const seedForm = (q: AdminQuestion): FormState => {
     difficulty: q.difficulty,
     importance: q.importance,
     tags: q.tags.join(', '),
-    csQuestion: q.cs.question,
-    // Keep cs options aligned 1:1 with the English options.
-    csOptions: options.map((_, i) => q.cs.options[i] ?? ''),
-    csIntroduction: q.cs.introduction,
-    csExplanation: q.cs.explanation,
   };
 };
 
@@ -132,7 +118,6 @@ function SelectField({
 
 export default function QuestionEditor({ open, initial, categories, onClose, onSaved }: Props) {
   const [form, setForm] = useState(() => blankForm(categories));
-  const [tab, setTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
@@ -142,7 +127,6 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setTab(0);
     const seeded = initial ? seedForm(initial) : blankForm(categories);
     setForm(seeded);
     baselineRef.current = JSON.stringify(seeded);
@@ -151,24 +135,17 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   const setOption = (index: number, value: string) =>
     setForm((f) => ({ ...f, options: f.options.map((o, i) => (i === index ? value : o)) }));
 
-  const setCsOption = (index: number, value: string) =>
-    setForm((f) => ({ ...f, csOptions: f.csOptions.map((o, i) => (i === index ? value : o)) }));
-
-  // English and Czech option arrays grow/shrink together so they stay parallel.
   const addOption = () =>
-    setForm((f) =>
-      f.options.length >= MAX_OPTIONS ? f : { ...f, options: [...f.options, ''], csOptions: [...f.csOptions, ''] },
-    );
+    setForm((f) => (f.options.length >= MAX_OPTIONS ? f : { ...f, options: [...f.options, ''] }));
 
   const removeOption = (index: number) =>
     setForm((f) => {
       if (f.options.length <= MIN_OPTIONS) return f;
       const options = f.options.filter((_, i) => i !== index);
-      const csOptions = f.csOptions.filter((_, i) => i !== index);
       let correctIndex = f.correctIndex;
       if (index === f.correctIndex) correctIndex = 0;
       else if (index < f.correctIndex) correctIndex -= 1;
-      return { ...f, options, csOptions, correctIndex };
+      return { ...f, options, correctIndex };
     });
 
   const validate = (): string | null => {
@@ -184,7 +161,6 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
     const validationError = validate();
     if (validationError) {
       setError(validationError);
-      setTab(0);
       return;
     }
     setSaving(true);
@@ -203,13 +179,6 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
         .filter(Boolean),
       difficulty: form.difficulty,
       importance: form.importance,
-      cs: {
-        question: form.csQuestion.trim(),
-        // Server drops these unless they line up with the English options.
-        options: form.csOptions.map((o) => o.trim()),
-        introduction: form.csIntroduction.trim(),
-        explanation: form.csExplanation.trim(),
-      },
     };
     try {
       await saveQuestion(payload);
@@ -251,180 +220,118 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
       <div style={{ overflowY: 'auto', padding: '16px 20px' }}>
         {error && <Banner status="error" title={error} style={{ marginBottom: 16 }} />}
 
-        <SegmentedControl
-          value={tab === 0 ? 'en' : 'cs'}
-          onChange={(v) => setTab(v === 'en' ? 0 : 1)}
-          label="Translation language"
+        <TextArea
+          label="Question"
+          value={form.question}
+          onChange={(v) => setForm((f) => ({ ...f, question: v }))}
+          rows={2}
+          description="Markdown code fences (``` ```) are rendered as code blocks."
+          style={{ marginBottom: 16, width: '100%' }}
+        />
+
+        <p style={subtitleStyle}>Options — select the correct answer</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+          {form.options.map((opt, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="radio"
+                name="correct-answer"
+                checked={form.correctIndex === i}
+                onChange={() => setForm((f) => ({ ...f, correctIndex: i }))}
+                aria-label={`Mark option ${i + 1} correct`}
+                style={{ width: 18, height: 18, accentColor: 'var(--brand-accent)', flexShrink: 0 }}
+              />
+              <TextInput
+                label={`Option ${i + 1}`}
+                isLabelHidden
+                value={opt}
+                onChange={(v) => setOption(i, v)}
+                placeholder={`Option ${i + 1}`}
+                size="sm"
+                style={{ flex: 1 }}
+              />
+              <IconButton
+                icon={<span aria-hidden>✕</span>}
+                label="Remove option"
+                tooltip={form.options.length <= MIN_OPTIONS ? `Keep at least ${MIN_OPTIONS}` : 'Remove option'}
+                onClick={() => removeOption(i)}
+                isDisabled={form.options.length <= MIN_OPTIONS}
+                variant="ghost"
+                size="sm"
+              />
+            </div>
+          ))}
+        </div>
+        <Button
+          label="+ Add option"
+          onClick={addOption}
+          isDisabled={form.options.length >= MAX_OPTIONS}
+          variant="ghost"
+          size="sm"
           style={{ marginBottom: 16 }}
-        >
-          <SegmentedControlItem value="en" label="English" />
-          <SegmentedControlItem value="cs" label="Čeština" />
-        </SegmentedControl>
+        />
 
-        {tab === 0 ? (
-          <div>
-            <TextArea
-              label="Question"
-              value={form.question}
-              onChange={(v) => setForm((f) => ({ ...f, question: v }))}
-              rows={2}
-              description="Markdown code fences (``` ```) are rendered as code blocks."
-              style={{ marginBottom: 16, width: '100%' }}
-            />
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+          <SelectField
+            label="Category"
+            value={form.category}
+            onChange={(v) => setForm((f) => ({ ...f, category: v }))}
+            style={{ minWidth: 180, flex: 1 }}
+          >
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {getCategoryLabel(c)}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Difficulty"
+            value={String(form.difficulty)}
+            onChange={(v) => setForm((f) => ({ ...f, difficulty: Number(v) }))}
+            style={{ minWidth: 120 }}
+          >
+            {DIFFICULTIES.map((d) => (
+              <option key={d} value={String(d)}>
+                {d}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Importance"
+            helperText="How essential for a learner (1–10)"
+            value={String(form.importance)}
+            onChange={(v) => setForm((f) => ({ ...f, importance: Number(v) }))}
+            style={{ minWidth: 140 }}
+          >
+            {IMPORTANCE_LEVELS.map((n) => (
+              <option key={n} value={String(n)}>
+                {n}
+              </option>
+            ))}
+          </SelectField>
+        </div>
 
-            <p style={subtitleStyle}>Options — select the correct answer</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-              {form.options.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="radio"
-                    name="correct-answer"
-                    checked={form.correctIndex === i}
-                    onChange={() => setForm((f) => ({ ...f, correctIndex: i }))}
-                    aria-label={`Mark option ${i + 1} correct`}
-                    style={{ width: 18, height: 18, accentColor: 'var(--brand-accent)', flexShrink: 0 }}
-                  />
-                  <TextInput
-                    label={`Option ${i + 1}`}
-                    isLabelHidden
-                    value={opt}
-                    onChange={(v) => setOption(i, v)}
-                    placeholder={`Option ${i + 1}`}
-                    size="sm"
-                    style={{ flex: 1 }}
-                  />
-                  <IconButton
-                    icon={<span aria-hidden>✕</span>}
-                    label="Remove option"
-                    tooltip={form.options.length <= MIN_OPTIONS ? `Keep at least ${MIN_OPTIONS}` : 'Remove option'}
-                    onClick={() => removeOption(i)}
-                    isDisabled={form.options.length <= MIN_OPTIONS}
-                    variant="ghost"
-                    size="sm"
-                  />
-                </div>
-              ))}
-            </div>
-            <Button
-              label="+ Add option"
-              onClick={addOption}
-              isDisabled={form.options.length >= MAX_OPTIONS}
-              variant="ghost"
-              size="sm"
-              style={{ marginBottom: 16 }}
-            />
-
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
-              <SelectField
-                label="Category"
-                value={form.category}
-                onChange={(v) => setForm((f) => ({ ...f, category: v }))}
-                style={{ minWidth: 180, flex: 1 }}
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {getCategoryLabel(c)}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                label="Difficulty"
-                value={String(form.difficulty)}
-                onChange={(v) => setForm((f) => ({ ...f, difficulty: Number(v) }))}
-                style={{ minWidth: 120 }}
-              >
-                {DIFFICULTIES.map((d) => (
-                  <option key={d} value={String(d)}>
-                    {d}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                label="Importance"
-                helperText="How essential for a learner (1–10)"
-                value={String(form.importance)}
-                onChange={(v) => setForm((f) => ({ ...f, importance: Number(v) }))}
-                style={{ minWidth: 140 }}
-              >
-                {IMPORTANCE_LEVELS.map((n) => (
-                  <option key={n} value={String(n)}>
-                    {n}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <TextInput
-              label="Tags (comma-separated)"
-              value={form.tags}
-              onChange={(v) => setForm((f) => ({ ...f, tags: v }))}
-              placeholder="useState, Hooks"
-              style={{ marginBottom: 16, width: '100%' }}
-            />
-            <TextArea
-              label="Introduction (shown as a hint)"
-              value={form.introduction}
-              onChange={(v) => setForm((f) => ({ ...f, introduction: v }))}
-              rows={2}
-              style={{ marginBottom: 16, width: '100%' }}
-            />
-            <TextArea
-              label="Explanation (shown after answering)"
-              value={form.explanation}
-              onChange={(v) => setForm((f) => ({ ...f, explanation: v }))}
-              rows={2}
-              style={{ width: '100%' }}
-            />
-          </div>
-        ) : (
-          <div>
-            <Banner
-              status="info"
-              title="Optional Czech translation. Leave a field blank to fall back to English. Category, difficulty, tags and the correct-answer choice are shared with the English version."
-              style={{ marginBottom: 16 }}
-            />
-
-            <TextArea
-              label="Otázka (question)"
-              value={form.csQuestion}
-              onChange={(v) => setForm((f) => ({ ...f, csQuestion: v }))}
-              rows={2}
-              style={{ marginBottom: 16, width: '100%' }}
-            />
-
-            <p style={subtitleStyle}>Možnosti (options) — same order as English</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {form.options.map((enOpt, i) => (
-                <TextInput
-                  key={i}
-                  label={`Možnost ${i + 1}`}
-                  isLabelHidden
-                  value={form.csOptions[i] ?? ''}
-                  onChange={(v) => setCsOption(i, v)}
-                  placeholder={enOpt || `Option ${i + 1}`}
-                  description={`EN: ${enOpt || '—'}`}
-                  size="sm"
-                  style={{ width: '100%' }}
-                />
-              ))}
-            </div>
-
-            <TextArea
-              label="Úvod (introduction)"
-              value={form.csIntroduction}
-              onChange={(v) => setForm((f) => ({ ...f, csIntroduction: v }))}
-              rows={2}
-              style={{ marginBottom: 16, width: '100%' }}
-            />
-            <TextArea
-              label="Vysvětlení (explanation)"
-              value={form.csExplanation}
-              onChange={(v) => setForm((f) => ({ ...f, csExplanation: v }))}
-              rows={2}
-              style={{ width: '100%' }}
-            />
-          </div>
-        )}
+        <TextInput
+          label="Tags (comma-separated)"
+          value={form.tags}
+          onChange={(v) => setForm((f) => ({ ...f, tags: v }))}
+          placeholder="useState, Hooks"
+          style={{ marginBottom: 16, width: '100%' }}
+        />
+        <TextArea
+          label="Introduction (shown as a hint)"
+          value={form.introduction}
+          onChange={(v) => setForm((f) => ({ ...f, introduction: v }))}
+          rows={2}
+          style={{ marginBottom: 16, width: '100%' }}
+        />
+        <TextArea
+          label="Explanation (shown after answering)"
+          value={form.explanation}
+          onChange={(v) => setForm((f) => ({ ...f, explanation: v }))}
+          rows={2}
+          style={{ width: '100%' }}
+        />
       </div>
 
       <div

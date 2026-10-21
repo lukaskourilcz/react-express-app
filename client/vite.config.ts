@@ -9,7 +9,7 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
+import { GUIDE_LOCALES, PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en, type TranslationKey } from './src/i18n/translations';
@@ -144,8 +144,8 @@ function purgeAstryxCss(): Plugin {
 function productMetadata(env: Record<string, string>): Plugin {
   const id = resolveCatalogProductId({ lockSubject: env.VITE_LOCK_SUBJECT, product: env.VITE_PRODUCT });
   const product = PRODUCT_CATALOG[id];
-  const title = product.title.en;
-  const description = product.description.en;
+  const title = product.title;
+  const description = product.description;
   const manifest = JSON.stringify({
     name: product.brand,
     short_name: product.brand,
@@ -235,12 +235,12 @@ function productMetadata(env: Record<string, string>): Plugin {
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, 'index.html'), html);
       };
-      for (const topic of topics) for (const locale of ['en', 'cs'] as const) {
+      for (const topic of topics) for (const locale of GUIDE_LOCALES) {
         const topicTitle = `${topic.title[locale]} · ${product.brand}`;
         const description = topic.description[locale];
         const url = origin + topicPath(topic.slug, locale);
         const schema = JSON.stringify(topicSchema(topicTitle, description, url, locale)).replace(/</g, '\\u003c');
-        const links = `<link rel="canonical" href="${url}" />` + ['en', 'cs'].map(lang => `<link rel="alternate" hreflang="${lang}" href="${origin}${topicPath(topic.slug, lang as 'en' | 'cs')}" />`).join('');
+        const links = `<link rel="canonical" href="${url}" />` + GUIDE_LOCALES.map(guideLocale => `<link rel="alternate" hreflang="${guideLocale}" href="${origin}${topicPath(topic.slug, guideLocale)}" />`).join('');
         const article = renderToStaticMarkup(createElement(TopicArticle, { topic, locale, brand: product.brand, related: topics }));
         const html = indexHtml
           .replace('<html lang="en">', `<html lang="${locale}" data-public-locale="${locale}">`)
@@ -292,13 +292,13 @@ function productMetadata(env: Record<string, string>): Plugin {
         const difficulty = en[`coding.difficulty.${task.difficulty}` as TranslationKey] ?? task.difficulty;
         const pagePath = `/coding/${task.track}/${task.id}`;
         const image = `/og/coding/${task.id}.png`;
-        const pageTitle = `${task.title.en} · ${track} coding challenge · ${product.brand}`;
+        const pageTitle = `${task.title} · ${track} coding challenge · ${product.brand}`;
         const description = codingShareDescription({ difficulty, track, brand: product.brand, ...coding });
         if ((await writeOgCard(path.join(outDir, image), {
-          kind: 'coding', title: task.title.en, track, difficulty, free: task.free === true, freeCount: coding.free, totalCount: coding.total,
+          kind: 'coding', title: task.title, track, difficulty, free: task.free === true, freeCount: coding.free, totalCount: coding.total,
         })) === 'drawn') drawn++;
-        await writePage(pagePath, pageHead(indexHtml, { title: pageTitle, description, url: origin + pagePath, image: origin + image, imageAlt: `${task.title.en}: ${track}, ${difficulty}` })
-          .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(task.title.en)}</h1><p>${escape(description)}</p></main></noscript></div>`));
+        await writePage(pagePath, pageHead(indexHtml, { title: pageTitle, description, url: origin + pagePath, image: origin + image, imageAlt: `${task.title}: ${track}, ${difficulty}` })
+          .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(task.title)}</h1><p>${escape(description)}</p></main></noscript></div>`));
       }
       // C4-4: the Coding home and its track pages get a head of their own the
       // same way, so a crawler or a link preview that runs no JavaScript stops
@@ -359,33 +359,6 @@ function productMetadata(env: Record<string, string>): Plugin {
   };
 }
 
-/** The app ships English only (`ENABLED_LANGS`), and no Czech may reach a
- * browser. Two shared modules the coding workbench imports keep a Czech line
- * beside each English one: the documentation blurbs and the default failure
- * hints. The server sends its copy through `englishOnly`; here the client
- * build blanks the same lines, so the repository keeps them and the bundle
- * does not (V3-6). A line this misses fails the build rather than shipping.
- * Drop this the day Czech ships again. */
-function englishOnlyCodingCopy(): Plugin {
-  const files = ['/shared/coding-docs.ts', '/shared/coding-failure.ts'];
-  const czech = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/;
-  const quoted = String.raw`'(?:[^'\\]|\\.)*'`;
-  return {
-    name: 'english-only-coding-copy',
-    enforce: 'pre',
-    transform(code, id) {
-      if (!files.some((file) => id.split('?')[0].endsWith(file))) return null;
-      const blanked = code
-        // `cs: '…'` in a { en, cs } pair.
-        .replace(new RegExp(`\\bcs: ${quoted}`, 'g'), "cs: ''")
-        // The last column of a documentation row, `[tag, url, title, source, en, cs]`.
-        .replace(new RegExp(`, ${quoted}\\],$`, 'gm'), ", ''],");
-      if (czech.test(blanked)) this.error(`${path.basename(id)} still holds Czech copy after blanking; teach englishOnlyCodingCopy its new shape.`);
-      return { code: blanked, map: null };
-    },
-  };
-}
-
 /** The merchandise mockups the owner has exported from Spreadshop (#229):
  * `public/merch/<sku>.webp` (or .avif, .png, .jpg). The Rewards tiles show an
  * image only for a SKU listed here, so a missing file is never requested and
@@ -413,7 +386,6 @@ export default defineConfig(({ mode }) => {
     __MERCH_IMAGES__: JSON.stringify(merchImages(path.resolve(__dirname, 'public/merch'))),
   },
   plugins: [
-    englishOnlyCodingCopy(),
     productMetadata(env),
     react(),
     purgeAstryxCss(),

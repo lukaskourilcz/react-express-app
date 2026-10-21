@@ -11,7 +11,6 @@
 // for the misconception the bug comes from — not for the line number.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
-// English is the source of truth; Czech copy lives in javascript-debug.cs.ts.
 
 import type { CodingTaskSource } from '../types';
 
@@ -46,10 +45,7 @@ console.log(average([]));
     estimatedMinutes: 6,
     pitfall: 'boundary',
     failureHints: {
-      boundary: {
-        en: 'The ordinary lists already work — the bug only shows at the edge. Ask what the last line computes when there is nothing to average.',
-        cs: 'Běžné seznamy fungují — chyba se ukáže až na kraji. Zeptej se, co poslední řádek spočítá, když není co průměrovat.',
-      },
+      boundary: 'The ordinary lists already work — the bug only shows at the edge. Ask what the last line computes when there is nothing to average.',
     },
     tests: [
       { call: 'average([1, 2, 3])', expected: 2 },
@@ -91,10 +87,7 @@ console.log(tally(["a", "b", "a"]));
     verify: 'tests',
     estimatedMinutes: 7,
     failureHints: {
-      'output-shape': {
-        en: 'The container is right and the numbers in it are not. Look at what the loop writes for a word it has already seen.',
-        cs: 'Nádoba je správná, čísla v ní ne. Podívej se, co cyklus zapíše pro slovo, které už jednou viděl.',
-      },
+      'output-shape': 'The container is right and the numbers in it are not. Look at what the loop writes for a word it has already seen.',
     },
     tests: [
       { call: '[...tally(["a", "b", "a"]).entries()]', expected: [['a', 2], ['b', 1]] },
@@ -140,10 +133,7 @@ console.log(without(original, "a"), original);
     estimatedMinutes: 8,
     pitfall: 'mutation',
     failureHints: {
-      mutation: {
-        en: 'The answer is right and the side effect is not. Ask which array the function returns, and whether the caller is still holding it.',
-        cs: 'Odpověď je správná, vedlejší efekt ne. Zeptej se, které pole funkce vrací a jestli ho volající pořád drží.',
-      },
+      mutation: 'The answer is right and the side effect is not. Ask which array the function returns, and whether the caller is still holding it.',
     },
     tests: [
       { call: 'without(["a", "b", "a"], "a")', expected: ['b'] },
@@ -193,10 +183,7 @@ console.log(firstLongerThan(["ox", "cat", "horse"], 2));
     verify: 'tests',
     estimatedMinutes: 6,
     failureHints: {
-      tests: {
-        en: 'It finds a match, just not the one that was asked for. Trace the loop on a list with two matches and watch what the variable holds after each step.',
-        cs: 'Shodu najde, jen ne tu, o kterou šlo. Projdi cyklus na seznamu se dvěma shodami a sleduj, co proměnná drží po každém kroku.',
-      },
+      tests: 'It finds a match, just not the one that was asked for. Trace the loop on a list with two matches and watch what the variable holds after each step.',
     },
     tests: [
       { call: 'firstLongerThan(["ox", "cat", "horse"], 2)', expected: 'cat' },

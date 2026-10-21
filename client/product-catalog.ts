@@ -6,8 +6,8 @@ import type { MerchSku } from '../shared/rewards';
 export const PRODUCT_CATALOG = {
   devshark: {
     brand: 'devShark', subjectId: 'webdev',
-    title: { en: 'devShark — developer learning and practice', cs: 'devShark — učení a procvičování pro vývojáře' },
-    description: { en: 'Build durable developer knowledge across frontend, backend, databases, DevOps, testing, security, system design and AI.', cs: 'Buduj pevné vývojářské znalosti od frontendu a backendu po databáze, DevOps, testování, bezpečnost, návrh systémů a AI.' },
+    title: 'devShark — developer learning and practice',
+    description: 'Build durable developer knowledge across frontend, backend, databases, DevOps, testing, security, system design and AI.',
   },
 } as const;
 

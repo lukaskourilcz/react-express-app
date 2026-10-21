@@ -56,7 +56,7 @@ it('loads, stores and sends nothing before the visitor decides', async () => {
   analytics.capturePageview('/');
   analytics.identifyUser('user-1');
   analytics.capture('quiz_started', { mode: 'quick' });
-  analytics.captureActivation('learning_cta_clicked', { product: 'devshark', locale: 'en', source: 'home' });
+  analytics.captureActivation('learning_cta_clicked', { product: 'devshark', source: 'home' });
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(loads.count).toBe(0);
   expect(client.init).not.toHaveBeenCalled();
@@ -178,7 +178,11 @@ it('captures activation without allowing raw learner data into its properties', 
   await vi.waitFor(() => expect(client.init).toHaveBeenCalled());
   const properties = { product: 'devshark', locale: 'en' as const, source: 'home' as const, category: 'react', code: 'PRIVATE', answer: 'PRIVATE', access_token: 'PRIVATE' };
   analytics.captureActivation('landing_sample_completed', properties);
-  await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('landing_sample_completed', { product: 'devshark', locale: 'en', source: 'home', category: 'react' }));
+  // The home page's events carry no language: the app has one.
+  await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('landing_sample_completed', { product: 'devshark', source: 'home', category: 'react' }));
+  // A topic guide's event names the language the guide was read in.
+  analytics.captureActivation('learning_cta_clicked', { product: 'devshark', locale: 'cs', source: 'topic_guide', category: 'react' });
+  await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('learning_cta_clicked', { product: 'devshark', locale: 'cs', source: 'topic_guide', category: 'react' }));
   expect(client.init.mock.calls[0][1]).toMatchObject({ autocapture: false, disable_session_recording: true, respect_dnt: true });
 });
 

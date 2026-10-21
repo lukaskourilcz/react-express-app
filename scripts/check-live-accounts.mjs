@@ -45,7 +45,7 @@ try {
   await api(1,'/api/quiz/roadmap?resource=coding-submit',{session:task.session,code:'function calculate(s){return Number(s)}'},'POST',403);
   check('sealed coding session rejects another authenticated account');
   for (const mode of ['multiplayer','classroom']) {
-    const room=await api(0,'/api/play/create',{host_name:'Launch audit host',mode,count:5,categories:['javascript'],duration_s:0,lang:mode==='classroom'?'cs':'en'});
+    const room=await api(0,'/api/play/create',{host_name:'Launch audit host',mode,count:5,categories:['javascript'],duration_s:0});
     const joined=await api(1,'/api/play/join',{code:room.code,display_name:'Launch audit player'});
     assert(joined.questions.every(q=>!('correct_index' in q)&&!('explanation' in q)));
     await api(1,'/api/play/control',{code:room.code,action:'start'},'POST',403);

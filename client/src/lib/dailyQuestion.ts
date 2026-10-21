@@ -27,7 +27,7 @@ export type QotdResult = QuizResult['results'][number];
 export async function checkDailyAnswer(sessionId: string, questionId: string, selectedIndex: number): Promise<QotdResult> {
   const result = await apiFetch<QuizResult>('/api/quiz/submit', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, answers: { [questionId]: selectedIndex }, lang: 'en' }),
+    body: JSON.stringify({ sessionId, answers: { [questionId]: selectedIndex } }),
   });
   const graded = result.results.find((one) => one.questionId === questionId);
   if (!graded) throw new ApiError('The question was retired while you answered it.', 409, 'qotd_voided');

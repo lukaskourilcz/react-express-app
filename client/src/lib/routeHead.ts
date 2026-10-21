@@ -1,10 +1,9 @@
 // The document head for each route: its title, description, canonical URL,
 // structured data and robots line. The app shell (App.tsx) applies it on
 // every navigation.
-import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import { CURRENT_PRODUCT, productText } from './products';
-import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './publicMetadata';
+import { CURRENT_PRODUCT } from './products';
+import { GUIDE_LOCALES, NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './publicMetadata';
 
 type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -47,10 +46,10 @@ const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
   ['/roadmap/paths/dsa-foundations', 'paths.picker.dsaLabel'],
 ];
 
-export function routeTitle(pathname: string, t: Translate, lang: Lang): string {
+export function routeTitle(pathname: string, t: Translate): string {
   const publicTopic = topicFromPath(pathname);
   if (publicTopic) return `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}`;
-  if (pathname === '/') return productText(CURRENT_PRODUCT.title, lang);
+  if (pathname === '/') return CURRENT_PRODUCT.title;
   const titleKey = ROUTE_TITLE_KEYS[pathname];
   if (titleKey) return t(titleKey);
   const path = PATH_TITLE_NAMES.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -106,7 +105,7 @@ export function readShareHead(): ShareHead | null {
  * belongs to the not-found page, which adds it while it shows and removes it
  * when it goes (PublicInfoPages.tsx), so it is left alone here.
  */
-export function applyRouteHead(pathname: string, t: Translate, lang: Lang, shareHead: ShareHead | null = null): void {
+export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareHead | null = null): void {
   const setMeta = (selector: string, value: string) => {
     document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
   };
@@ -125,13 +124,13 @@ export function applyRouteHead(pathname: string, t: Translate, lang: Lang, share
   }
 
   const publicTopic = topicFromPath(pathname);
-  document.title = routeTitle(pathname, t, lang);
+  document.title = routeTitle(pathname, t);
   // /premium and /premium/cancel carry their own description and canonical,
   // the same ones the build writes into their static HTML.
   const page = publicPage(pathname);
   const description = publicTopic
     ? publicTopic.topic.description[publicTopic.locale]
-    : page ? t(page.descriptionKey) : productText(CURRENT_PRODUCT.description, lang);
+    : page ? t(page.descriptionKey) : CURRENT_PRODUCT.description;
   setMeta('meta[name="description"]', description);
   setMeta('meta[property="og:title"]', document.title);
   setMeta('meta[property="og:description"]', description);
@@ -145,7 +144,7 @@ export function applyRouteHead(pathname: string, t: Translate, lang: Lang, share
     const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
   }
   if (publicTopic && canonical) {
-    for (const locale of ['en', 'cs']) {
+    for (const locale of GUIDE_LOCALES) {
       const link = document.createElement('link'); link.rel = 'alternate'; link.hreflang = locale;
       link.href = `${PUBLIC_ORIGIN}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
     }

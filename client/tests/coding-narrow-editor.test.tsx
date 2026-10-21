@@ -21,9 +21,9 @@ vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
 // for a bigger screen" and nothing else, so a phone could never pass it.
 const task: PlayableCodingTask = {
   id: 'js-narrow-editor', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
-  focus: ['functions'], title: { en: 'Narrow task', cs: 'Úzká úloha' },
-  prompt: { en: 'Return one.', cs: 'Vrať jedničku.' },
-  starter: 'const one = () => 1;\n', hints: { en: ['Use a function.'], cs: ['Použij funkci.'] },
+  focus: ['functions'], title: 'Narrow task',
+  prompt: 'Return one.',
+  starter: 'const one = () => 1;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [],
 };
 
@@ -93,7 +93,7 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
 const puzzle = {
   taskId: 'js-narrow-puzzle', variantId: 'v1',
   lines: [{ id: 'b1', code: '}' }, { id: 'b2', code: 'const one = () => {' }, { id: 'b3', code: '  return 1;' }],
-  competencies: ['sequence' as const], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' },
+  competencies: ['sequence' as const], claim: 'Arranged correctly.',
 };
 const mountPuzzle = () => render(
   <MemoryRouter><LanguageProvider>
@@ -126,7 +126,7 @@ it('offers the editor beside a puzzle, and an earlier choice of the editor opens
 it('does not tell a signed-in learner to sign in after an accepted order', async () => {
   vi.mocked(submitCoding).mockResolvedValue({
     verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null,
-    failureHint: null, puzzle: { accepted: true, competencies: ['sequence'], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' } },
+    failureHint: null, puzzle: { accepted: true, competencies: ['sequence'], claim: 'Arranged correctly.' },
     progress: null, firstPass: false, xpAwarded: 0, xpForfeited: false, applied: false, github: null, solutions: null,
   });
   mountPuzzle();

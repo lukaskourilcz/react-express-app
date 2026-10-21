@@ -72,7 +72,7 @@ function PathRow({ row }: { row: ResumeRow }) {
  * longer opens, offers no row either: starting its activity would be refused.
  */
 export function PathResumeSection() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const userId = isAuthenticated ? user?.id : undefined;
   const catalog = usePathCatalog();
@@ -86,7 +86,6 @@ export function PathResumeSection() {
     })),
   });
 
-  const localized = (text: { en: string; cs: string }) => (lang === 'cs' ? text.cs || text.en : text.en);
   const rows: ResumeRow[] = active.flatMap((enrollment, index) => {
     const entry = entryFor(catalog.data, enrollment.pathId);
     if (!entry || !isOpen(entry.availability)) return [];
@@ -98,10 +97,10 @@ export function PathResumeSection() {
     if (!module || !activity) return [];
     return [{
       enrollment,
-      pathTitle: localized(entry.manifest.title),
+      pathTitle: entry.manifest.title,
       moduleId: module.id,
       activityId: next,
-      activityTitle: localized(activity.title),
+      activityTitle: activity.title,
     }];
   });
   if (rows.length === 0) return null;

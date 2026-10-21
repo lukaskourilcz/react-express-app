@@ -34,7 +34,6 @@ import {
   useEnrollments,
   usePathCatalog,
 } from '../../lib/learningPaths';
-import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import type { PathCatalogEntry } from '../../../../shared/learning-path-api';
 import { MERCH_ENABLED } from '../../../../shared/rewards';
@@ -47,7 +46,6 @@ const PathRewardClaim = lazyShellPart(() => import('./PathRewardClaim'));
 
 export default function LearningPathsCard() {
   const t = useT();
-  const loc = useLoc();
   const [subject] = useSubject();
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -249,7 +247,7 @@ export default function LearningPathsCard() {
                 <span className="lp-activity__kind">
                   {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
                 </span>
-                <span className="lp-activity__title">{loc(manifest.title)}</span>
+                <span className="lp-activity__title">{manifest.title}</span>
                 <span className="lp-activity__minutes">
                   {/* A short state that fits its slot: closed, resume a paused
                       enrollment, in progress, or start; with the Premium mark

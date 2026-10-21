@@ -167,7 +167,7 @@ describe('/premium', () => {
 });
 
 describe('the plan table', () => {
-  it('compares Free and Premium and drops the AI and bilingual rows', () => {
+  it('compares Free and Premium and drops the AI and language rows', () => {
     server.use(settingsHandler);
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
@@ -180,7 +180,7 @@ describe('the plan table', () => {
     expect(rows).not.toContain('FDE and DSA learning paths');
     expect(rows).not.toContain('Coins for merchandise');
     expect(rows).not.toContain('Ads');
-    expect(rows.join(' ')).not.toMatch(/AI|Czech/);
+    expect(rows.join(' ')).not.toMatch(/AI|[Ll]anguage|[Tt]ranslat/);
     expect(screen.getByText(/No ads on either plan\./)).toBeInTheDocument();
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
     expect(within(table).getByText('All 16')).toBeInTheDocument();

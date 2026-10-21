@@ -28,7 +28,7 @@ export interface Concept {
   /** The category its questions live in. A concept never spans categories:
    * that would let a mix pull in a topic the learner has not unlocked. */
   topic: string;
-  label: { en: string; cs: string };
+  label: string;
   /** Tags that identify a question as being about this concept. A question
    * matches when it carries any of them. */
   tags: readonly string[];
@@ -38,204 +38,184 @@ export interface Concept {
 export interface ConceptGroup {
   id: string;
   topic: string;
-  label: { en: string; cs: string };
+  label: string;
   /** What choosing between these actually is, in one line. Shown to the
    * learner as the reason a session is mixed. */
-  contrast: { en: string; cs: string };
+  contrast: string;
   concepts: readonly Concept[];
 }
 
 const g = (
   id: string,
   topic: string,
-  label: { en: string; cs: string },
-  contrast: { en: string; cs: string },
-  concepts: readonly [string, string, string, readonly string[]][],
+  label: string,
+  contrast: string,
+  concepts: readonly [string, string, readonly string[]][],
 ): ConceptGroup => ({
   id,
   topic,
   label,
   contrast,
-  concepts: concepts.map(([cid, en, cs, tags]) => ({
+  concepts: concepts.map(([cid, conceptLabel, tags]) => ({
     id: cid,
     topic,
-    label: { en, cs },
+    label: conceptLabel,
     tags,
   })),
 });
 
 export const CONCEPT_GROUPS: readonly ConceptGroup[] = [
   g('js-array-transform', 'javascript',
-    { en: 'Transforming an array', cs: 'Práce s polem' },
-    { en: 'Each of these walks the array once. What differs is what you get back.',
-      cs: 'Každá z nich projde pole jednou. Liší se tím, co vrátí.' },
+    'Transforming an array',
+    'Each of these walks the array once. What differs is what you get back.',
     [
-      ['js-map', 'map', 'map', ['map']],
-      ['js-filter', 'filter', 'filter', ['filter']],
-      ['js-reduce', 'reduce', 'reduce', ['reduce']],
+      ['js-map', 'map', ['map']],
+      ['js-filter', 'filter', ['filter']],
+      ['js-reduce', 'reduce', ['reduce']],
     ]),
   g('js-async', 'javascript',
-    { en: 'Sequencing asynchronous work', cs: 'Řazení asynchronní práce' },
-    { en: 'Three ways to say "later". They differ in how failure travels.',
-      cs: 'Tři způsoby, jak říct „později“. Liší se tím, kudy putuje chyba.' },
+    'Sequencing asynchronous work',
+    'Three ways to say "later". They differ in how failure travels.',
     [
-      ['js-callbacks', 'Callbacks', 'Callbacky', ['Callbacks']],
-      ['js-promises', 'Promises', 'Promises', ['Promises']],
-      ['js-async-await', 'async / await', 'async / await', ['async']],
+      ['js-callbacks', 'Callbacks', ['Callbacks']],
+      ['js-promises', 'Promises', ['Promises']],
+      ['js-async-await', 'async / await', ['async']],
     ]),
   g('js-equality', 'javascript',
-    { en: 'Equality and truthiness', cs: 'Rovnost a pravdivost' },
-    { en: 'Whether two values are equal, and whether one is "true enough", are different questions.',
-      cs: 'Jestli se dvě hodnoty rovnají a jestli je jedna „dost pravdivá“, jsou dvě různé otázky.' },
+    'Equality and truthiness',
+    'Whether two values are equal, and whether one is "true enough", are different questions.',
     [
-      ['js-comparison', 'Comparison', 'Porovnávání', ['Comparison']],
-      ['js-coercion', 'Coercion', 'Převody typů', ['Coercion']],
-      ['js-truthy', 'Truthiness', 'Pravdivost', ['Truthy', 'Nullish']],
+      ['js-comparison', 'Comparison', ['Comparison']],
+      ['js-coercion', 'Coercion', ['Coercion']],
+      ['js-truthy', 'Truthiness', ['Truthy', 'Nullish']],
     ]),
   g('ts-shape', 'typescript',
-    { en: 'Describing a shape', cs: 'Popis tvaru' },
-    { en: 'Three ways to name a type. Which one you reach for changes what you can do next.',
-      cs: 'Tři způsoby, jak pojmenovat typ. Volba mění, co s ním jde dělat dál.' },
+    'Describing a shape',
+    'Three ways to name a type. Which one you reach for changes what you can do next.',
     [
-      ['ts-interfaces', 'Interfaces', 'Rozhraní', ['Interfaces']],
-      ['ts-aliases', 'Type aliases', 'Aliasy typů', ['Type aliases']],
-      ['ts-unions', 'Unions', 'Sjednocení', ['Unions']],
+      ['ts-interfaces', 'Interfaces', ['Interfaces']],
+      ['ts-aliases', 'Type aliases', ['Type aliases']],
+      ['ts-unions', 'Unions', ['Unions']],
     ]),
   g('ts-narrowing', 'typescript',
-    { en: 'Proving a type at runtime', cs: 'Zúžení typu za běhu' },
-    { en: 'The compiler believes what it can check. These are the two ways of showing it.',
-      cs: 'Kompilátor věří tomu, co si ověří. Tohle jsou dva způsoby, jak mu to ukázat.' },
+    'Proving a type at runtime',
+    'The compiler believes what it can check. These are the two ways of showing it.',
     [
-      ['ts-narrowing', 'Narrowing', 'Zužování', ['Narrowing']],
-      ['ts-guards', 'Type guards', 'Typové stráže', ['Type guards']],
+      ['ts-narrowing', 'Narrowing', ['Narrowing']],
+      ['ts-guards', 'Type guards', ['Type guards']],
     ]),
   g('react-state', 'react',
-    { en: 'Holding state', cs: 'Držení stavu' },
-    { en: 'One value or a set of transitions — the choice is about how the updates relate.',
-      cs: 'Jedna hodnota, nebo sada přechodů — jde o to, jak spolu změny souvisí.' },
+    'Holding state',
+    'One value or a set of transitions — the choice is about how the updates relate.',
     [
-      ['react-usestate', 'useState', 'useState', ['useState']],
-      ['react-usereducer', 'useReducer', 'useReducer', ['useReducer']],
-      ['react-derived', 'Derived state', 'Odvozený stav', ['Derived state']],
+      ['react-usestate', 'useState', ['useState']],
+      ['react-usereducer', 'useReducer', ['useReducer']],
+      ['react-derived', 'Derived state', ['Derived state']],
     ]),
   g('react-memo', 'react',
-    { en: 'Memoising', cs: 'Memoizace' },
-    { en: 'One caches a value, one caches a function. Mixing them up is the classic mistake.',
-      cs: 'Jedno ukládá hodnotu, druhé funkci. Zaměnit je je klasická chyba.' },
+    'Memoising',
+    'One caches a value, one caches a function. Mixing them up is the classic mistake.',
     [
-      ['react-usememo', 'useMemo', 'useMemo', ['useMemo']],
-      ['react-usecallback', 'useCallback', 'useCallback', ['useCallback']],
+      ['react-usememo', 'useMemo', ['useMemo']],
+      ['react-usecallback', 'useCallback', ['useCallback']],
     ]),
   g('react-effects', 'react',
-    { en: 'When an effect is the wrong tool', cs: 'Kdy efekt není správný nástroj' },
-    { en: 'Most of what people put in an effect belongs in an event handler instead.',
-      cs: 'Většina toho, co lidé dávají do efektu, patří spíš do obsluhy události.' },
+    'When an effect is the wrong tool',
+    'Most of what people put in an effect belongs in an event handler instead.',
     [
       // `Cleanup` is deliberately not a concept of its own: every question
       // carrying it also carries `useEffect`, which resolves first, so a
       // separate concept would match nothing and be practised never.
-      ['react-useeffect', 'useEffect', 'useEffect', ['useEffect', 'Cleanup']],
-      ['react-events', 'Events', 'Události', ['Events']],
+      ['react-useeffect', 'useEffect', ['useEffect', 'Cleanup']],
+      ['react-events', 'Events', ['Events']],
     ]),
   g('css-layout', 'css',
-    { en: 'Laying out a page', cs: 'Rozvržení stránky' },
-    { en: 'One arranges along a line, one arranges on a plane. Most layouts want both.',
-      cs: 'Jedno řadí po přímce, druhé po ploše. Většina rozvržení chce obojí.' },
+    'Laying out a page',
+    'One arranges along a line, one arranges on a plane. Most layouts want both.',
     [
-      ['css-flexbox', 'Flexbox', 'Flexbox', ['Flexbox']],
-      ['css-grid', 'Grid', 'Grid', ['Grid']],
+      ['css-flexbox', 'Flexbox', ['Flexbox']],
+      ['css-grid', 'Grid', ['Grid']],
     ]),
   g('css-stacking', 'css',
-    { en: 'Taking an element out of flow', cs: 'Vyjmutí prvku z toku' },
-    { en: 'Where it sits and what it sits on top of are decided by different rules.',
-      cs: 'Kde prvek je a přes co leží, rozhodují různá pravidla.' },
+    'Taking an element out of flow',
+    'Where it sits and what it sits on top of are decided by different rules.',
     [
-      ['css-positioning', 'Positioning', 'Pozicování', ['Positioning']],
-      ['css-stacking', 'Stacking', 'Vrstvení', ['Stacking']],
+      ['css-positioning', 'Positioning', ['Positioning']],
+      ['css-stacking', 'Stacking', ['Stacking']],
     ]),
   g('dsa-linear', 'dsa',
-    { en: 'Which end you take from', cs: 'Z kterého konce bereš' },
-    { en: 'Same storage, opposite discipline — and the discipline is the whole point.',
-      cs: 'Stejné úložiště, opačná disciplína — a právě o tu disciplínu jde.' },
+    'Which end you take from',
+    'Same storage, opposite discipline — and the discipline is the whole point.',
     [
-      ['dsa-stacks', 'Stacks', 'Zásobníky', ['Stacks']],
-      ['dsa-queues', 'Queues', 'Fronty', ['Queues']],
+      ['dsa-stacks', 'Stacks', ['Stacks']],
+      ['dsa-queues', 'Queues', ['Queues']],
     ]),
   g('dsa-lookup', 'dsa',
-    { en: 'Finding something again', cs: 'Najít něco znovu' },
-    { en: 'Index, key or scan — the cost of the lookup is what separates them.',
-      cs: 'Index, klíč, nebo průchod — liší se cenou vyhledání.' },
+    'Finding something again',
+    'Index, key or scan — the cost of the lookup is what separates them.',
     [
-      ['dsa-arrays', 'Arrays', 'Pole', ['Arrays']],
-      ['dsa-hash', 'Hash tables', 'Hašovací tabulky', ['Hash Tables']],
-      ['dsa-searching', 'Searching', 'Vyhledávání', ['Searching']],
+      ['dsa-arrays', 'Arrays', ['Arrays']],
+      ['dsa-hash', 'Hash tables', ['Hash Tables']],
+      ['dsa-searching', 'Searching', ['Searching']],
     ]),
   g('dsa-order', 'dsa',
-    { en: 'Order and what it buys', cs: 'Uspořádání a co přináší' },
-    { en: 'Sorting costs once; the searches it makes possible are cheap forever after.',
-      cs: 'Seřazení stojí jednou; vyhledávání, která umožní, jsou pak už levná.' },
+    'Order and what it buys',
+    'Sorting costs once; the searches it makes possible are cheap forever after.',
     [
-      ['dsa-sorting', 'Sorting', 'Řazení', ['Sorting']],
-      ['dsa-complexity', 'Complexity', 'Složitost', ['Complexity', 'Big-O']],
+      ['dsa-sorting', 'Sorting', ['Sorting']],
+      ['dsa-complexity', 'Complexity', ['Complexity', 'Big-O']],
     ]),
   g('dsa-linked', 'dsa',
-    { en: 'Structures with links in them', cs: 'Struktury s odkazy' },
-    { en: 'One parent, many parents, or none — the shape decides how you walk it.',
-      cs: 'Jeden rodič, mnoho rodičů, nebo žádný — tvar rozhoduje, jak jím projdeš.' },
+    'Structures with links in them',
+    'One parent, many parents, or none — the shape decides how you walk it.',
     [
-      ['dsa-lists', 'Linked lists', 'Spojové seznamy', ['Linked Lists']],
-      ['dsa-trees', 'Trees', 'Stromy', ['Trees', 'BST']],
-      ['dsa-graphs', 'Graphs', 'Grafy', ['Graphs']],
+      ['dsa-lists', 'Linked lists', ['Linked Lists']],
+      ['dsa-trees', 'Trees', ['Trees', 'BST']],
+      ['dsa-graphs', 'Graphs', ['Graphs']],
     ]),
   g('sec-identity', 'security',
-    { en: 'Who you are and what you may do', cs: 'Kdo jsi a co smíš' },
-    { en: 'Proving identity and granting permission are separate, and confusing them is a vulnerability.',
-      cs: 'Prokázat identitu a udělit oprávnění jsou dvě věci; jejich záměna je zranitelnost.' },
+    'Who you are and what you may do',
+    'Proving identity and granting permission are separate, and confusing them is a vulnerability.',
     [
-      ['sec-authn', 'Authentication', 'Autentizace', ['AuthN']],
-      ['sec-authz', 'Authorization', 'Autorizace', ['AuthZ']],
+      ['sec-authn', 'Authentication', ['AuthN']],
+      ['sec-authz', 'Authorization', ['AuthZ']],
     ]),
   g('sec-injection', 'security',
-    { en: 'Content that came from somewhere else', cs: 'Obsah odjinud' },
-    { en: 'Three attacks with three different fixes, and they are regularly mistaken for one.',
-      cs: 'Tři útoky se třemi různými opravami, které se pravidelně pletou dohromady.' },
+    'Content that came from somewhere else',
+    'Three attacks with three different fixes, and they are regularly mistaken for one.',
     [
-      ['sec-injection', 'Injection', 'Injekce', ['Injection']],
-      ['sec-xss', 'XSS', 'XSS', ['XSS']],
-      ['sec-csrf', 'CSRF', 'CSRF', ['CSRF']],
+      ['sec-injection', 'Injection', ['Injection']],
+      ['sec-xss', 'XSS', ['XSS']],
+      ['sec-csrf', 'CSRF', ['CSRF']],
     ]),
   g('db-model', 'databases',
-    { en: 'How the data is shaped', cs: 'Jak jsou data tvarovaná' },
-    { en: 'The model decides which queries are cheap, which is a design decision and not a preference.',
-      cs: 'Model rozhoduje, které dotazy jsou levné — to je návrhové rozhodnutí, ne otázka vkusu.' },
+    'How the data is shaped',
+    'The model decides which queries are cheap, which is a design decision and not a preference.',
     [
-      ['db-sql', 'SQL', 'SQL', ['SQL']],
-      ['db-nosql', 'NoSQL', 'NoSQL', ['NoSQL']],
+      ['db-sql', 'SQL', ['SQL']],
+      ['db-nosql', 'NoSQL', ['NoSQL']],
     ]),
   g('db-cost', 'databases',
-    { en: 'Why a query is slow', cs: 'Proč je dotaz pomalý' },
-    { en: 'A missing index and a query in a loop feel identical from the outside.',
-      cs: 'Chybějící index a dotaz ve smyčce vypadají zvenku stejně.' },
+    'Why a query is slow',
+    'A missing index and a query in a loop feel identical from the outside.',
     [
-      ['db-indexing', 'Indexing', 'Indexy', ['Indexing']],
-      ['db-nplus1', 'N+1', 'N+1', ['N+1']],
+      ['db-indexing', 'Indexing', ['Indexing']],
+      ['db-nplus1', 'N+1', ['N+1']],
     ]),
   g('node-io', 'nodejs',
-    { en: 'Moving bytes', cs: 'Přesun bajtů' },
-    { en: 'One holds bytes, one delivers them over time. The choice is about how much memory you need at once.',
-      cs: 'Jedno drží bajty, druhé je doručuje v čase. Jde o to, kolik paměti potřebuješ naráz.' },
+    'Moving bytes',
+    'One holds bytes, one delivers them over time. The choice is about how much memory you need at once.',
     [
-      ['node-buffers', 'Buffers', 'Buffery', ['Buffers']],
-      ['node-streams', 'Streams', 'Streamy', ['Streams']],
+      ['node-buffers', 'Buffers', ['Buffers']],
+      ['node-streams', 'Streams', ['Streams']],
     ]),
   g('sd-copies', 'system-design',
-    { en: 'More than one copy', cs: 'Víc než jedna kopie' },
-    { en: 'Copying the same data and splitting different data solve different problems.',
-      cs: 'Kopírovat stejná data a rozdělit různá data řeší různé problémy.' },
+    'More than one copy',
+    'Copying the same data and splitting different data solve different problems.',
     [
-      ['sd-replication', 'Replication', 'Replikace', ['Replication']],
-      ['sd-sharding', 'Sharding', 'Sharding', ['Sharding']],
-      ['sd-caching', 'Caching', 'Cachování', ['Caching', 'CDN']],
+      ['sd-replication', 'Replication', ['Replication']],
+      ['sd-sharding', 'Sharding', ['Sharding']],
+      ['sd-caching', 'Caching', ['Caching', 'CDN']],
     ]),
 ];
 
@@ -297,7 +277,7 @@ export function validateConcepts(): string[] {
         problems.push(`concept ${concept.id} is not in its group's topic`);
       }
       if (concept.tags.length === 0) problems.push(`concept ${concept.id} matches nothing`);
-      if (!concept.label.cs.trim()) problems.push(`concept ${concept.id} has no Czech label`);
+      if (!concept.label.trim()) problems.push(`concept ${concept.id} has no label`);
     }
   }
   // Two concepts in the same topic must not claim the same tag, or resolution

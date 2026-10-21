@@ -65,7 +65,7 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
       if (!question_id || !question || !correct_answer) {
         return jsonError(res, 400, 'bad_request', 'question_id, question and correct_answer are required');
       }
-      const bank = await getEffectiveQuestionsById(subject, false);
+      const bank = await getEffectiveQuestionsById(subject);
       const source = bank.get(question_id);
       if (!source || subjectForCategory(source.category) !== subject) {
         return jsonError(res, 400, 'invalid_question', 'Question does not belong to this subject');

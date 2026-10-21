@@ -44,7 +44,7 @@ export default function DevQuality() {
     <div className="dev-quality">
       <div className="dev-quality-summary">
         <div>
-          <h2>Deterministic quality and EN/CS parity</h2>
+          <h2>Deterministic quality checks</h2>
           <p>Flags content for human review. It never edits accepted answers or publishes generated content.</p>
         </div>
         <Button

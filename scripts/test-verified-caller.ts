@@ -387,7 +387,7 @@ async function main() {
     drain(rateLimit.RATE_LIMITS.readAddress, undefined, school);
     const map = await call(roadmap as Handler, { from: school });
     assert.equal(map.statusCode, 429, 'the Learn map past the address budget is refused');
-    const level = await call(roadmap as Handler, { from: school, query: { topic: 'javascript', level: '1', lang: 'en' } });
+    const level = await call(roadmap as Handler, { from: school, query: { topic: 'javascript', level: '1' } });
     assert.equal(level.statusCode, 429, 'so is a Learn step');
     const board = await call(leaderboard as Handler, { from: school, query: { period: 'global' } });
     assert.equal(board.statusCode, 429, 'so is a leaderboard read the CDN did not answer');
@@ -445,7 +445,7 @@ async function main() {
     );
     assert.ok(upstashCommands.some((command) => command.includes('once:placement:verified-caller-attempt-0001:1')), 'the claim was asked of Upstash');
 
-    const placement = await call(roadmap as Handler, { query: { resource: 'placement', subject: 'webdev', lang: 'en' } });
+    const placement = await call(roadmap as Handler, { query: { resource: 'placement', subject: 'webdev' } });
     assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
     const round = placement.body as { placementToken: string; questions: { id: string }[] };
     const graded = await call(roadmap as Handler, { method: 'POST', query: { resource: 'placement' }, body: { placementToken: round.placementToken, answers: Object.fromEntries(round.questions.map((q) => [q.id, 0])) } });

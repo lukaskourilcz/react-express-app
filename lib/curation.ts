@@ -22,9 +22,9 @@ import { createHash } from 'node:crypto';
 import { createLogger } from './http';
 import { stableAttemptId } from './quiz-tokens';
 import { getEffectiveQuestions, overridesAvailable } from './questions-store';
-import type { Question, QuestionTranslation } from './quiz-data';
+import type { Question } from './quiz-data';
 import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
-import type { CodingTask, Localized } from '../shared/coding-catalog';
+import type { CodingTask } from '../shared/coding-catalog';
 import type { CodingSolution } from './coding/types';
 import { approachesFor } from './coding/approaches';
 import { puzzleFor } from './coding/puzzles';
@@ -98,24 +98,13 @@ export function contentHash(q: Pick<Question, 'category' | 'question' | 'options
     .slice(0, 16);
 }
 
-/** The plain digest of one served translation, or null when there is none. A
- * translation is reviewed on its own, because a wrong Czech option order is
- * a defect the English item does not have. */
-export function translationHash(tr: QuestionTranslation | null | undefined): string | null {
-  if (!tr) return null;
-  if (!tr.introduction && !tr.question && !tr.options && !tr.explanation) return null;
-  const fields = [tr.introduction ?? '', tr.question ?? '', tr.options ?? [], tr.explanation ?? ''];
-  return createHash('sha256').update(JSON.stringify(['translation-hash:v1', ...fields])).digest('hex').slice(0, 16);
-}
-
 /**
  * The plain digest of everything that decides how a coding task is graded and
  * presented: the brief, the starter, the visible and hidden tests, the design
- * key and the reference solution. Czech copy is hashed separately, as for
- * questions. Server-only, unkeyed for the same reason as `contentHash`.
+ * key and the reference solution. Server-only, unkeyed for the same reason
+ * as `contentHash`.
  */
 export function taskHash(task: CodingTask, solution: CodingSolution | undefined): string {
-  const stripCs = (value: Localized) => value.en;
   const authored = {
     id: task.id,
     track: task.track,
@@ -127,45 +116,45 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
     focus: task.focus,
     verify: task.verify,
     format: task.format ?? 'implement',
-    title: stripCs(task.title),
-    prompt: stripCs(task.prompt),
+    title: task.title,
+    prompt: task.prompt,
     starter: task.starter,
-    previousRequirements: task.previousRequirements?.map(stripCs) ?? null,
-    references: task.references?.map(reference => ({ title: reference.title.en, url: reference.url })) ?? null,
+    previousRequirements: task.previousRequirements ?? null,
+    references: task.references?.map(reference => ({ title: reference.title, url: reference.url })) ?? null,
     skeleton: task.skeleton ?? null,
-    hints: task.hints.en,
-    approach: task.approach?.en ?? null,
-    tests: task.tests?.map((t) => ({ call: t.call, expected: t.expected, label: t.label?.en ?? null, edge: t.edge ?? false, async: t.async ?? false })) ?? null,
-    typeTests: task.typeTests?.map((t) => ({ code: t.code, label: t.label?.en ?? null, rejects: t.rejects ?? false })) ?? null,
+    hints: task.hints,
+    approach: task.approach ?? null,
+    tests: task.tests?.map((t) => ({ call: t.call, expected: t.expected, label: t.label ?? null, edge: t.edge ?? false, async: t.async ?? false })) ?? null,
+    typeTests: task.typeTests?.map((t) => ({ code: t.code, label: t.label ?? null, rejects: t.rejects ?? false })) ?? null,
     suite: task.suite ?? null,
-    checklist: task.checklist?.en ?? null,
-    api: task.api ? { method: task.api.method, url: task.api.url, note: task.api.note.en } : null,
+    checklist: task.checklist ?? null,
+    api: task.api ? { method: task.api.method, url: task.api.url, note: task.api.note } : null,
     design: task.design
       ? {
-          scenario: task.design.scenario.en,
-          brief: task.design.brief.en,
-          reference: task.design.reference.en,
+          scenario: task.design.scenario,
+          brief: task.design.brief,
+          reference: task.design.reference,
           passMark: task.design.passMark,
-          steps: task.design.steps.map((step) => ({ key: step.key, title: step.title.en, prompt: step.prompt.en, options: step.options.map(stripCs), correct: step.correct, explanation: step.explanation.en })),
+          steps: task.design.steps.map((step) => ({ key: step.key, title: step.title, prompt: step.prompt, options: step.options, correct: step.correct, explanation: step.explanation })),
         }
       : null,
     drill: task.drill
       ? {
           format: task.drill.format,
-          scenario: task.drill.scenario.en,
-          prompt: task.drill.prompt.en,
-          explanation: task.drill.explanation.en,
-          unit: task.drill.unit?.en ?? null,
+          scenario: task.drill.scenario,
+          prompt: task.drill.prompt,
+          explanation: task.drill.explanation,
+          unit: task.drill.unit ?? null,
           answer: task.drill.answer ?? null,
           min: task.drill.min ?? null,
           max: task.drill.max ?? null,
-          options: task.drill.options?.map(stripCs) ?? null,
+          options: task.drill.options ?? null,
           correct: task.drill.correct ?? null,
-          steps: task.drill.steps?.map(stripCs) ?? null,
+          steps: task.drill.steps ?? null,
         }
       : null,
     failureHints: task.failureHints
-      ? Object.fromEntries(Object.entries(task.failureHints).map(([key, value]) => [key, value?.en ?? null]))
+      ? Object.fromEntries(Object.entries(task.failureHints).map(([key, value]) => [key, value ?? null]))
       : null,
     pitfall: task.pitfall ?? null,
     solution: solution ? {
@@ -174,44 +163,16 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
       hiddenSuite: solution.hiddenSuite ?? null,
     } : null,
     approaches: approachesFor(task.id).map(approach => ({
-      name: approach.name.en, code: approach.code, readability: approach.readability.en,
-      time: approach.time, space: approach.space, assumptions: approach.assumptions.en,
-      tradeoffs: approach.tradeoffs.en,
+      name: approach.name, code: approach.code, readability: approach.readability,
+      time: approach.time, space: approach.space, assumptions: approach.assumptions,
+      tradeoffs: approach.tradeoffs,
     })),
     puzzle: (() => {
       const puzzle = puzzleFor(task.id);
-      return puzzle ? { lines: puzzle.lines, accepted: puzzle.accepted, competencies: puzzle.competencies, claim: puzzle.claim.en } : null;
+      return puzzle ? { lines: puzzle.lines, accepted: puzzle.accepted, competencies: puzzle.competencies, claim: puzzle.claim } : null;
     })(),
   };
   return createHash('sha256').update(JSON.stringify(['task-hash:v2', authored])).digest('hex').slice(0, 16);
-}
-
-/** The plain digest of a coding task's Czech overlay, or null when any of it
- * is missing (the content contract already refuses that). */
-export function taskTranslationHash(task: CodingTask): string | null {
-  const cs = {
-    title: task.title.cs,
-    prompt: task.prompt.cs,
-    hints: task.hints.cs,
-    approach: task.approach?.cs ?? null,
-    tests: task.tests?.map((t) => t.label?.cs ?? null) ?? null,
-    typeTests: task.typeTests?.map((t) => t.label?.cs ?? null) ?? null,
-    checklist: task.checklist?.cs ?? null,
-    api: task.api?.note.cs ?? null,
-    design: task.design
-      ? {
-          scenario: task.design.scenario.cs,
-          brief: task.design.brief.cs,
-          reference: task.design.reference.cs,
-          steps: task.design.steps.map((step) => ({ title: step.title.cs, prompt: step.prompt.cs, options: step.options.map((o) => o.cs), explanation: step.explanation.cs })),
-        }
-      : null,
-    drill: task.drill
-      ? { scenario: task.drill.scenario.cs, prompt: task.drill.prompt.cs, explanation: task.drill.explanation.cs, unit: task.drill.unit?.cs ?? null, options: task.drill.options?.map((o) => o.cs) ?? null, steps: task.drill.steps?.map((o) => o.cs) ?? null }
-      : null,
-  };
-  if (!cs.title || !cs.prompt) return null;
-  return createHash('sha256').update(JSON.stringify(['task-translation-hash:v1', cs])).digest('hex').slice(0, 16);
 }
 
 /* ── the registry ──────────────────────────────────────────────────────── */
@@ -242,12 +203,12 @@ export const isAuditedCategory = (category: string): boolean =>
  * cannot forget to ask.
  */
 export function questionEligibility(q: Question): Eligibility {
-  return eligibilityFrom(REGISTRY_BY_ID.get(q.id), contentHash(q), translationHash(q.csTranslation), isAudited(q));
+  return eligibilityFrom(REGISTRY_BY_ID.get(q.id), contentHash(q), isAudited(q));
 }
 
 /** May this exact coding task be issued? Same rule, same registry. */
 export function codingTaskEligibility(task: CodingTask, solution: CodingSolution | undefined): Eligibility {
-  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), taskTranslationHash(task), CODING_TASKS_AUDITED);
+  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), CODING_TASKS_AUDITED);
 }
 
 function recordFrom(entry: RegistryEntry, current: boolean, version: string): ReviewRecord {

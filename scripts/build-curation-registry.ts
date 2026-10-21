@@ -41,7 +41,6 @@ export interface LedgerItem {
   id: string;
   kind: 'question' | 'coding-task';
   contentHash: string;
-  cs: { hash: string | null; status: string } | null;
   revision: number;
   quality: RegistryEntry['dimensions'];
   qualityScore: number;
@@ -68,7 +67,6 @@ export function registryFromLedger(ledger: LedgerFile): RegistryEntry[] {
       id: item.id,
       kind: item.kind,
       hash: item.contentHash,
-      cs: item.cs?.hash ?? null,
       relevance: item.relevanceScore,
       quality: item.qualityScore,
       markers: item.relevance,

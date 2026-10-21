@@ -510,9 +510,9 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
 // grades one, so the grader is proven here directly, as the handlers called
 // it, against every kind of design task, for the review before it returns.
 {
-  type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: { en: string } };
-  type Verdict = { verdict?: string; design?: Step[] | null; designReference?: { en: string } | null };
-  type Opened = { key: CodingDesignKey; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
+  type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: string };
+  type Verdict = { verdict?: string; design?: Step[] | null; designReference?: string | null };
+  type Opened = { key: CodingDesignKey; task: { design?: { steps: { options: string[] }[] }; drill?: { options?: string[]; steps?: string[] } } };
   // A fresh shuffle per opening, as the task resource deals one per request.
   let deal = 0;
   const shuffle = <T,>(list: T[]): T[] => { deal += 1; return list.map((_, index) => list[(index + deal) % list.length]); };
@@ -558,9 +558,9 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
 
   // A guided walkthrough: all wrong, then one short of the pass mark.
   const design = guided.design!;
-  const secrets = [...design.steps.map((step) => step.explanation.en), design.reference.en];
+  const secrets = [...design.steps.map((step) => step.explanation), design.reference];
   const rightFor = (opened: Opened) => opened.task.design!.steps.map((step, index) =>
-    step.options.findIndex((option) => option.en === design.steps[index].options[design.steps[index].correct].en));
+    step.options.findIndex((option) => option === design.steps[index].options[design.steps[index].correct]));
   const first = open(guided.id);
   const right = rightFor(first);
   assert.ok(right.every((index) => index >= 0));
@@ -582,8 +582,8 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const pass = submit(third, guided.id, thirdRight);
   assert.equal(pass.verdict, 'passed');
   assert.deepEqual(pass.design?.map((step) => step.correctIndex), thirdRight, 'a pass carries the correct options');
-  assert.deepEqual(pass.design?.map((step) => step.explanation?.en), design.steps.map((step) => step.explanation.en), 'and the explanations');
-  assert.equal(pass.designReference?.en, design.reference.en, 'and the reference answer');
+  assert.deepEqual(pass.design?.map((step) => step.explanation), design.steps.map((step) => step.explanation), 'and the explanations');
+  assert.equal(pass.designReference, design.reference, 'and the reference answer');
 
   // An estimate drill.
   const band = byId(estimate.id).drill!;
@@ -592,33 +592,33 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const missed = submit(estimateOpened, estimate.id, [tooHigh]);
   assert.equal(missed.verdict, 'failed');
   assert.deepEqual(missed.design, [{ correct: false, given: tooHigh }]);
-  withheld(missed, [band.explanation.en], 'estimate');
+  withheld(missed, [band.explanation], 'estimate');
   const inBand = submit(open(estimate.id), estimate.id, [band.answer!]);
   assert.equal(inBand.verdict, 'passed');
   assert.deepEqual(inBand.design?.[0].acceptedRange, { min: band.min, max: band.max, answer: band.answer }, 'a pass carries the accepted range');
-  assert.equal(inBand.design?.[0].explanation?.en, band.explanation.en);
+  assert.equal(inBand.design?.[0].explanation, band.explanation);
 
   // A trade-off drill.
   const pick = byId(choice.id).drill!;
   const choiceOpened = open(choice.id);
-  const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en);
+  const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option === pick.options![pick.correct!]);
   const choiceWrong = (choiceRight + 1) % pick.options!.length;
   const wrongPick = submit(choiceOpened, choice.id, [choiceWrong]);
   assert.deepEqual(wrongPick.design, [{ correct: false, given: choiceWrong }]);
-  withheld(wrongPick, [pick.explanation.en], 'trade-off');
+  withheld(wrongPick, [pick.explanation], 'trade-off');
   const choiceAgain = open(choice.id);
-  const rightPick = submit(choiceAgain, choice.id, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
+  const rightPick = submit(choiceAgain, choice.id, [choiceAgain.task.drill!.options!.findIndex((option) => option === pick.options![pick.correct!])]);
   assert.equal(rightPick.verdict, 'passed');
   assert.equal(typeof rightPick.design?.[0].correctIndex, 'number', 'a pass carries the correct option');
 
   // A sequence drill.
   const order = byId(sequence.id).drill!;
-  const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown.en === step.en));
+  const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown === step));
   const sequenceOpened = open(sequence.id);
   const reversed = [...orderFor(sequenceOpened)].reverse();
   const outOfOrder = submit(sequenceOpened, sequence.id, [reversed]);
   assert.deepEqual(outOfOrder.design, [{ correct: false, given: reversed }]);
-  withheld(outOfOrder, [order.explanation.en], 'sequence');
+  withheld(outOfOrder, [order.explanation], 'sequence');
   const sequenceAgain = open(sequence.id);
   const inOrder = submit(sequenceAgain, sequence.id, [orderFor(sequenceAgain)]);
   assert.equal(inOrder.verdict, 'passed');

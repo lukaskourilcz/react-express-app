@@ -1,15 +1,16 @@
 import { useLayoutEffect, useRef, type MouseEventHandler } from 'react';
 import type { TopicLandingDefinition } from '../../lib/topicCatalog';
 import { takePublicGuide } from '../../lib/publicGuideHandoff';
+import type { GuideLocale } from '../../lib/publicMetadata';
 export const topicLabels = {
   en: { home: 'Home', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides', language: 'Guide language' },
   cs: { home: 'Domů', kicker: 'Rychlé vysvětlení', example: 'Jak to funguje', misconception: 'Častý omyl', practice: 'Krátké procvičení', cta: 'Procvičit v kvízu', reference: 'Přečíst dokumentaci', related: 'Další témata', language: 'Jazyk průvodce' },
-};
-export function topicPath(slug: string, locale: 'en' | 'cs') { return `${locale === 'cs' ? '/cs' : ''}/topics/${slug}`; }
+} satisfies Record<GuideLocale, Record<string, string>>;
+export function topicPath(slug: string, locale: GuideLocale) { return `${locale === 'cs' ? '/cs' : ''}/topics/${slug}`; }
 /** Identical, escaped React markup for build-time HTML and the live route.
  * Only the public teaching catalogue enters this view; never scored answers. */
 export function TopicArticle({ topic, locale, brand, related, onPractice }: {
-  topic: TopicLandingDefinition; locale: 'en' | 'cs'; brand: string;
+  topic: TopicLandingDefinition; locale: GuideLocale; brand: string;
   related: TopicLandingDefinition[]; onPractice?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const copy = topicLabels[locale];

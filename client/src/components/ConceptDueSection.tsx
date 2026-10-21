@@ -32,7 +32,7 @@ const ArrowGlyph = ({ size = 16 }: { size?: number }) => (
 );
 
 export function ConceptDueSection() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
 
   const { data } = useQuery({ ...conceptDueQuery, enabled: isAuthenticated });
@@ -43,7 +43,7 @@ export function ConceptDueSection() {
   const names = due
     .map((one) => conceptById(one.conceptId))
     .filter((concept): concept is NonNullable<typeof concept> => concept !== null)
-    .map((concept) => concept.label[lang] || concept.label.en);
+    .map((concept) => concept.label);
   if (names.length === 0) return null;
 
   const shown = names.slice(0, NAMED).join(', ');

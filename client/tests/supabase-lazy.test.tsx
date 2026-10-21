@@ -209,10 +209,8 @@ describe('a visitor who is not signed in', () => {
   });
 
   it('writes no account preference and opens no live channel without importing supabase-js', async () => {
-    const { savePreferredLanguage } = await import('../src/lib/languagePref');
     const { saveLearningPreference } = await import('../src/lib/trackPref');
     const { joinMatchChannel } = await import('../src/lib/realtime');
-    await savePreferredLanguage('en');
     await expect(saveLearningPreference(null, { schemaVersion: 1, baseTrack: 'frontend', specialization: null }))
       .resolves.toMatchObject({ ok: false, reason: 'not_signed_in' });
     await settle();

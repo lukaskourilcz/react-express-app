@@ -29,10 +29,10 @@ export const taskHref = (taskId: string): string => {
 export const currentRunTask = (session: PracticeSession): string | null =>
   session.queue[Math.min(session.position, session.queue.length)] ?? null;
 
-export function formatWhen(iso: string, lang: string): string {
+export function formatWhen(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'full', timeStyle: 'short' }).format(date);
+  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'short' }).format(date);
 }
 
 /** A one-event calendar file for a planned run, built here and offered as a
@@ -69,7 +69,7 @@ export function runSummary(session: PracticeSession, t: (key: TranslationKey, va
 
 /** The open run, with its own actions. */
 function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => void }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const advance = useAdvanceSession();
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +100,7 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
       <p className="cd-run__summary">{runSummary(session, t)}</p>
       {scheduled && session.scheduledFor && (
         <p className="cd-run__when" role="status">
-          {t('coding.run.plannedFor', { when: formatWhen(session.scheduledFor, lang) })}
+          {t('coding.run.plannedFor', { when: formatWhen(session.scheduledFor) })}
           {due && <> {t('coding.run.due')}</>}
         </p>
       )}

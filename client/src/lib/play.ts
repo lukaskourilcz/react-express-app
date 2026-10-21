@@ -155,8 +155,6 @@ export const createMatch = (input: {
   categories: string[];
   /** Per-question time limit in seconds. 0 = no limit. */
   duration_s: number;
-  /** Question language for the whole match (host's UI language). */
-  lang: 'en' | 'cs';
 }) =>
   apiFetch<{ id: string; code: string; mode: string; status: string }>('/api/play/create', {
     method: 'POST',

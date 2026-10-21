@@ -66,7 +66,7 @@ try {
   mutateDuringRead = true;
   assert.equal((await call()).status, 503, 'changing override layer holds export');
   mutateDuringRead = false; rows = []; invalidateQuestionsCache();
-  const served = pickQuestionOfTheDay(await getEffectiveQuestions('webdev', false), utcToday());
+  const served = pickQuestionOfTheDay(await getEffectiveQuestions('webdev'), utcToday());
   const daily = await call({ daily: 'today' });
   assert.equal(daily.status, 200);
   assert.equal(daily.body.packets[0].sourceId, `question:${served!.question.id}`);

@@ -52,12 +52,11 @@ for (const file of readdirSync('docs/audit/wip/native').filter(file => file.ends
   }
 }
 console.log(`Native review bindings passed: ${seen.size}/${materials.size} records. ${materials.size - seen.size} still require individual review; no complete-catalogue claim.`);
-// A localized-looking expected object is test data, not translated copy.
+// An expected value is test data, hashed exactly as authored.
 const fixture = LEARNING_PATHS.flatMap(path => path.modules.flatMap(module => module.activities))
   .find(activity => activity.code?.tests.length)!;
 const first = structuredClone(fixture);
 const second = structuredClone(fixture);
-first.code!.tests[0].expected = { en: 'same', cs: 'first' };
-second.code!.tests[0].expected = { en: 'same', cs: 'second' };
-assert.equal(nativeContentHash(first), nativeContentHash(second), 'Fixture must exercise the locale-filtering boundary');
+first.code!.tests[0].expected = { value: 'first' };
+second.code!.tests[0].expected = { value: 'second' };
 assert.notEqual(nativeGradingHash(first), nativeGradingHash(second), 'Raw expected data must invalidate native grading review');

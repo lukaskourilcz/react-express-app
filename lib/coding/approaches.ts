@@ -17,213 +17,122 @@
  * real task and that no task advertises a comparison it does not have. A task
  * with nothing authored shows no tab, rather than an empty one. */
 
-import type { Localized } from '../../shared/coding-catalog';
 
 export interface CuratedApproach {
   /** What this way of solving it is called, in the learner's language. */
-  name: Localized;
+  name: string;
   /** The code, written for this product. */
   code: string;
   /** Why it reads the way it does. */
-  readability: Localized;
+  readability: string;
   /** Big-O in time and space, with the assumption that makes it true. */
   time: string;
   space: string;
   /** What has to be true for this to be a fair comparison. */
-  assumptions: Localized;
+  assumptions: string;
   /** What you give up by choosing it. */
-  tradeoffs: Localized;
+  tradeoffs: string;
 }
 
 const APPROACHES: Record<string, CuratedApproach[]> = {
   'js-double-numbers': [
     {
-      name: { en: 'map', cs: 'map' },
+      name: 'map',
       code: 'const double = numbers => numbers.map(number => number * 2);',
-      readability: {
-        en: 'Says what it produces rather than how it walks: one new array, one result per element.',
-        cs: 'Říká, co vzniká, ne jak se prochází: jedno nové pole, jeden výsledek na prvek.',
-      },
+      readability: 'Says what it produces rather than how it walks: one new array, one result per element.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'Every element is a number, and a new array is wanted rather than a change in place.',
-        cs: 'Každý prvek je číslo a chceme nové pole, ne změnu na místě.',
-      },
-      tradeoffs: {
-        en: 'Allocates a second array. On a very large list that memory is real, though it is rarely the thing that matters.',
-        cs: 'Alokuje druhé pole. U hodně velkého seznamu je ta paměť skutečná, i když málokdy rozhoduje.',
-      },
+      assumptions: 'Every element is a number, and a new array is wanted rather than a change in place.',
+      tradeoffs: 'Allocates a second array. On a very large list that memory is real, though it is rarely the thing that matters.',
     },
     {
-      name: { en: 'An indexed loop', cs: 'Cyklus přes indexy' },
+      name: 'An indexed loop',
       code: 'function double(numbers) {\n  const out = new Array(numbers.length);\n  for (let i = 0; i < numbers.length; i++) out[i] = numbers[i] * 2;\n  return out;\n}',
-      readability: {
-        en: 'More lines, and the mechanics are visible. Useful when the loop body grows beyond one expression.',
-        cs: 'Víc řádků a mechanika je vidět. Hodí se, když tělo cyklu přeroste jeden výraz.',
-      },
+      readability: 'More lines, and the mechanics are visible. Useful when the loop body grows beyond one expression.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'Every input element is a number. The output length is known before the loop starts; runtime performance depends on the engine and input.',
-        cs: 'Totéž co výše. Předem daná velikost pole se vyhne opakovanému růstu, což je malý, ale skutečný zisk.',
-      },
-      tradeoffs: {
-        en: 'The index is one more thing to get wrong, and the intent is no longer stated in the first word.',
-        cs: 'Index je další místo, kde udělat chybu, a záměr už není vidět hned v prvním slově.',
-      },
+      assumptions: 'Every input element is a number. The output length is known before the loop starts; runtime performance depends on the engine and input.',
+      tradeoffs: 'The index is one more thing to get wrong, and the intent is no longer stated in the first word.',
     },
   ],
   'js-sum-array': [
     {
-      name: { en: 'reduce', cs: 'reduce' },
+      name: 'reduce',
       code: 'const sum = numbers => numbers.reduce((total, number) => total + number, 0);',
-      readability: {
-        en: 'One expression, and the initial value is written down — which is what makes the empty list answer 0 rather than throw.',
-        cs: 'Jeden výraz a počáteční hodnota je napsaná — právě díky ní prázdný seznam vrátí 0 a ne chybu.',
-      },
+      readability: 'One expression, and the initial value is written down — which is what makes the empty list answer 0 rather than throw.',
       time: 'O(n)',
       space: 'O(1)',
-      assumptions: {
-        en: 'Every element is a number. Without the initial value the empty case throws, so it is not optional here.',
-        cs: 'Každý prvek je číslo. Bez počáteční hodnoty prázdný případ selže, takže tady není volitelná.',
-      },
-      tradeoffs: {
-        en: 'Readers who meet reduce rarely have to stop and work out what the accumulator is.',
-        cs: 'Kdo reduce potkává zřídka, musí se zastavit a rozmyslet, co je akumulátor.',
-      },
+      assumptions: 'Every element is a number. Without the initial value the empty case throws, so it is not optional here.',
+      tradeoffs: 'Readers who meet reduce rarely have to stop and work out what the accumulator is.',
     },
     {
-      name: { en: 'A running total', cs: 'Průběžný součet' },
+      name: 'A running total',
       code: 'function sum(numbers) {\n  let total = 0;\n  for (const number of numbers) total += number;\n  return total;\n}',
-      readability: {
-        en: 'Plain, and hard to misread. The empty case answers 0 for the same reason: the total starts there.',
-        cs: 'Prosté a těžko se to přečte špatně. Prázdný případ vrátí 0 ze stejného důvodu: součet tam začíná.',
-      },
+      readability: 'Plain, and hard to misread. The empty case answers 0 for the same reason: the total starts there.',
       time: 'O(n)',
       space: 'O(1)',
-      assumptions: {
-        en: 'The same as above.',
-        cs: 'Totéž co výše.',
-      },
-      tradeoffs: {
-        en: 'Three lines instead of one, and a mutable variable in scope.',
-        cs: 'Tři řádky místo jednoho a proměnná, která se mění.',
-      },
+      assumptions: 'The same as above.',
+      tradeoffs: 'Three lines instead of one, and a mutable variable in scope.',
     },
   ],
   'js-reverse-string': [
     {
-      name: { en: 'Spread, reverse, join', cs: 'Spread, reverse, join' },
+      name: 'Spread, reverse, join',
       code: 'const reverse = text => [...text].reverse().join("");',
-      readability: {
-        en: 'Reads as the three steps it is. The spread splits by code point, so characters outside the basic plane survive.',
-        cs: 'Čte se jako tři kroky, kterými je. Spread dělí po code pointech, takže znaky mimo základní rovinu přežijí.',
-      },
+      readability: 'Reads as the three steps it is. The spread splits by code point, so characters outside the basic plane survive.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'This task reverses code points. Combining marks and joined emoji contain several points; preserving visual clusters is a different contract.',
-        cs: 'Chceme obracet po code pointech. Složené emoji a kombinující znaky se i tak rozpadnou — to nezvládne žádné jednořádkové obrácení.',
-      },
-      tradeoffs: {
-        en: 'The code-point array and the returned string both need memory proportional to the input.',
-        cs: 'Staví dvě mezistruktury. V jakékoli velikosti, kterou prohlížeč udrží, to nevadí.',
-      },
+      assumptions: 'This task reverses code points. Combining marks and joined emoji contain several points; preserving visual clusters is a different contract.',
+      tradeoffs: 'The code-point array and the returned string both need memory proportional to the input.',
     },
     {
-      name: { en: 'Building from the end', cs: 'Skládání od konce' },
+      name: 'Building from the end',
       code: 'function reverse(text) {\n  const points = Array.from(text);\n  const out = [];\n  for (let i = points.length - 1; i >= 0; i--) out.push(points[i]);\n  return out.join("");\n}',
-      readability: {
-        en: 'The loop makes the reverse traversal explicit. Its index belongs to a code-point array, not the original UTF-16 string.',
-        cs: 'Mechanika je vidět, což pomáhá, když se učíš, proč index začíná na length - 1.',
-      },
+      readability: 'The loop makes the reverse traversal explicit. Its index belongs to a code-point array, not the original UTF-16 string.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'Array.from collects complete code points before the loop indexes them. Joined emoji and combining marks follow the same rule as the first approach.',
-        cs: 'Indexování prochází jednotky UTF-16, ne code pointy, takže rozdělí znaky, které spread zachová celé.',
-      },
-      tradeoffs: {
-        en: 'Uses an additional array to make the traversal explicit. Push and join avoid repeatedly copying a growing output string.',
-        cs: 'Pro prostý text správné, pro zbytek ne — kratší verze je tady zároveň správnější.',
-      },
+      assumptions: 'Array.from collects complete code points before the loop indexes them. Joined emoji and combining marks follow the same rule as the first approach.',
+      tradeoffs: 'Uses an additional array to make the traversal explicit. Push and join avoid repeatedly copying a growing output string.',
     },
   ],
   'js-palindrome': [
     {
-      name: { en: 'Compare with the reverse', cs: 'Porovnání s obrácením' },
+      name: 'Compare with the reverse',
       code: 'const isPalindrome = text => {\n  return text === [...text].reverse().join("");\n};',
-      readability: {
-        en: 'States the definition directly: compare the word with its reverse.',
-        cs: 'Vyslovuje definici přímo: stejné dopředu i dozadu, jakmile zmizí šum.',
-      },
+      readability: 'States the definition directly: compare the word with its reverse.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'The task accepts only lowercase ASCII letters. n is the number of letters; no cleaning or case conversion is required.',
-        cs: 'Počítají se písmena a číslice, nic jiného — to pravidlo je rozhodnutí a kód ho zapisuje.',
-      },
-      tradeoffs: {
-        en: 'Allocates a character array and a reversed string. It processes the whole word even when its ends already differ.',
-        cs: 'Kopíruje řetězec dvakrát. Nikdy nekončí dřív, ani když se první a poslední znak už neshodují.',
-      },
+      assumptions: 'The task accepts only lowercase ASCII letters. n is the number of letters; no cleaning or case conversion is required.',
+      tradeoffs: 'Allocates a character array and a reversed string. It processes the whole word even when its ends already differ.',
     },
     {
-      name: { en: 'Two pointers', cs: 'Dva ukazatele' },
+      name: 'Two pointers',
       code: 'function isPalindrome(text) {\n  let left = 0;\n  let right = text.length - 1;\n  while (left < right) {\n    if (text[left] !== text[right]) return false;\n    left++;\n    right--;\n  }\n  return true;\n}',
-      readability: {
-        en: 'Longer, but it says why it stops: the first disagreement is the answer.',
-        cs: 'Delší, ale říká, proč končí: první neshoda je odpověď.',
-      },
+      readability: 'Longer, but it says why it stops: the first disagreement is the answer.',
       time: 'O(n)',
       space: 'O(1)',
-      assumptions: {
-        en: 'The same lowercase ASCII input. The comparison uses constant-time indexing and a fixed number of counters.',
-        cs: 'Stejné pravidlo čištění. Samotné procházení nepotřebuje paměť navíc.',
-      },
-      tradeoffs: {
-        en: 'Can stop at the first mismatched pair. In the worst case it compares all opposite pairs without allocating a copy.',
-        cs: 'Víc kódu za úsporu, která se projeví jen u dlouhých řetězců selhávajících brzy.',
-      },
+      assumptions: 'The same lowercase ASCII input. The comparison uses constant-time indexing and a fixed number of counters.',
+      tradeoffs: 'Can stop at the first mismatched pair. In the worst case it compares all opposite pairs without allocating a copy.',
     },
   ],
   'js-word-count': [
     {
-      name: { en: 'Count whitespace-separated runs', cs: 'Mapa četností' },
+      name: 'Count whitespace-separated runs',
       code: 'const wordCount = text => (text.match(/\\S+/g) ?? []).length;',
-      readability: {
-        en: 'The pattern matches each non-whitespace run. No matches become an empty array, whose length is zero.',
-        cs: 'Jeden průchod, jedna struktura. V ?? 0 je ošetřený případ „tohle vidím poprvé“.',
-      },
+      readability: 'The pattern matches each non-whitespace run. No matches become an empty array, whose length is zero.',
       time: 'O(n)',
       space: 'O(n)',
-      assumptions: {
-        en: 'JavaScript whitespace separates words; n is the number of string positions. This counts tokens rather than performing natural-language segmentation.',
-        cs: 'Slova dělí mezery a na velikosti písmen nezáleží. Očekávané O(1) vyhledání předpokládá, že klíče nekolidují patologicky.',
-      },
-      tradeoffs: {
-        en: 'Short and direct, but the array of matches allocates memory even though only its length is needed.',
-        cs: 'Map drží pořadí vkládání a libovolný typ klíče; prostý objekt by byl kratší a zdědil by klíče z prototypu.',
-      },
+      assumptions: 'JavaScript whitespace separates words; n is the number of string positions. This counts tokens rather than performing natural-language segmentation.',
+      tradeoffs: 'Short and direct, but the array of matches allocates memory even though only its length is needed.',
     },
     {
-      name: { en: 'Count transitions into a word', cs: 'Seřadit a počítat úseky' },
+      name: 'Count transitions into a word',
       code: 'function wordCount(text) {\n  let count = 0;\n  let inside = false;\n  for (const character of text) {\n    const whitespace = /\\s/.test(character);\n    if (!whitespace && !inside) count++;\n    inside = !whitespace;\n  }\n  return count;\n}',
-      readability: {
-        en: 'The state records whether the previous character belonged to a word. Count only the transition from whitespace into a non-whitespace run.',
-        cs: 'Hůř se to sleduje a důvod, proč po tom sáhnout, není čitelnost.',
-      },
+      readability: 'The state records whether the previous character belonged to a word. Count only the transition from whitespace into a non-whitespace run.',
       time: 'O(n)',
       space: 'O(1)',
-      assumptions: {
-        en: 'The same JavaScript whitespace rule applies. Each character is examined once, and the output is a single count.',
-        cs: 'Stejná pravidla pro slova. Řazení dělá stejná slova sousedními, a o to celé jde.',
-      },
-      tradeoffs: {
-        en: 'Uses constant extra memory, with more state to explain and maintain than the matching expression.',
-        cs: 'Na tuhle práci pomalejší než mapa. Je tu pro kontrast: řazení je správný nástroj, když potřebuješ i pořadí.',
-      },
+      assumptions: 'The same JavaScript whitespace rule applies. Each character is examined once, and the output is a single count.',
+      tradeoffs: 'Uses constant extra memory, with more state to explain and maintain than the matching expression.',
     },
   ],
 };

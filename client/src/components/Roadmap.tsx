@@ -70,7 +70,7 @@ import {
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
 import { ROADMAP_MAX_HEARTS, type PlacementReview } from '../../../shared/assessment';
-import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
+import { levelIntro } from '../lib/levelIntros';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
@@ -309,14 +309,11 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 
 function Roadmap() {
   useRoadmapStructureFirst({ plan: true });
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
-
-  // Kick off the lazy Czech intro fetch as soon as the page knows the language.
-  useEffect(() => preloadLevelIntros(lang), [lang]);
 
   // Roadmap structure via TanStack Query — cached + de-duped with the /roadmap
   // tree, cancellable, with built-in loading/error state and retry.
@@ -501,8 +498,8 @@ function Roadmap() {
     const startedAt = Date.now();
     const req =
       a.kind === 'level'
-        ? fetchRoadmapLevel(topic, a.ref, lang, controller.signal)
-        : fetchRoadmapPartTest(topic, a.ref, lang, controller.signal);
+        ? fetchRoadmapLevel(topic, a.ref, controller.signal)
+        : fetchRoadmapPartTest(topic, a.ref, controller.signal);
     req
       .then(async (data) => {
         await holdLoadingScreen(startedAt);
@@ -674,7 +671,6 @@ function Roadmap() {
   if (skillCheckOpen) {
     return (
       <SkillCheckRunner
-        lang={lang}
         subject={subject}
         isAuthenticated={isAuthenticated}
         onCancel={() => setSkillCheckOpen(false)}
@@ -723,7 +719,6 @@ function Roadmap() {
         onNext={() => next && openNext(next)}
         onReplay={() => open(active)}
         t={t}
-        lang={lang}
       />
     );
   }
@@ -1353,7 +1348,7 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
 }
 
 function LessonRunner({
-  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
+  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
 }: {
   playable: RoadmapPlayable;
   /** No Learn level was passed before this one opened (#239). */
@@ -1361,7 +1356,7 @@ function LessonRunner({
   topicCompleted?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
-  onReplay: () => void; t: TFn; lang: string;
+  onReplay: () => void; t: TFn;
 }) {
   const { user } = useAuth();
   // Fixed when the level opens: the pass itself updates the progress the
@@ -1382,7 +1377,7 @@ function LessonRunner({
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
-  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref, lang) : null;
+  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
   const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
@@ -1443,7 +1438,7 @@ function LessonRunner({
       setAnswerError(null);
       setSelected(index);
       try {
-        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index, lang);
+        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index);
         setSelected(result.selectedIndex);
         setGrade(result);
         setRevealed(true);
@@ -1460,7 +1455,7 @@ function LessonRunner({
         setGrading(false);
       }
     },
-    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint, reportError],
+    [revealed, grading, playable.sessionId, question.id, isCheckpoint, reportError],
   );
 
   const complete = useCallback(async () => {
@@ -1652,7 +1647,7 @@ function LessonRunner({
             <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
               <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
               {codingTasks.map(({ task, session }, index) => <span key={task.id}>
-                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en}</a>
+                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title}</a>
               </span>)}
             </div>
           )}
@@ -1671,7 +1666,7 @@ function LessonRunner({
 
   if (codingPhase && codingTasks[codingIndex]) {
     const current = codingTasks[codingIndex];
-    const title = current.task.title[lang === 'cs' ? 'cs' : 'en'] || current.task.title.en;
+    const title = current.task.title;
     return (
       <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -2097,14 +2092,12 @@ interface PlacementDone {
 type PlacementResponse = PlacementRound | PlacementDone;
 
 function SkillCheckRunner({
-  lang,
   subject,
   isAuthenticated,
   onCancel,
   onFinished,
   t,
 }: {
-  lang: string;
   subject: SubjectId;
   isAuthenticated: boolean;
   onCancel: () => void;
@@ -2191,7 +2184,7 @@ function SkillCheckRunner({
     setReview([]);
     const startedAt = Date.now();
     try {
-      const params = new URLSearchParams({ resource: 'placement', subject, lang });
+      const params = new URLSearchParams({ resource: 'placement', subject });
       const res = await apiFetch<PlacementResponse>(`/api/quiz/roadmap?${params}`);
       await holdLoadingScreen(startedAt);
       if (res.done) await finishFrom(res);
@@ -2200,7 +2193,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [subject, lang, applyRound, finishFrom]);
+  }, [subject, applyRound, finishFrom]);
 
   const submitRound = useCallback(async () => {
     if (!token) return;
@@ -2209,7 +2202,7 @@ function SkillCheckRunner({
     try {
       const res = await apiFetch<PlacementResponse>('/api/quiz/roadmap?resource=placement', {
         method: 'POST',
-        body: JSON.stringify({ placementToken: token, answers, lang }),
+        body: JSON.stringify({ placementToken: token, answers }),
       });
       setReview((previous) => [...previous, ...(res.review ?? []).flatMap((item) => {
         const question = questions.find((one) => one.id === item.questionId);
@@ -2225,7 +2218,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [token, answers, lang, difficulty, questions, applyRound, finishFrom]);
+  }, [token, answers, difficulty, questions, applyRound, finishFrom]);
 
   const current: Question | undefined = questions[qIndex];
   const roundSize = questions.length;
@@ -2462,15 +2455,15 @@ function SkillCheckRunner({
 
 /** The same reviewed DSA lessons, with an entry point open before placement. */
 export function BigOIntroduction() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
   const [level, setLevel] = useState<1 | 2 | null>(null);
   const [generation, setGeneration] = useState(0);
   const before = useRef(0);
   const lesson = useQuery({
-    queryKey: ['big-o-introduction', level, generation, lang, user?.id ?? null],
+    queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
     enabled: level !== null,
-    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, lang, signal),
+    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
     staleTime: 0,
     gcTime: 0,
     retry: false,
@@ -2485,7 +2478,7 @@ export function BigOIntroduction() {
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data}
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
-      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} lang={lang} t={t}
+      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} t={t}
       onFinished={(pct, repeatXp) => {
         recordLevelResult('dsa', level, pct, lesson.data!.passPct);
         awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);

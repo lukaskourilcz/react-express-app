@@ -350,7 +350,7 @@ describe('a level whose session cannot be used', () => {
 
   it('passes a visitor’s level on its questions, keeps it on this device, and says when coding counts', async () => {
     answer({
-      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] },
       complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: true, applied: true, codingPending: [], codingUnverified: true }),
     });
     await openLevelAndAnswer();
@@ -370,7 +370,7 @@ describe('a level whose session cannot be used', () => {
   it('still holds a signed-in level until its coding task passes', async () => {
     signInAs();
     answer({
-      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] },
       complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: false, applied: true, codingPending: ['js-digit-sum'] }),
     });
     await openLevelAndAnswer();
@@ -387,7 +387,7 @@ describe('a level whose session cannot be used', () => {
     signInAs();
     let completions = 0;
     answer({
-      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] },
       complete: () => {
         completions += 1;
         return HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: false, applied: true, codingPending: ['js-digit-sum'] });
@@ -414,7 +414,7 @@ describe('a level whose session cannot be used', () => {
 // the Coding section (or on another device) never opened in a level, and
 // what the learner ran there never reached the account.
 describe('the coding step and the account draft', () => {
-  const WITH_CODE = { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] };
+  const WITH_CODE = { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] };
   function drafts(draft: { code: string | null; updatedAt: string | null }, { refuseWith }: { refuseWith?: string } = {}) {
     const seen = { reads: 0, saves: [] as unknown[] };
     server.use(

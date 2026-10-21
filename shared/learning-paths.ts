@@ -13,10 +13,7 @@
  *   - `CodingTrack` and `RoadmapTopic` gain no members.
  * A learning path references those registries; it never joins them. */
 
-import type { Localized, LocalizedList } from './coding-catalog';
 import { isLearnSectionId, type LearnSectionId } from './learn-sections';
-
-export type { Localized, LocalizedList };
 
 /* ── identity ──────────────────────────────────────────────────────────── */
 
@@ -89,8 +86,8 @@ export const SATISFYING_STATES: Record<EvidenceState, readonly EvidenceState[]> 
 /** A named capability the path teaches and the diagnostic measures. */
 export interface CompetencyDescriptor {
   id: string;
-  title: Localized;
-  summary: Localized;
+  title: string;
+  summary: string;
 }
 
 /** A published source the author checked, with the date they checked it. The
@@ -106,12 +103,12 @@ export interface SourceReference {
  * Descriptors are observable, so a learner can self-review honestly. */
 export interface RubricDimension {
   id: string;
-  title: Localized;
+  title: string;
   levels: {
-    missing: Localized;
-    partial: Localized;
-    adequate: Localized;
-    strong: Localized;
+    missing: string;
+    partial: string;
+    adequate: string;
+    strong: string;
   };
 }
 
@@ -127,9 +124,9 @@ export interface ActivitySummary {
   kind: ActivityKind;
   purpose: ActivityPurpose;
   verification: VerificationKind;
-  title: Localized;
+  title: string;
   /** One sentence on what the learner will do. */
-  summary: Localized;
+  summary: string;
   competencies: string[];
   estimatedMinutes: number;
   /** Objective checks: how many questions and the share that must be right. */
@@ -155,9 +152,9 @@ export interface ModuleRequirement {
 
 export interface ModuleSummary {
   id: string;
-  title: Localized;
+  title: string;
   /** What the learner can do after the module, in their words. */
-  outcomes: LocalizedList;
+  outcomes: string[];
   competencies: string[];
   /** Module ids that should come first. Advisory for browsing, and the
    * validator proves the graph is acyclic. */
@@ -174,9 +171,9 @@ export interface ModuleSummary {
 
 export interface LessonSummary {
   id: string;
-  title: Localized;
+  title: string;
   /** One sentence for the module list; the body arrives with the lesson. */
-  summary: Localized;
+  summary: string;
   estimatedMinutes: number;
   sources: SourceReference[];
 }
@@ -185,8 +182,8 @@ export interface LessonSummary {
  * at material that already exists rather than duplicating it. */
 export interface BridgeSummary {
   id: string;
-  title: Localized;
-  summary: Localized;
+  title: string;
+  summary: string;
   /** Base tracks this bridge is usually suggested to; the diagnostic can
    * recommend it to anyone whose evidence calls for it. */
   suggestedFor: BaseTrack[];
@@ -200,7 +197,7 @@ export interface BridgeReference {
   kind: 'roadmap-topic' | 'coding-task' | 'path-activity' | 'doc';
   /** Topic id, coding task id, activity id, or an absolute documentation URL. */
   ref: string;
-  label: Localized;
+  label: string;
 }
 
 /** The published, learner-visible description of one path version. */
@@ -208,14 +205,14 @@ export interface LearningPathManifest {
   id: LearningPathId;
   kind: LearningPathKind;
   version: number;
-  title: Localized;
+  title: string;
   /** The honest promise: what the path covers and what it does not. */
-  summary: Localized;
-  outcomes: LocalizedList;
+  summary: string;
+  outcomes: string[];
   /** What the path deliberately excludes, so nobody infers coverage. */
-  nonGoals: LocalizedList;
+  nonGoals: string[];
   /** Prose entry requirement; enrollment never enforces a rank or XP gate. */
-  entryRequirement: Localized;
+  entryRequirement: string;
   competencies: CompetencyDescriptor[];
   modules: ModuleSummary[];
   bridges: BridgeSummary[];
@@ -227,7 +224,7 @@ export interface LearningPathManifest {
   /** ISO date of the last full content review. */
   reviewedOn: string;
   /** Wording the completion screen may use. No certification, no hiring claim. */
-  completionLabel: Localized;
+  completionLabel: string;
 }
 
 export type PathCodeLanguage = 'javascript' | 'typescript' | 'react';

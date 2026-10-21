@@ -12,7 +12,6 @@
  * holds; the same vocabulary and the same authored text serve both, so the
  * learner is not told two different stories about one failure. */
 
-import type { Localized } from './coding-catalog';
 
 export const FAILURE_CATEGORIES = [
   'types',
@@ -121,35 +120,14 @@ export function classifyFailure(signals: FailureSignals): FailureCategory {
  * expected value. `tests` has no default on purpose — "some checks failed" adds
  * nothing the results panel has not already said, so the hint ladder takes over.
  */
-export const DEFAULT_FAILURE_HINTS: Partial<Record<FailureCategory, Localized>> = {
-  types: {
-    en: 'The types did not check out, so the code never ran. Read the first type error and fix that one — later errors are often knock-on effects of it.',
-    cs: 'Typy neprošly kontrolou, takže se kód vůbec nespustil. Přečti si první typovou chybu a oprav tu — další chyby z ní často jen vyplývají.',
-  },
-  runtime: {
-    en: 'Your code threw before it could answer. Check the values you index into or call methods on: something is not what you expect it to be at that point.',
-    cs: 'Kód vyhodil chybu dřív, než stihl odpovědět. Zkontroluj hodnoty, do kterých indexuješ nebo na nichž voláš metody: něco tam v tu chvíli není to, co čekáš.',
-  },
-  timeout: {
-    en: 'The run did not finish in time. Look for a loop whose condition never becomes false, or a recursion with no base case.',
-    cs: 'Běh se nestihl dokončit. Hledej cyklus, jehož podmínka nikdy nepřestane platit, nebo rekurzi bez ukončovací větve.',
-  },
-  'missing-return': {
-    en: 'Your function came back with nothing. Check that every path returns a value — a branch that only computes, or a callback whose result is thrown away, both look like this.',
-    cs: 'Funkce nevrátila nic. Ověř, že hodnotu vrací každá větev — takhle vypadá i větev, která jen počítá, nebo callback, jehož výsledek zahodíš.',
-  },
-  'output-shape': {
-    en: 'You are returning the right idea in the wrong form. Re-read what the task asks you to hand back and compare it with the kind of value you are producing.',
-    cs: 'Vracíš správnou myšlenku ve špatné podobě. Přečti si znovu, co má úloha vrátit, a porovnej to s tím, jakou hodnotu vyrábíš.',
-  },
-  boundary: {
-    en: 'The ordinary cases pass and the extremes do not. Try the smallest input the task allows, and the one right at the edge of your loop or slice.',
-    cs: 'Běžné případy procházejí, krajní ne. Zkus nejmenší vstup, který úloha připouští, a ten přesně na hraně tvého cyklu nebo výřezu.',
-  },
-  mutation: {
-    en: 'Something is being changed in place that should not be. Check whether you are modifying the value you were given instead of building a new one.',
-    cs: 'Něco se mění na místě, i když by nemělo. Zkontroluj, jestli neupravuješ hodnotu, kterou jsi dostal, místo abys stavěl novou.',
-  },
+export const DEFAULT_FAILURE_HINTS: Partial<Record<FailureCategory, string>> = {
+  types: 'The types did not check out, so the code never ran. Read the first type error and fix that one — later errors are often knock-on effects of it.',
+  runtime: 'Your code threw before it could answer. Check the values you index into or call methods on: something is not what you expect it to be at that point.',
+  timeout: 'The run did not finish in time. Look for a loop whose condition never becomes false, or a recursion with no base case.',
+  'missing-return': 'Your function came back with nothing. Check that every path returns a value — a branch that only computes, or a callback whose result is thrown away, both look like this.',
+  'output-shape': 'You are returning the right idea in the wrong form. Re-read what the task asks you to hand back and compare it with the kind of value you are producing.',
+  boundary: 'The ordinary cases pass and the extremes do not. Try the smallest input the task allows, and the one right at the edge of your loop or slice.',
+  mutation: 'Something is being changed in place that should not be. Check whether you are modifying the value you were given instead of building a new one.',
 };
 
 /**
@@ -160,8 +138,8 @@ export const DEFAULT_FAILURE_HINTS: Partial<Record<FailureCategory, Localized>> 
  */
 export function failureHint(
   category: FailureCategory,
-  authored: Partial<Record<FailureCategory, Localized>> | undefined,
-): { category: FailureCategory; body: Localized } | null {
+  authored: Partial<Record<FailureCategory, string>> | undefined,
+): { category: FailureCategory; body: string } | null {
   const body = authored?.[category] ?? DEFAULT_FAILURE_HINTS[category];
   return body ? { category, body } : null;
 }

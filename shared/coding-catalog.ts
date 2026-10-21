@@ -27,15 +27,6 @@ export const CODING_FORMATS = ['implement', 'debug'] as const;
 export type CodingFormat = (typeof CODING_FORMATS)[number];
 export const formatOf = (task: { format?: CodingFormat }): CodingFormat => task.format ?? 'implement';
 
-export interface Localized {
-  en: string;
-  cs: string;
-}
-export interface LocalizedList {
-  en: string[];
-  cs: string[];
-}
-
 export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react', 'system-design', 'algorithms'];
 export const isCodingTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_TRACKS as readonly string[]).includes(value);
@@ -136,7 +127,7 @@ export function difficultyOf(task: { id: string; tier: CodingTier; difficulty?: 
 export interface CallTest {
   call: string;
   expected: unknown;
-  label?: Localized;
+  label?: string;
   edge?: boolean;
   async?: boolean;
 }
@@ -145,51 +136,51 @@ export interface CallTest {
  * `rejects` passes only when the compiler refuses it. */
 export interface TypeTest {
   code: string;
-  label?: Localized;
+  label?: string;
   rejects?: boolean;
 }
 
 export interface CodingApiNote {
   method: string;
   url: string;
-  note: Localized;
+  note: string;
 }
 
 /** A guided system-design walkthrough: five questions in interview order. */
 export interface GuidedDesignStep {
   key: string;
-  title: Localized;
-  prompt: Localized;
-  options: Localized[];
+  title: string;
+  prompt: string;
+  options: string[];
   /** Index into `options`. Server-only in playable payloads. */
   correct: number;
-  explanation: Localized;
+  explanation: string;
 }
 export interface GuidedDesign {
-  scenario: Localized;
-  brief: Localized;
+  scenario: string;
+  brief: string;
   steps: GuidedDesignStep[];
   /** The whole answer said out loud; shown after the walkthrough. */
-  reference: Localized;
+  reference: string;
   passMark: number;
 }
 
 export type DesignDrillFormat = 'estimate' | 'tradeoff' | 'bottleneck' | 'sequence';
 export interface DesignDrill {
   format: DesignDrillFormat;
-  scenario: Localized;
-  prompt: Localized;
-  explanation: Localized;
+  scenario: string;
+  prompt: string;
+  explanation: string;
   /** estimate */
-  unit?: Localized;
+  unit?: string;
   answer?: number;
   min?: number;
   max?: number;
   /** tradeoff / bottleneck */
-  options?: Localized[];
+  options?: string[];
   correct?: number;
   /** sequence: steps in the correct order */
-  steps?: Localized[];
+  steps?: string[];
 }
 
 export interface CodingTask {
@@ -211,14 +202,14 @@ export interface CodingTask {
   difficulty?: Difficulty;
   /** Technique tags from CODING_TECHNIQUES. */
   focus: string[];
-  title: Localized;
-  prompt: Localized;
+  title: string;
+  prompt: string;
   starter: string;
-  previousRequirements?: Localized[];
-  references?: { title: Localized; url: string }[];
+  previousRequirements?: string[];
+  references?: { title: string; url: string }[];
   skeleton?: string;
-  hints: LocalizedList;
-  approach?: LocalizedList;
+  hints: string[];
+  approach?: string[];
   verify: CodingVerify;
   /** What the learner does. Absent means `implement`. */
   format?: CodingFormat;
@@ -227,7 +218,7 @@ export interface CodingTask {
   /** React: Testing Library suite source for `/App.test.js`. */
   suite?: string;
   /** React checklist tasks: what the learner confirms before submitting. */
-  checklist?: LocalizedList;
+  checklist?: string[];
   api?: CodingApiNote;
   design?: GuidedDesign;
   drill?: DesignDrill;
@@ -236,7 +227,7 @@ export interface CodingTask {
    * failed run instead of the generic ladder rung, and they are versioned with
    * the task because they are part of its content. A category left out falls
    * back to the curated default for that category. */
-  failureHints?: Partial<Record<FailureCategory, Localized>>;
+  failureHints?: Partial<Record<FailureCategory, string>>;
   /** The mistake this task is built around, when there is one. Used only when
    * the run proves nothing more specific — never to override evidence. */
   pitfall?: FailureCategory;
@@ -253,7 +244,7 @@ export interface CodingTaskSummary {
   /** The resolved label (`difficultyOf`), written into the index at build time. */
   difficulty: Difficulty;
   focus: string[];
-  title: Localized;
+  title: string;
   verify: CodingVerify;
   /** Absent means `implement`; the section reads it to offer a format filter. */
   format?: CodingFormat;
@@ -271,39 +262,39 @@ export interface PlayableCodingTask extends CodingTaskSummary {
    * is not evidence that it has no defects. */
   review?: PublicItemReview;
   legacyId?: string;
-  prompt: Localized;
-  previousRequirements?: Localized[];
-  references?: { title: Localized; url: string }[];
+  prompt: string;
+  previousRequirements?: string[];
+  references?: { title: string; url: string }[];
   starter: string;
   skeleton?: string;
-  hints: LocalizedList;
-  approach?: LocalizedList;
+  hints: string[];
+  approach?: string[];
   tests?: CallTest[];
   typeTests?: TypeTest[];
   suite?: string;
-  checklist?: LocalizedList;
+  checklist?: string[];
   api?: CodingApiNote;
   /** The authored failure hints travel with the playable task so the Run
    * button can show the same line the server would. They are teaching text,
    * not answer material: none of them names an input or an expected value. */
-  failureHints?: Partial<Record<FailureCategory, Localized>>;
+  failureHints?: Partial<Record<FailureCategory, string>>;
   pitfall?: FailureCategory;
   /** The code-ordering puzzle for narrow screens, lines already shuffled. The
    * accepted orders are not here and never leave the server. */
   puzzle?: PuzzleView;
   design?: {
-    scenario: Localized;
-    brief: Localized;
+    scenario: string;
+    brief: string;
     passMark: number;
-    steps: { key: string; title: Localized; prompt: Localized; options: Localized[] }[];
+    steps: { key: string; title: string; prompt: string; options: string[] }[];
   };
   drill?: {
     format: DesignDrillFormat;
-    scenario: Localized;
-    prompt: Localized;
-    unit?: Localized;
-    options?: Localized[];
-    steps?: Localized[];
+    scenario: string;
+    prompt: string;
+    unit?: string;
+    options?: string[];
+    steps?: string[];
   };
 }
 

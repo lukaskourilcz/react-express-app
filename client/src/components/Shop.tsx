@@ -43,7 +43,7 @@ import { CoinIcon, ShieldIcon } from './ui/icons';
 import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { friendlyError } from '../lib/api';
@@ -93,7 +93,7 @@ const ADDRESS_AUTOCOMPLETE: Record<keyof ShippingAddress, string> = {
 const EMPTY_ADDRESS: ShippingAddress = { name: '', line1: '', line2: '', city: '', postalCode: '', country: '' };
 const LEDGER_PREVIEW = 5;
 
-const projectTitle = (id: string): string => EVOLVING_CHALLENGES.find((one) => one.id === id)?.title.en ?? id;
+const projectTitle = (id: string): string => EVOLVING_CHALLENGES.find((one) => one.id === id)?.title ?? id;
 const percent = (rate: number): string => String(Math.round(rate * 1000) / 10);
 
 function monthLabel(month: string): string {
@@ -453,7 +453,6 @@ function useRewardsFirstData() {
 function Shop() {
   useRewardsFirstData();
   const t = useT();
-  const { lang } = useLanguage();
   const { isAuthenticated } = useAuth();
   const { tier } = useEntitlement();
   const config = useGameConfig();
@@ -753,7 +752,7 @@ function Shop() {
                   <span>{t('shop.tokenPrice', { n: one.tokenTotal.toLocaleString('en-GB') })}</span>
                 )}
                 {one.tokenTotal === null && one.totalMinor !== null && one.currency && (
-                  <span>{formatMoney(one.totalMinor, one.currency, lang)}</span>
+                  <span>{formatMoney(one.totalMinor, one.currency)}</span>
                 )}
                 {one.trackingRef && <span>{one.carrier} · {one.trackingRef}</span>}
                 {one.testMode && <Badge variant="neutral" label={t('shop.testOrder')} />}

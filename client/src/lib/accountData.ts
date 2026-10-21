@@ -39,7 +39,7 @@ const DEVICE_KEYS = new Set([
   'devshark:route-reload',
   'devshark:signed-out-by-choice', // a Log out, which the other tabs hear too (lib/auth.tsx)
 ]);
-// The language is kept under `devquiz.lang`, outside the prefixes.
+// A `devquiz.lang` value left by an older build sits outside the prefixes and is kept.
 
 /** A learning preference chosen before any sign-in (lib/trackPref.ts). */
 const GUEST_PREFERENCE = /^devquiz:[^:]+:learning-preference:guest$/;

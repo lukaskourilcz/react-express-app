@@ -414,7 +414,7 @@ for (const width of [360, 1440]) {
       await page.route(/resource=coding-task(?:&|$)/, route => {
         const authored = CODING_TASKS.find(one => one.id === 'js-double-numbers')!;
         const task = playable(authored);
-        if (refreshed) task.title = { en: 'Updated double task', cs: '' };
+        if (refreshed) task.title = 'Updated double task';
         return route.fulfill({ json: { task, session: refreshed ? 'fresh-session' : 'old-session', locked: null, progress: null, draft: null, signedIn: false } });
       });
       await openTask(page, '/coding/javascript/js-double-numbers');

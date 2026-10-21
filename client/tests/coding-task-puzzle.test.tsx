@@ -21,8 +21,8 @@ vi.mock('../src/lib/entitlement', () => ({
 vi.mock('../src/coding/api', () => {
   const task = {
     id: 'js-sum-array', track: 'javascript', level: 1, tier: 1, difficulty: 'easy', focus: ['for'],
-    title: { en: 'Sum an array', cs: 'Součet' }, prompt: { en: 'Sum it.', cs: 'Sečti.' },
-    starter: 'const sum = () => 0;\n', hints: { en: [], cs: [] }, verify: 'tests', estimatedMinutes: 5, tests: [],
+    title: 'Sum an array', prompt: 'Sum it.',
+    starter: 'const sum = () => 0;\n', hints: [], verify: 'tests', estimatedMinutes: 5, tests: [],
   } satisfies PlayableCodingTask;
   return {
     codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
@@ -51,7 +51,7 @@ const base: CodingVerdictResponse = {
 vi.mock('../src/coding/CodingWorkbench', () => ({
   CodingWorkbench: ({ onVerdict }: { onVerdict: (verdict: CodingVerdictResponse, code?: string) => void }) => (
     <>
-      <button type="button" onClick={() => onVerdict({ ...base, puzzle: { accepted: true, competencies: ['sequence'], claim: { en: 'Arranged.', cs: 'Seřazeno.' } } })}>Accepted order</button>
+      <button type="button" onClick={() => onVerdict({ ...base, puzzle: { accepted: true, competencies: ['sequence'], claim: 'Arranged.' } })}>Accepted order</button>
       <button type="button" onClick={() => onVerdict({ ...base, progress, firstPass: true, xpAwarded: 25, applied: true }, 'const sum = (list) => list.reduce((a, b) => a + b, 0);')}>Real pass</button>
     </>
   ),

@@ -114,8 +114,8 @@ author needs it rather than the first time it is discovered not to.
 `npm run test:launch` fails if any of these stops holding:
 
 - Every figure names a real topic and a level inside that topic's range.
-- Every figure has an English title and alt text, and the alt text is
-  long enough to be the content rather than a label for it.
+- Every figure has a title and alt text, and the alt text is long enough
+  (120+ characters) to be the content rather than a label for it.
 - No arrow is unlabelled — an unlabelled arrow means "somehow", which is the
   thing a diagram is supposed to replace.
 - No mark is wordless; no table row is the wrong width; no frame marks a cell it

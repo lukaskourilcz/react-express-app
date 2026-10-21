@@ -1,6 +1,6 @@
 /** Pure grading helpers, shared by the handlers and the launch contracts. */
 
-import type { CodingTask, DesignDrillFormat, Localized } from '../../shared/coding-catalog';
+import type { CodingTask, DesignDrillFormat } from '../../shared/coding-catalog';
 import type { CodingOutcome, DesignAnswer, DesignStepVerdict } from '../../shared/coding-api';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
@@ -56,7 +56,7 @@ const asOrder = (value: unknown): number[] | null =>
 interface DesignGrade {
   outcome: CodingOutcome;
   verdicts: DesignStepVerdict[];
-  reference: Localized | null;
+  reference: string | null;
 }
 
 /** Grades a system-design submission against the sealed key, key and all. */
@@ -131,7 +131,7 @@ export function codeOutcome(input: {
 /** How many hint rungs a task offers before the solution: authored hints, the
  * approach steps, the skeleton and the documentation link. */
 export function ladderLength(task: Pick<CodingTask, 'hints' | 'approach' | 'skeleton'>): number {
-  return task.hints.en.length + (task.approach?.en.length ?? 0) + (task.skeleton ? 1 : 0) + 1;
+  return task.hints.length + (task.approach?.length ?? 0) + (task.skeleton ? 1 : 0) + 1;
 }
 
 /** The solution opens once half the ladder is spent, never before two rungs. */
