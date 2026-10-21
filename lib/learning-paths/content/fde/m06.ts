@@ -406,7 +406,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The MCP specification says there SHOULD always be a human in the loop with the ability to deny tool invocations. OWASP’s LLM06:2025 Excessive Agency entry says to use human-in-the-loop control “to require a human to approve high-impact actions before they are taken”. Take “deny” literally. An approval step needs a reject path that ends the call, so the dispatcher in the exercise keeps each held call in one of three states: pending, approved (it ran once) or rejected (it never runs, and approving it later finds nothing).',
+            'The MCP specification says there SHOULD always be a human in the loop with the ability to deny tool invocations. OWASP’s LLM06:2025 Excessive Agency entry says to use human-in-the-loop control “to require a human to approve high-impact actions before they are taken”. Read “deny” as a requirement: an approval step needs a reject path that ends the call. The dispatcher in the exercise keeps each held call in one of three states: pending, approved (it ran once) or rejected (it never runs, and approving it later finds nothing).',
         },
         {
           kind: 'prose',
@@ -510,7 +510,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'RFC 9110 calls a method idempotent when the intended effect of several identical requests equals the effect of one. That describes intent, not identical responses. A stable key enables deduplication only when the receiver enforces the documented scoped operation contract against concurrency and crashes. Bind request identity and result, state which failures are retained and define the retention window. Merely sending a key does not make arbitrary repeated financial effects safe.',
+            'RFC 9110 calls a method idempotent when the intended effect of several identical requests equals the effect of one. The definition covers the intended effect on the server; two responses may still differ. A stable key enables deduplication only when the receiver enforces the documented scoped operation contract against concurrency and crashes. Bind request identity and result, state which failures are retained and define the retention window. Merely sending a key does not make arbitrary repeated financial effects safe.',
         },
         {
           kind: 'table',
@@ -662,7 +662,7 @@ export const FDE_M06: ModuleSource = {
             'A completed refund of 900 cents, because the sub-agent has calls left in its budget of four and the arguments validate.',
           ],
           correct: 0,
-          explanation: 'A sub-agent’s grant is the intersection of what it asked for and what the session holds. refunds.write is not in the session, so the request grants nothing, and the scope gate refuses before the arguments or the approval step run. Returning pending_approval would let a sub-agent widen the operator’s permissions and then ask the operator to approve the result; approval never adds a scope. budget_exhausted is wrong on the numbers: this is the third of four calls, and the budget counts calls, not misbehaviour, although this refused call still uses one. A completed refund skips both the scope gate and the approval that refunds.create requires.',
+          explanation: 'A sub-agent’s grant is the intersection of what it asked for and what the session holds. refunds.write is not in the session, so the request grants nothing, and the scope gate refuses before the arguments or the approval step run. Returning pending_approval would let a sub-agent widen the operator’s permissions and then ask the operator to approve the result; approval never adds a scope. budget_exhausted is wrong on the numbers: this is the third of four calls, and the budget counts calls, and this refused call still uses one. A completed refund skips both the scope gate and the approval that refunds.create requires.',
           competencies: ['tools'],
         },
       ],

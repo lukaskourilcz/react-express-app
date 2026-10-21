@@ -473,7 +473,7 @@ export const FDE_M07: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A rule that reads two trace fields is a starting point, not a diagnosis. Anthropic’s article warns that you will not know whether your graders work “unless you read the transcripts and grades from many trials”. Read a sample from every label before you act on the counts, and expect some errors to need a label this rule does not have.',
+            'A rule that reads two trace fields gives you a first sort of the errors. Anthropic’s article warns that you will not know whether your graders work “unless you read the transcripts and grades from many trials”. Read a sample from every label before you act on the counts, and expect some errors to need a label this rule does not have.',
         },
         {
           kind: 'prose',
