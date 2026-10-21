@@ -5737,3 +5737,13 @@ Issue #364: the authenticated, read-only `GET /api/quiz/questions?resource=marke
 PR #365 is merged at 1bf6cd56b06f2bb7e8dfbbb14d57ab7028bff368. Frozen head 58133cf1 passed required run 39618238380: verify 41m16s, SQL 36s. READY production dpl_8FBFfVNS5cpx2ZixJ8Q96ubEnRGU matches the merge SHA. Read-only guest checks against devshark.app after the deploy: `/`, `/quiz` and `/learn` answer 200; `/api/health` answers 200 with database, service role and rate limiter OK; the export answers 503 `marketing_not_configured` with and without a bearer, because `DEVSHARK_MARKETING_EXPORT_SECRET` is not set.
 
 The export is not switched on. Its server secret, the n8n credential and an authenticated production check stay with the owner (NEEDED.md, "Configure OwnDashboard marketing source integration after PR review"). No export, publication, account or database write happened in production. The verify job took 41 minutes because the `package.json` change triggered the QuickJS rebuild; the job's limit is 45.
+
+## Learn section registry and plan membership — 21 October 2026
+
+Issue #487: `shared/learn-sections.ts` adds the three Learn sections (Web Developer, Software Engineer, Forward Deployed Engineer) with the owner's membership matrix. A learner profile may now carry an opt-in `sections` list; `planTopics` appends a joined Software Engineer section's topics and their prerequisites after the track stages, so the server's `403 not_in_plan` and Today follow the joined section. A profile without `sections` plans what it planned before. `PUT ?op=learning-preference` accepts `sections`, refuses unknown ones with 400 before any write, and keeps the saved list when a save leaves it out. No UI, tier, reward, schema or handler-count change.
+
+Local `ci:parity --fast` at cade6b03 (Node 24.22.0): complete and clean, 28 passed, 25 skipped (full-only steps), 0 failed. The first run had failed `check:bundle` at 243,108 against the 243,000 budget; after the opt-in split the initial download measured 242,974 with the budget unchanged.
+
+PR #521 is merged at 88b6fcfd73c2cb63a568bfaa5d9e7479d50a1b71. Head cade6b03 passed required run 39636125708: verify 44m23s, SQL 44s. READY production dpl_EnjFL3yT3KiftsPAeMhXaZs1gNft matches the merge SHA with no alias error and served devshark.app. Read-only guest checks: `/`, `/learn` and `/api/health` answer 200; `GET` and `PUT ?op=learning-preference` (the latter with an unknown section) answer 401 for a guest.
+
+No authenticated production save was made: the 400 for unknown sections and the kept list are proven by the handler contracts against a stand-in, not on a production account.
