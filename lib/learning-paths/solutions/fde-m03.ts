@@ -9,8 +9,11 @@
  * refuses, one where it refuses the genuine pair), the same webhook id on two
  * connections, a forged delivery that tries to use up a genuine id, the
  * tolerance edges in both directions, a ticket id that belongs to the other
- * tenant, the grant states at their exact boundaries, and grant dates that do
- * not parse (they fail closed).
+ * tenant, the grant states at their exact boundaries, grant dates that do
+ * not parse (they fail closed), and an audit entry for every refusal reason.
+ * The oracle signature in the `acceptPair` world has the genuine signature's
+ * length, so a receiver that checks lengths before `ctx.safeEqual`, as the
+ * lesson's Node sketch does, is graded on the answer `ctx.safeEqual` gives.
  *
  * All four security criteria are critical, so none of them can be averaged
  * away by a correct record shape. `scripts/test-learning-paths.ts` also
@@ -18,8 +21,8 @@
  * `===` instead of `ctx.safeEqual`, `===` beside one unused `ctx.safeEqual`
  * call, no replay store, an unscoped replay key, no timestamp tolerance, the
  * tenant taken from the payload, an expired grant accepted, an unparseable
- * expiry read as never expiring) and requires each to fail its named
- * criterion. */
+ * expiry read as never expiring, a grant refusal left out of the audit) and
+ * requires each to fail its named criterion. */
 
 import type { PathCodeSolution } from '../types';
 
@@ -181,7 +184,7 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
         criterion: 'signature',
       },
       {
-        call: "(function () { var genuine = __deliver().headers['webhook-signature']; var w = __world({ acceptPair: ['v1,c2FmZUVxdWFsLW9yYWNsZQ==', genuine] }); var out = receiveWebhook(__deliver({ signature: 'v1,c2FmZUVxdWFsLW9yYWNsZQ==' }), w.ctx); return { out: out, writes: w.writes }; })()",
+        call: "(function () { var genuine = __deliver().headers['webhook-signature']; var w = __world({ acceptPair: ['v1,c2FmZUVxdWFsLW9yYWNsZS1zYW1lLWxlbmd0aC1wYWQ=', genuine] }); var out = receiveWebhook(__deliver({ signature: 'v1,c2FmZUVxdWFsLW9yYWNsZS1zYW1lLWxlbmd0aC1wYWQ=' }), w.ctx); return { out: out, writes: w.writes }; })()",
         expected: { out: { ok: true, ticketId: 'TCK-1001', status: 'solved' }, writes: ['TEN-4021:TCK-1001:solved'] },
         label: 'the accept decision is the answer ctx.safeEqual gives for the header entry and the expected signature',
         criterion: 'signature',
@@ -354,6 +357,16 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
           ['msg_3Rt8', 'TEN-4021', 'accept', 'accepted'],
         ],
         label: 'every delivery writes exactly one audit entry',
+      },
+      {
+        call: "(function () { return [[{ grant: { revokedAt: '2026-04-01T12:00:00Z' } }, {}], [{ grant: { expiresAt: '2026-04-02T08:00:00Z' } }, {}], [{}, { rawBody: '{not json' }], [{}, { event: { ticketId: 'TCK-9999' } }]].map(function (c) { var w = __world(c[0]); receiveWebhook(__deliver(c[1]), w.ctx); return w.audit; }); })()",
+        expected: [
+          [{ webhookId: 'msg_2Lk9', connectionId: 'CON-DUN', tenantId: 'TEN-4021', decision: 'refuse', reason: 'grant_revoked' }],
+          [{ webhookId: 'msg_2Lk9', connectionId: 'CON-DUN', tenantId: 'TEN-4021', decision: 'refuse', reason: 'grant_expired' }],
+          [{ webhookId: 'msg_2Lk9', connectionId: 'CON-DUN', tenantId: 'TEN-4021', decision: 'refuse', reason: 'bad_payload' }],
+          [{ webhookId: 'msg_2Lk9', connectionId: 'CON-DUN', tenantId: 'TEN-4021', decision: 'refuse', reason: 'unknown_ticket' }],
+        ],
+        label: 'a refused grant, a bad payload and an unknown ticket each write one audit entry',
       },
       {
         call: "(function () { var w = __world(); var d = __deliver({ event: { status: 'pending', note: 'x'.repeat(20000) } }); Object.freeze(d.headers); Object.freeze(d); var before = JSON.stringify(d); var out = receiveWebhook(d, w.ctx); return { out: out, unchanged: JSON.stringify(d) === before }; })()",

@@ -62,6 +62,7 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'the tenant taken from the payload (tenant leak)', replace: ['const tenantId: string = connection.tenantId;', 'const tenantId: string = event.tenantId;'], criterion: 'tenant-isolation' },
     { label: 'an expired grant accepted', replace: ["  if (!(Date.parse(grant.expiresAt) > nowMs)) return refuse('grant_expired');\n", ''], criterion: 'permission-freshness' },
     { label: 'an unparseable expiry read as never expiring (fails open)', replace: ['if (!(Date.parse(grant.expiresAt) > nowMs))', 'if (Date.parse(grant.expiresAt) <= nowMs)'], criterion: 'permission-freshness' },
+    { label: 'grant refusals not audited', replace: ["return refuse('grant_expired')", "return { ok: false, reason: 'grant_expired' }"], criterion: 'core' },
   ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },

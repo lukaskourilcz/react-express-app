@@ -1,0 +1,29 @@
+{
+  "kind": "native-review-continuation",
+  "issue": "#501 (B5)",
+  "reviewedIds": [
+    "fde-v1-m03-l1",
+    "fde-v1-m03-l2",
+    "fde-v1-m03-l2-read",
+    "fde-v1-m03-checks",
+    "fde-v1-m03-q5",
+    "fde-v1-m03-q6",
+    "fde-v1-m03-q7",
+    "fde-v1-m03-q8",
+    "fde-v1-m03-q9",
+    "fde-v1-m03-q10",
+    "fde-v1-m03-webhook-receiver"
+  ],
+  "retiredIds": [
+    "fde-v1-m03-tenant-tool-wrapper"
+  ],
+  "uniqueCoverageAdded": 7,
+  "currentReviewFiles": [
+    "review-2026-10-15-n023.jsonl",
+    "review-2026-10-15-n033.jsonl",
+    "review-2026-10-22-b5.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b5-before.json",
+  "proof": null,
+  "note": "Four stale M03 records revised in place, the retired tool-wrapper record moved to history, seven new items reviewed individually. Evidence is npm run test:paths plus scratch gradePathCode/gradeCheck probes kept outside the repository; no proof script is committed. Same-session model review by a reviewer agent separate from the author; no human approval."
+}
