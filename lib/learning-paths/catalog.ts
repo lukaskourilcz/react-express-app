@@ -77,6 +77,7 @@ export function moduleSummary(module: MergedModule): ModuleSummary {
     })),
     activities: module.activities.map(activitySummary),
     requires: module.requires,
+    ...(module.requiresAtLeast ? { requiresAtLeast: module.requiresAtLeast } : {}),
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
     ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),

@@ -33,8 +33,8 @@ const ACTIVITY_SUMMARY_KEYS = new Set([
   'passThreshold', 'domains', 'language', 'reuseTaskId', 'rubricDimensions', 'scenario', 'fixtureNote',
 ]);
 const MODULE_SUMMARY_KEYS = new Set([
-  'id', 'title', 'outcomes', 'competencies', 'dependsOn', 'lessons', 'activities', 'requires', 'estimatedMinutes',
-  'optional', 'shelf',
+  'id', 'title', 'outcomes', 'competencies', 'dependsOn', 'lessons', 'activities', 'requires', 'requiresAtLeast',
+  'estimatedMinutes', 'optional', 'shelf',
 ]);
 const MANIFEST_KEYS = [
   'id', 'kind', 'version', 'title', 'summary', 'outcomes', 'nonGoals', 'entryRequirement', 'competencies', 'modules',

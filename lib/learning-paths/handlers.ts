@@ -806,9 +806,17 @@ export function recordedState(prior: EvidenceState | undefined, next: EvidenceSt
  * `accept_learning_path_result` takes: each required activity with every
  * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
  * applies). An off-loop module (optional or on a shelf) sends none and never
- * completes. */
+ * completes.
+ *
+ * A module with a quota (`requiresAtLeast`) sends none either. The routine
+ * ANDs every requirement it gets and has no way to count "nine of twelve", so
+ * sending the plain requirements alone would let it complete the module on
+ * the lessons. Completion then comes from `p_module_complete`, which the
+ * handler works out with `moduleComplete` from the progress it read, as it
+ * did before 054: two of the module's cases passed at the same instant can
+ * each miss the other, and the next result in the module completes it. */
 export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
-  if (isOffLoopModule(module)) return [];
+  if (isOffLoopModule(module) || module.requiresAtLeast) return [];
   return module.requires.map((requirement) => ({
     activityId: requirement.activityId,
     states: SATISFYING_STATES[requirement.state],

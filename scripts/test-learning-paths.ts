@@ -29,6 +29,7 @@ import { moduleRequirements, recordedState } from '../lib/learning-paths/handler
 import { handlerContracts } from './learning-path-handler-contracts';
 import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
 import { schemaContracts } from './learning-path-schema-contracts';
+import { quotaContracts } from './learning-path-quota-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
@@ -130,6 +131,9 @@ async function main() {
     // (and a verified pass for a write-up), and each requirement missed alone.
     for (const module of path.modules) {
       const requirements = moduleRequirements(module);
+      // The routine cannot count a quota, so such a module sends nothing and
+      // the handler's moduleComplete decides (quotaContracts covers it).
+      if (module.requiresAtLeast) continue;
       const databaseSays = (states: Map<string, EvidenceState>) => requirements.length > 0
         && requirements.every((one) => one.states.includes(states.get(one.activityId) ?? 'not_started'));
       const met = new Map(module.requires.map((one) => [one.activityId, one.state]));
@@ -528,6 +532,7 @@ async function main() {
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
   diagnosticCompetencyContracts();
   schemaContracts(fail);
+  quotaContracts(fail);
   await handlerContracts(fail);
 
   if (failures.length > 0) {

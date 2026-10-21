@@ -389,13 +389,36 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       issues.push(error('shelf_not_optional', mAt,
         'a shelf module sits outside the loop, so it must be optional and can never gate completion'));
     }
-    if (module.requires.length === 0 && !isOffLoopModule(module)) {
+    const quota = module.requiresAtLeast;
+    if (module.requires.length === 0 && !quota && !isOffLoopModule(module)) {
       issues.push(error('no_requirements', mAt, 'a module needs at least one completion requirement'));
     }
-    if (isOffLoopModule(module) && module.requires.length > 0) {
+    if (isOffLoopModule(module) && (module.requires.length > 0 || quota)) {
       issues.push(error('optional_requirements', mAt, 'an optional or shelf module is skippable, so it cannot carry requirements'));
     }
     const ownIds = new Set(module.activities.map((activity) => activity.id));
+    if (quota) {
+      const qAt = `${mAt}/requiresAtLeast`;
+      if (new Set(quota.of).size !== quota.of.length) issues.push(error('duplicate_id', qAt, 'a quota lists each activity once'));
+      if (!Number.isInteger(quota.count) || quota.count < 1 || quota.count > quota.of.length) {
+        issues.push(error('bad_quota', qAt, 'a quota count must be a whole number from 1 to the number of activities it lists'));
+      }
+      if ((['needs_revision', 'not_started'] as EvidenceState[]).includes(quota.state)) {
+        issues.push(error('impossible_requirement', qAt, `requiring ${quota.state} cannot describe completion`));
+      }
+      for (const activityId of quota.of) {
+        const activity = module.activities.find((one) => one.id === activityId);
+        if (!activity) {
+          issues.push(error('unknown_requirement', qAt, `quota activity ${activityId} is not an activity of this module`));
+        } else if (quota.state === 'verified_pass' && activity.verification !== 'machine_verified') {
+          issues.push(error('unverifiable_requirement', `${qAt}/${activityId}`,
+            'a self-reviewed activity can never reach verified_pass, so counting it toward the quota would mislead'));
+        }
+        if (module.requires.some((requirement) => requirement.activityId === activityId)) {
+          issues.push(error('quota_overlap', `${qAt}/${activityId}`, 'an activity is either required or counted toward the quota, not both'));
+        }
+      }
+    }
     for (const requirement of module.requires) {
       if (!ownIds.has(requirement.activityId)) {
         issues.push(error('unknown_requirement', mAt, `requirement ${requirement.activityId} is not an activity of this module`));
@@ -450,7 +473,8 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
   }
   for (const [id, activity] of allActivities) {
     if (activity.purpose !== 'diagnostic') continue;
-    const requiredBy = path.modules.filter((module) => module.requires.some((one) => one.activityId === id));
+    const requiredBy = path.modules.filter((module) =>
+      module.requires.some((one) => one.activityId === id) || module.requiresAtLeast?.of.includes(id));
     if (requiredBy.length > 0) {
       issues.push(error('diagnostic_required', `${at}/${id}`,
         'a diagnostic is always skippable, so it can never gate module completion'));
@@ -487,13 +511,16 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
 
   // At least one route to completion must exist: every module's requirements
   // must be satisfiable by activities that can actually reach the state.
+  const canReach = (activityId: string, state: EvidenceState): boolean => {
+    const activity = allActivities.get(activityId);
+    if (!activity) return false;
+    if (state === 'verified_pass') return activity.verification === 'machine_verified';
+    return true;
+  };
   const reachable = path.modules.every((module) =>
-    module.requires.every((requirement) => {
-      const activity = allActivities.get(requirement.activityId);
-      if (!activity) return false;
-      if (requirement.state === 'verified_pass') return activity.verification === 'machine_verified';
-      return true;
-    }));
+    module.requires.every((requirement) => canReach(requirement.activityId, requirement.state))
+    && (!module.requiresAtLeast
+      || module.requiresAtLeast.of.filter((id) => canReach(id, module.requiresAtLeast!.state)).length >= module.requiresAtLeast.count));
   if (!reachable) issues.push(error('unreachable_completion', at, 'the path has no valid route to completion'));
 
   for (const field of pathCopyFields(path)) {

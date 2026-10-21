@@ -157,6 +157,16 @@ export interface ModuleRequirement {
   state: EvidenceState;
 }
 
+/** A quota beside `requires`: at least `count` of the activities in `of` must
+ * reach `state`. The decomposition module asks for nine of its twelve cases,
+ * so one weak case cannot hold the module back and nine strong ones still
+ * have to exist. */
+export interface ModuleRequirementQuota {
+  count: number;
+  of: string[];
+  state: EvidenceState;
+}
+
 /** Named lists of modules the hub shows apart from the loop. Not the Learn
  * section's shelf of paths (shared/progression.ts): this one groups modules
  * inside one path. */
@@ -188,6 +198,8 @@ export interface ModuleSummary {
   lessons: LessonSummary[];
   activities: ActivitySummary[];
   requires: ModuleRequirement[];
+  /** Met as well as every entry of `requires`, never instead of them. */
+  requiresAtLeast?: ModuleRequirementQuota;
   estimatedMinutes: number;
   /** Placement diagnostics and bridges live in modules the learner may skip
    * entirely. An optional module never gates path completion and never
@@ -344,7 +356,7 @@ export interface ActivityProgress {
 
 export interface ModuleProgress {
   moduleId: string;
-  /** True only when every entry of `requires` is satisfied. */
+  /** True only when every entry of `requires` and the quota are satisfied. */
   completed: boolean;
   completedAt: string | null;
   activities: ActivityProgress[];
@@ -353,15 +365,25 @@ export interface ModuleProgress {
 export const stateSatisfies = (required: EvidenceState, actual: EvidenceState): boolean =>
   SATISFYING_STATES[required].includes(actual);
 
-/** Whether a module's requirements are met by the states recorded for it. */
+/** The activities of a quota that already reach its state. */
+export function quotaMet(
+  quota: ModuleRequirementQuota,
+  states: ReadonlyMap<string, EvidenceState>,
+): string[] {
+  return quota.of.filter((activityId) => stateSatisfies(quota.state, states.get(activityId) ?? 'not_started'));
+}
+
+/** Whether a module's requirements are met by the states recorded for it:
+ * every entry of `requires`, and the quota when the module carries one. */
 export function moduleComplete(
-  module: Pick<ModuleSummary, 'requires'>,
+  module: Pick<ModuleSummary, 'requires' | 'requiresAtLeast'>,
   states: ReadonlyMap<string, EvidenceState>,
 ): boolean {
-  if (module.requires.length === 0) return false;
+  const quota = module.requiresAtLeast;
+  if (module.requires.length === 0 && !quota) return false;
   return module.requires.every((requirement) =>
     stateSatisfies(requirement.state, states.get(requirement.activityId) ?? 'not_started'),
-  );
+  ) && (!quota || quotaMet(quota, states).length >= quota.count);
 }
 
 /** Guided completion: every required module's evidence is in place. Off-loop
@@ -413,15 +435,22 @@ export function nextActivityId(
       return state !== 'self_reviewed' && state !== 'verified_pass';
     });
     if (unread) return unread.id;
-    const unmet = module.requires.filter(
-      (requirement) => !stateSatisfies(requirement.state, states.get(requirement.activityId) ?? 'not_started'),
-    );
+    const unmet = module.requires
+      .filter((requirement) => !stateSatisfies(requirement.state, states.get(requirement.activityId) ?? 'not_started'))
+      .map((requirement) => requirement.activityId);
+    // An unmet quota offers each of its activities not yet at its state, in
+    // the module's order, after the plain requirements.
+    const quota = module.requiresAtLeast;
+    if (quota && quotaMet(quota, states).length < quota.count) {
+      const met = new Set(quotaMet(quota, states));
+      unmet.push(...quota.of.filter((activityId) => !met.has(activityId) && !unmet.includes(activityId)));
+    }
     if (unmet.length === 0) continue;
-    const started = unmet.find((requirement) => {
-      const state = states.get(requirement.activityId);
+    const started = unmet.find((activityId) => {
+      const state = states.get(activityId);
       return state === 'in_progress' || state === 'needs_revision';
     });
-    return (started ?? unmet[0]).activityId;
+    return started ?? unmet[0];
   }
   return null;
 }
