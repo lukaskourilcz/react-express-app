@@ -23,6 +23,7 @@
 import type { PostHog } from 'posthog-js';
 import { readJSON, removeStored, writeJSON } from './storage';
 import { hasConsent, subscribeConsent } from './consent';
+import type { GuideLocale } from './publicMetadata';
 
 /* ── campaign attribution (#239) ───────────────────────────────────────── *
  * Social posts link to devShark with `utm_source`, `utm_medium` and
@@ -344,15 +345,14 @@ export function capturePathEvent(event: PathFunnelEvent, properties: PathFunnelP
   capture(event, safe);
 }
 
-/** Activation events carry only catalogue identifiers, never code or answers. */
+/** Activation events carry only catalogue identifiers, never code or answers.
+ * A topic guide's event also names the language the guide was read in. */
 export type ActivationEvent = 'landing_sample_completed' | 'learning_cta_clicked';
-export interface ActivationProperties {
-  product: string;
-  locale: 'en' | 'cs';
-  source: 'home' | 'topic_guide';
-  category?: string;
-}
+export type ActivationProperties =
+  | { product: string; source: 'home'; category?: string }
+  | { product: string; source: 'topic_guide'; locale: GuideLocale; category?: string };
 export function captureActivation(event: ActivationEvent, properties: ActivationProperties): void {
-  const { product, locale, source, category } = properties;
-  capture(event, { product, locale, source, ...(category ? { category } : {}) });
+  const { product, source, category } = properties;
+  const locale = properties.source === 'topic_guide' ? { locale: properties.locale } : {};
+  capture(event, { product, ...locale, source, ...(category ? { category } : {}) });
 }

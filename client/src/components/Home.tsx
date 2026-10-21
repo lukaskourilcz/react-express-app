@@ -24,7 +24,6 @@ import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingT
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
-import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
@@ -161,13 +160,13 @@ const STRIP_ICON = (path: ReactNode) => (
 // ───────────────────────────────── Landing ────────────────────────────────
 
 export default function Home() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const subject = useActiveSubject();
   const { isAuthenticated } = useAuth();
   const topicsRef = useRef<HTMLElement>(null);
 
-  const featured = (LANDING_TOPICS[subject.id] ?? []).map((topic) => localizeLandingTopic(topic, lang, t));
+  const featured = LANDING_TOPICS[subject.id] ?? [];
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
@@ -229,7 +228,7 @@ export default function Home() {
               showTeaser={false}
               chip={`${sample.name} · ${t('home.sampleChip', { level: sample.levels[0] })}`}
               question={sample.question}
-              onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: sample.id })}
+              onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, source: 'home', category: sample.id })}
             />
           </div>
         )}
@@ -271,7 +270,7 @@ export default function Home() {
       </section>
 
       {/* ── Roadmap preview ── */}
-      {selected && <RoadmapPreview topic={selected} onStart={() => { captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected.id }); navigate(`/learn?topic=${encodeURIComponent(selected.id)}`); }} />}
+      {selected && <RoadmapPreview topic={selected} onStart={() => { captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, source: 'home', category: selected.id }); navigate(`/learn?topic=${encodeURIComponent(selected.id)}`); }} />}
 
       {/* ── Everything-else feature strip (no hover) ── */}
       <section aria-label={t('home.moreKicker')} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
