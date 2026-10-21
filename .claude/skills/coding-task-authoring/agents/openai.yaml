@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding Task Authoring"
+  short_description: "Add a coding task with solution, review and index"
+  default_prompt: "Use $coding-task-authoring to add or edit this coding task, record its review and prove it is issued."
