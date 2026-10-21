@@ -450,7 +450,9 @@ export const WEBDEV_PLAN_STAGES: Record<BaseTrack, readonly (readonly string[])[
  * learner who chose FDE still has to meet the data and service work the
  * specialization is built on — the specialization does not route around it. */
 export const SPECIALIZATION_BRIDGE_TOPICS: Record<string, readonly string[]> = {
-  fde: ['nodejs', 'databases', 'general', 'ai', 'security'],
+  // Every FDE section topic the base track may lack (shared/learn-sections.ts):
+  // a member never meets a topic of their own section outside their plan.
+  fde: ['nodejs', 'databases', 'general', 'ai', 'security', 'devops'],
 };
 
 /** Topics a skill path leans on. DSA Foundations is entered directly, so this

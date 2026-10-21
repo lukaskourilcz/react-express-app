@@ -4895,6 +4895,17 @@ async function main() {
     assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);
     assert.deepEqual(sectionsForTopic('ai'), ['forward-deployed-engineer']);
     assert.ok(SPECIALIZATION_BRIDGE_TOPICS.fde.includes('ai'), 'the FDE bridge brings AI & LLMs into the plan');
+    // A section a learner belongs to never lists a topic their plan lacks:
+    // FDE comes with the specialization, so its bridge carries every FDE topic.
+    for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
+      const fde = planTopics({
+        schemaVersion: 2, baseTrack: track, specialization: 'fde', skillPaths: [],
+        goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
+      });
+      for (const topic of section('forward-deployed-engineer').topics) {
+        assert.ok(fde.includes(topic), `an FDE learner on ${track} plans the FDE section topic ${topic}`);
+      }
+    }
 
     const frontend = {
       schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null, skillPaths: [],
