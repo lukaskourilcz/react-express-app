@@ -243,7 +243,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     const list = listRef.current;
     if (!list || !scrollable) return;
     const rows = Array.from(list.children).slice(0, 5);
-    // Measure actual rows so Czech text, zoom and narrow layouts still show five.
+    // Measure actual rows so long text, zoom and narrow layouts still show five.
     const sizeList = () => list.style.setProperty('--cd-project-list-height', `${rows.reduce((height, row) => height + row.getBoundingClientRect().height, 0) + 1}px`);
     sizeList();
     const observer = new ResizeObserver(sizeList);
@@ -413,7 +413,7 @@ export function FullStackScreen() {
 export function CodingTrackScreen() {
   useCodingFirstData('bookmarks');
   useWarmWorkbench();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -450,8 +450,7 @@ export function CodingTrackScreen() {
     }
     if (needle) {
       // The title as the row shows it, plus the technique tags: the words a
-      // learner actually remembers about a challenge. Never a title in a
-      // language the page is not in (C3-13).
+      // learner actually remembers about a challenge.
       const haystack = `${task.title} ${task.focus.join(' ')}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
@@ -468,7 +467,7 @@ export function CodingTrackScreen() {
     const status = statusOf(task);
     if (statusFilter === 'passed') return status === 'passed';
     return status === 'open' || status === 'in_progress' || status === 'revealed';
-  }), [tasks, group, needle, lang, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
+  }), [tasks, group, needle, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);

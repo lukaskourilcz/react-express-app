@@ -16,10 +16,10 @@ export interface CategoryOption {
 }
 
 /**
- * i18n key for a category's display name. The registry's `label` field is the
- * English fallback; user-visible surfaces should render
- * `t(categoryLabelKey(cat))` so Czech gets Czech topic names (same pattern as
- * subjectNameKey in subjects.ts).
+ * Translation key for a category's display name. The registry's `label` field
+ * is the fallback; user-visible surfaces should render
+ * `t(categoryLabelKey(cat))`, so the copy lives in translations.ts (same
+ * pattern as subjectNameKey in subjects.ts).
  */
 export const categoryLabelKey = (cat: string): TranslationKey => `category.${cat}` as TranslationKey;
 

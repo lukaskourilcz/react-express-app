@@ -6,29 +6,9 @@
 //
 // Keyed by RoadmapTopic; a topic's array has one entry per level, in order.
 // Topics or levels without an entry simply skip the panel (the runner treats a
-// missing intro as "start immediately"). Czech translations live in
-// levelIntros.cs.ts and are consulted by levelIntro() when the UI is in Czech.
+// missing intro as "start immediately").
 
 import type { RoadmapTopic } from '../types/quiz';
-
-// Czech intros are lazy-loaded so the ~28 KB gzip of CS text never ships to
-// EN users. `preloadLevelIntros('cs')` kicks off the fetch (the Roadmap page
-// calls it when the UI language is Czech); until it lands, levelIntro() falls
-// back to English — the same graceful-degradation pattern as LanguageContext.
-type IntroTable = Partial<Record<RoadmapTopic, string[]>>;
-let csIntros: IntroTable | null = null;
-let csInflight: Promise<void> | null = null;
-
-export function preloadLevelIntros(lang: string): void {
-  if (lang !== 'cs' || csIntros || csInflight) return;
-  csInflight = import('./levelIntros.cs')
-    .then((mod) => {
-      csIntros = mod.LEVEL_INTROS_CS;
-    })
-    .catch(() => {
-      csInflight = null; // allow a retry on the next call
-    });
-}
 
 export const LEVEL_INTROS: Partial<Record<RoadmapTopic, string[]>> = {
   javascript: [
@@ -382,11 +362,8 @@ export const LEVEL_INTROS: Partial<Record<RoadmapTopic, string[]>> = {
   ],
 };
 
-/** The intro blurb for a topic + GLOBAL level number, in the given language
- *  (falling back to English), or null if none exists. */
-export function levelIntro(topic: RoadmapTopic, level: number, lang = 'en'): string | null {
-  const cs = lang === 'cs' ? csIntros?.[topic]?.[level - 1] : undefined;
-  if (cs) return cs;
+/** The intro blurb for a topic + GLOBAL level number, or null if none exists. */
+export function levelIntro(topic: RoadmapTopic, level: number): string | null {
   const list = LEVEL_INTROS[topic];
   if (!list) return null;
   return list[level - 1] ?? null;

@@ -5402,26 +5402,11 @@ async function main() {
     // keeps it (HARDEN).
     vercelRoutingContracts();
 
-    // The app ships English only (`ENABLED_LANGS`), so the Czech dictionary is
-  // retained work rather than a live surface and a new English key is not
-  // obliged to arrive with a translation — `t` falls back to English for
-  // anything missing. What still has to hold is the other direction: a key
-  // removed from English and left in Czech is unreachable, and a Czech string
-  // nobody can render is worse than no string, because it reads as translated
-  // work that is live and is not.
+  // The app ships one dictionary, English, and it must not look truncated.
   {
-    const keysOf = (file: string) => {
-      const source = readFileSync(join(process.cwd(), 'client/src/i18n', file), 'utf8');
-      return new Set((source.match(/^ {2}'[^']+':/gm) ?? []).map((line) => line.trim().slice(1, -2)));
-    };
-    const en = keysOf('translations.ts');
-    const cs = keysOf('translations.cs.ts');
+    const source = readFileSync(join(process.cwd(), 'client/src/i18n/translations.ts'), 'utf8');
+    const en = new Set((source.match(/^ {2}'[^']+':/gm) ?? []).map((line) => line.trim().slice(1, -2)));
     assert.ok(en.size > 1500, `the English dictionary looks truncated: ${en.size} keys`);
-    assert.deepEqual(
-      [...cs].filter((key) => !en.has(key)),
-      [],
-      'a Czech key with no English counterpart is unreachable and should be deleted',
-    );
   }
 
   // The pre-paint bootstrap has to run before anything that can block it.

@@ -137,7 +137,7 @@
   font-family: var(--font-family-heading, inherit);
   font-weight: 700;
   font-size: 1.02rem;
-  /* A long Czech group name wraps rather than pushing the count off the row. */
+  /* A long group name wraps rather than pushing the count off the row. */
   min-width: 0;
 }
 .cd-technique__count {

@@ -1,10 +1,8 @@
-// UI string translations for the app shell and quiz flow.
+// UI strings for the app shell and quiz flow.
 //
-// `en` is the source of truth; its keys define the TranslationKey type, so
-// `cs` is required to provide every key (the compiler enforces parity).
-// Interpolation: use {name} placeholders and pass vars to t(key, vars).
-// Empty values keep retired UI keys compatible with the archived Czech
-// dictionary; no current screen reads those removed labels or descriptions.
+// `en` is the one source of the app's copy; its keys define the
+// TranslationKey type. Interpolation: use {name} placeholders and pass vars
+// to t(key, vars).
 
 export const en = {
   'designPreview.label': 'Compare interface designs',
@@ -113,13 +111,6 @@ export const en = {
   'home.statQuestions': 'questions',
   'home.statCodingChallenges': 'coding challenges',
   'home.introAria': 'Introduction',
-  'home.topicBlurbLocalized': '{name} is split into short lessons, practice and checkpoints.',
-  'home.sampleQuestionLocalized': 'What is included in the {name} learning path?',
-  'home.sampleOptionFoundations': 'Foundations',
-  'home.sampleOptionPractice': 'Guided practice',
-  'home.sampleOptionReview': 'Checkpoint review',
-  'home.sampleOptionAll': 'All of the above',
-  'home.sampleExplanationLocalized': 'The {name} path combines foundations, practice and checkpoint review.',
   'home.tryOne': 'Try one — no signup',
   'home.codeSample': 'Code sample for this practice question',
   'home.sampleChip': 'Level 1 — {level}',
@@ -330,8 +321,6 @@ export const en = {
   'common.lightMode': 'Switch to light mode',
   'common.soundOn': 'Turn sound on',
   'common.soundOff': 'Turn sound off',
-  'lang.switchToCzech': 'Přepnout do češtiny',
-  'lang.switchToEnglish': 'Switch to English',
 
   // Auth
   'auth.logIn': 'Log in',
@@ -497,7 +486,6 @@ export const en = {
   'challenge.topics': 'Choose your topics',
   'challenge.noTopics': 'Choose at least one topic to start.',
   'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
-  'leaderboard.visibility.hint': '',
   'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
   'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 
@@ -517,12 +505,10 @@ export const en = {
   'friends.loadFailed': 'Your friends did not load.',
   'friends.unavailable': 'Friends are not available yet on this deployment.',
   'friends.handleTitle': 'Your sharkname',
-  'friends.handleHelp': '',
   'friends.handlePlaceholder': 'e.g. lukas-k',
   'friends.handleSave': 'Save',
   'friends.saving': 'Saving…',
   'friends.handleSaved': 'Saved.',
-  'friends.handleInvalid': '',
   'friends.discoverable': 'Let people find me by my sharkname',
   'friends.discoverableHelp': 'When off, nobody new can add you. Existing friends stay.',
   'friends.findTitle': 'Add a friend',
@@ -591,7 +577,6 @@ export const en = {
   'profile.longestStreak': 'Longest streak',
   'profile.day': 'day',
   'profile.days': 'days',
-  'profile.daysFew': 'days',
   'profile.streakUnavailable': 'Streak data did not load. Retry below.',
   // Migration 048: any verified learning counts, not only a quiz.
   'profile.streakRule': 'A day counts when you finish a quiz, a Learn level or a Challenge run, or pass a coding task.',
@@ -745,38 +730,18 @@ export const en = {
   // Practice / stats toasts
   'quiz.reportSent': 'Thanks, report sent',
   'quiz.reportFailed': 'Could not send report',
-  // The old key, kept because the retained Czech file has it: a result
-  // waiting in the queue (lib/pendingQuizReceipts.ts) to be saved.
+  // An older key name: a result waiting in the queue
+  // (lib/pendingQuizReceipts.ts) to be saved.
   'quiz.streakWarning': 'Your result isn’t saved to your account yet. devShark will try again the next time you open it.',
   'quiz.resultNotSaved': 'This result could not be saved to your account.',
   'quiz.dailyPractice': 'You started this daily challenge signed out, so it counted as practice and was not saved.',
   'quiz.pendingResultLost': 'An earlier quiz result could not be saved to your account: a result has to be saved within an hour.',
   'quiz.shareCopied': 'Result copied to clipboard',
   'quiz.shareSaved': 'Share card saved and result text copied',
-  'quiz.shareCardTitle': '',
   'quiz.shareFailed': 'Could not share',
 
   // Generic errors
 
-  // Unrendered since Shark Cards replaced the flashcard grid (the sharkCards.*
-  // block below). The keys stay because the retained Czech file has them.
-  'card.heading': 'Cards',
-  'card.kicker': 'Flashcards',
-  'card.practiceAll': 'Practice all {count}',
-  'card.tapReveal': 'Tap to reveal ↻',
-  'card.hideAnswer': 'Tap to hide ↻',
-  'card.subtitle': 'Flashcards from questions you bookmarked. Reveal the answer when ready.',
-  'card.signInTitle': 'Sign in to use Cards',
-  'card.signInBody': 'Your flashcards are saved to your account so you can review them on any device.',
-  'card.emptyTitle': 'No cards yet',
-  'card.emptyHint': 'Bookmark a question (the bookmark icon) and it shows up here as a flashcard.',
-  'card.goToQuiz': 'Go to the quiz',
-  'card.loading': 'Loading cards…',
-  'card.remove': 'Remove card',
-  'card.removeFailed': 'Could not remove the card. Try again.',
-  'card.added': 'Saved to Collection',
-  'card.removed': 'Removed from Collection',
-  'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
 
   // ── Shark Cards (owner decision 12): a question the learner did not know,
   // saved where its explanation was shown, reviewed later as a card that
@@ -967,9 +932,6 @@ export const en = {
   'challenge.todaySet': "today's set",
   'challenge.finsStat': 'fins',
   'challenge.perQuestion': 'per question',
-  'challenge.relaxedPace': '',
-  'challenge.relaxedHint': '',
-  'challenge.practiceScore': '',
   'challenge.todayBoard': "Today's board",
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
   'challenge.boardUnavailable': 'The top scores could not be loaded. You can still play.',
@@ -993,13 +955,7 @@ export const en = {
   'challenge.nextQuestion': 'Next question',
   'challenge.seeResult': 'See result',
   'challenge.gameOver': 'Run ended',
-  'challenge.submitPrompt': '',
-  'challenge.nameLabel': '',
-  'challenge.nameRequired': '',
-  'challenge.namePublicHint': '',
   'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
-  'challenge.submitScore': '',
-  'challenge.scoreSubmitted': '',
   'challenge.playAgain': 'Play again',
   'challenge.backToIntro': 'Back',
   'challenge.cta': 'Biggest Shark Challenge',
@@ -1087,10 +1043,6 @@ export const en = {
   // ── Non-webdev career-roadmap header ──────────────────────────────────
 
   // ── Misc previously-hardcoded strings ─────────────────────────────────
-  'quiz.shareText': '',
-  // Unrendered since #230: the quiz prompt that asked for voluntary support
-  // left with the support page (#222). The keys stay because the retained
-  // Czech file still has them, and their values say what is true now.
   'quiz.reviewWeakAreas': 'Review weak areas',
   'quiz.interleavedNote': 'You’re comparing related ideas here, to practise choosing which one fits.',
   'quiz.hardestAvailableNote': 'These topics have no advanced questions yet, so this quiz uses the hardest ones they have.',
@@ -1098,6 +1050,16 @@ export const en = {
   'common.dismiss': 'Dismiss',
   'topicLanding.notFound': 'Topic not found',
   'topicLanding.goHome': 'Go home',
+  // The classroom invitation and the not-found page (PublicInfoPages.tsx).
+  'classroomPage.title': 'Run a focused classroom challenge.',
+  'classroomPage.lead': 'Create a host-led room, share one link or QR code, and let signed-in learners join the same subject session.',
+  'classroomPage.create': 'Create a classroom',
+  'classroomPage.join': 'Join with a room code',
+  'classroomPage.note': 'Participants sign in, open the room link, and the host controls question progress.',
+  'notFoundPage.title': 'That page is out of the water.',
+  'notFoundPage.lead': 'The address may be old or incomplete. Your learning progress is safe.',
+  'notFoundPage.home': 'Go home',
+  'notFoundPage.back': 'Go back',
   'a11y.codeBlock': '{language} code block',
 
   // ── Today queue (one daily plan per subject) ──────────────────────────
@@ -1131,10 +1093,6 @@ export const en = {
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
-  // Unrendered: Today no longer promises a card pack, since no screen opens
-  // one. The keys stay because the retained Czech file still has them.
-  'today.packReady': 'Card pack ready',
-  'today.openPack': 'Open your pack',
   'today.emptyTitle': 'Nothing queued',
   'today.emptyBody': 'Nothing is due today. A new plan is ready tomorrow.',
   'today.premiumTitle': 'Premium opens your next level',
@@ -1153,11 +1111,6 @@ export const en = {
   'mastery.masteredTooltip': 'Mastered — passed on {days} different days.',
   'mastery.dueTooltip': 'It’s been a while. A quick review will keep this sharp.',
   'mastery.legendTitle': 'Roadmap key',
-
-  // Unrendered: the collectible album and its card packs are retired (owner
-  // decision 12). Shark Cards are the sharkCards.* block. The key stays because
-  // the retained Czech file has it.
-  'cards.title': 'Shark Cards',
 
   // ── Server-synced badges (badge.<id>.label / badge.<id>.desc) ─────────
   'badges.title': 'Badges',
@@ -1182,7 +1135,6 @@ export const en = {
   'placement.subtitle': 'A few quick rounds that adjust to you. Answer honestly — there’s no penalty for not knowing yet.',
   'placement.idkYet': 'I don’t know yet',
   'placement.idkYetHint': 'No penalty — it just helps us place you.',
-  'placement.idkCounts': '',
   'placement.roundOf': 'Round {n} of {total}',
   'placement.steppingUp': 'Stepping up the difficulty',
   'placement.steppingUpHint': 'You’ve got this — here’s something harder.',
@@ -1194,7 +1146,6 @@ export const en = {
   'placement.next': 'Next',
   'placement.finish': 'Finish',
   'placement.done': 'Placement complete',
-  'placement.doneBody': '',
   'placement.applyFailed': 'Your score could not be saved to your account, so no paths opened. Try again.',
   'placement.retry': 'Retake placement',
   'placement.cancel': 'Cancel',
@@ -1261,7 +1212,6 @@ export const en = {
   'error.taskRetired': 'This challenge was retired from the catalogue. Pick another one.',
   'error.matchFinished': 'This match is already over.',
   'error.rateLimited': 'Too many requests. Wait a moment and try again.',
-  'error.notFound': "We couldn't find that. Check the code and try again.",
   'error.boundaryBody': 'The page hit an unexpected error. Reloading usually fixes it.',
   'error.tryAgain': 'Try again',
   'error.reloadPage': 'Reload page',
@@ -1467,9 +1417,8 @@ export const en = {
   'error.prerequisiteNotMet': 'Pass the steps before this one first.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
-  // Section 4 of the second handoff. The landing keys above keep their names
-  // (the Czech parity contract needs every Czech key in English); these are
-  // the keys the rewrite added.
+  // Section 4 of the second handoff. The landing keys above keep their names;
+  // these are the keys the rewrite added.
   'nav.premium': 'Premium',
   'title.premium': 'Premium · devShark',
   'title.premiumSuccess': 'Premium checkout · devShark',
@@ -2234,10 +2183,6 @@ export const en = {
   'challenge.shareDetail': 'before three strikes',
   'challenge.shareDetailPractice': 'at relaxed pace',
   'challenge.shareText': 'I got {n} right before three strikes in the devShark Biggest Shark Challenge. Can you beat it?',
-  'typing.shareLabel': '',
-  'typing.shareHeadline': '',
-  'typing.shareDetail': '',
-  'typing.shareText': '',
   // Question of the day, /daily (#239)
   'title.daily': 'Question of the day · devShark',
   'daily.kicker': 'devShark question of the day',

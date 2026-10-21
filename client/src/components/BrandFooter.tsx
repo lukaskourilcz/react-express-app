@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
-import { MULTILINGUAL, useLanguage, useT } from '../i18n/LanguageContext';
-import type { Lang } from '../i18n/LanguageContext';
+import { useT } from '../i18n/LanguageContext';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
-import { savePreferredLanguage } from '../lib/languagePref';
 import { useBilling } from '../lib/billing';
 import { openConsentSettings } from '../lib/consent';
 import type { TranslationKey } from '../i18n/translations';
@@ -19,7 +17,6 @@ const SOCIAL_ICON: Record<SocialPlatform, typeof InstagramIcon> = {
 
 export default function BrandFooter() {
   const t = useT();
-  const { lang, setLang } = useLanguage();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
   // The public cancellation page is a legal link (§ 312k BGB): always one
@@ -65,23 +62,9 @@ export default function BrandFooter() {
           </nav>
         )}
         {/* The full versions of these live in Profile → Preferences. A visitor
-            who has not signed in still needs to read the site in their own
-            language and in a comfortable contrast, so the same three settings
-            stay reachable here. */}
+            who has not signed in still needs a comfortable contrast and a
+            choice about sound, so the same two settings stay reachable here. */}
         <div className="ss-footer-settings" role="group" aria-label={t('profile.preferences')}>
-          {MULTILINGUAL && (
-            <button
-              type="button"
-              onClick={() => {
-                const next: Lang = lang === 'en' ? 'cs' : 'en';
-                setLang(next);
-                void savePreferredLanguage(next);
-              }}
-              aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
-            >
-              {lang === 'en' ? 'CS' : 'EN'}
-            </button>
-          )}
           <button type="button" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
             {mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
           </button>

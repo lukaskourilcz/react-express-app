@@ -10,7 +10,6 @@ import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
 import BrandLogo from './components/BrandLogo';
 import { useT, useLanguage } from './i18n/LanguageContext';
-import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
 import { queryClient } from './lib/queryClient';
 import { setTrackValue } from './lib/tracks';
@@ -249,7 +248,7 @@ function App() {
   const location = useLocation();
   const startupGuidePath = useRef(/^(?:\/cs)?\/topics\//.test(location.pathname) ? location.pathname : null);
   const navigate = useNavigate();
-  const { t, setLang, lang } = useLanguage();
+  const { t } = useLanguage();
   const config = useGameConfig();
   const membership = useEntitlement();
   const [quizActive, setQuizActive] = useState(false);
@@ -360,13 +359,6 @@ function App() {
     }
   }, [user]);
 
-  // Apply the account's saved language preference on sign-in, so the learner's
-  // chosen default loads automatically across devices.
-  useEffect(() => {
-    const pref = preferredLanguageOf(user);
-    if (pref) setLang(pref);
-  }, [user, setLang]);
-
   // Apply the account's saved learning track on sign-in, so the chosen path
   // follows the learner across devices. The account wins over anything cached
   // on this device: a guest may draft a choice, but signing in never silently
@@ -423,12 +415,12 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
-    applyRouteHead(location.pathname, t, lang, SHARE_HEAD);
-  }, [location.pathname, t, lang]);
+    applyRouteHead(location.pathname, t, SHARE_HEAD);
+  }, [location.pathname, t]);
 
   useEffect(() => {
-    // Route focus is intentionally pathname-only: changing language updates
-    // metadata, but must not pull focus away from the language control.
+    // Route focus is intentionally pathname-only, so a change that only
+    // rewrites the head does not pull focus away from the current control.
     if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
     const preserveStartupFocus = startupGuidePath.current !== null;
     const timer = window.setTimeout(() => {

@@ -26,11 +26,9 @@ import { getStreakProtection, activateShield, streakState, shieldRemaining, type
 import { DayChangeNote } from './DayChangeNote';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
-import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
-import type { Lang } from '../i18n/LanguageContext';
+import { useT, useLanguage } from '../i18n/LanguageContext';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
-import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
 // The friends tab keeps its code out of the profile until it opens, with a
@@ -58,34 +56,21 @@ function SectionLabel({ children }: { children: ReactNode }) {
   return <Kicker as="h2">{children}</Kicker>;
 }
 
-// Language, appearance and sound ride along in the identity banner. They are
-// the only account-wide switches on this screen and the banner had the room, so
-// they need no card, headings or help text of their own: each button states the
-// action it performs as its accessible name and its tooltip, and shows the state
-// it switches to (CS while reading English, the moon while in light mode).
+// Appearance and sound ride along in the identity banner. They are the only
+// account-wide switches on this screen and the banner had the room, so they
+// need no card, headings or help text of their own: each button states the
+// action it performs as its accessible name and its tooltip, and shows the
+// state it switches to (the moon while in light mode).
 function IdentitySettings() {
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useLanguage();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
 
-  const nextLang: Lang = lang === 'en' ? 'cs' : 'en';
-  const langLabel = t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish');
   const modeLabel = t(mode === 'light' ? 'common.darkMode' : 'common.lightMode');
   const soundLabel = t(settings.soundEffects ? 'common.soundOff' : 'common.soundOn');
 
   return (
     <div className="de-identity-settings" role="group" aria-label={t('profile.preferences')}>
-      {MULTILINGUAL && (
-        <button
-          type="button"
-          className="de-identity-settings__button"
-          onClick={() => { setLang(nextLang); void savePreferredLanguage(nextLang); }}
-          aria-label={langLabel}
-          title={langLabel}
-        >
-          <span aria-hidden="true">{nextLang.toUpperCase()}</span>
-        </button>
-      )}
       <button
         type="button"
         className="de-identity-settings__button"
@@ -378,7 +363,7 @@ export function StreakCard({
   stats: UserStats | null;
   unavailable?: boolean;
 }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const currentLabelId = useId();
   const longestLabelId = useId();
   // The shield and the count read one protection state, so a streak that a
@@ -398,12 +383,7 @@ export function StreakCard({
   const longestStreak = stats?.longest_streak ?? 0;
   const currentStreakDisplay = unavailable || streakUnknown ? '—' : currentStreak;
   const longestStreakDisplay = unavailable ? '—' : longestStreak;
-  const dayUnit = (value: number) => {
-    if (lang === 'en') return t(value === 1 ? 'profile.day' : 'profile.days');
-    if (value === 1) return t('profile.day');
-    if (value >= 2 && value <= 4) return t('profile.daysFew');
-    return t('profile.days');
-  };
+  const dayUnit = (value: number) => t(value === 1 ? 'profile.day' : 'profile.days');
 
   return (
     <div className="ss-panel" style={{ padding: 24, width: '100%' }}>

@@ -70,7 +70,7 @@ import {
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
 import { ROADMAP_MAX_HEARTS, type PlacementReview } from '../../../shared/assessment';
-import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
+import { levelIntro } from '../lib/levelIntros';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
@@ -309,14 +309,11 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 
 function Roadmap() {
   useRoadmapStructureFirst({ plan: true });
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
-
-  // Kick off the lazy Czech intro fetch as soon as the page knows the language.
-  useEffect(() => preloadLevelIntros(lang), [lang]);
 
   // Roadmap structure via TanStack Query — cached + de-duped with the /roadmap
   // tree, cancellable, with built-in loading/error state and retry.
@@ -722,7 +719,6 @@ function Roadmap() {
         onNext={() => next && openNext(next)}
         onReplay={() => open(active)}
         t={t}
-        lang={lang}
       />
     );
   }
@@ -1352,7 +1348,7 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
 }
 
 function LessonRunner({
-  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
+  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
 }: {
   playable: RoadmapPlayable;
   /** No Learn level was passed before this one opened (#239). */
@@ -1360,7 +1356,7 @@ function LessonRunner({
   topicCompleted?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
-  onReplay: () => void; t: TFn; lang: string;
+  onReplay: () => void; t: TFn;
 }) {
   const { user } = useAuth();
   // Fixed when the level opens: the pass itself updates the progress the
@@ -1381,7 +1377,7 @@ function LessonRunner({
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
-  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref, lang) : null;
+  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
   const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
@@ -2459,7 +2455,7 @@ function SkillCheckRunner({
 
 /** The same reviewed DSA lessons, with an entry point open before placement. */
 export function BigOIntroduction() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
   const [level, setLevel] = useState<1 | 2 | null>(null);
   const [generation, setGeneration] = useState(0);
@@ -2482,7 +2478,7 @@ export function BigOIntroduction() {
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data}
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
-      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} lang={lang} t={t}
+      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} t={t}
       onFinished={(pct, repeatXp) => {
         recordLevelResult('dsa', level, pct, lesson.data!.passPct);
         awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
