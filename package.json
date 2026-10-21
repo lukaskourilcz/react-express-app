@@ -33,6 +33,7 @@
     "check:unused": "node scripts/check-unused.mjs",
     "check:public": "node scripts/check-public.mjs",
     "check:security": "node scripts/check-security.mjs",
+    "ci:parity": "node scripts/ci-parity.mjs",
     "audit:performance": "node scripts/audit-performance.mjs",
     "test:browser": "playwright test",
     "check:bundle": "node scripts/check-bundle.mjs",
