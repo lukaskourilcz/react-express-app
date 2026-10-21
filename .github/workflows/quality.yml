@@ -159,7 +159,7 @@ jobs:
           npm run test:browser -- tests/browser/coding-pages.spec.ts
           npm run test:browser -- tests/browser/coding-workbench.spec.ts
           npm run test:browser -- tests/browser/coding-drafts.spec.ts
-          npm run test:browser -- tests/browser/learning-release.spec.ts
+          npm run test:browser -- tests/browser/learning-release.spec.ts tests/browser/learn-sections.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts

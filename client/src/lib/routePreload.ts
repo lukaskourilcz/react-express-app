@@ -45,6 +45,12 @@ export function preloadPath(pathname: string): Promise<void> {
   return Promise.all(loads).then(() => undefined);
 }
 
+/** The route box key (App.tsx). The Learn sections share one box, so moving
+ * between /learn and /learn/<section> keeps the page mounted, its route focus
+ * and its error boundary where they are. /learn/big-o keeps its own box. */
+export const routeBoxKey = (pathname: string): string =>
+  /^\/learn(?:\/(?!big-o\/?$)[^/]+)?\/?$/.test(pathname) ? '/learn' : pathname;
+
 /** The in-app path a link (or a chrome button carrying `data-route`) leads to. */
 function pathOf(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;

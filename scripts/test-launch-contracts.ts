@@ -156,6 +156,7 @@ import {
   validateProgressionGraph,
 } from '../shared/progression';
 import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
+import { OPT_IN_SECTIONS as INITIAL_OPT_IN_SECTIONS } from '../shared/learn-section-ids';
 import {
   isLearnerProfileComplete,
   missingProfileFields,
@@ -205,6 +206,7 @@ import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/con
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
 import { privacyEn as PRIVACY_ENGLISH } from '../client/src/i18n/translations.privacy';
+import { learnEn as LEARN_ENGLISH } from '../client/src/i18n/translations.learn';
 import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
 import {
   DEFAULT_COIN_SETTINGS,
@@ -1031,7 +1033,7 @@ function publicCopyContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   // devShark is freemium: no shipped English string may still promise that
   // everything is free.
-  for (const [key, value] of Object.entries(ENGLISH)) {
+  for (const [key, value] of Object.entries({ ...ENGLISH, ...LEARN_ENGLISH })) {
     assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
   }
   // The sentence the buyer ticks in Checkout is the one /premium and the
@@ -1056,6 +1058,10 @@ function publicCopyContracts() {
   assert.doesNotMatch(ENGLISH['legal.terms.plans.premium'], /merchandise/);
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
+  // The Learn page's own dictionary states results the same way.
+  for (const [key, value] of Object.entries(LEARN_ENGLISH)) {
+    assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
+  }
   for (const [key, value] of Object.entries(ENGLISH)) {
     // Round two added the Learn end states (design review 2 R2-P1.13).
     if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)|roadmap\.(levelComplete|levelFailed|outOfHeartsTitle|checkpointComplete|allDone)/.test(key)) continue;
@@ -4777,7 +4783,7 @@ async function main() {
   // A curriculum edit that strands a learner — a cycle, a prerequisite on a
   // topic that no longer exists, a plan whose first stage nothing can open —
   // fails here rather than in front of the learner.
-  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS);
+  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS, LEARN_SECTIONS);
   assert.deepEqual(
     graphProblems,
     [],
@@ -4876,11 +4882,30 @@ async function main() {
     ]);
     assert.deepEqual(OPT_IN_SECTIONS, LEARN_SECTIONS.filter((one) => one.membership === 'opt-in'),
       'planTopics appends exactly the opt-in sections');
+    assert.equal(INITIAL_OPT_IN_SECTIONS, OPT_IN_SECTIONS, 'learn-sections re-exports the opt-in list of learn-section-ids');
+    // The initial bundle plans (shared/progression.ts) and parses profiles
+    // (shared/learning-paths.ts) but renders no section. Neither may import
+    // the full registry, or every section's topic list ships to every visitor.
+    for (const file of ['shared/progression.ts', 'shared/learning-paths.ts']) {
+      assert.doesNotMatch(readFileSync(file, 'utf8'), /from '\.\/learn-sections'/,
+        `${file} imports from ./learn-section-ids, never the full ./learn-sections registry`);
+    }
     // Shared topics: one id, listed in several sections.
     assert.deepEqual(sectionsForTopic('databases'), ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
     assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);
     assert.deepEqual(sectionsForTopic('ai'), ['forward-deployed-engineer']);
     assert.ok(SPECIALIZATION_BRIDGE_TOPICS.fde.includes('ai'), 'the FDE bridge brings AI & LLMs into the plan');
+    // A section a learner belongs to never lists a topic their plan lacks:
+    // FDE comes with the specialization, so its bridge carries every FDE topic.
+    for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
+      const fde = planTopics({
+        schemaVersion: 2, baseTrack: track, specialization: 'fde', skillPaths: [],
+        goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
+      });
+      for (const topic of section('forward-deployed-engineer').topics) {
+        assert.ok(fde.includes(topic), `an FDE learner on ${track} plans the FDE section topic ${topic}`);
+      }
+    }
 
     const frontend = {
       schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null, skillPaths: [],
@@ -5828,6 +5853,16 @@ function consentContracts() {
   assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('legal.privacy.')), 'privacy keys live in translations.privacy.ts alone');
   const legalImporters = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/components/BrandFooter.tsx', 'client/src/components/CookieConsent.tsx'];
   for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.privacy/, `${file} pulls the privacy policy into the shell`);
+  // The Learn page's section and placement copy ships with the Learn chunk
+  // (translations.learn.ts), never with the shell.
+  assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('learn.') || key.startsWith('placement.')),
+    'learn.* and placement.* keys live in translations.learn.ts alone');
+  const shellFiles = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/lib/routePreload.ts', 'client/src/lib/routeHead.ts'];
+  for (const file of shellFiles) assert.doesNotMatch(read(file), /translations\.learn/, `${file} pulls the Learn copy into the shell`);
+  for (const id of LEARN_SECTION_IDS) {
+    assert.ok(`learn.section.${id}` in LEARN_ENGLISH, `section ${id} has a name in translations.learn.ts`);
+    assert.ok(`learn.section.line.${id}` in LEARN_ENGLISH, `section ${id} has a line in translations.learn.ts`);
+  }
 }
 
 void main().catch((error) => {

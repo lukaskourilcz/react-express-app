@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, onlineManager, queryOptions } from '@tanstack/react-query';
-import { installIntentPreloading, preloadPath, routeChunk } from '../src/lib/routePreload';
+import { installIntentPreloading, preloadPath, routeBoxKey, routeChunk } from '../src/lib/routePreload';
 import { FIRST_DATA_WAIT_MS, lazyPart, readOnce, settled, useFirstData } from '../src/lib/routeData';
 import { firstDraw, headings } from './firstDraw';
 import { RouteErrorBoundary } from '../src/components/RouteErrorBoundary';
@@ -35,6 +35,19 @@ describe('route chunks', () => {
     await expect(loader()).rejects.toThrow('Failed to fetch');
     await expect(loader()).resolves.toHaveProperty('default');
     expect(load).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('route box key', () => {
+  it('gives every Learn section one box and leaves other pages on their own path', () => {
+    expect(routeBoxKey('/learn')).toBe('/learn');
+    expect(routeBoxKey('/learn/')).toBe('/learn');
+    expect(routeBoxKey('/learn/web-developer')).toBe('/learn');
+    expect(routeBoxKey('/learn/software-engineer/')).toBe('/learn');
+    expect(routeBoxKey('/learn/big-o')).toBe('/learn/big-o');
+    expect(routeBoxKey('/learning')).toBe('/learning');
+    expect(routeBoxKey('/learn/x/y')).toBe('/learn/x/y');
+    expect(routeBoxKey('/roadmap')).toBe('/roadmap');
   });
 });
 

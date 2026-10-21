@@ -13,7 +13,7 @@
  *   - `CodingTrack` and `RoadmapTopic` gain no members.
  * A learning path references those registries; it never joins them. */
 
-import { isLearnSectionId, type LearnSectionId } from './learn-sections';
+import { isLearnSectionId, type LearnSectionId } from './learn-section-ids';
 
 /* ── identity ──────────────────────────────────────────────────────────── */
 

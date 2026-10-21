@@ -564,3 +564,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-input:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 .lp-brief-refresh { min-height: 44px; flex-shrink: 0; }
+
+/* The plan card is the target of the Learn page's "Choose your plan"
+   (/profile#learning-plan): room under the fixed header when it scrolls in. */
+.lp-plan-anchor { scroll-margin-top: 6rem; }

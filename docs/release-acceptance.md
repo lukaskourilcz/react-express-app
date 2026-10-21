@@ -5747,3 +5747,13 @@ Local `ci:parity --fast` at cade6b03 (Node 24.22.0): complete and clean, 28 pass
 PR #521 is merged at 88b6fcfd73c2cb63a568bfaa5d9e7479d50a1b71. Head cade6b03 passed required run 39636125708: verify 44m23s, SQL 44s. READY production dpl_EnjFL3yT3KiftsPAeMhXaZs1gNft matches the merge SHA with no alias error and served devshark.app. Read-only guest checks: `/`, `/learn` and `/api/health` answer 200; `GET` and `PUT ?op=learning-preference` (the latter with an unknown section) answer 401 for a guest.
 
 No authenticated production save was made: the 400 for unknown sections and the kept list are proven by the handler contracts against a stand-in, not on a production account.
+
+## English-only code — 21 October 2026
+
+Issue #485: the second language is removed from the code. The 41 `*.cs.ts` files are deleted, copy types are plain strings, no client request sends `lang`, and the handlers ignore a stray `lang` from an old cached client. `t()` serves the one English dictionary; the language switch, the Storybook language toolbar and the second-language validators and contracts are gone. Native path code attempts open at deploy time take the existing one-time `task_changed` path, because their attempt material no longer carries a second-language slot; question, coding-task and coding-attempt hashes are unchanged. The `/cs/topics` guides stay until D3 (#486).
+
+Local full `ci:parity` at a9e5e153 (Node 24.22.0): complete and clean, 51 passed (the 18 browser specs, `test:harness` and Storybook included), 0 failed. The initial download measured 241,651 gzip bytes, 1,323 below the old figure, and the budget was lowered to that value.
+
+PR #526 is merged at d18f154ca0a6c95af60ec5b4e7257ead1a0af34c. Head a9e5e153 passed required run 39655387854: verify 37m14s, SQL 36s. READY production dpl_DZNFakxF4xBW67PnTjvZxBFBSK7s matches the merge SHA with no alias error and serves devshark.app. Read-only guest checks after the deploy: `/`, `/learn`, `/quiz`, `/coding`, `/topics/javascript-closures` and `/cs/topics/javascript-closures` answer 200 (the app shell with `lang="en"`); `/api/health` is healthy; the coding-task read and the daily answer 200 with and without a stray `lang=cs`, and the task title is the plain English string.
+
+No signed-in, Premium, path-attempt or physical-device check was made in production.

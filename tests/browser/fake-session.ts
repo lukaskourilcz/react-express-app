@@ -19,29 +19,39 @@ export const fakeUser = {
   created_at: '2026-09-01T00:00:00Z',
 };
 
+/** The fake user with extra `user_metadata`, such as a saved learner profile. */
+export function userWith(metadata: Record<string, unknown>) {
+  return { ...fakeUser, user_metadata: { ...fakeUser.user_metadata, ...metadata } };
+}
+
 /** A well-formed session that no server ever issued. */
-export function fakeSession() {
+export function fakeSession(user: typeof fakeUser = fakeUser) {
   const now = Math.floor(Date.now() / 1000);
   const part = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
   const accessToken = [
     part({ alg: 'HS256', typ: 'JWT' }),
-    part({ sub: fakeUser.id, aud: 'authenticated', role: 'authenticated', email: fakeUser.email, iat: now, exp: now + 3600 }),
+    part({ sub: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, iat: now, exp: now + 3600 }),
     Buffer.from('not-a-real-signature').toString('base64url'),
   ].join('.');
-  return { access_token: accessToken, refresh_token: 'fake-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user: fakeUser };
+  return { access_token: accessToken, refresh_token: 'fake-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user };
 }
 
 /** Puts the fake session where supabase-js looks, before the page's scripts run. */
-export async function storeFakeSession(page: Page) {
-  await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: fakeSession() });
+export async function storeFakeSession(page: Page, user: typeof fakeUser = fakeUser) {
+  await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: fakeSession(user) });
 }
 
-/** Supabase Auth, answered locally: nothing leaves the machine. */
-export async function localAuth(page: Page) {
+/** Supabase Auth, answered locally: nothing leaves the machine. With `user`,
+ * the user endpoint and a session refresh answer with what it returns at that
+ * moment, so a spec can change the account's metadata after a save. */
+export async function localAuth(page: Page, { user }: { user?: () => typeof fakeUser } = {}) {
   await page.route('**/auth/v1/**', (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/auth/v1/user')) return route.fulfill({ json: fakeUser });
+    if (url.pathname.endsWith('/auth/v1/user')) return route.fulfill({ json: user ? user() : fakeUser });
     if (url.pathname.endsWith('/auth/v1/authorize')) return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Authorize</title><p>Google sign-in would start here.</p>' });
+    if (user && url.pathname.endsWith('/auth/v1/token') && url.searchParams.get('grant_type') === 'refresh_token') {
+      return route.fulfill({ json: fakeSession(user()) });
+    }
     return route.fulfill({ status: 401, json: { error: 'invalid_grant', error_description: 'local test' } });
   });
 }
