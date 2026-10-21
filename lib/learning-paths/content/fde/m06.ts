@@ -818,7 +818,7 @@ console.log(JSON.stringify(demo.call('refunds.create', { orderId: 'ORD-4471' }))
             critical: true,
             weight: 3,
             detail:
-              'The approval state did not hold. A tool with `approval: true` must return `pending_approval` and leave the handler log empty until `approve`, including when a sub-agent proposed it. `approve` must run the stored snapshot exactly once, `reject` must end the call without running it, and either one on a settled or unknown callId must return `unknown_call`. `pending()` must list what is still waiting with a copy of the validated arguments.',
+              'The approval state did not hold. A tool with `approval: true` must return `pending_approval` and leave the handler log empty until `approve`, including when a sub-agent proposed it. `approve` must run the stored snapshot exactly once, `reject` must end the call without running it, and either one on a settled or unknown callId must return `unknown_call`. `pending()` must list what is still waiting with a copy of the validated arguments. A sub-agent’s approved or rejected call must be recorded under that sub-agent’s key, not the dispatcher’s.',
           },
           {
             id: 'subagent-budget',
@@ -826,7 +826,7 @@ console.log(JSON.stringify(demo.call('refunds.create', { orderId: 'ORD-4471' }))
             critical: true,
             weight: 3,
             detail:
-              'A sub-agent made more calls than it was given. Check that the budget is tested before any other gate, that every call uses one unit whether it succeeds or is refused, that retries inside one call use one unit, that a missing or zero budget refuses the first call, and that two sub-agents keep separate budgets.',
+              'A sub-agent made more calls than it was given. Check that the budget is tested before any other gate, that every call uses one unit whether it succeeds or is refused, that retries inside one call use one unit, that a missing, zero, negative, fractional, infinite or string budget refuses the first call, that a replayed idempotency key still spends the budget first, and that two sub-agents keep separate budgets.',
           },
           {
             id: 'retry-budget',

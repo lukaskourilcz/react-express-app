@@ -7,8 +7,9 @@
  * refusal, a scope compared by prefix instead of by whole string, `null`
  * mistaken for absent, a key replayed against a different tool, a second
  * approval of a call that already ran, a rejection that must stick, and a
- * sub-agent that asks for more than the session holds or keeps calling after
- * its budget ran out. Scope, argument, approval and sub-agent budget
+ * sub-agent that asks for more than the session holds, keeps calling after
+ * its budget ran out, gets a budget from Infinity or a fraction, replays a key
+ * to skip its budget, or has its settled approval land in the parent's keys. Scope, argument, approval and sub-agent budget
  * assertions carry critical criteria, so a working retry loop can never
  * average away a refund that ran without a person's approval. */
 
@@ -250,6 +251,17 @@ export const FDE_M06_SOLUTIONS: Record<string, PathCodeSolution> = {
         },
         criterion: 'approval-held',
       },
+      {
+        call: "(function () { var f = __fixture(); var d = createDispatcher(f.registry, f.session); var sub = d.delegate({ scopes: ['refunds.write', 'orders.read'], maxCalls: 4 }); var a = sub.call('refunds.create', { orderId: 'ORD-1', amountCents: 100, currency: 'USD' }, { idempotencyKey: 'K1' }); var b = sub.call('refunds.create', { orderId: 'ORD-2', amountCents: 200, currency: 'USD' }, { idempotencyKey: 'K2' }); d.reject(a.callId); d.approve(b.callId); var rejected = sub.call('refunds.create', { orderId: 'ORD-1', amountCents: 100, currency: 'USD' }, { idempotencyKey: 'K1' }); var approved = sub.call('refunds.create', { orderId: 'ORD-2', amountCents: 200, currency: 'USD' }, { idempotencyKey: 'K2' }); var parent = d.call('orders.read', { status: 'open' }, { idempotencyKey: 'K1' }); return { rejected: rejected, approved: approved, parent: parent, queued: d.pending().length, refunded: f.log.filter(function (e) { return e.tool === 'refunds.create'; }).map(function (e) { return e.args.orderId; }) }; })()",
+        expected: {
+          rejected: { ok: false, reason: 'rejected', callId: 'CALL-1' },
+          approved: { ok: true, value: { refundId: 'RFD-1', amountCents: 200 }, attempts: 1 },
+          parent: { ok: true, value: { count: 2 }, attempts: 1 },
+          queued: 0,
+          refunded: ['ORD-2'],
+        },
+        criterion: 'approval-held',
+      },
 
       /* ── sub-agents: narrowed scopes and a call budget ────────────────── */
       {
@@ -292,6 +304,28 @@ export const FDE_M06_SOLUTIONS: Record<string, PathCodeSolution> = {
           c: { ok: true, value: { batchId: 'B', synced: true }, attempts: 3 },
           e: { ok: false, reason: 'budget_exhausted', maxCalls: 3 },
           ran: 3,
+        },
+        criterion: 'subagent-budget',
+      },
+      {
+        call: "(function () { var f = __fixture(); var d = createDispatcher(f.registry, f.session); var out = [Infinity, 2.5, '3', -1].map(function (n) { return d.delegate({ scopes: ['orders.read'], maxCalls: n }).call('orders.read', {}); }); return { out: out, ran: f.log.length }; })()",
+        expected: {
+          out: [
+            { ok: false, reason: 'budget_exhausted', maxCalls: 0 },
+            { ok: false, reason: 'budget_exhausted', maxCalls: 0 },
+            { ok: false, reason: 'budget_exhausted', maxCalls: 0 },
+            { ok: false, reason: 'budget_exhausted', maxCalls: 0 },
+          ],
+          ran: 0,
+        },
+        criterion: 'subagent-budget',
+      },
+      {
+        call: "(function () { var f = __fixture(); var d = createDispatcher(f.registry, f.session); var sub = d.delegate({ scopes: ['orders.read'], maxCalls: 1 }); var a = sub.call('orders.read', { status: 'open' }, { idempotencyKey: 'K' }); var b = sub.call('orders.read', { status: 'open' }, { idempotencyKey: 'K' }); return { a: a, b: b, ran: f.log.length }; })()",
+        expected: {
+          a: { ok: true, value: { count: 2 }, attempts: 1 },
+          b: { ok: false, reason: 'budget_exhausted', maxCalls: 1 },
+          ran: 1,
         },
         criterion: 'subagent-budget',
       },
