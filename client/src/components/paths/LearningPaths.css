@@ -116,7 +116,9 @@
   align-items: baseline;
   justify-content: space-between;
 }
-.lp-module__title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+/* Wraps at 360 px with 200 % text: the index label moves above a long
+   title, and a word wider than the card breaks instead of overflowing. */
+.lp-module__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; overflow-wrap: anywhere; }
 .lp-module__index {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
