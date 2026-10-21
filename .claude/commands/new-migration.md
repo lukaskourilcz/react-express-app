@@ -7,7 +7,7 @@ allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 Scaffold a migration for `$ARGUMENTS` by following `.claude/skills/supabase-migration/SKILL.md`. Read the skill first; this command writes the empty shapes, and you fill them.
 
 1. Inspect `git status --short` and `git fetch origin main`. Preserve unrelated work.
-2. Take the next migration number: the highest `supabase/supabase-schema-NNN.sql` here or on `origin/main`, plus one, padded to three digits. Take the next test number the same way from `supabase/tests/NNN-*.test.sql`. Build a kebab-case slug of three to five words from the purpose.
+2. Take the next migration number: the highest `supabase/supabase-schema-NNN.sql` here or on `origin/main`, plus one, padded to three digits. Take the next test number the same way from `supabase/tests/NNN-*.test.sql`. Build a kebab-case slug of three to five words from the purpose. The predecessor is `<NNN-1>`, or the number given with `--after` when the migration depends on an earlier file; name the same predecessor in the header (step 3) and the deploy item (step 5).
 3. Write `supabase/supabase-schema-<NNN>.sql` with the header and the transaction, and nothing between them yet:
 
    ```sql
@@ -35,17 +35,19 @@ Scaffold a migration for `$ARGUMENTS` by following `.claude/skills/supabase-migr
 5. Add an unticked item to `NEEDED.md`, in the section of the work the migration belongs to, using the skill's wording and markers:
 
    ```md
-   - [ ] **Apply migration <NNN> before the <feature> deploy** — `supabase/supabase-schema-<NNN>.sql` (<what it adds>). Apply it after <NNN-1>; the code in production keeps working with it applied, and the new code needs it. [imp:4] [owner:me] [time:5m] [kind:deploy]
+   - [ ] **Apply migration <NNN> before the <feature> deploy** — `supabase/supabase-schema-<NNN>.sql` (<what it adds>). Apply it after <NNN-1 or --after>; the code in production keeps working with it applied, and the new code needs it. [imp:4] [owner:me] [time:5m] [kind:deploy]
    ```
 
-6. Prove the scaffold on an empty database. Pick a free host port; the script refuses a database that already has tables, so remove the container after the run:
+6. Prove the scaffold on an empty database. The script refuses a database that already has tables, so start a fresh container and remove it after the run. Set `PORT` to a host port nothing listens on (`lsof -i :$PORT` prints nothing) and run the lines in one shell:
 
    ```sh
-   docker run -d --name devshark-sql -p 54339:5432 -e POSTGRES_PASSWORD=postgres supabase/postgres:17.6.1.171
-   until docker exec devshark-sql pg_isready -U postgres -h 127.0.0.1; do sleep 2; done
-   DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54339/postgres npm run test:sql
-   psql postgres://postgres:postgres@127.0.0.1:54339/postgres -X -v ON_ERROR_STOP=1 -f supabase/supabase-schema-<NNN>.sql
-   docker rm -f devshark-sql
+   PORT=54339 NAME=devshark-sql-$$
+   URL=postgres://postgres:postgres@127.0.0.1:$PORT/postgres
+   docker run -d --name "$NAME" -p "$PORT":5432 -e POSTGRES_PASSWORD=postgres supabase/postgres:17.6.1.171
+   until docker exec "$NAME" pg_isready -U postgres -h 127.0.0.1; do sleep 2; done
+   DATABASE_URL="$URL" npm run test:sql
+   psql "$URL" -X -v ON_ERROR_STOP=1 -f supabase/supabase-schema-<NNN>.sql
+   docker rm -f "$NAME"
    git diff --check
    ```
 
