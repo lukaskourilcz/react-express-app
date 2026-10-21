@@ -36,7 +36,7 @@ export const FDE_PATH: PathSource = {
   version: 1,
   title: 'Forward Deployed Engineer',
   summary:
-    'Modules and a staged capstone on the work that sits between a customer’s messy problem and a system that survives contact with it: scoping, integration, bounded AI, evaluation, security, operations and handoff. It assumes you can already build software, and it grades the judgement rather than the syntax.',
+    'A sequence of modules and a staged capstone on the work that sits between a customer’s messy problem and a system that survives contact with it: scoping, integration, bounded AI, evaluation, security, operations and handoff. It assumes you can already build software, and it grades the judgement rather than the syntax.',
   outcomes: [
     'Turn an ambiguous customer request into a scope with a baseline, a measurable success condition and stated non-goals.',
     'Integrate a real-shaped external system: dirty records, pagination, throttling, duplicate delivery and identity boundaries.',
