@@ -550,7 +550,40 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   min-width: 0;
   padding: 16px;
 }
-.lp-sections .lp-toggle { padding: 12px 14px; }
+/* The Software Engineer check card (ui/RadioCards CheckCard): the shared
+   card, with a drawn box beside the text so it reads as a toggle, not as one
+   of the radio cards under it. */
+.lp-sections__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* Nothing else resets a heading's margins inside the cards, and the user
+   agent's would push the name below the box. */
+.lp-sections .ss-radio-card h4 { margin: 0; }
+.lp-sections__box {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+}
+.lp-sections__check[aria-checked='true'] .lp-sections__box {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+}
+.lp-sections__check[aria-checked='true'] .lp-sections__box::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  margin-top: -2px;
+  border: solid var(--brand-on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 .lp-sections__blurb { display: flex; flex-direction: column; gap: 4px; }
 .lp-sections__legend {
   font: 600 0.95rem var(--font-family-body);

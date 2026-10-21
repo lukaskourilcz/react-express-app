@@ -22,7 +22,9 @@ export const pickerEn = {
   'paths.picker.noneLabel': 'Continue without a specialization',
   'paths.picker.noneBlurb': 'Stay with the foundations and the coding challenges. You can add a specialization later without losing anything.',
   'paths.picker.fdeBlurb': 'devShark’s flagship section: scope a customer problem, integrate their systems, set limits on what a model may do, evaluate, ship and hand over.',
-  'paths.picker.fdeEntry': 'Before you start: you ship code in one of the three tracks and can debug JavaScript or TypeScript. The optional diagnostic suggests bridges and never blocks you.',
+  // The requirement itself is the FDE manifest's `entryRequirement`, the text
+  // the path page shows, so the two cannot drift apart.
+  'paths.picker.fdeEntry': 'Before you start: {requirement}',
   'paths.picker.sectionsFootnote': 'Leave a section later and its topics drop out of your plan, while every level you passed stays passed. Removing the specialization pauses its path and keeps your work.',
 
   'paths.picker.continue': 'Continue',

@@ -35,7 +35,7 @@ import { trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tr
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { pickerCopy, type PickerKey } from '../i18n/translations.picker';
-import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import { CheckCard, RadioCard, RadioCardGroup } from './ui/RadioCards';
 import {
   EXPERIENCE_LEVELS,
   LEARNER_GOALS,
@@ -99,6 +99,7 @@ export default function PathPickerDialog({
   currentSpecialization,
   currentProfile = null,
   fdeLocked = false,
+  fdeEntryRequirement = null,
   onChoose,
   /** Set while the parent is saving, so the dialog cannot be double-submitted. */
   busy = false,
@@ -114,6 +115,9 @@ export default function PathPickerDialog({
   currentProfile?: LearnerProfile | null;
   /** The plan does not open this path: the option carries the Premium mark. */
   fdeLocked?: boolean;
+  /** The FDE manifest's `entryRequirement`, the one text the path page shows
+   * too. Absent while the catalog loads, and the card then shows none. */
+  fdeEntryRequirement?: string | null;
   onChoose: (result: PathPickerResult) => void;
   busy?: boolean;
   error?: string | null;
@@ -124,6 +128,13 @@ export default function PathPickerDialog({
   const seLabelId = `${ids}-se-label`;
   const seBlurbId = `${ids}-se-blurb`;
   const roleLegendId = `${ids}-role-legend`;
+  // The parts of a specialization card read after its name.
+  const roleIds = (option: RoleChoice) => ({
+    current: `${ids}-${option}-current`,
+    premium: `${ids}-${option}-premium`,
+    blurb: `${ids}-${option}-blurb`,
+    entry: `${ids}-${option}-entry`,
+  });
 
   const [step, setStep] = useState<Step>('track');
   const [track, setTrack] = useState<Track>(current);
@@ -237,24 +248,25 @@ export default function PathPickerDialog({
       {step === 'sections' && (
         <div className="lp-sections">
           {/* A section is an opt-in, not one of a set: Software Engineer runs
-              beside any track and beside the specialization, so it is a
-              checkbox rather than another exclusive card. */}
-          <label className="lp-toggle">
-            <input
-              type="checkbox"
-              checked={softwareEngineer}
-              onChange={(event) => setSoftwareEngineer(event.target.checked)}
-              aria-labelledby={seLabelId}
-              aria-describedby={seBlurbId}
-            />
-            <span>
+              beside any track and beside the specialization, so it is the
+              shared check card rather than another exclusive radio card. */}
+          <CheckCard
+            checked={softwareEngineer}
+            onChange={() => setSoftwareEngineer((joined) => !joined)}
+            labelledBy={seLabelId}
+            describedBy={seBlurbId}
+            className="lp-sections__check"
+            style={softwareEngineer ? { background: 'var(--brand-accent-soft)' } : undefined}
+          >
+            <span className="lp-sections__box" aria-hidden="true" />
+            <VStack gap={1}>
               <Heading level={4} id={seLabelId}>{pickerCopy('profile.section.software-engineer')}</Heading>
               <span id={seBlurbId} className="lp-sections__blurb">
                 <Text type="supporting" color="secondary">{pickerCopy('paths.picker.seBlurb')}</Text>
                 <Text type="supporting" size="xsm" color="secondary">{pickerCopy('paths.picker.seFree')}</Text>
               </span>
-            </span>
-          </label>
+            </VStack>
+          </CheckCard>
 
           <RadioCardGroup
             value={role}
@@ -266,28 +278,43 @@ export default function PathPickerDialog({
             {ROLE_ORDER.map((option) => {
               const selected = option === role;
               const label = pickerCopy(option === 'none' ? 'paths.picker.noneLabel' : 'profile.section.forward-deployed-engineer');
+              const isCurrent = option === (currentSpecialization ?? 'none');
+              const premium = option === 'fde' && fdeLocked;
+              const entry = option === 'fde' && fdeEntryRequirement ? fdeEntryRequirement : null;
+              const part = roleIds(option);
+              // `label` names the card, so its marks and lines are wired in as
+              // the description: the Premium mark is heard before the choice.
+              const describedBy = [
+                isCurrent && part.current,
+                premium && part.premium,
+                part.blurb,
+                entry && part.entry,
+              ].filter(Boolean).join(' ');
               return (
                 <RadioCard
                   key={option}
                   value={option}
                   index={ROLE_ORDER.indexOf(option)}
                   label={label}
+                  describedBy={describedBy}
                   width="100%"
                   style={selected ? { background: 'var(--brand-accent-soft)' } : undefined}
                 >
-                  <VStack gap={0.5}>
+                  <VStack gap={1}>
                     <HStack gap={1} align="center" justify="between">
                       <Heading level={4}>{label}</Heading>
-                      {option === (currentSpecialization ?? 'none') && (
-                        <Badge variant="cyan" label={pickerCopy('home.pathCurrent')} />
+                      {isCurrent && (
+                        <span id={part.current}><Badge variant="cyan" label={pickerCopy('home.pathCurrent')} /></span>
                       )}
-                      {option === 'fde' && fdeLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
+                      {premium && <span id={part.premium} className="ss-premium-label">{t('premium.badge')}</span>}
                     </HStack>
-                    <Text type="supporting" color="secondary">
+                    <Text type="supporting" color="secondary" id={part.blurb}>
                       {pickerCopy(option === 'none' ? 'paths.picker.noneBlurb' : 'paths.picker.fdeBlurb')}
                     </Text>
-                    {option === 'fde' && (
-                      <Text type="supporting" size="xsm" color="secondary">{pickerCopy('paths.picker.fdeEntry')}</Text>
+                    {entry && (
+                      <Text type="supporting" size="xsm" color="secondary" id={part.entry}>
+                        {pickerCopy('paths.picker.fdeEntry', { requirement: entry })}
+                      </Text>
                     )}
                   </VStack>
                 </RadioCard>

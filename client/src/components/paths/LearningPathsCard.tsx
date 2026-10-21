@@ -311,6 +311,7 @@ export default function LearningPathsCard() {
         currentSpecialization={specialization}
         currentProfile={profile}
         fdeLocked={barred('fde')}
+        fdeEntryRequirement={fdeEntry?.manifest.entryRequirement}
         onChoose={(result) => void apply(result)}
         busy={busy}
         error={dialogError}

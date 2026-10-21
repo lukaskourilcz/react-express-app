@@ -16,7 +16,7 @@ const lesson = (id: string, title: string) => ({
 });
 const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
   id, kind: id === 'fde' ? 'role_specialization' : 'skill_path', version: 1, title: id === 'fde' ? 'Forward Deployed Engineer' : 'DSA Foundations',
-  summary: '', outcomes: [], nonGoals: [], entryRequirement: '', competencies: id === 'fde' ? [{ id: 'integration', title: 'Integration and data' }, { id: 'handoff', title: 'Adoption and handoff' }, { id: 'python-reading', title: 'Python comprehension' }] : [], bridges: [],
+  summary: '', outcomes: [], nonGoals: [], entryRequirement: id === 'fde' ? 'You ship code in one track and have integrated HTTP, a database or an API.' : '', competencies: id === 'fde' ? [{ id: 'integration', title: 'Integration and data' }, { id: 'handoff', title: 'Adoption and handoff' }, { id: 'python-reading', title: 'Python comprehension' }] : [], bridges: [],
   rubric: { version: 1, dimensions: [] }, diagnosticActivityId: id === 'fde' && state.diagnosticResults.length ? 'fde-diagnostic-check' : null, estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01',
   completionLabel: 'done',
   modules: [...(id === 'fde' && state.diagnosticResults.length ? [{
@@ -394,7 +394,13 @@ describe('the Profile picker', () => {
     const fde = within(group).getByRole('radio', { name: 'Forward Deployed Engineer' });
     expect(within(fde).getByText('Premium')).toBeInTheDocument();
     expect(within(fde).getByText(/^devShark’s flagship section/)).toBeInTheDocument();
-    expect(within(fde).getByText(/^Before you start:/)).toBeInTheDocument();
+    // The requirement is the manifest's, word for word.
+    expect(within(fde).getByText('Before you start: You ship code in one track and have integrated HTTP, a database or an API.')).toBeInTheDocument();
+    // The name is the label alone, so the Premium mark, the flagship line and
+    // the requirement reach a screen reader as the description.
+    expect(fde).toHaveAccessibleDescription(/^Premium devShark’s flagship section.*Before you start: You ship code/);
+    expect(within(group).getByRole('radio', { name: 'Continue without a specialization' }))
+      .toHaveAccessibleDescription(/^Current Stay with the foundations/);
   });
 
   it('a picker key with no words reads as the key, as t() does, and never throws', async () => {
