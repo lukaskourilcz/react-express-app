@@ -1,5 +1,10 @@
 # NEEDED — remaining tasks
 
+## Learn sections and the FDE flagship (proposal of 21 Oct 2026)
+
+- [ ] **Approve the Learn sections and FDE flagship proposal** — read [docs/learn-sections-fde-flagship-plan.md](docs/learn-sections-fde-flagship-plan.md) and answer its eight decisions (D1–D8 in section 10: v1 in place or v2, the membership matrix, the free taster, route moves, SQL spike, interview prep placement, Software Engineer opt-in, Career page). D1 needs one read of `learning_path_enrollments` in production and the state of `LEARNING_PATH_FDE_ENABLED`. Once approved, an agent creates the GitHub issues for Epics A and B from section 9. [imp:5] [owner:me] [time:45m] [kind:decision]
+- [ ] **Approve the agent workflow audit** — [docs/agent-workflow-audit.md](docs/agent-workflow-audit.md) proposes ten skills, three agents, six commands and eight stale-doc fixes as Epic C. Say which to create; C1 (CI parity and the PR flow) and C4 (learning-path module authoring) pay back first. [imp:4] [owner:me] [time:20m] [kind:decision]
+
 ## Launch audit, 29 Sep 2026 (before registrations open)
 
 Round 1 and the owner's decisions of 29 Sep are on `main`: migration 047 is applied, `main` is protected (the `verify` and `sql` checks must pass, admins included), leaderboard photos need the learner's consent (names became mandatory under the 13 October decision), streaks count any verified learning, the React capstones have suites, a reveal costs the task's XP, and the smaller rules are settled. Migrations 048-051 were applied to production before that code deployed. A third review on 29 Sep – 1 Oct fixed what the first two missed (streak shields, Challenge counting, sign-in races, billing edge cases, grader security, classroom limits, task tests, UI); migrations 052-054 were applied to production before that code deployed. The decisions it left for the owner are the items below marked *(round 3)*.
