@@ -56,6 +56,8 @@ export function activitySummary(activity: MergedActivity): ActivitySummary {
     ...(activity.code ? { language: activity.code.language } : {}),
     ...(activity.reuseTaskId ? { reuseTaskId: activity.reuseTaskId } : {}),
     ...(activity.artifact ? { rubricDimensions: activity.artifact.rubricDimensions } : {}),
+    ...(activity.scenario !== undefined ? { scenario: activity.scenario } : {}),
+    ...(activity.fixtureNote !== undefined ? { fixtureNote: activity.fixtureNote } : {}),
   };
 }
 
@@ -77,6 +79,7 @@ export function moduleSummary(module: MergedModule): ModuleSummary {
     requires: module.requires,
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
+    ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),
   };
 }
 

@@ -24,7 +24,10 @@ const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
   }] : []), {
     id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
-  }],
+  }, ...(id === 'fde' && state.shelf ? [{
+    id: 'fde-ip01', title: 'Learning round', optional: true, shelf: 'interview-prep', outcomes: [], competencies: [], dependsOn: [], lessons: [],
+    activities: [lesson('fde-ip01-l1', 'Interview lesson')], requires: [], estimatedMinutes: 10,
+  }] : [])],
 });
 const inventory = { modules: 1, lessons: 1, checks: 0, codeExercises: 0, artifacts: 0, estimatedMinutes: 10, moduleChecks: 0, moduleCodeExercises: 0, finalChecks: 0, finalCodeExercises: 0, diagnosticChecks: 0, diagnosticCodeExercises: 0 };
 
@@ -33,6 +36,7 @@ const state = vi.hoisted(() => ({
   availability: 'available',
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
   progressLoaded: true,
+  shelf: false,
   diagnosticResults: [] as { competencyId: string; state: 'demonstrated' | 'gap' | 'not_assessed'; score: number | null; assessedItems: number }[],
   metadata: {} as Record<string, unknown>,
   changes: [] as Record<string, unknown>[],
@@ -117,6 +121,7 @@ beforeEach(() => {
   state.availability = 'available';
   state.enrollments = [];
   state.progressLoaded = true;
+  state.shelf = false;
   state.diagnosticResults = [];
   state.metadata = {};
   state.changes.length = 0;
@@ -227,6 +232,52 @@ describe('the path page', () => {
     expect(screen.queryByRole('link', { name: /dsa-foundations first lesson/ })).toBeNull();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue where you left off' })); });
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'dsa-foundations' });
+  });
+});
+
+describe('the interview-prep shelf', () => {
+  const modulesSection = () => screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+
+  it('lists a shelf module under Interview prep, apart from the loop, marked Optional', async () => {
+    state.shelf = true;
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const shelf = screen.getByRole('region', { name: 'Interview prep' });
+    expect(within(shelf).getByText('Learning round')).toBeInTheDocument();
+    expect(within(shelf).getByText('Optional practice for interview rounds. It does not count toward completing the path.')).toBeInTheDocument();
+    expect(within(shelf).getByText('Optional')).toBeInTheDocument();
+    expect(within(shelf).getAllByRole('link', { name: /Interview lesson/ })[0]).toBeInTheDocument();
+    expect(within(modulesSection()).queryByText('Learning round')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Optional: placement and bridges' })).toBeNull();
+  });
+
+  it('sits between the loop and the placement and bridge modules, which keep their own section', async () => {
+    state.shelf = true;
+    state.enrollments = [enrolled('fde')];
+    state.diagnosticResults = [{ competencyId: 'integration', state: 'gap', score: 0.3333, assessedItems: 3 }];
+    await overview('fde');
+    const shelf = screen.getByRole('region', { name: 'Interview prep' });
+    const optional = screen.getByRole('heading', { name: 'Optional: placement and bridges' }).closest('section') as HTMLElement;
+    expect(within(optional).getByText('Optional diagnostic')).toBeInTheDocument();
+    expect(within(optional).queryByText('Learning round')).toBeNull();
+    expect(modulesSection().compareDocumentPosition(shelf) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(shelf.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows no shelf on a path without one', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    expect(screen.queryByRole('region', { name: 'Interview prep' })).toBeNull();
+  });
+
+  it('once Premium lapses, the shelf modules are no longer links', async () => {
+    state.shelf = true;
+    state.tier = 'free';
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const shelf = screen.getByRole('region', { name: 'Interview prep' });
+    expect(within(shelf).getByText('Learning round')).toBeInTheDocument();
+    expect(within(shelf).queryByRole('link')).toBeNull();
   });
 });
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Editor } from '../../coding/Editor';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
+import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { LessonView, RichText } from './LessonBody';
 import type {
   CheckQuestionPayload,
@@ -122,6 +123,7 @@ export function LessonActivity({
 
 export function CheckActivity({
   questions,
+  scenario,
   passThreshold,
   domains,
   domainThreshold,
@@ -132,6 +134,9 @@ export function CheckActivity({
   busy,
 }: {
   questions: CheckQuestionPayload[];
+  /** A shared case the questions work through in order. Shown once, above
+   * them, while answering and in the review alike. */
+  scenario?: string;
   passThreshold: number;
   domains: string[] | undefined;
   /** The share each domain needs on its own, which the server lowers for a
@@ -149,6 +154,7 @@ export function CheckActivity({
   const t = useT();
   const [answers, setAnswers] = useState<(number | null)[]>(() => questions.map(() => null));
   const groupName = useId();
+  const scenarioId = useId();
 
   useEffect(() => {
     setAnswers(questions.map(() => null));
@@ -164,7 +170,9 @@ export function CheckActivity({
   const graded = verdicts.size > 0;
 
   return (
-    <div className="lp-check">
+    // Not `lp-check`: that class is the profile picker's checkbox label, whose
+    // rules would dim the whole check once its radios are disabled.
+    <div className="lp-check-view">
       <div className="lp-notice">
         <span className="lp-notice__glyph" aria-hidden="true">
           ◉
@@ -174,6 +182,15 @@ export function CheckActivity({
           {domains?.length ? ` ${t('paths.check.domainGate', { percent: Math.round((domainThreshold ?? passThreshold) * 100) })}` : ''}
         </span>
       </div>
+
+      {/* One named region, not a description on every question, so a screen
+          reader reads the case once and the learner can return to it. */}
+      {scenario !== undefined && (
+        <section className="lp-brief lp-card" aria-labelledby={scenarioId}>
+          <h3 id={scenarioId}>{pathCopy['paths.check.scenarioTitle']}</h3>
+          <RichText text={scenario} />
+        </section>
+      )}
 
       {questions.map((question, index) => {
         const verdict = verdicts.get(question.id);
@@ -263,6 +280,7 @@ export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict' | '
 
 export function CodeActivity({
   code,
+  fixtureNote,
   draft,
   result,
   onSubmit,
@@ -272,6 +290,9 @@ export function CodeActivity({
   submitBlocked = false,
 }: {
   code: PathCodePayload;
+  /** Says the fixture is deliberately unfamiliar and what "done" means.
+   * Shown above the editor. */
+  fixtureNote?: string;
   draft: PathDraft | null;
   result: SubmitActivityResponse | null;
   onSubmit: (source: string) => void;
@@ -350,6 +371,17 @@ export function CodeActivity({
       </div>
 
       <div className="lp-work">
+        {fixtureNote !== undefined && (
+          <div className="lp-notice lp-notice--info">
+            <span className="lp-notice__glyph" aria-hidden="true">
+              ℹ
+            </span>
+            <div className="lp-brief">
+              <strong>{pathCopy['paths.code.fixtureNoteTitle']}</strong>
+              <RichText text={fixtureNote} />
+            </div>
+          </div>
+        )}
         <div className="lp-actions">
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}

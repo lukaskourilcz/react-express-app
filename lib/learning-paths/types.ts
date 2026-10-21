@@ -13,6 +13,7 @@ import type {
   EvidenceState,
   LearningPathId,
   LearningPathKind,
+  ModuleShelf,
   PathCodeLanguage,
   SourceReference,
   VerificationKind,
@@ -146,12 +147,19 @@ export interface ActivitySource {
   /** Every listed domain must reach `passThreshold` on its own, so a strong
    * domain cannot compensate for a missing one. */
   domains?: string[];
+  /** kind: 'check' — a shared preamble shown once above the ordered
+   * questions. Public: it must never state an answer. */
+  scenario?: string;
   /** kind: 'code' */
   code?: PathCodeSource;
   /** kind: 'code' — reuse an ordinary coding task instead of a new body. The
    * learner reaches it through the path without the ordinary tier gate; the
    * pass records path evidence only, never coding XP or a tier unlock. */
   reuseTaskId?: string;
+  /** kind: 'code' — shown above the editor: the fixture is deliberately
+   * unfamiliar, and this says what "done" means. Sits at activity level, so
+   * a `reuseTaskId` activity can carry one too. */
+  fixtureNote?: string;
   /** kind: 'artifact' */
   artifact?: PathArtifactSource;
 }
@@ -169,6 +177,9 @@ export interface ModuleSource {
   /** Placement diagnostics and bridge practice live in modules a learner may
    * skip entirely; they never gate completion. */
   optional?: boolean;
+  /** Listed apart from the loop. The validator requires `optional: true`
+   * beside it; the merge never derives one from the other. */
+  shelf?: ModuleShelf;
 }
 
 /* ── bridges and the path itself ──────────────────────────────────────── */
@@ -355,6 +366,8 @@ export interface MergedActivity {
   domains?: string[];
   code?: MergedCode;
   reuseTaskId?: string;
+  scenario?: string;
+  fixtureNote?: string;
   artifact?: MergedArtifact;
 }
 
@@ -422,6 +435,11 @@ export function mergeActivity(activity: ActivitySource): MergedActivity {
     ...(activity.passThreshold !== undefined ? { passThreshold: activity.passThreshold } : {}),
     ...(activity.domains ? { domains: activity.domains } : {}),
     ...(activity.reuseTaskId ? { reuseTaskId: activity.reuseTaskId } : {}),
+    // `!== undefined`, so an empty authored string reaches the validator's
+    // missing_copy check. An absent key stays absent, which keeps the review
+    // hashes and attempt versions of every activity without one.
+    ...(activity.scenario !== undefined ? { scenario: activity.scenario } : {}),
+    ...(activity.fixtureNote !== undefined ? { fixtureNote: activity.fixtureNote } : {}),
   };
   if (activity.questions) {
     merged.questions = activity.questions.map((question) => ({
@@ -464,6 +482,7 @@ export interface MergedModule {
   requires: { activityId: string; state: EvidenceState }[];
   estimatedMinutes: number;
   optional?: boolean;
+  shelf?: ModuleShelf;
 }
 
 export function mergeModule(module: ModuleSource): MergedModule {
@@ -478,6 +497,7 @@ export function mergeModule(module: ModuleSource): MergedModule {
     requires: module.requires,
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
+    ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),
   };
 }
 

@@ -116,7 +116,9 @@
   align-items: baseline;
   justify-content: space-between;
 }
-.lp-module__title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+/* Wraps at 360 px with 200 % text: the index label moves above a long
+   title, and a word wider than the card breaks instead of overflowing. */
+.lp-module__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; overflow-wrap: anywhere; }
 .lp-module__index {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
@@ -324,7 +326,8 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 
 /* ── objective checks ──────────────────────────────────────────────────── */
 
-.lp-check { display: flex; flex-direction: column; gap: 20px; }
+/* Not .lp-check, which is the profile picker's checkbox label below. */
+.lp-check-view { display: flex; flex-direction: column; gap: 20px; }
 .lp-question { display: flex; flex-direction: column; gap: 12px; }
 .lp-question__prompt { margin: 0; font-weight: 600; line-height: 1.6; }
 .lp-question__context {
@@ -353,7 +356,16 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 }
 .lp-option:hover { border-color: var(--color-border-strong); }
 .lp-option:focus-within { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.lp-option input { margin-top: 0.25em; min-width: 1rem; min-height: 1rem; }
+/* Same radio as the profile picker's checkbox: 20px, brand accent. */
+.lp-option input {
+  width: 20px;
+  height: 20px;
+  min-width: 1rem;
+  min-height: 1rem;
+  margin-top: 0.15em;
+  flex: none;
+  accent-color: var(--brand-accent);
+}
 .lp-option--chosen { border-color: var(--brand-accent); background: var(--brand-accent-soft); }
 .lp-option--correct { border-color: var(--ss-success); background: var(--ss-success-soft); }
 .lp-option--wrong { border-color: var(--ss-error); background: var(--ss-error-soft); }

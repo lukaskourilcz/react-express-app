@@ -63,11 +63,26 @@ import type {
   StartActivityResponse,
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
-import type { ActivitySummary, EvidenceState, LearningPathId, ModuleSummary } from '../../../../shared/learning-paths';
+import type { ActivitySummary, EvidenceState, LearningPathId, ModuleShelf, ModuleSummary } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 import { Button } from '@astryxdesign/core/Button';
 
 /* ── shared hooks ──────────────────────────────────────────────────────── */
+
+// Off the loop: an optional module or one on a shelf. The server's
+// isOffLoopModule decides progress; this local copy only lays the page out,
+// because a value import from shared/learning-paths would add to the initial
+// download (that module ships with the shell).
+const offLoop = (module: ModuleSummary) => module.optional === true || module.shelf !== undefined;
+
+// Every shelf's heading and note. A Record, so adding a shelf to
+// MODULE_SHELVES fails the type check until it has copy here.
+const SHELF_COPY: Record<ModuleShelf, { title: string; note: string }> = {
+  'interview-prep': {
+    title: pathCopy['paths.shelf.interviewPrep.title'],
+    note: pathCopy['paths.shelf.interviewPrep.note'],
+  },
+};
 
 function usePathState(pathId: LearningPathId) {
   const { user, isAuthenticated } = useAuth();
@@ -143,7 +158,7 @@ function ModuleCard({
   const className = [
     'lp-module',
     completed ? 'lp-module--done' : '',
-    module.optional ? 'lp-module--optional' : '',
+    offLoop(module) ? 'lp-module--optional' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -152,7 +167,7 @@ function ModuleCard({
       <div className="lp-module__head">
         <h2 className="lp-module__title">
           <span className="lp-module__index">
-            {module.optional ? t('paths.module.optional') : t('paths.module.index', { index })}
+            {offLoop(module) ? t('paths.module.optional') : t('paths.module.index', { index })}
           </span>
           {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
@@ -243,8 +258,13 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const open = isOpen(availability);
   const next = progress.data?.nextActivityId ?? null;
   const nextModule = next ? manifest.modules.find((one) => one.activities.some((a) => a.id === next)) : undefined;
-  const requiredModules = manifest.modules.filter((one) => !one.optional);
-  const optionalModules = manifest.modules.filter((one) => one.optional);
+  const requiredModules = manifest.modules.filter((one) => !offLoop(one));
+  // Shelf modules list under their own heading, so the optional section's
+  // note about placement and bridges never describes interview practice.
+  const optionalModules = manifest.modules.filter((one) => one.optional && one.shelf === undefined);
+  const shelves = (Object.keys(SHELF_COPY) as ModuleShelf[])
+    .map((shelf) => ({ shelf, modules: manifest.modules.filter((one) => one.shelf === shelf) }))
+    .filter((one) => one.modules.length > 0);
   // Activities link only while the path is open to this learner; a closed
   // path, or a lapsed plan, keeps its outline and evidence without dead ends.
   const reachable = Boolean(enrollment) && open && !barred;
@@ -290,7 +310,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               the one that matters: coming back to earlier material is the plan
               working, not the plan slipping. */}
           <p className="lp-note">
-            {t('paths.activityKinds')}
+            {pathCopy['paths.activityKinds']}
           </p>
         </div>
         <div className="lp-head__actions">
@@ -459,10 +479,31 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         </div>
       </section>
 
+      {/* The loop, then the shelves, then placement and bridges. */}
+      {shelves.map(({ shelf, modules }) => (
+        <section key={shelf} className="lp-section" aria-labelledby={`path-shelf-${shelf}`}>
+          <h2 id={`path-shelf-${shelf}`}>{SHELF_COPY[shelf].title}</h2>
+          <p className="lp-lead">{SHELF_COPY[shelf].note}</p>
+          <div className="lp-modules">
+            {modules.map((module) => (
+              <ModuleCard
+                key={module.id}
+                pathId={pathId}
+                module={module}
+                index={0}
+                states={states}
+                completed={false}
+                interactive={reachable}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+
       {optionalModules.length > 0 && (
         <section className="lp-section">
-          <h2>{t('paths.optionalTitle')}</h2>
-          <p className="lp-lead">{t('paths.optionalNote')}</p>
+          <h2>{pathCopy['paths.optionalTitle']}</h2>
+          <p className="lp-lead">{pathCopy['paths.optionalNote']}</p>
           <div className="lp-modules">
             {optionalModules.map((module) => (
               <ModuleCard
@@ -798,7 +839,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         </div>
         <div className="lp-head__actions">
           <span className="lp-module__meta">
-            {moduleProgress?.completed ? t('paths.module.complete') : t('paths.module.inProgress')}
+            {/* An off-loop module never completes, so "In progress" would
+                read as unfinished for good. */}
+            {offLoop(module)
+              ? t('paths.module.optional')
+              : moduleProgress?.completed ? t('paths.module.complete') : t('paths.module.inProgress')}
           </span>
         </div>
       </header>
@@ -892,6 +937,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           {open?.check && (
             <CheckActivity
               questions={open.check.questions}
+              scenario={open.activity.scenario}
               passThreshold={open.check.passThreshold}
               domains={open.activity.domains}
               domainThreshold={open.check.domainThreshold}
@@ -913,6 +959,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             <CodeActivity
               key={open.activity.id}
               code={open.code}
+              fixtureNote={open.activity.fixtureNote}
               submitBlocked={briefChanged}
               draft={draft}
               result={result}

@@ -807,6 +807,27 @@ A domain-gated check needs its threshold overall and a minimum in every domain:
 the same threshold for a domain of five or more questions, half for a smaller
 one.
 
+Three optional content fields shape the FDE flagship (#497). A check's
+`scenario` is a shared case the learner reads once above its ordered
+questions; the check needs three questions or more, and the scenario ships in
+the public manifest, so it must never quote an answer or an explanation. A
+code activity's `fixtureNote` sits above the editor and says the fixture is
+deliberately unfamiliar and what "done" means. A module's `shelf:
+'interview-prep'` lists it apart from the loop and must come with `optional:
+true`. Both strings reach the workspace in the start response's activity
+summary, and no payload repeats them. The validator refuses a misplaced field
+(`misplaced_scenario`, `misplaced_fixture_note`), a short scenario check
+(`scenario_too_few_questions`), an empty one (`missing_copy`), an unknown or
+non-optional shelf (`unknown_shelf`, `shelf_not_optional`) and a loop module
+that depends on a shelf module (`loop_depends_on_shelf`). It warns when a
+scenario passes 2,000 characters (`long_scenario`) or a shelf module comes
+ahead of a loop module (`shelf_before_loop`). Off-loop modules, optional or
+shelved, never gate completion, never supply the next action and never count
+toward the module total the reward compares: `isOffLoopModule` in
+`shared/learning-paths.ts` decides that for the shared arithmetic and the
+handlers. `pathInventory` also leaves a shelf module's checks, code and
+artifacts out of the counts the path header shows; the shelf lists its own.
+
 Endpoints are new `resource=`/`op=` branches on existing handlers
 (`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on

@@ -25,6 +25,10 @@ const manifest = {
     activities: [summary(C, 'The check', 'check'), summary(A, 'Activity A'), summary(B, 'Activity B')],
     requires: [{ activityId: C, state: 'verified_pass' }, { activityId: A, state: 'verified_pass' }, { activityId: B, state: 'verified_pass' }],
     estimatedMinutes: 10,
+  }, {
+    // An optional module: the server never completes it.
+    id: 'dsa-v1-x01', title: 'Placement', outcomes: [], competencies: [], dependsOn: [], lessons: [], optional: true,
+    activities: [summary('dsa-v1-x01-check', 'Placement check', 'check')], requires: [], estimatedMinutes: 5,
   }],
 };
 
@@ -41,6 +45,8 @@ const calls = vi.hoisted(() => ({
   submitFailures: [] as unknown[],
   codePassed: false,
   changedOnRenewal: false,
+  scenario: undefined as string | undefined,
+  fixtureNote: undefined as string | undefined,
 }));
 vi.mock('../src/lib/xp', async importOriginal => ({ ...await importOriginal<typeof import('../src/lib/xp')>(), announceVerifiedQuestXp: vi.fn(), syncXpWithServer: vi.fn(async () => {}) }));
 
@@ -82,7 +88,11 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         ...(previousSession && calls.changedOnRenewal ? { needsBriefReview: true } : {}),
         session: `SESSION_${activityId}_${calls.start.length}`,
         expiresAt: new Date(Date.now() + 3600e3).toISOString(),
-        activity: summary(activityId, activityId, activityId === C ? 'check' : 'code'),
+        activity: {
+          ...summary(activityId, activityId, activityId === C ? 'check' : 'code'),
+          ...(activityId === C && calls.scenario !== undefined ? { scenario: calls.scenario } : {}),
+          ...(activityId === A && calls.fixtureNote !== undefined ? { fixtureNote: calls.fixtureNote } : {}),
+        },
         purpose: 'exercise',
         draft: activityId === C ? null : calls.serverDraft,
         previous: null,
@@ -124,16 +134,18 @@ beforeEach(() => {
   calls.serverDraft = null;
   calls.next = null;
   calls.submitFailures.length = 0;
+  calls.scenario = undefined;
+  calls.fixtureNote = undefined;
   Object.defineProperty(window.navigator, 'onLine', { value: true, configurable: true });
 });
 
-async function mount(activityId: string) {
+async function mount(activityId: string | null, moduleId = 'dsa-v1-d01') {
   // Imported here, after the fixtures above exist: the mocked module reads them.
   const { DsaModule } = await import('../src/components/paths/LearningPathScreens');
   await act(async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={[`/roadmap/paths/dsa-foundations/dsa-v1-d01?activity=${activityId}`]}>
+        <MemoryRouter initialEntries={[`/roadmap/paths/dsa-foundations/${moduleId}${activityId ? `?activity=${activityId}` : ''}`]}>
           <LanguageProvider>
             <Routes><Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} /></Routes>
           </LanguageProvider>
@@ -345,4 +357,77 @@ it('shows a renewed changed brief before grading a second code submission', asyn
   await press('Submit');
   await waitFor(() => expect(calls.submit).toHaveLength(2));
   expect(calls.submit[1].code).toBe('keep the correction');
+});
+
+describe('the content shapes of #497', () => {
+  const scenarioRegion = () => screen.queryAllByRole('region', { name: 'The scenario' });
+  const NOTE_FIRST = 'The starter is a trimmed copy of a customer script.';
+
+  it('shows a check\'s scenario once while answering, after Submit and after Try again', async () => {
+    calls.scenario = 'A support lead says the export is wrong.\n\nAnswer in order.';
+    await mount(C);
+    await waitFor(() => expect(screen.getByText(/Which one\?/)).toBeInTheDocument());
+    expect(scenarioRegion()).toHaveLength(1);
+    expect(screen.getAllByText('A support lead says the export is wrong.')).toHaveLength(1);
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Left' })); });
+    await press('Submit');
+    await waitFor(() => expect(screen.getByText('Because of the right side.')).toBeInTheDocument());
+    expect(scenarioRegion()).toHaveLength(1);
+    await press('Try again');
+    await waitFor(() => expect(calls.start).toEqual([C, C]));
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Left' })).not.toBeChecked());
+    expect(scenarioRegion()).toHaveLength(1);
+  });
+
+  it('shows the fixture note above the editor, and keeps it after a failed submit', async () => {
+    calls.fixtureNote = `${NOTE_FIRST}\n\nYou are done when the visible tests pass.`;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    const label = screen.getByText('Before you start');
+    const note = screen.getByText(NOTE_FIRST);
+    expect(label.compareDocumentPosition(editor()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(note.compareDocumentPosition(editor()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await type('an attempt');
+    await press('Submit');
+    await waitFor(() => expect(calls.submit).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+    expect(screen.getByText(NOTE_FIRST)).toBeInTheDocument();
+  });
+
+  it('shows the changed note after Load latest brief', async () => {
+    calls.fixtureNote = 'The first note.';
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    expect(screen.getByText('The first note.')).toBeInTheDocument();
+    await type('first submission');
+    await press('Submit');
+    await waitFor(() => expect(calls.submit).toHaveLength(1));
+    calls.changedOnRenewal = true;
+    calls.fixtureNote = 'The revised note.';
+    await type('keep the correction');
+    await press('Submit');
+    await screen.findByRole('button', { name: 'Load latest brief' });
+    await press('Load latest brief');
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Load latest brief' })).toBeNull());
+    expect(screen.getByText('The revised note.')).toBeInTheDocument();
+    expect(screen.queryByText('The first note.')).toBeNull();
+  });
+
+  it('shows no note on a code activity without one', async () => {
+    await mount(B);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${B}`));
+    expect(screen.queryByText('Before you start')).toBeNull();
+  });
+
+  it('labels an optional module Optional in its header, and a loop module In progress', async () => {
+    await mount(null, 'dsa-v1-x01');
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Placement' })).toBeInTheDocument());
+    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Optional');
+  });
+
+  it('labels a loop module In progress until the server completes it', async () => {
+    await mount(null);
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'D01' })).toBeInTheDocument());
+    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('In progress');
+  });
 });

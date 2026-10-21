@@ -6,7 +6,9 @@
  * test and the server capability all reach the same verdict. */
 
 import {
+  MODULE_SHELVES,
   activityIdPrefix,
+  isOffLoopModule,
   isPathContentId,
   type EvidenceState,
 } from '../../shared/learning-paths';
@@ -23,6 +25,12 @@ export interface ValidationIssue {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_REVIEW_AGE_DAYS = 400;
+/** A scenario carries one case across its ordered questions, so it needs
+ * enough of them to be worth the preamble. */
+const SCENARIO_MIN_QUESTIONS = 3;
+/** Scenarios ship in every catalogue response, so a long one costs every
+ * learner who opens Today, Career or Profile. */
+const SCENARIO_WARN_CHARS = 2_000;
 
 const error = (code: string, at: string, message: string): ValidationIssue => ({ level: 'error', code, at, message });
 const warning = (code: string, at: string, message: string): ValidationIssue => ({ level: 'warning', code, at, message });
@@ -74,6 +82,8 @@ function pathCopyFields(path: MergedPath): { path: string; value: string }[] {
     for (const activity of module.activities) {
       out.push({ path: `${activity.id}.title`, value: activity.title });
       out.push({ path: `${activity.id}.summary`, value: activity.summary });
+      if (activity.scenario !== undefined) out.push({ path: `${activity.id}.scenario`, value: activity.scenario });
+      if (activity.fixtureNote !== undefined) out.push({ path: `${activity.id}.fixtureNote`, value: activity.fixtureNote });
       activity.questions?.forEach((question) => {
         out.push({ path: `${question.id}.prompt`, value: question.prompt });
         out.push({ path: `${question.id}.explanation`, value: question.explanation });
@@ -177,6 +187,13 @@ function validateActivity(
   if (activity.estimatedMinutes <= 0 || activity.estimatedMinutes > 480) {
     issues.push(error('bad_estimate', at, 'estimatedMinutes must be between 1 and 480'));
   }
+  // Before the switch: the code case breaks early for a reused task.
+  if (activity.scenario !== undefined && activity.kind !== 'check') {
+    issues.push(error('misplaced_scenario', at, 'only a check carries a scenario'));
+  }
+  if (activity.fixtureNote !== undefined && activity.kind !== 'code') {
+    issues.push(error('misplaced_fixture_note', at, 'only a code activity carries a fixture note'));
+  }
 
   switch (activity.kind) {
     case 'lesson': {
@@ -191,6 +208,13 @@ function validateActivity(
     case 'check': {
       const questions = activity.questions ?? [];
       if (questions.length === 0) issues.push(error('empty_check', at, 'a check needs at least one question'));
+      if (activity.scenario !== undefined && questions.length < SCENARIO_MIN_QUESTIONS) {
+        issues.push(error('scenario_too_few_questions', at, 'a scenario check needs at least three questions'));
+      }
+      if (activity.scenario !== undefined && activity.scenario.length > SCENARIO_WARN_CHARS) {
+        issues.push(warning('long_scenario', at,
+          `the scenario has ${activity.scenario.length} characters; every catalogue response carries it, so keep it under ${SCENARIO_WARN_CHARS}`));
+      }
       if (activity.verification !== 'machine_verified') {
         issues.push(error('check_verification', at, 'objective checks are machine-verified'));
       }
@@ -358,11 +382,18 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       issues.push(...validateActivity(path, module.id, activity, seenActivities, competencyIds, rubricIds, lessonIds));
     }
 
-    if (module.requires.length === 0 && !module.optional) {
+    if (module.shelf !== undefined && !(MODULE_SHELVES as readonly string[]).includes(module.shelf)) {
+      issues.push(error('unknown_shelf', mAt, `unknown shelf ${module.shelf}`));
+    }
+    if (module.shelf !== undefined && !module.optional) {
+      issues.push(error('shelf_not_optional', mAt,
+        'a shelf module sits outside the loop, so it must be optional and can never gate completion'));
+    }
+    if (module.requires.length === 0 && !isOffLoopModule(module)) {
       issues.push(error('no_requirements', mAt, 'a module needs at least one completion requirement'));
     }
-    if (module.optional && module.requires.length > 0) {
-      issues.push(error('optional_requirements', mAt, 'an optional module is skippable, so it cannot carry requirements'));
+    if (isOffLoopModule(module) && module.requires.length > 0) {
+      issues.push(error('optional_requirements', mAt, 'an optional or shelf module is skippable, so it cannot carry requirements'));
     }
     const ownIds = new Set(module.activities.map((activity) => activity.id));
     for (const requirement of module.requires) {
@@ -389,6 +420,23 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       }
     }
   }
+  // The loop must stand on its own: a learner who never opens a shelf can
+  // still finish the path, and the first loop module is the taster's first
+  // module, so a shelf listed ahead of the loop reads as the start.
+  const shelfIds = new Set(path.modules.filter((module) => module.shelf !== undefined).map((module) => module.id));
+  const lastLoopIndex = path.modules.reduce((last, module, index) => (isOffLoopModule(module) ? last : index), -1);
+  path.modules.forEach((module, index) => {
+    const mAt = `${path.id}/${module.id}`;
+    if (!isOffLoopModule(module)) {
+      for (const dependency of module.dependsOn) {
+        if (shelfIds.has(dependency)) {
+          issues.push(error('loop_depends_on_shelf', mAt, `a loop module cannot depend on the shelf module ${dependency}`));
+        }
+      }
+    } else if (module.shelf !== undefined && index < lastLoopIndex) {
+      issues.push(warning('shelf_before_loop', mAt, 'a shelf module should come after every loop module in manifest order'));
+    }
+  });
   const cycle = findCycle(path.modules.map((module) => ({ id: module.id, dependsOn: module.dependsOn })));
   if (cycle) issues.push(error('dependency_cycle', path.id, `module dependency cycle: ${cycle.join(' → ')}`));
 
