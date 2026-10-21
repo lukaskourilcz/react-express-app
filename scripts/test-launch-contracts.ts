@@ -2746,8 +2746,9 @@ async function strayLangContracts() {
 }
 
 /** devShark ships English only (#485). No second-language file is left in
- * the code, and no client fetcher puts `lang` on a request: not as a query
- * parameter, not as a body field and not through URLSearchParams. */
+ * the code, no client fetcher puts `lang` on a request (not as a query
+ * parameter, not as a body field and not through URLSearchParams), and every
+ * code file that mentions Czech is on a reasoned list. */
 function englishOnlyContracts() {
   const sources = ['api', 'lib', 'shared', 'scripts', 'tests', 'client/src', 'client/tests', 'client/.storybook'].flatMap(codeFiles);
   const overlays = sources.filter((file) => /\.cs\.(ts|tsx)$/.test(file));
@@ -2763,6 +2764,38 @@ function englishOnlyContracts() {
     readFileSync(join(process.cwd(), file), 'utf8').split('\n').flatMap((line, index) =>
       /^\s*(\/\/|\*|\/\*)/.test(line) || !SENDS_LANG.some((pattern) => pattern.test(line)) ? [] : [`${file}:${index + 1}`]));
   assert.deepEqual(offenders, [], 'no client fetcher sends lang');
+
+  // The #485 acceptance grep (`grep -rli czech` over .ts, .tsx and .mjs) may
+  // match only these files, each for a reason other than a second interface
+  // language. A new match fails here until it is removed or listed with its
+  // reason, and a listed file that stops matching must leave the list.
+  const CZECH_MENTIONS: Record<string, string> = {
+    'client/product-catalog.ts': 'the trader ID (IČO) and registered address',
+    'client/src/components/LegalPages.tsx': 'the Czech out-of-court dispute body',
+    'client/src/i18n/translations.privacy.ts': 'the Czech data protection office',
+    'client/src/i18n/translations.ts': 'Czech law and the Czech Trade Inspection Authority',
+    'client/tests/merch.test.tsx': 'Czechia as a shipping region',
+    'client/tests/premium-page.test.tsx': 'the trader address',
+    'lib/billing/handlers.ts': 'the Czech Civil Code',
+    'lib/roadmap-questions-ai.ts': 'quiz content on how a Czech sentence tokenizes',
+    'lib/roadmap-questions-cool-stuff.ts': "quiz content about the word 'robot'",
+    'scripts/product-cleanup-contracts.ts': 'Czechia as a shipping region',
+    'scripts/test-launch-contracts.ts': 'this list',
+    'shared/coding-locale.ts': 'the Czech koruna currency name',
+    'shared/coding-utc-time.ts': 'the Czechia Time zone label',
+    'shared/launch-offer.ts': 'the Czech price indication law',
+    // removed by D3 (#486): the public /cs/ guides and their checks.
+    'scripts/check-public.mjs': 'the /cs/ guide checks',
+    'tests/browser/public.spec.ts': 'the /cs/ guide checks',
+  };
+  const SKIPPED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', 'test-results', 'playwright-report', '.vercel']);
+  const walk = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = dir === '.' ? entry.name : `${dir}/${entry.name}`;
+    if (entry.isDirectory()) return SKIPPED_DIRS.has(entry.name) ? [] : walk(path);
+    return /\.(ts|tsx|mjs)$/.test(entry.name) ? [path] : [];
+  });
+  const mentions = walk('.').filter((file) => /czech/i.test(readFileSync(join(process.cwd(), file), 'utf8'))).sort();
+  assert.deepEqual(mentions, Object.keys(CZECH_MENTIONS).sort(), 'every file that mentions Czech is listed with its reason');
 }
 
 /** Advanced asked of a topic with nothing above difficulty 2 is served its
