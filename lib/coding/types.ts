@@ -18,6 +18,12 @@ export interface SourceCallTest {
   label?: string;
   edge?: boolean;
   async?: boolean;
+  /** The critical criterion of the source path activity this check holds,
+   * when it is not the default `core` (DSA Foundations, #493). Authoring
+   * only: `mergeTask` does not copy it, so it never reaches the browser.
+   * `npm run test:coding` requires every wrong answer tagged with a criterion
+   * to fail at least one check tagged with that criterion. */
+  criterion?: string;
 }
 
 export interface SourceTypeTest {

@@ -36,6 +36,7 @@ import {
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
 import { DSA_FOUNDATIONS_WRONG, DSA_SOURCE_ACTIVITY } from './fixtures/dsa-foundations-known-answers';
+import { DSA_FOUNDATIONS_TASKS } from '../lib/coding/tasks/dsa-foundations';
 import { activityIn, pathById } from '../lib/learning-paths/catalog';
 import { complexityGuidance } from '../shared/coding-complexity';
 import { REACT_VARIANTS } from './coding-react-variants';
@@ -593,7 +594,8 @@ async function main() {
   // search: on the algorithms track with topic dsa, an authored runtime
   // target, and a known wrong answer for every critical criterion of the
   // path activity it came from (a wrong entry with no criterion breaks the
-  // default one, `core`).
+  // default one, `core`). Section 5 of the known-answer run grades each one
+  // and requires it to fail a check tagged with its criterion.
   {
     const dsa = pathById('dsa-foundations');
     if (DSA_FOUNDATIONS_TASK_IDS.size !== 29) fail(`DSA Foundations has ${DSA_FOUNDATIONS_TASK_IDS.size} tasks, not 29`);
@@ -1562,6 +1564,30 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
       if (await passesTask(task, source) !== expected) fail(`${known.id}: ${known.label} ${expected ? 'fails a check the statement does not ask for' : 'passes every check'}`);
     }
   }
+  // 5. DSA Foundations (#493): a wrong answer tagged with a criterion must
+  // fail a check tagged with that criterion (an untagged check holds `core`),
+  // so a variant that only trips a value check cannot stand in for the read,
+  // write, call or comparison probe its criterion names.
+  let attributed = 0;
+  const dsaSources = new Map(DSA_FOUNDATIONS_TASKS.map((task) => [task.id, task]));
+  for (const known of DSA_FOUNDATIONS_WRONG) {
+    if (!ONLY.test(known.id)) continue;
+    const task = dsaSources.get(known.id);
+    const source = knownSource(known);
+    if (!task || source === null) continue;
+    const visible = task.tests ?? [];
+    const hidden = solutionFor(known.id)?.hiddenTests ?? [];
+    const run = await withTimeout(runChecks({ runtimePolicy: runtimePolicyForTask(known.id), code: source, visible, hidden, shuffle: (list) => list }), 8_000, known.id);
+    const failed = new Set<string>();
+    for (const [checks, result] of [[visible, run.visible], [hidden, run.hidden]] as const) {
+      if (!result || result.codeError || result.timedOut) continue;
+      checks.forEach((check, index) => { if (result.results[index]?.pass !== true) failed.add(check.criterion ?? 'core'); });
+    }
+    const criterion = known.criterion ?? 'core';
+    attributed += 1;
+    if (!failed.has(criterion)) fail(`${known.id}: ${known.label} is tagged ${criterion}, but fails no check tagged ${criterion} (it fails: ${[...failed].join(', ') || 'only by not loading or timing out'})`);
+  }
+  console.log(`DSA Foundations: ${attributed} criterion-tagged wrong answers graded against the checks of their criterion.`);
   console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${checkpoints} checkpoint solutions fail their milestone, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check, and ${knownAnswers} known answers keep their verdict (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 

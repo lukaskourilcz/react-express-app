@@ -159,7 +159,8 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
     pitfall: task.pitfall ?? null,
     solution: solution ? {
       solution: solution.solution, junior: solution.junior ?? null, senior: solution.senior ?? null,
-      hiddenTests: solution.hiddenTests ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null,
+      // A check's `criterion` tag is contract metadata, not content.
+      hiddenTests: solution.hiddenTests?.map(({ criterion: _criterion, ...test }) => test) ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null,
       hiddenSuite: solution.hiddenSuite ?? null,
     } : null,
     approaches: approachesFor(task.id).map(approach => ({

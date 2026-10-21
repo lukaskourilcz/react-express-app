@@ -8,8 +8,11 @@
 // a shadow counter, repeated property definitions). `criterion` names the
 // critical criterion of the source path activity the variant breaks, so the
 // content contract can prove that every critical criterion has a wrong
-// answer it rejects. DSA_FOUNDATIONS_RIGHT holds correct answers written
-// another way, which must keep passing.
+// answer it rejects, and that the answer fails a check tagged with that
+// criterion (`criterion` on the checks of lib/coding/tasks and
+// lib/coding/solutions; an untagged check holds `core`).
+// DSA_FOUNDATIONS_RIGHT holds correct answers written another way, which
+// must keep passing.
 //
 // The issue placed flawed variants under lib/coding/solutions/; they live
 // here instead, beside the established KNOWN_WRONG_CODE list, so no wrong
