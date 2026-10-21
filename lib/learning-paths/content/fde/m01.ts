@@ -532,7 +532,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
         {
           kind: 'prose',
           body:
-            'Someone above the sponsor will read about this project for two minutes, on a phone, between other meetings. Vercel’s forward-deployed engineer posting expects you to write for executives: it asks for experience presenting technical discovery findings and proposals to executives at enterprise customers. Orosz describes OpenAI’s validation phase ending in a final report that shows eval performance compared to the objectives, which is the same habit: the result set beside the target agreed before.',
+            'Someone above the sponsor will read about this project for two minutes, on a phone, between other meetings. Vercel’s forward-deployed engineer posting expects you to report to executives: it asks for experience presenting technical discovery findings and proposals to executives at enterprise customers. Orosz describes OpenAI’s validation phase ending in a final report that shows eval performance compared to the objectives, which is the same habit: the result set beside the target agreed before.',
         },
         {
           kind: 'prose',
