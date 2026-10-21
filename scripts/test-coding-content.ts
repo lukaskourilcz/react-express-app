@@ -11,8 +11,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
-import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
+import { CODING_TASKS, DSA_FOUNDATIONS_TASK_IDS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
+import { CODING_SUMMARIES, DSA_LEVELS_AWAITING_E3, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { codingBoardContracts } from './coding-board-contract';
@@ -35,6 +35,9 @@ import {
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
+import { DSA_FOUNDATIONS_WRONG, DSA_SOURCE_ACTIVITY } from './fixtures/dsa-foundations-known-answers';
+import { activityIn, pathById } from '../lib/learning-paths/catalog';
+import { complexityGuidance } from '../shared/coding-complexity';
 import { REACT_VARIANTS } from './coding-react-variants';
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
@@ -408,8 +411,11 @@ async function main() {
     if (task.track === 'system-design') {
       if (task.level !== 0) fail(`${where}: system design tasks carry no Learn level`);
     } else {
-      if (task.topic !== task.track) fail(`${where}: topic must match the track`);
-      if (!Number.isInteger(task.level) || task.level < 1 || task.level > 25) fail(`${where}: level must be 1–25`);
+      // A DSA Foundations task sits on the algorithms track with a DSA topic,
+      // whose levels run 1 to 15; every other task's topic is its track.
+      const dsaTopic = task.track === 'algorithms' && (task.topic === 'dsa' || task.topic === 'dsa-advanced');
+      if (task.topic !== task.track && !dsaTopic) fail(`${where}: topic must match the track, or be dsa or dsa-advanced on the algorithms track`);
+      if (!Number.isInteger(task.level) || task.level < 1 || task.level > (dsaTopic ? 15 : 25)) fail(`${where}: level must be 1–${dsaTopic ? 15 : 25}`);
     }
     if (!isCodingTier(task.tier)) fail(`${where}: bad tier`);
     // An authored label may only move a task within what its tier allows.
@@ -567,6 +573,49 @@ async function main() {
       if (chosen.some((t) => t.verify === 'checklist')) fail(`${topic} level ${level} would gate on a checklist task`);
     }
   }
+  // DSA Foundations (#493): every level but the foundation review (15) has
+  // tasks, and a level issues them only once its title matches them; the Big O
+  // introduction (1-2) and the levels E3 re-sequences (10, 11, 14) wait.
+  for (let level = 1; level <= 15; level++) {
+    const tasks = tasksForLevel('dsa', level);
+    if (level < 15 && tasks.length === 0 && !ALLOW_GAPS) fail(`dsa level ${level} has no coding task`);
+    if (level === 15 && tasks.length > 0) fail('dsa level 15, the foundation review, has no coding task');
+    const chosen = levelCodingTasks('dsa', level);
+    const held = DSA_LEVELS_AWAITING_E3.has(level) || level === 15;
+    if (held && chosen.length > 0) fail(`dsa level ${level} issues a coding task before E3`);
+    if (!held && chosen.length === 0 && !ALLOW_GAPS) fail(`dsa level ${level} issues no coding task`);
+    if (chosen.some((t) => t.verify === 'checklist' || formatOf(t) === 'debug')) fail(`dsa level ${level} would gate on a checklist or repair task`);
+  }
+  if (levelCodingTasks('algorithms', 1).length > 0 || levelCodingTasks('system-design', 0).length > 0) fail('only the Learn coding topics seal coding into a level');
+
+  /* ── DSA Foundations (#493) ─────────────────────────────────────────── */
+  // The DSA path's code exercises, one task each but the reused binary
+  // search: on the algorithms track with topic dsa, an authored runtime
+  // target, and a known wrong answer for every critical criterion of the
+  // path activity it came from (a wrong entry with no criterion breaks the
+  // default one, `core`).
+  {
+    const dsa = pathById('dsa-foundations');
+    if (DSA_FOUNDATIONS_TASK_IDS.size !== 29) fail(`DSA Foundations has ${DSA_FOUNDATIONS_TASK_IDS.size} tasks, not 29`);
+    const pathCode = (dsa?.modules ?? []).flatMap((module) => module.activities).filter((activity) => activity.kind === 'code' && !activity.reuseTaskId);
+    if (pathCode.length !== 29) fail(`the DSA path has ${pathCode.length} authored code exercises, not 29`);
+    const sources = new Set(Object.values(DSA_SOURCE_ACTIVITY));
+    for (const activity of pathCode) if (!sources.has(activity.id)) fail(`${activity.id}: a DSA path exercise with no coding task`);
+    for (const id of DSA_FOUNDATIONS_TASK_IDS) {
+      const task = byId.get(id);
+      if (!task) { fail(`${id}: a DSA Foundations id with no task`); continue; }
+      if (task.track !== 'algorithms' || task.topic !== 'dsa') fail(`${id}: a DSA Foundations task is on the algorithms track with topic dsa`);
+      if (complexityGuidance(task).targetTime === null) fail(`${id}: the prompt needs a Target: O(...) time sentence`);
+      const wrong = DSA_FOUNDATIONS_WRONG.filter((known) => known.id === id);
+      if (wrong.length === 0) fail(`${id}: needs at least one known wrong answer`);
+      const activity = dsa && DSA_SOURCE_ACTIVITY[id] ? activityIn(dsa, DSA_SOURCE_ACTIVITY[id])?.activity : undefined;
+      if (!activity?.code) { fail(`${id}: no source activity in the DSA path`); continue; }
+      const covered = new Set(wrong.map((known) => known.criterion ?? 'core'));
+      for (const criterion of activity.code.criteria.filter((one) => one.critical)) {
+        if (!covered.has(criterion.id)) fail(`${id}: no known wrong answer breaks the critical criterion ${criterion.id} of ${activity.id}`);
+      }
+    }
+  }
 
   /* ── hidden tracks ──────────────────────────────────────────────────── */
   // System design is hidden until its tasks are reviewed again (owner
@@ -592,7 +641,7 @@ async function main() {
       if (gradeDesign(task, prepared.key, right as DesignAnswer[]).outcome !== 'passed') fail(`${task.id}: its grader fails the right answers`);
       if (gradeDesign(task, prepared.key, wrong as DesignAnswer[]).outcome !== 'failed') fail(`${task.id}: its grader passes wrong answers`);
     }
-    for (const topic of ['javascript', 'typescript', 'react', 'system-design', 'algorithms'] as const) {
+    for (const topic of ['javascript', 'typescript', 'react', 'system-design', 'algorithms', 'dsa', 'dsa-advanced'] as const) {
       for (let level = 0; level <= 25; level++) if (tasksForLevel(topic, level).some((task) => !CODING_SECTION_TRACKS.includes(task.track))) fail(`${topic} level ${level} holds a hidden task`);
     }
     if (EVOLVING_CHALLENGES.some((project) => !CODING_SECTION_TRACKS.includes(project.track))) fail('a project sits on a hidden track');
@@ -1160,7 +1209,7 @@ async function main() {
   const debugTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
   assert.ok(debugTasks.filter((task) => !evolvingStage(task.id)).length >= 4, 'the four standalone repair tasks stay beside the debugging paths');
   for (const task of debugTasks) {
-    assert.equal(task.track, 'javascript', 'the first debugging set is JavaScript; extend this check when others land');
+    assert.ok(task.track === 'javascript' || task.track === 'algorithms', `${task.id}: repair tasks are JavaScript or Algorithms; extend this check when others land`);
     assert.ok((task.tests?.length ?? 0) >= 3, `${task.id}: a debugging task needs tests that pin the behaviour down`);
     assert.ok(task.failureHints || task.pitfall, `${task.id}: a debugging task must name the misconception it teaches`);
     for (const hint of Object.values(task.failureHints ?? {})) {
