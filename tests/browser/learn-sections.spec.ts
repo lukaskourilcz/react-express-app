@@ -126,6 +126,19 @@ test.describe('Learn section routes', () => {
     await expect(page).toHaveURL(/\/learn\/software-engineer$/);
   });
 
+  test('the Learn nav link on a section adds no history entry', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await prepare(page);
+    await stand(page, 'guest');
+    await page.goto('/learn/software-engineer');
+    await expect(switcherItem(page, 'Software Engineer')).toHaveAttribute('aria-checked', 'true');
+    const before = await page.evaluate(() => history.length);
+    await page.locator('nav.ss-nav-center').getByRole('link', { name: 'Learn', exact: true }).click();
+    await expect(page).toHaveURL(/\/learn\/software-engineer$/);
+    await expect(switcherItem(page, 'Software Engineer')).toHaveAttribute('aria-checked', 'true');
+    expect(await page.evaluate(() => history.length)).toBe(before);
+  });
+
   test('the switcher browses with arrows and opens with Enter or Space, keeping focus', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await prepare(page);

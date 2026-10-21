@@ -421,6 +421,9 @@ function App() {
   // Route focus follows the route box (lib/routePreload.ts), not the
   // pathname: a Learn section switch keeps focus on the switcher.
   const boxKey = routeBoxKey(location.pathname);
+  // A nav link to the box on screen (Learn on /learn/<section>) only names
+  // the page already shown: replace, so it adds no history entry and no view.
+  const inBox = (to: string) => boxKey === to && location.pathname !== to;
   useEffect(() => {
     // Route focus is intentionally box-only, so a change that only rewrites
     // the head does not pull focus away from the current control.
@@ -549,6 +552,7 @@ function App() {
                 <Link
                   key={item.to}
                   to={item.to}
+                  replace={inBox(item.to)}
                   className="ss-navlink"
                   data-active={item.isActive(navPath)}
                   aria-current={item.isActive(location.pathname) ? 'page' : undefined}
@@ -665,6 +669,7 @@ function App() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    replace={inBox(item.to)}
                     className="ss-drawer-link"
                     data-active={item.isActive(navPath)}
                     aria-current={item.isActive(location.pathname) ? 'page' : undefined}
