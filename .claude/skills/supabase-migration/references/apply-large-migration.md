@@ -1,15 +1,23 @@
 # Applying a large migration through the Supabase connector
 
-Use this only when the owner has authorised you to apply a named migration to production, and the connector's `apply_migration` (or a large `execute_sql`) fails with "Invalid or expired requestState". Small calls still work, so you split the file into small calls.
+Use this only when the owner has authorised you to apply a named migration to production, and the connector's `apply_migration` (or a large `execute_sql`) fails on the size of the file while small calls still work. Then you split the file into small calls.
 
-Origin: the operator procedure that applied 058 and 059 on 9 October 2026 and 060 on 11 October 2026. `NEEDED.md` records the result in the items "Apply migrations 058 and 059 before deploying the draft-conflict code" ("production then matched a fresh build of the repository") and "Apply migration 060 before deploying". This file is the first written copy of the steps in the repository.
+Origin: the operator reported these steps; no other file in the repository records them. What the repository does record: `NEEDED.md`, item "Apply migrations 058 and 059 before deploying the draft-conflict code", says both were applied on 9 Oct 2026 and "production then matched a fresh build of the repository"; item "Apply migration 060 before deploying" says only that "Production inspection on 13 October confirmed 060 already installed". Neither item says how the files were applied.
+
+Three parameters below come from the operator alone and are unverified in the repository. Treat them as starting values and confirm each against the connector before you rely on it:
+
+- the error text "Invalid or expired requestState", which marks a call too large for the connector;
+- the size limit of about 11 KB per wrapped call;
+- the `supabase_migrations.schema_migrations` insert in step 8, which no rehearsal has run.
+
+The rehearsal at the end of this file proves only the `DO $wrap$` mechanism on a local database.
 
 ## Steps
 
 1. **Read the history first.** Call `list_migrations` and compare it with `supabase/supabase-schema-*.sql`, so you neither skip nor repeat a file. Note how the existing rows name themselves.
 2. **Prepare the text.** Remove full-line `--` comments and the file's own `BEGIN;` and `COMMIT;`. Each connector call runs in its own transaction, so the file no longer commits as one unit.
 3. **Split into statements.** Cut at the semicolons that end a statement. A routine body between `$$` (or `$tag$`) quotes holds semicolons of its own: keep the whole `CREATE OR REPLACE FUNCTION … $$ … $$;` in one piece.
-4. **Group the statements.** Keep each group under about 11 KB once wrapped. End a group only after the `REVOKE` and `GRANT` that follow a new routine or table, so no call leaves an object open to `anon` or `authenticated` between two calls. Put the file's `DO` dependency guard in the first group.
+4. **Group the statements.** Keep each group under about 11 KB once wrapped (operator-reported; see above). End a group only after the `REVOKE` and `GRANT` that follow a new routine or table, so no call leaves an object open to `anon` or `authenticated` between two calls. Put the file's `DO` dependency guard in the first group.
 5. **Wrap each group** so the connector receives one short statement:
 
    ```sql
@@ -24,7 +32,7 @@ Origin: the operator procedure that applied 058 and 059 on 9 October 2026 and 06
 
 6. **Rehearse locally.** Build a fresh `supabase/postgres:17.6.1.171` container at the state production has (every file before the new one), run the wrapped groups in order with `psql -X -v ON_ERROR_STOP=1 -f`, then compare its fingerprint (below) with a second fresh container built from the repository with the new file applied whole. Apply the groups a second time to prove the re-run is harmless.
 7. **Apply in production**, one `execute_sql` call per wrapped group, in order. Stop at the first error and report it; do not improvise a fix in production.
-8. **Record the history row by hand**, because `execute_sql` writes none:
+8. **Record the history row by hand**, because `execute_sql` writes none (operator-reported and untested; match the version and name format `list_migrations` returned in step 1):
 
    ```sql
    INSERT INTO supabase_migrations.schema_migrations (version, name)
