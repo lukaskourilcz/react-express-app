@@ -25,33 +25,33 @@ import { openBillingPortal, useBilling } from '../lib/billing';
 import { friendlyError } from '../lib/api';
 import { FREE_LEARN_LEVELS, type EntitlementResponse } from '../../../shared/tiers';
 
-function formatDay(iso: string, lang: string): string {
+function formatDay(iso: string): string {
   const date = new Date(iso);
   const sameYear = date.getFullYear() === new Date().getFullYear();
-  return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, {
+  return new Intl.DateTimeFormat('en-GB', {
     day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }),
   }).format(date);
 }
 
 type T = ReturnType<typeof useLanguage>['t'];
 
-export function planText(plan: EntitlementResponse, t: T, lang: string): string {
+export function planText(plan: EntitlementResponse, t: T): string {
   if (plan.tier !== 'premium') return t('profile.plan.free');
   if (plan.source === 'provider') {
     if (plan.inGrace) return t('profile.plan.grace');
     if (plan.currentPeriodEnd) {
-      const date = formatDay(plan.currentPeriodEnd, lang);
+      const date = formatDay(plan.currentPeriodEnd);
       return plan.cancelAtPeriodEnd ? t('profile.plan.cancelled', { date }) : t('profile.plan.renews', { date });
     }
     return t('profile.plan.premium');
   }
   if (plan.source === 'promo') {
     return plan.validUntil
-      ? t('profile.plan.voucherUntil', { date: formatDay(plan.validUntil, lang) })
+      ? t('profile.plan.voucherUntil', { date: formatDay(plan.validUntil) })
       : t('profile.plan.voucher');
   }
   return plan.validUntil
-    ? t('profile.plan.complimentaryUntil', { date: formatDay(plan.validUntil, lang) })
+    ? t('profile.plan.complimentaryUntil', { date: formatDay(plan.validUntil) })
     : t('profile.plan.complimentary');
 }
 
@@ -78,7 +78,7 @@ function ManageBilling() {
 }
 
 export default function PlanLine() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { tier, data, loading, failed, refetch, signedIn } = useEntitlement();
   const { cancellable } = useBilling();
   if (!signedIn) return null;
@@ -114,7 +114,7 @@ export default function PlanLine() {
       ) : (
         <>
           <span className="de-plan-line__body">
-            <Text type="supporting" weight="semibold">{planText(data!, t, lang)}</Text>
+            <Text type="supporting" weight="semibold">{planText(data!, t)}</Text>
             <Text type="supporting" color="secondary">{t('profile.plan.premiumBody')}</Text>
           </span>
           {cancellable && (data?.billingAccount === true || data?.source === 'provider') && (

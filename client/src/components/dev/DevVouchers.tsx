@@ -270,8 +270,8 @@ function CreatedCode({ created, onDone }: { created: CreatedVoucher; onDone: () 
 /* ── the list ──────────────────────────────────────────────────────────── */
 
 function VoucherFacts({ voucher }: { voucher: AdminVoucher }) {
-  const { t, lang } = useLanguage();
-  const day = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+  const { t } = useLanguage();
+  const day = (iso: string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
   return (
     <ul className="dev-voucher-facts">
       <li>{t('dev.vouchers.uses.value', { used: voucher.redeemedCount, max: voucher.maxRedemptions })}</li>

@@ -29,7 +29,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import ErrorRetry from './ErrorRetry';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
@@ -133,7 +133,6 @@ function useBoardFirstData() {
 function Leaderboard() {
   useBoardFirstData();
   const t = useT();
-  const { lang } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   // Four equal segments leave the full labels too little room below 480px:
@@ -338,7 +337,7 @@ function Leaderboard() {
         <Banner
           status="warning"
           title={t('leaderboard.offlineStale', {
-            time: new Date(stale.savedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }),
+            time: new Date(stale.savedAt).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
           })}
           endContent={<Button size="sm" variant="ghost" label={t('quiz.retry')} onClick={reload} />}
         />

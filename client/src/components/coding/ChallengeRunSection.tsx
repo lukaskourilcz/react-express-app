@@ -20,7 +20,7 @@ const ArrowGlyph = ({ size = 16 }: { size?: number }) => (
 );
 
 export function ChallengeRunSection() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const query = usePracticeSession(true);
   const advance = useAdvanceSession();
@@ -32,7 +32,7 @@ export function ChallengeRunSection() {
   const due = scheduled && Boolean(session.scheduledFor) && new Date(session.scheduledFor!).getTime() <= Date.now();
   const meta = runSummary(session, t);
   const reason = scheduled
-    ? t(due ? 'today.runDue' : 'today.runPlanned', { when: formatWhen(session.scheduledFor ?? '', lang) })
+    ? t(due ? 'today.runDue' : 'today.runPlanned', { when: formatWhen(session.scheduledFor ?? '') })
     : t('today.runActive', { done: Math.min(session.position, session.queue.length), total: session.queue.length });
   const actionLabel = scheduled ? t('today.runStart') : t('coding.run.continue');
   const body = (

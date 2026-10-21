@@ -27,7 +27,7 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useT } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { CrownBadge } from './ui/Crown';
 import { CountryFlag, countryOptions } from './ui/CountryFlag';
@@ -105,7 +105,6 @@ function HandleCard({
   onEditSharkname?: () => void;
 }) {
   const t = useT();
-  const { lang } = useLanguage();
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
 
@@ -121,9 +120,9 @@ function HandleCard({
     catch (err) { setError(friendlyError(err)); }
   };
 
-  // 249 codes named and sorted in the reader's language. Memoised because that
-  // is 249 Intl lookups and a collated sort.
-  const countries = useMemo(() => countryOptions(lang), [lang]);
+  // 249 codes named and sorted in English. Memoised because that is 249 Intl
+  // lookups and a collated sort.
+  const countries = useMemo(() => countryOptions(), []);
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
@@ -148,7 +147,7 @@ function HandleCard({
           <div className="fr-row fr-row--country">
             <label className="fr-label" htmlFor={`${inputId}-country`}>{t('friends.countryLabel')}</label>
             <span className="fr-country">
-              <CountryFlag code={state.country} locale={lang} size={20} />
+              <CountryFlag code={state.country} size={20} />
               <select
                 id={`${inputId}-country`}
                 className="fr-select"
@@ -323,7 +322,6 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { lang } = useLanguage();
   const drop = async (handle: string) => {
     setBusy(handle); setError(null);
     try { await removeFriend(handle); onChanged(); }
@@ -349,7 +347,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                     {friend.displayName !== friend.handle && <span className="fr-handle">{friend.handle}</span>}
                   </span>
                   <span className="fr-friend__marks">
-                    <CountryFlag code={friend.country} locale={lang} size={16} />
+                    <CountryFlag code={friend.country} size={16} />
                     {/* Owned and worn. It says nothing about anybody's learning
                         and it does not move this row: the order is by correct
                         answers, then accuracy. */}

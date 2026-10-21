@@ -179,7 +179,7 @@ type SuccessState =
   | { kind: 'error'; message: string };
 
 export function PremiumSuccessPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const sessionId = params.get('session_id') ?? '';
@@ -253,7 +253,7 @@ export function PremiumSuccessPage() {
               <span>{t('billing.success.checkingStatus')}</span>
             </>
           )}
-          {view.kind === 'done' && <strong>{t('billing.success.doneStatus', { plan: planText(view.plan, t, lang) })}</strong>}
+          {view.kind === 'done' && <strong>{t('billing.success.doneStatus', { plan: planText(view.plan, t) })}</strong>}
           {view.kind === 'pending' && (
             // After the last automatic check nothing checks again until the
             // button is pressed, so the line stops promising that it will.
@@ -316,7 +316,7 @@ type CancelStep =
   | { kind: 'done'; receipt: CancelReceipt };
 
 export function PremiumCancelPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const [params] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -426,8 +426,8 @@ export function PremiumCancelPage() {
   };
 
   const startAgain = () => { setError(null); setStep({ kind: 'form' }); };
-  const dateTime = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso));
-  const date = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long' }).format(new Date(iso));
+  const dateTime = (iso: string) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso));
+  const date = (iso: string) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'long' }).format(new Date(iso));
   const effect = withdraw
     ? t('billing.cancel.confirmWithdrawBody', { email: email.trim() })
     : t('billing.cancel.confirmBody', { email: email.trim() });

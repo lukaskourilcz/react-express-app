@@ -32,7 +32,7 @@ type Status = 'idle' | 'working' | 'shared' | 'copied' | 'saved' | 'failed';
 const SOURCE: Record<ResultShareActionsProps['kind'], ShareSource> = { challenge_result: 'challenge', learn_topic_result: 'learn_topic' };
 
 export default function ResultShareActions({ kind, label, headline, detail, text, path, centered = false }: ResultShareActionsProps) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<Status>('idle');
   const statusId = useId();
 
@@ -43,7 +43,7 @@ export default function ResultShareActions({ kind, label, headline, detail, text
       label,
       headline,
       detail,
-      date: new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long' }).format(new Date()),
+      date: new Intl.DateTimeFormat('en-GB', { dateStyle: 'long' }).format(new Date()),
       accent,
       fileSuffix: kind === 'challenge_result' ? 'challenge' : 'learning-path',
     });

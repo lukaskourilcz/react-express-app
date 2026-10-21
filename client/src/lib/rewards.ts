@@ -198,9 +198,9 @@ export function useOrderMutation() {
 
 /** Money, in the currency the server priced it in. Never rounded into a
  * different currency, and never shown at all when nothing was configured. */
-export function formatMoney(minor: number, currency: string, locale: string): string {
+export function formatMoney(minor: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(locale === 'cs' ? 'cs-CZ' : 'en-GB', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency,
     }).format(minor / 100);
