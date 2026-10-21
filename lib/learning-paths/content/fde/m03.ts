@@ -36,8 +36,12 @@ import type { ModuleSource } from '../../types';
  * and non-ASCII input when this module was written.
  *
  * `__world` hands the learner a `ctx` and keeps the probes (`reads`, `writes`,
- * `claims`, `audit`, `compared`) on an object the learner's code never sees,
- * so a submission cannot fake the evidence the grade reads. */
+ * `claims`, `audit`) on an object the learner's code never sees, so a
+ * submission cannot fake the evidence the grade reads. Two options change
+ * what `ctx.safeEqual` answers, so the grade can tell a comparison that goes
+ * through it from one that only calls it: `safeEqual: 'never'` makes it refuse
+ * every pair, and `acceptPair: [a, b]` makes it accept that one pair (in
+ * either order) although the two strings differ. */
 const WEBHOOK_WORLD = `
 var __K = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -182,7 +186,7 @@ var __world = function (options) {
   var o = options || {};
   var tickets = __TICKETS.map(__clone);
   var claimed = {};
-  var world = { reads: [], writes: [], claims: [], audit: [], compared: 0, ctx: null };
+  var world = { reads: [], writes: [], claims: [], audit: [], ctx: null };
   world.ctx = {
     now: __NOW,
     getConnection: function (id) {
@@ -196,12 +200,13 @@ var __world = function (options) {
     },
     sign: function (secret, content) { return __hmacSha256(String(secret), String(content)); },
     safeEqual: function (left, right) {
-      world.compared++;
       var a = String(left);
       var b = String(right);
       var diff = a.length ^ b.length;
       var length = Math.max(a.length, b.length);
       for (var i = 0; i < length; i++) diff |= (a.charCodeAt(i) | 0) ^ (b.charCodeAt(i) | 0);
+      if (o.safeEqual === 'never') return false;
+      if (o.acceptPair && ((a === o.acceptPair[0] && b === o.acceptPair[1]) || (a === o.acceptPair[1] && b === o.acceptPair[0]))) return true;
       return diff === 0;
     },
     claim: function (key) {
@@ -942,16 +947,16 @@ export const FDE_M03: ModuleSource = {
       verification: 'machine_verified',
       title: 'Tenant-scoped webhook receiver',
       summary:
-        'Repair a TypeScript receiver that trusts the payload’s tenant, compares signatures loosely, ignores the grant and never asks the replay store. Graded on behaviour, signature, replay, tenant isolation and permission freshness.',
+        'Repair a TypeScript receiver that trusts the payload’s tenant, compares the signature header with ===, skips the timestamp, grant and payload checks, never asks the replay store and writes no audit entry. Graded on behaviour, signature, replay, tenant isolation and permission freshness.',
       competencies: ['boundaries'],
       estimatedMinutes: 50,
       code: {
         language: 'typescript',
         prompt:
-          'Dunfold Freight and Kestrel Foods each connected their ticketing system to Marlbrook. When a ticket changes status, the provider POSTs a delivery to `/hooks/:connectionId`. Repair `receiveWebhook(delivery, ctx)`, the function every delivery passes through. It returns `{ ok: true, ticketId, status }` when it applied the update and `{ ok: false, reason }` when it refused.\n\n`delivery.connectionId` comes from the URL path. `delivery.headers` holds lowercase header names: `webhook-id`, `webhook-timestamp` (whole seconds since the Unix epoch, as a string) and `webhook-signature` (one or more space-separated entries such as `v1,<base64>`). `delivery.body` is the raw body string exactly as it arrived.\n\n`ctx` is the trusted server side: `now` (an ISO instant), `getConnection(id)` (a `Connection` or `null`), `sign(secret, content)` (HMAC-SHA256, base64), `safeEqual(a, b)` (a constant-time string comparison), `claim(key)` (the replay store: `true` the first time you claim a key, `false` after), `findTicket(tenantId, ticketId)` (a tenant-scoped read that returns the ticket or `null`), `updateStatus(tenantId, ticketId, status)` and `audit(entry)`.\n\nThe starter almost works. It reads the tenant from the payload, compares the whole signature header with `===`, ignores the grant and never asks the replay store. The scratch pad shows what that costs. Repair it so it checks, in this order:\n\n1. **Connection.** When `ctx.getConnection(delivery.connectionId)` returns `null`, refuse `unknown_connection`.\n2. **Signature.** When any of the three headers is missing or empty, refuse `bad_signature`. Otherwise compute `\'v1,\' + ctx.sign(connection.secret, id + \'.\' + timestamp + \'.\' + body)` and compare it with each space-separated entry of `webhook-signature` through `ctx.safeEqual`. When no entry matches, refuse `bad_signature`.\n3. **Timestamp.** The timestamp must be ASCII digits only and lie within 300 seconds of `ctx.now`, in either direction; exactly 300 seconds passes. Otherwise refuse `stale_timestamp`.\n4. **Grant.** The connection’s grant is revoked when `revokedAt` is set and falls at or before `ctx.now`: refuse `grant_revoked`. It is expired when `expiresAt` falls at or before `ctx.now`: refuse `grant_expired`. When both hold, report `grant_revoked`.\n5. **Payload.** Parse the body as JSON. It must be an object with `type` equal to `ticket.status_changed`, a string `ticketId`, a string `tenantId`, and a `status` of `open`, `pending` or `solved`. Anything else, including a body that does not parse, is `bad_payload`.\n6. **Tenant.** The tenant is `connection.tenantId`. When the payload’s `tenantId` names another tenant, refuse `tenant_mismatch` before you read any ticket.\n7. **Ticket.** When `ctx.findTicket(connection.tenantId, ticketId)` returns `null`, refuse `unknown_ticket`.\n8. **Replay.** Claim the key `connectionId + \':\' + webhookId`. When `ctx.claim` returns `false`, refuse `replayed`. Claim only here, after every other check passed, so a refused delivery never uses up its id.\n9. **Write.** Call `ctx.updateStatus(connection.tenantId, ticketId, status)` once and return `{ ok: true, ticketId, status }`.\n\nEvery delivery, accepted or refused, writes exactly one audit entry through `ctx.audit`: `{ webhookId, connectionId, tenantId, decision, reason }`. `webhookId` is the header value, or `null` when it is missing or empty. `tenantId` is the connection’s tenant, or `null` for an unknown connection. `decision` is `accept` or `refuse`, and `reason` is the refusal reason or `accepted`.\n\nDomain: a body of at most 64 KiB, header values of at most 200 characters, and at most 10 signature entries. The `ctx` functions never throw. Do not mutate `delivery`. Target: O(n) time, where n is the body length plus the length of the signature header.\n\nThe deliveries, secrets, tickets and grants are fixtures written for this exercise. No ticketing provider, network or clock sits behind them: `ctx.now` is the only time there is, and `ctx.sign` is a plain-JavaScript HMAC-SHA256 because the sandbox has no crypto module.',
+          'Dunfold Freight and Kestrel Foods each connected their ticketing system to Marlbrook. When a ticket changes status, the provider POSTs a delivery to `/hooks/:connectionId`. Repair `receiveWebhook(delivery, ctx)`, the function every delivery passes through. It returns `{ ok: true, ticketId, status }` when it applied the update and `{ ok: false, reason }` when it refused.\n\n`delivery.connectionId` comes from the URL path. `delivery.headers` holds lowercase header names: `webhook-id`, `webhook-timestamp` (whole seconds since the Unix epoch, as a string) and `webhook-signature` (one or more space-separated entries such as `v1,<base64>`). `delivery.body` is the raw body string exactly as it arrived.\n\n`ctx` is the trusted server side: `now` (an ISO instant), `getConnection(id)` (a `Connection` or `null`), `sign(secret, content)` (HMAC-SHA256, base64), `safeEqual(a, b)` (a constant-time string comparison), `claim(key)` (the replay store: `true` the first time you claim a key, `false` after), `findTicket(tenantId, ticketId)` (a tenant-scoped read that returns the ticket or `null`), `updateStatus(tenantId, ticketId, status)` and `audit(entry)`.\n\nThe starter trusts the payload’s tenant, compares the whole signature header with `===`, skips the timestamp, grant and payload checks, throws on a body that does not parse, never asks the replay store and writes no audit entry. The scratch pad shows what the first of those costs. Repair it so it checks, in this order:\n\n1. **Connection.** When `ctx.getConnection(delivery.connectionId)` returns `null`, refuse `unknown_connection`.\n2. **Signature.** When any of the three headers is missing or empty, refuse `bad_signature`. Otherwise compute `\'v1,\' + ctx.sign(connection.secret, id + \'.\' + timestamp + \'.\' + body)` and compare it with each space-separated entry of `webhook-signature` through `ctx.safeEqual`. When no entry matches, refuse `bad_signature`.\n3. **Timestamp.** The timestamp must be ASCII digits only and lie within 300 seconds of `ctx.now`, in either direction; exactly 300 seconds passes. Otherwise refuse `stale_timestamp`.\n4. **Grant.** The connection’s grant is revoked when `revokedAt` is set and falls at or before `ctx.now`: refuse `grant_revoked`. It is expired when `expiresAt` falls at or before `ctx.now`: refuse `grant_expired`. When both hold, report `grant_revoked`. Fail closed on a date that does not parse: an unparseable `expiresAt` has expired, and a `revokedAt` that is set but does not parse counts as revoked.\n5. **Payload.** Parse the body as JSON. It must be an object with `type` equal to `ticket.status_changed`, a string `ticketId`, a string `tenantId`, and a `status` of `open`, `pending` or `solved`. Anything else, including a body that does not parse, is `bad_payload`.\n6. **Tenant.** The tenant is `connection.tenantId`. When the payload’s `tenantId` names another tenant, refuse `tenant_mismatch` before you read any ticket.\n7. **Ticket.** When `ctx.findTicket(connection.tenantId, ticketId)` returns `null`, refuse `unknown_ticket`.\n8. **Replay.** Claim the key `connectionId + \':\' + webhookId`. When `ctx.claim` returns `false`, refuse `replayed`. Claim only here, after every other check passed, so a refused delivery never uses up its id.\n9. **Write.** Call `ctx.updateStatus(connection.tenantId, ticketId, status)` once and return `{ ok: true, ticketId, status }`.\n\nEvery delivery, accepted or refused, writes exactly one audit entry through `ctx.audit`: `{ webhookId, connectionId, tenantId, decision, reason }`. `webhookId` is the header value, or `null` when it is missing or empty. `tenantId` is the connection’s tenant, or `null` for an unknown connection. `decision` is `accept` or `refuse`, and `reason` is the refusal reason or `accepted`.\n\nDomain: a body of at most 64 KiB, header values of at most 200 characters, and at most 10 signature entries. The `ctx` functions never throw. Do not mutate `delivery`. Target: O(n) time, where n is the body length plus the length of the signature header.\n\nThe deliveries, secrets, tickets and grants are fixtures written for this exercise. No ticketing provider, network or clock sits behind them: `ctx.now` is the only time there is, and `ctx.sign` is a plain-JavaScript HMAC-SHA256 because the sandbox has no crypto module.',
         contract: [
           'The tenant is `connection.tenantId`. The payload’s `tenantId` may only agree with it; it never chooses which tenant you read or write.',
-          'Compare signatures through `ctx.safeEqual` only. A `===` comparison stops at the first differing character, and the grade checks that the comparison went through `ctx.safeEqual`.',
+          'Compare signatures through `ctx.safeEqual` only. A `===` comparison stops at the first differing character. The grade checks that your accept decision is the answer `ctx.safeEqual` gives for the header entry and the expected signature, so calling it beside a `===` comparison does not pass.',
           'Verify `delivery.body` as it arrived. Do not parse and re-serialize it before you sign.',
           'Call `ctx.claim` once, after every other check passed, and `ctx.updateStatus` at most once, after a successful claim.',
           'Keep the supplied type names and the `receiveWebhook` signature. No imports, no network and no clock: the harness supplies `ctx`. Do not declare names that start with `__`.',
@@ -1079,7 +1084,7 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
 
   /* timestamp: digits only, within 300 seconds of ctx.now either way */
 
-  /* grant: revoked at or before now, then expired at or before now */
+  /* grant: revoked at or before now, then expired at or before now; an unparseable date fails closed */
 
   /* payload: JSON.parse inside try/catch, then type, ticketId, tenantId and status */
 
@@ -1100,7 +1105,7 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
           'Look up the connection and refuse `unknown_connection` when there is none.',
           'Refuse `bad_signature` when a header is missing, then compare `\'v1,\' + ctx.sign(...)` with each signature entry through `ctx.safeEqual`.',
           'Refuse `stale_timestamp` unless the timestamp is digits only and within 300 seconds of `ctx.now`.',
-          'Refuse `grant_revoked`, then `grant_expired`, comparing instants with `Date.parse`.',
+          'Refuse `grant_revoked`, then `grant_expired`, comparing instants with `Date.parse` and treating a date that does not parse as already passed.',
           'Parse and validate the payload, refuse `tenant_mismatch` when it names another tenant, and refuse `unknown_ticket` when the scoped lookup misses.',
           'Claim `connectionId:webhookId`, refuse `replayed` when the claim fails, then write once, audit the acceptance and return.',
         ],
@@ -1119,7 +1124,7 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
             critical: true,
             weight: 3,
             detail:
-              'A delivery the connection’s secret did not sign got through, or a genuine one was refused. Check that a missing header, a wrong secret, a body edited after signing and an entry without the `v1,` prefix all refuse with `bad_signature`, that a valid entry anywhere in the space-separated list passes, and that the comparison goes through `ctx.safeEqual` rather than `===`.',
+              'A delivery the connection’s secret did not sign got through, or a genuine one was refused. Check that a missing header, a wrong secret, a body edited after signing and an entry without the `v1,` prefix all refuse with `bad_signature`, that a valid entry anywhere in the space-separated list passes, and that the accept decision is the answer `ctx.safeEqual` gives for the entry and the expected signature rather than the result of `===`.',
           },
           {
             id: 'replay',
@@ -1143,7 +1148,7 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
             critical: true,
             weight: 2,
             detail:
-              'A grant check ran too late, too loosely, or not at all. A grant whose `expiresAt` is at or before `ctx.now` gives `grant_expired`, a grant revoked at or before `ctx.now` gives `grant_revoked` even when it has also expired, a revocation dated after `ctx.now` does not refuse, and none of those refusals reads a ticket or claims an id.',
+              'A grant check ran too late, too loosely, or not at all. A grant whose `expiresAt` is at or before `ctx.now` gives `grant_expired`, a grant revoked at or before `ctx.now` gives `grant_revoked` even when it has also expired, a revocation dated after `ctx.now` does not refuse, a date that does not parse fails closed, and none of those refusals reads a ticket or claims an id.',
           },
         ],
         tests: [

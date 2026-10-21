@@ -4,17 +4,22 @@
  * The visible assertions run one genuine delivery and one example of each
  * refusal. The hidden ones reach what those cannot show: a body edited after
  * signing, a valid signature second in a rotation list, a signature made with
- * the other tenant's secret, a comparison that bypasses `ctx.safeEqual`, the
- * same webhook id on two connections, a forged delivery that tries to use up a
- * genuine id, the tolerance edges in both directions, a ticket id that belongs
- * to the other tenant, and the grant states at their exact boundaries.
+ * the other tenant's secret, a comparison whose result is not the answer
+ * `ctx.safeEqual` gave (two worlds: one where it accepts a pair that `===`
+ * refuses, one where it refuses the genuine pair), the same webhook id on two
+ * connections, a forged delivery that tries to use up a genuine id, the
+ * tolerance edges in both directions, a ticket id that belongs to the other
+ * tenant, the grant states at their exact boundaries, and grant dates that do
+ * not parse (they fail closed).
  *
  * All four security criteria are critical, so none of them can be averaged
  * away by a correct record shape. `scripts/test-learning-paths.ts` also
  * re-runs this reference with one check removed at a time (no signature check,
- * `===` instead of `ctx.safeEqual`, no replay store, an unscoped replay key, no
- * timestamp tolerance, the tenant taken from the payload, an expired grant
- * accepted) and requires each to fail its named criterion. */
+ * `===` instead of `ctx.safeEqual`, `===` beside one unused `ctx.safeEqual`
+ * call, no replay store, an unscoped replay key, no timestamp tolerance, the
+ * tenant taken from the payload, an expired grant accepted, an unparseable
+ * expiry read as never expiring) and requires each to fail its named
+ * criterion. */
 
 import type { PathCodeSolution } from '../types';
 
@@ -120,9 +125,10 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
   const nowMs = Date.parse(ctx.now);
   if (!/^[0-9]+$/.test(timestamp) || Math.abs(nowMs / 1000 - Number(timestamp)) > TOLERANCE_SECONDS) return refuse('stale_timestamp');
 
+  // Fail closed: a date that does not parse counts as already passed.
   const grant = connection.grant;
-  if (grant.revokedAt !== null && Date.parse(grant.revokedAt) <= nowMs) return refuse('grant_revoked');
-  if (Date.parse(grant.expiresAt) <= nowMs) return refuse('grant_expired');
+  if (grant.revokedAt !== null && !(Date.parse(grant.revokedAt) > nowMs)) return refuse('grant_revoked');
+  if (!(Date.parse(grant.expiresAt) > nowMs)) return refuse('grant_expired');
 
   const event = parseEvent(delivery.body);
   if (!event) return refuse('bad_payload');
@@ -175,9 +181,15 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
         criterion: 'signature',
       },
       {
-        call: '(function () { var w = __world(); var out = receiveWebhook(__deliver(), w.ctx); return { ok: out.ok, compared: w.compared > 0 }; })()',
-        expected: { ok: true, compared: true },
-        label: 'the signature comparison goes through ctx.safeEqual',
+        call: "(function () { var genuine = __deliver().headers['webhook-signature']; var w = __world({ acceptPair: ['v1,c2FmZUVxdWFsLW9yYWNsZQ==', genuine] }); var out = receiveWebhook(__deliver({ signature: 'v1,c2FmZUVxdWFsLW9yYWNsZQ==' }), w.ctx); return { out: out, writes: w.writes }; })()",
+        expected: { out: { ok: true, ticketId: 'TCK-1001', status: 'solved' }, writes: ['TEN-4021:TCK-1001:solved'] },
+        label: 'the accept decision is the answer ctx.safeEqual gives for the header entry and the expected signature',
+        criterion: 'signature',
+      },
+      {
+        call: "(function () { var w = __world({ safeEqual: 'never' }); var out = receiveWebhook(__deliver(), w.ctx); return { out: out, writes: w.writes, claims: w.claims }; })()",
+        expected: { out: { ok: false, reason: 'bad_signature' }, writes: [], claims: [] },
+        label: 'a genuine signature is refused when ctx.safeEqual says it does not match',
         criterion: 'signature',
       },
       {
@@ -304,6 +316,18 @@ const receiveWebhook = (delivery: Delivery, ctx: ReceiverContext): Outcome => {
         call: "(function () { var w = __world({ grant: { revokedAt: '2026-04-02T09:00:00Z' } }); return receiveWebhook(__deliver(), w.ctx); })()",
         expected: { ok: false, reason: 'grant_revoked' },
         label: 'a revocation dated exactly now has taken effect',
+        edge: true,
+        criterion: 'permission-freshness',
+      },
+      {
+        call: "(function () { return [{ expiresAt: '' }, { expiresAt: 'next week' }, { revokedAt: 'yesterday' }, { revokedAt: '', expiresAt: 'soon' }].map(function (grant) { var w = __world({ grant: grant }); return [receiveWebhook(__deliver(), w.ctx).reason, w.reads.length, w.claims.length, w.writes.length]; }); })()",
+        expected: [
+          ['grant_expired', 0, 0, 0],
+          ['grant_expired', 0, 0, 0],
+          ['grant_revoked', 0, 0, 0],
+          ['grant_revoked', 0, 0, 0],
+        ],
+        label: 'a grant date that does not parse fails closed: expired, or revoked when revokedAt is set',
         edge: true,
         criterion: 'permission-freshness',
       },
