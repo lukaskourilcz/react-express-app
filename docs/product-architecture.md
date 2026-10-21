@@ -728,6 +728,25 @@ label in `leveling.ts` is a different concept with a similar name, and neither
 `CodingTrack` nor `RoadmapTopic` gains a member. A path *references* those
 registries; it never joins them.
 
+### Learn sections and the plan
+
+`shared/learn-sections.ts` groups the Learn topics and paths into three
+sections: Web Developer, Software Engineer and Forward Deployed Engineer
+(`LEARN_SECTION_IDS`, `LEARN_SECTIONS`; the membership matrix of
+[the Learn sections plan](learn-sections-fde-flagship-plan.md), section 5.1).
+A shared topic keeps one id, one set of levels and one progress record in
+every section that lists it. Web Developer comes with every base track,
+Forward Deployed Engineer with the `fde` specialization, and Software Engineer
+only from an explicit opt-in saved as `sections` on the learner profile
+(`PUT ?op=learning-preference` accepts it; a save without it keeps the saved
+list). `planTopics` appends each joined opt-in section's topics, in section
+order, after the track stages and bridges, then the prerequisites those topics
+need, so `403 not_in_plan` and Today follow without a handler change. A
+profile without `sections` plans what it planned before. A section never
+changes a tier. `validateProgressionGraph` fails when a section lists a topic
+the catalogue does not hold or has retired, when a live topic sits in no
+section, or when a section shelves an unknown path.
+
 `shared/learning-path-api.ts` is the wire contract. Authored content, answer
 keys, hidden assertions and reference solutions live under
 `lib/learning-paths/` and reach the browser only as projections that strip

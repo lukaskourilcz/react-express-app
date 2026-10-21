@@ -356,6 +356,12 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
         && (!Array.isArray(body.skillPaths) || !body.skillPaths.every(isSkillPathId))) {
       return jsonError(res, 400, 'bad_request', 'skillPaths must be known skill paths');
     }
+    const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
+    if (body.sections !== undefined
+        && (!Array.isArray(body.sections) || body.sections.length > LEARN_SECTION_IDS.length
+          || !body.sections.every(isLearnSectionId))) {
+      return jsonError(res, 400, 'bad_request', 'sections must be known Learn sections');
+    }
 
     // Read what the account already holds so a partial save — the Profile's
     // track toggle, which sends no profile answers — keeps the rest.
@@ -374,6 +380,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
       baseTrack: body.baseTrack,
       specialization,
       skillPaths: body.skillPaths ?? existing?.skillPaths ?? [],
+      ...((body.sections ?? existing?.sections) ? { sections: Array.from(new Set(body.sections ?? existing?.sections)) } : {}),
       goals: body.goals ?? existing?.goals ?? [],
       experience: body.experience ?? existing?.experience ?? ('' as never),
       studyTime: body.studyTime ?? existing?.studyTime ?? ('' as never),

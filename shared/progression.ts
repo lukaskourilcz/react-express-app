@@ -20,7 +20,9 @@
  *
  * Keep this module pure: no storage, no network, no clock. */
 
-import type { BaseTrack, LearnerProfile, SkillPathId } from './learning-paths';
+import { isLearningPathId, type BaseTrack, type LearnerProfile, type SkillPathId } from './learning-paths';
+import { LEARN_SECTIONS, OPT_IN_SECTIONS, type LearnSection } from './learn-sections';
+import { isRetiredTopic } from './retired-content';
 import { SUBJECT_SCOPE_CATALOG } from './subject-catalog';
 
 /* ── verified progress ─────────────────────────────────────────────────── */
@@ -459,8 +461,17 @@ export const SKILL_PATH_BRIDGE_TOPICS: Record<SkillPathId, readonly string[]> = 
 };
 
 /** Ordered topics of a learner's plan: the base track's stages, then whatever
- * the chosen specialization and skill paths add, in first-seen order and
- * without repeats. */
+ * the chosen specialization and skill paths add, then the topics of each
+ * opt-in Learn section the learner joined (in section order), then every
+ * prerequisite those section topics need that the plan does not hold yet.
+ * First-seen order, without repeats.
+ *
+ * Only opt-in sections append here. Web Developer is the base track's stages
+ * and Forward Deployed Engineer is the specialization's bridge, so a profile
+ * without `sections` plans exactly what it planned before sections existed.
+ * The prerequisite closure is what stops a Frontend learner who joins
+ * Software Engineer from meeting DevOps & Cloud behind a Node.js their plan
+ * never offered. No prerequisite changes. */
 export function planTopics(profile: LearnerProfile | null): string[] {
   if (!profile) return [];
   const ordered: string[] = [];
@@ -473,6 +484,24 @@ export function planTopics(profile: LearnerProfile | null): string[] {
   for (const stage of WEBDEV_PLAN_STAGES[profile.baseTrack] ?? []) for (const topic of stage) push(topic);
   if (profile.specialization) for (const topic of SPECIALIZATION_BRIDGE_TOPICS[profile.specialization] ?? []) push(topic);
   for (const path of profile.skillPaths) for (const topic of SKILL_PATH_BRIDGE_TOPICS[path] ?? []) push(topic);
+  const appended: string[] = [];
+  for (const section of OPT_IN_SECTIONS) {
+    if (!profile.sections?.includes(section.id)) continue;
+    for (const topic of section.topics) {
+      appended.push(topic);
+      push(topic);
+    }
+  }
+  // Breadth-first over the prerequisites of everything a section appended,
+  // so each prerequisite lands after the topics that asked for it.
+  const queue = [...appended];
+  while (queue.length > 0) {
+    for (const prereq of TOPIC_PREREQS[queue.shift()!] ?? []) {
+      if (seen.has(prereq)) continue;
+      push(prereq);
+      queue.push(prereq);
+    }
+  }
   return ordered;
 }
 
@@ -534,18 +563,24 @@ export function nextEligibleStep(
 /* ── graph validation ──────────────────────────────────────────────────── */
 
 export interface GraphProblem {
-  kind: 'missing' | 'cycle' | 'unreachable' | 'unknown-plan-topic';
+  kind: 'missing' | 'cycle' | 'unreachable' | 'unknown-plan-topic'
+    | 'unknown-section-topic' | 'unsectioned-topic' | 'unknown-section-path';
   topic: string;
   detail?: string;
 }
 
 /**
  * Prove the graph is usable: every topic declares prerequisites, no cycle
- * exists, every topic traces back to a starter, and every plan names topics
- * the subject actually owns. Run from the launch-contract test, so a curriculum
+ * exists, every topic traces back to a starter, every plan names topics the
+ * subject actually owns, and the Learn sections cover the live catalogue
+ * exactly (`sections` is a parameter only so the contract can feed it a
+ * broken registry). Run from the launch-contract test, so a curriculum
  * edit that strands a learner fails before it ships rather than after.
  */
-export function validateProgressionGraph(allTopics: readonly string[]): GraphProblem[] {
+export function validateProgressionGraph(
+  allTopics: readonly string[],
+  sections: readonly LearnSection[] = LEARN_SECTIONS,
+): GraphProblem[] {
   const problems: GraphProblem[] = [];
   const known = new Set(allTopics);
 
@@ -622,6 +657,25 @@ export function validateProgressionGraph(allTopics: readonly string[]): GraphPro
     for (const topic of topics) {
       if (!webdevTopics.has(topic)) problems.push({ kind: 'unknown-plan-topic', topic, detail: path });
     }
+  }
+
+  // Learn sections (shared/learn-sections.ts): every listed topic is a live
+  // catalogue topic, every live catalogue topic is listed somewhere, and every
+  // path a section shelves is a published learning path.
+  const sectioned = new Set<string>();
+  for (const section of sections) {
+    for (const topic of section.topics) {
+      sectioned.add(topic);
+      if (!webdevTopics.has(topic) || isRetiredTopic(topic)) {
+        problems.push({ kind: 'unknown-section-topic', topic, detail: section.id });
+      }
+    }
+    for (const path of section.paths) {
+      if (!isLearningPathId(path)) problems.push({ kind: 'unknown-section-path', topic: path, detail: section.id });
+    }
+  }
+  for (const topic of webdevTopics) {
+    if (!isRetiredTopic(topic) && !sectioned.has(topic)) problems.push({ kind: 'unsectioned-topic', topic });
   }
 
   return problems;

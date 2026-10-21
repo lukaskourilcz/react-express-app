@@ -147,12 +147,15 @@ import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
   everyPlanHasAFirstStep,
   stepAlreadyPassed,
+  SPECIALIZATION_BRIDGE_TOPICS,
+  TOPIC_PREREQS,
   WEBDEV_PLAN_STAGES,
   isLevelUnlocked,
   isTopicInPlan,
   planTopics,
   validateProgressionGraph,
 } from '../shared/progression';
+import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
 import {
   isLearnerProfileComplete,
   missingProfileFields,
@@ -4773,6 +4776,90 @@ async function main() {
       'a part test never passed still takes the ordinary check');
     assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', part: 1, from: 1, to: 2 }), false,
       'passing the levels a part test spans is not passing the test');
+  }
+
+  // ── Learn sections (#487) ────────────────────────────────────────────────
+  // The membership matrix the owner approved (plan section 5.1), opt-in
+  // sections append to the plan with their prerequisites, and a profile without
+  // `sections` plans exactly what it planned before.
+  {
+    const section = (id: string) => LEARN_SECTIONS.find((one) => one.id === id)!;
+    assert.deepEqual([...LEARN_SECTION_IDS], ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
+    assert.deepEqual(section('web-developer').topics,
+      ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general']);
+    assert.deepEqual(section('software-engineer').topics,
+      ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
+    assert.deepEqual(section('forward-deployed-engineer').topics,
+      ['ai', 'nodejs', 'databases', 'general', 'devops', 'security']);
+    assert.deepEqual(LEARN_SECTIONS.map((one) => [one.id, one.membership, [...one.paths]]), [
+      ['web-developer', 'base-track', []],
+      ['software-engineer', 'opt-in', []],
+      ['forward-deployed-engineer', 'specialization', ['fde']],
+    ]);
+    assert.deepEqual(OPT_IN_SECTIONS, LEARN_SECTIONS.filter((one) => one.membership === 'opt-in'),
+      'planTopics appends exactly the opt-in sections');
+    // Shared topics: one id, listed in several sections.
+    assert.deepEqual(sectionsForTopic('databases'), ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
+    assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);
+    assert.deepEqual(sectionsForTopic('ai'), ['forward-deployed-engineer']);
+    assert.ok(SPECIALIZATION_BRIDGE_TOPICS.fde.includes('ai'), 'the FDE bridge brings AI & LLMs into the plan');
+
+    const frontend = {
+      schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null, skillPaths: [],
+      goals: ['level-up' as const], experience: 'some' as const, studyTime: '15-30' as const, updatedAt: null,
+    };
+    const joined = { ...frontend, sections: ['software-engineer' as const] };
+    const base = planTopics(frontend);
+    const withSection = planTopics(joined);
+    assert.deepEqual(withSection.slice(0, base.length), base, 'a joined section appends after the track stages');
+    // The acceptance order: the section's topics in section order (those the
+    // track already plans keep their stage position), then Node.js, the
+    // prerequisite of System Design, DevOps & Cloud and Databases.
+    assert.deepEqual(withSection.slice(base.length), ['algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
+    for (const topic of ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
+      assert.ok(withSection.includes(topic), `a Frontend learner in Software Engineer plans ${topic}`);
+    }
+    for (const topic of withSection) {
+      for (const prereq of TOPIC_PREREQS[topic] ?? []) {
+        assert.ok(withSection.includes(prereq), `${topic} is planned, so its prerequisite ${prereq} must be too`);
+      }
+    }
+    // The server's plan check (`stepRefusal` → 403 not_in_plan) reads the same rule.
+    assert.equal(isTopicInPlan(joined, 'webdev', 'system-design'), true);
+    assert.equal(isTopicInPlan(frontend, 'webdev', 'system-design'), false);
+    assert.equal(isTopicInPlan(joined, 'webdev', 'cool-stuff'), false);
+
+    // Without `sections`, and with only implied sections, nothing changes.
+    for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
+      for (const specialization of [null, 'fde' as const]) {
+        const plain = { ...frontend, baseTrack: track, specialization };
+        assert.deepEqual(planTopics({ ...plain, sections: [] }), planTopics(plain));
+        assert.deepEqual(planTopics({ ...plain, sections: ['web-developer', 'forward-deployed-engineer'] }), planTopics(plain),
+          'Web Developer and FDE follow the track and the specialization, not the saved list');
+      }
+    }
+    assert.deepEqual(learnerSections(frontend), ['web-developer']);
+    assert.deepEqual(learnerSections({ ...frontend, specialization: 'fde' }), ['web-developer', 'forward-deployed-engineer']);
+    assert.deepEqual(learnerSections(joined), ['web-developer', 'software-engineer']);
+    assert.deepEqual(learnerSections(null), []);
+
+    // The profile parser keeps known sections, drops the rest, and leaves a
+    // missing list missing.
+    assert.deepEqual(parseLearnerProfile({ ...frontend, sections: ['software-engineer', 'nope', 'software-engineer'] })?.sections, ['software-engineer']);
+    assert.equal(parseLearnerProfile(frontend)?.sections, undefined);
+    assert.equal(parseLearnerProfile({ ...frontend, sections: 'software-engineer' })?.sections, undefined);
+
+    // The graph validator catches a broken registry.
+    const broken = LEARN_SECTIONS.map((one) => one.id === 'software-engineer'
+      ? { ...one, topics: [...one.topics, 'quantum'], paths: ['nope' as never] }
+      : one.id === 'forward-deployed-engineer' ? { ...one, topics: one.topics.filter((topic) => topic !== 'ai') } : one);
+    const kinds = validateProgressionGraph(ROADMAP_TOPICS, broken).map((problem) => `${problem.kind}:${problem.topic}`).sort();
+    assert.deepEqual(kinds, ['unknown-section-path:nope', 'unknown-section-topic:quantum', 'unsectioned-topic:ai']);
+    assert.ok(
+      validateProgressionGraph(ROADMAP_TOPICS, [...LEARN_SECTIONS, { id: 'web-developer', topics: ['abbreviations'], paths: [], membership: 'base-track' }])
+        .some((problem) => problem.kind === 'unknown-section-topic' && problem.topic === 'abbreviations'),
+      'a retired topic may not sit in a section',
+    );
   }
 
   // No plan may be empty, and every plan topic must belong to devShark.
