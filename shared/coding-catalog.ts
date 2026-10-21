@@ -153,6 +153,10 @@ export interface CallTest {
   label?: string;
   edge?: boolean;
   async?: boolean;
+  /** What the Results row prints in place of `call`, when `call` carries its
+   * fixtures or probe source inline (the DSA Foundations checks). Display
+   * only: every runner executes `call`. */
+  shown?: string;
 }
 
 /** One TypeScript type-level assertion, appended as a single line. A line marked

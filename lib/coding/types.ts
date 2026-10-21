@@ -18,6 +18,9 @@ export interface SourceCallTest {
   label?: string;
   edge?: boolean;
   async?: boolean;
+  /** A short form of `call` for the Results row, when `call` builds its own
+   * fixtures or probes inline (`CallTest.shown`). */
+  shown?: string;
   /** The critical criterion of the source path activity this check holds,
    * when it is not the default `core` (DSA Foundations, #493). Authoring
    * only: `mergeTask` does not copy it, so it never reaches the browser.
@@ -140,6 +143,7 @@ export function mergeTask(source: CodingTaskSource): CodingTask {
       ...(test.label ? { label: test.label } : {}),
       ...(test.edge ? { edge: true } : {}),
       ...(test.async ? { async: true } : {}),
+      ...(test.shown ? { shown: test.shown } : {}),
     }));
   }
   if (source.typeTests) {

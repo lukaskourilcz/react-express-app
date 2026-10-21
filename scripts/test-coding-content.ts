@@ -608,6 +608,13 @@ async function main() {
       if (!task) { fail(`${id}: a DSA Foundations id with no task`); continue; }
       if (task.track !== 'algorithms' || task.topic !== 'dsa') fail(`${id}: a DSA Foundations task is on the algorithms track with topic dsa`);
       if (complexityGuidance(task).targetTime === null) fail(`${id}: the prompt needs a Target: O(...) time sentence`);
+      // The Results row prints `shown ?? call`: no probe source, and no row
+      // longer than the catalogue's longest hand-written call (419).
+      for (const test of task.tests ?? []) {
+        const row = test.shown ?? test.call;
+        if (row.length > 420 || row.includes('__probe')) fail(`${id}: the Results row for "${test.label ?? row.slice(0, 40)}" prints ${row.length} characters of probe or fixture source; give the check a short \`shown\` (shownCall in dsa-probes.ts)`);
+        if (test.shown && test.shown.length >= test.call.length) fail(`${id}: a \`shown\` form is no shorter than the call it stands for`);
+      }
       const wrong = DSA_FOUNDATIONS_WRONG.filter((known) => known.id === id);
       if (wrong.length === 0) fail(`${id}: needs at least one known wrong answer`);
       const activity = dsa && DSA_SOURCE_ACTIVITY[id] ? activityIn(dsa, DSA_SOURCE_ACTIVITY[id])?.activity : undefined;

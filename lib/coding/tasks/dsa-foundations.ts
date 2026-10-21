@@ -32,6 +32,7 @@ import {
   QUERIES_40,
   RECORDS_64,
   searchVisits,
+  shownCall,
   withLinkedList,
   withListChecks,
   withTagged,
@@ -46,7 +47,7 @@ const TREE_NODES = 'A node is a plain object `{ value, left, right }`. `left` an
 const COMPARE_CONTRACT = 'The caller supplies `compare(a, b)`, which returns a negative number when `a` belongs before `b`, zero when the two are interchangeable, and a positive number when `a` belongs after `b`.';
 const SORT_DOMAIN = 'Every comparison between two elements goes through `compare`, and the checks count the calls. The input is an ordinary dense array of at most 128 elements. The comparator orders them consistently, returns finite Numbers and does not change elements. Keep every element reference and its multiplicity; do not clone items, change their fields, or add array properties.';
 
-export const DSA_FOUNDATIONS_TASKS: CodingTaskSource[] = [
+const AUTHORED: CodingTaskSource[] = [
   /* ── Level 1-2: Big O, growth and space (d01) ─────────────────────── */
   {
     id: 'alg-dsa-sum-of-evens',
@@ -1667,3 +1668,15 @@ console.log(mostFrequent(['a', 'b', 'a', 'c', 'a'], ['a', 'c', 'z']));
     ],
   },
 ];
+
+/** The tasks, each built visible check carrying the short form the Results
+ * row shows in its place (`shownCall`). */
+export const DSA_FOUNDATIONS_TASKS: CodingTaskSource[] = AUTHORED.map((task) => ({
+  ...task,
+  ...(task.tests ? {
+    tests: task.tests.map((test) => {
+      const shown = shownCall(test.call);
+      return shown === test.call ? test : { ...test, shown };
+    }),
+  } : {}),
+}));

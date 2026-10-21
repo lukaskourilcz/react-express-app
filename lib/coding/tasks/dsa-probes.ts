@@ -22,22 +22,25 @@
 
 /** `{ result, reads }`: what `run(view)` returned, and how many indexed reads
  * it made on `values` through the proxy `view`. */
+const COUNT_READS = `((values, run) => { let reads = 0; const view = new __probe.Proxy(values, { get(target, key) { if (__probe.isIndex(key)) reads += 1; return target[key]; } }); const result = run(view); return { result, reads }; })`;
 export const countReads = (values: string, run: string): string =>
-  `((values, run) => { let reads = 0; const view = new __probe.Proxy(values, { get(target, key) { if (__probe.isIndex(key)) reads += 1; return target[key]; } }); const result = run(view); return { result, reads }; })(${values}, ${run})`;
+  `${COUNT_READS}(${values}, ${run})`;
 
 /** `{ result, writes, same, values }`: what `run(view)` returned, how many
  * indexed assignments, definitions and deletions it made on `values`, whether
  * it returned `view` itself, and the array's entries afterwards. */
+const COUNT_WRITES = `((values, run) => { let writes = 0; const counted = key => { if (__probe.isIndex(key)) writes += 1; }; const view = new __probe.Proxy(values, { set(target, key, value) { counted(key); target[key] = value; return true; }, defineProperty(target, key, descriptor) { counted(key); __probe.defineProperty(target, key, descriptor); return true; }, deleteProperty(target, key) { counted(key); return __probe.deleteProperty(target, key); } }); const result = run(view); const after = []; for (let i = 0; i < values.length; i += 1) after[i] = values[i]; return { result, writes, same: result === view, values: after }; })`;
 export const countWrites = (values: string, run: string): string =>
-  `((values, run) => { let writes = 0; const counted = key => { if (__probe.isIndex(key)) writes += 1; }; const view = new __probe.Proxy(values, { set(target, key, value) { counted(key); target[key] = value; return true; }, defineProperty(target, key, descriptor) { counted(key); __probe.defineProperty(target, key, descriptor); return true; }, deleteProperty(target, key) { counted(key); return __probe.deleteProperty(target, key); } }); const result = run(view); const after = []; for (let i = 0; i < values.length; i += 1) after[i] = values[i]; return { result, writes, same: result === view, values: after }; })(${values}, ${run})`;
+  `${COUNT_WRITES}(${values}, ${run})`;
 
 /** `{ out, size, ops, buffers }`: `createQueue(newBuffer)` filled with 0 to
  * n - 1 and drained. `newBuffer` hands out a counted buffer: a proxy over an
  * array with `push`, `length` and index access only. Indexed reads,
  * assignments, definitions and deletions count one each, and so does a push;
  * `shift` and `splice` are absent, so a slide shows in the count. */
+const MEASURE_QUEUE = `((n) => { let ops = 0; let buffers = 0; const counted = key => { if (__probe.isIndex(key)) ops += 1; }; const newBuffer = () => { buffers += 1; return new __probe.Proxy([], { get(target, key) { if (__probe.isIndex(key)) { ops += 1; return target[key]; } if (key === 'length') return target.length; if (key === 'push') return value => { ops += 1; target[target.length] = value; return target.length; }; return undefined; }, set(target, key, value) { counted(key); target[key] = value; return true; }, defineProperty(target, key, descriptor) { counted(key); __probe.defineProperty(target, key, descriptor); return true; }, deleteProperty(target, key) { counted(key); return __probe.deleteProperty(target, key); } }); }; const queue = createQueue(newBuffer); for (let i = 0; i < n; i += 1) queue.enqueue(i); const out = []; for (let i = 0; i < n; i += 1) out[i] = queue.dequeue(); return { out, size: queue.size(), ops, buffers }; })`;
 export const measureQueue = (n: number): string =>
-  `((n) => { let ops = 0; let buffers = 0; const counted = key => { if (__probe.isIndex(key)) ops += 1; }; const newBuffer = () => { buffers += 1; return new __probe.Proxy([], { get(target, key) { if (__probe.isIndex(key)) { ops += 1; return target[key]; } if (key === 'length') return target.length; if (key === 'push') return value => { ops += 1; target[target.length] = value; return target.length; }; return undefined; }, set(target, key, value) { counted(key); target[key] = value; return true; }, defineProperty(target, key, descriptor) { counted(key); __probe.defineProperty(target, key, descriptor); return true; }, deleteProperty(target, key) { counted(key); return __probe.deleteProperty(target, key); } }); }; const queue = createQueue(newBuffer); for (let i = 0; i < n; i += 1) queue.enqueue(i); const out = []; for (let i = 0; i < n; i += 1) out[i] = queue.dequeue(); return { out, size: queue.size(), ops, buffers }; })(${n})`;
+  `${MEASURE_QUEUE}(${n})`;
 
 /** Linked lists of `{ value, next }` nodes: `list(1, 2, 3)` builds one, and
  * `valuesOf(head)` and `nodesOf(head)` read one back. Both walks stop after
@@ -67,8 +70,9 @@ export const LIST_FIXTURES = LIST;
 
 /** `{ result, compares }`: what `run(values, counted)` returned, and how many
  * times it called `counted`, which compares with `compare`. */
+const COUNT_COMPARES = `((values, run, compare) => { let compares = 0; const counted = (a, b) => { compares += 1; return compare(a, b); }; const result = run(values, counted); return { result, compares }; })`;
 export const countCompares = (values: string, run: string, compare = '(a, b) => a - b'): string =>
-  `((values, run, compare) => { let compares = 0; const counted = (a, b) => { compares += 1; return compare(a, b); }; const result = run(values, counted); return { result, compares }; })(${values}, ${run}, ${compare})`;
+  `${COUNT_COMPARES}(${values}, ${run}, ${compare})`;
 
 /** `[1, 2, …, n]` and `[n, …, 2, 1]` as literals. */
 export const ascending = (n: number): string => `[${Array.from({ length: n }, (_, i) => i + 1).join(', ')}]`;
@@ -98,22 +102,25 @@ export const withTreeChecks = (body: string): string => `(() => { ${TREE} ${TREE
 /** `{ value, visits }`: `run(root, target)` over a copy of the tree made of
  * counted nodes. A node counts once, the first time its `value`, `left` or
  * `right` is read, and counting stops before the returned node is read. */
+const SEARCH_VISITS = `((levels, target, run) => { ${TREE} let visits = 0; let counting = true; const wrap = node => { if (!node) return null; let seen = false; const inner = { value: node.value, left: null, right: null }; const counted = new __probe.Proxy(inner, { get(holder, key) { if (counting && !seen && (key === 'value' || key === 'left' || key === 'right')) { seen = true; visits += 1; } return holder[key]; } }); inner.left = wrap(node.left); inner.right = wrap(node.right); return counted; }; const found = run(wrap(tree(levels)), target); counting = false; return { value: found ? found.value : null, visits }; })`;
 export const searchVisits = (levels: string, target: string, run: string): string =>
-  `((levels, target, run) => { ${TREE} let visits = 0; let counting = true; const wrap = node => { if (!node) return null; let seen = false; const inner = { value: node.value, left: null, right: null }; const counted = new __probe.Proxy(inner, { get(holder, key) { if (counting && !seen && (key === 'value' || key === 'left' || key === 'right')) { seen = true; visits += 1; } return holder[key]; } }); inner.left = wrap(node.left); inner.right = wrap(node.right); return counted; }; const found = run(wrap(tree(levels)), target); counting = false; return { value: found ? found.value : null, visits }; })(${levels}, ${target}, ${run})`;
+  `${SEARCH_VISITS}(${levels}, ${target}, ${run})`;
 
 /** Sixty-four `{ id, name }` records with ids 100, 104, … 352 and names
  * `rec-00` to `rec-63`. */
 const RECORDS = "const records64 = () => { const out = []; for (let i = 0; i < 64; i += 1) out[i] = { id: 100 + i * 4, name: 'rec-' + (i < 10 ? '0' + i : String(i)) }; return out; };";
 
 /** How many indexed reads `buildIndex` makes on `records` while it builds. */
+const BUILD_READS = `((records) => { let reads = 0; const view = new __probe.Proxy(records, { get(target, key) { if (__probe.isIndex(key)) reads += 1; return target[key]; } }); buildIndex(view); return reads; })`;
 export const buildReads = (records: string): string =>
-  `((records) => { let reads = 0; const view = new __probe.Proxy(records, { get(target, key) { if (__probe.isIndex(key)) reads += 1; return target[key]; } }); buildIndex(view); return reads; })(${records})`;
+  `${BUILD_READS}(${records})`;
 
 /** `{ names, reads, most }`: the name each `lookup(id)` found (or null), the
  * indexed reads all the lookups made, counted after the build, and the most
  * any single lookup made. */
+const LOOKUP_READS = `((records, ids) => { let reads = 0; let most = 0; let counting = false; const view = new __probe.Proxy(records, { get(target, key) { if (counting && __probe.isIndex(key)) reads += 1; return target[key]; } }); const index = buildIndex(view); counting = true; const names = []; for (let i = 0; i < ids.length; i += 1) { const before = reads; const found = index.lookup(ids[i]); if (reads - before > most) most = reads - before; names[i] = found ? found.name : null; } counting = false; return { names, reads, most }; })`;
 export const lookupReads = (records: string, ids: string): string =>
-  `((records, ids) => { let reads = 0; let most = 0; let counting = false; const view = new __probe.Proxy(records, { get(target, key) { if (counting && __probe.isIndex(key)) reads += 1; return target[key]; } }); const index = buildIndex(view); counting = true; const names = []; for (let i = 0; i < ids.length; i += 1) { const before = reads; const found = index.lookup(ids[i]); if (reads - before > most) most = reads - before; names[i] = found ? found.name : null; } counting = false; return { names, reads, most }; })(${records}, ${ids})`;
+  `${LOOKUP_READS}(${records}, ${ids})`;
 
 /** A call with the 64-record fixture. `body` ends in a `return`. */
 export const withRecords = (body: string): string => `(() => { ${RECORDS} ${body} })()`;
@@ -122,3 +129,43 @@ export const RECORDS_64 = `(() => { ${RECORDS} return records64(); })()`;
 /** Fifty values drawn from seven, and forty queries drawn from ten. */
 export const POOL_50 = "(() => { const out = []; for (let i = 0; i < 50; i += 1) out[i] = 'v' + (i % 7); return out; })()";
 export const QUERIES_40 = "(() => { const out = []; for (let i = 0; i < 40; i += 1) out[i] = 'v' + (i % 10); return out; })()";
+
+/* ──── What the Results row shows ──────────────────────────────────────
+ * A built check carries its fixtures and probe source inline, up to 2,600
+ * characters, and the workbench prints a visible check's call in its Results
+ * row. `shownCall` turns a built call back into the short expression it was
+ * written as: each probe reads as its builder's name (`countReads([1, 2, 3],
+ * view => sumOfEvens(view)).reads <= 3`), each fixture prelude is dropped,
+ * and a wrapper whose body is a single `return` shows only the returned
+ * expression. Display only: the grader and the Run button execute `call`. */
+const CALL_NAMES: readonly (readonly [string, string])[] = [
+  [COUNT_READS, 'countReads'],
+  [COUNT_WRITES, 'countWrites'],
+  [MEASURE_QUEUE, 'measureQueue'],
+  [COUNT_COMPARES, 'countCompares'],
+  [SEARCH_VISITS, 'searchVisits'],
+  [BUILD_READS, 'buildReads'],
+  [LOOKUP_READS, 'lookupReads'],
+  [RECORDS_64, 'records64()'],
+  [POOL_50, 'pool50()'],
+  [QUERIES_40, 'queries40()'],
+];
+const PRELUDES: readonly string[] = [
+  `${LIST} ${LIST_CHECKS} `,
+  `${TREE} ${TREE_CHECKS} `,
+  `${LIST} `,
+  `${TREE} `,
+  `${TAGGED} `,
+  `${RECORDS} `,
+];
+const COUNTED_CALLS = /^\(\(\) => \{ (?:.*? )?const original = (\w+); let calls = 0; try \{ \1 = function \(input\) \{ calls \+= 1; return original\(input\); \}; \} catch \(error\) \{ return -1; \} try \{ (.*); \} finally \{ \1 = original; \} return calls; \}\)\(\)$/;
+
+export function shownCall(call: string): string {
+  const counted = COUNTED_CALLS.exec(call);
+  if (counted) return `countCalls(${counted[1]}, () => ${counted[2]})`;
+  let shown = call;
+  for (const [text, name] of CALL_NAMES) shown = shown.split(text).join(name);
+  for (const prelude of PRELUDES) shown = shown.split(`(() => { ${prelude}`).join('(() => { ');
+  const single = /^\(\(\) => \{ return ([^;]*); \}\)\(\)$/.exec(shown);
+  return single ? single[1] : shown;
+}
