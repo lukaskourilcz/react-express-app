@@ -327,7 +327,8 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 
 /* ── objective checks ──────────────────────────────────────────────────── */
 
-/* Not .lp-check, which is the profile picker's checkbox label below. */
+/* A check activity's container. It once shared .lp-check with the picker's
+   checkbox label and took its dimming; the label is now .lp-toggle. */
 .lp-check-view { display: flex; flex-direction: column; gap: 20px; }
 .lp-question { display: flex; flex-direction: column; gap: 12px; }
 .lp-question__prompt { margin: 0; font-weight: 600; line-height: 1.6; }
@@ -483,8 +484,8 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* ── profile answers in the path picker ──────────────────────────────────
    Checkboxes, not cards: goals are a multi-select and a section is an
    opt-in, so neither is one-of-N. Targets clear 44px on touch. The rows are
-   .lp-toggle, apart from the check activity's .lp-check container above:
-   sharing that name stacked each box over its text and drew the picker's
+   .lp-toggle, apart from the check activity's .lp-check-view container:
+   sharing one name stacked each box over its text and drew the picker's
    border round every check activity. */
 .lp-fieldset {
   border: 0;
