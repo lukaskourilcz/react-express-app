@@ -197,13 +197,16 @@ test.describe('A Frontend learner and Software Engineer', () => {
     await expect(topicCard(page, 'Git')).toContainText('Also in Web Developer');
     await expect(topicCard(page, 'Databases')).toContainText('Also in Web Developer and Forward Deployed Engineer');
 
-    await join.click();
+    await join.focus();
+    await page.keyboard.press('Enter');
     await expect(page.getByText('Software Engineer was not added to your plan. Try again.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeFocused();
     await expect(topicCard(page, 'Algorithms')).toHaveAccessibleName(/not in your plan/);
 
-    await page.getByRole('button', { name: 'Try again' }).click();
+    await page.keyboard.press('Enter');
     await expect(page.getByText(/Software Engineer is in your plan\./)).toBeVisible();
+    await expect(page.getByText(/Software Engineer is in your plan\./)).toBeFocused();
     expect(state.puts.at(-1)).toMatchObject({ baseTrack: 'frontend', specialization: null, sections: ['software-engineer'] });
     await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toHaveCount(0);
     for (const name of ['Algorithms', 'Security', 'DSA']) await expect(topicCard(page, name)).toBeEnabled();
@@ -288,9 +291,11 @@ test.describe('Learn section states', () => {
     await page.goto('/learn/software-engineer');
     await expect(page.getByText(/^Pass 5 levels of JavaScript to open /)).toBeVisible();
     await expect(page.locator('.rm-skillcheck-row')).toBeVisible();
-    await page.getByRole('button', { name: 'Go to JavaScript' }).click();
+    await page.getByRole('button', { name: 'Go to JavaScript' }).focus();
+    await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/learn\/web-developer\?topic=javascript$/);
     await expect(topicCard(page, 'JavaScript')).toHaveAttribute('aria-checked', 'true');
+    await expect(topicCard(page, 'JavaScript')).toBeFocused();
   });
 
   test('a signed-in account with no plan is sent to choose one', async ({ page }) => {

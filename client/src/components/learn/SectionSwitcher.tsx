@@ -92,6 +92,7 @@ export type JoinState = { status: 'saving' | 'saved' | 'error'; step?: 'save' | 
  * for an account with no saved plan, since a join would save a plan from the
  * local track and hide topics open today; nothing for a member; otherwise the
  * join. A failed join replaces the button with its error and one Try again.
+ * Focus follows each of those swaps (see the effect below).
  */
 export function SectionHeader({
   section,
@@ -131,6 +132,22 @@ export function SectionHeader({
   // A member whose join just landed keeps the saved line, not a button.
   const joinable = section !== 'web-developer' && !authLoading && signedIn && hasPlan && !isMember;
 
+  // A join removes the button that started it: the saved line or the error's
+  // Try again takes its place. Focus goes there, unless the learner moved it
+  // elsewhere during the save.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const status = join?.status ?? null;
+  const shownStatus = useRef(status);
+  useEffect(() => {
+    if (shownStatus.current === status) return;
+    shownStatus.current = status;
+    const held = document.activeElement;
+    if (held && held !== document.body && !headerRef.current?.contains(held)) return;
+    (status === 'saved' ? statusRef.current : status === 'error' ? retryRef.current : null)?.focus();
+  }, [status]);
+
   let action: ReactNode = null;
   let note: ReactNode = null;
   if (section === 'web-developer') {
@@ -169,7 +186,7 @@ export function SectionHeader({
   }
 
   return (
-    <div className="rm-section-header">
+    <div className="rm-section-header" ref={headerRef}>
       <p className="rm-section-line">{learnText(`learn.section.line.${section}`)}</p>
       {action && <div className="rm-section-action">{action}</div>}
       {note && <p className="rm-section-note">{note}</p>}
@@ -178,11 +195,11 @@ export function SectionHeader({
           <Banner
             status="error"
             title={learnText(join?.step === 'enroll' ? 'learn.join.enrollFailed' : 'learn.join.failed', { name })}
-            endContent={<Button variant="secondary" label={retryLabel} isDisabled={!online} onClick={onRetry} />}
+            endContent={<Button ref={retryRef} variant="secondary" label={retryLabel} isDisabled={!online} onClick={onRetry} />}
           />
         </div>
       )}
-      <div role="status" aria-live="polite" className="rm-section-status">
+      <div role="status" aria-live="polite" className="rm-section-status" ref={statusRef} tabIndex={-1}>
         {join?.status === 'saved' ? learnText('learn.join.saved', { name }) : null}
       </div>
     </div>

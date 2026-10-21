@@ -526,10 +526,26 @@ function Roadmap() {
     navigate({ pathname: `/learn/${id}`, search: nextTopic ? `?topic=${nextTopic}` : '' });
   };
 
+  // "Go to <prerequisite>" removes its own button: the section body remounts
+  // under the new section. Focus goes to the topic it opened (else the open
+  // section in the switcher) once that section is on screen.
+  const sectionBodyRef = useRef<HTMLDivElement>(null);
+  const focusOnArrival = useRef<LearnSectionId | null>(null);
+  useEffect(() => {
+    if (focusOnArrival.current !== section) return;
+    focusOnArrival.current = null;
+    (sectionBodyRef.current?.querySelector<HTMLElement>('.rm-topic-rail [role="radio"][aria-checked="true"]')
+      ?? document.querySelector<HTMLElement>('.rm-section-switcher [role="radio"][aria-checked="true"]'))?.focus();
+  }, [section, topic]);
+
   // Joining the section on screen (components/learn/joinSection.ts). The
   // state names the section it belongs to, so a switch during a save never
   // shows its result under another section.
   const [join, setJoin] = useState<(JoinState & { section: LearnSectionId }) | null>(null);
+  // The saved line is said once: leaving the section drops it.
+  useEffect(() => {
+    setJoin((current) => (current?.status === 'saved' && current.section !== section ? null : current));
+  }, [section]);
   const fdeOnScreen = section === 'forward-deployed-engineer';
   const pathCatalog = usePathCatalog(fdeOnScreen);
   const enrollments = useEnrollments(fdeOnScreen && isAuthenticated ? user?.id : undefined);
@@ -876,7 +892,7 @@ function Roadmap() {
 
       {/* Keyed by section: a switch fades the section in (rmTrackIn, none
           under reduced motion) and re-measures the map. */}
-      <div key={section} className="rm-track-in rm-section-body">
+      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body">
         <SectionHeader
           section={section}
           name={sectionName}
@@ -925,7 +941,10 @@ function Roadmap() {
               kind="gate"
               prereq={gate.prereq}
               topic={gate.topic}
-              onGo={() => switchSection(gate.prereqSection, gate.prereq as RoadmapTopic)}
+              onGo={() => {
+                focusOnArrival.current = gate.prereqSection;
+                switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
+              }}
               t={t}
             />
           ) : (

@@ -161,6 +161,15 @@ describe('joining Software Engineer', () => {
     expect(notInPlan()).toHaveLength(0);
     expect(screen.getByRole('radio', { name: /^Algorithms/ })).not.toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
+    // The button is gone; focus is on the line that replaced it.
+    expect(screen.getByText(/Software Engineer is in your plan\./)).toHaveFocus();
+
+    // The saved line is said once: leaving the section and coming back drops it.
+    fireEvent.click(screen.getByRole('radio', { name: /^Web Developer/ }));
+    await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/web-developer'));
+    fireEvent.click(screen.getByRole('radio', { name: /^Software Engineer/ }));
+    expect(await screen.findByRole('radio', { name: /^Algorithms/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
   });
 
   it('reports a failed save with one Try again, which saves again', async () => {
@@ -171,6 +180,7 @@ describe('joining Software Engineer', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
     expect(await screen.findByText('Software Engineer was not added to your plan. Try again.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Try again' })).toHaveFocus();
     expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
     expect(notInPlan().length).toBeGreaterThan(0);
 
