@@ -239,7 +239,7 @@ export default function PathPickerDialog({
           {/* A section is an opt-in, not one of a set: Software Engineer runs
               beside any track and beside the specialization, so it is a
               checkbox rather than another exclusive card. */}
-          <label className="lp-check">
+          <label className="lp-toggle">
             <input
               type="checkbox"
               checked={softwareEngineer}
@@ -307,7 +307,7 @@ export default function PathPickerDialog({
               {LEARNER_GOALS.map((goal) => {
                 const checked = goals.includes(goal);
                 return (
-                  <label key={goal} className="lp-check">
+                  <label key={goal} className="lp-toggle">
                     <input
                       type="checkbox"
                       checked={checked}

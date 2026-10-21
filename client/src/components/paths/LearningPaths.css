@@ -481,8 +481,11 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
  * figure caption so the table is self-describing when read out of context. */
 
 /* ── profile answers in the path picker ──────────────────────────────────
-   Checkboxes, not cards: goals are a multi-select and a skill path is an
-   opt-in, so neither is one-of-N. Targets clear 44px on touch. */
+   Checkboxes, not cards: goals are a multi-select and a section is an
+   opt-in, so neither is one-of-N. Targets clear 44px on touch. The rows are
+   .lp-toggle, apart from the check activity's .lp-check container above:
+   sharing that name stacked each box over its text and drew the picker's
+   border round every check activity. */
 .lp-fieldset {
   border: 0;
   margin: 0;
@@ -500,7 +503,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   gap: 4px;
   margin-top: 8px;
 }
-.lp-check {
+.lp-toggle {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -511,28 +514,28 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   cursor: pointer;
   color: var(--color-text-primary);
 }
-.lp-check > span {
+.lp-toggle > span {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.lp-check input {
+.lp-toggle input {
   width: 20px;
   height: 20px;
   margin-top: 2px;
   accent-color: var(--brand-accent);
   flex: none;
 }
-.lp-check:hover { background: var(--color-background-muted); }
-.lp-check:has(input:checked) {
+.lp-toggle:hover { background: var(--color-background-muted); }
+.lp-toggle:has(input:checked) {
   border-color: var(--brand-accent);
   background: var(--brand-accent-soft);
 }
-.lp-check:has(input:focus-visible) {
+.lp-toggle:has(input:focus-visible) {
   outline: 2px solid var(--ss-focus);
   outline-offset: 2px;
 }
-.lp-check:has(input:disabled) {
+.lp-toggle:has(input:disabled) {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -547,7 +550,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   min-width: 0;
   padding: 16px;
 }
-.lp-sections .lp-check { padding: 12px 14px; }
+.lp-sections .lp-toggle { padding: 12px 14px; }
 .lp-sections__blurb { display: flex; flex-direction: column; gap: 4px; }
 .lp-sections__legend {
   font: 600 0.95rem var(--font-family-body);
