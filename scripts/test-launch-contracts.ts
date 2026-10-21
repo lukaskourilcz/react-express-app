@@ -243,16 +243,6 @@ function mockResponse() {
   };
 }
 
-/** Where a browser payload still carries Czech: the path of every `{ en, cs }`
- * pair whose Czech slot is not empty. The app ships English only (C4-6). */
-function czechIn(value: unknown, at = ''): string[] {
-  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
-  if (!value || typeof value !== 'object') return [];
-  const record = value as Record<string, unknown>;
-  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
-  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
-}
-
 /** Every script and source file under `dir` (relative to the repository),
  * node_modules left out. */
 function codeFiles(dir: string): string[] {
@@ -1040,7 +1030,7 @@ function billingContracts() {
 function publicCopyContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   // devShark is freemium: no shipped English string may still promise that
-  // everything is free (the Czech dictionary is retained and unshipped).
+  // everything is free.
   for (const [key, value] of Object.entries(ENGLISH)) {
     assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
   }
@@ -2755,6 +2745,26 @@ async function strayLangContracts() {
   }
 }
 
+/** devShark ships English only (#485). No second-language file is left in
+ * the code, and no client fetcher puts `lang` on a request: not as a query
+ * parameter, not as a body field and not through URLSearchParams. */
+function englishOnlyContracts() {
+  const sources = ['api', 'lib', 'shared', 'scripts', 'tests', 'client/src', 'client/tests', 'client/.storybook'].flatMap(codeFiles);
+  const overlays = sources.filter((file) => /\.cs\.(ts|tsx)$/.test(file));
+  assert.deepEqual(overlays, [], 'no second-language overlay file remains');
+  const SENDS_LANG = [
+    /[?&]lang=/,
+    /\b(?:set|append)\(\s*['"]lang['"]/,
+    /(?<![\w.-])lang\s*:/,
+    /[{,]\s*lang\s*[,}]/,
+    /\bgetStoredLang\b/,
+  ];
+  const offenders = codeFiles('client/src').flatMap((file) =>
+    readFileSync(join(process.cwd(), file), 'utf8').split('\n').flatMap((line, index) =>
+      /^\s*(\/\/|\*|\/\*)/.test(line) || !SENDS_LANG.some((pattern) => pattern.test(line)) ? [] : [`${file}:${index + 1}`]));
+  assert.deepEqual(offenders, [], 'no client fetcher sends lang');
+}
+
 /** Advanced asked of a topic with nothing above difficulty 2 is served its
  * hardest questions, and says so, instead of a 404 that Retry repeats. */
 async function quizDifficultyContracts() {
@@ -3697,7 +3707,7 @@ async function main() {
   assert.equal(gardenPathFor({ id: 'dd-requests-per-second', track: 'system-design', level: 0 }), 'system-design/00-requests-per-second.md');
   assert.ok(CODING_INDEX.length > 0, 'the browser index exists (freshness is enforced by npm run test:coding)');
   assert.ok(CODING_INDEX.every((row) => !('tests' in row) && !('prompt' in row)), 'the browser index carries no task bodies');
-  assert.deepEqual(czechIn(CODING_INDEX), [], 'the browser index carries no Czech titles (C4-6)');
+  assert.ok(CODING_INDEX.every((row) => typeof row.title === 'string' && row.title.length > 0), 'the browser index carries one English title per task (#485)');
   const ladderBase = { track: 'javascript' as const, progress: { passed: new Set<string>() }, tasks: CODING_INDEX, javascriptLevelsCleared: 0 };
   assert.equal(tierUnlocked({ ...ladderBase, tier: 1 }), true);
   assert.equal(tierUnlocked({ ...ladderBase, tier: 3 }), false);
@@ -5419,8 +5429,8 @@ async function main() {
       const bootstrap = html.indexOf("devquiz:color-mode");
       assert.ok(bootstrap > 0, 'index.html must set the colour mode before first paint');
       assert.ok(
-        html.indexOf('devquiz.lang') > 0,
-        'index.html must set the document language before first paint, so a screen reader reads Czech in a Czech voice',
+        html.indexOf('root.lang = root.dataset.publicLocale') > 0,
+        'index.html must set the document language before first paint, so a prerendered guide is read in its own language',
       );
       const firstBlocking = html.search(/<link[^>]+rel="stylesheet"/);
       if (firstBlocking >= 0) {
@@ -5729,6 +5739,7 @@ async function main() {
   await qotdContracts();
   await quizSubmitScopeContracts();
   await strayLangContracts();
+  englishOnlyContracts();
   await guestChallengeLimitContracts();
   await challengeSelectionContracts();
   await dailyIntegrityContracts();

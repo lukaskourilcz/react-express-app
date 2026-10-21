@@ -200,8 +200,8 @@ const BLOCK_EXTERNAL = process.argv.includes('--block-external') ||
 
 // The app reads the theme from local storage before it paints, so seeding it
 // lets one sweep cover dark mode as well as the widths. There is no language
-// to seed: the app ships English only (ENABLED_LANGS), so a Czech seed would
-// measure the English pages again and report them as Czech.
+// to seed: the app ships English only (#485), so a language seed would
+// measure the English pages again under another name.
 const THEME = process.env.RESPONSIVE_THEME ?? '';
 if (process.env.RESPONSIVE_LOCALE) {
   throw new Error('RESPONSIVE_LOCALE has no effect: the app ships English only. Remove it.');

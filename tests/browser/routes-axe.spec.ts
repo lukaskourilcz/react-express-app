@@ -8,7 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 // below 4.5:1 or a sideways scroller a keyboard cannot reach fails a gate
 // instead of waiting for a manual audit.
 //
-// The app ships English only (ENABLED_LANGS), so there is one locale to scan.
+// The app ships English only (#485), so there is one locale to scan.
 
 // A signed-out /profile sends the visitor home, so the home page is scanned
 // under its own name rather than as "/profile".
