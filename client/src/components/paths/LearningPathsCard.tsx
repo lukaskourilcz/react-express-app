@@ -1,11 +1,17 @@
-// The Profile card that owns the track-plus-specialization choice and shows
-// the learner's active learning paths.
+// The Profile card that owns the track, the joined Learn sections and the
+// specialization, and shows the learner's learning paths.
 //
 // Two operations, not one: saving the account preference and enrolling in a
 // path are separate server calls, and either can fail on its own. The card
 // says which one failed and offers to retry that one, because "saved" when
 // only half of it landed is the kind of quiet lie that costs a learner their
 // work later.
+//
+// The sections the card lists come from `learnerSections`: Web Developer with
+// the track, Software Engineer from the saved opt-in, Forward Deployed Engineer
+// with the specialization. Leaving Software Engineer saves an empty list, so
+// its topics leave the plan (`planTopics`) while every passed level stays on
+// the server.
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -24,6 +30,7 @@ import ErrorRetry from '../ErrorRetry';
 import { useSubject } from '../../lib/subjects';
 import { trackLabelKey, useTrack, type Track } from '../../lib/tracks';
 import { learnerProfileOf, preferredLearningOf, profileGapsOf, saveLearningPreference } from '../../lib/trackPref';
+import { pickerCopy, type PickerKey } from '../../i18n/translations.picker';
 import PathPickerDialog, { type PathPickerResult } from '../PathPickerDialog';
 import {
   changeEnrollment,
@@ -35,6 +42,7 @@ import {
   usePathCatalog,
 } from '../../lib/learningPaths';
 import type { LearningPathId } from '../../../../shared/learning-paths';
+import { learnerSections, type LearnSectionId } from '../../../../shared/learn-sections';
 import type { PathCatalogEntry } from '../../../../shared/learning-path-api';
 import { MERCH_ENABLED } from '../../../../shared/rewards';
 import './LearningPaths.css';
@@ -43,6 +51,8 @@ import { Button } from '@astryxdesign/core/Button';
 // The reward's code stays out of the profile until a path is enrolled. Its
 // boundary keeps the card when that code does not load, with a Retry.
 const PathRewardClaim = lazyShellPart(() => import('./PathRewardClaim'));
+
+const sectionName = (id: LearnSectionId) => pickerCopy(`profile.section.${id}` as PickerKey);
 
 export default function LearningPathsCard() {
   const t = useT();
@@ -76,6 +86,8 @@ export default function LearningPathsCard() {
   const { lockOf } = useLocks();
 
   const fdeEntry = entryFor(catalog.data, 'fde');
+  // DSA Foundations is no longer chosen in the picker (epic E folds it into
+  // Learn), but a learner who runs it still finds it listed here.
   const dsaEntry = entryFor(catalog.data, 'dsa-foundations');
 
   const enrollmentFor = useCallback(
@@ -91,9 +103,8 @@ export default function LearningPathsCard() {
   // running, whichever says so: a path started from its own page is chosen
   // here too, so saving the picker does not pause it.
   const fdeActive = enrollmentFor('fde')?.status === 'active';
-  const dsaActive = enrollmentFor('dsa-foundations')?.status === 'active';
   const specialization = preference?.specialization ?? (fdeActive ? 'fde' : null);
-  const dsaChosen = (profile?.skillPaths.includes('dsa-foundations') ?? false) || dsaActive;
+  const sections = learnerSections({ specialization, sections: profile?.sections });
 
   const apply = useCallback(
     async (result: PathPickerResult) => {
@@ -144,22 +155,21 @@ export default function LearningPathsCard() {
         }
       };
       try {
+        // The picker no longer asks about DSA Foundations, so saving it never
+        // starts or pauses that enrollment, and the save below leaves the
+        // account's skill paths as they are.
         await follow('fde', fdeEntry, result.specialization === 'fde', specialization === 'fde', result.track);
-        // DSA Foundations is an independent enrollment: it never touches the
-        // base track or the role.
-        await follow('dsa-foundations', dsaEntry, result.skillPaths.includes('dsa-foundations'), dsaChosen);
         await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
       } catch (error) {
         setBusy(false);
-        setDialogError(`${t('paths.picker.enrollFailed')} ${friendlyError(error)}`);
+        setDialogError(`${pickerCopy('paths.picker.enrollFailed')} ${friendlyError(error)}`);
         return;
       }
 
       const savedSpecialization = refused.includes('fde') ? preference?.specialization ?? null : result.specialization;
-      const keepsDsa = profile?.skillPaths.includes('dsa-foundations') ?? false;
-      const skillPaths = refused.includes('dsa-foundations')
-        ? result.skillPaths.filter((one) => one !== 'dsa-foundations' || keepsDsa)
-        : result.skillPaths;
+      // Joining a section is free, so the sections are saved as chosen. The
+      // full list goes every time: an empty one is how Software Engineer is
+      // left, where leaving the field out would keep the saved list.
       const saved = await saveLearningPreference(
         user?.id ?? null,
         { schemaVersion: 1, baseTrack: result.track, specialization: savedSpecialization },
@@ -167,7 +177,7 @@ export default function LearningPathsCard() {
           goals: result.goals,
           experience: result.experience,
           studyTime: result.studyTime,
-          skillPaths,
+          sections: result.sections,
         },
       );
       if (!saved.ok) {
@@ -182,15 +192,18 @@ export default function LearningPathsCard() {
 
       setBusy(false);
       setOpen(false);
-      setNotice(
-        t('profile.pathSaved', {
-          track: t(trackLabelKey(subject, result.track)),
-          role: savedSpecialization === 'fde' ? ' + Forward Deployed Engineer' : '',
-        }),
-      );
+      const added = learnerSections({ specialization: savedSpecialization, sections: result.sections })
+        .filter((id) => id !== 'web-developer');
+      const savedLine = t('profile.pathSaved', {
+        track: t(trackLabelKey(subject, result.track)),
+        role: added.map((id) => ` + ${sectionName(id)}`).join(''),
+      });
+      // The refused specialization is named in the notice as well as in the
+      // upgrade sheet, which opens once, after the picker closes.
+      setNotice(refused.includes('fde') ? `${savedLine}. ${pickerCopy('profile.fdeRefused')}` : savedLine);
       if (refused.length > 0) openUpgradeSheet({ kind: 'learning-path', ref: refused[0] });
     },
-    [barred, dsaChosen, dsaEntry, enrollmentFor, fdeEntry, preference, profile, queryClient, setTrack, specialization, subject, t, user?.id],
+    [barred, enrollmentFor, fdeEntry, preference, queryClient, setTrack, specialization, subject, t, user?.id],
   );
 
   const activePaths = [fdeEntry, dsaEntry].filter(Boolean).map((entry) => {
@@ -207,37 +220,38 @@ export default function LearningPathsCard() {
       <VStack gap={2}>
         <VStack gap={0.5}>
           <Text type="supporting" size="xsm" color="secondary">
-            {t('profile.pathTitle')}
+            {pickerCopy('profile.pathTitle')}
           </Text>
           <Text type="supporting" color="secondary">
-            {t('profile.pathHelp')}
+            {pickerCopy('profile.pathHelp')}
           </Text>
         </VStack>
 
         {needsProfile && (
           <div className="lp-notice lp-notice--info" role="status">
             <span className="lp-notice__glyph" aria-hidden="true">!</span>
-            <span>{t('profile.completePrompt')}</span>
+            <span>{pickerCopy('profile.completePrompt')}</span>
           </div>
         )}
 
         <div className="lp-profile-choice">
-          <Text className="lp-profile-choice__value">
-            {t(trackLabelKey(subject, track as Track))}
-            {' · '}
-            {specialization === 'fde' ? 'Forward Deployed Engineer' : t('profile.pathNone')}
-          </Text>
-          <Button variant="secondary" onClick={() => setOpen(true)} label={needsProfile ? t('profile.completeAction') : t('profile.pathChoose')} />
+          <div className="lp-profile-choice__summary">
+            <Text className="lp-profile-choice__value">{t(trackLabelKey(subject, track as Track))}</Text>
+            <Text type="supporting" size="xsm" color="secondary" className="lp-profile-choice__value">
+              {pickerCopy('profile.sectionsJoined', { sections: sections.map(sectionName).join(' · ') })}
+            </Text>
+          </div>
+          <Button variant="secondary" onClick={() => setOpen(true)} label={needsProfile ? pickerCopy('profile.completeAction') : pickerCopy('profile.pathChoose')} />
         </div>
 
         {profile && !needsProfile && (
           <dl className="lp-profile-inventory">
-            <dt>{t('profile.inventory.goals')}</dt>
-            <dd>{profile.goals.map((goal) => t(`profile.goal.${goal}` as never)).join(' · ')}</dd>
-            <dt>{t('profile.inventory.experience')}</dt>
-            <dd>{t(`profile.experience.${profile.experience}` as never)}</dd>
-            <dt>{t('profile.inventory.studyTime')}</dt>
-            <dd>{t(`profile.studyTime.${profile.studyTime}` as never)}</dd>
+            <dt>{pickerCopy('profile.inventory.goals')}</dt>
+            <dd>{profile.goals.map((goal) => pickerCopy(`profile.goal.${goal}` as PickerKey)).join(' · ')}</dd>
+            <dt>{pickerCopy('profile.inventory.experience')}</dt>
+            <dd>{pickerCopy(`profile.experience.${profile.experience}` as PickerKey)}</dd>
+            <dt>{pickerCopy('profile.inventory.studyTime')}</dt>
+            <dd>{pickerCopy(`profile.studyTime.${profile.studyTime}` as PickerKey)}</dd>
           </dl>
         )}
 
@@ -296,9 +310,7 @@ export default function LearningPathsCard() {
         current={track as Track}
         currentSpecialization={specialization}
         currentProfile={profile}
-        dsaEnrolled={dsaActive}
         fdeLocked={barred('fde')}
-        dsaLocked={barred('dsa-foundations')}
         onChoose={(result) => void apply(result)}
         busy={busy}
         error={dialogError}
