@@ -34,6 +34,7 @@ interface Route {
 
 interface VercelConfig {
   headers?: unknown;
+  redirects?: unknown;
   routes?: Route[];
   rewrites?: { source: string; destination: string }[];
 }
@@ -123,10 +124,46 @@ export function vercelRoutingContracts(): void {
   const phases = routePhases(config);
 
   // Every rule before the filesystem check only adds headers, so none of them
-  // ends the request early and every rule after it still runs.
+  // ends the request early and every rule after it still runs. The one
+  // exception is a permanent redirect of a moved page, which ends the request
+  // on purpose and comes after every header rule, so the 308 still carries
+  // the app's security headers.
+  const redirects = phases.main.filter((route) => route.status !== undefined);
   for (const route of phases.main) {
+    if (redirects.includes(route)) continue;
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs before the filesystem check and must only add headers`);
   }
+  for (const route of redirects) {
+    assert.equal(route.status, 308, `${route.src} is a permanent redirect`);
+    assert.ok(route.dest === undefined && route.continue === undefined, `${route.src} answers with a redirect and ends the request`);
+    assert.deepEqual(Object.keys(route.headers ?? {}), ['Location'], `${route.src} sets Location and nothing else`);
+    assert.ok(phases.main.indexOf(route) > Math.max(...phases.main.filter((one) => !redirects.includes(one)).map((one) => phases.main.indexOf(one))), `${route.src} comes after every header rule`);
+    for (const path of [...ASSET_PATHS, ...DOCUMENTS]) assert.ok(!routeMatches(route, path), `${route.src} would redirect ${path}`);
+  }
+  // The FDE path moved into its Learn section (#489, plan decision D4). Its
+  // old addresses answer a crawler with a 308 to the new one, the module kept.
+  // These routes sit before the filesystem check, as Vercel compiles a
+  // `redirects` entry; a `redirects` property itself would land after
+  // `handle: hit` here, where a page that is no file never reaches it.
+  assert.equal(config.redirects, undefined, 'vercel.json keeps its redirects in `routes`, before the filesystem check');
+  const redirectOf = (path: string) => {
+    const route = redirects.find((one) => routeMatches(one, path));
+    if (!route) return null;
+    const match = new RegExp(route.src!, 'i').exec(path)!;
+    return route.headers!.Location.replace(/\$(\d)/g, (_, index: string) => match[Number(index)] ?? '');
+  };
+  const MOVED: [string, string][] = [
+    ['/roadmap/specializations/fde', '/learn/forward-deployed-engineer/path'],
+    ['/roadmap/specializations/fde/', '/learn/forward-deployed-engineer/path'],
+    ['/roadmap/specializations/fde/fde-v1-m03', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
+    ['/roadmap/specializations/fde/fde-v1-m03/', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
+    ['/roadmap/specializations/fde/fde-v1-m03/extra', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
+  ];
+  for (const [from, to] of MOVED) assert.equal(redirectOf(from), to, `${from} answers 308 to ${to}`);
+  for (const path of ['/learn/forward-deployed-engineer/path', '/learn/forward-deployed-engineer/path/fde-v1-m03', '/roadmap', '/roadmap/paths/dsa-foundations', '/roadmap/specializations', '/roadmap/specializations/fdex']) {
+    assert.equal(redirectOf(path), null, `${path} is not redirected`);
+  }
+  assert.ok(phaseHeaders('/roadmap/specializations/fde/fde-v1-m03', 'main', phases)['content-security-policy'], 'the 308 carries the app’s security headers');
   // Vercel accepts nothing else after `handle: hit`.
   for (const route of phases.hit) {
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs after a file matched and may only add headers`);

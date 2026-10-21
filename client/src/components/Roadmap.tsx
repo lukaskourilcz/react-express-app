@@ -99,6 +99,7 @@ import {
 import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
 import { LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
+import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useOnline } from './learn/useOnline';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
@@ -551,6 +552,7 @@ function Roadmap() {
   const enrollments = useEnrollments(fdeOnScreen && isAuthenticated ? user?.id : undefined);
   const fdeEntry = entryFor(pathCatalog.data, 'fde');
   const fdeBarred = isBarred(lockOf({ kind: 'learning-path', pathId: 'fde' }));
+  const fdePath = useFdePathSteps();
   const runJoin = async (id: LearnSectionId) => {
     if (!user || !profile || join?.status === 'saving') return;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
@@ -844,11 +846,18 @@ function Roadmap() {
 
   /* ──── map view ─────────────────────────────────────────────────────── */
   const sectionName = learnText(`learn.section.${section}`);
-  const switcherItems = LEARN_SECTIONS.map(({ id }) => ({
-    id,
-    name: learnText(`learn.section.${id}`),
-    percent: loadingStructure || structureError ? null : sectionProgress(entriesBySection[id], progress, levelCounts).percent,
-  }));
+  // The FDE figure counts its path too (#489), and waits for the path's
+  // answers rather than showing one number and then another.
+  const switcherItems = LEARN_SECTIONS.map(({ id }) => {
+    const path = id === 'forward-deployed-engineer' ? fdePath : null;
+    return {
+      id,
+      name: learnText(`learn.section.${id}`),
+      percent: loadingStructure || structureError || path?.pending
+        ? null
+        : sectionProgress(entriesBySection[id], progress, levelCounts, path?.steps ?? null).percent,
+    };
+  });
   const gate = sectionHasOpen ? null : sectionGate(entries, progress, extraUnlocksSet, members);
   const skillCheckRow = (
     <div className="rm-skillcheck-row">
