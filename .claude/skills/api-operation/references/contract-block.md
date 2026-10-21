@@ -25,6 +25,7 @@ export async function handle<Name>(req: VercelRequest, res: VercelResponse, db: 
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!db) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
+  res.setHeader('Cache-Control', 'private, no-store');
   try {
     // Read with withTimeout(db.from(...)...); answer a db error with
     // jsonError(res, 500, 'db_error', '...').
@@ -90,6 +91,7 @@ async function <name>Contracts() {
   const ok = await call('GET');
   assert.equal(ok.statusCode, 200);
   assert.deepEqual(ok.body, { ok: true });
+  assert.equal(ok.headers.get('cache-control'), 'private, no-store', 'an answer about one account is never cached');
 
   // 3. The limit (only with an own bucket): one account spends its own
   //    budget and nobody else's.
