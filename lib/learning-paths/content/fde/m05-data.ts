@@ -772,7 +772,7 @@ const applyApi = async (ledger: readonly AccountRecord[], client: AccountsClient
             critical: true,
             weight: 3,
             detail:
-              'A record or a rejection reason is wrong. Check that you find CSV columns by trimmed, lowercased header name, that ids are trimmed and uppercased, that emails are trimmed and lowercased with exactly one @, that both timestamp shapes come out as `YYYY-MM-DDTHH:MM:SSZ`, that the API walk follows `nextCursor` past empty pages, and that the ledger is sorted by id as text.',
+              'A record or a rejection reason is wrong. Check that you find CSV columns by trimmed, lowercased header name, that ids are trimmed and uppercased, that emails are trimmed and lowercased with exactly one @, that both timestamp shapes come out as `YYYY-MM-DDTHH:MM:SSZ`, that the API walk follows `nextCursor` past empty pages, and that the ledger is sorted by id in UTF-16 code-unit order, compared with `<` and `>` rather than `localeCompare`.',
           },
           {
             id: 'accounted',

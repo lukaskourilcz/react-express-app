@@ -246,9 +246,9 @@ export const FDE_M05_DATA_SOLUTIONS: Record<string, PathCodeSolution> = {
         async: true,
       },
       {
-        call: "applyApi([], __page([{ accountId: 'b-1', email: 'b@x.example', modifiedAt: '2026-03-01T09:00:00Z' }, { accountId: 'ACC-9', email: 'n@x.example', modifiedAt: '2026-03-01T09:00:00Z' }, { accountId: 'ACC-10', email: 't@x.example', modifiedAt: '2026-03-01T09:00:00Z' }])).then(__ids)",
-        expected: ["ACC-10","ACC-9","B-1"],
-        label: "ids sort by UTF-16 code units, not as numbers",
+        call: "applyApi([], __page([{ accountId: 'b-1', email: 'b@x.example', modifiedAt: '2026-03-01T09:00:00Z' }, { accountId: 'ACC-9', email: 'n@x.example', modifiedAt: '2026-03-01T09:00:00Z' }, { accountId: 'ACC-10', email: 't@x.example', modifiedAt: '2026-03-01T09:00:00Z' }, { accountId: 'acc_1', email: 'u@x.example', modifiedAt: '2026-03-01T09:00:00Z' }])).then(__ids)",
+        expected: ["ACC-10","ACC-9","ACC_1","B-1"],
+        label: "ids sort by UTF-16 code units, not as numbers and not by locale collation",
         async: true,
       },
       {
