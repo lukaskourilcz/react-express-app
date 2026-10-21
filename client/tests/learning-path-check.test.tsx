@@ -17,11 +17,15 @@ const graded = (questions: SubmitActivityResponse['questions'], state: 'verified
   feedback: [], module: null, guidedComplete: false, nextActivityId: null, replayed: false, xpAwarded: 0,
 });
 
-function renderCheck(props: { domains?: string[]; domainThreshold?: number; result?: SubmitActivityResponse | null }) {
+const SCENARIO_FIRST = 'A support lead says the weekly export is wrong.';
+const SCENARIO = `${SCENARIO_FIRST}\n\nYou can read the \`deliveries\` table. Answer in order.`;
+
+function renderCheck(props: { domains?: string[]; domainThreshold?: number; result?: SubmitActivityResponse | null; scenario?: string }) {
   return render(
     <LanguageProvider>
       <CheckActivity
         questions={QUESTIONS}
+        scenario={props.scenario}
         passThreshold={0.8}
         domains={props.domains}
         domainThreshold={props.domainThreshold}
@@ -49,12 +53,12 @@ describe('the rule a check states', () => {
 
 describe('a graded check', () => {
   /** Answer both questions (the first option each), then hand the result over. */
-  function answerAndGrade(result: SubmitActivityResponse) {
-    const view = renderCheck({});
+  function answerAndGrade(result: SubmitActivityResponse, scenario?: string) {
+    const view = renderCheck({ scenario });
     for (const name of ['O(n)', 'A stack']) fireEvent.click(screen.getByRole('radio', { name }));
     view.rerender(
       <LanguageProvider>
-        <CheckActivity questions={QUESTIONS} passThreshold={0.8} domains={undefined} result={result} onSubmit={() => {}} onRetry={() => {}} busy={false} />
+        <CheckActivity questions={QUESTIONS} scenario={scenario} passThreshold={0.8} domains={undefined} result={result} onSubmit={() => {}} onRetry={() => {}} busy={false} />
       </LanguageProvider>,
     );
   }
@@ -95,5 +99,63 @@ describe('a graded check', () => {
     expect(screen.getByText('One pass over the input.')).toBeInTheDocument();
     expect(screen.getByText('First in, first out.')).toBeInTheDocument();
     expect(within(question(/Which structure\?/)).getByText(/A queue/).closest('label')).toHaveClass('lp-option--correct');
+  });
+
+  /** The scenario region, once, and before the first question in the page. */
+  function expectScenarioOnceAboveQuestions() {
+    expect(screen.getAllByText(SCENARIO_FIRST)).toHaveLength(1);
+    const region = screen.getByRole('region', { name: 'The scenario' });
+    expect(within(region).getByText(SCENARIO_FIRST)).toBeInTheDocument();
+    expect(region.compareDocumentPosition(question(/Which growth class\?/)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  }
+
+  it('keeps the scenario once above the questions in a practice review', () => {
+    answerAndGrade(graded([
+      { questionId: 'q1', correct: true, correctIndex: 0, explanation: 'One pass over the input.' },
+      { questionId: 'q2', correct: false, correctIndex: 1, explanation: 'First in, first out.' },
+    ], 'needs_revision'), SCENARIO);
+    expectScenarioOnceAboveQuestions();
+  });
+
+  it('keeps the scenario once above the questions when a project review withholds the key', () => {
+    answerAndGrade(graded([
+      { questionId: 'q1', correct: true },
+      { questionId: 'q2', correct: false },
+    ], 'needs_revision'), SCENARIO);
+    expectScenarioOnceAboveQuestions();
+    expect(screen.getByText(/appear once you pass this check/)).toBeInTheDocument();
+  });
+});
+
+describe('a check with a scenario', () => {
+  it('shows the scenario once, above the first question, while answering', () => {
+    renderCheck({ scenario: SCENARIO });
+    expect(screen.getAllByText(SCENARIO_FIRST)).toHaveLength(1);
+    const region = screen.getByRole('region', { name: 'The scenario' });
+    const first = screen.getByRole('group', { name: /Which growth class\?/ });
+    expect(region.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Reading text, not a control: the first Tab stop is still the first radio.
+    expect(within(region).queryAllByRole('radio')).toHaveLength(0);
+  });
+
+  it('renders paragraphs and inline code from the authored text', () => {
+    renderCheck({ scenario: SCENARIO });
+    const region = screen.getByRole('region', { name: 'The scenario' });
+    expect(region.querySelectorAll('p')).toHaveLength(2);
+    expect(region.querySelectorAll('code')).toHaveLength(1);
+    expect(within(region).getByText('deliveries').tagName).toBe('CODE');
+  });
+
+  it('shows no scenario region on a check without one', () => {
+    renderCheck({});
+    expect(screen.queryByRole('region', { name: 'The scenario' })).toBeNull();
+    expect(screen.queryByText('The scenario')).toBeNull();
+  });
+
+  it('does not wear the profile picker\'s checkbox class, whose rules dim a disabled check', () => {
+    const view = renderCheck({ scenario: SCENARIO });
+    const root = view.container.querySelector('.lp-check-view');
+    expect(root).not.toBeNull();
+    expect(view.container.querySelector('.lp-check')).toBeNull();
   });
 });
