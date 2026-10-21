@@ -1,5 +1,12 @@
 # NEEDED — remaining tasks
 
+## Learn sections, the FDE flagship, DSA into Learn and English only (approved 21 Oct 2026)
+
+The owner approved [docs/learn-sections-fde-flagship-plan.md](docs/learn-sections-fde-flagship-plan.md) and [docs/agent-workflow-audit.md](docs/agent-workflow-audit.md) on 21 October 2026 with the decisions in the plan's section 10. The GitHub issues of epics A to E are the backlog; [docs/handoff-opus-2026-10-21.md](docs/handoff-opus-2026-10-21.md) is the prompt that starts the implementation in a fresh terminal session.
+
+- [ ] **Set `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production** once the FDE release verification issue (B14) is merged and its acceptance entry is in `docs/release-acceptance.md`; redeploy. The path then opens to Premium accounts, with the diagnostic and the first module free. [imp:4] [owner:me] [time:5m] [kind:deploy]
+- [ ] **Run the handoff prompt for the implementation session** — paste `docs/handoff-opus-2026-10-21.md` into a terminal session on this repository. It names the reading order, the issue order and the rules. [imp:5] [owner:me] [time:5m] [kind:setup]
+
 ## Launch audit, 29 Sep 2026 (before registrations open)
 
 Round 1 and the owner's decisions of 29 Sep are on `main`: migration 047 is applied, `main` is protected (the `verify` and `sql` checks must pass, admins included), leaderboard photos need the learner's consent (names became mandatory under the 13 October decision), streaks count any verified learning, the React capstones have suites, a reveal costs the task's XP, and the smaller rules are settled. Migrations 048-051 were applied to production before that code deployed. A third review on 29 Sep – 1 Oct fixed what the first two missed (streak shields, Challenge counting, sign-in races, billing edge cases, grader security, classroom limits, task tests, UI); migrations 052-054 were applied to production before that code deployed. The decisions it left for the owner are the items below marked *(round 3)*.

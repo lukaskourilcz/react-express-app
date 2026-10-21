@@ -1,5 +1,7 @@
 # devShark learning paths: implementation entry point
 
+> **Historical (21 October 2026).** The issues below are closed. The FDE path is now planned as the Premium flagship inside the Forward Deployed Engineer section of Learn, and the DSA Foundations path folds into Learn as two topics. The current entry point is [the Learn sections plan](learn-sections-fde-flagship-plan.md).
+
 Prepared 8 September 2026. Documentation and issues only; application implementation has not started in this change.
 
 ## Product structure
