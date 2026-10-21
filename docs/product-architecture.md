@@ -750,6 +750,27 @@ changes a tier. `validateProgressionGraph` fails when a section lists a topic
 the catalogue does not hold or has retired, when a live topic sits in no
 section, or when a section shelves an unknown path.
 
+The Learn page shows the sections under one route, `/learn/:section`
+(`client/src/components/learn/`). An address without a known section resolves
+in this order: the first section that lists `?topic`, the section last opened
+on this device (`devquiz:roadmap:section`), then Web Developer; the page
+replaces the address with the section's own and keeps the query. A section
+address whose `?topic` only another section lists moves to that section.
+Each section also remembers its last topic (`devquiz:roadmap:section-topic`).
+The sections share one route box (`routeBoxKey`), so a switch keeps the page
+mounted, and a level or the skill check stays open while the address changes.
+In a section the learner has not joined, the topics the plan lacks show dimmed
+beside one action: Software Engineer saves the union of the saved `sections`
+and its own id (the server replaces the list with what a save sends); Forward
+Deployed Engineer enrols in the FDE path first when the path is open, then
+saves the `fde` specialization, the order the Profile card uses, so a free
+account gets the upgrade sheet and nothing is saved. A visitor is asked to
+sign in, and an account with no saved plan is sent to `/profile` to choose
+one. The section's progress figure counts its Learn topics only; A3 adds the
+FDE path. `shared/learn-section-ids.ts` carries the ids, the section shape and
+the opt-in list that the first download needs for planning; the full registry
+in `shared/learn-sections.ts` reaches the browser only in a lazy chunk.
+
 `shared/learning-path-api.ts` is the wire contract. Authored content, answer
 keys, hidden assertions and reference solutions live under
 `lib/learning-paths/` and reach the browser only as projections that strip
