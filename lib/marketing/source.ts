@@ -71,7 +71,7 @@ export function questionPacket(input: { question: Question; deleted: boolean; up
 export function codingPacket(task: CodingTask, active: boolean, now: string): SourcePacket {
   // Explicit allowlist. Tests, drills, hints, approaches and solutions are absent.
   // No coding answer/explanation is approved for marketing in v1.
-  const content: SourceContent = { title: task.title.en, body: [task.prompt.en, ...(task.previousRequirements ?? []).map((r) => r.en)].join('\n\n'),
+  const content: SourceContent = { title: task.title, body: [task.prompt, ...(task.previousRequirements ?? [])].join('\n\n'),
     category: task.track, difficulty: difficultyOf(task), code: task.starter, options: [], answer: null,
     explanation: null, evidence: [], image: null };
   const reason = active ? (summarize(task).free ? 'active-free' : 'active-premium') : 'not-issued';
@@ -149,7 +149,7 @@ export async function handleMarketingSource(req: VercelRequest, res: VercelRespo
       const picked = pickQuestionOfTheDay(questions.map((q) => q.question).filter((q) => active.has(`question:${q.id}`)), date);
       // A serving instance may still hold its 15-second quiz cache. Hold a
       // mismatched daily rather than linking a different current question.
-      const served = pickQuestionOfTheDay(await getEffectiveQuestions('webdev', false), date);
+      const served = pickQuestionOfTheDay(await getEffectiveQuestions('webdev'), date);
       if (!picked || !served || picked.question.id !== served.question.id ||
           hashContent(picked.question) !== hashContent(served.question)) throw new Error('marketing_source_unavailable');
       const source = picked && questionPackets.find((p) => p.sourceId === `question:${picked.question.id}`);

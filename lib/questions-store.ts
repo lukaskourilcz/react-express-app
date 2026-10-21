@@ -159,8 +159,8 @@ export async function getFreshMarketingQuestions(): Promise<{ question: Question
     if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('marketing_source_unavailable');
     return second;
   })(), 10000);
-  const bank = await loadSubjectQuestionBank('webdev', false);
-  return buildMarketingQuestionSnapshot(bank.questions, data);
+  const bank = await loadSubjectQuestionBank('webdev');
+  return buildMarketingQuestionSnapshot(bank, data);
 }
 
 /** Includes safe history for tombstones, with the exact same merge as serving. */

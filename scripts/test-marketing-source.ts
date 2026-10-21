@@ -16,7 +16,7 @@ const base = bank.find((q) => questionEligibility(q).active && q.category === 'j
 assert.ok(base);
 const row = (patch: Partial<QuestionEditRow>): QuestionEditRow => ({ question_id: base.id, is_custom: false, deleted: false,
   question: null, options: null, correct_index: null, explanation: null, introduction: null, category: null,
-  tags: null, difficulty: null, cs_question: null, cs_options: null, cs_introduction: null, cs_explanation: null, ...patch });
+  tags: null, difficulty: null, ...patch });
 const clean = questionPacket(buildMarketingQuestionSnapshot([base], [])[0], now)!;
 assert.equal(clean.eligible, true);
 assert.equal(clean.content.answer, base.options[base.correctAnswer]);
