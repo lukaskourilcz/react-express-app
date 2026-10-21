@@ -185,6 +185,11 @@ export const FDE_M11_DEPLOY: ModuleSource = {
           reviewedOn: '2026-10-21',
         },
         {
+          label: 'Amazon ECS docs: Determine Amazon ECS task health using container health checks',
+          url: 'https://docs.aws.amazon.com/AmazonECS/latest/developerguide/healthcheck.html',
+          reviewedOn: '2026-10-21',
+        },
+        {
           label: 'Sierra: Forward Deployed Infrastructure Engineer (job posting)',
           url: 'https://jobs.ashbyhq.com/sierra/d9c0aa93-e35d-4752-9cef-4c39dcad5365',
           reviewedOn: '2026-10-21',
@@ -221,7 +226,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
         {
           kind: 'code',
           language: 'dockerfile',
-          code: "# syntax=docker/dockerfile:1\nFROM node:22-bookworm-slim@sha256:<digest your build pins> AS build\nWORKDIR /app\nCOPY package.json package-lock.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM node:22-bookworm-slim@sha256:<digest your build pins>\nWORKDIR /app\nENV NODE_ENV=production\nCOPY --from=build /app/dist ./dist\nCOPY --from=build /app/node_modules ./node_modules\nUSER node\nEXPOSE 8080\nHEALTHCHECK --interval=30s --timeout=5s --retries=3 \\\n  CMD node dist/healthcheck.js\nCMD [\"node\", \"dist/server.js\"]",
+          code: "# syntax=docker/dockerfile:1\nFROM node:22-bookworm-slim@sha256:<digest your build pins> AS build\nWORKDIR /app\nCOPY package.json package-lock.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build && npm prune --omit=dev\n\nFROM node:22-bookworm-slim@sha256:<digest your build pins>\nWORKDIR /app\nENV NODE_ENV=production\nCOPY --from=build /app/dist ./dist\nCOPY --from=build /app/node_modules ./node_modules\nUSER node\nEXPOSE 8080\nHEALTHCHECK --interval=30s --timeout=5s --retries=3 \\\n  CMD node dist/healthcheck.js\nCMD [\"node\", \"dist/server.js\"]",
           caption: 'The workbench image as Marlbrook’s reviewer receives it. The digest is left as a placeholder here; a real build pins the one it tested. No secret appears in any line.',
         },
         {
@@ -237,7 +242,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
             [
               'Two `FROM` stages',
               'Does the runtime image carry your compiler and dev dependencies?',
-              'Multi-stage builds reduce the size of the final image; the first stage builds, the second copies only what runs.',
+              'Multi-stage builds reduce the size of the final image. Here the first stage builds and then prunes its dev dependencies with `npm prune --omit=dev`, so the second stage copies only what runs.',
             ],
             [
               '`USER node`',
@@ -247,7 +252,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
             [
               '`HEALTHCHECK`',
               'How will our platform know the container stopped working?',
-              '`HEALTHCHECK` tells Docker how to test that a container still works; exit code 0 means healthy and 1 means unhealthy.',
+              '`HEALTHCHECK` tells Docker how to test that a container still works; exit code 0 means healthy and 1 means unhealthy. The customer’s orchestrator may ignore it: Amazon ECS does not monitor a health check embedded in the image unless the container definition specifies one, so you hand their platform team the command for that definition.',
             ],
             [
               'No `ARG` or `ENV` holding a token',
@@ -351,7 +356,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
           reviewedOn: '2026-10-21',
         },
         {
-          label: 'Martin Fowler: Parallel Change',
+          label: 'Danilo Sato (martinfowler.com): Parallel Change',
           url: 'https://martinfowler.com/bliki/ParallelChange.html',
           reviewedOn: '2026-10-21',
         },
@@ -370,8 +375,8 @@ export const FDE_M11_DEPLOY: ModuleSource = {
         {
           kind: 'code',
           language: 'text',
-          code: 'Terraform will perform the following actions:\n\n  # aws_db_instance.cases must be replaced\n-/+ resource "aws_db_instance" "cases" {\n      ~ identifier = "cases-prod" -> "workbench-cases-prod" # forces replacement\n        # (14 unchanged attributes hidden)\n    }\n\n  # aws_security_group.workbench will be updated in-place\n  ~ resource "aws_security_group" "workbench" {\n      ~ ingress = [\n          + {\n              + cidr_blocks = ["10.40.0.0/16"]\n              + from_port   = 8080\n              + to_port     = 8080\n              + protocol    = "tcp"\n            },\n        ]\n    }\n\nPlan: 1 to add, 1 to change, 1 to destroy.',
-          caption: 'A fixture plan for a release that only meant to open port 8080 to Marlbrook’s internal range. A rename slipped in beside it.',
+          code: 'Terraform will perform the following actions:\n\n  # aws_db_instance.cases must be replaced\n-/+ resource "aws_db_instance" "cases" {\n      ~ storage_encrypted = false -> true # forces replacement\n        # (14 unchanged attributes hidden)\n    }\n\n  # aws_security_group.workbench will be updated in-place\n  ~ resource "aws_security_group" "workbench" {\n      ~ ingress = [\n          + {\n              + cidr_blocks = ["10.40.0.0/16"]\n              + from_port   = 8080\n              + to_port     = 8080\n              + protocol    = "tcp"\n            },\n        ]\n    }\n\nPlan: 1 to add, 1 to change, 1 to destroy.',
+          caption: 'A fixture plan for a release that only meant to open port 8080 to Marlbrook’s internal range. An encryption setting slipped in beside it.',
         },
         {
           kind: 'table',
@@ -387,7 +392,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Read the summary line before the details. “1 to destroy” in a release that only meant to open a port tells you something else changed. Here a rename of the database identifier forces replacement, and the Terraform lifecycle docs say the default for a replacement is to destroy the existing object first and then create the new one. The case database would come back empty. Two lifecycle settings change that: `prevent_destroy = true` makes Terraform reject any plan that would destroy the object, and `create_before_destroy` builds the replacement first. Neither copies the data across.',
+            'Read the summary line before the details. “1 to destroy” in a release that only meant to open a port tells you something else changed. Here turning on storage encryption for the database forces replacement, and the Terraform lifecycle docs say the default for a replacement is to destroy the existing object first and then create the new one. The case database would come back empty. Two lifecycle settings change that: `prevent_destroy = true` makes Terraform reject any plan that would destroy the object, and `create_before_destroy` builds the replacement first. Neither copies the data across.',
         },
         {
           kind: 'callout',
@@ -398,7 +403,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A release gate is a check that can say no, and a pipeline that cannot refuse has no gates. For a deployment into Marlbrook’s account, five gates run in order: the image builds from pinned inputs, the tests pass, a person approves the saved plan, the migration job reports every migration applied, and a canary answers its health checks with the release’s configuration in place. The SRE Workbook defines canarying as a partial, time-limited deployment of a change and its evaluation against the rest of the service, with a pause and rollback when the canary drifts too far from the control.',
+            'A release gate is a check that can say no, and a pipeline that cannot refuse has no gates. For a deployment into Marlbrook’s account, four gates run in order: the image builds from pinned inputs and passes its tests, a person approves the saved plan, the migration job reports every migration applied, and a canary answers its health checks with the release’s configuration in place. Only then does the rollout start. The SRE Workbook defines canarying as a partial, time-limited deployment of a change and its evaluation against the rest of the service, with a pause and rollback when the canary drifts too far from the control.',
         },
         {
           kind: 'prose',
@@ -408,14 +413,14 @@ export const FDE_M11_DEPLOY: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A rollback costs nothing until a migration has run. Redeploying the previous image restores the previous code; it restores no column, no row and no message already sent. Martin Fowler describes parallel change, also called expand and contract, as the pattern for backward-incompatible changes: expand the interface so it supports old and new versions, migrate every client, then contract to remove the old version. For a schema, “contract” is the step that drops a column.',
+            'A rollback costs nothing until a migration has run. Redeploying the previous image restores the previous code; it restores no column, no row and no message already sent. Danilo Sato’s article on Martin Fowler’s site describes parallel change, also called expand and contract, as the pattern for backward-incompatible changes: expand the interface so it supports old and new versions, migrate every client, then contract to remove the old version. For a schema, “contract” is the step that drops a column.',
         },
         {
           kind: 'table',
           caption: 'The three phases of a schema change, whether you can still roll the code back, and what that rollback costs.',
           headers: ['Phase', 'Old code still works?', 'Rollback cost'],
           rows: [
-            ['Expand: add `priority` beside `legacy_priority`', 'Yes, it ignores the new column', 'Redeploy the old image. Rows written meanwhile keep a value the old code never reads.'],
+            ['Expand: add `priority` beside `legacy_priority`; no code reads or writes it yet', 'Yes, it ignores the new column', 'Redeploy the old image. The new column is still empty, so nothing is lost.'],
             ['Migrate: new code writes both, reads `priority`', 'Yes, `legacy_priority` stays filled', 'Redeploy the old image. Nothing to restore.'],
             ['Contract: drop `legacy_priority`', 'No, it reads a column that no longer exists', 'Restore from a restore point taken before the drop, and lose writes made after it.'],
           ],
@@ -425,7 +430,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
           caption: 'Release R-2026.10.3 through its gates in Marlbrook’s account. The contract migration waits for a later release, after no running code reads the old column.',
           trace: {
             shape: 'array',
-            legend: ['pinned build', 'saved plan approved', 'migrations applied', 'canary healthy', 'rollout'],
+            legend: ['pinned build and tests', 'saved plan approved', 'migrations applied', 'canary healthy', 'rollout'],
             frames: [
               {
                 cells: ['passed', 'waiting', 'waiting', 'waiting', 'waiting'],
@@ -435,7 +440,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
               {
                 cells: ['passed', 'passed', 'waiting', 'waiting', 'waiting'],
                 marks: [{ index: 1, role: 'settled' }, { index: 2, role: 'active' }],
-                note: 'The reviewer approves a saved plan with 0 to destroy, after the identifier rename came out of the release.',
+                note: 'The reviewer approves a saved plan with 0 to destroy, after the encryption change came out of the release.',
               },
               {
                 cells: ['passed', 'passed', 'passed', 'waiting', 'waiting'],
@@ -523,17 +528,17 @@ export const FDE_M11_DEPLOY: ModuleSource = {
             'This release was meant to open port 8080 to Marlbrook’s internal range and nothing else. The case database holds three years of tickets. What happens if someone applies this plan, and what do you do?',
           context: {
             language: 'text',
-            code: '  # aws_db_instance.cases must be replaced\n-/+ resource "aws_db_instance" "cases" {\n      ~ identifier = "cases-prod" -> "workbench-cases-prod" # forces replacement\n    }\n\n  # aws_security_group.workbench will be updated in-place\n  ~ resource "aws_security_group" "workbench" { ... }\n\nPlan: 1 to add, 1 to change, 1 to destroy.',
+            code: '  # aws_db_instance.cases must be replaced\n-/+ resource "aws_db_instance" "cases" {\n      ~ storage_encrypted = false -> true # forces replacement\n    }\n\n  # aws_security_group.workbench will be updated in-place\n  ~ resource "aws_security_group" "workbench" { ... }\n\nPlan: 1 to add, 1 to change, 1 to destroy.',
           },
           options: [
-            'Terraform renames the database in place and keeps its data, since only the identifier changes. Apply it during the change window.',
+            'Terraform encrypts the database in place and keeps its data, since only a storage setting changes. Apply it during the change window.',
             'Terraform builds the new database first and then removes the old one, so the tickets move across. Apply it and check the row count.',
-            'Terraform destroys the database and creates an empty one. Stop the apply, take the rename out, and get a plan with nothing to destroy.',
-            'Terraform changes only its state file for the rename, so no remote object changes. Apply it and run a refresh afterwards.',
+            'Terraform destroys the database and creates an empty one. Stop the apply, take the encryption change out, and get a plan with nothing to destroy.',
+            'Terraform changes only its state file for the setting, so no remote object changes. Apply it and run a refresh afterwards.',
           ],
           correct: 2,
           explanation:
-            '`-/+` with `# forces replacement` means Terraform cannot change the identifier in place, and the lifecycle docs say a replacement destroys the existing object first and then creates a new one. The release did not ask for a database change, so you remove the rename and approve a plan that destroys nothing. An in-place update would show `~`, not `-/+`. Create-before-destroy only applies when the configuration sets `create_before_destroy`, and even then Terraform builds a new empty object; it copies no data. A state-only rename is a separate operation, and this plan proposes a change to a remote object.',
+            '`-/+` with `# forces replacement` means Terraform cannot change `storage_encrypted` in place, and the lifecycle docs say a replacement destroys the existing object first and then creates a new one. The release did not ask for a database change, so you take the encryption change out and approve a plan that destroys nothing; encrypting the database becomes its own planned change, with a copy of the data. An in-place update would show `~`, not `-/+`. Create-before-destroy only applies when the configuration sets `create_before_destroy`, and even then Terraform builds a new empty object; it copies no data. A plan that touched only state would propose no action on a remote object; this one proposes replacing the database.',
           competencies: ['deployment'],
         },
         {
