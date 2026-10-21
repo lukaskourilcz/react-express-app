@@ -18,4 +18,4 @@ Print the content snapshot for `$ARGUMENTS` and report it without retyping numbe
 4. When the request asks for a count that the snapshot does not print, compute it from the owning registry with a one-off read, say so, and suggest adding it to `scripts/content-snapshot.ts`.
 5. Return the snapshot output verbatim in a code block, followed by any disagreement found in step 3.
 
-The snapshot reads no database: question counts are the repository's gated bank without the `/dev` overrides, and path storage shows as not checked. Do not present either as the production state. The Learn section matrix is printed only after A1 (#487) adds `shared/learn-sections.ts` and the script is extended. Do not edit files unless the request asks for it.
+The snapshot reads no database: question counts are the repository's gated bank without the `/dev` overrides, and path storage shows as not checked. Do not present either as the production state. Do not edit files unless the request asks for it.

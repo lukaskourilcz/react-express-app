@@ -8,9 +8,7 @@
 // server applies (`applyEligibility`), so the counts are the repository's
 // answer; the /dev override layer (`question_edits`) is not read.
 //
-// The Learn section matrix (`shared/learn-sections.ts`) is not printed yet:
-// that registry arrives with A1 (#487), and this script gains the matrix
-// after A1 merges.
+// The Learn section matrix comes from `shared/learn-sections.ts` (A1, #487).
 
 import { ROADMAP_TOPICS, liveRoadmapStructure, topicLevelCount, type RoadmapTopic } from '../lib/roadmap';
 import { loadSubjectQuestionBank } from '../lib/question-bank-loader';
@@ -23,6 +21,7 @@ import { CODING_INDEX } from '../shared/coding-index';
 import { CODING_SECTION_TRACKS, CODING_TRACKS } from '../shared/coding-catalog';
 import { evolvingStage } from '../shared/evolving';
 import { pathInventory, BASE_TRACKS } from '../shared/learning-paths';
+import { LEARN_SECTIONS, sectionsForTopic } from '../shared/learn-sections';
 import { SKILL_PATH_BRIDGE_TOPICS, SPECIALIZATION_BRIDGE_TOPICS, WEBDEV_PLAN_STAGES, partRanges } from '../shared/progression';
 import { SUBJECT_SCOPE_CATALOG, deliveryCategories } from '../shared/subject-catalog';
 import {
@@ -168,7 +167,13 @@ async function main() {
       indexInSync,
     },
     paths,
-    sectionMatrix: null as null,
+    sectionMatrix: LEARN_SECTIONS.map((section) => ({
+      id: section.id,
+      membership: section.membership,
+      topics: [...section.topics],
+      shared: section.topics.filter((topic) => sectionsForTopic(topic).length > 1),
+      paths: [...section.paths],
+    })),
   };
 
   if (json) {
@@ -262,7 +267,11 @@ async function main() {
   }
   out.push('');
 
-  out.push('Learn section matrix: not printed. shared/learn-sections.ts arrives with A1 (#487); the matrix is added here after A1 merges.');
+  out.push('Learn sections (shared/learn-sections.ts LEARN_SECTIONS; shared topics marked *)');
+  for (const section of snapshot.sectionMatrix) {
+    const topics = section.topics.map((topic) => (section.shared.includes(topic) ? `${topic}*` : topic)).join(', ');
+    out.push(`  ${pad(section.id, 27)} ${pad(section.membership, 15)} ${section.topics.length} topics: ${topics}${section.paths.length ? `; paths: ${section.paths.join(', ')}` : ''}`);
+  }
   console.log(out.join('\n'));
 }
 
