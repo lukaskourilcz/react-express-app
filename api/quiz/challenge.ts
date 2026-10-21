@@ -4,8 +4,6 @@ import { settleMilestones } from '../../lib/rewards/coins';
 import {
   secureShuffle,
   weightedSample,
-  localizeQuestion,
-  normalizeLang,
   PRIVATE_CATEGORIES,
   type Question,
 } from '../../lib/quiz-runtime';
@@ -109,8 +107,7 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'Assessment sessions cannot reuse challenge runs');
   }
   if (!assessment && req.query.ranked === '0') return jsonError(res, 400, 'invalid_run_mode', 'Challenge allows 90 seconds per question');
-  const lang = normalizeLang(req.query.lang);
-  const all = await getEffectiveQuestions(scope.subject, lang === 'cs');
+  const all = await getEffectiveQuestions(scope.subject);
   const deliverable = new Set(defaultDeploymentCategories());
   const available: string[] = [...new Set(all.filter(q => deliverable.has(q.category) && !PRIVATE_CATEGORIES.includes(q.category)).map(q => q.category))].sort();
   const topics = scope.categories.filter(topic => available.includes(topic)).sort();
@@ -138,9 +135,8 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   const selected = weightedSample(pool, Math.min(batchSize, pool.length), weight);
 
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
-  const questions = selected.map((base) => {
-    const q = localizeQuestion(base, lang);
-    const correctText = q.options[base.correctAnswer];
+  const questions = selected.map((q) => {
+    const correctText = q.options[q.correctAnswer];
     const shuffled = secureShuffle(q.options);
     sessionData.push({ questionId: q.id, correctAnswer: shuffled.indexOf(correctText) });
     return {
@@ -151,7 +147,7 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
       options: shuffled,
       category: q.category,
       difficulty: q.difficulty,
-      review: itemReview(base),
+      review: itemReview(q),
     };
   });
 
@@ -317,7 +313,7 @@ async function runAnswers(
   breakdown: Record<string, { correct: number; total: number }>;
 } | null> {
   try {
-    const bank = await getEffectiveQuestionsById(subject, false);
+    const bank = await getEffectiveQuestionsById(subject);
     const answered: { questionId: string; category: string; isCorrect: boolean; xp: number }[] = [];
     const breakdown: Record<string, { correct: number; total: number }> = {};
     for (const outcome of outcomes) {

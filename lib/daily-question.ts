@@ -18,7 +18,7 @@
 import { createHash } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { encodeSession } from './quiz-tokens';
-import { localizeQuestion, PRIVATE_CATEGORIES } from './quiz-runtime';
+import { PRIVATE_CATEGORIES } from './quiz-runtime';
 import { jsonError } from './http';
 import { getEffectiveQuestions } from './questions-store';
 import { enforceClassRateLimit, RATE_LIMITS } from './rate-limit';
@@ -136,8 +136,8 @@ export async function handleQuestionOfTheDay(req: VercelRequest, res: VercelResp
     return jsonError(res, 404, QOTD_BEFORE_START, 'There was no question of the day on that date.');
   }
 
-  const questions = await getEffectiveQuestions('webdev', false);
-  const picked = pickQuestionOfTheDay(questions.map((q) => localizeQuestion(q, 'en')), date);
+  const questions = await getEffectiveQuestions('webdev');
+  const picked = pickQuestionOfTheDay(questions, date);
   if (!picked) return jsonError(res, 503, 'no_questions', 'The question of the day is not available right now.');
 
   const { correctAnswer, ...answer } = picked;

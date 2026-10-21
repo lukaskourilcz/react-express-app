@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { randomBytes } from 'node:crypto';
-import {
-  localizeQuestion,
-  normalizeLang,
-  secureShuffle,
-  type Question,
-} from '../../lib/quiz-runtime';
+import { secureShuffle, type Question } from '../../lib/quiz-runtime';
 import {
   decodeQuizResultReceipt,
   decodeSessionEnvelope,
@@ -138,14 +133,13 @@ const PROGRESS_TABLE = 'roadmap_progress';
 
 // Build a playable payload without answer keys. Options are shuffled on the
 // server and the answer indices are kept only inside the encrypted session.
-function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, byId: Map<string, Question>) {
+function buildQuestions(ids: string[], byId: Map<string, Question>) {
   const answerKey: { questionId: string; correctAnswer: number }[] = [];
   const questions = ids
     .map((id) => byId.get(id))
     .filter((q): q is NonNullable<typeof q> => Boolean(q))
-    .map((base) => {
-      const q = localizeQuestion(base, lang);
-      const correctText = q.options[base.correctAnswer];
+    .map((q) => {
+      const correctText = q.options[q.correctAnswer];
       const options = secureShuffle(q.options);
       answerKey.push({ questionId: q.id, correctAnswer: options.indexOf(correctText) });
       return {
@@ -156,7 +150,7 @@ function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, b
         options,
         category: q.category,
         difficulty: q.difficulty,
-        review: itemReview(base),
+        review: itemReview(q),
       };
     });
   return { questions, answerKey };
@@ -169,7 +163,6 @@ async function playableResponse(input: {
   title: string;
   passPct: number;
   ids: string[];
-  lang: ReturnType<typeof normalizeLang>;
   byId: Map<string, Question>;
   difficulty?: number;
   requiredLevelStart?: number;
@@ -177,7 +170,7 @@ async function playableResponse(input: {
   /** The account the step is issued to, or null for a guest. */
   userId: string | null;
 }) {
-  const built = buildQuestions(input.ids, input.lang, input.byId);
+  const built = buildQuestions(input.ids, input.byId);
   const subject = subjectForTopic(input.topic);
   if (!subject) return null;
   const attemptId = randomBytes(18).toString('base64url');
@@ -727,7 +720,6 @@ function placementRoundResponse(input: {
   history: PlacementOutcome[];
   pool: Question[];
   byId: Map<string, Question>;
-  lang: ReturnType<typeof normalizeLang>;
 }): Record<string, unknown> | null {
   const seen = new Set<string>(input.history.map((h) => h.questionId));
   // A round is five questions, or fewer when fewer are left in the budget: a
@@ -736,7 +728,7 @@ function placementRoundResponse(input: {
   const remaining = PLACEMENT_TOTAL - input.history.length;
   const ids = pickPlacementIds(input.pool, input.difficulty, Math.max(1, Math.min(PLACEMENT_ROUND_SIZE, remaining)), seen);
   if (ids.length === 0) return null;
-  const built = buildQuestions(ids, input.lang, input.byId);
+  const built = buildQuestions(ids, input.byId);
   if (built.questions.length === 0) return null;
   const items = built.answerKey.map((k) => ({
     questionId: k.questionId,
@@ -773,12 +765,11 @@ async function handlePlacementStart(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
   }
   const subject = rawSubject;
-  const lang = normalizeLang(req.query.lang);
-  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const byId = await getEffectiveQuestionsById(subject);
   const pool = poolForSubject(byId, subject);
   const attemptId = randomBytes(18).toString('base64url');
   const response = placementRoundResponse({
-    subject, attemptId, round: 1, difficulty: PLACEMENT_START_DIFFICULTY, history: [], pool, byId, lang,
+    subject, attemptId, round: 1, difficulty: PLACEMENT_START_DIFFICULTY, history: [], pool, byId,
   });
   if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
   res.setHeader('Cache-Control', 'private, no-store');
@@ -788,7 +779,7 @@ async function handlePlacementStart(req: VercelRequest, res: VercelResponse) {
 
 async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapAnswerAddress, RATE_LIMITS.roadmapAnswer))) return;
-  const body = (req.body || {}) as { placementToken?: unknown; answers?: unknown; lang?: unknown };
+  const body = (req.body || {}) as { placementToken?: unknown; answers?: unknown };
   if (typeof body.placementToken !== 'string') {
     return jsonError(res, 400, 'invalid_session', 'Placement session expired or invalid');
   }
@@ -804,7 +795,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   // A question retired while the round was open is void: it is neither a hit
   // nor a miss, it does not move the difficulty, and the run is topped up with
   // another question later so the receipt still covers the full budget.
-  const servedNow = await getEffectiveQuestionsById(state.subject, false);
+  const servedNow = await getEffectiveQuestionsById(state.subject);
   const roundOutcomes: PlacementOutcome[] = [];
   const review: import('../../shared/assessment').PlacementReview[] = [];
   let roundCorrect = 0;
@@ -885,8 +876,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     return res.json(response);
   }
 
-  const lang = normalizeLang(body.lang);
-  const byId = await getEffectiveQuestionsById(state.subject, lang === 'cs');
+  const byId = await getEffectiveQuestionsById(state.subject);
   const pool = poolForSubject(byId, state.subject);
   const response = placementRoundResponse({
     subject: state.subject,
@@ -896,7 +886,6 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     history,
     pool,
     byId,
-    lang,
   });
   if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
   response.lastRoundCorrect = roundCorrect;
@@ -1036,7 +1025,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapAnswerAddress, RATE_LIMITS.roadmapAnswer))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
   const body = (req.body || {}) as {
-    sessionId?: unknown; questionId?: unknown; selectedIndex?: unknown; lang?: unknown;
+    sessionId?: unknown; questionId?: unknown; selectedIndex?: unknown;
   };
   const session = roadmapSession(body.sessionId);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
@@ -1052,12 +1041,11 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (await refuseLockedSession(res, userId, session)) return;
 
   const selectedIndex = Number(body.selectedIndex);
-  const lang = normalizeLang(body.lang);
 
   // The explanation does not depend on the grade, so it is fetched alongside it
   // rather than after it. The store is cached, but a cold instance pays a read,
   // and paying it in parallel costs nothing.
-  const questionsPromise = getEffectiveQuestionsById(session.subject, lang === 'cs');
+  const questionsPromise = getEffectiveQuestionsById(session.subject);
 
   // One round trip. The v2 routine opens the attempt if this is the first
   // answer and runs every check the two-step path ran on the same locked row,
@@ -1118,8 +1106,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const stored = saved.data as { selectedIndex?: unknown; correctAnswer?: unknown; isCorrect?: unknown };
 
   const questions = await questionsPromise;
-  const base = questions.get(body.questionId);
-  const explanation = base ? localizeQuestion(base, lang).explanation : '';
+  const explanation = questions.get(body.questionId)?.explanation ?? '';
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({
     selectedIndex: Number(stored.selectedIndex),
@@ -1174,7 +1161,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // is closed without a verdict instead: nothing is written to the learner's
   // progress, no pass is granted on a flawed item and no fail is recorded for
   // one. The client offers the level again with its current questions.
-  const served = await getEffectiveQuestionsById(session.subject, false);
+  const served = await getEffectiveQuestionsById(session.subject);
   const retired = session.questions.filter((q) => !served.has(q.questionId)).map((q) => q.questionId);
   if (retired.length > 0) {
     if (!attempt.completed_at) {
@@ -1351,7 +1338,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // unanswered when the hearts ran out are simply absent from the graded rows
   // and are not recorded as failures — they were not attempted.
   if (userId && isScopeSubject(session.subject)) {
-    const byId = await getEffectiveQuestionsById(session.subject, false);
+    const byId = await getEffectiveQuestionsById(session.subject);
     const items = graded.flatMap((answer) => {
       const question = byId.get(String(answer.question_id));
       if (!question) return [];
@@ -1477,7 +1464,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     try {
       const learner = await learnerContext(req, res);
       if (learner === undefined) return;
-      const byId = await getEffectiveQuestionsById(undefined, false);
+      const byId = await getEffectiveQuestionsById();
       const exists = (id: string) => byId.has(id);
       const structure = liveRoadmapStructure(exists);
       const levelCount = (topic: string) => (structure as Record<string, { levels: unknown[] } | undefined>)[topic]?.levels.length ?? 0;
@@ -1561,7 +1548,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // The same for everyone, so only the address tier: verifying a token
     // here would cost a round trip the map never needed.
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
-    const byId = await getEffectiveQuestionsById(undefined, false);
+    const byId = await getEffectiveQuestionsById();
     const exists = (id: string) => byId.has(id);
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
     const topicSet = new Set<string>(topics);
@@ -1583,14 +1570,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'Unknown topic');
   }
   const topic: RoadmapTopic = topicRaw;
-  const lang = normalizeLang(req.query.lang);
   const subject = subjectForTopic(topic)!;
   if (!(await limitRead(req, res))) return;
   // One read of the learner's plan and verified record, shared by the three
   // step branches below. A guest has neither, and takes the preview path.
   const learner = await learnerContext(req, res);
   if (learner === undefined) return;
-  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const byId = await getEffectiveQuestionsById(subject);
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
   const availability = liveAvailability(live);
@@ -1635,7 +1621,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = await playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
-      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
+      passPct: PART_TEST_PASS, ids, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
@@ -1670,7 +1656,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = await playableResponse({
       kind: 'checkpoint', topic, ref: checkpoint, title: `Part ${checkpoint}`,
-      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
+      passPct: PART_TEST_PASS, ids, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) {
@@ -1701,7 +1687,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const playable = await playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
-    ids: live.levelIds[level - 1] ?? [], lang, byId, userId: learner?.userId ?? null,
+    ids: live.levelIds[level - 1] ?? [], byId, userId: learner?.userId ?? null,
     ...(required !== null ? { requiredLevelStart: required, requiredLevelEnd: required } : {}),
   });
   if (!playable || playable.questions.length === 0) {

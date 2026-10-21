@@ -247,7 +247,7 @@ async function main() {
     // so the handler asks again without them. Either way the XP is 5 a
     // correct answer.
     const { getEffectiveQuestions } = await import('../lib/questions-store');
-    const bank = (await getEffectiveQuestions('webdev', false)).slice(0, 5);
+    const bank = (await getEffectiveQuestions('webdev')).slice(0, 5);
     const answered = (runId: string) => bank.map((question, i) => tokens.encodeScoreProof(runId, question.id, 'webdev', i < 2));
     INSTALLED.record_challenge_completion = true;
     for (const shape of ['052', '040'] as const) {

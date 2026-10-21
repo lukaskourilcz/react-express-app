@@ -63,12 +63,12 @@ import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession as encodeLegacyCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
-import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, codingTaskEligibility, questionEligibility, isAuditedCategory } from '../lib/curation';
+import { contentVersion, contentHash, taskHash, itemReview, codingTaskReview, codingTaskEligibility, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
-import { applyEligibility, getEffectiveQuestions, getQuestionsForHistoryById } from '../lib/questions-store';
+import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
@@ -282,35 +282,32 @@ async function auditGateContracts() {
   const markers = (n: number) => ({ presentDay: Math.min(2, n), practicalUtility: Math.min(2, Math.max(0, n - 2)), transferable: Math.min(2, Math.max(0, n - 4)), audienceFit: Math.min(2, Math.max(0, n - 6)), riskOutcome: Math.min(2, Math.max(0, n - 8)) });
   const dims = (floor: number) => ({ topicRelevance: 5, learningValue: 5, technicalCorrectness: 5, wording: 5, answerOptions: 5, hint: floor, explanation: 5 });
   const entry = (over: Partial<RegistryEntry> = {}): RegistryEntry => ({
-    id: 'rm-js-1', kind: 'question', hash: 'h1', cs: 'c1',
+    id: 'rm-js-1', kind: 'question', hash: 'h1',
     relevance: 8, quality: 4, markers: markers(8), dimensions: dims(4),
     decision: 'retain', reviewedAt: '2026-09-09', revision: 1, ...over,
   });
 
   // The boundaries the audit names, one by one.
-  assert.equal(eligibilityFrom(entry(), 'h1', 'c1', true).active, true, 'a current passing record is served');
-  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 3 retires');
-  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4) }), 'h1', 'c1', true).active, true, 'relevance 4 alone does not retire');
-  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4), quality: 2, dimensions: dims(2) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 4 with quality 2 still retires');
-  assert.equal(eligibilityFrom(entry({ relevance: 10, markers: markers(10), quality: 2, dimensions: dims(2) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 10 with a wrong key (quality capped at 2) still retires');
-  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', 'c1', true).reason, 'retired', 'a retire decision withholds whatever the scores say');
-  assert.equal(eligibilityFrom(entry({ decision: 'quarantine' }), 'h1', 'c1', true).reason, 'quarantined', 'unverified correctness is held, not passed');
-  assert.equal(eligibilityFrom(null, 'h1', 'c1', true).reason, 'unreviewed', 'no record means not served');
-  assert.equal(eligibilityFrom(entry(), 'h2', 'c1', true).reason, 'superseded', 'a record for other content does not apply — an edit invalidates approval');
-  assert.equal(eligibilityFrom(entry({ hash: 'h2', revision: 2 }), 'h2', 'c1', true).active, true, 'a re-reviewed rewrite returns on its new hash');
-  assert.equal(eligibilityFrom(entry(), 'h1', 'c2', true).csApproved, false, 'an edited translation is not the reviewed one');
-  assert.equal(eligibilityFrom(entry({ cs: null }), 'h1', null, true).csApproved, true, 'no translation to approve');
-  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', 'c1', true).reason, 'invalid-record', 'a row whose totals disagree with its markers is no record at all');
-  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).active, true, 'outside the audited scope an unreviewed item is served as before');
-  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).reason, 'not-in-scope');
+  assert.equal(eligibilityFrom(entry(), 'h1', true).active, true, 'a current passing record is served');
+  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', true).reason, 'failed-gate', 'relevance 3 retires');
+  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4) }), 'h1', true).active, true, 'relevance 4 alone does not retire');
+  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4), quality: 2, dimensions: dims(2) }), 'h1', true).reason, 'failed-gate', 'relevance 4 with quality 2 still retires');
+  assert.equal(eligibilityFrom(entry({ relevance: 10, markers: markers(10), quality: 2, dimensions: dims(2) }), 'h1', true).reason, 'failed-gate', 'relevance 10 with a wrong key (quality capped at 2) still retires');
+  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', true).reason, 'retired', 'a retire decision withholds whatever the scores say');
+  assert.equal(eligibilityFrom(entry({ decision: 'quarantine' }), 'h1', true).reason, 'quarantined', 'unverified correctness is held, not passed');
+  assert.equal(eligibilityFrom(null, 'h1', true).reason, 'unreviewed', 'no record means not served');
+  assert.equal(eligibilityFrom(entry(), 'h2', true).reason, 'superseded', 'a record for other content does not apply — an edit invalidates approval');
+  assert.equal(eligibilityFrom(entry({ hash: 'h2', revision: 2 }), 'h2', true).active, true, 'a re-reviewed rewrite returns on its new hash');
+  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', true).reason, 'invalid-record', 'a row whose totals disagree with its markers is no record at all');
+  assert.equal(eligibilityFrom(null, 'h1', false).active, true, 'outside the audited scope an unreviewed item is served as before');
+  assert.equal(eligibilityFrom(null, 'h1', false).reason, 'not-in-scope');
   // A recorded decision holds wherever the item lives; the scope only decides
   // what happens to content with no applicable record.
-  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', 'c1', false).reason, 'retired', 'a retirement recorded for a category still in progress withholds the item now');
-  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', 'c1', false).reason, 'failed-gate', 'a failing row withholds outside the scope too');
-  assert.equal(eligibilityFrom(entry(), 'h1', 'c1', false).reason, 'reviewed', 'a passing row serves, and claims, outside the scope');
-  assert.equal(eligibilityFrom(entry(), 'h1', 'c2', false).csApproved, false, 'a reviewed item outside the scope still drops an unreviewed translation');
-  assert.deepEqual(eligibilityFrom(entry(), 'h2', 'c1', false), { active: true, reason: 'not-in-scope', entry: null, csApproved: true }, 'a superseded row outside the scope neither withholds nor claims');
-  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', 'c1', false).active, true, 'a broken row outside the scope is no record, so the item is served as before');
+  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', false).reason, 'retired', 'a retirement recorded for a category still in progress withholds the item now');
+  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', false).reason, 'failed-gate', 'a failing row withholds outside the scope too');
+  assert.equal(eligibilityFrom(entry(), 'h1', false).reason, 'reviewed', 'a passing row serves, and claims, outside the scope');
+  assert.deepEqual(eligibilityFrom(entry(), 'h2', false), { active: true, reason: 'not-in-scope', entry: null }, 'a superseded row outside the scope neither withholds nor claims');
+  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', false).active, true, 'a broken row outside the scope is no record, so the item is served as before');
   assert.equal(registryEntryConsistent(entry({ quality: 5 })), false, 'the quality score must be the floor of its dimensions');
 
   // The registry is the ledger, exactly.
@@ -352,8 +349,8 @@ async function auditGateContracts() {
   // for its exact current content, and every registry row names a real item.
   // The served set is read with the gate applied, so a withheld item is
   // proven absent rather than assumed.
-  const served = await getEffectiveQuestions('webdev', true);
-  const history = await getQuestionsForHistoryById('webdev', true);
+  const served = await getEffectiveQuestions('webdev');
+  const history = await getQuestionsForHistoryById('webdev');
   const byId = new Map(REVIEW_REGISTRY.map((row) => [row.id, row]));
   for (const q of served) {
     const row = byId.get(q.id);
@@ -362,14 +359,13 @@ async function auditGateContracts() {
       continue;
     }
     // A served item with a row is served on that row's terms wherever it lives:
-    // current content, live decision, both gates, the reviewed translation.
+    // current content, live decision, both gates.
     if (row.hash !== contentHash(q)) {
       assert.ok(!AUDITED_CATEGORIES.has(q.category), `${q.id} is served on content its record was not made about`);
       continue;
     }
     assert.ok(row.decision === 'retain' || row.decision === 'rewrite', `${q.id} is served with decision ${row.decision}`);
     assert.ok(passesBothGates(row.relevance, row.quality), `${q.id} is served while failing a gate`);
-    if (q.csTranslation) assert.equal(translationHash(q.csTranslation), row.cs, `${q.id} serves a Czech translation that was not reviewed`);
   }
   const withheldByDecision = REVIEW_REGISTRY.filter((row) => row.decision === 'retire' || row.decision === 'quarantine' || !passesBothGates(row.relevance, row.quality));
   const servedIds = new Set(served.map((q) => q.id));
@@ -399,8 +395,6 @@ async function auditGateContracts() {
     assert.deepEqual(gated.list.map((q) => q.id), [audited.id], 'the edited copy and the unreviewed id are withheld');
     assert.equal(gated.withheld.get(audited.id), 'superseded');
     assert.equal(gated.withheld.get('rm-js-never-reviewed'), 'unreviewed');
-    const foreignCs = { ...audited, csTranslation: { question: 'Jiná otázka' } };
-    assert.equal(applyEligibility([foreignCs]).list[0]?.csTranslation, null, 'an unreviewed translation is dropped, and English served instead');
     assert.equal(questionEligibility(audited).active, true);
   }
   // In a category the wave has reached only in part, the recorded decisions
@@ -412,8 +406,6 @@ async function auditGateContracts() {
     assert.deepEqual(gated.list.map((q) => q.id), [partial.id, partial.id, 'rm-js-never-reviewed'], 'outside the completed scope an edit or a missing record serves the item as before');
     assert.equal(questionEligibility(edited).reason, 'not-in-scope');
     assert.equal(questionEligibility(partial).reason, 'reviewed', 'the recorded review still applies to the unedited wording');
-    const foreignCs = { ...partial, csTranslation: { question: 'Jiná otázka' } };
-    assert.equal(applyEligibility([foreignCs]).list[0]?.csTranslation, null, 'a reviewed item outside the scope still serves only its reviewed translation');
   }
   const retiredRow = REVIEW_REGISTRY.find((row) => row.kind === 'question' && row.decision === 'retire' && !AUDITED_CATEGORIES.has(history.get(row.id)?.category ?? ''));
   if (retiredRow) {
@@ -421,7 +413,7 @@ async function auditGateContracts() {
     assert.equal(questionEligibility(item).reason, retiredRow.hash === contentHash(item) ? 'retired' : 'not-in-scope');
     assert.ok(!servedIds.has(retiredRow.id) || retiredRow.hash !== contentHash(item), `${retiredRow.id} was retired in a category still in progress and is still served`);
   }
-  const firstServed = (await getEffectiveQuestions('webdev', false))[0];
+  const firstServed = (await getEffectiveQuestions('webdev'))[0];
   assert.ok(firstServed, 'the webdev bank serves questions');
 
   // Levels keep their authored membership. A retired question thins its own
@@ -484,7 +476,7 @@ async function auditGateContracts() {
 
   // A placement round voids a retired item and tops the run up instead of
   // ending it short of the budget.
-  const pool = (await getEffectiveQuestions('webdev', false)).slice(0, 3);
+  const pool = (await getEffectiveQuestions('webdev')).slice(0, 3);
   const placementToken = encodePlacementRun({
     subject: 'webdev', attemptId: 'placement-void-contract-1234', round: 1, difficulty: 3, history: [],
     items: [
@@ -834,16 +826,16 @@ async function tierContracts() {
     await roadmapHandler(guest({ resource: 'coding-task', id: freeTask.id }) as never, guestFree as never);
     assert.equal(guestFree.statusCode, 200, 'a free task stays open to a guest');
     const guestLevel = mockResponse();
-    await roadmapHandler(guest({ topic: 'react', level: '13', lang: 'en' }) as never, guestLevel as never);
+    await roadmapHandler(guest({ topic: 'react', level: '13' }) as never, guestLevel as never);
     assert.equal(guestLevel.statusCode, 402, 'a guest is refused a Premium Learn level');
     const guestTest = mockResponse();
-    await roadmapHandler(guest({ topic: 'react', test: '2', lang: 'en' }) as never, guestTest as never);
+    await roadmapHandler(guest({ topic: 'react', test: '2' }) as never, guestTest as never);
     assert.equal(guestTest.statusCode, 402, 'a guest is refused a Premium part test');
     const guestTs = mockResponse();
-    await roadmapHandler(guest({ topic: 'typescript', level: '1', lang: 'en' }) as never, guestTs as never);
+    await roadmapHandler(guest({ topic: 'typescript', level: '1' }) as never, guestTs as never);
     assert.equal(guestTs.statusCode, 402, 'a guest is refused a Premium topic');
     const guestFreeLevel = mockResponse();
-    await roadmapHandler(guest({ topic: 'react', level: '12', lang: 'en' }) as never, guestFreeLevel as never);
+    await roadmapHandler(guest({ topic: 'react', level: '12' }) as never, guestFreeLevel as never);
     assert.notEqual(guestFreeLevel.statusCode, 402, 'a free Learn level stays open to a guest');
     // Grading and the solution follow the same rule. A guest's session for a
     // Premium task, or for a coding task inside a Premium Learn level, is
@@ -2145,7 +2137,7 @@ function erasureContracts() {
  * pools; the same question for the same date; no answer before a check; a
  * check that records nothing for anyone; and no question before its day. */
 async function qotdContracts() {
-  const served = await getEffectiveQuestions('webdev', false);
+  const served = await getEffectiveQuestions('webdev');
   const deliverable = new Set(deliveryCategories('webdev'));
   for (const track of QOTD_TRACKS) {
     assert.ok(deliverable.has(track), `${track} is served`);
@@ -2619,7 +2611,7 @@ async function quizSubmitScopeContracts() {
   // option before the level is finished, so this session must not be
   // gradable as a quiz.
   const level = mockResponse();
-  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1', lang: 'en' }), level as never);
+  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1' }), level as never);
   assert.equal(level.statusCode, 200, JSON.stringify(level.body));
   const learn = await submitAll((level.body as { sessionId: string }).sessionId, learner);
   assert.equal(learn.session.scope, 'roadmap');
@@ -2710,7 +2702,7 @@ async function quizSubmitScopeContracts() {
     }
   }
   const placement = mockResponse();
-  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev', lang: 'en' }), placement as never);
+  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev' }), placement as never);
   assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
   for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
     assert.equal('tags' in question, false, 'a placement round sends no tags');
@@ -2719,10 +2711,54 @@ async function quizSubmitScopeContracts() {
   }
 }
 
+/** devShark ships English only (#485), and no request carries `lang` any
+ * more. An old cached client may still send one for a while, so a stray
+ * `lang` in the query or the body is ignored rather than refused: a Learn
+ * level, a placement round, a quiz and its grading all answer 200 in English. */
+async function strayLangContracts() {
+  const english = await getEffectiveQuestionsById('webdev');
+  const assertEnglish = (label: string, questions: { id: string; question: string; options: string[] }[]) => {
+    assert.ok(questions.length > 0, `${label} hands out questions`);
+    for (const served of questions) {
+      const source = english.get(served.id);
+      assert.ok(source, `${label}: ${served.id} is a served question`);
+      assert.equal(served.question, source!.question, `${label}: ${served.id} is served in English`);
+      assert.deepEqual([...served.options].sort(), [...source!.options].sort(), `${label}: ${served.id} offers its English options`);
+    }
+  };
+
+  const level = mockResponse();
+  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1', lang: 'cs' }), level as never);
+  assert.equal(level.statusCode, 200, `a Learn level with a stray lang is served (${JSON.stringify(level.body)})`);
+  assertEnglish('Learn level', (level.body as { questions: { id: string; question: string; options: string[] }[] }).questions);
+
+  const placement = mockResponse();
+  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev', lang: 'cs' }), placement as never);
+  assert.equal(placement.statusCode, 200, `a placement round with a stray lang is served (${JSON.stringify(placement.body)})`);
+  assertEnglish('placement', (placement.body as { questions: { id: string; question: string; options: string[] }[] }).questions);
+
+  const quiz = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '3', difficulty: 'mixed', categories: 'javascript', lang: 'cs' }), quiz as never);
+  assert.equal(quiz.statusCode, 200, `a quiz with a stray lang is served (${JSON.stringify(quiz.body)})`);
+  const quizBody = quiz.body as { sessionId: string; questions: { id: string; question: string; options: string[] }[] };
+  assertEnglish('quiz', quizBody.questions);
+  const session = decodeSessionEnvelope(quizBody.sessionId)!;
+  const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+  const graded = mockResponse();
+  await submitHandler(quizRequest('POST', {}, { sessionId: quizBody.sessionId, answers, lang: 'cs' }), graded as never);
+  assert.equal(graded.statusCode, 200, `a quiz submit with a stray lang is graded (${JSON.stringify(graded.body)})`);
+  const results = (graded.body as { results: { questionId: string; isCorrect: boolean; explanation: string }[] }).results;
+  assert.equal(results.length, session.questions.length);
+  for (const result of results) {
+    assert.equal(result.isCorrect, true, `${result.questionId} is graded on its sealed key`);
+    assert.equal(result.explanation, english.get(result.questionId)!.explanation, `${result.questionId} is explained in English`);
+  }
+}
+
 /** Advanced asked of a topic with nothing above difficulty 2 is served its
  * hardest questions, and says so, instead of a 404 that Retry repeats. */
 async function quizDifficultyContracts() {
-  const served = await getEffectiveQuestions('webdev', false);
+  const served = await getEffectiveQuestions('webdev');
   const hardestHtml = Math.max(...served.filter((q) => q.category === 'html').map((q) => q.difficulty));
   assert.ok(hardestHtml < 3, 'this contract needs a topic with no advanced questions');
   const html = mockResponse();
@@ -3975,11 +4011,11 @@ async function main() {
     ...reviewQuestions[0],
     source: 'base', deleted: false,
     options: ['Always correct', 'Always correct'],
-    cs: { question: '', options: [], introduction: '', explanation: '' },
-    review: { active: true, reason: 'reviewed', csApproved: false },
+    review: { active: true, reason: 'reviewed' },
   }]);
   assert.ok(qualityIssues.some((issue) => issue.kind === 'weak_distractor'));
-  assert.ok(qualityIssues.some((issue) => issue.kind === 'missing_translation'));
+  // English only (#485): the checks never raise a second-language issue.
+  assert.ok(qualityIssues.every((issue) => !/translation|parity/.test(issue.kind)), 'no second-language quality issue kinds');
 
   const migration = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-022.sql'), 'utf8');
   assert.match(migration, /record_verified_quiz_result_v2/);
@@ -4685,7 +4721,7 @@ async function main() {
   {
     const lessonRes = mockResponse();
     await roadmapHandler({
-      method: 'GET', headers: {}, query: { topic: 'javascript', level: '1', lang: 'en' },
+      method: 'GET', headers: {}, query: { topic: 'javascript', level: '1' },
     } as never, lessonRes as never);
     assert.equal(lessonRes.statusCode, 200, 'the first JavaScript Learn level must load');
     const lesson = lessonRes.body as { sessionId?: string; questions?: Array<Record<string, unknown>> };
@@ -5707,6 +5743,7 @@ async function main() {
   await voucherContracts();
   await qotdContracts();
   await quizSubmitScopeContracts();
+  await strayLangContracts();
   await guestChallengeLimitContracts();
   await challengeSelectionContracts();
   await dailyIntegrityContracts();

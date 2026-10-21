@@ -20,14 +20,14 @@ try {
     console.log(`PASS preview ${path}: HTTP 200`);
   }
   for(const id of ['react-counter','js-double-numbers']) {
-    const opened=await context.request.get(`${origin}/api/quiz/roadmap?resource=coding-task&id=${id}&lang=en`);
+    const opened=await context.request.get(`${origin}/api/quiz/roadmap?resource=coding-task&id=${id}`);
     assert.equal(opened.status(),200,`${id}: task HTTP ${opened.status()}`);
     const task=await opened.json();
     for(const [kind,code,expected] of [
       ['reference',solutionFor(id)!.solution,'passed'],
       ['wrong',id==='react-counter'?'export default function App(){return <p>wrong</p>;}':'const double = ns => ns;','failed'],
     ]) {
-      const submitted=await context.request.post(`${origin}/api/quiz/roadmap?resource=coding-submit`,{data:{session:task.session,code,runCount:1,hintsUsed:0,durationMs:30000,lang:'en'},timeout:50000});
+      const submitted=await context.request.post(`${origin}/api/quiz/roadmap?resource=coding-submit`,{data:{session:task.session,code,runCount:1,hintsUsed:0,durationMs:30000},timeout:50000});
       const result=await submitted.json();
       assert.equal(submitted.status(),200,`${id} ${kind}: HTTP ${submitted.status()}, error ${result.error?.code??'none'}`);
       assert.equal(result.verdict,expected,`${id} ${kind}: ${result.verdict??'missing verdict'}`);
@@ -42,7 +42,7 @@ try {
     const cleanupFile = process.argv[4];
     assert(cleanupFile, 'Challenge verification requires a private cleanup file');
     for (const positive of [true, false]) {
-      const opened = await context.request.get(`${origin}/api/quiz/challenge?categories=javascript&lang=en`);
+      const opened = await context.request.get(`${origin}/api/quiz/challenge?categories=javascript`);
       assert.equal(opened.status(), 200, 'Challenge batch must open');
       const batch = await opened.json();
       const proofs: string[] = [];
@@ -53,7 +53,7 @@ try {
         const answer = question.options.indexOf(authored.options[authored.correctAnswer]);
         assert(answer >= 0, 'The displayed shuffle must contain the authored answer');
         const selectedIndex = positive && index === 0 ? answer : (answer + 1) % question.options.length;
-        const submitted = await context.request.post(`${origin}/api/quiz/submit`, { data: { sessionId: batch.sessionId, answers: { [question.id]: selectedIndex }, lang: 'en' } });
+        const submitted = await context.request.post(`${origin}/api/quiz/submit`, { data: { sessionId: batch.sessionId, answers: { [question.id]: selectedIndex } } });
         assert.equal(submitted.status(), 200, 'Challenge answer must be accepted');
         const result = await submitted.json();
         assert.equal(result.results[0].isCorrect, positive && index === 0);

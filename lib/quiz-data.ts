@@ -41,29 +41,9 @@ export interface Question {
   // delivery so format variety in a session is a real signal rather than a
   // guess about what the text looks like.
   snippet?: SnippetMeta;
-  // Resolved Czech translation for /dev-managed questions, set by the question
-  // overrides layer:
-  //   undefined → not resolved; fall back to the static cs bank (default)
-  //   null      → explicitly no translation (show English)
-  //   object    → use this translation (a /dev cs override)
-  csTranslation?: QuestionTranslation | null;
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
-
-// Supported question languages. English is the base/source language; other
-// languages are stored as per-question overrides and fall back to English.
-export type QuestionLang = 'en' | 'cs';
-
-// A translation only overrides the human-readable text fields. `options` must
-// be a parallel array (same length AND same order as the English options) so
-// that the stored correctAnswer index stays valid after localization.
-export interface QuestionTranslation {
-  introduction?: string;
-  question?: string;
-  options?: string[];
-  explanation?: string;
-}
 
 const coreQuestions: Question[] = [
   // REACT - useState

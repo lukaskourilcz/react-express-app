@@ -158,10 +158,6 @@ export interface RegistryEntry {
   /** Plain digest of the reviewed content. A served item with a different
    * digest was edited after this decision and the decision no longer applies. */
   hash: string;
-  /** Digest of the reviewed Czech translation, or null when the item has no
-   * approved translation. A served translation with a different digest is
-   * dropped in favour of English rather than served unreviewed. */
-  cs: string | null;
   relevance: number;
   quality: number;
   markers: RelevanceMarkers;
@@ -213,9 +209,6 @@ export interface Eligibility {
   active: boolean;
   reason: EligibilityReason;
   entry: RegistryEntry | null;
-  /** True when the served translation is the one that was reviewed (or the
-   * item has none). False means serve English instead. */
-  csApproved: boolean;
 }
 
 /**
@@ -225,8 +218,8 @@ export interface Eligibility {
  * capped at 2) still retires, and an item nobody has reviewed is not served.
  *
  * A recorded decision about exactly this content is enforced wherever the
- * item lives: a retirement withholds it and a passing review serves it (and
- * approves its translation) whether or not its category is in the audited
+ * item lives: a retirement withholds it and a passing review serves it
+ * whether or not its category is in the audited
  * scope. The scope decides only what happens to content nobody has recorded a
  * decision about — no record, a record for other wording, a broken record:
  * inside the scope that content is withheld until it is reviewed; outside it
@@ -237,21 +230,19 @@ export interface Eligibility {
 export function eligibilityFrom(
   entry: RegistryEntry | null | undefined,
   contentHash: string,
-  translationHash: string | null,
   inScope: boolean,
 ): Eligibility {
   const unrecorded = (reason: 'unreviewed' | 'invalid-record' | 'superseded', record: RegistryEntry | null): Eligibility =>
     inScope
-      ? { active: false, reason, entry: record, csApproved: false }
-      : { active: true, reason: 'not-in-scope', entry: null, csApproved: true };
+      ? { active: false, reason, entry: record }
+      : { active: true, reason: 'not-in-scope', entry: null };
   if (!entry) return unrecorded('unreviewed', null);
   if (!registryEntryConsistent(entry)) return unrecorded('invalid-record', entry);
   if (entry.hash !== contentHash) return unrecorded('superseded', entry);
-  const csApproved = translationHash === null ? true : entry.cs === translationHash;
-  if (entry.decision === 'retire') return { active: false, reason: 'retired', entry, csApproved };
-  if (entry.decision === 'quarantine') return { active: false, reason: 'quarantined', entry, csApproved };
-  if (!passesBothGates(entry.relevance, entry.quality)) return { active: false, reason: 'failed-gate', entry, csApproved };
-  return { active: true, reason: 'reviewed', entry, csApproved };
+  if (entry.decision === 'retire') return { active: false, reason: 'retired', entry };
+  if (entry.decision === 'quarantine') return { active: false, reason: 'quarantined', entry };
+  if (!passesBothGates(entry.relevance, entry.quality)) return { active: false, reason: 'failed-gate', entry };
+  return { active: true, reason: 'reviewed', entry };
 }
 
 /* ── status, derived and failing closed ────────────────────────────────── */

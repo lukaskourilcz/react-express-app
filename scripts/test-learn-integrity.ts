@@ -274,7 +274,7 @@ function mockResponse() {
 async function main() {
   const server = await startStandIn();
   try {
-    const [{ default: roadmap }, tokens] = await Promise.all([import('../api/quiz/roadmap'), import('../lib/quiz-tokens')]);
+    const [{ default: roadmap }, tokens, store] = await Promise.all([import('../api/quiz/roadmap'), import('../lib/quiz-tokens'), import('../lib/questions-store')]);
     let address = 0;
     const call = async (method: string, query: Record<string, string>, token?: string, body?: unknown) => {
       const res = mockResponse();
@@ -292,7 +292,7 @@ async function main() {
       const session = tokens.decodeSessionEnvelope(sessionId)!;
       const statuses: number[] = [];
       for (const question of session.questions) {
-        const res = await call('POST', { resource: 'answer' }, token, { sessionId, questionId: question.questionId, selectedIndex: question.correctAnswer, lang: 'en' });
+        const res = await call('POST', { resource: 'answer' }, token, { sessionId, questionId: question.questionId, selectedIndex: question.correctAnswer });
         statuses.push(res.statusCode);
       }
       return statuses;
@@ -300,10 +300,10 @@ async function main() {
 
     // The Big O introduction opens before placement, but no later DSA step does.
     for (const level of ['1', '2']) {
-      const intro = await call('GET', { topic: 'dsa', level, lang: 'en' }, LEARNER.token);
+      const intro = await call('GET', { topic: 'dsa', level }, LEARNER.token);
       assert.equal(intro.statusCode, 200, `free beginner Big O lesson ${level}: ${JSON.stringify(intro.body)}`);
     }
-    const laterDsa = await call('GET', { topic: 'dsa', level: '3', lang: 'en' }, LEARNER.token);
+    const laterDsa = await call('GET', { topic: 'dsa', level: '3' }, LEARNER.token);
     assert.notEqual(laterDsa.statusCode, 200, 'the introduction must not unlock the rest of DSA');
 
     // ── A guest's session cannot be completed by an account ────────────────
@@ -311,14 +311,14 @@ async function main() {
     // asks with its token. Fetched without the token, the same level is served
     // as a preview; answering and completing it with the token must not record
     // it for the account.
-    const refused = await call('GET', { topic: 'javascript', level: '10', lang: 'en' }, LEARNER.token);
+    const refused = await call('GET', { topic: 'javascript', level: '10' }, LEARNER.token);
     assert.equal(refused.statusCode, 403, 'a new account is refused a level it has not reached');
-    const preview = await call('GET', { topic: 'javascript', level: '10', lang: 'en' });
+    const preview = await call('GET', { topic: 'javascript', level: '10' });
     assert.equal(preview.statusCode, 200, 'a guest is served the preview');
     const previewSession = preview.body.sessionId as string;
     const foreign = await answerAll(previewSession, LEARNER.token);
     assert.ok(foreign.every((status) => status === 409), `a guest session is not answered with a token (${foreign.join(',')})`);
-    const foreignAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: previewSession, questionId: tokens.decodeSessionEnvelope(previewSession)!.questions[0].questionId, selectedIndex: 0, lang: 'en' });
+    const foreignAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: previewSession, questionId: tokens.decodeSessionEnvelope(previewSession)!.questions[0].questionId, selectedIndex: 0 });
     assert.equal(foreignAnswer.body?.error?.code, 'session_owner_mismatch', 'the refusal names why, so the client can restart the level');
     const foreignComplete = await call('POST', { resource: 'complete' }, LEARNER.token, { sessionId: previewSession });
     assert.equal(foreignComplete.statusCode, 409, 'a guest session is not completed with a token');
@@ -331,9 +331,18 @@ async function main() {
     assert.equal(tokens.decodeCodingSession(codingItem.session)?.userId, null, 'a guest level seals a guest coding session');
 
     // An account's session answers to that account alone: not to a guest (a
-    // learner who signed out mid-level) and not to another account.
-    const own = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, LEARNER.token);
+    // learner who signed out mid-level) and not to another account. This
+    // fetch and the answer below also carry the stray `lang: 'cs'` an old
+    // cached client may still send (#485): it is ignored, never refused, and
+    // the copy served is English.
+    const own = await call('GET', { topic: 'javascript', level: '1', lang: 'cs' }, LEARNER.token);
     assert.equal(own.statusCode, 200);
+    const englishById = await store.getEffectiveQuestionsById('webdev');
+    for (const served of own.body.questions as { id: string; question: string; options: string[] }[]) {
+      const english = englishById.get(served.id)!;
+      assert.equal(served.question, english.question, `${served.id} is served in English whatever lang says`);
+      assert.deepEqual([...served.options].sort(), [...english.options].sort(), `${served.id} offers its English options`);
+    }
     assert.equal(tokens.decodeSessionEnvelope(own.body.sessionId)?.userId, LEARNER.id, 'the session is sealed to the account');
     const ownCoding = (own.body.coding ?? [])[0] as { session: string } | undefined;
     assert.ok(ownCoding);
@@ -353,15 +362,16 @@ async function main() {
     assert.ok(ownCoding, 'JavaScript level 1 carries a coding task');
     assert.equal(tokens.decodeCodingSession(ownCoding.session)?.userId, LEARNER.id, 'and so is its coding task');
     const firstQuestion = tokens.decodeSessionEnvelope(own.body.sessionId)!.questions[0];
-    const signedOut = await call('POST', { resource: 'answer' }, undefined, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0, lang: 'en' });
+    const signedOut = await call('POST', { resource: 'answer' }, undefined, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0 });
     assert.equal(signedOut.statusCode, 409, 'a signed-in session is not answered after signing out');
-    const otherAccount = await call('POST', { resource: 'answer' }, OTHER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0, lang: 'en' });
+    const otherAccount = await call('POST', { resource: 'answer' }, OTHER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0 });
     assert.equal(otherAccount.statusCode, 409, 'nor by another account');
-    const ownAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: firstQuestion.correctAnswer, lang: 'en' });
+    const ownAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: firstQuestion.correctAnswer, lang: 'cs' });
     assert.equal(ownAnswer.statusCode, 200, `the account itself answers (${JSON.stringify(ownAnswer.body)})`);
     assert.equal(ownAnswer.body.isCorrect, true);
+    assert.equal(ownAnswer.body.explanation, englishById.get(firstQuestion.questionId)!.explanation, 'a stray lang still gets the English explanation');
     // A guest keeps playing a guest session.
-    const guestLevel = await call('GET', { topic: 'html', level: '1', lang: 'en' });
+    const guestLevel = await call('GET', { topic: 'html', level: '1' });
     const guestStatuses = await answerAll(guestLevel.body.sessionId);
     assert.ok(guestStatuses.every((status) => status === 200), `a guest answers a guest session (${guestStatuses.join(',')})`);
     console.log('PASS learn: a session answers only to the account it was issued to');
@@ -383,7 +393,7 @@ async function main() {
         },
       },
     });
-    const level2 = await call('GET', { topic: 'html', level: '2', lang: 'en' }, LEARNER.token);
+    const level2 = await call('GET', { topic: 'html', level: '2' }, LEARNER.token);
     assert.equal(level2.statusCode, 200, JSON.stringify(level2.body));
     assert.ok((await answerAll(level2.body.sessionId, LEARNER.token)).every((status) => status === 200));
     const completed = await call('POST', { resource: 'complete' }, LEARNER.token, { sessionId: level2.body.sessionId });
@@ -400,15 +410,15 @@ async function main() {
     // ── A granted topic opens its levels ───────────────────────────────────
     const granted = await call('GET', { resource: 'progress' }, OWNER.token);
     assert.ok(granted.body.extra.unlocked.includes('system-design'), 'the progress GET reports the grant');
-    const grantedLevel = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OWNER.token);
+    const grantedLevel = await call('GET', { topic: 'system-design', level: '1' }, OWNER.token);
     assert.equal(grantedLevel.statusCode, 200, `a granted topic serves its first level (${JSON.stringify(grantedLevel.body?.error)})`);
-    const notGranted = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OTHER.token);
+    const notGranted = await call('GET', { topic: 'system-design', level: '1' }, OTHER.token);
     assert.equal(notGranted.body?.error?.code, 'topic_locked', 'an account without the grant is still refused');
     // The grant is keyed on the address, so an unconfirmed one gets nothing.
     const unconfirmed = await call('GET', { resource: 'progress' }, OWNER_UNCONFIRMED.token);
     assert.equal(unconfirmed.statusCode, 200, JSON.stringify(unconfirmed.body));
     assert.ok(!unconfirmed.body.extra.unlocked.includes('system-design'), 'an unconfirmed owner address is not granted the topic');
-    const unconfirmedLevel = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OWNER_UNCONFIRMED.token);
+    const unconfirmedLevel = await call('GET', { topic: 'system-design', level: '1' }, OWNER_UNCONFIRMED.token);
     assert.equal(unconfirmedLevel.body?.error?.code, 'topic_locked', 'nor served its levels');
     console.log('PASS learn: a granted topic opens its levels');
 
@@ -417,7 +427,7 @@ async function main() {
     // revealed in this attempt: the level is not passed and the task stays
     // pending, as complete_verified_roadmap_attempt records it from 047.
     for (const revealed of [true, false]) {
-      const level = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, OTHER.token);
+      const level = await call('GET', { topic: 'javascript', level: '1' }, OTHER.token);
       assert.equal(level.statusCode, 200, JSON.stringify(level.body));
       assert.ok((await answerAll(level.body.sessionId, OTHER.token)).every((status) => status === 200));
       const attemptId = tokens.decodeSessionEnvelope(level.body.sessionId)!.attemptId;
@@ -443,7 +453,7 @@ async function main() {
     // account without a recorded coding pass still waits for one.
     {
       const progressRows = tables.roadmap_progress.length;
-      const guest = await call('GET', { topic: 'javascript', level: '1', lang: 'en' });
+      const guest = await call('GET', { topic: 'javascript', level: '1' });
       assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
       assert.ok((guest.body.coding ?? []).length > 0, 'JavaScript level 1 carries a coding task');
       assert.ok((await answerAll(guest.body.sessionId)).every((status) => status === 200));
@@ -455,7 +465,7 @@ async function main() {
       assert.equal(guestDone.body.progress, undefined, 'no stored progress comes back for a guest');
       assert.equal(tables.roadmap_progress.length, progressRows, 'nothing is recorded for a guest');
 
-      const signedIn = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, LEARNER.token);
+      const signedIn = await call('GET', { topic: 'javascript', level: '1' }, LEARNER.token);
       assert.equal(signedIn.statusCode, 200, JSON.stringify(signedIn.body));
       assert.ok((await answerAll(signedIn.body.sessionId, LEARNER.token)).every((status) => status === 200));
       const taskIds = (signedIn.body.coding as Array<{ task: { id: string } }>).map((item) => item.task.id);
@@ -470,7 +480,7 @@ async function main() {
     console.log('PASS learn: a guest passes a level on its questions; an account still needs its coding pass');
 
     // ── A failed progress read is not a refusal ────────────────────────────
-    const blip = await call('GET', { topic: 'javascript', level: '2', lang: 'en' }, BROKEN.token);
+    const blip = await call('GET', { topic: 'javascript', level: '2' }, BROKEN.token);
     assert.equal(blip.statusCode, 503, `a progress read that fails answers 503 (${JSON.stringify(blip.body)})`);
     assert.equal(blip.body?.error?.code, 'progress_unavailable');
     console.log('PASS learn: a failed progress read answers 503, not "complete the preceding steps"');
@@ -490,16 +500,16 @@ async function main() {
         extra: {},
         data: { html: { levels: htmlLevels, checkpoints: { '1': { passed: true, bestPct: 95 } } } },
       });
-      const viaTest = await call('GET', { topic: 'html', test: '1', lang: 'en' }, BACKEND.token);
+      const viaTest = await call('GET', { topic: 'html', test: '1' }, BACKEND.token);
       assert.equal(viaTest.statusCode, 200, `a passed part test outside the plan is served under ?test= (${JSON.stringify(viaTest.body?.error)})`);
       assert.equal(viaTest.body.kind, 'checkpoint');
       assert.equal(viaTest.body.ref, 1);
-      const viaCheckpoint = await call('GET', { topic: 'html', checkpoint: '1', lang: 'en' }, BACKEND.token);
+      const viaCheckpoint = await call('GET', { topic: 'html', checkpoint: '1' }, BACKEND.token);
       assert.equal(viaCheckpoint.statusCode, 200, 'and still under ?checkpoint=');
-      const notPassed = await call('GET', { topic: 'html', test: '2', lang: 'en' }, BACKEND.token);
+      const notPassed = await call('GET', { topic: 'html', test: '2' }, BACKEND.token);
       assert.equal(notPassed.statusCode, 403, 'a part test never passed outside the plan is still refused');
       assert.equal(notPassed.body?.error?.code, 'not_in_plan');
-      const nextLevel = await call('GET', { topic: 'html', level: String(htmlLevelCount), lang: 'en' }, BACKEND.token);
+      const nextLevel = await call('GET', { topic: 'html', level: String(htmlLevelCount) }, BACKEND.token);
       assert.equal(nextLevel.body?.error?.code, 'not_in_plan', 'as is a level never passed');
     }
     console.log('PASS learn: a passed part test outside the plan is served under ?test= and ?checkpoint=');
@@ -509,12 +519,12 @@ async function main() {
     // handler closes that attempt itself, without the completion routine that
     // advances the streak for a passed or failed level, so it advances it.
     const loseOnHearts = async () => {
-      const level = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, HEARTS.token);
+      const level = await call('GET', { topic: 'javascript', level: '1' }, HEARTS.token);
       assert.equal(level.statusCode, 200, JSON.stringify(level.body));
       const session = tokens.decodeSessionEnvelope(level.body.sessionId)!;
       for (const question of session.questions.slice(0, 3)) {
         const options = (level.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
-        const wrong = await call('POST', { resource: 'answer' }, HEARTS.token, { sessionId: level.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+        const wrong = await call('POST', { resource: 'answer' }, HEARTS.token, { sessionId: level.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options });
         assert.equal(wrong.statusCode, 200, JSON.stringify(wrong.body));
         assert.equal(wrong.body.isCorrect, false);
       }
@@ -538,11 +548,11 @@ async function main() {
       assert.equal(again.body.applied, false);
       assert.equal(rpcCalls.some((one) => one.name === 'advance_verified_streak'), false, 'a retried completion does not count the day again');
       // A guest's level lost on hearts has no streak to count.
-      const guest = await call('GET', { topic: 'javascript', level: '1', lang: 'en' });
+      const guest = await call('GET', { topic: 'javascript', level: '1' });
       const guestSession = tokens.decodeSessionEnvelope(guest.body.sessionId)!;
       for (const question of guestSession.questions.slice(0, 3)) {
         const options = (guest.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
-        await call('POST', { resource: 'answer' }, undefined, { sessionId: guest.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+        await call('POST', { resource: 'answer' }, undefined, { sessionId: guest.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options });
       }
       rpcCalls.length = 0;
       const guestDone = await call('POST', { resource: 'complete' }, undefined, { sessionId: guest.body.sessionId });
@@ -565,14 +575,14 @@ async function main() {
     // says what it paid, or when the XP opens again, for the toast.
     {
       const playLevel = async (correct: boolean) => {
-        const level = await call('GET', { topic: 'html', level: '1', lang: 'en' }, REPEAT.token);
+        const level = await call('GET', { topic: 'html', level: '1' }, REPEAT.token);
         assert.equal(level.statusCode, 200, JSON.stringify(level.body));
         const session = tokens.decodeSessionEnvelope(level.body.sessionId)!;
         for (const question of session.questions) {
           const options = (level.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
           const answer = await call('POST', { resource: 'answer' }, REPEAT.token, {
             sessionId: level.body.sessionId, questionId: question.questionId,
-            selectedIndex: correct ? question.correctAnswer : (question.correctAnswer + 1) % options, lang: 'en',
+            selectedIndex: correct ? question.correctAnswer : (question.correctAnswer + 1) % options,
           });
           if (answer.statusCode !== 200) break; // out of hearts
         }
@@ -625,7 +635,7 @@ async function main() {
     console.log('PASS learn: a replayed step pays its XP again after an hour, as XP only, and says when it opens');
     // A direct visit to the public guide's second intro must be completable,
     // rather than open successfully and then fail its SQL prerequisite.
-    const bigO=await call('GET',{topic:'dsa',level:'2',lang:'en'},OTHER.token);
+    const bigO=await call('GET',{topic:'dsa',level:'2'},OTHER.token);
     assert.equal(bigO.statusCode,200,JSON.stringify(bigO.body));
     assert.equal((bigO.body.coding??[]).length,0,'the introductory Big O lesson needs no locked coding task');
     assert.ok((await answerAll(bigO.body.sessionId,OTHER.token)).every(status=>status===200));

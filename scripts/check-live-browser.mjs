@@ -16,7 +16,7 @@ try{
   pages.push(await context.newPage());
  }
  for(const mode of ['multiplayer','classroom']){
-  const room=await api('/api/play/create',{host_name:'Launch audit host',mode,count:5,categories:['javascript'],duration_s:0,lang:'en'});
+  const room=await api('/api/play/create',{host_name:'Launch audit host',mode,count:5,categories:['javascript'],duration_s:0});
   await pages[0].goto(base+'/play/'+room.code);
   await pages[0].getByRole('button',{name:/Start.*5/i}).waitFor({timeout:30000});
   await pages[1].goto(base+'/play/'+room.code);

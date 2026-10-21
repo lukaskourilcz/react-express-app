@@ -22,7 +22,7 @@ import { createHash } from 'node:crypto';
 import { createLogger } from './http';
 import { stableAttemptId } from './quiz-tokens';
 import { getEffectiveQuestions, overridesAvailable } from './questions-store';
-import type { Question, QuestionTranslation } from './quiz-data';
+import type { Question } from './quiz-data';
 import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
 import type { CodingTask } from '../shared/coding-catalog';
 import type { CodingSolution } from './coding/types';
@@ -96,16 +96,6 @@ export function contentHash(q: Pick<Question, 'category' | 'question' | 'options
     ]))
     .digest('hex')
     .slice(0, 16);
-}
-
-/** The plain digest of one served translation, or null when there is none. A
- * translation is reviewed on its own, because a wrong Czech option order is
- * a defect the English item does not have. */
-export function translationHash(tr: QuestionTranslation | null | undefined): string | null {
-  if (!tr) return null;
-  if (!tr.introduction && !tr.question && !tr.options && !tr.explanation) return null;
-  const fields = [tr.introduction ?? '', tr.question ?? '', tr.options ?? [], tr.explanation ?? ''];
-  return createHash('sha256').update(JSON.stringify(['translation-hash:v1', ...fields])).digest('hex').slice(0, 16);
 }
 
 /**
@@ -213,12 +203,12 @@ export const isAuditedCategory = (category: string): boolean =>
  * cannot forget to ask.
  */
 export function questionEligibility(q: Question): Eligibility {
-  return eligibilityFrom(REGISTRY_BY_ID.get(q.id), contentHash(q), translationHash(q.csTranslation), isAudited(q));
+  return eligibilityFrom(REGISTRY_BY_ID.get(q.id), contentHash(q), isAudited(q));
 }
 
 /** May this exact coding task be issued? Same rule, same registry. */
 export function codingTaskEligibility(task: CodingTask, solution: CodingSolution | undefined): Eligibility {
-  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), null, CODING_TASKS_AUDITED);
+  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), CODING_TASKS_AUDITED);
 }
 
 function recordFrom(entry: RegistryEntry, current: boolean, version: string): ReviewRecord {

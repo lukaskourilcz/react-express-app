@@ -5,7 +5,7 @@
 //   npm run audit:devshark-inventory -- --out <dir>
 //
 // Writes one JSON file per review batch (the reviewer's input: the English
-// item, its Czech translation, its level and objective) plus `inventory.json`,
+// item, its level and objective) plus `inventory.json`,
 // the reconciled list every ledger row must map back to. Read-only: it never
 // edits content and never touches the database — the override layer is a
 // source the inventory can only *name*, which is why it appears with a null
@@ -14,15 +14,13 @@
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { questions, type Question } from '../lib/quiz-data';
-import { questionTranslationsCs } from '../lib/quiz-data.cs';
 import { fixTheTestQuestions } from '../lib/roadmap-questions-fix-the-test';
-import { fixTheTestTranslationsCs } from '../lib/roadmap-questions-fix-the-test.cs';
 import { roadmapCoolStuffQuestions } from '../lib/roadmap-questions';
 import { buildRoadmap } from '../lib/roadmap-build';
 import { htmlSeeds } from '../lib/roadmap-questions-html';
 import { cssSeeds } from '../lib/roadmap-questions-css';
 import { topicLevels, type RoadmapTopic } from '../lib/roadmap';
-import { contentHash, translationHash, taskHash, questionEligibility } from '../lib/curation';
+import { contentHash, taskHash, questionEligibility } from '../lib/curation';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { ACTIVE_CODING_TASKS } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
@@ -54,8 +52,6 @@ interface InventoryItem {
   difficulty: number;
   tags: string[];
   contentHash: string;
-  csHash: string | null;
-  hasCs: boolean;
   eligible: boolean;
 }
 
@@ -94,10 +90,9 @@ const plansFor = (topic: string): string[] =>
   (Object.keys(WEBDEV_PLAN_STAGES) as (keyof typeof WEBDEV_PLAN_STAGES)[])
     .filter((track) => WEBDEV_PLAN_STAGES[track].some((stage) => stage.includes(topic)));
 
-function describe(q: Question, source: string, delivery: Delivery, cs: Record<string, { introduction?: string; question?: string; options?: string[]; explanation?: string }>): InventoryItem {
+function describe(q: Question, source: string, delivery: Delivery): InventoryItem {
   const topic = topicOf(q.id);
   const level = levelOf(q.id);
-  const tr = cs[q.id];
   return {
     id: q.id,
     kind: 'question',
@@ -110,14 +105,11 @@ function describe(q: Question, source: string, delivery: Delivery, cs: Record<st
     difficulty: q.difficulty,
     tags: q.tags,
     contentHash: contentHash(q),
-    csHash: translationHash(tr),
-    hasCs: !!tr,
     eligible: questionEligibility(q).active,
   };
 }
 
-function reviewerRow(q: Question, item: InventoryItem, cs: Record<string, { introduction?: string; question?: string; options?: string[]; explanation?: string }>) {
-  const tr = cs[q.id];
+function reviewerRow(q: Question, item: InventoryItem) {
   return {
     id: q.id,
     delivery: item.delivery,
@@ -134,9 +126,6 @@ function reviewerRow(q: Question, item: InventoryItem, cs: Record<string, { intr
     correctAnswer: q.correctAnswer,
     explanation: q.explanation,
     ...(q.snippet ? { snippet: q.snippet } : {}),
-    cs: tr
-      ? { hint: tr.introduction ?? null, question: tr.question ?? null, options: tr.options ?? null, explanation: tr.explanation ?? null, csHash: item.csHash }
-      : null,
   };
 }
 
@@ -146,14 +135,13 @@ function main() {
   if (!outDir) throw new Error('Pass --out <dir>');
   mkdirSync(outDir, { recursive: true });
 
-  const cs = { ...questionTranslationsCs, ...fixTheTestTranslationsCs };
   const items: InventoryItem[] = [];
   const rows = new Map<string, ReturnType<typeof reviewerRow>[]>();
   const push = (q: Question, source: string, delivery: Delivery, batch: string) => {
-    const item = describe(q, source, delivery, cs);
+    const item = describe(q, source, delivery);
     items.push(item);
     const list = rows.get(batch) ?? [];
-    list.push(reviewerRow(q, item, cs));
+    list.push(reviewerRow(q, item));
     rows.set(batch, list);
   };
 

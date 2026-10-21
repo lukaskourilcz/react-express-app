@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto';
 import type { AdminQuestion } from './questions-store';
 
 export type QualityIssueKind =
-  | 'missing_translation'
-  | 'translation_parity'
   | 'weak_distractor'
   | 'duplicate'
   | 'ambiguous_wording'
@@ -31,10 +29,9 @@ const hashQuestion = (question: AdminQuestion): string => createHash('sha256').u
   options: question.options,
   correctAnswer: question.correctAnswer,
   explanation: question.explanation,
-  cs: question.cs,
 })).digest('hex');
 
-/** Deterministic first-pass content and EN/CS parity checks. Never edits data. */
+/** Deterministic first-pass content checks. Never edits data. */
 export function inspectQuestionQuality(questions: AdminQuestion[]): QualityIssue[] {
   const issues: QualityIssue[] = [];
   const duplicates = new Map<string, string[]>();
@@ -84,21 +81,6 @@ export function inspectQuestionQuality(questions: AdminQuestion[]): QualityIssue
     }
     if ((question.importance ?? 5) <= 3 && question.difficulty >= 4) {
       add('importance_mismatch', 'low', 'A difficult question has low curriculum importance.', 'Confirm it belongs in scored rotation or reserve it for optional advanced practice.');
-    }
-
-    const csMissing = !question.cs.question.trim() || !question.cs.explanation.trim() ||
-      question.cs.options.length !== question.options.length || question.cs.options.some((option) => !option.trim());
-    if (csMissing) {
-      add('missing_translation', 'high', 'Czech question, explanation, or parallel options are incomplete.', 'Complete all Czech fields while preserving option order and code identifiers.');
-    } else {
-      const englishCode = [...question.question.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
-      const missingCode = englishCode.filter((token) => !question.cs.question.includes(token));
-      if (missingCode.length > 0) {
-        add('translation_parity', 'medium', `Czech text may have changed code identifiers: ${missingCode.slice(0, 3).join(', ')}.`, 'Keep code, API, and identifier tokens unchanged in the translation.');
-      }
-      if (!question.cs.options[question.correctAnswer]?.trim()) {
-        add('translation_parity', 'high', 'The accepted-answer slot is missing in Czech.', 'Restore a parallel Czech option at the same accepted index.');
-      }
     }
   }
 

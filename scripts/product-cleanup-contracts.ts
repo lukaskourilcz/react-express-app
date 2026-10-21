@@ -245,7 +245,7 @@ function flashcardsDatabase(rows: Record<string, unknown>[]) {
 /** Owner decision 12: Shark Cards are saved questions, and the packs are gone. */
 async function sharkCardContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
-  const bank = await getEffectiveQuestions('webdev', false);
+  const bank = await getEffectiveQuestions('webdev');
   const quizQuestion = bank.find((q) => !q.id.startsWith('rm-'));
   const learnQuestion = bank.find((q) => /^rm-js-\d+$/.test(q.id));
   assert.ok(quizQuestion && learnQuestion, 'the bank has a quiz question and a Learn question to save');
