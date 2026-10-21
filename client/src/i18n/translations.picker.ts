@@ -31,6 +31,7 @@ export const pickerEn = {
   'paths.picker.back': 'Back',
   'paths.picker.cancel': 'Cancel',
   'paths.picker.save': 'Save',
+  'paths.picker.accountSaveFailed': 'Your track and specialization are kept on this device. Your sections and answers are not saved to your account yet. Try again.',
   'paths.picker.enrollFailed': 'A path could not be started or paused, so your choices are not saved to your account yet. Try again.',
 
   'profile.picker.title': 'A little about your learning',

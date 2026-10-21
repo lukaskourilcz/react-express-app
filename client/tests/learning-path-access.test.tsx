@@ -41,6 +41,7 @@ const state = vi.hoisted(() => ({
   diagnosticResults: [] as { competencyId: string; state: 'demonstrated' | 'gap' | 'not_assessed'; score: number | null; assessedItems: number }[],
   metadata: {} as Record<string, unknown>,
   catalogFailed: false,
+  saveFails: false,
   changes: [] as Record<string, unknown>[],
   saves: [] as unknown[][],
   sheet: vi.fn(),
@@ -60,7 +61,7 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/lib/trackPref')>(),
   saveLearningPreference: vi.fn(async (...args: unknown[]) => {
     state.saves.push(args);
-    return { ok: true, preference: args[1] };
+    return state.saveFails ? { ok: false, reason: 'network', message: 'network' } : { ok: true, preference: args[1] };
   }),
 }));
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
@@ -127,6 +128,7 @@ beforeEach(() => {
   state.diagnosticResults = [];
   state.metadata = {};
   state.catalogFailed = false;
+  state.saveFails = false;
   state.changes.length = 0;
   state.saves.length = 0;
   state.sheet.mockReset();
@@ -425,6 +427,18 @@ describe('the Profile picker', () => {
     expect(state.sheet).toHaveBeenCalledTimes(1);
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
     expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
+  });
+
+  it('an account save that fails promises only what the device keeps', async () => {
+    state.saveFails = true;
+    signedInWith(profile);
+    await card();
+    await walkToSave();
+    await press('Save');
+    await waitFor(() => expect(state.saves).toHaveLength(1));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your track and specialization are kept on this device. Your sections and answers are not saved to your account yet. Try again.',
+    );
   });
 
   it('a picker key with no words reads as the key, as t() does, and never throws', async () => {

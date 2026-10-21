@@ -186,7 +186,9 @@ export default function LearningPathsCard() {
       );
       if (!saved.ok) {
         setBusy(false);
-        setDialogError(saved.reason === 'not_signed_in' ? t('paths.signInToRecord') : t('paths.picker.saveFailed'));
+        // Only the track and the specialization are cached on the device, so the
+        // message promises no more than that.
+        setDialogError(saved.reason === 'not_signed_in' ? t('paths.signInToRecord') : pickerCopy('paths.picker.accountSaveFailed'));
         return;
       }
 
