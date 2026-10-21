@@ -5,7 +5,7 @@ description: Add or edit a coding task with a server-only solution, hidden tests
 
 # Coding Task Authoring
 
-The coding review gate is closed: since the 17 October 2026 wave, a new task, or a task whose brief, tests, solution or grader changed, stays withheld until the ledger holds a passing review of its exact version (`docs/curation-claims.md`, "The gate, applied once"; `CODING_TASKS_AUDITED` in `lib/curation-registry.ts`). This skill takes a task from source to issued. Premium rules live in [../learn-question-authoring/references/premium-gating.md](../learn-question-authoring/references/premium-gating.md); the ledger row template lives in [../learn-question-authoring/references/ledger-row.md](../learn-question-authoring/references/ledger-row.md).
+The coding review gate is on: since the 17 October 2026 wave, a new task, or a task whose brief, tests, solution or grader changed, stays withheld until the ledger holds a passing review of its exact version (`docs/curation-claims.md`, "The gate, applied once"; `CODING_TASKS_AUDITED` in `lib/curation-registry.ts`). This skill takes a task from source to issued. Premium rules live in [../learn-question-authoring/references/premium-gating.md](../learn-question-authoring/references/premium-gating.md); the ledger row template lives in [../learn-question-authoring/references/ledger-row.md](../learn-question-authoring/references/ledger-row.md).
 
 ## Read first
 
@@ -49,7 +49,7 @@ New band files are English only (`EASY_BAND` doc comment in `lib/coding/catalog.
 
 `complexityGuidance` in `shared/coding-complexity.ts` reads the target from `prompt` only when the task has `tests` and its track is not `react` or `system-design`:
 
-- Write `Target: O(...)` followed by `time`, `calls`, `checks`, punctuation or the end of the prompt, for example `Target: O(n) time and O(1) extra space, where n is the number of items.` The space target is the `O(...)` before `space` after it.
+- Write `Target: O(...)` followed by `time`, `calls`, `checks`, punctuation or the end of the prompt, for example `Target: O(n) time and O(1) extra space, where n is the number of items.` After the time target, an `O(...)` followed by `space` or `extra space` becomes the space target.
 - `inspectComplexity` in `lib/coding/complexity.ts` can compare only `O(1)`, `O(log n)`, `O(n)`, `O(n log n)`, `O(n²)` and `O(n^k)`. Any other target, such as `O(n*m)`, still shows, and the estimate reports unknown.
 - An estimate above the target pays `CODING_ABOVE_TARGET_XP` (15) instead of `CODING_PASS_XP` (25); correctness never depends on it.
 - Define what `n` counts in the brief. The coding wave recorded a missing input-size definition as a defect (`graderChecks.complexity` in the ledger rows).
@@ -78,12 +78,12 @@ After Epic E (E2 in `docs/learn-sections-fde-flagship-plan.md`, section 9, and s
 ## Procedure
 
 1. Write the task and its solution; register a new file in `lib/coding/catalog.ts` and `lib/coding/solutions/index.ts`.
-2. Prove it while authoring: `CODING_ONLY='^<id>$' npm run test:coding`. `CODING_ONLY` limits the solution proofs; the shape checks still cover every task. Leave `CODING_ALLOW_LEVEL_GAPS` and `CODING_SKIP_INDEX` unset before you report.
+2. Prove it while authoring: `CODING_ONLY='^<id>$' npm run test:coding`. `CODING_ONLY` limits the solution proofs to matching ids, which takes seconds instead of the full run's twenty minutes; the shape checks still cover every task. Until the ledger row exists, a band task fails with exactly one problem, `<id>: an Easy-band task must be issued` (or `a Medium or Hard band task must be issued`); fix anything else it reports. Leave `CODING_ALLOW_LEVEL_GAPS` and `CODING_SKIP_INDEX` unset before you report.
 3. Read the hash: `npm run audit:devshark-inventory -- --out "$TMPDIR/inv"`, then `jq '.codingTasks[] | select(.id == "<id>") | {contentHash, active}' "$TMPDIR/inv/inventory.json"`.
 4. Review the task and write its row from the ledger template, with the grader evidence of step 2. An edited task gets `revision` plus one, `previousHash` and a `verification.verdict` of `accept` or `amend`.
 5. Run `npm run build:curation-registry`, then `npm run build:coding-index`. The index lists active tasks only, so it must be rebuilt after the registry.
 6. Rerun step 3 and confirm `active: true`.
-7. Update the counts the launch contracts pin: `SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount` in `shared/subject-catalog.ts`, and the issued-task count in `scripts/test-launch-contracts.ts` ("all currently issued coding identities are included in the completed wave", 725 today). Update the prose counts listed in the Premium reference when the free numbers move.
+7. Update the counts the launch contracts pin to `counts.activeCodingTasks` from the inventory: the issued-task count in `scripts/test-launch-contracts.ts` (`reviewedCoding.length`, message "all currently issued coding identities are included in the completed wave", 725 today) and `SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount` in `shared/subject-catalog.ts` (message "the landing coding challenge count must match the active, visible coding catalogue"). `test:launch` stops at the first of them, so a stale count shows up one failure at a time. Update the prose counts listed in the Premium reference when the free numbers move.
 8. Run the validation block.
 
 ## Validation
