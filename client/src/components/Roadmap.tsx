@@ -407,7 +407,8 @@ function Roadmap() {
     // A deep link (/learn?topic=…&part=…) wins over the topic last opened in
     // this section, then the last one overall. A locked or unlisted one falls
     // back to the section's first open topic, so the page lands somewhere
-    // actionable.
+    // actionable. With nothing open it is the first entry, locked, and the
+    // ?level deep link below opens nothing.
     const fromUrl = new URLSearchParams(window.location.search).get('topic');
     const initial = railEntries(resolved.section, {
       liveTopics: TOPICS, inPlan, hasPlan, isMember: members.includes(resolved.section),
@@ -645,10 +646,13 @@ function Roadmap() {
     const levelRaw = params.get('level');
     if (!levelRaw) return;
     autoOpenedRef.current = true;
-    // If the requested topic was locked, `topic` fell back to the starter — never
-    // open a level that belongs to a different topic than the one on screen.
+    // Never open a level of a topic other than the one on screen, nor of one
+    // the rail does not show as open: with nothing open in the section (a
+    // fresh device on /learn?topic=dsa&level=1), `topic` is the section's
+    // first, locked entry and the map says what opens it.
     const urlTopic = params.get('topic');
     if (urlTopic && urlTopic !== topic) return;
+    if (!entries.some((entry) => entry.topic === topic && entry.state === 'open')) return;
     const lvl = parseInt(levelRaw, 10);
     if (!Number.isInteger(lvl) || lvl < 1) return;
     if (!inPlan(topic) && !isLevelPassed(progress, topic, lvl)) return;

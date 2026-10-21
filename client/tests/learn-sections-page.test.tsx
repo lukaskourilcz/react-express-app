@@ -131,6 +131,20 @@ describe('the section switcher', () => {
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/software-engineer?topic=dsa'));
     expect(await screen.findByRole('radio', { name: /^DSA/ })).toBeInTheDocument();
   });
+
+  it('opens no level from a ?level deep link into a topic that is locked on this device', async () => {
+    answer();
+    const levelRequests: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).searchParams.get('level')) levelRequests.push(request.url);
+    });
+    await mountAt('/learn?topic=dsa&level=1');
+    expect(await screen.findByText('Nothing here is open yet')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^DSA — Locked/ })).toBeDisabled();
+    expect(screen.queryByText('Which option is first?')).toBeNull();
+    expect(levelRequests).toEqual([]);
+    server.events.removeAllListeners('request:start');
+  });
 });
 
 describe('joining Software Engineer', () => {
