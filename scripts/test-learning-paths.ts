@@ -52,6 +52,15 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
     { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
   ],
+  'fde-v1-m03-webhook-receiver': [
+    { label: 'no signature check', replace: ["  if (!signed) return refuse('bad_signature');\n", ''], criterion: 'signature' },
+    { label: 'signatures compared with === instead of ctx.safeEqual', replace: ['ctx.safeEqual(entry, expected)', 'entry === expected'], criterion: 'signature' },
+    { label: 'no replay store', replace: ["  if (!ctx.claim(connectionId + ':' + webhookId)) return refuse('replayed');\n", ''], criterion: 'replay' },
+    { label: 'a replay key not scoped by connection', replace: ["ctx.claim(connectionId + ':' + webhookId)", 'ctx.claim(String(webhookId))'], criterion: 'replay' },
+    { label: 'no timestamp tolerance', replace: ["Math.abs(nowMs / 1000 - Number(timestamp)) > TOLERANCE_SECONDS", 'false'], criterion: 'replay' },
+    { label: 'the tenant taken from the payload (tenant leak)', replace: ['const tenantId: string = connection.tenantId;', 'const tenantId: string = event.tenantId;'], criterion: 'tenant-isolation' },
+    { label: 'an expired grant accepted', replace: ["  if (Date.parse(grant.expiresAt) <= nowMs) return refuse('grant_expired');\n", ''], criterion: 'permission-freshness' },
+  ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
