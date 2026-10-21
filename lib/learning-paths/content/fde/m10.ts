@@ -18,7 +18,7 @@
  * present and inside its cap, nothing more. The module requires all three,
  * so guided completion waits for them. Their scenarios are fixtures stated in
  * each brief. The practitioner sources (Qureshi, The Pragmatic Engineer,
- * PostHog, and the Vercel and Harvey postings) were read in October 2026 and
+ * PostHog, and the Vercel posting) were read in October 2026 and
  * are cited for what they say, never as a hiring standard.
  *
  * This file becomes M13 when B9 renumbers the manifest; its id stays
@@ -317,11 +317,6 @@ export const FDE_M10: ModuleSource = {
           reviewedOn: '2026-10-21',
         },
         {
-          label: 'Harvey, Forward Deployed Finance Engineer, Buyout job posting',
-          url: 'https://jobs.ashbyhq.com/harvey/fb3ecf9e-9379-4839-817c-f620a3e6034d',
-          reviewedOn: '2026-10-21',
-        },
-        {
           label: 'Nabeel S. Qureshi, “Reflections on Palantir” (October 2024)',
           url: 'https://nabeelqu.co/reflections-on-palantir',
           reviewedOn: '2026-10-21',
@@ -467,7 +462,7 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A handoff made of a document and a farewell call leaves the customer’s team owning code they have never changed. The postings for this role put teaching inside the job. Vercel’s forward-deployed engineer posting lists running workshops and pair programming sessions so customer teams can maintain what you ship, and describes success as customer teams able to extend the work on their own. Harvey’s posting for a forward deployed finance engineer lists trainings and onboarding beside discovery, pilots and custom builds, and asks for someone comfortable facilitating a workshop.',
+            'A handoff made of a document and a farewell call leaves the customer’s team owning code they have never changed. Vercel’s forward-deployed engineer posting puts teaching inside the job. It lists running workshops and pair programming sessions so customer teams can maintain what you ship, and describes success as customer teams able to extend the work on their own.',
         },
         {
           kind: 'prose',

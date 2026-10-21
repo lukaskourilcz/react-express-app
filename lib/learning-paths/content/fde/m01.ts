@@ -14,7 +14,7 @@
  * requires both, so guided completion waits for them.
  *
  * The practitioner sources (Qureshi, The Pragmatic Engineer, PostHog, and
- * the Vercel and Harvey postings) were read in October 2026 and are cited
+ * the Vercel posting) were read in October 2026 and are cited
  * for what they say, never as a hiring standard.
  *
  * Marlbrook Systems, its ticket volumes, its shadowing clock and its
@@ -298,17 +298,12 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
           url: 'https://vercel.com/careers/forward-deployed-engineer-5752684004',
           reviewedOn: '2026-10-21',
         },
-        {
-          label: 'Harvey, Forward Deployed Finance Engineer, Buyout job posting',
-          url: 'https://jobs.ashbyhq.com/harvey/fb3ecf9e-9379-4839-817c-f620a3e6034d',
-          reviewedOn: '2026-10-21',
-        },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Scoping is where the role spends its time. Jina Yoon’s PostHog explainer says forward deployed engineers spend far more of their time than other engineers talking to customers and scoping projects “to decide what to build, and how”. This lesson turns that time into one page you can hand to someone else.',
+            'Forward deployed engineers spend more of their time scoping than most engineers do. Jina Yoon’s PostHog explainer says forward deployed engineers spend far more of their time than other engineers talking to customers and scoping projects “to decide what to build, and how”. This lesson turns that time into one page you can hand to someone else.',
         },
         {
           kind: 'prose',
@@ -537,7 +532,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
         {
           kind: 'prose',
           body:
-            'Someone above the sponsor will read about this project for two minutes, on a phone, between other meetings. The postings for this role name that reader. Vercel’s forward-deployed engineer posting asks for experience presenting technical discovery findings and proposals to executives at enterprise customers. Harvey’s posting for a forward deployed finance engineer asks for executive presence and credibility with everyone from analysts to partners and investment committee members. Orosz describes OpenAI’s validation phase ending in a final report that shows eval performance compared to the objectives, which is the same habit: the result set beside the target agreed before.',
+            'Someone above the sponsor will read about this project for two minutes, on a phone, between other meetings. Vercel’s forward-deployed engineer posting expects you to write for executives: it asks for experience presenting technical discovery findings and proposals to executives at enterprise customers. Orosz describes OpenAI’s validation phase ending in a final report that shows eval performance compared to the objectives, which is the same habit: the result set beside the target agreed before.',
         },
         {
           kind: 'prose',
