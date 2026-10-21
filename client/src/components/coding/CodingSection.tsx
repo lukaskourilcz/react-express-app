@@ -184,7 +184,9 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
     <>
       <span className="cd-row__title">{task.title}</span>
       <span className="cd-row__meta">
-        {hasLearnLevel(task) && <span>{task.topic === 'dsa' ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('coding.level', { n: task.level })}</span>}
+        {task.topic === 'dsa'
+          ? <span>{hasLearnLevel(task) ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('category.dsa')}</span>
+          : hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
         {isBarred(premium) && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
       </span>

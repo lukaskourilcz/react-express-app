@@ -194,7 +194,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpoint } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, DSA_LEVELS_AWAITING_E3, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -3746,9 +3746,16 @@ async function main() {
   const dsaRows = CODING_INDEX.filter((row) => row.topic === 'dsa');
   assert.equal(dsaRows.length, 29, 'the index lists the 29 DSA Foundations tasks');
   assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
+  // A DSA task names its Learn level only once that level issues it: levels
+  // 10, 11 and 14 still carry titles their tasks do not match until E3.
   for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
-    assert.equal(hasLearnLevel(row), row.topic === 'dsa', `${row.id}: only a DSA Foundations task names its Learn level`);
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' && !DSA_LEVELS_AWAITING_E3.has(row.level), `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
   }
+  for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
+    const row = CODING_INDEX.find((one) => one.id === id);
+    assert.ok(row && !hasLearnLevel(row), `${id}: sits on a DSA level that does not issue it yet, so it names no level`);
+  }
+  assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
   assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
