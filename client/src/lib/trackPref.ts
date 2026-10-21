@@ -37,6 +37,7 @@ import {
   type StudyTime,
 } from '../../../shared/learning-paths';
 import type { Track } from './tracks';
+import type { LearnSectionId } from '../../../shared/learn-sections';
 
 export type { BaseTrack, LearnerProfile, LearningPreference, RequiredProfileField, RoleSpecializationId };
 
@@ -47,6 +48,8 @@ export interface ProfileAnswers {
   experience?: ExperienceLevel;
   studyTime?: StudyTime;
   skillPaths?: SkillPathId[];
+  /** Opt-in Learn sections (`shared/learn-sections.ts`), such as Software Engineer. */
+  sections?: LearnSectionId[];
 }
 
 const isTrack = (value: unknown): value is Track =>

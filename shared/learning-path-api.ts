@@ -10,6 +10,7 @@ import type { CallTest, Localized, LocalizedList, TypeTest } from './coding-cata
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 import type { ComplexityGuidance, ComplexityReport } from './coding-complexity';
+import type { LearnSectionId } from './learn-sections';
 import type {
   ActivityPurpose,
   ActivitySummary,
@@ -77,6 +78,10 @@ export interface LearningPreferenceRequest {
   experience?: ExperienceLevel;
   studyTime?: StudyTime;
   skillPaths?: SkillPathId[];
+  /** Opt-in Learn sections to keep on the profile; left out keeps the saved
+   * list. Web Developer and Forward Deployed Engineer follow the base track
+   * and the specialization and need no entry. */
+  sections?: LearnSectionId[];
 }
 
 /* ── enrollment ────────────────────────────────────────────────────────── */
