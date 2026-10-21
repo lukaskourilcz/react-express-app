@@ -194,7 +194,7 @@ async function main() {
   out.push(`Offered topics: ${totals.offeredTopics}, ${totals.levels} levels.`);
   out.push(
     `Deliverable questions: ${totals.deliverableQuestions} (SUBJECT_SCOPE_CATALOG.webdev.questionCount says ${totals.catalogueQuestionCount}` +
-      `${totals.deliverableQuestions === totals.catalogueQuestionCount ? ', in agreement' : ', MISMATCH: npm run test:launch will fail'}).`,
+      `${totals.deliverableQuestions === totals.catalogueQuestionCount ? ', in agreement' : ', MISMATCH: npm run test:launch (auditGateContracts) will fail'}).`,
   );
   out.push('');
 
@@ -217,7 +217,7 @@ async function main() {
   const inBounds = share >= FREE_CODING_SHARE.min && share <= FREE_CODING_SHARE.max;
   out.push(
     `Free coding tasks (freeCodingCounts over shared/coding-index.ts): ${codingFree.free} of ${codingFree.total} (${percent(codingFree.free, codingFree.total)}); ` +
-      `FREE_CODING_SHARE ${FREE_CODING_SHARE.min * 100}–${FREE_CODING_SHARE.max * 100} %, target ${FREE_CODING_SHARE.target * 100} %: ${inBounds ? 'within' : 'OUTSIDE'}`,
+      `FREE_CODING_SHARE ${FREE_CODING_SHARE.min * 100}–${FREE_CODING_SHARE.max * 100} %, target ${FREE_CODING_SHARE.target * 100} %: ${inBounds ? 'within' : 'OUTSIDE: npm run test:launch (tierContracts) will fail'}`,
   );
   out.push('');
 
@@ -231,7 +231,7 @@ async function main() {
   }
   out.push(
     `Issued: ${snapshot.coding.issued} (SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount says ${snapshot.coding.catalogueChallengeCount}` +
-      `${snapshot.coding.issued === snapshot.coding.catalogueChallengeCount ? ', in agreement' : ', MISMATCH'}). ` +
+      `${snapshot.coding.issued === snapshot.coding.catalogueChallengeCount ? ', in agreement' : ', MISMATCH: npm run test:launch (auditGateContracts) will fail'}). ` +
       `shared/coding-index.ts lists ${CODING_INDEX.length}: ${indexInSync ? 'in sync' : 'STALE, run npm run build:coding-index'}.`,
   );
   out.push('');
@@ -255,7 +255,7 @@ async function main() {
   for (const path of paths) {
     const r = path.readiness;
     out.push(
-      `  ${pad(path.id, 16)} content ${r.contentReady ? 'ready' : 'INCOMPLETE'} (${r.errors} errors, ${r.warnings} warnings); ` +
+      `  ${pad(path.id, 16)} content ${r.contentReady ? 'ready' : 'INCOMPLETE: npm run test:paths will fail'} (${r.errors} errors, ${r.warnings} warnings); ` +
         `switch ${r.switchOn ? 'on' : 'off'} in this environment; storage ${r.storage}; ` +
         `availability once migration 026 is installed: ${r.availabilityIfStorageInstalled}`,
     );

@@ -32,7 +32,7 @@ Run `npm run content:snapshot` before you write a count into an issue, a plan or
 
 - A learning path references the registries above and never joins them: `CodingTrack` and `RoadmapTopic` gain no member for a path, and `Track` keeps its three values (`shared/learning-paths.ts` header comment; `docs/product-architecture.md` "Learning paths").
 - `shared/tiers.ts` is the only place that decides what the free tier opens. The server refuses locked content with 402 in `lib/access.ts` and the client mirrors it (CLAUDE.md "Protected behavior"; `shared/tiers.ts` header). The module imports nothing from `lib/`, and `tierContracts` in `scripts/test-launch-contracts.ts` fails if it does.
-- `api/` holds exactly twelve physical TypeScript handlers; add a `resource=` or `op=` branch, never a file (CLAUDE.md "Protected behavior"). `scripts/test-launch-contracts.ts` asserts it: "Vercel function budget must remain exactly 12".
+- `api/` holds exactly twelve physical TypeScript handlers (CLAUDE.md "Protected behavior"). A new endpoint is a `resource=` or `op=` branch inside an existing handler, never a file (`docs/product-architecture.md` "Sources of truth"). `scripts/test-launch-contracts.ts` asserts it: "Vercel function budget must remain exactly 12".
 - A count in copy or a document is derived, never typed. `SUBJECT_SCOPE_CATALOG.webdev.questionCount` and `codingChallengeCount` are recomputed and asserted by `auditGateContracts` in `scripts/test-launch-contracts.ts`; plan issue A5 (#491) asks the docs for "no counts typed by hand".
 - A level keeps its authored question membership when items are withheld; a thin level becomes unavailable, it is never repacked (`lib/roadmap.ts`, the comment above `MIN_LEVEL_QUESTIONS`).
 - The browser never imports `lib/learning-paths` (`docs/product-architecture.md` "Learning paths"; the "must not import lib/learning-paths" assertion in `scripts/test-launch-contracts.ts`).
@@ -56,7 +56,7 @@ The question counts come from the static bank with the curation gate applied. Th
 
 1. Edit the owner listed above, not a copy of it.
 2. Run `npm run content:snapshot` before and after; the difference is the change you made.
-3. A `MISMATCH`, `STALE` or `OUTSIDE` word in the output names the check that will fail. Fix the registry or regenerate (`npm run build:coding-index`, `npm run build:curation-registry`), then rerun.
+3. A `MISMATCH`, `OUTSIDE`, `INCOMPLETE` or `STALE` word in the output marks a registry that disagrees with a derived count or a path its validator rejects. The line names the check that will fail (`npm run test:launch` with its contract, or `npm run test:paths`) or, for `STALE`, the command that regenerates the file. Fix the registry or regenerate (`npm run build:coding-index`, `npm run build:curation-registry`), then rerun.
 
 ## Validation
 
