@@ -1,12 +1,12 @@
 // The Learn page's section switcher and the line under it.
 //
-// The switcher is the Astryx SegmentedControl, which selects as focus moves.
-// The page opens a section on activation only, so the control's value here is
-// the section the learner is browsing: arrow keys, Home and End move it, and
-// Enter, Space or a click open it (the item's own onClick runs before the
-// control's selection). Leaving with Tab drops an unopened highlight.
+// The switcher is the Astryx SegmentedControl. Its checked item is always the
+// open section: arrow keys, Home and End move focus only (the control's own
+// selection on focus is ignored), and Enter, Space or a click open the focused
+// section through the item's onClick. The hint that says so is each item's
+// description, which screen readers read with the item.
 
-import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type FocusEvent, type ReactNode } from 'react';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Button } from '@astryxdesign/core/Button';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -20,13 +20,17 @@ export interface SwitcherItem {
   percent: number | null;
 }
 
+// Focus moves without selecting; the open section changes on activation.
+const browseOnly = () => {};
+// The focus ring is 2px wide at a 2px offset; keep it and a little air inside
+// the scroller.
+const RING_SPACE = 6;
+
 export function SectionSwitcher({ value, items, onActivate }: {
   value: LearnSectionId;
   items: readonly SwitcherItem[];
   onActivate: (id: LearnSectionId) => void;
 }) {
-  const [browsed, setBrowsed] = useState<LearnSectionId>(value);
-  useEffect(() => setBrowsed(value), [value]);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Keep the open section in view inside a narrow scroller, centred so its
@@ -40,16 +44,24 @@ export function SectionSwitcher({ value, items, onActivate }: {
     scroller.scrollLeft = left - (scroller.clientWidth - item.offsetWidth) / 2;
   }, [value]);
 
-  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setBrowsed(value);
+  // Browsing with the arrow keys moves focus to an item the scroller may cut
+  // off. Bring the whole item, focus ring included, into view.
+  const onFocus = (event: FocusEvent<HTMLDivElement>) => {
+    const scroller = event.currentTarget;
+    const item = (event.target as HTMLElement).closest('[role="radio"]');
+    if (!item || scroller.scrollWidth <= scroller.clientWidth) return;
+    const box = scroller.getBoundingClientRect();
+    const { left, right } = item.getBoundingClientRect();
+    if (left - RING_SPACE < box.left) scroller.scrollLeft -= box.left - left + RING_SPACE;
+    else if (right + RING_SPACE > box.right) scroller.scrollLeft += right + RING_SPACE - box.right;
   };
 
   return (
-    <div className="rm-section-switcher" role="group" aria-describedby="learn-switcher-hint" onBlur={onBlur}>
-      <div className="rm-section-switcher__scroll" ref={scrollerRef}>
+    <div className="rm-section-switcher">
+      <div className="rm-section-switcher__scroll" ref={scrollerRef} onFocus={onFocus}>
         <SegmentedControl
-          value={browsed}
-          onChange={(next) => setBrowsed(next as LearnSectionId)}
+          value={value}
+          onChange={browseOnly}
           label={learnText('learn.switcher.label')}
           size="lg"
         >
@@ -58,6 +70,7 @@ export function SectionSwitcher({ value, items, onActivate }: {
               key={id}
               value={id}
               label={percent === null ? name : learnText('learn.switcher.item', { name, percent })}
+              aria-describedby="learn-switcher-hint"
               onClick={() => {
                 if (id !== value) onActivate(id);
               }}

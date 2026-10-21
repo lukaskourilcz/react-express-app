@@ -151,6 +151,10 @@ test.describe('Learn section routes', () => {
     await expect(switcherItem(page, 'Software Engineer')).toBeFocused();
     await expect(page).toHaveURL(/\/learn\/web-developer$/);
     await expect(topicCard(page, 'HTML')).toBeVisible();
+    // Browsing moves focus only: the open section stays the checked one.
+    await expect(switcherItem(page, 'Web Developer')).toHaveAttribute('aria-checked', 'true');
+    await expect(switcherItem(page, 'Software Engineer')).toHaveAttribute('aria-checked', 'false');
+    await expect(switcherItem(page, 'Software Engineer')).toHaveAccessibleDescription(/Enter or Space to open/);
 
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/learn\/software-engineer$/);
@@ -337,6 +341,34 @@ test.describe('Learn sections across widths and themes', () => {
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     expect(await page.locator('.rm-section-body').evaluate((el) => getComputedStyle(el).animationName)).toBe('rmTrackIn');
+  });
+});
+
+test.describe('The switcher on a narrow screen', () => {
+  test('keeps the focused item, ring included, inside the scroller at 360px', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await prepare(page);
+    await stand(page, 'guest');
+    await page.goto('/learn/web-developer');
+    await expect(topicCard(page, 'HTML')).toBeVisible();
+    const focusedInView = () => page.evaluate(() => {
+      const scroller = document.querySelector('.rm-section-switcher__scroll')!.getBoundingClientRect();
+      const item = (document.activeElement as HTMLElement).getBoundingClientRect();
+      return item.left - 4 >= scroller.left - 1 && item.right + 4 <= scroller.right + 1;
+    });
+    // The three names do not fit at 360px, so the switcher scrolls.
+    expect(await page.locator('.rm-section-switcher__scroll').evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await switcherItem(page, 'Web Developer').focus();
+    for (const key of ['ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft']) {
+      await page.keyboard.press(key);
+      expect(await focusedInView(), `after ${key}`).toBe(true);
+    }
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/learn\/software-engineer$/);
+    await page.keyboard.press('ArrowLeft');
+    await expect(switcherItem(page, 'Web Developer')).toBeFocused();
+    expect(await focusedInView(), 'Web Developer after opening Software Engineer').toBe(true);
   });
 });
 
