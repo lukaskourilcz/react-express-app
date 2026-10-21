@@ -342086,7 +342086,7 @@
    "objective": "Sum the even integers of an array, zero and negatives included, in one pass of at most n reads.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "443c1766c6d28aa5",
+   "contentHash": "bce3a25898776777",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -342132,7 +342132,7 @@
     "cases": [
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -342141,7 +342141,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -342150,7 +342150,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -342159,7 +342159,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -342168,7 +342168,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "wrong: reading each even slot twice",
       "expected": "failed",
       "verdict": "failed",
@@ -342177,7 +342177,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "wrong: testing % 2 !== 1, which admits negative odd numbers",
       "expected": "failed",
       "verdict": "failed",
@@ -342186,7 +342186,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "wrong: sorting the caller's array first",
       "expected": "failed",
       "verdict": "failed",
@@ -342195,7 +342195,7 @@
      },
      {
       "id": "alg-dsa-sum-of-evens",
-      "contentHash": "443c1766c6d28aa5",
+      "contentHash": "bce3a25898776777",
       "label": "alternative: copying the input, then summing the copy",
       "expected": "passed",
       "verdict": "passed",
@@ -342212,7 +342212,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -342239,7 +342239,7 @@
    "objective": "Count floor halvings from n down to 1.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "43e5c3d54e5b3d54",
+   "contentHash": "5bdddc7cf89eac58",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -342274,80 +342274,89 @@
    "decision": "retain",
    "retireReason": null,
    "defects": [],
-   "rationale": "The d01 halving counter. Hidden checks cover odd values on both sides of powers of two and one million, so a ceil, a counter starting at 1 and a lookup of the visible answers fail.",
+   "rationale": "The d01 halving counter. The prompt bounds n at Number.MAX_SAFE_INTEGER, and visible and hidden checks run past 32 bits up to that bound, so a ceil, a counter starting at 1, a 32-bit shift, Math.floor(Math.log2(n)) (49 for 2^49 - 1) and a lookup of the visible answers fail.",
    "evidence": [
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
     "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
-    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (2 known wrong answers fail).",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (4 known wrong answers fail).",
     "source: lib/learning-paths/content/dsa (dsa-v1-d01-halving-counter) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "wrong: halving with Math.ceil",
       "expected": "failed",
       "verdict": "failed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
+      "contentHash": "5bdddc7cf89eac58",
       "label": "wrong: a counter that starts at 1",
       "expected": "failed",
       "verdict": "failed",
-      "visible": 5,
-      "hidden": 7
+      "visible": 6,
+      "hidden": 10
      },
      {
       "id": "alg-dsa-halving-steps",
-      "contentHash": "43e5c3d54e5b3d54",
-      "label": "alternative: the floor of the base-2 logarithm",
-      "expected": "passed",
-      "verdict": "passed",
-      "visible": 5,
-      "hidden": 7
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: halving with a 32-bit shift",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: the floor of the base-2 logarithm, which rounds up just below a large power of two",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
      }
     ],
-    "boundaries": "n = 1 (zero steps), 2, odd values, powers of two and their neighbours, 1000000.",
+    "boundaries": "n = 1 (zero steps), 2, odd values, powers of two and their neighbours, 1000000, 2^31, 2^40, 2^49 - 1, Number.MAX_SAFE_INTEGER.",
     "mutation": "Numeric input; nothing to mutate.",
     "complexity": "Authored target: O(log n) time, where n is the starting numeric value. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
     "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
@@ -342356,7 +342365,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -342383,7 +342392,7 @@
    "objective": "Return max minus min of an array in one pass, within 2n reads.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "476ed7a3f1b7b177",
+   "contentHash": "a3a3709259c406a4",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -342422,112 +342431,121 @@
    "evidence": [
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of",
     "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
-    "run: production QuickJS grader on this exact hash: 11/11 expected verdicts (6 known wrong answers fail).",
+    "run: production QuickJS grader on this exact hash: 12/12 expected verdicts (7 known wrong answers fail).",
     "source: lib/learning-paths/content/dsa (dsa-v1-d01-pair-versus-pass) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: comparing every pair",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: seeding the smallest and largest with 0",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: spreading the array into Math.max and Math.min, which overflows the call stack on long input",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: sorting the caller's array",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: every pair behind a declared Proxy that hands the array back",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: every pair behind a replaced global Proxy",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "wrong: every pair behind a replaced RegExp test",
       "expected": "failed",
       "verdict": "failed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      },
      {
       "id": "alg-dsa-max-gap",
-      "contentHash": "476ed7a3f1b7b177",
+      "contentHash": "a3a3709259c406a4",
       "label": "alternative: an independent min and max loop",
       "expected": "passed",
       "verdict": "passed",
       "visible": 6,
-      "hidden": 8
+      "hidden": 9
      }
     ],
-    "boundaries": "Empty, single, all-equal, all-negative input, 9 and 12 element budgets.",
+    "boundaries": "Empty, single, all-equal, all-negative input, 9 and 12 element budgets, 200,000 values under a read cap of 2n.",
     "mutation": "A hidden check returns the input beside the gap; sorting in place fails it.",
     "complexity": "Authored target: O(n) time, where n is the input length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
     "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
@@ -342536,7 +342554,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -342564,7 +342582,7 @@
    "objective": "Reverse the caller's array in place, return the same array, within n indexed writes.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "16294d627e506993",
+   "contentHash": "97e1e8219a5dbacb",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -342610,7 +342628,7 @@
     "cases": [
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -342619,7 +342637,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -342628,7 +342646,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -342637,7 +342655,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -342646,7 +342664,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "wrong: returning a reversed copy only",
       "expected": "failed",
       "verdict": "failed",
@@ -342655,7 +342673,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "wrong: returning the array unchanged",
       "expected": "failed",
       "verdict": "failed",
@@ -342664,7 +342682,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "wrong: deleting each index before writing it",
       "expected": "failed",
       "verdict": "failed",
@@ -342673,7 +342691,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "wrong: defining every index three times",
       "expected": "failed",
       "verdict": "failed",
@@ -342682,7 +342700,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "wrong: defining every index three times through Reflect",
       "expected": "failed",
       "verdict": "failed",
@@ -342691,7 +342709,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "alternative: one property definition per index",
       "expected": "passed",
       "verdict": "passed",
@@ -342700,7 +342718,7 @@
      },
      {
       "id": "alg-dsa-reverse-in-place",
-      "contentHash": "16294d627e506993",
+      "contentHash": "97e1e8219a5dbacb",
       "label": "alternative: Reflect definitions after Object.defineProperty was replaced",
       "expected": "passed",
       "verdict": "passed",
@@ -342717,7 +342735,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -342744,7 +342762,7 @@
    "objective": "Compact the distinct values of a sorted array into its prefix and return their count, within n writes.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "0ec140b199aabea3",
+   "contentHash": "db1bd7d6f49afc11",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -342790,7 +342808,7 @@
     "cases": [
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -342799,7 +342817,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -342808,7 +342826,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -342817,7 +342835,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -342826,7 +342844,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "wrong: counting the distinct values without writing them",
       "expected": "failed",
       "verdict": "failed",
@@ -342835,7 +342853,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "wrong: returning the length",
       "expected": "failed",
       "verdict": "failed",
@@ -342844,7 +342862,7 @@
      },
      {
       "id": "alg-dsa-dedupe-sorted",
-      "contentHash": "0ec140b199aabea3",
+      "contentHash": "db1bd7d6f49afc11",
       "label": "wrong: writing the distinct values in reverse",
       "expected": "failed",
       "verdict": "failed",
@@ -342861,7 +342879,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -343777,7 +343795,7 @@
    "objective": "Build a FIFO queue over a supplied buffer with a head index, within six buffer operations per value.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "29a386617db2f04a",
+   "contentHash": "321653d18dbfaaba",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -343826,7 +343844,7 @@
     "cases": [
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -343835,7 +343853,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -343844,7 +343862,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -343853,7 +343871,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -343862,7 +343880,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: dequeuing with shift",
       "expected": "failed",
       "verdict": "failed",
@@ -343871,7 +343889,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: sliding the waiting values down on every dequeue",
       "expected": "failed",
       "verdict": "failed",
@@ -343880,7 +343898,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: ignoring newBuffer and keeping a private array",
       "expected": "failed",
       "verdict": "failed",
@@ -343889,7 +343907,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: one buffer shared by every queue",
       "expected": "failed",
       "verdict": "failed",
@@ -343898,7 +343916,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: undefined instead of null from an empty queue",
       "expected": "failed",
       "verdict": "failed",
@@ -343907,7 +343925,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: defining the new slot ten times",
       "expected": "failed",
       "verdict": "failed",
@@ -343916,7 +343934,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: defining the new slot ten times through Reflect",
       "expected": "failed",
       "verdict": "failed",
@@ -343925,7 +343943,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "wrong: deleting and redefining the new slot ten times",
       "expected": "failed",
       "verdict": "failed",
@@ -343934,7 +343952,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "alternative: appending by defining the next index",
       "expected": "passed",
       "verdict": "passed",
@@ -343943,7 +343961,7 @@
      },
      {
       "id": "alg-dsa-queue",
-      "contentHash": "29a386617db2f04a",
+      "contentHash": "321653d18dbfaaba",
       "label": "alternative: Reflect definitions after Object.defineProperty was replaced",
       "expected": "passed",
       "verdict": "passed",
@@ -343960,7 +343978,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -343988,7 +344006,7 @@
    "objective": "Prepend one node and find the first node holding a value with ===.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "a9097fba40000c91",
+   "contentHash": "f5ef81292743c950",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344034,7 +344052,7 @@
     "cases": [
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344043,7 +344061,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344052,7 +344070,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344061,7 +344079,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344070,7 +344088,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "wrong: find comparing with ==",
       "expected": "failed",
       "verdict": "failed",
@@ -344079,7 +344097,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "wrong: prepend rewriting the old head in place",
       "expected": "failed",
       "verdict": "failed",
@@ -344088,7 +344106,7 @@
      },
      {
       "id": "alg-dsa-prepend-and-find",
-      "contentHash": "a9097fba40000c91",
+      "contentHash": "f5ef81292743c950",
       "label": "wrong: prepend appending at the tail",
       "expected": "failed",
       "verdict": "failed",
@@ -344105,7 +344123,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -344133,7 +344151,7 @@
    "objective": "Unlink the first node holding a value and return the resulting head.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "68c08615f61d8af8",
+   "contentHash": "72459fdca91f1ffc",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344179,7 +344197,7 @@
     "cases": [
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344188,7 +344206,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344197,7 +344215,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344206,7 +344224,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344215,7 +344233,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "wrong: deleting every match",
       "expected": "failed",
       "verdict": "failed",
@@ -344224,7 +344242,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "wrong: returning the old head when the head matches",
       "expected": "failed",
       "verdict": "failed",
@@ -344233,7 +344251,7 @@
      },
      {
       "id": "alg-dsa-delete-first-match",
-      "contentHash": "68c08615f61d8af8",
+      "contentHash": "72459fdca91f1ffc",
       "label": "wrong: rebuilding the list from its values",
       "expected": "failed",
       "verdict": "failed",
@@ -344250,7 +344268,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -344277,7 +344295,7 @@
    "objective": "Reverse a singly linked list by rewiring the original nodes.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "d92eda523be83b23",
+   "contentHash": "b53db536e13148c2",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344323,7 +344341,7 @@
     "cases": [
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344332,7 +344350,7 @@
      },
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344341,7 +344359,7 @@
      },
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344350,7 +344368,7 @@
      },
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344359,7 +344377,7 @@
      },
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "wrong: building new nodes",
       "expected": "failed",
       "verdict": "failed",
@@ -344368,7 +344386,7 @@
      },
      {
       "id": "alg-dsa-reverse-list",
-      "contentHash": "d92eda523be83b23",
+      "contentHash": "b53db536e13148c2",
       "label": "wrong: returning the old head",
       "expected": "failed",
       "verdict": "failed",
@@ -344385,7 +344403,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -344549,7 +344567,7 @@
    "objective": "Sum a linked list recursively with the empty list as the only base case, nodes + 1 calls.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "0a97e7f8c1ace281",
+   "contentHash": "f6b6a96579ef0204",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344595,7 +344613,7 @@
     "cases": [
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344604,7 +344622,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344613,7 +344631,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344622,7 +344640,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344631,7 +344649,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "wrong: zeroing each node as it adds it",
       "expected": "failed",
       "verdict": "failed",
@@ -344640,7 +344658,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "wrong: a loop",
       "expected": "failed",
       "verdict": "failed",
@@ -344649,7 +344667,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "wrong: a second base case at the last node",
       "expected": "failed",
       "verdict": "failed",
@@ -344658,7 +344676,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "wrong: a loop that sets the old harness counter",
       "expected": "failed",
       "verdict": "failed",
@@ -344667,7 +344685,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "wrong: a const binding the counter cannot swap",
       "expected": "failed",
       "verdict": "failed",
@@ -344676,7 +344694,7 @@
      },
      {
       "id": "alg-dsa-recursive-list-sum",
-      "contentHash": "0a97e7f8c1ace281",
+      "contentHash": "f6b6a96579ef0204",
       "label": "alternative: a one-line recursive declaration",
       "expected": "passed",
       "verdict": "passed",
@@ -344693,7 +344711,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -344720,7 +344738,7 @@
    "objective": "Build [n, ..., 0] with a loop in one call, for n up to 10000.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "db7a138336f1178d",
+   "contentHash": "39ff71f91436a0f4",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344766,7 +344784,7 @@
     "cases": [
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344775,7 +344793,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344784,7 +344802,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344793,7 +344811,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344802,7 +344820,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "wrong: recursion through countdownSteps",
       "expected": "failed",
       "verdict": "failed",
@@ -344811,7 +344829,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "wrong: stopping before 0",
       "expected": "failed",
       "verdict": "failed",
@@ -344820,7 +344838,7 @@
      },
      {
       "id": "alg-dsa-iterative-countdown",
-      "contentHash": "db7a138336f1178d",
+      "contentHash": "39ff71f91436a0f4",
       "label": "wrong: one array shared by every call",
       "expected": "failed",
       "verdict": "failed",
@@ -344837,7 +344855,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -344864,7 +344882,7 @@
    "objective": "Return the first index strictly equal to a target, stopping at the match.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "04ce9877bfdd4ec1",
+   "contentHash": "642ab943cea12b5d",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -344910,7 +344928,7 @@
     "cases": [
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -344919,7 +344937,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -344928,7 +344946,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -344937,7 +344955,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -344946,7 +344964,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "wrong: scanning past the first match",
       "expected": "failed",
       "verdict": "failed",
@@ -344955,7 +344973,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "wrong: comparing with ==",
       "expected": "failed",
       "verdict": "failed",
@@ -344964,7 +344982,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "wrong: scanning past the match behind a declared Proxy",
       "expected": "failed",
       "verdict": "failed",
@@ -344973,7 +344991,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "wrong: scanning past the match behind a replaced RegExp test",
       "expected": "failed",
       "verdict": "failed",
@@ -344982,7 +345000,7 @@
      },
      {
       "id": "alg-dsa-linear-search",
-      "contentHash": "04ce9877bfdd4ec1",
+      "contentHash": "642ab943cea12b5d",
       "label": "alternative: indexOf",
       "expected": "passed",
       "verdict": "passed",
@@ -344999,7 +345017,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345026,7 +345044,7 @@
    "objective": "Return where a run of equal values starts in a sorted array, in at most 20 reads of 64.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "fb3e850c32d2bb0c",
+   "contentHash": "50ce71176c98af6b",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345072,7 +345090,7 @@
     "cases": [
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345081,7 +345099,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345090,7 +345108,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345099,7 +345117,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345108,7 +345126,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "wrong: a linear scan",
       "expected": "failed",
       "verdict": "failed",
@@ -345117,7 +345135,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "wrong: finding any match, then walking left",
       "expected": "failed",
       "verdict": "failed",
@@ -345126,7 +345144,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "wrong: returning any match in the run",
       "expected": "failed",
       "verdict": "failed",
@@ -345135,7 +345153,7 @@
      },
      {
       "id": "alg-dsa-first-occurrence",
-      "contentHash": "fb3e850c32d2bb0c",
+      "contentHash": "50ce71176c98af6b",
       "label": "wrong: 0 for an empty array",
       "expected": "failed",
       "verdict": "failed",
@@ -345152,7 +345170,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345179,7 +345197,7 @@
    "objective": "Selection sort in place through compare, with exactly n(n-1)/2 comparisons.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "8b1c3a76c11bfec6",
+   "contentHash": "e89d1dfc9dde37df",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345225,7 +345243,7 @@
     "cases": [
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345234,7 +345252,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345243,7 +345261,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345252,7 +345270,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345261,7 +345279,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "wrong: insertion sort",
       "expected": "failed",
       "verdict": "failed",
@@ -345270,7 +345288,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "wrong: the built-in sort",
       "expected": "failed",
       "verdict": "failed",
@@ -345279,7 +345297,7 @@
      },
      {
       "id": "alg-dsa-selection-sort",
-      "contentHash": "8b1c3a76c11bfec6",
+      "contentHash": "e89d1dfc9dde37df",
       "label": "wrong: sorting a copy and returning it",
       "expected": "failed",
       "verdict": "failed",
@@ -345296,7 +345314,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345323,7 +345341,7 @@
    "objective": "Stable insertion sort in place, 7 comparisons on sorted and 28 on reversed input of 8.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "31b161dae34e0e41",
+   "contentHash": "45dc7dc9590e5380",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345369,7 +345387,7 @@
     "cases": [
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345378,7 +345396,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345387,7 +345405,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345396,7 +345414,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345405,7 +345423,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "wrong: selection sort",
       "expected": "failed",
       "verdict": "failed",
@@ -345414,7 +345432,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "wrong: walking past equal elements",
       "expected": "failed",
       "verdict": "failed",
@@ -345423,7 +345441,7 @@
      },
      {
       "id": "alg-dsa-insertion-sort",
-      "contentHash": "31b161dae34e0e41",
+      "contentHash": "45dc7dc9590e5380",
       "label": "wrong: the built-in sort",
       "expected": "failed",
       "verdict": "failed",
@@ -345440,7 +345458,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345467,7 +345485,7 @@
    "objective": "Stable merge sort into a fresh array, 12 to 24 comparisons on 8 and exactly 12 when sorted.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "05879a2f2450467f",
+   "contentHash": "10a3a58e73294c8f",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345513,7 +345531,7 @@
     "cases": [
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345522,7 +345540,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345531,7 +345549,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345540,7 +345558,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345549,7 +345567,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "wrong: taking the right element on a tie",
       "expected": "failed",
       "verdict": "failed",
@@ -345558,7 +345576,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "wrong: sorting the caller's array in place",
       "expected": "failed",
       "verdict": "failed",
@@ -345567,7 +345585,7 @@
      },
      {
       "id": "alg-dsa-merge-sort",
-      "contentHash": "05879a2f2450467f",
+      "contentHash": "10a3a58e73294c8f",
       "label": "wrong: insertion sort on a copy",
       "expected": "failed",
       "verdict": "failed",
@@ -345584,7 +345602,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345612,7 +345630,7 @@
    "objective": "Count the nodes of a binary tree and measure its height in edges, with -1 for empty.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "d5a6fe70246a038e",
+   "contentHash": "f97c4e5f90cf7839",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345658,7 +345676,7 @@
     "cases": [
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345667,7 +345685,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345676,7 +345694,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345685,7 +345703,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345694,7 +345712,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "wrong: an empty tree of height 0",
       "expected": "failed",
       "verdict": "failed",
@@ -345703,7 +345721,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "wrong: an empty tree of height null",
       "expected": "failed",
       "verdict": "failed",
@@ -345712,7 +345730,7 @@
      },
      {
       "id": "alg-dsa-tree-size-height",
-      "contentHash": "d5a6fe70246a038e",
+      "contentHash": "f97c4e5f90cf7839",
       "label": "wrong: a size that follows the left spine only",
       "expected": "failed",
       "verdict": "failed",
@@ -345729,7 +345747,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345757,7 +345775,7 @@
    "objective": "Return inorder, preorder, postorder and level-order values of a binary tree.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "0f58ec83ef7e2d2a",
+   "contentHash": "a2f66e22dfb0024a",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345803,7 +345821,7 @@
     "cases": [
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345812,7 +345830,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345821,7 +345839,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345830,7 +345848,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345839,7 +345857,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "wrong: preorder and inorder swapped",
       "expected": "failed",
       "verdict": "failed",
@@ -345848,7 +345866,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "wrong: level order taken with pop",
       "expected": "failed",
       "verdict": "failed",
@@ -345857,7 +345875,7 @@
      },
      {
       "id": "alg-dsa-tree-traversals",
-      "contentHash": "0f58ec83ef7e2d2a",
+      "contentHash": "a2f66e22dfb0024a",
       "label": "wrong: one output array shared by every call",
       "expected": "failed",
       "verdict": "failed",
@@ -345874,7 +345892,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -345902,7 +345920,7 @@
    "objective": "Insert into a BST with duplicates to the right and search along one path, at most h + 1 nodes.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "c1ed407d806217b0",
+   "contentHash": "4a32f722ebccdb8c",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -345948,7 +345966,7 @@
     "cases": [
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -345957,7 +345975,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -345966,7 +345984,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -345975,7 +345993,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -345984,7 +346002,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "wrong: searching the whole tree",
       "expected": "failed",
       "verdict": "failed",
@@ -345993,7 +346011,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "wrong: equal values sent left",
       "expected": "failed",
       "verdict": "failed",
@@ -346002,7 +346020,7 @@
      },
      {
       "id": "alg-dsa-bst-search-insert",
-      "contentHash": "c1ed407d806217b0",
+      "contentHash": "4a32f722ebccdb8c",
       "label": "wrong: an insert that makes the new value the root",
       "expected": "failed",
       "verdict": "failed",
@@ -346019,7 +346037,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -346046,7 +346064,7 @@
    "objective": "Repair a level-order traversal that pops, pushes null children and seeds null.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "4c10a9f6a8170148",
+   "contentHash": "1533a1188423dcea",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -346094,7 +346112,7 @@
     "cases": [
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -346103,7 +346121,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -346112,7 +346130,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -346121,7 +346139,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -346130,7 +346148,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "wrong: the queue and the null guard fixed, the empty tree not",
       "expected": "failed",
       "verdict": "failed",
@@ -346139,7 +346157,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "wrong: the queue and the empty tree fixed, null children still pushed",
       "expected": "failed",
       "verdict": "failed",
@@ -346148,7 +346166,7 @@
      },
      {
       "id": "alg-dsa-repair-level-order",
-      "contentHash": "4c10a9f6a8170148",
+      "contentHash": "1533a1188423dcea",
       "label": "wrong: the null guard and the empty tree fixed, still read with pop",
       "expected": "failed",
       "verdict": "failed",
@@ -346165,7 +346183,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -346192,7 +346210,7 @@
    "objective": "Wrap sorted records in a lookup that binary-searches them, building nothing up front.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "001cf77c4b84f278",
+   "contentHash": "f891c46700daa8a2",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -346238,7 +346256,7 @@
     "cases": [
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -346247,7 +346265,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -346256,7 +346274,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -346265,7 +346283,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -346274,7 +346292,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "wrong: a linear lookup",
       "expected": "failed",
       "verdict": "failed",
@@ -346283,7 +346301,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "wrong: a Map built from every record up front",
       "expected": "failed",
       "verdict": "failed",
@@ -346292,7 +346310,7 @@
      },
      {
       "id": "alg-dsa-record-index",
-      "contentHash": "001cf77c4b84f278",
+      "contentHash": "f891c46700daa8a2",
       "label": "wrong: returning the name instead of the record",
       "expected": "failed",
       "verdict": "failed",
@@ -346309,7 +346327,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
@@ -346336,7 +346354,7 @@
    "objective": "Answer count queries from one counting pass, within 200 reads for 40 queries over 50 values.",
    "intendedLevel": "intermediate",
    "revision": 1,
-   "contentHash": "c0a9f84cd352053f",
+   "contentHash": "40eb68b5600e6b17",
    "hashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -346382,7 +346400,7 @@
     "cases": [
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -346391,7 +346409,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -346400,7 +346418,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -346409,7 +346427,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -346418,7 +346436,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "wrong: scanning values once per query",
       "expected": "failed",
       "verdict": "failed",
@@ -346427,7 +346445,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "wrong: counting into a plain object, which merges 1 and \"1\"",
       "expected": "failed",
       "verdict": "failed",
@@ -346436,7 +346454,7 @@
      },
      {
       "id": "alg-dsa-frequency-index",
-      "contentHash": "c0a9f84cd352053f",
+      "contentHash": "40eb68b5600e6b17",
       "label": "wrong: undefined for a value that never appears",
       "expected": "failed",
       "verdict": "failed",
@@ -346453,7 +346471,7 @@
     "pass": "second-reading",
     "verdict": "accept",
     "problems": [],
-    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
    },
    "reviewer": {
     "kind": "model",
