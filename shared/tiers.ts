@@ -67,11 +67,13 @@ export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '4.99', 
  * strings, objects, functions and async in JavaScript; types, objects and
  * array methods in TypeScript; rendering, hooks and async in React; loops,
  * objects, sorting and recursion in Algorithms). JavaScript 41, TypeScript 18,
- * React 19, Algorithms 9: with the opening stages of the 29 projects and
+ * React 19, Algorithms 12: with the opening stages of the 29 projects and
  * short paths (three tasks in each of the eleven ten-stage projects, two in
- * each of the three FullStack apps, one in each short path), 141 of the 725
- * issued tasks, 19.4 % (JavaScript 68, TypeScript 32, React 30,
- * Algorithms 11). The second block of each track
+ * each of the three FullStack apps, one in each short path), 144 of the 754
+ * issued tasks, 19.1 % (JavaScript 68, TypeScript 32, React 30,
+ * Algorithms 14). The DSA Foundations tasks of #493 added three: the first
+ * loops and recursion tasks of the Algorithms track, which the first-task
+ * rule opens, and the halving counter on the Big O levels. The second block of each track
  * came with the Easy waves of #226. The third came with its Medium and Hard waves, which
  * added no Easy task: it opens an Easy task for the techniques those
  * challenges combine most and the free set had least of (closures, recursion,
@@ -172,6 +174,11 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
   'alg-easy2-greatest-common-divisor',
   'alg-merge-sorted',
   'alg-easy2-fibonacci-memo',
+  // DSA Foundations (#493): the first loops and recursion tasks of the track,
+  // and the halving counter beside them on the Big O levels.
+  'alg-dsa-sum-of-evens',
+  'alg-dsa-halving-steps',
+  'alg-dsa-factorial',
 ];
 
 /** Something a learner starts. `stage` is one-based. */
@@ -256,7 +263,7 @@ export function isFreeCodingTask(taskId: string): boolean {
 }
 
 /** How many of these coding tasks the free tier opens, and of how many: the
- * "141 of 725 tasks free" that share images and copy print (#239). Pass the
+ * "144 of 754 tasks free" that share images and copy print (#239). Pass the
  * catalogue's ids; the count is this module's rule, not a stored number. */
 export function freeCodingCounts(taskIds: readonly string[]): { free: number; total: number } {
   return { free: taskIds.filter(isFreeCodingTask).length, total: taskIds.length };
