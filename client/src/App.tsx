@@ -1,6 +1,6 @@
 import { applyRouteHead, readShareHead } from './lib/routeHead';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
@@ -35,7 +35,7 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import SignInDialogHost from './components/auth/SignInDialogHost';
 import { useAuthLanding } from './lib/authLanding';
-import { installIntentPreloading, routeChunk } from './lib/routePreload';
+import { installIntentPreloading, routeBoxKey, routeChunk } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { ShellPartBoundary } from './components/ShellPartBoundary';
@@ -56,7 +56,7 @@ const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathn
 const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
 const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
-const loadRoadmap = routeChunk(exact('/learn', '/learn/big-o'), () => import('./components/Roadmap'));
+const loadRoadmap = routeChunk(under('/learn'), () => import('./components/Roadmap'));
 const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
@@ -418,9 +418,12 @@ function App() {
     applyRouteHead(location.pathname, t, SHARE_HEAD);
   }, [location.pathname, t]);
 
+  // Route focus follows the route box (lib/routePreload.ts), not the
+  // pathname: a Learn section switch keeps focus on the switcher.
+  const boxKey = routeBoxKey(location.pathname);
   useEffect(() => {
-    // Route focus is intentionally pathname-only, so a change that only
-    // rewrites the head does not pull focus away from the current control.
+    // Route focus is intentionally box-only, so a change that only rewrites
+    // the head does not pull focus away from the current control.
     if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
     const preserveStartupFocus = startupGuidePath.current !== null;
     const timer = window.setTimeout(() => {
@@ -433,11 +436,21 @@ function App() {
       main?.removeAttribute('data-skip-target');
       main?.focus({ preventScroll: true });
     }, 230);
-    // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
-    // PostHog is configured.
-    capturePageview(location.pathname);
     return () => window.clearTimeout(timer);
-  }, [location.pathname]);
+  }, [boxKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
+  // PostHog is configured. A replace inside one route box only names the page
+  // the visitor already sees (/learn resolving to /learn/<section>), so it
+  // logs nothing; a section switch is a push and logs its own view.
+  const navigationType = useNavigationType();
+  const viewedBox = useRef<string | null>(null);
+  useEffect(() => {
+    const sameBox = viewedBox.current === boxKey;
+    viewedBox.current = boxKey;
+    if (sameBox && navigationType === 'REPLACE') return;
+    capturePageview(location.pathname);
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
@@ -756,7 +769,7 @@ function App() {
               the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
             <m.div
-              key={location.pathname}
+              key={boxKey}
               className="ss-route"
               // The page waiting for its successor (see `navigating` above).
               aria-busy={navigating || undefined}
@@ -769,7 +782,7 @@ function App() {
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-                  <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/learn/:section?" element={<Roadmap />} />
                   <Route path="/big-o" element={<BigOPage />} />
                   <Route path="/learn/big-o" element={<BigOIntroduction />} />
                   <Route path="/today" element={<Today />} />
