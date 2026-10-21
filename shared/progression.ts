@@ -21,7 +21,7 @@
  * Keep this module pure: no storage, no network, no clock. */
 
 import { isLearningPathId, type BaseTrack, type LearnerProfile, type SkillPathId } from './learning-paths';
-import { LEARN_SECTIONS, learnerSections, type LearnSection } from './learn-sections';
+import { LEARN_SECTIONS, OPT_IN_SECTIONS, type LearnSection } from './learn-sections';
 import { isRetiredTopic } from './retired-content';
 import { SUBJECT_SCOPE_CATALOG } from './subject-catalog';
 
@@ -484,10 +484,9 @@ export function planTopics(profile: LearnerProfile | null): string[] {
   for (const stage of WEBDEV_PLAN_STAGES[profile.baseTrack] ?? []) for (const topic of stage) push(topic);
   if (profile.specialization) for (const topic of SPECIALIZATION_BRIDGE_TOPICS[profile.specialization] ?? []) push(topic);
   for (const path of profile.skillPaths) for (const topic of SKILL_PATH_BRIDGE_TOPICS[path] ?? []) push(topic);
-  const joined = new Set(learnerSections(profile));
   const appended: string[] = [];
-  for (const section of LEARN_SECTIONS) {
-    if (section.membership !== 'opt-in' || !joined.has(section.id)) continue;
+  for (const section of OPT_IN_SECTIONS) {
+    if (!profile.sections?.includes(section.id)) continue;
     for (const topic of section.topics) {
       appended.push(topic);
       push(topic);

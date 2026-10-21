@@ -155,7 +155,7 @@ import {
   planTopics,
   validateProgressionGraph,
 } from '../shared/progression';
-import { LEARN_SECTION_IDS, LEARN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
+import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
 import {
   isLearnerProfileComplete,
   missingProfileFields,
@@ -4796,6 +4796,8 @@ async function main() {
       ['software-engineer', 'opt-in', []],
       ['forward-deployed-engineer', 'specialization', ['fde']],
     ]);
+    assert.deepEqual(OPT_IN_SECTIONS, LEARN_SECTIONS.filter((one) => one.membership === 'opt-in'),
+      'planTopics appends exactly the opt-in sections');
     // Shared topics: one id, listed in several sections.
     assert.deepEqual(sectionsForTopic('databases'), ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
     assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);

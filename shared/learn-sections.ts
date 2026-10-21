@@ -34,30 +34,32 @@ export interface LearnSection {
  * LLMs belongs to FDE; Node.js, Databases, General, DevOps & Cloud and
  * Security are FDE foundations; Git and General are shared by Web Developer and
  * Software Engineer. DSA Advanced joins Software Engineer with epic E. */
-export const LEARN_SECTIONS: readonly LearnSection[] = [
-  {
-    id: 'web-developer',
-    topics: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general'],
-    paths: [],
-    membership: 'base-track',
-  },
-  {
-    id: 'software-engineer',
-    topics: ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general'],
-    paths: [],
-    membership: 'opt-in',
-  },
-  {
-    id: 'forward-deployed-engineer',
-    topics: ['ai', 'nodejs', 'databases', 'general', 'devops', 'security'],
-    paths: ['fde'],
-    membership: 'specialization',
-  },
-];
+const WEB_DEVELOPER: LearnSection = {
+  id: 'web-developer',
+  topics: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general'],
+  paths: [],
+  membership: 'base-track',
+};
+const SOFTWARE_ENGINEER: LearnSection = {
+  id: 'software-engineer',
+  topics: ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general'],
+  paths: [],
+  membership: 'opt-in',
+};
+const FORWARD_DEPLOYED_ENGINEER: LearnSection = {
+  id: 'forward-deployed-engineer',
+  topics: ['ai', 'nodejs', 'databases', 'general', 'devops', 'security'],
+  paths: ['fde'],
+  membership: 'specialization',
+};
 
-const BY_ID = new Map(LEARN_SECTIONS.map((section) => [section.id, section]));
+export const LEARN_SECTIONS: readonly LearnSection[] = [WEB_DEVELOPER, SOFTWARE_ENGINEER, FORWARD_DEPLOYED_ENGINEER];
 
-export const learnSection = (id: LearnSectionId): LearnSection => BY_ID.get(id)!;
+/** The sections a learner joins by choice, in section order: the only ones
+ * `planTopics` appends. Kept apart from `LEARN_SECTIONS` so the browser's
+ * initial bundle, which plans but does not render sections, carries only
+ * these. The launch contracts check it equals the opt-in subset. */
+export const OPT_IN_SECTIONS: readonly LearnSection[] = [SOFTWARE_ENGINEER];
 
 /** Sections that list `topic`, in section order. A topic in more than one is
  * shared: the rail shows it in each, with the same progress. */
