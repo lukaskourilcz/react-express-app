@@ -54,7 +54,7 @@ async function main() {
 
   /* ── the served bank ─────────────────────────────────────────────────── */
   const bank = await loadSubjectQuestionBank(SUBJECT);
-  const { list: served } = applyEligibility(bank.questions);
+  const { list: served } = applyEligibility(bank);
   const servedIds = new Set(served.map((question) => question.id));
   const delivery = new Set(deliveryCategories(SUBJECT));
   const deliverable = served.filter((question) => delivery.has(question.category));
