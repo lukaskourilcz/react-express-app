@@ -52,6 +52,12 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
     { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
   ],
+  'fde-v1-m06-tool-dispatcher': [
+    { label: 'a dispatcher that runs an approval tool without waiting for approval', replace: ['    if (tool.approval) {', '    if (false) {'], criterion: 'approval-held' },
+    { label: 'a rejection that leaves the call approvable', replace: ['    const entry = take(callId);\n    if (!entry) return { ok: false, reason: \'unknown_call\' };\n    return settle(entry.store, entry.key, { ok: false, reason: \'rejected\', callId });', "    if (!Object.prototype.hasOwnProperty.call(waiting, callId)) return { ok: false, reason: 'unknown_call' };\n    return { ok: false, reason: 'rejected', callId };"], criterion: 'approval-held' },
+    { label: 'a sub-agent that keeps every scope it asks for', replace: ['const scopes = asked.filter(scope => held.indexOf(scope) !== -1);', 'const scopes = asked;'], criterion: 'scope-enforced' },
+    { label: 'a sub-agent with no call budget', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };\n", ''], criterion: 'subagent-budget' },
+  ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
