@@ -14,6 +14,8 @@
 //   * an off-loop module never supplies the next action, never counts toward
 //     guided completion or the inventory's module total, and sends the
 //     database no requirements, even if its optional flag slipped
+//   * a shelf module's checks, code and artifacts stay out of every count
+//     the path header shows
 
 import { LEARNING_PATHS, activitySummary, moduleSummary, publicManifest } from '../lib/learning-paths/catalog';
 import { moduleRequirements } from '../lib/learning-paths/handlers';
@@ -202,6 +204,25 @@ export function schemaContracts(fail: Fail): void {
   if (nextActivityId(manifest, shelfDone) !== 'fde-v1-x01-read') fail('schema progress: shelf work moved the next action off the loop');
   const inventory = pathInventory(manifest);
   if (inventory.modules !== 1 || inventory.lessons !== 1) fail(`schema inventory: expected 1 module and 1 lesson, got ${inventory.modules} and ${inventory.lessons}`);
+  {
+    // The header shows these counts side by side, so the shelf's check,
+    // drill and artifact stay out of every one of them, as its lesson and
+    // minutes do. Give the shelf a drill and an artifact of its own first.
+    const stocked = structuredClone(manifest);
+    const shelf = stocked.modules.find((module) => module.id === SHELF)!;
+    const drill = stocked.modules.flatMap((module) => module.activities).find((activity) => activity.kind === 'code')!;
+    shelf.activities.push(
+      { ...drill, id: 'fde-v1-ip01-drill' },
+      { ...drill, id: 'fde-v1-ip01-star', kind: 'artifact', verification: 'self_reviewed', language: undefined, rubricDimensions: ['clarity'] },
+    );
+    const counted = pathInventory(stocked);
+    const expected = { checks: 3, moduleChecks: 3, codeExercises: 1, moduleCodeExercises: 1, artifacts: 0, modules: 1, lessons: 1 };
+    for (const [key, value] of Object.entries(expected)) {
+      const got = counted[key as keyof typeof expected];
+      if (got !== value) fail(`schema inventory: ${key} is ${got}, expected ${value} with the shelf left out`);
+    }
+    if (counted.estimatedMinutes !== inventory.estimatedMinutes) fail('schema inventory: shelf minutes reached the path estimate');
+  }
 
   /* ── 7. the shelf stays off the loop even without its optional flag ── */
   // The validator refuses this source; the arithmetic must not rely on it.

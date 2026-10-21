@@ -802,7 +802,8 @@ ahead of a loop module (`shelf_before_loop`). Off-loop modules, optional or
 shelved, never gate completion, never supply the next action and never count
 toward the module total the reward compares: `isOffLoopModule` in
 `shared/learning-paths.ts` decides that for the shared arithmetic and the
-handlers.
+handlers. `pathInventory` also leaves a shelf module's checks, code and
+artifacts out of the counts the path header shows; the shelf lists its own.
 
 Endpoints are new `resource=`/`op=` branches on existing handlers
 (`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;

@@ -267,7 +267,9 @@ export interface PathInventory {
   /** Modules that gate completion; off-loop modules (optional placement, bridges, shelves) excluded. */
   modules: number;
   lessons: number;
-  /** Every objective question in the path, whatever its purpose. */
+  /** Every objective question in the path, whatever its purpose. A shelf
+   * module's questions, code and artifacts are not counted here or below:
+   * the interview shelf is listed apart from the loop. */
   checks: number;
   /** Every code exercise in the path, whatever its purpose. */
   codeExercises: number;
@@ -301,6 +303,9 @@ export function pathInventory(manifest: LearningPathManifest): PathInventory {
       lessons += module.lessons.length;
       estimatedMinutes += module.estimatedMinutes;
     }
+    // Placement and bridge activities keep their purpose split below; a
+    // shelf's do not reach the path's totals at all.
+    if (module.shelf !== undefined) continue;
     for (const activity of module.activities) {
       if (activity.kind === 'check') byPurpose[activity.purpose].checks += activity.questionCount ?? 0;
       else if (activity.kind === 'code') byPurpose[activity.purpose].code += 1;
