@@ -398,6 +398,46 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       if (res.statusCode !== 200 || JSON.stringify(profile?.goals) !== JSON.stringify(['level-up'])) {
         fail(`a partial preference save answered ${res.statusCode} and wrote goals ${JSON.stringify(profile?.goals)}, not the saved ones`);
       }
+
+      // Learn sections (#487): a save may carry the opt-in sections, a save
+      // without them keeps the saved list, and an unknown section is refused
+      // before anything is written.
+      const profileWritten = () => {
+        const meta = (writes.at(-1) as [string, { user_metadata: Record<string, { goals?: string[]; sections?: string[] }> }] | undefined)?.[1]?.user_metadata;
+        return meta ? Object.values(meta).find((value) => Array.isArray(value?.goals)) : undefined;
+      };
+      const reading = (stored: Record<string, unknown>) => fakeSupabase({
+        auth: { getUserById: async () => ({ data: { user: { user_metadata: { [LEARNER_PROFILE_META_KEY]: stored } } }, error: null }), updateUserById },
+      });
+      res = response();
+      await handleLearningPreference(
+        request('PUT', `pref-sections-${stamp}`, { ...put, sections: ['software-engineer', 'software-engineer'] }, { headers: { authorization: 'Bearer test' } }),
+        res as never,
+        reading(saved),
+      );
+      if (res.statusCode !== 200 || JSON.stringify(profileWritten()?.sections) !== JSON.stringify(['software-engineer'])) {
+        fail(`a save with sections answered ${res.statusCode} and wrote ${JSON.stringify(profileWritten()?.sections)}, not ['software-engineer']`);
+      }
+      res = response();
+      await handleLearningPreference(
+        request('PUT', `pref-keep-${stamp}`, put, { headers: { authorization: 'Bearer test' } }),
+        res as never,
+        reading({ ...saved, sections: ['software-engineer'] }),
+      );
+      if (res.statusCode !== 200 || JSON.stringify(profileWritten()?.sections) !== JSON.stringify(['software-engineer'])) {
+        fail(`a save without sections answered ${res.statusCode} and wrote ${JSON.stringify(profileWritten()?.sections)}, not the saved list`);
+      }
+      const before = writes.length;
+      for (const sections of [['data-scientist'], 'software-engineer', ['software-engineer', 7]]) {
+        res = response();
+        await handleLearningPreference(
+          request('PUT', `pref-bad-${stamp}`, { ...put, sections }, { headers: { authorization: 'Bearer test' } }),
+          res as never,
+          reading(saved),
+        );
+        if (res.statusCode !== 400) fail(`a save with sections ${JSON.stringify(sections)} answers ${res.statusCode}, not 400`);
+      }
+      if (writes.length !== before) fail('a save with unknown sections still wrote the account');
     }
 
     /* ── the path reward ──────────────────────────────────────────────── */
