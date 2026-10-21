@@ -156,6 +156,7 @@ import {
   validateProgressionGraph,
 } from '../shared/progression';
 import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
+import { OPT_IN_SECTIONS as INITIAL_OPT_IN_SECTIONS } from '../shared/learn-section-ids';
 import {
   isLearnerProfileComplete,
   missingProfileFields,
@@ -4777,7 +4778,7 @@ async function main() {
   // A curriculum edit that strands a learner — a cycle, a prerequisite on a
   // topic that no longer exists, a plan whose first stage nothing can open —
   // fails here rather than in front of the learner.
-  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS);
+  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS, LEARN_SECTIONS);
   assert.deepEqual(
     graphProblems,
     [],
@@ -4876,6 +4877,14 @@ async function main() {
     ]);
     assert.deepEqual(OPT_IN_SECTIONS, LEARN_SECTIONS.filter((one) => one.membership === 'opt-in'),
       'planTopics appends exactly the opt-in sections');
+    assert.equal(INITIAL_OPT_IN_SECTIONS, OPT_IN_SECTIONS, 'learn-sections re-exports the opt-in list of learn-section-ids');
+    // The initial bundle plans (shared/progression.ts) and parses profiles
+    // (shared/learning-paths.ts) but renders no section. Neither may import
+    // the full registry, or every section's topic list ships to every visitor.
+    for (const file of ['shared/progression.ts', 'shared/learning-paths.ts']) {
+      assert.doesNotMatch(readFileSync(file, 'utf8'), /from '\.\/learn-sections'/,
+        `${file} imports from ./learn-section-ids, never the full ./learn-sections registry`);
+    }
     // Shared topics: one id, listed in several sections.
     assert.deepEqual(sectionsForTopic('databases'), ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
     assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);

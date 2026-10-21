@@ -10,7 +10,7 @@ import type { CallTest, TypeTest } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 import type { ComplexityGuidance, ComplexityReport } from './coding-complexity';
-import type { LearnSectionId } from './learn-sections';
+import type { LearnSectionId } from './learn-section-ids';
 import type {
   ActivityPurpose,
   ActivitySummary,

@@ -21,7 +21,7 @@
  * Keep this module pure: no storage, no network, no clock. */
 
 import { isLearningPathId, type BaseTrack, type LearnerProfile, type SkillPathId } from './learning-paths';
-import { LEARN_SECTIONS, OPT_IN_SECTIONS, type LearnSection } from './learn-sections';
+import { OPT_IN_SECTIONS, type LearnSection } from './learn-section-ids';
 import { isRetiredTopic } from './retired-content';
 import { SUBJECT_SCOPE_CATALOG } from './subject-catalog';
 
@@ -573,13 +573,15 @@ export interface GraphProblem {
  * Prove the graph is usable: every topic declares prerequisites, no cycle
  * exists, every topic traces back to a starter, every plan names topics the
  * subject actually owns, and the Learn sections cover the live catalogue
- * exactly (`sections` is a parameter only so the contract can feed it a
- * broken registry). Run from the launch-contract test, so a curriculum
+ * exactly. The caller passes `sections` (`LEARN_SECTIONS` from
+ * `shared/learn-sections.ts`, or a broken registry in the contract), so this
+ * module, which the browser's initial bundle carries, never pulls the full
+ * registry in. Run from the launch-contract test, so a curriculum
  * edit that strands a learner fails before it ships rather than after.
  */
 export function validateProgressionGraph(
   allTopics: readonly string[],
-  sections: readonly LearnSection[] = LEARN_SECTIONS,
+  sections: readonly LearnSection[],
 ): GraphProblem[] {
   const problems: GraphProblem[] = [];
   const known = new Set(allTopics);
