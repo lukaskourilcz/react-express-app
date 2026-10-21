@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -50,13 +50,11 @@ import {
   pathStatus,
   PARTS_PER_TOPIC,
   getRoadmapProgress,
-  isTopicUnlocked,
   unlockExtraTopics,
   useExtraUnlocks,
   getExtraUnlocks,
   topicsFromAssessment,
   type PartRange,
-  type RoadmapProgress,
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
 import ReferralMoment from './ReferralMoment';
@@ -82,13 +80,32 @@ import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
-import { useInPlan } from '../lib/eligibility';
+import { NO_PENDING, useInPlan, useLearnerSections, type PendingJoin } from '../lib/eligibility';
+import { entryFor, isOpen, useEnrollments, usePathCatalog } from '../lib/learningPaths';
+import { openSignIn } from '../lib/signInDialog';
+import { learnerProfileOf } from '../lib/trackPref';
+import { LEARN_SECTIONS, LEARN_SECTION_IDS, type LearnSectionId } from '../../../shared/learn-sections';
+import {
+  SECTION_KEY,
+  SECTION_TOPIC_KEY,
+  firstSelectable,
+  railEntries,
+  resolveSection,
+  sectionGate,
+  sectionProgress,
+  sectionTopics,
+  type RailEntry,
+} from './learn/sections';
+import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
+import { LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
+import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
+import { useOnline } from './learn/useOnline';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
-import { readString, writeString } from '../lib/storage';
+import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
 import { autosaveDraft, codingDraftQuery, flushAutosave, forgetDeviceDraft, openingDraft, saveDraft } from '../coding/drafts';
 import { fetchCodingTask } from '../coding/api';
 import { DraftNote, useDraftChoice } from '../coding/DraftNote';
@@ -100,7 +117,6 @@ import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon, TrophyIcon } from './ui/icons';
-import { CategoryGlyph } from './ui/techIcons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
 import { ShellPartBoundary } from './ShellPartBoundary';
@@ -124,6 +140,10 @@ type Active = { kind: 'level' | 'test'; ref: number };
 // The roadmap topic list is scoped to the active subject (see subjects.ts);
 // each subject exposes its own ordered set of Learn topics.
 const TOPIC_KEY = 'devquiz:roadmap:topic';
+const readSectionTopic = (section: LearnSectionId): string | null =>
+  readJSON<Partial<Record<LearnSectionId, string>>>(SECTION_TOPIC_KEY, {})[section] ?? null;
+const writeSectionTopic = (section: LearnSectionId, topic: string): void =>
+  writeJSON(SECTION_TOPIC_KEY, { ...readJSON<Partial<Record<LearnSectionId, string>>>(SECTION_TOPIC_KEY, {}), [section]: topic });
 const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = BRAND.gold;
 // Lives for a level lesson: one heart that drains a third per wrong answer.
@@ -223,12 +243,6 @@ const CheckIcon = ({ size = 22 }: { size?: number }) => (
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
-const LockIcon = ({ size = 18 }: { size?: number }) => (
-  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
 // Mastered levels carry a filled star; cleared-but-due levels carry a small
 // review (circular-arrow) marker. Both pair the mastery colour with a distinct
 // shape so status never rides on colour alone.
@@ -311,10 +325,13 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 function Roadmap() {
   useRoadmapStructureFirst({ plan: true });
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
+  const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
+  const queryClient = useQueryClient();
+  const online = useOnline();
 
   // Roadmap structure via TanStack Query — cached + de-duped with the /roadmap
   // tree, cancellable, with built-in loading/error state and retry.
@@ -334,16 +351,51 @@ function Roadmap() {
   // fallback landing topic.
   const [subject] = useSubject();
   const TOPICS = topicsForSubject(subject);
+
+  // Which Learn section the address names (components/learn/sections.ts). An
+  // address that does not name one, or names the wrong one for its ?topic, is
+  // replaced with the one it resolves to, query and all.
+  const { section: sectionParam } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const resolved = useMemo(
+    () => resolveSection(sectionParam, location.search, readString(SECTION_KEY)),
+    [sectionParam, location.search],
+  );
+  useEffect(() => {
+    if (resolved.canonical) navigate(resolved.canonical, { replace: true });
+  }, [resolved.canonical]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The section on screen. It follows the address except while a level or the
+  // skill check is open (the effect after their state below).
+  const [section, setSection] = useState<LearnSectionId>(resolved.section);
+
   // The server serves nothing new outside the learner's chosen track (403
   // not_in_plan), and keeps serving levels already passed whatever the plan
-  // says. The rail lists what the plan holds plus any topic with a passed
-  // level; everything else would only lead to a refusal.
-  const inPlan = useInPlan();
-  const topicVisible = useCallback(
-    (value: RoadmapTopic, p: RoadmapProgress = progress) => inPlan(value) || passedLevelCount(p, value) > 0,
-    [inPlan, progress],
-  );
-  const visibleTopics = useMemo(() => TOPICS.filter((value) => topicVisible(value)), [TOPICS, topicVisible]);
+  // says. A join the session has not read back yet counts as planned, so
+  // every reader of the plan on this page agrees the moment it lands.
+  const [pending, setPending] = useState<PendingJoin>(NO_PENDING);
+  const inPlan = useInPlan(pending);
+  const { profile, hasPlan, members } = useLearnerSections(pending);
+  const isMember = members.includes(section);
+  useEffect(() => {
+    if (pending === NO_PENDING) return;
+    const saved = learnerProfileOf(user);
+    if (!saved) return;
+    const held = pending.sections.every((id) => saved.sections?.includes(id)) && (!pending.fde || saved.specialization === 'fde');
+    if (held) setPending(NO_PENDING);
+  }, [user, pending]);
+
+  // Each section's rail: what the plan holds plus any topic with a passed
+  // level, and, in a section the learner has not joined, the rest dimmed.
+  const entriesBySection = useMemo(() => {
+    const base = { liveTopics: TOPICS, inPlan, hasPlan, progress, extraUnlocks: extraUnlocksSet, lockOf };
+    return Object.fromEntries(
+      LEARN_SECTION_IDS.map((id) => [id, railEntries(id, { ...base, isMember: members.includes(id) })]),
+    ) as Record<LearnSectionId, RailEntry[]>;
+  }, [TOPICS, inPlan, hasPlan, progress, extraUnlocksSet, lockOf, members]);
+  const entries = entriesBySection[section];
+  const sectionHasOpen = entries.some((entry) => entry.state === 'open');
+
   // An old link to a path that no longer exists. It is answered rather than
   // redirected: the learner asked for something specific and deserves to know
   // where it went, and their history for it is untouched.
@@ -352,21 +404,17 @@ function Roadmap() {
     return fromUrl ? retirementOf(fromUrl) ?? null : null;
   });
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
-    // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
-    // last-opened topic so clicking a part on the tree lands on that path.
+    // A deep link (/learn?topic=…&part=…) wins over the topic last opened in
+    // this section, then the last one overall. A locked or unlisted one falls
+    // back to the section's first open topic, so the page lands somewhere
+    // actionable.
     const fromUrl = new URLSearchParams(window.location.search).get('topic');
-    const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
-    const candidate =
-      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : TOPICS[0];
-    // If the saved topic is locked (fresh user, reset progress, etc.) or
-    // outside the plan, fall back to the first open topic of the plan so the
-    // page lands somewhere actionable.
-    const stored = getRoadmapProgress();
-    const extra = new Set(getExtraUnlocks());
-    if (!isTopicUnlocked(stored, candidate, extra) || !topicVisible(candidate, stored)) {
-      return TOPICS.find((value) => inPlan(value) && isTopicUnlocked(stored, value, extra)) ?? TOPICS[0];
-    }
-    return candidate;
+    const initial = railEntries(resolved.section, {
+      liveTopics: TOPICS, inPlan, hasPlan, isMember: members.includes(resolved.section),
+      progress: getRoadmapProgress(), extraUnlocks: new Set(getExtraUnlocks()), lockOf,
+    });
+    const chosen = firstSelectable(initial, [fromUrl, readSectionTopic(resolved.section), readString(TOPIC_KEY), TOPICS[0]]);
+    return (chosen ?? initial[0]?.topic ?? TOPICS[0]) as RoadmapTopic;
   });
   // Which of the topic's PARTS_PER_TOPIC parts is open in the path view.
   const [part, setPart] = useState<number>(() => {
@@ -385,16 +433,6 @@ function Roadmap() {
     }
   }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The plan arrives with the account (a restored session, a track changed on
-  // another page). A topic it leaves out, with nothing passed in it, is not
-  // one to stay on.
-  useEffect(() => {
-    if (visibleTopics.length > 0 && !visibleTopics.includes(topic)) {
-      setTopic(visibleTopics.find((value) => isTopicUnlocked(progress, value, new Set(extraUnlocks))) ?? visibleTopics[0]);
-      setPart(1);
-    }
-  }, [visibleTopics]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
   const [loadingLesson, setLoadingLesson] = useState(false);
@@ -407,17 +445,14 @@ function Roadmap() {
   const [skillCheckOpen, setSkillCheckOpen] = useState(false);
   const [unlockSnack, setUnlockSnack] = useState<string | null>(null);
 
-  const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
-  const isUnlocked = useCallback(
-    (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
-    [progress, extraUnlocksSet],
-  );
-  // How many of the subject's paths are still closed — surfaced under the rail
-  // so the dimmed pills read as content to earn, not as broken buttons.
-  const lockedTopicCount = useMemo(
-    () => visibleTopics.filter((value) => !isUnlocked(value)).length,
-    [visibleTopics, isUnlocked],
-  );
+  // The section follows the address, except while a level or the skill check
+  // is open: Back, Forward or a nav click then change the address only, and
+  // the section follows once the learner is back on the map.
+  useEffect(() => {
+    if (active !== null || skillCheckOpen) return;
+    setSection(resolved.section);
+    writeString(SECTION_KEY, resolved.section);
+  }, [resolved.section, active, skillCheckOpen]);
   // The topic's full (global) level list, split into progression checkpoints.
   const topicStructure = structure?.structure[topic];
   const levels: RoadmapLevelMeta[] = topicStructure?.levels ?? [];
@@ -452,16 +487,79 @@ function Roadmap() {
     syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
   }, [isAuthenticated]);
 
-  const selectTopic = (next: RoadmapTopic) => {
-    // Locked topics aren't tabbable; ignore if somehow invoked.
-    if (!isUnlocked(next)) return;
+  // Show `next`, on the first unlocked, incomplete part of it.
+  const landOn = (next: RoadmapTopic, remember: LearnSectionId | null) => {
     setTopic(next);
-    writeString(TOPIC_KEY, next);
-    // Land on the first unlocked, incomplete part of the newly chosen topic.
     const nextRanges = partRanges(structure?.structure[next]?.levels.length ?? 0);
     const p = currentPart(progress, next, nextRanges, extraUnlocksSet);
     setPart(p);
-    writeString(PART_KEY, String(p));
+    if (remember) {
+      writeString(TOPIC_KEY, next);
+      writeSectionTopic(remember, next);
+      writeString(PART_KEY, String(p));
+    }
+  };
+
+  const selectTopic = (next: RoadmapTopic) => {
+    // Locked and dimmed topics aren't tabbable; ignore if somehow invoked.
+    if (!entries.some((entry) => entry.topic === next && entry.state === 'open')) return;
+    landOn(next, section);
+  };
+
+  // A section, or a plan that arrived with the account, may not list the
+  // topic on screen as open. Move to the section's remembered topic, else its
+  // first open one. With nothing open the map area says what opens it, and
+  // the topic stays as it was.
+  useEffect(() => {
+    if (active) return;
+    if (entries.some((entry) => entry.topic === topic && entry.state === 'open')) return;
+    const next = firstSelectable(entries, [readSectionTopic(section), readString(TOPIC_KEY), TOPICS[0]]);
+    if (next) landOn(next as RoadmapTopic, null);
+  }, [section, entries]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Open another section, optionally on one of its topics. The old query is
+   * dropped, so a ?topic of the section left behind cannot send the learner
+   * back. */
+  const switchSection = (id: LearnSectionId, nextTopic?: RoadmapTopic) => {
+    if (nextTopic) landOn(nextTopic, id);
+    navigate({ pathname: `/learn/${id}`, search: nextTopic ? `?topic=${nextTopic}` : '' });
+  };
+
+  // Joining the section on screen (components/learn/joinSection.ts). The
+  // state names the section it belongs to, so a switch during a save never
+  // shows its result under another section.
+  const [join, setJoin] = useState<(JoinState & { section: LearnSectionId }) | null>(null);
+  const fdeOnScreen = section === 'forward-deployed-engineer';
+  const pathCatalog = usePathCatalog(fdeOnScreen);
+  const enrollments = useEnrollments(fdeOnScreen && isAuthenticated ? user?.id : undefined);
+  const fdeEntry = entryFor(pathCatalog.data, 'fde');
+  const fdeBarred = isBarred(lockOf({ kind: 'learning-path', pathId: 'fde' }));
+  const runJoin = async (id: LearnSectionId) => {
+    if (!user || !profile || join?.status === 'saving') return;
+    const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
+    setJoin({ section: id, status: 'saving' });
+    const outcome = id === 'software-engineer'
+      ? await joinSoftwareEngineer(user.id, profile, queryClient)
+      : await joinFde({
+        userId: user.id,
+        profile,
+        entry: fdeEntry,
+        enrollment: enrollments.data?.enrollments.find((one) => one.pathId === 'fde'),
+        barred: fdeBarred,
+        queryClient,
+        skipEnroll: retryAfterSave,
+      });
+    if (outcome.ok) {
+      setPending((current) => (id === 'software-engineer'
+        ? { ...current, sections: [...current.sections, id] }
+        : { ...current, fde: true }));
+      setJoin({ section: id, status: 'saved' });
+    } else if (outcome.step === 'premium') {
+      // The upgrade sheet is open; nothing was saved.
+      setJoin(null);
+    } else {
+      setJoin({ section: id, status: 'error', step: outcome.step });
+    }
   };
 
   const selectPart = (p: number) => {
@@ -725,6 +823,21 @@ function Roadmap() {
   }
 
   /* ──── map view ─────────────────────────────────────────────────────── */
+  const sectionName = learnText(`learn.section.${section}`);
+  const switcherItems = LEARN_SECTIONS.map(({ id }) => ({
+    id,
+    name: learnText(`learn.section.${id}`),
+    percent: loadingStructure || structureError ? null : sectionProgress(entriesBySection[id], progress, levelCounts).percent,
+  }));
+  const gate = sectionHasOpen ? null : sectionGate(entries, progress, extraUnlocksSet, members);
+  const skillCheckRow = (
+    <div className="rm-skillcheck-row">
+      <span>{t('roadmap.skillCheckSubtitle')}</span>
+      <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
+        <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
+      </button>
+    </div>
+  );
   const topicDone = passedLevelCount(progress, topic);
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
@@ -751,57 +864,44 @@ function Roadmap() {
         </div>
       )}
 
-      {/* Topic selector — every topic in the subject is listed so the breadth of
-          the map is obvious on a first visit. Locked ones stay in place, dimmed
-          and marked with a lock, and the note below counts them. */}
-      {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
-          announces "N of M selected" correctly. */}
-      <RadioCardGroup value={topic} onChange={(value) => selectTopic(value as RoadmapTopic)} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
-        {visibleTopics.map((value, index) => {
-          const unlocked = isUnlocked(value);
-          const color = getCategoryHexColor(value);
-          const label = t(categoryLabelKey(value));
-          return (
-            <RadioCard
-              key={value}
-              value={value}
-              index={index}
-              disabled={!unlocked}
-              label={unlocked ? label : `${label} — ${t('roadmap.locked')}`}
-              className="rm-topic-pill"
-              padding={2.5}
-              style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
-              data-locked={!unlocked}
-            >
-              {/* Constant white chip under the logo: the selected pill fills
-                  with the topic's own colour, which used to swallow a
-                  same-coloured glyph. */}
-              <span className="rm-topic-glyph">
-                <CategoryGlyph category={value} color={color} size={20} />
-              </span>
-              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
-                <span>{label}</span>
-                <span className="rm-topic-progress">
-                  {unlocked
-                    ? t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })
-                    : t('roadmap.locked')}
-                </span>
-              </span>
-              {!unlocked && <span className="rm-topic-lock" aria-hidden><LockIcon size={13} /></span>}
-            </RadioCard>
-          );
-        })}
-      </RadioCardGroup>
+      <SectionSwitcher
+        value={section}
+        items={switcherItems}
+        onActivate={(id) => switchSection(id)}
+      />
 
-      {/* How much of the map is still closed, and how to open it. Without this
-          the dimmed pills read as decoration rather than as earned content. */}
-      {lockedTopicCount > 0 && (
-        <p className="rm-topic-locked-note">
-          <LockIcon size={13} />
-          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: visibleTopics.length })}</span>
-          <span>{t('roadmap.topicsLockedHowTo')}</span>
-        </p>
-      )}
+      {/* Keyed by section: a switch fades the section in (rmTrackIn, none
+          under reduced motion) and re-measures the map. */}
+      <div key={section} className="rm-track-in rm-section-body">
+        <SectionHeader
+          section={section}
+          name={sectionName}
+          isMember={isMember}
+          hasPlan={hasPlan}
+          signedIn={isAuthenticated}
+          authLoading={authLoading}
+          online={online}
+          join={join?.section === section ? join : null}
+          onJoin={() => void runJoin(section)}
+          onRetry={() => void runJoin(section)}
+          onSignIn={() => openSignIn({ returnTo: `/learn/${section}` })}
+          onChoosePlan={() => navigate('/profile')}
+          fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
+          premiumLabel={t('premium.badge')}
+          retryLabel={t('roadmap.retry')}
+        />
+
+        <SectionRail
+          sectionName={sectionName}
+          entries={entries}
+          value={topic}
+          onSelect={(value) => selectTopic(value as RoadmapTopic)}
+          loading={loadingStructure}
+          loadingCount={sectionTopics(section, TOPICS).length}
+          levelCounts={levelCounts}
+          progress={progress}
+          t={t}
+        />
 
       {loadingStructure ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 24, marginTop: 16 }}>
@@ -814,6 +914,21 @@ function Roadmap() {
           <div style={{ marginBottom: 16, color: 'var(--ss-error)' }} role="alert">{structureError}</div>
           <AxButton variant="secondary" label={t('roadmap.retry')} onClick={() => structureQuery.refetch()} />
         </div>
+      ) : !sectionHasOpen && (gate || !isMember) ? (
+        <>
+          {gate ? (
+            <SectionEmpty
+              kind="gate"
+              prereq={gate.prereq}
+              topic={gate.topic}
+              onGo={() => switchSection(gate.prereqSection, gate.prereq as RoadmapTopic)}
+              t={t}
+            />
+          ) : (
+            <SectionEmpty kind="notMember" name={sectionName} />
+          )}
+          {skillCheckRow}
+        </>
       ) : levels.length === 0 ? (
         <div style={{ maxWidth: 620, margin: '32px auto 0' }}>
           <Banner status="info" title={t('roadmap.noLevels')} description={t('roadmap.noLevelsBody')} />
@@ -961,14 +1076,10 @@ function Roadmap() {
             </div>
           )}
 
-          <div className="rm-skillcheck-row">
-            <span>{t('roadmap.skillCheckSubtitle')}</span>
-            <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
-              <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
-            </button>
-          </div>
+          {skillCheckRow}
         </>
       )}
+      </div>
 
       <AppToast
         open={!!unlockSnack}

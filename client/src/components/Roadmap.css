@@ -551,3 +551,78 @@
 }
 .rm-placement-review { margin-top: 32px; text-align: left; width: 100%; min-width: 0; }
 .rm-placement-review article { margin-top: 16px; overflow-wrap: anywhere; }
+
+/* ── Learn sections (components/learn/*): the switcher, the section line and
+   its one action, the dimmed rail state, and the empty section. Tokens only. */
+.rm-section-switcher { margin: 4px 0 12px; max-width: 100%; }
+/* At 360px the three names do not fit; the switcher scrolls inside its own
+   box (the page never does), and the open section is kept in view. */
+.rm-section-switcher__scroll { max-width: 100%; overflow-x: auto; padding: 2px; }
+.rm-section-header { margin: 0 0 14px; display: grid; gap: 8px; justify-items: start; }
+.rm-section-line,
+.rm-section-note {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--ss-type-meta);
+  color: var(--color-text-secondary);
+}
+.rm-section-line { font-size: var(--ss-type-compact); }
+.rm-section-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; }
+.rm-section-action__slot { display: block; height: 44px; }
+/* A long action ("Sign in to add Forward Deployed Engineer to your plan")
+   wraps at 360px instead of pushing the page sideways. !important for the
+   reason app-shell.css gives at its touch-target floor: Astryx's StyleX rules
+   sit at a specificity no class selector reaches. */
+.rm-section-action .astryx-button {
+  white-space: normal !important;
+  height: auto !important;
+  min-height: 36px;
+  max-width: 100%;
+  text-align: start;
+}
+.rm-section-error { width: 100%; max-width: 620px; }
+.rm-section-status:empty { display: none; }
+.rm-section-status { font-size: var(--ss-type-meta); color: var(--color-text-primary); }
+
+.rm-topic-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.rm-topic-progress .ss-premium-label { font-size: inherit; margin-right: 6px; }
+/* A topic outside the plan of a section the learner has not joined: dimmed
+   with "Not in your plan" as text. It keeps a solid edge, which tells it apart
+   from the dashed edge and lock of a topic behind a prerequisite. */
+.rm-topic-pill--dimmed {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-background-muted);
+}
+.rm-topic-pill--dimmed .rm-topic-glyph { filter: grayscale(1); }
+.rm-topic-also {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.rm-section-empty {
+  max-width: 620px;
+  margin: 24px auto 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background-color: var(--color-background-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--ss-type-compact);
+}
+.rm-section-empty p { margin: 0 0 12px; }
+.rm-section-empty__title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Astryx's segment colour transition ignores reduced motion. */
+  .rm-section-switcher .astryx-segmented-control-item { transition: none !important; }
+}
