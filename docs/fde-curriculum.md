@@ -23,7 +23,7 @@ A bridge exemption requires all mandatory checks for that competency in the vers
 
 ## Modules and deliverables
 
-The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 practical exercises and one staged capstone**, plus diagnostic/bridge content. Each M01–M10 has two lessons, four checks and one practical exercise. This is a production target, not a count to display before the content exists. Every item needs objectives, sources, version, estimated effort and feedback. Module practical exercises may combine existing task types; do not create arbitrary runtime infrastructure to meet the count.
+The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 practical exercises and one staged capstone**, plus diagnostic/bridge content. Each M01–M10 has two lessons, at least four checks and one practical exercise. M06 and M07 carry six checks each, so the modules hold 44 checks in total. This is a production target, not a count to display before the content exists. Every item needs objectives, sources, version, estimated effort and feedback. Module practical exercises may combine existing task types; do not create arbitrary runtime infrastructure to meet the count.
 
 | ID | Module and lessons | Practical evidence | Dependency |
 |---|---|---|---|
