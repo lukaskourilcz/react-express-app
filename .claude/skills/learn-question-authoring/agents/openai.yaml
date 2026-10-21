@@ -1,0 +1,4 @@
+interface:
+  display_name: "Learn Question Authoring"
+  short_description: "Add or edit Learn questions that stay served"
+  default_prompt: "Use $learn-question-authoring to add or edit this Learn question, record its review and prove it is served."

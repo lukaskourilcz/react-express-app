@@ -1,15 +1,21 @@
 // Shared builder for the roadmap ("Learn") question sets.
 //
-// The roadmap is a Duolingo-style path: 25 levels per topic, 4 questions per
-// level, ordered easiest → hardest. Rather than repeating the full Question
-// shape 100× per topic, each topic file supplies a compact `Seed[]` and this
-// helper expands it into real Question objects with deterministic ids
-// (`<prefix>-<n>`), a level-derived difficulty, and a default hint.
+// The roadmap is a Duolingo-style path: eight questions per level, ordered
+// easiest → hardest, up to 25 levels per topic (the level titles in
+// lib/roadmap.ts set each topic's count: JavaScript runs 25, HTML 6). Each
+// topic file supplies a compact `Seed[]` and this helper expands it into real
+// Question objects with deterministic ids (`<prefix>-<n>`, n = seed index + 1),
+// a level-derived difficulty, and a default hint. JavaScript, TypeScript and
+// React author each level as four A seeds and four B seeds, which
+// lib/roadmap-questions.ts interleaves; every other topic is one list of eight
+// seeds per level.
 //
-// Level/difficulty mapping (8 questions per level, 25 levels):
+// Level/difficulty mapping (QUESTIONS_PER_LEVEL = 8):
 //   question index i (0-based) → level = floor(i/8)+1 → difficulty = ceil(level/5)
 // so levels 1-5 are difficulty 1, 6-10 are 2, … 21-25 are 5. With 8 per level,
-// every 5-level checkpoint covers exactly 40 questions.
+// every 5-level checkpoint covers exactly 40 questions. An id is its position,
+// so a seed inserted mid-list renumbers every later question: new material for
+// an existing level goes through lib/roadmap-questions-restored.ts.
 
 import type { Question, CategoryType } from './quiz-data';
 import type { SnippetMeta } from '../shared/snippet-format';
