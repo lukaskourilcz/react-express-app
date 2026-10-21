@@ -302,8 +302,22 @@ test.describe('Learn section states', () => {
     await prepare(page);
     await stand(page, 'no-plan');
     await page.goto('/learn/software-engineer');
-    await expect(page.getByRole('button', { name: 'Choose your plan' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Choose your plan' })).toHaveAttribute('href', '/profile#learning-plan');
     await expect(page.getByRole('radio', { name: /not in your plan/ })).toHaveCount(0);
+
+    // On a phone the plan card sits below the fold: the link scrolls it in,
+    // clear of the fixed header, and focuses it.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/user/stats**', (route) => route.fulfill({ json: { data: { user_id: 'user-1', total_quizzes: 0, total_correct: 0, total_questions: 0, current_streak: 0, longest_streak: 0, created_at: '2026-10-01', updated_at: '2026-10-01' } } }));
+    await page.getByRole('link', { name: 'Choose your plan' }).click();
+    await expect(page).toHaveURL(/\/profile#learning-plan$/);
+    await expect(page.locator('#learning-plan')).toBeFocused({ timeout: 15_000 });
+    await page.waitForTimeout(400);
+    await expect(page.locator('#learning-plan')).toBeFocused();
+    const headerBottom = await page.locator('header').first().evaluate((el) => el.getBoundingClientRect().bottom);
+    const cardTop = await page.locator('#learning-plan').evaluate((el) => el.getBoundingClientRect().top);
+    expect(cardTop).toBeGreaterThanOrEqual(headerBottom);
+    expect(cardTop).toBeLessThan(844);
   });
 });
 

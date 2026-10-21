@@ -433,6 +433,8 @@ function App() {
       // The public guide's native interaction owns focus during cold startup.
       // Once navigation leaves it, ordinary route focus resumes.
       if (preserveStartupFocus) return;
+      // A page that focused the target its hash names keeps that focus.
+      if (location.hash && document.activeElement?.id === location.hash.slice(1)) return;
       const main = document.getElementById('main-content');
       // Silent focus: clear the skip-link flag first so this move never paints
       // the page-wide ring (see #main-content rules in app-shell.css).

@@ -7,6 +7,7 @@
 // description, which screen readers read with the item.
 
 import { useEffect, useRef, type FocusEvent, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Button } from '@astryxdesign/core/Button';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -19,6 +20,10 @@ export interface SwitcherItem {
   name: string;
   percent: number | null;
 }
+
+/** Profile's plan card (LearningPathsCard), which scrolls to and focuses
+ * itself when the address names it. */
+export const CHOOSE_PLAN_HREF = '/profile#learning-plan';
 
 // Focus moves without selecting; the open section changes on activation.
 const browseOnly = () => {};
@@ -106,7 +111,6 @@ export function SectionHeader({
   onJoin,
   onRetry,
   onSignIn,
-  onChoosePlan,
   fde,
   premiumLabel,
   retryLabel,
@@ -122,7 +126,6 @@ export function SectionHeader({
   onJoin: () => void;
   onRetry: () => void;
   onSignIn: () => void;
-  onChoosePlan: () => void;
   fde?: { entryLoading: boolean; pathOpen: boolean; barred: boolean };
   premiumLabel: string;
   retryLabel: string;
@@ -157,7 +160,7 @@ export function SectionHeader({
   } else if (!signedIn) {
     action = <Button variant="secondary" label={learnText('learn.join.signIn', { name })} onClick={onSignIn} />;
   } else if (!hasPlan) {
-    action = <Button variant="secondary" label={learnText('learn.join.choosePlan')} onClick={onChoosePlan} />;
+    action = <Button variant="secondary" as={Link} href={CHOOSE_PLAN_HREF} label={learnText('learn.join.choosePlan')} />;
     note = learnText('learn.join.noPlan');
   } else if (joinable && !failed) {
     if (section === 'forward-deployed-engineer' && fde?.entryLoading) {

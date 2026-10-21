@@ -205,7 +205,9 @@ describe('a section without a plan', () => {
     signIn({});
     answer();
     await mountAt('/learn/forward-deployed-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose your plan' }));
+    const choose = await screen.findByRole('link', { name: 'Choose your plan' });
+    expect(choose).toHaveAttribute('href', '/profile#learning-plan');
+    fireEvent.click(choose);
     expect(notInPlan()).toHaveLength(0);
     expect(screen.queryByRole('button', { name: /Add Forward Deployed Engineer/ })).toBeNull();
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/profile'));

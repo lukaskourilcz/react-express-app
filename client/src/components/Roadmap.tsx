@@ -905,7 +905,6 @@ function Roadmap() {
           onJoin={() => void runJoin(section)}
           onRetry={() => void runJoin(section)}
           onSignIn={() => openSignIn({ returnTo: `/learn/${section}` })}
-          onChoosePlan={() => navigate('/profile')}
           fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}

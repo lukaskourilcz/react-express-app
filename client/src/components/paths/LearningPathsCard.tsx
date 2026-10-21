@@ -7,7 +7,7 @@
 // only half of it landed is the kind of quiet lie that costs a learner their
 // work later.
 
-import { Suspense, useCallback, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@astryxdesign/core/Card';
@@ -57,6 +57,16 @@ export default function LearningPathsCard() {
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // The Learn page's "Choose your plan" links to /profile#learning-plan. The
+  // card sits below the fold on a phone, and lazy routes mount after the
+  // browser's own hash jump, so bring it into view and focus it here.
+  const anchorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (window.location.hash !== '#learning-plan') return;
+    anchorRef.current?.scrollIntoView({ block: 'start' });
+    anchorRef.current?.focus({ preventScroll: true });
+  }, []);
 
   const preference = useMemo(() => preferredLearningOf(user), [user]);
   const profile = useMemo(() => learnerProfileOf(user), [user]);
@@ -192,7 +202,7 @@ export default function LearningPathsCard() {
   return (
     // The same card stock as the GitHub card beside it (.ss-raised: the
     // container radius, the 2px edge and --shadow-low).
-    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised lp-plan-anchor" id="learning-plan" ref={anchorRef} tabIndex={-1} style={{ display: 'flex', width: '100%' }}>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <VStack gap={0.5}>
