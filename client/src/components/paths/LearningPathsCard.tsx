@@ -127,17 +127,21 @@ export default function LearningPathsCard() {
         wasChosen: boolean,
         baseTrack?: PathPickerResult['track'],
       ) => {
+        // The plan decides before the catalog does: a path the plan does not
+        // open is refused even while the catalog is loading or unavailable,
+        // so a free account never saves it as its specialization. A choice
+        // the account already held is not asked about again.
+        if (wants && !wasChosen && barred(pathId)) {
+          refused.push(pathId);
+          return;
+        }
         if (!entry || !isOpen(entry.availability)) return;
         const existing = enrollmentFor(pathId);
         if (wants) {
           // Running already, or paused on its own page and left chosen here:
           // saving the picker changes neither.
           if (existing && (existing.status === 'active' || wasChosen)) return;
-          // A choice the account already held is not asked about again.
-          if (barred(pathId)) {
-            if (!wasChosen) refused.push(pathId);
-            return;
-          }
+          if (barred(pathId)) return;
           try {
             await changeEnrollment({
               pathId,

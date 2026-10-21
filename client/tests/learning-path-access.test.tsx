@@ -40,6 +40,7 @@ const state = vi.hoisted(() => ({
   shelf: false,
   diagnosticResults: [] as { competencyId: string; state: 'demonstrated' | 'gap' | 'not_assessed'; score: number | null; assessedItems: number }[],
   metadata: {} as Record<string, unknown>,
+  catalogFailed: false,
   changes: [] as Record<string, unknown>[],
   saves: [] as unknown[][],
   sheet: vi.fn(),
@@ -72,7 +73,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   });
   return {
     ...actual,
-    usePathCatalog: () => ({
+    usePathCatalog: () => (state.catalogFailed ? { isLoading: false, isError: true, refetch: () => {}, data: undefined } : {
       isLoading: false, isError: false, refetch: () => {},
       data: {
         paths: (['fde', 'dsa-foundations'] as const).map((id) => ({
@@ -125,6 +126,7 @@ beforeEach(() => {
   state.shelf = false;
   state.diagnosticResults = [];
   state.metadata = {};
+  state.catalogFailed = false;
   state.changes.length = 0;
   state.saves.length = 0;
   state.sheet.mockReset();
@@ -401,6 +403,28 @@ describe('the Profile picker', () => {
     expect(fde).toHaveAccessibleDescription(/^Premium devShark’s flagship section.*Before you start: You ship code/);
     expect(within(group).getByRole('radio', { name: 'Continue without a specialization' }))
       .toHaveAccessibleDescription(/^Current Stay with the foundations/);
+  });
+
+  it('while the catalog is unavailable, a free account still cannot save FDE and is asked for Premium once', async () => {
+    state.tier = 'free';
+    state.catalogFailed = true;
+    signedInWith(profile);
+    await card();
+    await openPicker();
+    await press('Continue');
+    const fde = screen.getByRole('radio', { name: 'Forward Deployed Engineer' });
+    expect(fde).toHaveAccessibleDescription(/^Premium /);
+    // No catalog, no requirement: the card shows nothing rather than a copy.
+    expect(within(fde).queryByText(/^Before you start:/)).toBeNull();
+    await act(async () => { fireEvent.click(fde); });
+    await press('Continue');
+    await press('Save');
+    await waitFor(() => expect(state.saves).toHaveLength(1));
+    expect(state.changes).toEqual([]);
+    expect(savedAnswers()[1].specialization).toBeNull();
+    expect(state.sheet).toHaveBeenCalledTimes(1);
+    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
+    expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
   });
 
   it('a picker key with no words reads as the key, as t() does, and never throws', async () => {
