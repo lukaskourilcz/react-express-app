@@ -1,7 +1,8 @@
 // Who may start a learning path, and what the path's screens offer when they
 // may not: Premium opens the paths, a switched-off path offers nothing to
 // resume, and the Profile picker never pauses a path the learner started on
-// its own page.
+// its own page. The picker's Sections step (#490) saves Software Engineer with
+// the profile and keeps the FDE Premium refusal.
 import type { ReactElement } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -339,54 +340,160 @@ describe('the Profile picker', () => {
     schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
     goals: ['level-up'], experience: 'some', studyTime: '30-60', updatedAt: '2026-09-01T00:00:00Z',
   };
+  const signedInWith = (saved: Record<string, unknown>) => {
+    state.metadata = {
+      devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: saved.baseTrack, specialization: saved.specialization },
+      devquiz_learner_profile_v2: saved,
+    };
+  };
   const card = () => mount('/profile', '/profile', async () => {
     const { default: LearningPathsCard } = await import('../src/components/paths/LearningPathsCard');
     return <LearningPathsCard />;
   });
-  const walkToSave = async () => {
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Choose your path' })); });
-    for (let step = 0; step < 3; step += 1) {
-      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue' })); });
-    }
+  const press = async (name: string) => {
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name })); });
   };
+  const openPicker = () => press('Choose your path');
+  /** Track, then Sections, then the profile answers, which are already saved. */
+  const walkToSave = async () => {
+    await openPicker();
+    for (let step = 0; step < 2; step += 1) await press('Continue');
+  };
+  const savedAnswers = () => state.saves[0] as [unknown, { specialization: unknown }, Record<string, unknown>];
 
   it('keeps the paths a learner started on their own pages when the picker is saved', async () => {
     // The account said "no specialization" and no skill path, then the learner
     // started both from the path pages.
-    state.metadata = {
-      devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'frontend', specialization: null },
-      devquiz_learner_profile_v2: profile,
-    };
+    signedInWith(profile);
     state.enrollments = [enrolled('fde'), enrolled('dsa-foundations')];
     await card();
     await walkToSave();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+    await press('Save');
     await waitFor(() => expect(state.saves).toHaveLength(1));
-    expect(state.changes.filter((one) => one.action === 'pause')).toEqual([]);
-    const [, preference, answers] = state.saves[0] as [unknown, { specialization: unknown }, { skillPaths: string[] }];
+    // The picker asks nothing about DSA Foundations, so it neither pauses the
+    // enrollment nor sends skill paths, which the server then keeps.
+    expect(state.changes).toEqual([]);
+    const [, preference, answers] = savedAnswers();
     expect(preference.specialization).toBe('fde');
-    expect(answers.skillPaths).toEqual(['dsa-foundations']);
+    expect(answers).not.toHaveProperty('skillPaths');
   });
 
-  it('on the free plan, choosing FDE shows the Premium mark, enrols nothing, saves no role and asks for Premium', async () => {
+  it('offers Software Engineer and the FDE card on the Sections step, and no DSA toggle', async () => {
     state.tier = 'free';
-    state.metadata = {
-      devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'frontend', specialization: null },
-      devquiz_learner_profile_v2: profile,
-    };
+    signedInWith(profile);
     await card();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Choose your path' })); });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue' })); });
+    await openPicker();
+    await press('Continue');
+    expect(screen.getByRole('heading', { name: 'Add a section?' })).toBeInTheDocument();
+    const se = screen.getByRole('checkbox', { name: 'Software Engineer' });
+    expect(se).not.toBeChecked();
+    expect(se).toHaveAccessibleDescription(/Free to join\./);
+    expect(screen.queryByRole('checkbox', { name: /DSA/ })).toBeNull();
+    const group = screen.getByRole('radiogroup', { name: 'Specialization' });
+    expect(within(group).getByRole('radio', { name: 'Continue without a specialization' })).toHaveAttribute('aria-checked', 'true');
+    const fde = within(group).getByRole('radio', { name: 'Forward Deployed Engineer' });
+    expect(within(fde).getByText('Premium')).toBeInTheDocument();
+    expect(within(fde).getByText(/^devShark’s flagship section/)).toBeInTheDocument();
+    expect(within(fde).getByText(/^Before you start:/)).toBeInTheDocument();
+  });
+
+  it('saving the picker writes the Software Engineer section with the profile', async () => {
+    signedInWith(profile);
+    await card();
+    expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
+    await openPicker();
+    await press('Continue');
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Software Engineer' })); });
+    await press('Continue');
+    await press('Save');
+    await waitFor(() => expect(state.saves).toHaveLength(1));
+    const [, preference, answers] = savedAnswers();
+    expect(preference.specialization).toBeNull();
+    expect(answers).toEqual({ goals: ['level-up'], experience: 'some', studyTime: '30-60', sections: ['software-engineer'] });
+    // Joining is free: nothing enrols and nothing asks for Premium.
+    expect(state.changes).toEqual([]);
+    expect(state.sheet).not.toHaveBeenCalled();
+    expect(screen.getByText(/^Saved: \w+ \+ Software Engineer$/)).toBeInTheDocument();
+  });
+
+  it('removing Software Engineer saves an empty list, so its topics leave the plan and nothing else changes', async () => {
+    const joined = { ...profile, sections: ['software-engineer'] };
+    signedInWith(joined);
+    await card();
+    expect(screen.getByText('Sections: Web Developer · Software Engineer')).toBeInTheDocument();
+    await openPicker();
+    await press('Continue');
+    const se = screen.getByRole('checkbox', { name: 'Software Engineer' });
+    expect(se).toBeChecked();
+    await act(async () => { fireEvent.click(se); });
+    await press('Continue');
+    await press('Save');
+    await waitFor(() => expect(state.saves).toHaveLength(1));
+    const [, , answers] = savedAnswers();
+    // Sent, not left out: a missing field would keep the saved list.
+    expect(answers.sections).toEqual([]);
+    // The plan is the only thing that changes. The save is the one write: no
+    // enrollment moves and nothing asks the server to drop progress, so every
+    // passed level stays where it is.
+    expect(state.changes).toEqual([]);
+    const { planTopics } = await import('../../shared/progression');
+    const before = planTopics(joined as Parameters<typeof planTopics>[0]);
+    const after = planTopics({ ...joined, sections: answers.sections } as Parameters<typeof planTopics>[0]);
+    // The Frontend plan already holds DSA, Git and General; these four come
+    // only with the section.
+    for (const topic of ['algorithms', 'system-design', 'devops', 'security']) {
+      expect(before).toContain(topic);
+      expect(after).not.toContain(topic);
+    }
+    expect(after).toEqual(planTopics(profile as Parameters<typeof planTopics>[0]));
+  });
+
+  it('arrow keys browse without advancing, Continue advances and Back keeps every choice', async () => {
+    signedInWith(profile);
+    await card();
+    await openPicker();
+    const tracks = screen.getAllByRole('radio');
+    const chosen = tracks.find((one) => one.getAttribute('aria-checked') === 'true')!;
+    const next = tracks[(tracks.indexOf(chosen) + 1) % tracks.length];
+    await act(async () => { fireEvent.keyDown(chosen, { key: 'ArrowDown' }); });
+    expect(next).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('heading', { name: 'Choose your learning path' })).toBeInTheDocument();
+    await press('Continue');
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Software Engineer' })); });
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Continue without a specialization' }), { key: 'ArrowDown' });
+    });
+    expect(screen.getByRole('radio', { name: 'Forward Deployed Engineer' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('heading', { name: 'Add a section?' })).toBeInTheDocument();
+    await press('Back');
+    expect(screen.getByRole('radio', { name: next.getAttribute('aria-label')! })).toHaveAttribute('aria-checked', 'true');
+    await press('Continue');
+    expect(screen.getByRole('checkbox', { name: 'Software Engineer' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Forward Deployed Engineer' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('on the free plan, choosing FDE shows the Premium mark, enrols nothing, saves no role and asks for Premium once', async () => {
+    state.tier = 'free';
+    signedInWith(profile);
+    await card();
+    await openPicker();
+    await press('Continue');
     const fde = screen.getByRole('radio', { name: 'Forward Deployed Engineer' });
     expect(within(fde).getByText('Premium')).toBeInTheDocument();
     await act(async () => { fireEvent.click(fde); });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue' })); });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue' })); });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Software Engineer' })); });
+    await press('Continue');
+    await press('Save');
     await waitFor(() => expect(state.saves).toHaveLength(1));
     expect(state.changes).toEqual([]);
-    expect((state.saves[0] as [unknown, { specialization: unknown }])[1].specialization).toBeNull();
+    const [, preference, answers] = savedAnswers();
+    expect(preference.specialization).toBeNull();
+    // The free section still saves; only the specialization is held back.
+    expect(answers.sections).toEqual(['software-engineer']);
+    expect(state.sheet).toHaveBeenCalledTimes(1);
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
+    expect(screen.getByText(/^Saved: \w+ \+ Software Engineer\. Forward Deployed Engineer needs Premium, so it is not on your plan yet\.$/)).toBeInTheDocument();
+    expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
   });
 
   // Owner decision 10: merchandise is paused until next quarter, so a finished
