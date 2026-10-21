@@ -564,10 +564,16 @@ The section lists four tracks. Three of them — `javascript`, `typescript` and
 interview problems in plain JavaScript, twenty of them the Easy warm-ups of
 #226 and fifteen its first Medium and Hard wave, plus two short paths: an
 ordinary graded track with the same
-XP and one-award-per-task ledger, but a topic of its own, so
-none of its challenges can be drawn into a Learn level's quota. Its `level` is
-an ordering key rather than a Learn level, which `hasLearnLevel` is what the
-row, the workbench and the GitHub commit message read before naming one.
+XP and one-award-per-task ledger. Those tasks carry `algorithms` as their
+topic, so none of them can be drawn into a Learn level's quota, and their
+`level` is an ordering key rather than a Learn level. The track also holds
+the 29 DSA Foundations tasks of #493, the DSA path's exercises, whose topic is
+`dsa`: their level is a DSA Learn level, and `levelCodingTasks` seals them
+into DSA levels 3 to 9, 12 and 13 (levels 1, 2, 10, 11 and 14 wait for E3,
+#494). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
+tracks and for a `dsa` task, which the row and the workbench show as
+"DSA · Level n"; the row, the workbench and the GitHub commit message read it
+before naming one.
 System design is hidden until its tasks have been reviewed again (owner
 decision, 9 Oct 2026; `NEEDED.md`). `lib/coding/active.ts` issues no task of a
 track missing from `CODING_SECTION_TRACKS`, so none of its 45 tasks is in a
@@ -644,8 +650,8 @@ Hard (`difficultyOf`), projected from its tier, or for a project milestone or
 path level from its position; a checkpoint reads its tier like a standalone
 task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
 gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
-725 tasks in `shared/coding-index.ts`, 459 are Easy, 171 Medium and 95 Hard; by
-track, 316 JavaScript, 156 TypeScript, 183 React and 70 Algorithms. The 45
+754 tasks in `shared/coding-index.ts`, 480 are Easy, 179 Medium and 95 Hard; by
+track, 316 JavaScript, 156 TypeScript, 183 React and 99 Algorithms. The 45
 hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` on a task's first verified pass, and
 again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
 verified pass after the learner reset the task to its starter (the
@@ -787,7 +793,9 @@ coding tier ladder), assertions grouped into named criteria (so a
 security-critical failure cannot be averaged away), and evidence recorded in
 `learning_path_*` only. A path pass writes no tier unlock. Verified coding activities use the shared
 canonical coding reward (migration 065): a reused ordinary task cannot earn a
-second first-pass reward. Non-coding activities keep their existing reward rules.
+second first-pass reward, and a DSA exercise that became a coding task (#493)
+records under that task's id (`canonicalCodingTaskId`), so a path pass and a
+Coding pass share one record. Non-coding activities keep their existing reward rules.
 Native code sessions bind exact activity/grader material and rubric version.
 A stale unaccepted session is refused before grading or evidence/XP writes;
 loading its latest brief keeps the editor source. Automatic retries send their previous
@@ -974,8 +982,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   after free passes only. `npm run build:coding-index` projects all of it
   into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
   catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
-  contracts; 141 of 725 today: JavaScript 68, TypeScript 32, React 30,
-  Algorithms 11). Every free task reads Easy except two debugging paths whose
+  contracts; 144 of 754 today: JavaScript 68, TypeScript 32, React 30,
+  Algorithms 14). Every free task reads Easy except two debugging paths whose
   authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
@@ -1611,7 +1619,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 770 tasks (725
+routes, unlocks and progress. The full catalogue contains 799 tasks (754
 issued, with system design hidden), and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass. A stage's
@@ -1748,8 +1756,10 @@ the name nor the photo shared with friends. Existing public-photo consent is
 kept; the old visibility flag can no longer hide a leaderboard name.
 
 Verified native-path code now records acceptance and the shared coding award
-in one transaction (migration 065). A reused task keeps its ordinary task ID;
-an independent path exercise has a stable scoped ID. This prevents paying the
+in one transaction (migration 065). A reused task keeps its ordinary task ID,
+and so does a DSA exercise E2 turned into a coding task
+(`lib/learning-paths/dsa-coding-tasks.ts`; the queue, whose path contract
+differs, keeps its own); any other path exercise has a stable scoped ID. This prevents paying the
 same task again just because it was reached on another screen. Type-only,
 unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
 The accepted path response stores the actual award and the same complexity
