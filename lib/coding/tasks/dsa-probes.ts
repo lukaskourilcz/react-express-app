@@ -29,6 +29,13 @@ export const countReads = (values: string, run: string): string =>
 /** `{ result, writes, same, values }`: what `run(view)` returned, how many
  * indexed assignments, definitions and deletions it made on `values`, whether
  * it returned `view` itself, and the array's entries afterwards. */
+/** What `run(view)` returned, where `view` reads `values` and throws once
+ * `budget` indexed reads have been spent, so a long input stops a scan of
+ * every pair quickly instead of running it to the deadline. */
+const WITHIN_READS = `((values, run, budget) => { let reads = 0; const view = new __probe.Proxy(values, { get(target, key) { if (__probe.isIndex(key)) { reads += 1; if (reads > budget) throw new Error('read budget spent'); } return target[key]; } }); return run(view); })`;
+export const withinReads = (values: string, run: string, budget: number): string =>
+  `${WITHIN_READS}(${values}, ${run}, ${budget})`;
+
 const COUNT_WRITES = `((values, run) => { let writes = 0; const counted = key => { if (__probe.isIndex(key)) writes += 1; }; const view = new __probe.Proxy(values, { set(target, key, value) { counted(key); target[key] = value; return true; }, defineProperty(target, key, descriptor) { counted(key); __probe.defineProperty(target, key, descriptor); return true; }, deleteProperty(target, key) { counted(key); return __probe.deleteProperty(target, key); } }); const result = run(view); const after = []; for (let i = 0; i < values.length; i += 1) after[i] = values[i]; return { result, writes, same: result === view, values: after }; })`;
 export const countWrites = (values: string, run: string): string =>
   `${COUNT_WRITES}(${values}, ${run})`;
@@ -140,6 +147,7 @@ export const QUERIES_40 = "(() => { const out = []; for (let i = 0; i < 40; i +=
  * expression. Display only: the grader and the Run button execute `call`. */
 const CALL_NAMES: readonly (readonly [string, string])[] = [
   [COUNT_READS, 'countReads'],
+  [WITHIN_READS, 'withinReads'],
   [COUNT_WRITES, 'countWrites'],
   [MEASURE_QUEUE, 'measureQueue'],
   [COUNT_COMPARES, 'countCompares'],

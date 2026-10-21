@@ -68,8 +68,11 @@ export const DSA_FOUNDATIONS_WRONG: readonly DsaKnownAnswer[] = [
   { id: 'alg-dsa-sum-of-evens', criterion: 'core', label: "sorting the caller's array first", code: 'const sumOfEvens = values => { values.sort((a, b) => a - b); let total = 0; for (const value of values) if (value % 2 === 0) total += value; return total; };' },
   { id: 'alg-dsa-halving-steps', label: 'halving with Math.ceil', replace: [['value = Math.floor(value / 2);', 'value = Math.ceil(value / 2);']] },
   { id: 'alg-dsa-halving-steps', label: 'a counter that starts at 1', replace: [['let steps = 0;', 'let steps = 1;']] },
+  { id: 'alg-dsa-halving-steps', label: 'halving with a 32-bit shift', code: 'const halvingSteps = n => { let steps = 0; for (let value = n; value > 1; value >>= 1) steps += 1; return steps; };' },
+  { id: 'alg-dsa-halving-steps', label: 'the floor of the base-2 logarithm, which rounds up just below a large power of two', code: 'const halvingSteps = n => Math.floor(Math.log2(n));' },
   { id: 'alg-dsa-max-gap', criterion: 'linear-budget', label: 'comparing every pair', code: PAIRS_GAP },
   { id: 'alg-dsa-max-gap', criterion: 'core', label: 'seeding the smallest and largest with 0', replace: [['let smallest = values[0];\n  let largest = values[0];', 'let smallest = 0;\n  let largest = 0;']] },
+  { id: 'alg-dsa-max-gap', criterion: 'core', label: 'spreading the array into Math.max and Math.min, which overflows the call stack on long input', code: 'const maxGap = values => (values.length < 2 ? 0 : Math.max(...values) - Math.min(...values));' },
   { id: 'alg-dsa-max-gap', criterion: 'core', label: "sorting the caller's array", code: 'const maxGap = values => { if (values.length < 2) return 0; values.sort((a, b) => a - b); return values[values.length - 1] - values[0]; };' },
   { id: 'alg-dsa-max-gap', criterion: 'linear-budget', label: 'every pair behind a declared Proxy that hands the array back', code: `var Proxy = function (values) { return values; };\n${PAIRS_GAP}` },
   { id: 'alg-dsa-max-gap', criterion: 'linear-budget', label: 'every pair behind a replaced global Proxy', code: `globalThis.Proxy = function (values) { return values; };\n${PAIRS_GAP}` },
@@ -176,7 +179,6 @@ export const DSA_FOUNDATIONS_WRONG: readonly DsaKnownAnswer[] = [
 
 export const DSA_FOUNDATIONS_RIGHT: readonly DsaKnownAnswer[] = [
   { id: 'alg-dsa-sum-of-evens', label: 'copying the input, then summing the copy', code: 'const sumOfEvens = values => { const copy = [...values]; let total = 0; for (let i = 0; i < copy.length; i++) if (copy[i] % 2 === 0) total += copy[i]; return total; };' },
-  { id: 'alg-dsa-halving-steps', label: 'the floor of the base-2 logarithm', code: 'const halvingSteps = n => Math.floor(Math.log2(n));' },
   { id: 'alg-dsa-max-gap', label: 'an independent min and max loop', code: 'function maxGap(values){if(values.length<2)return 0;\nlet low=values[0],high=low;for(let i=1;i<values.length;i++){const v=values[i];low=Math.min(low,v);high=Math.max(high,v);}return high-low;}' },
   { id: 'alg-dsa-reverse-in-place', label: 'one property definition per index', code: `function reverseInPlace(values){const copy=values.slice().reverse();for(let i=0;i<copy.length;i++)${DEFINE('Object.defineProperty', 'String(i)')};return values;}` },
   { id: 'alg-dsa-reverse-in-place', label: 'Reflect definitions after Object.defineProperty was replaced', code: `Object.defineProperty=()=>{throw new Error("replaced");};function reverseInPlace(values){const copy=values.slice().reverse();for(let i=0;i<copy.length;i++)${DEFINE('Reflect.defineProperty', 'String(i)')};return values;}` },

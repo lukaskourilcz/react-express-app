@@ -102,7 +102,7 @@ console.log(sumOfEvens([1, 2, 3, 4]));
     tier: 1,
     focus: ['while'],
     title: 'Halving counter',
-    prompt: 'Write `halvingSteps(n)` for an integer n of 1 or more. Count how many times it can be halved, rounding down each time, before it reaches 1. `halvingSteps(1)` gives 0, `halvingSteps(8)` gives 3 and `halvingSteps(10)` gives 3: 10, 5, 2, 1. Target: O(log n) time, where n is the starting numeric value.\n\nThis is the repeated-halving shape behind binary search. Halve by dividing by two and rounding down, not by dividing exactly, and count the halvings, not the values visited: reaching 1 from 1 is zero steps.',
+    prompt: 'Write `halvingSteps(n)` for an integer n from 1 up to `Number.MAX_SAFE_INTEGER`. Count how many times it can be halved, rounding down each time, before it reaches 1. `halvingSteps(1)` gives 0, `halvingSteps(8)` gives 3 and `halvingSteps(10)` gives 3: 10, 5, 2, 1. Target: O(log n) time, where n is the starting numeric value.\n\nThis is the repeated-halving shape behind binary search. Halve by dividing by two and rounding down, not by dividing exactly, and count the halvings, not the values visited: reaching 1 from 1 is zero steps. Bitwise shifts work on 32-bit integers, so `>>` miscounts once n passes 2 ** 31.',
     starter: `const halvingSteps = n => {
 
 };
@@ -138,6 +138,7 @@ console.log(halvingSteps(10));
       { call: 'halvingSteps(10)', expected: 3, label: 'rounding down: 10, 5, 2, 1' },
       { call: 'halvingSteps(2)', expected: 1, label: 'the smallest halving', edge: true },
       { call: 'halvingSteps(1024)', expected: 10, label: 'a thousand elements in ten steps' },
+      { call: 'halvingSteps(2 ** 40)', expected: 40, label: 'a value past 32 bits' },
     ],
   },
   {
@@ -148,7 +149,7 @@ console.log(halvingSteps(10));
     tier: 2,
     focus: ['for-of'],
     title: 'A pass instead of every pair',
-    prompt: 'Write `maxGap(values)` for an array of finite numbers, without changing it. Return the largest minus the smallest value; `[3, 9, 1]` gives 8. Empty or single-element input gives 0. Target: O(n) time, where n is the input length.\n\nThe checks allow at most 2n indexed reads of the original input in total on their inputs. A scan of every input pair goes over that budget. Work you do on a copy is not counted by this check.',
+    prompt: 'Write `maxGap(values)` for an array of finite numbers, without changing it. Return the largest minus the smallest value; `[3, 9, 1]` gives 8. Empty or single-element input gives 0. The array can be long, a hundred thousand values or more. Target: O(n) time, where n is the input length.\n\nThe checks allow at most 2n indexed reads of the original input in total on their inputs. A scan of every input pair goes over that budget. Work you do on a copy is not counted by this check.',
     starter: `const maxGap = values => {
 
 };
@@ -627,7 +628,7 @@ console.log(isBalanced('([]{})'));
     tier: 3,
     focus: ['push', 'objects'],
     title: 'A queue under a measured buffer budget',
-    prompt: 'Write `createQueue(newBuffer)`, returning an object with three methods:\n\n- `enqueue(value)` adds a value at the back. Its return value is never read.\n- `dequeue()` removes the value at the front and returns it, or `null` when the queue is empty.\n- `size()` returns how many values are waiting.\n\n`newBuffer` is a function the caller passes in. Call it once, where you would otherwise write `[]`, and keep the queue\'s values in the buffer it returns. A buffer offers `push(value)`, `length` and index access, and nothing else, so `shift` and `splice` are not there. In the scratch pad, `createQueue(() => [])` gives you a plain array to try things with.\n\nThe checks pass you a counted buffer. It counts indexed reads, assignments, property definitions and deletions, and one `push` counts as one write. Enqueueing 32 values and then dequeuing all 32 must stay within 192 buffer operations, six per value, and must make at least 32. A head index costs three per value: read the slot the head points at, clear it, then add one to the head. Sliding the waiting values down costs over a thousand on that sequence. Return values unchanged, including object identity and `undefined` or falsy values; separate queues keep separate state.\n\nTarget: O(1) time per operation, amortized over a sequence of calls, where an operation is one call to enqueue, dequeue or size. The fixed traces do not prove complexity for arbitrary code.',
+    prompt: 'Write `createQueue(newBuffer)`, returning an object with three methods:\n\n- `enqueue(value)` adds a value at the back. Its return value is never read.\n- `dequeue()` removes the value at the front and returns it, or `null` when the queue is empty.\n- `size()` returns how many values are waiting.\n\n`newBuffer` is a function the caller passes in. Call it once, where you would otherwise write `[]`, and keep the queue\'s values in the buffer it returns. A buffer offers `push(value)`, `length` and index access, and nothing else, so `shift` and `splice` are not there. In the scratch pad, `createQueue(() => [])` gives you a plain array to try things with.\n\nThe checks pass you a counted buffer. It counts indexed reads, assignments, property definitions and deletions, and one `push` counts as one write. Enqueueing 32 values and then dequeuing all 32 must stay within 192 buffer operations, six per value, and must make at least 32. A head index costs three per value: one `push` to enqueue it, then one read and one clear to dequeue it. The head itself is a local variable, so moving it is not a buffer operation. Sliding the waiting values down costs over a thousand on that sequence. Return values unchanged, including object identity and `undefined` or falsy values; separate queues keep separate state.\n\nTarget: O(1) time per operation, amortized over a sequence of calls, where an operation is one call to enqueue, dequeue or size. The fixed traces do not prove complexity for arbitrary code.',
     starter: `const createQueue = newBuffer => {
   const items = newBuffer();
 
