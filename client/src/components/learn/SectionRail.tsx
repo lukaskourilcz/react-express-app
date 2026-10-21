@@ -73,7 +73,9 @@ export function SectionRail({
     <>
       {/* Radiogroup semantics (not tabs: there is no tabpanel wiring), so
           assistive technology announces "N of M selected". */}
-      <RadioCardGroup value={value} onChange={(next) => onSelect(String(next))} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
+      {/* Only an open topic reads as chosen: with nothing open in the
+          section, no card is checked. */}
+      <RadioCardGroup value={entries.some((entry) => entry.topic === value && entry.state === 'open') ? value : ''} onChange={(next) => onSelect(String(next))} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
         {entries.map((entry, index) => {
           const { topic, state, alsoIn, premium } = entry;
           const color = getCategoryHexColor(topic);

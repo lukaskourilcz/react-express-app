@@ -29,17 +29,15 @@ export function SectionSwitcher({ value, items, onActivate }: {
   useEffect(() => setBrowsed(value), [value]);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  // Keep the open section in view inside the narrow scroller. Only the
-  // scroller moves: scrollIntoView could also scroll the page.
+  // Keep the open section in view inside a narrow scroller, centred so its
+  // neighbours show at the edges. Only the scroller moves: scrollIntoView
+  // could also scroll the page.
   useEffect(() => {
     const scroller = scrollerRef.current;
     const item = scroller?.querySelector<HTMLElement>(`[role="radio"][data-value="${value}"]`);
-    if (!scroller || !item) return;
-    const left = item.offsetLeft - scroller.offsetLeft;
-    if (left < scroller.scrollLeft) scroller.scrollLeft = left;
-    else if (left + item.offsetWidth > scroller.scrollLeft + scroller.clientWidth) {
-      scroller.scrollLeft = left + item.offsetWidth - scroller.clientWidth;
-    }
+    if (!scroller || !item || scroller.scrollWidth <= scroller.clientWidth) return;
+    const left = item.getBoundingClientRect().left - scroller.getBoundingClientRect().left + scroller.scrollLeft;
+    scroller.scrollLeft = left - (scroller.clientWidth - item.offsetWidth) / 2;
   }, [value]);
 
   const onBlur = (event: FocusEvent<HTMLDivElement>) => {

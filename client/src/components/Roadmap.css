@@ -558,6 +558,10 @@
 /* At 360px the three names do not fit; the switcher scrolls inside its own
    box (the page never does), and the open section is kept in view. */
 .rm-section-switcher__scroll { max-width: 100%; overflow-x: auto; padding: 2px; }
+/* The control keeps its natural width and each name stays on one line, so a
+   narrow screen scrolls the switcher rather than squeezing the names. */
+.rm-section-switcher [role='radiogroup'] { width: max-content; }
+.rm-section-switcher .astryx-segmented-control-item { white-space: nowrap; flex-shrink: 0; }
 .rm-section-header { margin: 0 0 14px; display: grid; gap: 8px; justify-items: start; }
 .rm-section-line,
 .rm-section-note {
