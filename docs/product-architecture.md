@@ -765,9 +765,11 @@ and its own id (the server replaces the list with what a save sends); Forward
 Deployed Engineer enrols in the FDE path first when the path is open, then
 saves the `fde` specialization, the order the Profile card uses, so a free
 account gets the upgrade sheet and nothing is saved. A visitor is asked to
-sign in, and an account with no saved plan is sent to `/profile` to choose
-one. The section's progress figure counts its Learn topics only; A3 adds the
-FDE path. `shared/learn-section-ids.ts` carries the ids, the section shape and
+sign in, and an account with no saved plan gets a link to the plan card at
+`/profile#learning-plan`. The section's progress figure counts its Learn
+topics only (A3 adds the FDE path), and any passed level shows as at least 1%.
+Joining a section can lower the figures, since the joined topics and their
+prerequisites join the total. `shared/learn-section-ids.ts` carries the ids, the section shape and
 the opt-in list that the first download needs for planning; the full registry
 in `shared/learn-sections.ts` reaches the browser only in a lazy chunk.
 

@@ -186,7 +186,8 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   except that `/learn` and every `/learn/<section>` share one key. A Learn
   section switch therefore remounts nothing: the box, its `RouteErrorBoundary`
   and route focus stay, and focus stays on the switcher. A replace inside one
-  box (`/learn` resolving to its section) logs no pageview.
+  box (`/learn` resolving to its section) logs no pageview, and a nav link to
+  the box on screen (Learn on `/learn/<section>`) replaces rather than pushes.
 - A page that fails keeps the shell. `RouteErrorBoundary` sits inside the
   route `Suspense` and inside the keyed route box; outside the `Suspense`,
   catching would remount it and bring the blank beat back. Its panel is the
