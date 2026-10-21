@@ -2,13 +2,20 @@
  *
  * The first module of the FDE path, and the one every later module quotes
  * back: who does the work today, what it costs them, and what this project
- * has agreed not to do. Two lessons, one four-question check, one written
- * scope brief.
+ * has agreed not to do. Two lessons, one four-question check, and two written
+ * pieces: the one-page scope (workflow, questions, baseline, success metric,
+ * scope, sequencing, non-goals, risks, acceptance) and a capped executive
+ * update (audience, decisions, open questions, next step).
  *
- * Nothing here is machine-gradable beyond the check. The scope brief is an
- * artifact: the server confirms every required field is present and inside
+ * Nothing here is machine-gradable beyond the check. Both written pieces are
+ * artifacts: the server confirms every required field is present and inside
  * its length cap, records the submission as self-reviewed, and says plainly
- * that a character count cannot judge a baseline.
+ * that a character count cannot judge a baseline or an update. The module
+ * requires both, so guided completion waits for them.
+ *
+ * The practitioner sources (Qureshi, The Pragmatic Engineer, PostHog, and
+ * the Vercel and Harvey postings) were read in October 2026 and are cited
+ * for what they say, never as a hiring standard.
  *
  * Marlbrook Systems, its ticket volumes, its shadowing clock and its
  * transcript are fixtures written for this module. No customer data, no live
@@ -24,10 +31,12 @@ export const FDE_M01: ModuleSource = {
     'Separate the mechanism a customer asked for from the job they are trying to do, and say which requirements are solutions in disguise.',
     'Write a baseline as a number with a population, a window and a method someone else can repeat, and a success condition with a date beside it.',
     'Write the exclusions down as non-goals, because an exclusion nobody wrote down is not one.',
+    'Order the work so the smallest slice that runs end to end reaches an operator first, and name what each later step waits on.',
+    'Write an executive update a sponsor can act on in two minutes: who it is for, the decisions you need, the open questions and the next step.',
   ],
   competencies: ['discovery'],
   dependsOn: [],
-  estimatedMinutes: 125,
+  estimatedMinutes: 180,
   lessons: [
     {
       id: 'fde-v1-m01-l1',
@@ -45,6 +54,16 @@ export const FDE_M01: ModuleSource = {
           label: 'OWASP Top 10 for Large Language Model Applications',
           url: 'https://owasp.org/www-project-top-10-for-large-language-model-applications/',
           reviewedOn: '2026-09-08',
+        },
+        {
+          label: 'Nabeel S. Qureshi, “Reflections on Palantir” (October 2024)',
+          url: 'https://nabeelqu.co/reflections-on-palantir',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'The Pragmatic Engineer, “What are Forward Deployed Engineers, and why are they so in demand?” (August 2025)',
+          url: 'https://newsletter.pragmaticengineer.com/p/forward-deployed-engineers',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
@@ -73,6 +92,11 @@ export const FDE_M01: ModuleSource = {
           kind: 'prose',
           body:
             'Then watch the work. Interviews and observation offer different evidence; compare what people describe with what you can observe. Ask to sit with one agent while they handle three real items, keep a clock running, and write down every system they open. Agree on consent, data access and interruption rules before observing; avoid disrupting active work.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Engineers who have done this job describe the same first move. Nabeel Qureshi, a forward deployed engineer at Palantir from 2015, writes that going onsite captures the tacit knowledge of how a customer works, which the flattened list of requirements behind most enterprise software leaves out. Gergely Orosz’s account of OpenAI’s forward deployed engineers in The Pragmatic Engineer starts their early scoping phase onsite: sit with users, map out their processes, identify the biggest value areas, prototype with synthetic data. Read both as practitioner accounts of a habit, with no measured outcome attached. You spend the first week watching the work, and the build waits.',
         },
         {
           kind: 'trace',
@@ -246,8 +270,8 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
       id: 'fde-v1-m01-l2',
       title: 'Baseline and scope',
       summary:
-        'Measure what the work costs today before proposing anything, write the success condition as a number with a date, and write the non-goals down.',
-      estimatedMinutes: 25,
+        'Measure what the work costs today before proposing anything, write the success metric as a number with a date, write the non-goals down, sequence the work, and report it upward in a few lines.',
+      estimatedMinutes: 35,
       sources: [
         {
           label: 'Google SRE Book — Service Level Objectives',
@@ -259,8 +283,33 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
           url: 'https://www.nist.gov/itl/ai-risk-management-framework',
           reviewedOn: '2026-09-08',
         },
+        {
+          label: 'PostHog, “WTF is a forward deployed engineer? (and why everyone is hiring them)” (February 2026)',
+          url: 'https://posthog.com/blog/forward-deployed-engineer',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'The Pragmatic Engineer, “What are Forward Deployed Engineers, and why are they so in demand?” (August 2025)',
+          url: 'https://newsletter.pragmaticengineer.com/p/forward-deployed-engineers',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Vercel, Forward-Deployed Engineer job posting',
+          url: 'https://vercel.com/careers/forward-deployed-engineer-5752684004',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Harvey, Forward Deployed Finance Engineer, Buyout job posting',
+          url: 'https://jobs.ashbyhq.com/harvey/fb3ecf9e-9379-4839-817c-f620a3e6034d',
+          reviewedOn: '2026-10-21',
+        },
       ],
       sections: [
+        {
+          kind: 'prose',
+          body:
+            'Scoping is where the role spends its time. Jina Yoon’s PostHog explainer says forward deployed engineers spend far more of their time than other engineers talking to customers and scoping projects “to decide what to build, and how”. This lesson turns that time into one page you can hand to someone else.',
+        },
         {
           kind: 'prose',
           body:
@@ -328,13 +377,18 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
         {
           kind: 'prose',
           body:
+            'Write that sentence as the success metric, and keep the acceptance condition on its own line. The success metric is the outcome you measure after launch: the 19-to-12-minute median, its date, and one guardrail you report beside it, such as the share of suggested replies an agent had to rewrite. The acceptance condition is the gate before launch: what a trial on agreed tickets has to show, and who signs it. Merge the two and the sponsor ends up signing off a pilot against a number nobody can measure until March.',
+        },
+        {
+          kind: 'prose',
+          body:
             'Say which slice the number covers, and what you will report next to it. One median can improve while a whole ticket type gets worse, and an aggregate across all tickets can conceal that change. Quality also has to be reported separately from cost and from how long the thing takes: a change that halves handle time and doubles corrections needs assessment against the agreed quality and cost criteria, and a single blended figure will not tell you which happened.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'The scope brief at the end of this module is recorded as self-reviewed. The server checks that every required field is filled in and inside its length cap, and that is all a character count can establish. It cannot tell whether your baseline can be re-measured, whether your five questions would change anything, or whether your non-goals are the ones that needed writing down. Those you judge yourself, against the rubric.',
+            'The scope brief and the executive update at the end of this module are recorded as self-reviewed. The server checks that every required field is filled in and inside its length cap, and that is all a character count can establish. It cannot tell whether your baseline can be re-measured, whether your five questions would change anything, whether your non-goals are the ones that needed writing down, or whether an executive could decide from your update. Those you judge yourself, against the rubric.',
         },
         {
           kind: 'prose',
@@ -451,7 +505,71 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
         {
           kind: 'prose',
           body:
-            'The output of all of this is one page. The workflow as you watched it, five questions you still need answered, one baseline, what is in, what is out, the risks and the acceptance condition. Keep the decision summary brief and link to supporting details where needed; document length alone does not establish whether scope is settled.',
+            'Then put the in-scope lines in order. A list tells the sponsor what you will build; a sequence tells them what they will see first and what each later step waits on. Orosz describes OpenAI’s delivery phase as a focus on the “smallest unit possible” that results in an end-to-end solution or demo. At Marlbrook that points at the account lookup: it needs no model, it reads two systems you already know, and the one ticket you watched spent ten of its nineteen minutes there, which makes it the first thing worth measuring.',
+        },
+        {
+          kind: 'table',
+          caption: 'The three Marlbrook in-scope lines in delivery order, with what each one waits on. A dependency nobody has asked for yet belongs in the risks too.',
+          headers: ['Order', 'What the operator sees when it lands', 'What it waits on'],
+          rows: [
+            [
+              '1. Account and plan lookup',
+              'The account and its plan on the ticket, or a visible “ambiguous match” with the candidates',
+              'Read access from the CRM data owner, and the entitlement system’s second login replaced by a service account someone approves',
+            ],
+            [
+              '2. Routing to tier',
+              'The tier and the rule that chose it, so the support lead can dispute a rule by name',
+              'The support lead confirming the whiteboard rules in writing, one test per rule',
+            ],
+            [
+              '3. Suggested reply, agent sends',
+              'A draft from a cited knowledge-base article, which the agent edits or discards',
+              'The security reviewer’s decision on reading ticket content, and an agreed quality measure for drafts',
+            ],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'The output of all of this is one page. The workflow as you watched it, five questions you still need answered, one baseline, the success metric, what is in and in which order, what is out, the risks and the acceptance condition. Keep the decision summary brief and link to supporting details where needed; a long document does not show that the scope is settled.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Someone above the sponsor will read about this project for two minutes, on a phone, between other meetings. The postings for this role name that reader. Vercel’s forward-deployed engineer posting asks for experience presenting technical discovery findings and proposals to executives at enterprise customers. Harvey’s posting for a forward deployed finance engineer asks for executive presence and credibility with everyone from analysts to partners and investment committee members. Orosz describes OpenAI’s validation phase ending in a final report that shows eval performance compared to the objectives, which is the same habit: the result set beside the target agreed before.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'An executive update has four parts. Name the reader and what they control. List the decisions you need from them, each answerable with a yes, a no or a name, and the date you need it by. List the open questions you carry, with who owns each one. End with the next step, who takes it and when. Leave out the diary of what the team did this week; the reader needs to know what changes for them.',
+        },
+        {
+          kind: 'code',
+          language: 'text',
+          code: `To: Head of Platform Engineering, Marlbrook (owns the CRM and the
+    entitlement system)
+
+Decisions I need from you
+- Read access to the CRM for the account lookup: yes or no by 18 Sept.
+- A named owner for the entitlement service account, by 18 Sept.
+
+Open questions
+- Can a deterministic lookup resolve shared email domains? We measure
+  it on August tickets next week (support lead).
+- Does reading ticket content need a separate security approval?
+  Security reviewer, meeting booked for 20 Sept.
+
+Next step
+- With access by 18 Sept, the support lead sees lookups on last
+  month's tickets on 25 Sept.`,
+          caption: 'A fixture update to a different reader than the one in the exercise. Under a hundred words, two decisions with dates, and no history of the week.',
+        },
+        {
+          kind: 'callout',
+          tone: 'note',
+          body:
+            'The postings cited here were open when they were read in October 2026, and postings close and change. They show what a few employers asked for at that moment. Nothing in this path claims that finishing it qualifies you for any role.',
         },
       ],
     },
@@ -474,9 +592,9 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: baseline and scope',
-      summary: 'A baseline with defined data and method, a dated success condition, and explicit scope exclusions and risks.',
+      summary: 'A baseline with defined data and method, a dated success metric apart from the acceptance gate, explicit exclusions and risks, a delivery sequence, and a four-part executive update.',
       competencies: ['discovery'],
-      estimatedMinutes: 25,
+      estimatedMinutes: 35,
       lessonId: 'fde-v1-m01-l2',
     },
     {
@@ -557,12 +675,12 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
       verification: 'self_reviewed',
       title: 'One-page scope: “add AI to support”',
       summary:
-        'Turn a one-line request into a scope with a workflow, five questions, a baseline, non-goals, risks and an acceptance condition. Recorded as self-reviewed.',
+        'Turn a one-line request into a scope with a workflow, five questions, a baseline, a success metric, a sequenced scope, non-goals, risks and an acceptance condition. Recorded as self-reviewed.',
       competencies: ['discovery'],
-      estimatedMinutes: 60,
+      estimatedMinutes: 75,
       artifact: {
         brief:
-          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations has sent one line: “Add AI to support.” Four agents handle roughly 400 tickets a month. The shadowing session in lesson one is the only measurement available for this submission, and it covered a single ticket. The separate multiple-choice baseline note is hypothetical; do not treat it as collected project evidence.\n\nWrite the one page that comes out of a discovery week. Seven fields, all required: the workflow as it runs today, five questions you would ask before writing any code, the baseline, what is in scope for this phase, what is not, the risks, and the condition that would let everyone agree this worked.\n\nThe company, the volumes, the clock and the transcript are fixtures written for this module. There is no live system to query and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer. Label one-ticket observations as preliminary; where a broader baseline or acceptance target has not been agreed, give a measurement/proposal plan and name the missing decision instead of claiming it already happened.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each required field is present and inside its length limit, and that is the whole of what it establishes — it cannot judge whether your baseline is measurable, whether your questions would change anything, or whether you excluded the right things. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you move on.',
+          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations has sent one line: “Add AI to support.” Four agents handle roughly 400 tickets a month. The shadowing session in lesson one is the only measurement available for this submission, and it covered a single ticket. The separate multiple-choice baseline note is hypothetical; do not treat it as collected project evidence.\n\nWrite the one page that comes out of a discovery week. Nine fields, all required, each with a character limit you can see before you type: the workflow as it runs today (2,000), five questions you would ask before writing any code (1,200), the baseline (400), the success metric (600), what is in scope for this phase (1,200), the order you would deliver it in (1,200), what is not in scope (1,200), the risks (2,000), and the acceptance condition that gates launch (1,500).\n\nYou review it against two rows of the path rubric, shown beside the form: problem framing and communication.\n\nThe company, the volumes, the clock and the transcript are fixtures written for this module. There is no live system to query and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer. Label one-ticket observations as preliminary; where a broader baseline or acceptance target has not been agreed, give a measurement/proposal plan and name the missing decision instead of claiming it already happened.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each required field is present and inside its length limit, and that is the whole of what it establishes: it cannot judge whether your baseline is measurable, whether your questions would change anything, or whether you excluded the right things. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you move on.',
         fields: [
           {
             id: 'workflow',
@@ -592,10 +710,28 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             maxLength: 400,
           },
           {
+            id: 'success-metric',
+            label: 'Success metric',
+            help:
+              'The outcome you will measure after launch: the metric from your baseline, the target, the date, and one guardrail you will report beside it so a gain in speed cannot hide a loss in quality. Label it proposed until the sponsor and the support lead agree it, and name who would confirm it. The check confirms the field is filled and inside 600 characters; it cannot tell whether the number is measurable.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 600,
+          },
+          {
             id: 'in-scope',
             label: 'In scope for this phase',
             help:
               'One line per thing this project will deliver, each small enough that you could demonstrate it. Where deterministic code covers a line, say so; where a model earns its place, say why. Presence is checked automatically, the choices are not.',
+            kind: 'list',
+            required: true,
+            maxLength: 1200,
+          },
+          {
+            id: 'sequencing',
+            label: 'Sequencing',
+            help:
+              'The in-scope lines in the order you would deliver them, one per line. For each, say what the operator sees when it lands and what it waits on: an approval, a data source, a measurement. Put the smallest slice that runs end to end first. The check tests non-empty content and total length only; it cannot judge the order.',
             kind: 'list',
             required: true,
             maxLength: 1200,
@@ -613,7 +749,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             id: 'risks',
             label: 'Risks',
             help:
-              'What could go wrong, who would notice it, and what you would do. Cover at least the three discovery risks: a veto holder nobody has named, a baseline you cannot repeat, and a data source the security review may refuse. Recorded as self-reviewed; no automated check reads this for coverage.',
+              'What could go wrong, who would notice it, and what you would do. Cover at least the three discovery risks: a veto holder nobody has named, a baseline you cannot repeat, and a data source the security review may refuse. Add any step in your sequence that waits on a decision nobody has asked for yet. Recorded as self-reviewed; no automated check reads this for coverage.',
             kind: 'long-text',
             required: true,
             maxLength: 2000,
@@ -622,7 +758,7 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             id: 'acceptance',
             label: 'Acceptance condition',
             help:
-              'Propose a condition for the sponsor and support lead to agree: a number measured like the baseline, with a date. Label it proposed if the fixture has not supplied agreement; name who would confirm it. Say which slice it covers and what you would report beside it, since one median can improve while a ticket type gets worse. The check confirms the field is filled; the rest is your own review against the rubric.',
+              'The gate before this reaches the desk: what a trial on agreed tickets has to show, measured how, and who signs it. Label it proposed if the fixture has not supplied agreement; name who would confirm it. Say which slice of tickets the trial covers, since one median can improve while a ticket type gets worse. Keep it apart from the success metric, which you measure after launch. The check confirms the field is filled; the rest is your own review against the rubric.',
             kind: 'long-text',
             required: true,
             maxLength: 1500,
@@ -631,9 +767,64 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
         rubricDimensions: ['problem-framing', 'communication'],
       },
     },
+    {
+      id: 'fde-v1-m01-exec-update',
+      kind: 'artifact',
+      purpose: 'exercise',
+      verification: 'self_reviewed',
+      title: 'Executive update: the end of discovery week',
+      summary:
+        'Write the update a Marlbrook executive reads in two minutes: the audience, the decisions you need, the open questions and the next step, inside 1,700 characters. Recorded as self-reviewed.',
+      competencies: ['discovery'],
+      estimatedMinutes: 30,
+      artifact: {
+        brief:
+          'It is the Friday of the Marlbrook discovery week. The VP of Customer Operations, who sent “Add AI to support”, meets the chief operating officer on Monday to decide whether the project keeps its budget, and has asked you for an update to forward.\n\nWhat the fixtures give you: one shadowed ticket took nineteen minutes, ten of them on finding the account and its plan. Your scope brief proposes the account lookup first, then routing, then a suggested reply that an agent sends. The security reviewer has not seen the design. The CRM data owner has not granted read access. Finance has not named an approver for anything that moves money, so refunds stay a non-goal. Nobody has agreed a success metric yet. Use only these facts; where you would need an answer you do not have, list it as an open question with an owner.\n\nFour fields, all required, with a combined limit of 1,700 characters so the update fits on a phone screen: the audience (200), the decisions you need (600), the open questions (600) and the next step (300). Choose whether you write to the VP or to the chief operating officer, and say so in the audience field. You review it against two rows of the path rubric, shown beside the form: communication and problem framing.\n\nMarlbrook, its people and its numbers are fixtures written for this module. This submission is recorded as self-reviewed. The automated check confirms that each field is present and inside its limit, and nothing more: it cannot tell whether a decision is answerable or whether the reader would know what to do next. Read your update as the person receiving it would, against the rubric, and cut anything that reader does not need.',
+        fields: [
+          {
+            id: 'audience',
+            label: 'Audience',
+            help:
+              'Who reads this, what they control, and what they need from it in one or two sentences. Name a role, not a person. The check confirms the field is filled and inside 200 characters.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 200,
+          },
+          {
+            id: 'decisions',
+            label: 'Decisions you need',
+            help:
+              'One decision per line, each answerable with a yes, a no or a name, with the date you need it by and what slips if it comes later. Two or three is plenty. The check tests non-empty content and a total of 600 characters; it cannot tell whether a line is a decision or a status report.',
+            kind: 'list',
+            required: true,
+            maxLength: 600,
+          },
+          {
+            id: 'open-questions',
+            label: 'Open questions',
+            help:
+              'One question per line that you cannot answer yet, with the role that owns the answer and when you expect it. Do not invent answers the fixtures do not give. The check tests non-empty content and a total of 600 characters.',
+            kind: 'list',
+            required: true,
+            maxLength: 600,
+          },
+          {
+            id: 'next-step',
+            label: 'Next step',
+            help:
+              'The next thing that happens, who does it and when, written so the reader knows what they will see next. The check confirms the field is filled and inside 300 characters.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 300,
+          },
+        ],
+        rubricDimensions: ['communication', 'problem-framing'],
+      },
+    },
   ],
   requires: [
     { activityId: 'fde-v1-m01-checks', state: 'verified_pass' },
     { activityId: 'fde-v1-m01-scope-brief', state: 'self_reviewed' },
+    { activityId: 'fde-v1-m01-exec-update', state: 'self_reviewed' },
   ],
 };
