@@ -461,7 +461,7 @@ export const FDE_M08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'One tool needs its own rules: the one that runs code. An analyst asks the assistant to summarise a CSV export, the model writes a script, and somebody wants to run it. OWASP’s 2025 list names the failure under LLM05, Improper Output Handling: model output passed into a system shell, `exec` or `eval` can end in remote code execution. Under LLM06, Excessive Agency, OWASP advises you to avoid open-ended extensions such as “run a shell command” and to give the model tools that each do one thing.',
+            'One tool needs its own rules: the one that runs code. An analyst asks the assistant to summarize a CSV export, the model writes a script, and somebody wants to run it. OWASP’s 2025 list names the failure under LLM05, Improper Output Handling: model output passed into a system shell, `exec` or `eval` can end in remote code execution. Under LLM06, Excessive Agency, OWASP advises you to avoid open-ended extensions such as “run a shell command” and to give the model tools that each do one thing.',
         },
         {
           kind: 'prose',
@@ -518,7 +518,7 @@ export const FDE_M08: ModuleSource = {
           rows: [
             [
               'SOC 2',
-              'An AICPA reporting framework: a CPA examines a service organisation’s controls relevant to security, availability, processing integrity, confidentiality or privacy, and reports on them',
+              'An AICPA reporting framework: a CPA examines a service organization’s controls relevant to security, availability, processing integrity, confidentiality or privacy, and reports on them',
               'Your company’s current report, which systems and categories its scope covers, and whether the workbench sits inside that scope',
             ],
             [
@@ -543,7 +543,7 @@ export const FDE_M08: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'The scripts, reviews, customers and tickets in this section are fictional fixtures. Nothing here assesses a real organisation’s compliance, and nothing runs a real sandbox: the questions grade how you read the cases.',
+            'The scripts, reviews, customers and tickets in this section are fictional fixtures. Nothing here assesses a real organization’s compliance, and nothing runs a real sandbox: the questions grade how you read the cases.',
         },
       ],
     },
@@ -689,7 +689,7 @@ export const FDE_M08: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'A SOC 2 report comes from a CPA’s examination of a service organisation’s controls relevant to security, availability, processing integrity, confidentiality or privacy, for the systems its scope names. The reviewer checks whether the workbench sits inside that scope. It is an assurance report a CPA issues under the AICPA’s SOC framework, not a government certification. It describes your company’s controls, not the configuration inside the retailer’s account, which the retailer and you still have to review. It does not test the customer’s network.',
+            'A SOC 2 report comes from a CPA’s examination of a service organization’s controls relevant to security, availability, processing integrity, confidentiality or privacy, for the systems its scope names. The reviewer checks whether the workbench sits inside that scope. It is an assurance report a CPA issues under the AICPA’s SOC framework, not a government certification. It describes your company’s controls, not the configuration inside the retailer’s account, which the retailer and you still have to review. It does not test the customer’s network.',
           competencies: ['ai-security'],
         },
         {

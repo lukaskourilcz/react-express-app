@@ -140,6 +140,15 @@ export const FDE_M11_DEPLOY_SOLUTIONS: Record<string, PathCodeSolution> = {
         criterion: 'config-gate',
       },
       {
+        call: "[[], [{ key: 'DATABASE_URL', state: 'OK' }, { key: 'QUEUE_URL', state: 'ok' }, { key: 'SIGNING_KEY', state: 'ok' }]].map(function (config) { return __gate({ config: config }).out.reasons; })",
+        expected: [
+          ['config:DATABASE_URL:missing', 'config:QUEUE_URL:missing', 'config:SIGNING_KEY:missing'],
+          ['config:DATABASE_URL:OK'],
+        ],
+        edge: true,
+        criterion: 'config-gate',
+      },
+      {
         call: "(function () { var r = __gate({ requiredConfig: ['SIGNING_KEY', 'WEBHOOK_SECRET'], config: [{ key: 'SIGNING_KEY', state: 'expired', value: 'FIXTURE-SECRET-7731' }] }); return { reasons: r.out.reasons, leaked: JSON.stringify(r).indexOf('FIXTURE-SECRET') !== -1 }; })()",
         expected: { reasons: ['config:SIGNING_KEY:expired', 'config:WEBHOOK_SECRET:missing'], leaked: false },
         criterion: 'config-gate',

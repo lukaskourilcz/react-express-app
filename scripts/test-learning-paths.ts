@@ -65,6 +65,8 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an empty probe list read as healthy', replace: ["if (!Array.isArray(probes) || probes.length === 0) return ['health:no-probes'];", "if (!Array.isArray(probes)) return ['health:no-probes'];"], criterion: 'health-gate' },
     { label: 'only not_ready counted as unhealthy', replace: [".filter((probe) => probe.status !== 'ready')", ".filter((probe) => probe.status === 'not_ready')"], criterion: 'health-gate' },
     { label: 'a required key nobody reported passing', replace: ['if (probe === undefined) reasons.push(`config:${key}:missing`);\n    else if', 'if (probe === undefined) continue;\n    if'], criterion: 'config-gate' },
+    { label: 'an empty configuration report read as no report', replace: ["if (!Array.isArray(probes)) return ['config:no-report'];", "if (!Array.isArray(probes) || probes.length === 0) return ['config:no-report'];"], criterion: 'config-gate' },
+    { label: 'a configuration state compared without its case', replace: ["else if (probe.state !== 'ok')", "else if (probe.state.toLowerCase() !== 'ok')"], criterion: 'config-gate' },
     { label: 'a configuration value written into the reason', replace: ['`config:${key}:${probe.state}`', '`config:${key}:${probe.state}:${probe.value}`'], criterion: 'config-gate' },
     { label: 'a rollout left out of the log', replace: ['  log.record({', "  if (decision === 'hold') log.record({"], criterion: 'records-why' },
     { label: 'reasons recorded in discovery order', replace: ['[...new Set(found)].sort()', '[...new Set(found)]'], criterion: 'records-why' },
