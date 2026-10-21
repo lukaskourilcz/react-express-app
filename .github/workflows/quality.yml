@@ -36,15 +36,13 @@ jobs:
       - run: npm run test:sql
         env:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
-  verify:
+  # verify used to run every gate in one job and reached 44 minutes of a
+  # 60-minute cap on 21 October. The gates now run as parallel jobs, and the
+  # job named verify (the required check) passes only when every one of them
+  # passed: a skipped or cancelled gate fails it.
+  quickjs:
     runs-on: ubuntu-latest
-    # Full isolated grading, browser coverage, Storybook and performance need
-    # more than the old 30-minute cap: run 38491511671 passed the preceding
-    # gates and timed out during the final Storybook/performance step. The
-    # test chain alone grew from 22m18s (run 39030786250, 17 October) to
-    # 30m38s (run 39636125708, 21 October), which left verify at 44m23s of
-    # 45, so the cap is 60.
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,9 +66,21 @@ jobs:
             fi
           fi
           npm run check:quickjs-build
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - run: npm ci && npm ci --prefix client
       - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
       - run: npm run audit:native-reviews
-      - run: npm run test:performance && npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:path-authority && npm run test:react-authority && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: |
           # The browser checks below run against this build, so it signs in the
@@ -85,6 +95,59 @@ jobs:
           VITE_PRODUCT: devshark
           VITE_LOCK_SUBJECT: webdev
       - run: npm audit --omit=dev && npm audit --omit=dev --prefix client
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - run: npm ci && npm ci --prefix client
+      - run: npm run test:performance && npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:path-authority && npm run test:react-authority && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
+  coding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - run: npm ci && npm ci --prefix client
+      - run: npm run test:coding
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - run: npm ci && npm ci --prefix client
+      - run: |
+          # The browser checks below run against this build, so it signs in the
+          # way production does: with the placeholder Supabase project that
+          # check:bundle measures with. tests/browser/lazy-auth.spec.ts needs it.
+          VITE_SUPABASE_URL=$(node -p "require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_URL")
+          VITE_SUPABASE_ANON_KEY=$(node -p "require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_ANON_KEY")
+          export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+          npm run build
+        id: build
+        env:
+          VITE_PRODUCT: devshark
+          VITE_LOCK_SUBJECT: webdev
       - run: npx playwright install --with-deps chromium
       - name: Browser checks
         run: |
@@ -131,3 +194,12 @@ jobs:
             test-results/
             client/storybook-static/
           retention-days: 14
+  verify:
+    needs: [quickjs, static, tests, coding, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "quickjs=${{ needs.quickjs.result }} static=${{ needs.static.result }} tests=${{ needs.tests.result }} coding=${{ needs.coding.result }} browser=${{ needs.browser.result }}"
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: exit 1

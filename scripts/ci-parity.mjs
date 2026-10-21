@@ -53,16 +53,21 @@ if (!existsSync(WORKFLOW) || !existsSync('package.json')) usage('Run ci:parity f
 // ---- What the workflow says ------------------------------------------------
 
 const workflow = readFileSync(WORKFLOW, 'utf8');
-const verifyStart = workflow.indexOf('\n  verify:');
-if (verifyStart < 0) usage(`${WORKFLOW} has no verify job; update scripts/ci-parity.mjs.`);
+// The verify gates are the jobs after `sql`, from `quickjs` to the `verify`
+// job that requires them all; ci:parity runs them one after another.
+const verifyStart = workflow.indexOf('\n  quickjs:');
+if (verifyStart < 0 || !workflow.includes('\n  verify:')) usage(`${WORKFLOW} has no quickjs or verify job; update scripts/ci-parity.mjs.`);
 const verifyJob = workflow.slice(verifyStart + 1);
 const TOPIC = verifyJob.match(/^\s*TOPIC=(\S+)/m)?.[1] ?? '';
 const QUICKJS_INPUTS = verifyJob.match(/git diff --quiet "\$QUICKJS_BASE_SHA" HEAD -- ([^;\n]+);/)?.[1].trim().split(/\s+/) ?? [];
 const COMMAND = /^(?:[A-Z_]+=\S+\s+)*(?:npm |npx playwright )/;
 
-/** Splits the verify job into its npm/npx commands and every other line. */
+/** Splits the verify jobs into their npm/npx commands and every other line.
+ * A command an earlier job already ran (`npm ci`, the second build) is that
+ * job's own setup, so it counts once. */
 function readVerifyJob() {
   const commands = [];
+  const seen = new Set();
   const glue = [];
   for (const raw of verifyJob.split('\n')) {
     const line = raw.trim();
@@ -70,7 +75,12 @@ function readVerifyJob() {
     const body = line.replace(/^-\s*/, '').replace(/^run:\s*\|?\s*/, '');
     const parts = body.split(/\s*&&\s*/);
     if (body && parts.every((part) => COMMAND.test(part))) {
-      for (const part of parts) commands.push(part.replace(/\s*>.*$/, '').replace(/\$TOPIC/g, TOPIC).trim());
+      for (const part of parts) {
+        const command = part.replace(/\s*>.*$/, '').replace(/\$TOPIC/g, TOPIC).trim();
+        if (seen.has(command)) continue;
+        seen.add(command);
+        commands.push(command);
+      }
     } else {
       glue.push(line);
     }
@@ -78,30 +88,125 @@ function readVerifyJob() {
   return { commands, glue };
 }
 
-// Every line of the verify job that is not an npm/npx command, in order. The
+// Every line of the verify jobs that is not an npm/npx command, in order. The
 // plan below reproduces what these lines do; change both together.
 const KNOWN_GLUE = [
-  'verify:', 'runs-on: ubuntu-latest', 'timeout-minutes: 60', 'steps:',
-  '- uses: actions/checkout@v4', '- uses: actions/setup-node@v4', 'with:', 'node-version: 24', 'cache: npm',
-  'cache-dependency-path: |', 'package-lock.json', 'client/package-lock.json',
-  '- name: Rebuild modified QuickJS runtime from pinned sources', 'env:',
-  'QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}', 'run: |',
-  'if [[ -n "$QUICKJS_BASE_SHA" && "$QUICKJS_BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then',
-  '[[ "$QUICKJS_BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1',
-  'git fetch --no-tags --depth=1 origin "$QUICKJS_BASE_SHA"',
-  'if git diff --quiet "$QUICKJS_BASE_SHA" HEAD -- lib/coding/vendor lib/coding/quickjs-variant.ts scripts/rebuild-quickjs-sort.mjs package.json package-lock.json client/package-lock.json; then',
-  'echo "QuickJS inputs unchanged; required runtime integrity tests still run below."', 'exit 0', 'fi', 'fi',
-  '- run: |',
-  'VITE_SUPABASE_URL=$(node -p "require(\'./docs/quality/bundle-budget.json\').measuredBuild.env.VITE_SUPABASE_URL")',
-  'VITE_SUPABASE_ANON_KEY=$(node -p "require(\'./docs/quality/bundle-budget.json\').measuredBuild.env.VITE_SUPABASE_ANON_KEY")',
-  'export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY', 'id: build', 'env:', 'VITE_PRODUCT: devshark', 'VITE_LOCK_SUBJECT: webdev',
-  '- name: Browser checks', 'run: |', 'node scripts/wait-for-preview.mjs',
-  'export CHROME_BIN=$(node -e "console.log(require(\'@playwright/test\').chromium.executablePath())")',
-  'TOPIC=javascript-closures',
-  "- if: ${{ !cancelled() && steps.build.conclusion == 'success' }}", 'name: Storybook and performance', 'run: |',
-  'TEST_BASE_URL=http://localhost:6006 node scripts/wait-for-preview.mjs',
-  '- uses: actions/upload-artifact@v4', 'if: always()', 'with:', 'name: quality', 'path: |',
-  'artifacts/', 'playwright-report/', 'test-results/', 'client/storybook-static/', 'retention-days: 14',
+  "quickjs:",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 30",
+  "steps:",
+  "- uses: actions/checkout@v4",
+  "- uses: actions/setup-node@v4",
+  "with:",
+  "node-version: 24",
+  "cache: npm",
+  "cache-dependency-path: |",
+  "package-lock.json",
+  "client/package-lock.json",
+  "- name: Rebuild modified QuickJS runtime from pinned sources",
+  "env:",
+  "QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}",
+  "run: |",
+  "if [[ -n \"$QUICKJS_BASE_SHA\" && \"$QUICKJS_BASE_SHA\" != \"0000000000000000000000000000000000000000\" ]]; then",
+  "[[ \"$QUICKJS_BASE_SHA\" =~ ^[a-f0-9]{40}$ ]] || exit 1",
+  "git fetch --no-tags --depth=1 origin \"$QUICKJS_BASE_SHA\"",
+  "if git diff --quiet \"$QUICKJS_BASE_SHA\" HEAD -- lib/coding/vendor lib/coding/quickjs-variant.ts scripts/rebuild-quickjs-sort.mjs package.json package-lock.json client/package-lock.json; then",
+  "echo \"QuickJS inputs unchanged; required runtime integrity tests still run below.\"",
+  "exit 0",
+  "fi",
+  "fi",
+  "static:",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 30",
+  "steps:",
+  "- uses: actions/checkout@v4",
+  "- uses: actions/setup-node@v4",
+  "with:",
+  "node-version: 24",
+  "cache: npm",
+  "cache-dependency-path: |",
+  "package-lock.json",
+  "client/package-lock.json",
+  "- run: |",
+  "VITE_SUPABASE_URL=$(node -p \"require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_URL\")",
+  "VITE_SUPABASE_ANON_KEY=$(node -p \"require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_ANON_KEY\")",
+  "export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY",
+  "id: build",
+  "env:",
+  "VITE_PRODUCT: devshark",
+  "VITE_LOCK_SUBJECT: webdev",
+  "tests:",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 30",
+  "steps:",
+  "- uses: actions/checkout@v4",
+  "- uses: actions/setup-node@v4",
+  "with:",
+  "node-version: 24",
+  "cache: npm",
+  "cache-dependency-path: |",
+  "package-lock.json",
+  "client/package-lock.json",
+  "coding:",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 30",
+  "steps:",
+  "- uses: actions/checkout@v4",
+  "- uses: actions/setup-node@v4",
+  "with:",
+  "node-version: 24",
+  "cache: npm",
+  "cache-dependency-path: |",
+  "package-lock.json",
+  "client/package-lock.json",
+  "browser:",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 30",
+  "steps:",
+  "- uses: actions/checkout@v4",
+  "- uses: actions/setup-node@v4",
+  "with:",
+  "node-version: 24",
+  "cache: npm",
+  "cache-dependency-path: |",
+  "package-lock.json",
+  "client/package-lock.json",
+  "- run: |",
+  "VITE_SUPABASE_URL=$(node -p \"require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_URL\")",
+  "VITE_SUPABASE_ANON_KEY=$(node -p \"require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_ANON_KEY\")",
+  "export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY",
+  "id: build",
+  "env:",
+  "VITE_PRODUCT: devshark",
+  "VITE_LOCK_SUBJECT: webdev",
+  "- name: Browser checks",
+  "run: |",
+  "node scripts/wait-for-preview.mjs",
+  "export CHROME_BIN=$(node -e \"console.log(require('@playwright/test').chromium.executablePath())\")",
+  "TOPIC=javascript-closures",
+  "- if: ${{ !cancelled() && steps.build.conclusion == 'success' }}",
+  "name: Storybook and performance",
+  "run: |",
+  "TEST_BASE_URL=http://localhost:6006 node scripts/wait-for-preview.mjs",
+  "- uses: actions/upload-artifact@v4",
+  "if: always()",
+  "with:",
+  "name: quality",
+  "path: |",
+  "artifacts/",
+  "playwright-report/",
+  "test-results/",
+  "client/storybook-static/",
+  "retention-days: 14",
+  "verify:",
+  "needs: [quickjs, static, tests, coding, browser]",
+  "if: ${{ always() }}",
+  "runs-on: ubuntu-latest",
+  "timeout-minutes: 5",
+  "steps:",
+  "- run: echo \"quickjs=${{ needs.quickjs.result }} static=${{ needs.static.result }} tests=${{ needs.tests.result }} coding=${{ needs.coding.result }} browser=${{ needs.browser.result }}\"",
+  "- if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}",
+  "run: exit 1",
 ];
 
 const env = { ...process.env, CI: 'true' };
@@ -145,9 +250,6 @@ const PLAN = [
   step('typecheck:scripts', npmRun('typecheck:scripts')),
   step('typecheck:tooling', npmRun('typecheck:tooling', '--prefix client')),
   step('audit:native-reviews', npmRun('audit:native-reviews')),
-  ...['test:performance', 'test:launch', 'test:coding-auth', 'test:grading-integrity', 'test:path-authority',
-    'test:react-authority', 'test:coding', 'test:paths', 'test:billing', 'test:fallbacks', 'test:garden',
-    'test:live-grading', 'test:client'].map((script) => step(script, npmRun(script))),
   step('check:unused', npmRun('check:unused')),
   step('check:security', npmRun('check:security')),
   step('build', npmRun('build'), { env: BUILD_ENV }),
@@ -155,6 +257,9 @@ const PLAN = [
   step('check:bundle', npmRun('check:bundle'), { env: BUILD_ENV, needs: ['build'] }),
   step('audit:prod', 'npm audit --omit=dev'),
   step('audit:client', 'npm audit --omit=dev --prefix client'),
+  ...['test:performance', 'test:launch', 'test:coding-auth', 'test:grading-integrity', 'test:path-authority',
+    'test:react-authority', 'test:paths', 'test:billing', 'test:fallbacks', 'test:garden',
+    'test:live-grading', 'test:client', 'test:coding'].map((script) => step(script, npmRun(script))),
   step('chromium', 'npx playwright install chromium', { ci: ['npx playwright install --with-deps chromium'], kind: 'chromium' }),
   step('preview', 'npm run preview --prefix client -- --host 0.0.0.0 --port 4173',
     { kind: 'server', url: 'http://localhost:4173', needs: ['build'] }),
