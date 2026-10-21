@@ -23,7 +23,7 @@ A bridge exemption requires all mandatory checks for that competency in the vers
 
 ## Modules and deliverables
 
-The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 practical exercises and one staged capstone**, plus diagnostic/bridge content. Each M01–M10 has two lessons, four checks and one practical exercise. This is a production target, not a count to display before the content exists. Every item needs an EN original, reviewed CS overlay, objectives, sources, version, estimated effort and feedback. Module practical exercises may combine existing task types; do not create arbitrary runtime infrastructure to meet the count.
+The minimum authored inventory is **20 short lessons, 40 scenario checks, 10 practical exercises and one staged capstone**, plus diagnostic/bridge content. Each M01–M10 has two lessons, four checks and one practical exercise. This is a production target, not a count to display before the content exists. Every item needs objectives, sources, version, estimated effort and feedback. Module practical exercises may combine existing task types; do not create arbitrary runtime infrastructure to meet the count.
 
 | ID | Module and lessons | Practical evidence | Dependency |
 |---|---|---|---|
@@ -67,6 +67,6 @@ MCQs use plausible options of comparable specificity, with the scenario constrai
 
 ## Content quality and upkeep
 
-Code-reviewed source files remain the publishing authority. Extend the current `/dev` quality/reporting workflow to inspect FDE inventory and link issue reports; do not require a new full CMS. A catalog validator must reject duplicate IDs, dependency cycles, missing overlays, missing sources, invalid task references and public answer leakage. Every critical task has a passing reference and intentionally flawed variants.
+Code-reviewed source files remain the publishing authority. Extend the current `/dev` quality/reporting workflow to inspect FDE inventory and link issue reports; do not require a new full CMS. A catalog validator must reject duplicate IDs, dependency cycles, missing sources, invalid task references and public answer leakage. Every critical task has a passing reference and intentionally flawed variants.
 
 Keep provider specifics in versioned reference notes. Verify current official Python, SQL, provider and protocol docs at authoring time. Technical recommendations in this specification are curriculum scope, not pinned package selections. Require quarterly source review and an immediate review for a broken API example or reported grading defect.

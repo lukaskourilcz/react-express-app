@@ -5,8 +5,8 @@ allowed-tools: Read, Grep, Glob, Bash, Edit
 ---
 
 Review `$ARGUMENTS` in its rendered product context, not as isolated dictionary
-text. The app ships English only (`ENABLED_LANGS`); the retained Czech files are
-finished work to leave alone, not a parity obligation.
+text. devShark ships English only: write all copy in English and add no second
+language, translation overlay or language switch.
 
 1. Inspect the current diff, trace the route/component in `client/src/App.tsx`, and read every relevant use site plus the matching section of `client/src/i18n/translations.ts`.
 2. Read `client/product-catalog.ts`, `docs/product-architecture.md`, and `docs/design/brand-system.md`. Search every changed phrase and legacy `DevQuiz` occurrence so metadata, navigation, dialogs, errors, and historical identifiers are classified correctly.

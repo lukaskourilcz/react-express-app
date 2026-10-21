@@ -100,9 +100,7 @@ quotes in a report; it covers the answer and is keyed so the options cannot
 be hashed against it. The plain `contentHash` is what the ledger records
 against, so the ledger stays checkable outside any one deployment; it is never
 served. It also covers the category, because topic fit was scored against it
-and moving an item is an edit the reviewer did not see. A served translation
-has its own hash: a Czech version that is not the reviewed one is dropped, and
-the reviewed English served in its place, rather than served unreviewed.
+and moving an item is an edit the reviewer did not see.
 
 [#176](https://github.com/lukaskourilcz/react-express-app/issues/176) populates
 the ledger in waves; `docs/audit/devshark-content-audit.md` reports each one.
@@ -200,7 +198,7 @@ a current record. There is no fallback sentence that sounds better.
 - The registry equals the ledger; every served item of an audited category
   has a current, passing record for its exact content; every retired or
   quarantined row is absent from the served set; an edited copy is
-  `superseded`; an unreviewed translation is dropped.
+  `superseded`.
 - Relevance 3 retires, 4 alone does not, 4 with quality 2 retires, relevance
   10 with a wrong key retires; a rewrite returns only on its new hash.
 - A retired question thins its own level; a level below the floor is
@@ -222,8 +220,7 @@ from the console.
 ## What this does not do
 
 It does not claim more than the ledger holds. An item with no applicable
-record in a category outside the audited scope is served with no claim; an
-item whose translation was not reviewed is served in English; a coding task
-with no record is issued as before until the coding wave has landed.
+record in a category outside the audited scope is served with no claim; a
+coding task with no record is issued as before until the coding wave has landed.
 `docs/audit/devshark-content-audit.md` says what each wave covered and what it
 did not.

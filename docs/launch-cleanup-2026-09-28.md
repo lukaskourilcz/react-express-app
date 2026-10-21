@@ -1,5 +1,7 @@
 # Launch cleanup — 28 September 2026
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 ## Delivered
 
 Repository changes were merged in PRs [269](https://github.com/lukaskourilcz/react-express-app/pull/269) and [307](https://github.com/lukaskourilcz/react-express-app/pull/307). The active owner checklist is [NEEDED.md](../NEEDED.md); the old checklist is archived, not silently discarded.

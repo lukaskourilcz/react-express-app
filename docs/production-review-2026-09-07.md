@@ -1,5 +1,7 @@
 # devShark production review · 7 September 2026
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 Issue #126 and PR #127. This review focuses on devShark and its marketingShark source.
 Other subjects and historical database migrations are preserved.
 

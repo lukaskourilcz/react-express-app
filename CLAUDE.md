@@ -11,7 +11,7 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 - Keep exactly twelve physical TypeScript handlers under `api/`; preserve validation, auth, authorization, rate limits, request IDs, safe errors, RLS, and service-role isolation.
 - The footer carries only the legal links ("Cookie settings", which reopens the cookie choice, counts as one), devShark's own social profiles, and the appearance and sound controls. devShark promotes no other product.
 - PostHog loads only after the visitor allows analytics in the cookie banner (`client/src/lib/consent.ts`); before that nothing is stored or sent, and a withdrawal removes its cookies. Marketing tags (GA4, Meta Pixel) go only into `MARKETING_LOADERS` (`client/src/lib/marketingTags.ts`), which `client/src/lib/marketing.ts` starts behind marketing consent. Sentry stays consent-free only while it sets no cookie, stores nothing and sends no personal data.
-- devShark ships English only, for good (owner decision, 21 October 2026). Write every piece of copy, content and documentation in English; add no second language, no translation overlay and no language switch. Epic D of [the Learn sections plan](docs/learn-sections-fde-flagship-plan.md) removes what remains of the earlier second-language work. Keep responsive web accessibility. Native/Expo work is out of scope.
+- devShark ships English only, for good (owner decision, 21 October 2026). Write every piece of copy, content and documentation in English; add no second language, no translation overlay and no language switch. Keep responsive web accessibility. Native/Expo work is out of scope.
 - Public legacy `DevQuiz` copy is stale; compatibility storage keys, migrations, package names, fixtures, and history may remain.
 
 ## Brand

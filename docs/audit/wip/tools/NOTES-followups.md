@@ -12,9 +12,6 @@
   results or source in options of this shape.
 - **`rm-js-189` case-only distractor `"Function"`.** Kept: the key is still the
   only defensible answer and no stronger distractor was available.
-- **`rm-node-62` and `rm-node-64` Czech drift.** The reviewer recorded that the
-  Czech tracks an older English stem for both; the localisation pass must
-  retranslate rather than keep.
 - **`rm-ts-36` and `rm-ts-40`.** The second reader flagged them as teaching the
   same excess-property rule, differing only in call-site versus assignment
   position. Both are sound as written; the duplicate pass should decide once
@@ -50,23 +47,11 @@
   code throws `Invalid hook call` rather than doing what the question asks
   about. One item was retired; the rest are rewritten with the call inside a
   component. Worth a mechanical check across the React bank for the same shape.
-- **The Czech hint is one sentence for the whole bank.** Every Czech item
-  carries "Pozorně si přečti kód a odhadni, co dělá nebo co vrací", which is
-  not a translation of the English hint and tells the learner to read code that
-  prose-only items do not contain. The localisation pass replaces all of them.
-- **The HTML bank's Czech is a different bank.** All 48 Czech items translate
-  the older abbreviation-and-tag-definition questions ("Co znamená zkratka
-  HTML?"), not the rescoped English ones, and the automated drift detector
-  caught only 12 of them. The topic needs retranslating whole, and the
-  detector's miss rate is worth reporting: it flags changed code, and these
-  items changed their subject without changing any code.
 - **`rm-node-140` explanation reverses the event-loop ordering.** It says a
   `setImmediate` often runs after a zero-millisecond timeout inside an I/O
   cycle. Run inside an `fs.readFile` callback the order is immediate first, and
   the Node documentation says the immediate "is always executed first" there.
-  The key is right and the explanation is wrong, and the Czech reproduces the
-  same error faithfully — the one place in the audit where a translation is
-  accurate to a mistake.
+  The key is right and the explanation is wrong.
 - **Four items teach the same rules-of-hooks rule.** `rm-react-50`, `91`, `114`
   and `186` each state that hooks cannot be called conditionally. They sit in
   four different batches, so no first reviewer could see the overlap; the
@@ -90,10 +75,6 @@
 - **`rm-general-34` back-references "that URL" from `rm-general-33`.** Every
   delivery path shuffles, so the reference breaks. Worth a mechanical sweep for
   other items that lean on their neighbour.
-- **32 items ship with no Czech at all.** The whole Testing Foundations block
-  (General levels 16-19) has `cs: null`, so a Czech learner meets those levels
-  in English today. The localisation pass writes them from scratch rather than
-  repairing a translation.
 - **Distractors that need no knowledge.** In the General bank roughly 35 of 51
   items in one batch carry two or more category-error options ("Sends emails",
   "Routes electrical signals" against a question about caching), so a learner
@@ -125,9 +106,6 @@ for a second reader rather than a second automated check.
   distinct under a unique constraint unless the constraint declares `NULLS NOT
   DISTINCT` (PostgreSQL 15 and later), so the item is wrong for the engine the
   product itself runs on.
-- **`rm-db-47` Czech reverses the English.** "Spojení vyžaduje SQL" says SQL is
-  required by joins rather than joins are required by SQL. The clearest single
-  translation defect the audit has found.
 - **System Design fails on presentation, not facts.** All 60 keys in its first
   batch are correct and singly defensible — the only topic so far with no
   correctness blocker at all. It fails on the generic hint, on 28 items with
@@ -180,7 +158,7 @@ for a second reader rather than a second automated check.
   `revalidateTag()` is a type error, and the error boundary's prop is `retry`
   rather than `reset`. Seven items teach the previous shape. One explanation
   says nested metadata merges; the documentation says the merge is shallow and
-  a nested object is replaced wholesale, and the Czech repeats the error.
+  a nested object is replaced wholesale.
 - **The audit's first retain.** `rm-devops-1` is the only item in 1,800 reviewed
   so far that passed both gates as written, and the reason is exactly the one
   the audit exists to find: it is the only item whose hint was written for its
@@ -229,32 +207,11 @@ for a second reader rather than a second automated check.
   than timing: `shift` touched 40 indexed reads at n=40 where `pop` touched
   one, at every size. That is the right kind of evidence for this topic, and
   the items that already name their case are the strongest in the bank.
-- **An outcome label is prose; a value is code.** The Czech pass surfaced a
-  question the brief had not answered: is the option `Error` a value to keep in
-  English or a description of what happened? Different batches answered
-  differently. Settled: an option that names the outcome (`Error`, `Type
-  error`, `Compiles`, `Nothing`) takes its Czech form, and an option a learner
-  would type or see printed (`undefined`, `null`, `NaN`, `TypeError`, `string`,
-  `"ACTIVE"`, `42`) stays byte-for-byte English. The test is whether the text
-  is the value or a description of it. `normalise-cs.py` applies the rule to
-  rows written before it was settled; run it once every Czech batch has
-  finished, never while one is still appending.
-- **The Czech translations were checked against the English that ships, not the
-  English that was reviewed.** Three items in one batch had a served Czech
-  question still showing the pre-rewrite snippet — an old array, a stale
-  comment, a `Promise.all` that the rewrite had removed. The translator noticed
-  because it works from the final English rather than from the served Czech,
-  which is the right direction of travel and the reason the localisation pass
-  runs after the rewrites are applied rather than beside them.
 - **The Testing retirement holds up under review.** Its first half retired 49 of
   60 items outright and redistributed 11, most into General levels 16-19, Node
   level 24, DevOps levels 3 and 11, and Databases level 11. That is the answer
   the retirement decision needed and never had: the section was not carrying
   material the rest of the map lacks.
-- **One AI item's Czech asks a different question entirely.** `rm-ai-50` serves
-  a Czech item about which 2017 paper introduced the transformer, where the
-  English asks about the quadratic cost of attention. Every one of the 25 items
-  in that range is drift of some degree.
 - **A tokenizer rule of thumb stated as fact.** One item gives "one token is
   about four characters, about 0.75 words" as a general truth. Measured across
   tokenizers the range is 0.72 to 0.90 words per token, and Anthropic's own
@@ -330,14 +287,13 @@ for a second reader rather than a second automated check.
   brief taught them.
 - **The sweep is now a tool, and it caught a second class the eye had missed.**
   `docs/audit/wip/tools/sweep-artifacts.py <inventoryDir>` scans every
-  learner-visible field, English and Czech, for item ids, commit hashes, tool
+  learner-visible field for item ids, commit hashes, tool
   version strings, working notes, scratch paths, the reviewer's vocabulary, and
   references to an option by its position. It exits non-zero on a hit, so it can
   gate the merge. Its second run found six items whose explanations pointed at
   "the first option" or "the last option" — meaningless, because the server
   shuffles answer order before serving, so those sentences name whatever
-  happened to land there. Two of the six had already been translated, so the
-  Czech carried the same defect. All fixed by naming the content instead of the
+  happened to land there. All fixed by naming the content instead of the
   position. One match is allowlisted in the tool with its reason: OWASP's own
   ranking of password hashing functions calls Argon2id "the first choice".
 - **The retired sections were worth reading, and none of them should come
@@ -353,20 +309,11 @@ for a second reader rather than a second automated check.
   a gloss neither RFC 6749 nor oauth.net uses. XML is spelled "eXtensible"
   against the W3C's "Extensible". The URI/URL/URN taxonomy two items teach is
   explicitly set aside by the WHATWG URL Standard ("Standardize on the term
-  URL"). One item keys BASE in the Pritchett wording while its own Czech keys a
-  competing variant, and OCI is the Open Container Initiative in one item and
-  Oracle Cloud Infrastructure in another's distractor. None of this ships —
+  URL"). OCI is the Open Container Initiative in one item and Oracle Cloud
+  Infrastructure in another's distractor. None of this ships —
   the section is refused by every delivery request — but it is the clearest
   evidence in the audit that an expansion item decays in a way a mechanism item
   does not.
-- **A blind spot in the automated Czech drift detection.** All 120
-  abbreviations items are Czech-drifted in the same way: the English stems were
-  reformulated into scenarios with acronym options, while the served Czech is
-  still the older "Co znamená zkratka X?" with English expansions as options.
-  The automation flagged exactly one of the 120. Key indexes still line up, so
-  nothing a checker compares had changed — the drift is in what the question
-  asks, not in its shape. Any future parity check has to compare meaning on the
-  stem, not just option count and key position.
 - **The code-snippets section found a gap in the live bank, not just in
   itself.** Seven of its items (541, 542, 552, 553, 554, 767, 771) are correct,
   well-built and duplicated nowhere — and have no destination, because no live
@@ -384,14 +331,8 @@ for a second reader rather than a second automated check.
   contrast. Nothing served was affected — the section is refused by every
   delivery request — but it is the fourth wrong key the audit has found, and
   the only one outside the active bank.
-- **Forty-seven code-snippets items serve English options under a Czech
-  question.** Their `cs.options` is null, so the delivery falls back to the
-  English list. A retired section hides it today; the same fallback in a live
-  bank would be visible to every Czech learner, and nothing currently checks
-  for it.
-- **Translation turns out to be a third reading.** Writing an item in another
-  language forces a reader to parse every option as a sentence, and the
-  translators are surfacing English defects that both readings passed:
+- **Three English defects that both readings passed.** Parsing every option as
+  a full sentence surfaced them:
   - `rm-react-155` asks "What problem does Context solve?" and only the key is
     phrased as a problem; the other three name capabilities. The shape decides
     the item without the subject.
@@ -402,11 +343,8 @@ for a second reader rather than a second automated check.
     module" while `__dirname` is injected by the module wrapper rather than
     global; the first pass recorded the defect and the rewrite kept it.
   None of these is a wrong key and all three still clear both gates, so none is
-  fixed here: a rewrite served on one reading is exactly what this audit does
-  not do, and the reading that would have to accept it is the one that just
-  found it. They belong to the next wave, which should treat the localisation
-  pass as a reviewer rather than a scribe and give it a way to file a defect
-  against the English instead of a note in a row.
+  fixed here: this audit serves no rewrite on one reading. They belong to the
+  next wave.
 - **A batch generator that silently handed a reviewer the wrong file.**
   `make-verify-batches.py` always writes the cross-batch duplicate pairs to
   `verify-duplicates.json`, and a later run that named a group `duplicates`
@@ -417,41 +355,6 @@ for a second reader rather than a second automated check.
   thing — but a less careful agent would have reviewed the pairs and returned
   rows nobody asked for. The name is now reserved and the path refuses to
   overwrite an existing file.
-- **The Czech parity checker was crying wolf, and that hides real defects.** It
-  treated any short option as code, so "Staged", "Monday", "Apples", "$8" and
-  "24 days" were all reported as lost identifiers — 83 findings across the
-  first 1,500 rows, essentially all false. A check nobody can read is a check
-  nobody runs. It now counts one ordinary English word as prose, and for an
-  option carrying a number it compares the quantity rather than the string:
-  a changed digit is a defect, while `$8` → `8 $`, `75%` → `75 %` and
-  `24 days` → `24 dní` are correct Czech and are listed separately under
-  `--formatting`. That leaves 0 real parity defects in the rows written so far.
-- **One convention question for a human, not for another rewrite.** Czech
-  writes money and percentages with the symbol after the number and a decimal
-  comma, and the translators applied that to option values. Arithmetic inside
-  an explanation keeps the English decimal point, because a formula is written
-  the way it is written. Two algorithms items therefore read both ways at once:
-  a reviewer-verified stem says `1,5 hodiny` while its new explanation says
-  `60 / 1.5 = 40 mph`. Both translators noticed it, neither changed it, and
-  neither should have — the stem's English was never rewritten, so there was no
-  second reading to accept a change to it. Settling which convention wins is a
-  one-line decision that belongs to the owner.
-- **Two Czech words for "repository", and the collision is the real problem.**
-  The Git track renders it `úložiště` (132 occurrences across both batches),
-  following the served Czech corpus, which already uses that word and never
-  uses the alternative. Security, System Design, Node.js and General render it
-  `repozitář` (17 occurrences). Neither is wrong on its own, and the Git
-  translators were right to follow what learners already read there.
-  What makes it worth a decision is that `úložiště` also means *storage*, and
-  the Databases and System Design tracks use it in exactly that sense — 13
-  occurrences in System Design alone, in the same file that calls a code
-  repository a `repozitář`. So the product now uses one word for two things and
-  two words for one thing. The tidy resolution is `repozitář` for a code
-  repository everywhere and `úložiště` reserved for storage, but that rewrites
-  the most frequent noun in the Git track away from what the served Czech has
-  always said, which is an owner's call rather than a translator's. Counted
-  with:
-  `grep -o -i "repozitář[a-zěščřžýáíéůú]*\|úložišt[a-zěščřžýáíéůú]*" <cs rows>`
 - **The audit moved the distribution its own report measures against.** The
   content report flagged 1,532 questions after the rewrites landed, against 158
   before — but the composition inverted. The tell the audit exists to remove,
@@ -498,51 +401,11 @@ for a second reader rather than a second automated check.
   audit that an authoring pass can leave a pattern no single-item review would
   ever see, which is an argument for checking key position across a section
   rather than within an item.
-- **Two more explanations that contradict what the code does**, both faithfully
-  translated into Czech: testfix-15 says `mockReturnValue(Promise.resolve())`
+- **Two more explanations that contradict what the code does**: testfix-15 says `mockReturnValue(Promise.resolve())`
   "makes `res.name` undefined" when it actually throws a TypeError, and
   testfix-3 calls a two-field object "the four-field object".
-- **Running both halves of a topic in parallel guarantees a glossary split.**
-  Each second-half translator was told to read the first half's file before
-  settling a shared term, which is the right instruction and was useless in
-  practice: both agents started at the same moment, so the file was empty when
-  the second one needed it. Git escaped it only because a message mid-run
-  reached its second half in time, and it then went back and re-aligned 30
-  spots across 26 already-written rows. Security did not: its halves split on
-  four terms, and each half turned out to be right on one and wrong on another
-  when counted against the rest of the product (`hash` 48 hits in 15 files
-  against `haš` 15 in 2; `session` 62 in 8 against `relace` 26 in 6). The fix
-  for the next wave is ordering, not instruction: translate a topic's first
-  batch alone, then fan the rest out with its finished file as the glossary.
-  The cost is one batch of wall-clock per topic and it removes the whole class.
-  Where a split has already happened, settle it by counting both candidates
-  across every finished file rather than by preference — and hand the edit back
-  to a translator, because find-and-replace on an inflected language is how you
-  turn a terminology problem into a grammar problem.
-- **The Czech pipeline was reading English the bank no longer serves.**
-  `make-cs-batches.py` took each field from the review row's rewrite, falling
-  back to the inventory. That is backwards once the rewrites are applied: the
-  inventory is regenerated from the seed files at that point and is the only
-  copy carrying a correction made *after* the apply. Three items had their
-  explanations fixed by the artifact sweep after their rewrites landed, and
-  their translators were handed the pre-fix text — `rm-ai-13`, `rm-dsa-32` and
-  `rm-dsa-105`. No harm reached the Czech: all three translators named the
-  wrong answer by its content rather than by position or by the word
-  "distractors", independently, which is what the English should have said in
-  the first place. The tool now takes the English from the inventory and keeps
-  `changed` from the review row, which is the only thing that row is actually
-  authoritative about.
-- **A defect class that exists only in Czech.** `rm-dsa-92`'s served stem ended
-  "…je takzvaná:", and the feminine agreement narrows the four options to the
-  two feminine ones before a learner knows anything — `výška` and `šířka`
-  against `stupeň` and `řád`. English has no equivalent, so no reviewer could
-  have seen it and no parity check compares grammar. The translator found it,
-  rewrote the stem so all four options sit in the nominative with no gender
-  tell, and swept the rest of its batch for the same shape. Worth making an
-  explicit item in the Czech brief: a stem must not agree with only some of its
-  options.
-- **Widening the position-reference sweep, then narrowing it again.** A
-  translator found one the sweep had missed: `rm-ai-60`'s explanation opened
+- **Widening the position-reference sweep, then narrowing it again.** The
+  sweep missed one: `rm-ai-60`'s explanation opened
   "Only the first prompt fixes the task…" in an item whose four options *are*
   prompts. The pattern only knew the nouns option, answer and choice. Widening
   it to `one`, `statement`, `claim` and `snippet` produced 31 hits — and all 29

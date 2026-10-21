@@ -146,8 +146,9 @@ plain clickable cards; don't combine it with a fin-school hover.)
 - Topic logos: `CategoryGlyph` in `components/ui/techIcons.tsx` (bundles only
   the devicons it imports — never pull the whole icon set or a CDN URL).
 - Paper grain + wave tile: the `--ss-grain` / `--ss-wave` data-URIs.
-- New copy becomes new keys in `i18n/translations.ts` (+ `.cs.ts`); never
-  hard-code user-visible English in a component.
+- New copy becomes new English keys in `i18n/translations.ts`; devShark ships
+  English only, with no second language. Never hard-code user-visible English
+  in a component.
 
 ## 8. Shared loading and motion vocabulary
 
@@ -158,7 +159,7 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
 `app-shell.css`; components must not inject duplicate style tags.
 
 - Page/data loading uses `LoadingScreen`: branded swimming fin, visible
-  translated status, one polite live region. `QuoteLoader` is the study-mode
+  status text from `t()`, one polite live region. `QuoteLoader` is the study-mode
   variation using the same fin. Never invent an unlabelled spinner or fake
   percentage for an unknown duration.
 - A navigation never blanks the page. The route `Suspense` boundary in
@@ -218,7 +219,7 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   element must end visible and untransformed; one that ends hidden needs a
   rule of its own.
 - In-place mutations keep their control visible, disable duplicate actions,
-  and use a translated action/status label. Do not replace a whole editor
+  and use an action/status label from `t()`. Do not replace a whole editor
   with a page loader during submission or draft saving.
 - Use `SwimCta` for prominent actions outside the homepage too (coding Submit,
   evolving Continue, collection practice). Use `FadeFinCta` for a quieter fin.

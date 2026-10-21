@@ -1,5 +1,7 @@
 # Handoff `176-w2-2026-09-10` — devShark content audit
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 **The question-bank wave is finished.** All 2,128 served items are reviewed
 twice, applied, translated and in the ledger's scope; see
 `docs/audit/devshark-content-audit.md` for the result and

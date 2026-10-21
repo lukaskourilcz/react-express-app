@@ -21,7 +21,7 @@ and the bottom of the wave stroke aligns with its bottom. The gap is 28% of the 
 `--brand-accent`; “Shark” uses `--brand-ink` in light mode and white in dark mode.
 The logo has fixed dimensions (about 166 × 22 px in the header and
 151 × 20 px in the mobile menu), needs no font and inherits the
-existing home link's translated accessible name. Existing V9 export and
+existing home link's accessible name. Existing V9 export and
 single-colour rules below still apply to the archived assets.
 The two lettering paths share one hashed SVG request, cached independently of
 JavaScript. SVG use instances inherit their theme colours from BrandLogo.

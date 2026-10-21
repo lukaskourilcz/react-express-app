@@ -6,7 +6,7 @@ twelve-stage applications. Twelve short paths of five levels each are listed
 on the pages of the sections they belong to; see [Short paths](#short-paths).
 Three more short paths, the debugging paths, sit on the Coding home above the
 projects; see [The debugging paths](#the-debugging-paths).
-Each stage has an individual EN/CS brief, targeted official reference links,
+Each stage has an individual brief, targeted official reference links,
 and a collapsed list of the prior requirements, drawn smaller and lighter and
 numbered by the stage that set them. Tests are cumulative, and each stage
 lists its own checks first: the top rows of Results show what the brief just
@@ -81,7 +81,6 @@ challenges take for granted: seeing what code does before you change it,
 with the console as the tool. Each path is one file of five functions that
 already run and are wrong in one way each. Every level repairs one function,
 and the checks of the earlier levels run again, as in the other short paths.
-The copy is English only, with empty Czech fields.
 
 Every level is a `debug`-format task. Its hint ladder opens with a hint that
 names the console technique, then three method steps, then a documentation
@@ -142,8 +141,7 @@ between the section header and its challenge list (the FullStack one leads
 the FullStack screen), not on the Coding home, and the UI counts them in
 levels ("Level 2 of 5") rather than stages. They replace the Custom
 category of 2026-09-24, whose two ten-step paths were split into the first,
-second, fourth and fifth JavaScript paths below. The copy is English only,
-with empty Czech fields. Each level has a hint, method steps, visible and
+second, fourth and fifth JavaScript paths below. Each level has a hint, method steps, visible and
 hidden checks, references, and reference, junior and senior solutions that
 `npm run test:coding` proves. Sources: `lib/coding/tasks/paths-*.ts` and
 `lib/coding/solutions/paths-*.ts`.
@@ -270,7 +268,7 @@ do not schedule any application behavior. Existing passes and XP are retained.
 Question/concept spaced practice is unchanged.
 
 Verification: `npm run test:coding` proves all reference solutions, rejects
-untouched starters, checks EN/CS parity and answer-free payloads, and asserts
+untouched starters, checks answer-free payloads, and asserts
 stable stage IDs, sequential unlocks, resume positions and cumulative tests.
 
 Release verification is recorded in `docs/release-acceptance.md`. Live

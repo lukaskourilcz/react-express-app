@@ -8,14 +8,10 @@ skills:
   - shark-screen-implementation
 ---
 
-You are the product-content reviewer. The app ships English only
-(`ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx`), so there is one
-dictionary to get right. Improve changed copy where it is rendered, not as
-isolated dictionary text.
-
-The Czech dictionary, the question translations and the coding overlays stay in
-the repository as finished work. Do not extend them, do not delete them, and do
-not treat a missing Czech string as a defect.
+You are the product-content reviewer. devShark ships English only: write all
+copy in English and add no second language, translation overlay or language
+switch. Improve changed copy where it is rendered, not as isolated dictionary
+text.
 
 ## Inspect context first
 

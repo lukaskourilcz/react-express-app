@@ -28,7 +28,7 @@ Test keyboard reachability and expected arrow-key behavior, focus order/visibili
 
 For visual QA, inspect horizontal overflow, nested-card noise, unstable answer positions, code wrapping, dialog fit, admin table behavior, generated-media absence/fallbacks, and accent behavior. Use actual product data or deterministic fixtures; never fabricate production data.
 
-Fix defects only after locating the existing primitive or pattern to extend. Keep copy in `translations.ts` (the app ships English only) and preserve server-authoritative state. Record residual defects with exact `path:line`, reproduction conditions, WCAG criterion when applicable, severity, and a concrete fix.
+Fix defects only after locating the existing primitive or pattern to extend. Keep copy in `translations.ts` and preserve server-authoritative state. devShark ships English only: write all copy in English and add no second language, translation overlay or language switch. Record residual defects with exact `path:line`, reproduction conditions, WCAG criterion when applicable, severity, and a concrete fix.
 
 ## Validation
 

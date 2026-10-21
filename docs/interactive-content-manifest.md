@@ -306,8 +306,6 @@ challenges to the Easy-band contract:
   in catalogue order, and a new tier 1 challenge would push out the one the
   level has always asked for.
 
-The waves are English only, with no Czech overlay.
-
 **The Medium and Hard waves.** Every Easy wave has landed, and #226 now adds
 challenges that combine what the Easy band teaches. A wave is one file per
 track under `lib/coding/tasks/medium-hard-<track>-<wave>.ts`, its solutions

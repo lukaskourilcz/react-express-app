@@ -1,5 +1,7 @@
 # Launch audit — 15 September 2026
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 Branch: `codex/launch-challenge-audit`.
 
 ## Outcome and scope

@@ -1,12 +1,12 @@
 # Activation measurement
 
-The homepage copy now explains guided lessons, quizzes and coding practice in English (the only shipped language; the prerendered `/cs/topics/` guides are the one Czech surface left) without promising a job or inventing outcomes. Public guides show an example and a misconception before offering a related quiz.
+The homepage copy now explains guided lessons, quizzes and coding practice in English without promising a job or inventing outcomes. Public guides show an example and a misconception before offering a related quiz.
 
 Use the existing PostHog project and `VITE_PUBLIC_POSTHOG_KEY`; no second analytics SDK is needed. In PostHog, create an ordered seven-day funnel for unique users:
 
-1. `$pageview`, with the production hostname and pathname `/` (or `/topics/` and `/cs/topics/` for the guide entry cohort).
+1. `$pageview`, with the production hostname and pathname `/` (or `/topics/` for the guide entry cohort).
 2. `landing_sample_completed` for homepage visitors; guide visitors can enter at the next step because they read a guide rather than the interactive home sample.
-3. `learning_cta_clicked`, broken down by `source`, `locale`, `product` and `category`.
+3. `learning_cta_clicked`, broken down by `source`, `product` and `category`.
 4. Existing `quiz_started` → `quiz_submitted`, or existing `learning_path_enrolled` → `learning_path_activity_verified` for guided paths.
 
 Compare homepage and guide cohorts separately; do not treat every visitor who reads a guide as a failed homepage sample. Use conversion rate and seven-day return rates, not total clicks, to decide whether copy changes helped. Record the deployment date and compare periods with similar traffic sources before drawing conclusions. Keep account creation optional in the learning flow; these changes do not add email campaigns or a signup wall.

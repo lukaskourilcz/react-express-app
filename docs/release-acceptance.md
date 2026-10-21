@@ -1,5 +1,7 @@
 # Release acceptance matrix
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 ## 15 October — local structuredClone own-key correction (#403)
 
 Actual QuickJS probes reproduce loss of an own __proto__ key, changed clone
@@ -5727,3 +5729,11 @@ This is a dated release checkpoint. Later exact production evidence is maintaine
 ## Public-guide startup handoff — 17 October 2026
 
 Issue #444: capture the existing public guide before createRoot replaces it, then transfer each matching native disclosure state and eligible summary focus once to the live article. Topic/locale/history identity prevents reuse on later navigation; focus/pointer tracking respects a visitor who moves elsewhere, and popstate/consumption removes listeners. Cold guide startup now skips the App’s delayed main-focus timer; leaving the initial route restores normal navigation focus. No persisted disclosure store or controlled details toggling is introduced. The first regression run correctly exposed the separate 230ms focus move; its six failures/traces are retained and excluded from acceptance. The repaired final production-shaped build passes all16 browser cases: keyboard/pointer state/focus in light/dark, moved focus, navigation away/back, profile preferences, optional scrollbar-chunk failure, existing public accessibility/head and JavaScript-disabled behavior. Profile also reflows across five widths in both themes. Initial transfer is242854/243000gzip bytes; the budget is unchanged, with cosmetic scrollbar feedback loaded asynchronously and failure handled. Root build/client types pass; API/script types, launch and both production dependency audits pass. CI now runs the new regressions. Physical devices, exact checked PR and production release remain separate.
+
+## OwnDashboard marketing source export, merged — 21 October 2026
+
+Issue #364: the authenticated, read-only `GET /api/quiz/questions?resource=marketing-source` operation on the existing quiz handler (the 13 October entry above describes it). Before the merge, main's later work was merged into the branch: conflicts in `package.json`, `NEEDED.md`, `docs/product-architecture.md` and this file kept both sides. On that merge commit, Node 24.22.0, these passed locally: API and script types, `test:performance`, `test:launch` (with the marketing producer and HTTP tests), `check:unused`, `check:security`, the production-shaped build, `check:public`, `check:bundle` (242,863 against 243,000 gzip bytes), both production audits (0 vulnerabilities), twelve handlers and `git diff --check`.
+
+PR #365 is merged at 1bf6cd56b06f2bb7e8dfbbb14d57ab7028bff368. Frozen head 58133cf1 passed required run 39618238380: verify 41m16s, SQL 36s. READY production dpl_8FBFfVNS5cpx2ZixJ8Q96ubEnRGU matches the merge SHA. Read-only guest checks against devshark.app after the deploy: `/`, `/quiz` and `/learn` answer 200; `/api/health` answers 200 with database, service role and rate limiter OK; the export answers 503 `marketing_not_configured` with and without a bearer, because `DEVSHARK_MARKETING_EXPORT_SECRET` is not set.
+
+The export is not switched on. Its server secret, the n8n credential and an authenticated production check stay with the owner (NEEDED.md, "Configure OwnDashboard marketing source integration after PR review"). No export, publication, account or database write happened in production. The verify job took 41 minutes because the `package.json` change triggered the QuickJS rebuild; the job's limit is 45.

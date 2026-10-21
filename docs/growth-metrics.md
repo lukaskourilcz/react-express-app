@@ -71,7 +71,7 @@ retention. The client sends `quiz_started`, `quiz_submitted`,
 `daily_result`, `referral`, `challenge_result`, `typing_result`,
 `daily_question`) and, from the #239 surfaces, `source` and `method`
 (`share`, `copy`, `download`), never the link, a code or a score. Add Learn lesson complete and topic-page CTA only if their
-payloads contain product, subject/category, locale, and coarse result counts—not
+payloads contain product, subject/category, and coarse result counts—not
 identity or question content.
 
 Never send email, display name, access/session/answer tokens, room codes, free

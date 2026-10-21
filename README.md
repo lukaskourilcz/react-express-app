@@ -8,7 +8,7 @@ Production: [devShark](https://devshark.app) deploys from `main` to Vercel, with
 
 StudyShark, the general-subject product that shared this code, moved to its own repository (`lukaskourilcz/studyshark`) on 2026-09-24. This repository builds devShark only; a build configured for any other product fails.
 
-The web experience uses the Deep End shark identity across the landing page, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts. The Czech dictionaries and translations are retained in the repository but are not offered in the UI; `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` is the single switch that brings them back.
+The web experience uses the Deep End shark identity across the landing page, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English only, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts.
 
 Current content: **2,447 authored questions**, of which 1,974 are served (the content audit retired 152 and quarantined 2, and the 319 in the three retired sections stay only so old attempts resolve), and **770 coding tasks**, 725 of them issued — 316 JavaScript, 156 TypeScript, 183 React and 70 Algorithms; 459 of them Easy, 171 Medium and 95 Hard. The 45 system design tasks are hidden until they are reviewed again. The counts come from `shared/coding-index.ts` and include every stage of the evolving projects and every level of the short paths.
 
@@ -28,7 +28,7 @@ Current content: **2,447 authored questions**, of which 1,974 are served (the co
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, and permanent account deletion.
 - Premium billing through Stripe Checkout, the Customer Portal and a public two-step cancellation page; merchandise printed and shipped by Spreadshop (sprd.net AG); and invite links that pay both friends coins once the invited one passes a first Learn level.
 - Sentry monitoring and PostHog analytics. Every optional integration is gated and disabled by default. devShark ships no AI feature.
-- A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality and parity checks, report triage, auth logs, feature and coin settings, and the merchandise quotes, monthly caps and fulfilment queue.
+- A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality checks, report triage, auth logs, feature and coin settings, and the merchandise quotes, monthly caps and fulfilment queue.
 
 Correct answers are not sent with unanswered questions. Quiz and learning sessions use authenticated AES-256-GCM envelopes, submissions are claimed once in Postgres, result receipts are idempotent, and competitive/progression mutations are performed through service-only APIs and atomic database functions.
 
@@ -63,7 +63,7 @@ React/Vite SPA
                  └─ atomic scoring/progression/leaderboard RPCs
 ```
 
-Czech translations are loaded only when requested. Static questions are merged with cached `/dev` overrides. The product is always devShark and the subject always `webdev`; `VITE_PRODUCT`/`VITE_LOCK_SUBJECT` may name them, and any other value fails the build.
+Static questions are merged with cached `/dev` overrides. The product is always devShark and the subject always `webdev`; `VITE_PRODUCT`/`VITE_LOCK_SUBJECT` may name them, and any other value fails the build.
 
 ## Repository map
 

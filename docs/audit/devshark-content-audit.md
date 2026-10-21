@@ -1,5 +1,7 @@
 # devShark content audit — the question bank
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 ## Current individual source checkpoint — B139 and Q013, 17 October 2026 UTC
 
 All 725 issued coding tasks, 263 native records and 2,168 question records have current individual model reviews. Q001–Q013 revise all 64 eligible answer-length candidates, ending with commits `292b11fd` and `dff171a3`. The final batch contains the four remaining questions rather than adding an artificial fifth identity. The 1,820-item effective-bank copy sweep passes with zero artifacts; the original diagnostic now flags zero eligible/effective items. Its 41 already-withheld candidates remain withheld. This is a finite reading aid, not proof that all answer cues have been eliminated.
