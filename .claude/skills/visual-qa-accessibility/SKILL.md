@@ -10,7 +10,7 @@ Read `docs/design/visual-qa-checklist.md` and inspect real rendered behavior whe
 ## Matrix
 
 - Widths: 360, 390, 430, 768, 1024, 1280, and 1440.
-- Presentation: light, dark, reduced motion, zoom/reflow. English is the only shipped language (`ENABLED_LANGS`).
+- Presentation: light, dark, reduced motion, zoom/reflow. devShark ships English only, with no second language, translation overlay or language switch, so the matrix has no language axis.
 - States: loading, empty, error, offline/reconnect, auth/permission, disabled, success, destructive, stale/expired, long content.
 
 ## Checks

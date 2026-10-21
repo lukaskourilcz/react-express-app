@@ -13,7 +13,7 @@ Use `shark-product-context` and `deep-end-design-system` with this workflow.
 4. State the user goal, primary action, product/auth/subject scope, and real data authority.
 5. Implement the complete flow, including relevant loading, delayed, empty, partial error, offline/reconnect, signed-out/permission, disabled, success, destructive, expired/stale, long-content, and narrow states.
 6. Preserve stable quiz answer positions, keyboard behavior, route focus, visible focus, semantic headings/landmarks, accessible names/errors/status, touch targets, reduced motion, and non-color cues.
-7. Add natural English copy to `translations.ts` and write no Czech. Do not invent users, counts, testimonials, legal conclusions, partners, or product claims.
+7. Add natural copy to `translations.ts`. devShark ships English only: write all copy in English and add no second language, translation overlay or language switch. Do not invent users, counts, testimonials, legal conclusions, partners, or product claims.
 8. Review the diff for duplicate registries/components, hard-coded URLs/counts/accent colors, public DevQuiz copy, nested-card noise, and answer-integrity regressions.
 9. Run focused checks, then `npm run typecheck:api`, `npm run test:launch`, `npm run build`, and `git diff --check`. Use the real browser/responsive harness for visual changes.
 

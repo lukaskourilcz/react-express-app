@@ -1,6 +1,6 @@
 ---
 name: shark-product-context
-description: Protect devShark product architecture, business rules, terminology, scope, localization, and integrity. Use for any feature, route, API, copy, settings, or data-flow change.
+description: Protect devShark product architecture, business rules, terminology, scope, English-only copy, and integrity. Use for any feature, route, API, copy, settings, or data-flow change.
 ---
 
 # Shark Product Context
@@ -20,7 +20,7 @@ Read `docs/product-architecture.md`, `client/product-catalog.ts`, `shared/subjec
 - The server owns product scope, subject scope, answers, grading, scores, XP, admin roles, and one-time claims. Never expose correct answers before submission.
 - Keep exactly 12 physical TypeScript handlers under `api/`; extend typed multiplexing rather than adding a handler.
 - Keep Supabase service-role isolation, RLS, request IDs, schema/method validation, rate limiting, and safe errors.
-- The app ships English only (`ENABLED_LANGS`). Write no Czech copy and add no Czech keys; the existing Czech files are retained work, neither extended nor deleted. Public `DevQuiz` copy is stale, but storage keys (the `studyshark:*` keys among them), migrations, package/repository names, fixtures, and history may remain for compatibility.
+- devShark ships English only: write all copy in English and add no second language, translation overlay or language switch. Public `DevQuiz` copy is stale, but storage keys (the `studyshark:*` keys among them), migrations, package/repository names, fixtures, and history may remain for compatibility.
 - Native/Expo work is out of scope.
 
 ## Reuse order

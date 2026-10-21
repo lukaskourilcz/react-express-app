@@ -22,7 +22,7 @@ Build on Astryx and the existing Shark primitives. Read `DESIGN_RULES.md`, `docs
 1. Trace the route and inspect sibling components before creating anything.
 2. Identify the user goal, primary action, states, breakpoint changes, and accessibility behavior.
 3. Extend an existing primitive or token where the meaning is shared.
-4. Add every user-visible string to `client/src/i18n/translations.ts`. The app ships English only; leave the retained Czech dictionary alone.
+4. Add every user-visible string to `client/src/i18n/translations.ts`. devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 5. Verify keyboard/focus, non-color status, 44px targets, reduced motion, reflow, fixed-shell clearance, and dark/light contrast.
 6. Run relevant checks from `package.json`, including `npm run test:launch`, `npm run build`, and `git diff --check`.
 

@@ -37,7 +37,7 @@ Use this skill with `shark-product-context` and `deep-end-design-system`. Read `
 - Use AVIF or WebP for stills; use PNG only when transparency or tooling requires it. Include intrinsic dimensions and responsive sources.
 - Add real typography, code, equations, labels, product UI, and screenshots deterministically. Never ask a generator to reproduce them.
 - Keep expressive media on public discovery and campaign surfaces. Do not load it in Quiz, Learn, Play, Profile, or `/dev` bundles.
-- Give decorative media empty alt text. Give informative media concise localized alt text. Motion requires a poster and must freeze under reduced motion.
+- Give decorative media empty alt text. Give informative media concise English alt text; devShark ships English only and adds no second language. Motion requires a poster and must freeze under reduced motion.
 - Preserve product-aware metadata and environment URL registries; do not hard-code deployment URLs.
 
 ## Validate and record
