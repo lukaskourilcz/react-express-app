@@ -12,15 +12,18 @@
 //   npm run ci:parity -- --bail       stop at the first failure, as CI does
 //   npm run ci:parity -- --install    run `npm ci` even when node_modules exist
 //
-// Before running anything the script compares its plan with the `verify` job:
-// every `npm` and `npx playwright` command there, in order, must be a step
-// here. When the workflow changes, the script stops with the difference
-// instead of reporting a stale sequence as green.
+// Before running anything the script compares its plan with the `verify` job.
+// Every `npm` and `npx playwright` command there, in order and with its env
+// prefix, must be a step here, and every other line of the job (the shell
+// glue, env, conditions, setup) must match KNOWN_GLUE. When the workflow
+// changes, the script stops with the difference instead of reporting a stale
+// sequence as green.
 //
 // The steps run on the working tree. CI checks out only committed files, so a
-// dirty tree is reported in the summary.
+// dirty tree is reported in the summary. A run that stops early still writes
+// its summary, marked incomplete.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, createWriteStream } from 'node:fs';
+import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = process.cwd();
@@ -36,47 +39,77 @@ const SQL = flag('--sql');
 const BAIL = flag('--bail');
 const LIST = flag('--list');
 const FORCE_INSTALL = flag('--install');
-const ONLY = option('--only')?.split(',').map((one) => one.trim()).filter(Boolean);
+const ONLY_RAW = option('--only');
+const ONLY = args.includes('--only') ? (ONLY_RAW ?? '').split(',').map((one) => one.trim()).filter(Boolean) : undefined;
 const LOG_DIR = path.resolve(option('--log-dir') ?? 'artifacts/ci-parity');
 
-if (!existsSync(WORKFLOW) || !existsSync('package.json')) {
-  console.error('Run ci:parity from the repository root.');
+function usage(message) {
+  console.error(message);
   process.exit(2);
 }
+
+if (!existsSync(WORKFLOW) || !existsSync('package.json')) usage('Run ci:parity from the repository root.');
 
 // ---- What the workflow says ------------------------------------------------
 
 const workflow = readFileSync(WORKFLOW, 'utf8');
-const verifyJob = workflow.slice(workflow.indexOf('\n  verify:'));
-if (!verifyJob.includes('runs-on')) {
-  console.error(`${WORKFLOW} has no verify job; update scripts/ci-parity.mjs.`);
-  process.exit(2);
-}
+const verifyStart = workflow.indexOf('\n  verify:');
+if (verifyStart < 0) usage(`${WORKFLOW} has no verify job; update scripts/ci-parity.mjs.`);
+const verifyJob = workflow.slice(verifyStart + 1);
 const TOPIC = verifyJob.match(/^\s*TOPIC=(\S+)/m)?.[1] ?? '';
 const QUICKJS_INPUTS = verifyJob.match(/git diff --quiet "\$QUICKJS_BASE_SHA" HEAD -- ([^;\n]+);/)?.[1].trim().split(/\s+/) ?? [];
+const COMMAND = /^(?:[A-Z_]+=\S+\s+)*(?:npm |npx playwright )/;
 
-/** The `npm …` and `npx playwright …` commands of the verify job, in order. */
-function workflowCommands() {
+/** Splits the verify job into its npm/npx commands and every other line. */
+function readVerifyJob() {
   const commands = [];
-  for (const rawLine of verifyJob.split('\n')) {
-    const line = rawLine.replace(/^\s*-?\s*(run:)?\s*/, '');
-    if (line.startsWith('#')) continue;
-    for (const part of line.split(/\s*&&\s*/)) {
-      const command = part.match(/^(?:[A-Z_]+=\S+\s+)*(npm (?:ci|audit|run)\b.*|npx playwright\b.*)$/)?.[1];
-      if (!command) continue;
-      commands.push(command.replace(/\s*>.*$/, '').replace(/\$TOPIC/g, TOPIC).trim());
+  const glue = [];
+  for (const raw of verifyJob.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const body = line.replace(/^-\s*/, '').replace(/^run:\s*\|?\s*/, '');
+    const parts = body.split(/\s*&&\s*/);
+    if (body && parts.every((part) => COMMAND.test(part))) {
+      for (const part of parts) commands.push(part.replace(/\s*>.*$/, '').replace(/\$TOPIC/g, TOPIC).trim());
+    } else {
+      glue.push(line);
     }
   }
-  return commands;
+  return { commands, glue };
 }
+
+// Every line of the verify job that is not an npm/npx command, in order. The
+// plan below reproduces what these lines do; change both together.
+const KNOWN_GLUE = [
+  'verify:', 'runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:',
+  '- uses: actions/checkout@v4', '- uses: actions/setup-node@v4', 'with:', 'node-version: 24', 'cache: npm',
+  'cache-dependency-path: |', 'package-lock.json', 'client/package-lock.json',
+  '- name: Rebuild modified QuickJS runtime from pinned sources', 'env:',
+  'QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}', 'run: |',
+  'if [[ -n "$QUICKJS_BASE_SHA" && "$QUICKJS_BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then',
+  '[[ "$QUICKJS_BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1',
+  'git fetch --no-tags --depth=1 origin "$QUICKJS_BASE_SHA"',
+  'if git diff --quiet "$QUICKJS_BASE_SHA" HEAD -- lib/coding/vendor lib/coding/quickjs-variant.ts scripts/rebuild-quickjs-sort.mjs package.json package-lock.json client/package-lock.json; then',
+  'echo "QuickJS inputs unchanged; required runtime integrity tests still run below."', 'exit 0', 'fi', 'fi',
+  '- run: |',
+  'VITE_SUPABASE_URL=$(node -p "require(\'./docs/quality/bundle-budget.json\').measuredBuild.env.VITE_SUPABASE_URL")',
+  'VITE_SUPABASE_ANON_KEY=$(node -p "require(\'./docs/quality/bundle-budget.json\').measuredBuild.env.VITE_SUPABASE_ANON_KEY")',
+  'export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY', 'id: build', 'env:', 'VITE_PRODUCT: devshark', 'VITE_LOCK_SUBJECT: webdev',
+  '- name: Browser checks', 'run: |', 'node scripts/wait-for-preview.mjs',
+  'export CHROME_BIN=$(node -e "console.log(require(\'@playwright/test\').chromium.executablePath())")',
+  'TOPIC=javascript-closures',
+  "- if: ${{ !cancelled() && steps.build.conclusion == 'success' }}", 'name: Storybook and performance', 'run: |',
+  'TEST_BASE_URL=http://localhost:6006 node scripts/wait-for-preview.mjs',
+  '- uses: actions/upload-artifact@v4', 'if: always()', 'with:', 'name: quality', 'path: |',
+  'artifacts/', 'playwright-report/', 'test-results/', 'client/storybook-static/', 'retention-days: 14',
+];
 
 const env = { ...process.env, CI: 'true' };
 let budget;
 try {
   budget = JSON.parse(readFileSync('docs/quality/bundle-budget.json', 'utf8')).measuredBuild.env;
 } catch (error) {
-  console.error(`docs/quality/bundle-budget.json has no measuredBuild.env: ${error.message}`);
-  process.exit(2);
+  usage(`docs/quality/bundle-budget.json has no measuredBuild.env: ${error.message}`);
 }
 // The build step's env in quality.yml: the product lock plus the placeholder
 // Supabase project that check:bundle measures with.
@@ -88,9 +121,11 @@ const BUILD_ENV = {
 };
 
 // ---- The plan ----------------------------------------------------------------
-// `ci` lists the workflow commands a step stands for; the drift check joins
-// them in plan order and compares them with workflowCommands().
+// `ci` lists the workflow commands a step stands for, env prefix included; the
+// drift check joins them in plan order and compares them with the workflow.
 // `tier`: 'fast' runs in --fast and the full run, 'full' only in the full run.
+// `chrome`: CI exports CHROME_BIN only from check:responsive on, so only these
+// steps get it; the browser specs launch Playwright's own Chromium.
 
 const npmRun = (script, extra = '') => `npm run ${script}${extra ? ` ${extra}` : ''}`;
 const step = (id, command, more = {}) => ({ id, command, ci: [command], tier: 'fast', ...more });
@@ -124,87 +159,143 @@ const PLAN = [
   step('preview', 'npm run preview --prefix client -- --host 0.0.0.0 --port 4173',
     { kind: 'server', url: 'http://localhost:4173', needs: ['build'] }),
   ...BROWSER_SPECS.map((specs) => step(`browser:${specs.replace(/tests\/browser\/|\.spec\.ts/g, '').replace(/ /g, '+')}`,
-    npmRun('test:browser', `-- ${specs}`), { tier: 'full', needs: ['preview', 'chromium'], browser: true })),
-  step('check:responsive', npmRun('check:responsive', RESPONSIVE_LIGHT), { needs: ['preview', 'chromium'], browser: true }),
-  step('check:responsive:dark', npmRun('check:responsive', RESPONSIVE_DARK),
-    { needs: ['preview', 'chromium'], browser: true, env: { RESPONSIVE_THEME: 'dark' } }),
-  step('test:harness', npmRun('test:harness'), { tier: 'full', needs: ['build', 'chromium'], browser: true }),
-  step('audit:performance', npmRun('audit:performance'), { tier: 'full', needs: ['preview'] }),
+    npmRun('test:browser', `-- ${specs}`), { tier: 'full', needs: ['preview', 'chromium'] })),
+  step('check:responsive', npmRun('check:responsive', RESPONSIVE_LIGHT), { needs: ['preview', 'chromium'], chrome: true }),
+  step('check:responsive:dark', npmRun('check:responsive', RESPONSIVE_DARK), {
+    ci: [`RESPONSIVE_THEME=dark ${npmRun('check:responsive', RESPONSIVE_DARK)}`],
+    needs: ['preview', 'chromium'], chrome: true, env: { RESPONSIVE_THEME: 'dark' },
+  }),
+  step('test:harness', npmRun('test:harness'), { tier: 'full', needs: ['build', 'chromium'], chrome: true }),
+  step('audit:performance', npmRun('audit:performance'), { tier: 'full', needs: ['preview', 'chromium'], chrome: true }),
   step('build:storybook', npmRun('build:storybook'), { tier: 'full', needs: ['build'] }),
   step('storybook', npmRun('storybook', '--prefix client -- --ci'),
     { tier: 'full', kind: 'server', url: 'http://localhost:6006', needs: ['build:storybook'] }),
-  step('browser:storybook', npmRun('test:browser', '-- tests/browser/storybook.spec.ts'),
-    { tier: 'full', needs: ['storybook', 'chromium'], browser: true, env: { STORYBOOK_URL: 'http://localhost:6006' } }),
+  step('browser:storybook', npmRun('test:browser', '-- tests/browser/storybook.spec.ts'), {
+    ci: [`STORYBOOK_URL=http://localhost:6006 ${npmRun('test:browser', '-- tests/browser/storybook.spec.ts')}`],
+    tier: 'full', needs: ['storybook', 'chromium'], chrome: true, env: { STORYBOOK_URL: 'http://localhost:6006' },
+  }),
 ];
 const SQL_STEP = step('test:sql', npmRun('test:sql'), { ci: [], kind: 'sql' });
 
+function firstDifference(expected, actual) {
+  const at = expected.findIndex((line, index) => line !== actual[index]);
+  if (at === -1 && expected.length === actual.length) return null;
+  const index = at === -1 ? Math.min(expected.length, actual.length) : at;
+  return { index, expected: expected[index] ?? '(nothing)', actual: actual[index] ?? '(nothing)' };
+}
+
 function checkDrift() {
-  const expected = workflowCommands();
-  const planned = PLAN.flatMap((one) => one.ci);
-  const firstDifference = expected.findIndex((command, index) => command !== planned[index]);
-  if (firstDifference === -1 && expected.length === planned.length) return;
-  const at = firstDifference === -1 ? Math.min(expected.length, planned.length) : firstDifference;
-  console.error(`scripts/ci-parity.mjs no longer matches the verify job in ${WORKFLOW}.`);
-  console.error(`First difference at command ${at + 1}:`);
-  console.error(`  workflow: ${expected[at] ?? '(nothing)'}`);
-  console.error(`  plan:     ${planned[at] ?? '(nothing)'}`);
-  console.error('Update PLAN in scripts/ci-parity.mjs and the sequence in .claude/skills/ci-parity-and-pr/SKILL.md.');
+  const { commands, glue } = readVerifyJob();
+  const problems = [];
+  const commandDiff = firstDifference(commands, PLAN.flatMap((one) => one.ci));
+  if (commandDiff) problems.push(`command ${commandDiff.index + 1}:\n  workflow: ${commandDiff.expected}\n  plan:     ${commandDiff.actual}`);
+  const glueDiff = firstDifference(glue, KNOWN_GLUE);
+  if (glueDiff) problems.push(`non-command line ${glueDiff.index + 1}:\n  workflow:   ${glueDiff.expected}\n  KNOWN_GLUE: ${glueDiff.actual}`);
+  if (!QUICKJS_INPUTS.length || !TOPIC) problems.push('the QuickJS inputs or the responsive TOPIC could not be read');
+  if (!problems.length) return;
+  console.error(`scripts/ci-parity.mjs no longer matches the verify job in ${WORKFLOW}. First difference at ${problems.join('\nand at ')}`);
+  console.error('Update PLAN or KNOWN_GLUE in scripts/ci-parity.mjs and the sequence in .claude/skills/ci-parity-and-pr/SKILL.md.');
   process.exit(2);
 }
 checkDrift();
-if (!QUICKJS_INPUTS.length || !TOPIC) {
-  console.error(`Could not read the QuickJS inputs or the responsive TOPIC from ${WORKFLOW}; update scripts/ci-parity.mjs.`);
-  process.exit(2);
+
+// ---- Arguments that need the plan ------------------------------------------
+
+const selected = [...PLAN, ...(SQL ? [SQL_STEP] : [])];
+if (ONLY) {
+  if (!ONLY.length || ONLY_RAW?.startsWith('--')) usage('--only needs a comma-separated list of step ids (see --list).');
+  const unknown = ONLY.filter((id) => !selected.some((one) => one.id === id));
+  if (unknown.length) usage(`Unknown step id${unknown.length > 1 ? 's' : ''} for --only: ${unknown.join(', ')} (see --list${SQL ? '' : '; test:sql needs --sql'}).`);
+}
+const MODE = ONLY ? 'partial' : FAST ? 'fast' : 'full';
+const inMode = (one) => (ONLY ? ONLY.includes(one.id) : !(FAST && one.tier === 'full'));
+
+if (LIST) {
+  for (const one of selected) console.log(`${one.id.padEnd(40)} ${(inMode(one) ? 'run' : 'skip').padEnd(5)} ${one.command}`);
+  process.exit(0);
 }
 
 // ---- Running -----------------------------------------------------------------
 
-const selected = [...PLAN, ...(SQL ? [SQL_STEP] : [])];
-if (LIST) {
-  for (const one of selected) {
-    const mode = ONLY ? (ONLY.includes(one.id) ? 'run' : 'skip') : FAST && one.tier === 'full' ? 'full only' : 'run';
-    console.log(`${one.id.padEnd(40)} ${mode.padEnd(10)} ${one.command}`);
-  }
-  process.exit(0);
-}
-
-mkdirSync(LOG_DIR, { recursive: true });
-const results = new Map();
-const servers = [];
-const started = Date.now();
 const git = (...gitArgs) => spawnSync('git', gitArgs, { encoding: 'utf8' });
 const head = git('rev-parse', 'HEAD').stdout.trim();
 const dirty = git('status', '--porcelain').stdout.trim() !== '';
 const nodeMajor = Number(process.versions.node.split('.')[0]);
+const startedAt = new Date().toISOString();
+const started = Date.now();
+const results = new Map();
+const servers = [];
+let chromePath = '';
+let finished = false;
 const logFile = (one) => path.join(LOG_DIR, `${one.id.replace(/[^\w.-]+/g, '_')}.log`);
+const summaryFile = path.join(LOG_DIR, 'summary.json');
 
-function record(one, result, detail, seconds = 0) {
-  results.set(one.id, { id: one.id, result, detail, seconds, log: result === 'pass' || result === 'fail' ? path.relative(ROOT, logFile(one)) : '' });
-  const mark = { pass: 'PASS', fail: 'FAIL', skipped: 'SKIP', 'not-run': 'NOT RUN' }[result];
-  console.log(`${mark.padEnd(8)} ${one.id}${seconds ? ` (${seconds}s)` : ''}${detail ? `: ${detail}` : ''}`);
+async function answers(url) {
+  try { return (await fetch(url, { signal: AbortSignal.timeout(1000) })).ok; } catch { return false; }
 }
-
-function runToLog(one, command, extraEnv = {}) {
-  return new Promise((resolve) => {
-    const out = createWriteStream(logFile(one));
-    out.write(`$ ${command}\n`);
-    const child = spawn(command, { shell: true, env: { ...env, ...extraEnv }, stdio: ['ignore', 'pipe', 'pipe'] });
-    child.stdout.pipe(out, { end: false });
-    child.stderr.pipe(out, { end: false });
-    child.on('close', (code) => { out.end(`\nexit ${code}\n`); resolve(code); });
-  });
-}
-
 async function waitFor(url, attempts = 120) {
   for (let attempt = 0; attempt < attempts; attempt++) {
-    try { if ((await fetch(url, { signal: AbortSignal.timeout(1000) })).ok) return true; } catch { /* not up yet */ }
+    if (await answers(url)) return true;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return false;
 }
 
-function chromiumPath() {
-  if (env.CHROME_BIN) return env.CHROME_BIN;
+// A preview or Storybook left over from another run would serve another build.
+for (const server of selected.filter((one) => one.kind === 'server' && inMode(one))) {
+  if (await answers(server.url)) usage(`${server.url} already answers. Stop that server (or the other ci:parity run) first.`);
+}
+
+mkdirSync(LOG_DIR, { recursive: true });
+rmSync(summaryFile, { force: true });
+
+function writeSummary(stopped) {
+  const rows = [...results.values()];
+  const count = (result) => rows.filter((row) => row.result === result).length;
+  const summary = {
+    mode: MODE,
+    only: ONLY ?? null,
+    complete: finished && !stopped,
+    stopped: stopped ?? null,
+    head,
+    dirty,
+    node: process.versions.node,
+    startedAt,
+    minutes: Math.round((Date.now() - started) / 600) / 100,
+    passed: count('pass'),
+    failed: count('fail'),
+    skipped: count('skipped'),
+    notRun: count('not-run'),
+    steps: rows,
+  };
+  writeFileSync(summaryFile, `${JSON.stringify(summary, null, 2)}\n`);
+  return summary;
+}
+
+function record(one, result, detail, seconds = 0) {
+  const logged = result === 'pass' || result === 'fail';
+  results.set(one.id, { id: one.id, result, detail, seconds, log: logged ? path.relative(ROOT, logFile(one)) : '' });
+  const mark = { pass: 'PASS', fail: 'FAIL', skipped: 'SKIP', 'not-run': 'NOT RUN' }[result];
+  console.log(`${mark.padEnd(8)} ${one.id}${seconds ? ` (${seconds}s)` : ''}${detail ? `: ${detail}` : ''}`);
+}
+
+function stepEnv(one) {
+  return { ...env, ...(one.chrome && chromePath ? { CHROME_BIN: chromePath } : {}), ...one.env };
+}
+
+function runToLog(one) {
+  return new Promise((resolve) => {
+    const out = createWriteStream(logFile(one));
+    out.write(`$ ${one.command}\n`);
+    const child = spawn(one.command, { shell: true, env: stepEnv(one), stdio: ['ignore', 'pipe', 'pipe'] });
+    child.stdout.pipe(out, { end: false });
+    child.stderr.pipe(out, { end: false });
+    child.on('error', (error) => { out.end(`\n${error.message}\n`); resolve(1); });
+    child.on('close', (code) => { out.end(`\nexit ${code}\n`); resolve(code ?? 1); });
+  });
+}
+
+function playwrightChromium() {
   try {
     return execFileSync(process.execPath, ['-e', "console.log(require('@playwright/test').chromium.executablePath())"], { encoding: 'utf8' }).trim();
   } catch {
@@ -212,10 +303,22 @@ function chromiumPath() {
   }
 }
 
+/** Why a step cannot run here, or null. */
+function precondition(one) {
+  if (one.kind === 'sql' && !env.DATABASE_URL) {
+    return 'DATABASE_URL is not set; scripts/test-sql.mjs needs an empty Postgres';
+  }
+  if (one.kind === 'quickjs' && !env.SHARK_EMSDK_DIR) {
+    const python = env.SHARK_PYTHON || 'python3';
+    const check = spawnSync(python, ['-c', 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)']);
+    if (check.status !== 0) return `the rebuild needs Python 3.10+ (set SHARK_PYTHON) or SHARK_EMSDK_DIR; ${python} is older or missing`;
+  }
+  return null;
+}
+
 async function runStep(one) {
-  if (ONLY && !ONLY.includes(one.id)) return;
-  if (FAST && one.tier === 'full') return record(one, 'skipped', 'not part of --fast');
-  const blocked = (one.needs ?? []).filter((need) => !ONLY?.length || ONLY.includes(need) ? ['fail', 'not-run'].includes(results.get(need)?.result) : false);
+  if (!inMode(one)) return record(one, 'skipped', ONLY ? 'not in --only' : 'not part of --fast');
+  const blocked = (one.needs ?? []).filter((need) => ['fail', 'not-run'].includes(results.get(need)?.result));
   if (blocked.length) return record(one, 'not-run', `needs ${blocked.join(', ')}`);
 
   if (one.kind === 'install') {
@@ -224,35 +327,35 @@ async function runStep(one) {
   }
   if (one.kind === 'quickjs') {
     const base = git('merge-base', 'HEAD', 'origin/main').stdout.trim();
-    if (base && git('diff', '--quiet', base, '--', ...QUICKJS_INPUTS).status === 0) {
+    if (!base) return record(one, 'not-run', 'no origin/main to compare the QuickJS inputs with; run git fetch origin');
+    if (git('diff', '--quiet', base, '--', ...QUICKJS_INPUTS).status === 0) {
       return record(one, 'skipped', `QuickJS inputs unchanged against origin/main ${base.slice(0, 8)}, as CI skips it`);
     }
   }
   if (one.kind === 'chromium') {
-    const chrome = chromiumPath();
-    if (chrome && existsSync(chrome)) {
-      env.CHROME_BIN = chrome;
-      return record(one, 'skipped', `using ${chrome}`);
+    // An explicit CHROME_BIN wins; the Claude Code cloud sandbox ships its
+    // Chromium at /opt/pw-browsers/chromium and cannot download browsers.
+    const given = [env.CHROME_BIN, '/opt/pw-browsers/chromium'].find((candidate) => candidate && existsSync(candidate));
+    if (given) {
+      chromePath = given;
+      return record(one, 'skipped', `using ${given}`);
     }
   }
-  if (one.kind === 'sql' && !env.DATABASE_URL) {
-    return record(one, 'not-run', 'DATABASE_URL is not set; see scripts/test-sql.mjs for the empty Postgres it needs');
-  }
+  const missing = precondition(one);
+  if (missing) return record(one, 'not-run', missing);
   if (one.kind === 'server') return startServer(one);
 
   const begin = Date.now();
-  const code = await runToLog(one, one.command, one.env);
+  const code = await runToLog(one);
   const seconds = Math.round((Date.now() - begin) / 1000);
-  if (one.kind === 'chromium' && code === 0) env.CHROME_BIN = chromiumPath();
+  if (one.kind === 'chromium' && code === 0) chromePath = playwrightChromium();
   record(one, code === 0 ? 'pass' : 'fail', code === 0 ? '' : `exit ${code}`, seconds);
 }
 
 async function startServer(one) {
-  if (await waitFor(one.url, 1)) {
-    return record(one, 'fail', `${one.url} already answers; stop that server so the checks see this build`);
-  }
-  const out = createWriteStream(logFile(one));
-  const child = spawn(one.command, { shell: true, detached: true, env, stdio: ['ignore', out, out] });
+  const fd = openSync(logFile(one), 'w');
+  const child = spawn(one.command, { shell: true, detached: true, env: stepEnv(one), stdio: ['ignore', fd, fd] });
+  closeSync(fd);
   servers.push(child);
   const begin = Date.now();
   const up = await waitFor(one.url);
@@ -260,41 +363,42 @@ async function startServer(one) {
 }
 
 function stopServers() {
-  for (const child of servers) {
+  for (const child of servers.splice(0)) {
     try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already stopped */ }
   }
 }
-process.on('SIGINT', () => { stopServers(); process.exit(130); });
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(signal, () => {
+    stopServers();
+    writeSummary(signal);
+    process.exit(128 + ({ SIGINT: 2, SIGTERM: 15, SIGHUP: 1 })[signal]);
+  });
+}
+process.on('exit', stopServers);
 
 if (nodeMajor !== 24) console.log(`Node ${process.versions.node}: CI runs Node 24, so results may differ.`);
 if (dirty) console.log('The working tree has uncommitted changes; CI sees only what you commit.');
-console.log(`ci:parity ${FAST ? '--fast' : 'full'} at ${head.slice(0, 8)}, logs in ${path.relative(ROOT, LOG_DIR)}/`);
+console.log(`ci:parity ${MODE}${ONLY ? ` (${ONLY.join(', ')})` : ''} at ${head.slice(0, 8)}, logs in ${path.relative(ROOT, LOG_DIR)}/`);
 
+let crash = null;
 try {
   for (const one of selected) {
     await runStep(one);
     if (BAIL && results.get(one.id)?.result === 'fail') break;
   }
+  finished = true;
+} catch (error) {
+  crash = error;
 } finally {
   stopServers();
 }
 
-const rows = [...results.values()];
-const count = (result) => rows.filter((row) => row.result === result).length;
-const summary = {
-  mode: FAST ? 'fast' : 'full',
-  head,
-  dirty,
-  node: process.versions.node,
-  minutes: Math.round((Date.now() - started) / 600) / 100,
-  passed: count('pass'),
-  failed: count('fail'),
-  skipped: count('skipped'),
-  notRun: count('not-run'),
-  steps: rows,
-};
-writeFileSync(path.join(LOG_DIR, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
-console.log(`\n${summary.passed} passed, ${summary.failed} failed, ${summary.skipped} skipped, ${summary.notRun} not run in ${summary.minutes} min.`);
+const summary = writeSummary(crash ? `crashed: ${crash.message}` : BAIL && !selected.every((one) => results.has(one.id)) ? 'bail' : undefined);
+console.log(`\n${summary.passed} passed, ${summary.failed} failed, ${summary.skipped} skipped, ${summary.notRun} not run in ${summary.minutes} min (${MODE}${summary.complete ? '' : ', incomplete'}).`);
 if (!SQL) console.log('The sql job did not run; pass --sql with DATABASE_URL set to include it.');
-for (const row of rows.filter((one) => one.result === 'fail')) console.log(`  failed: ${row.id}, see ${row.log}`);
-process.exit(summary.failed ? 1 : 0);
+for (const row of summary.steps.filter((one) => one.result === 'fail')) console.log(`  failed: ${row.id}, see ${row.log}`);
+if (crash) {
+  console.error(crash);
+  process.exit(1);
+}
+process.exit(summary.failed || !summary.complete ? 1 : 0);
