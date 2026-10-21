@@ -27,6 +27,7 @@ import { FDE_M07 } from './fde/m07';
 import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
+import { FDE_M11_DEPLOY } from './fde/m11-deploy';
 import { FDE_C01 } from './fde/c01';
 
 export const FDE_PATH: PathSource = {
@@ -35,12 +36,13 @@ export const FDE_PATH: PathSource = {
   version: 1,
   title: 'Forward Deployed Engineer',
   summary:
-    'Ten modules and a staged capstone on the work that sits between a customer’s messy problem and a system that survives contact with it: scoping, integration, bounded AI, evaluation, security, operations and handoff. It assumes you can already build software, and it grades the judgement rather than the syntax.',
+    'Modules and a staged capstone on the work that sits between a customer’s messy problem and a system that survives contact with it: scoping, integration, bounded AI, evaluation, security, deployment, operations and handoff. It assumes you can already build software, and it grades the judgement rather than the syntax.',
   outcomes: [
     'Turn an ambiguous customer request into a scope with a baseline, a measurable success condition and stated non-goals.',
     'Integrate a real-shaped external system: dirty records, pagination, throttling, duplicate delivery and identity boundaries.',
     'Decide where deterministic code is the right answer and where a model earns its place, then bound what the model is allowed to do.',
     'Evaluate a solution against a held-out set, separating retrieval failure from generation failure and quality from cost and latency.',
+    'Deploy into a cloud account the customer owns, and refuse a rollout the health, configuration and migration evidence has not cleared.',
     'Handle a rollout, an incident and a handoff without inventing certainty you do not have.',
   ],
   nonGoals: [
@@ -61,6 +63,7 @@ export const FDE_PATH: PathSource = {
     { id: 'tools', title: 'Tools and boundaries', summary: 'Give a model tools with checked arguments, scoped permissions, a retry budget and an approval step.' },
     { id: 'evaluation', title: 'Evaluation', summary: 'Measure a change against a baseline on held-out cases, and notice when an average is hiding the failure.' },
     { id: 'ai-security', title: 'AI security', summary: 'Treat retrieved and generated content as untrusted, and keep agency bounded when it lies to you.' },
+    { id: 'deployment', title: 'Deployment in the customer’s environment', summary: 'Ship into a cloud account you do not own: read the image and the plan, keep the workload’s identity and network narrow, and refuse a rollout the evidence has not cleared.' },
     { id: 'operations', title: 'Production delivery', summary: 'Roll out, observe, diagnose from traces and roll back without guessing.' },
     { id: 'handoff', title: 'Adoption and handoff', summary: 'Get an operator to accept the thing, and leave behind what the next person needs.' },
     { id: 'python-reading', title: 'Python comprehension', summary: 'Read typed, asynchronous Python and API-client code well enough to work with a data team.' },
@@ -76,6 +79,7 @@ export const FDE_PATH: PathSource = {
     FDE_M06,
     FDE_M07,
     FDE_M08,
+    FDE_M11_DEPLOY,
     FDE_M09,
     FDE_M10,
     FDE_C01,
