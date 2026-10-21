@@ -58,6 +58,13 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'a sub-agent that keeps every scope it asks for', replace: ['const scopes = asked.filter(scope => held.indexOf(scope) !== -1);', 'const scopes = asked;'], criterion: 'scope-enforced' },
     { label: 'a sub-agent with no call budget', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };\n", ''], criterion: 'subagent-budget' },
   ],
+  'fde-v1-m07-evaluation-metrics': [
+    { label: 'a comparison that reads only the aggregate and hides the regressed slice', replace: ['.filter(entry => entry.candidateAccuracy < entry.baselineAccuracy);', '.filter(() => false);'], criterion: 'slice-aware' },
+    { label: 'accuracy computed over answered cases only', replace: ['accuracy: rate(counts.correct, counts.total),', 'accuracy: rate(counts.correct, counts.answered),'], criterion: 'abstention-separate' },
+    { label: 'cost divided by answered cases instead of every request', replace: ['costPerRequestCents: rate(cost, overall.total),', 'costPerRequestCents: rate(cost, overall.answered),'], criterion: 'cost-latency' },
+    { label: 'latencies sorted as text before the p95 is read', replace: ['latencies.sort((a, b) => a - b);', 'latencies.sort();'], criterion: 'cost-latency' },
+    { label: 'every wrong answer called a hallucination', replace: ['failures[classify(item, entry)] += 1;', 'failures.hallucination += 1;'], criterion: 'failure-taxonomy' },
+  ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
