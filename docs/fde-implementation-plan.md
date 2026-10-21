@@ -8,7 +8,7 @@ Companions: [research and product decisions](fde-learning-path-research.md), [cu
 
 Add optional FDE specialization after the existing Fullstack/Frontend/Backend choice, with experienced-engineer placement and practical evidence. Non-goals: implementing application code in this planning change; shipping other specializations; requiring paid APIs, a new AI tutor or a remote execution platform.
 
-Keep all learning free (true when this plan was written; since 25 September 2026 devShark is freemium and both learning paths are Premium once their switches are on, per `shared/tiers.ts`), `webdev` scope, existing base-track IDs, twelve physical API handlers, EN/CS parity, existing foundations/XP, and the current Astryx/Deep End design. Do not confuse the existing `Specialization` career-label type in `leveling.ts` with the new role ID. Name the new concept `RoleSpecializationId`.
+Keep all learning free (true when this plan was written; since 25 September 2026 devShark is freemium and both learning paths are Premium once their switches are on, per `shared/tiers.ts`), `webdev` scope, existing base-track IDs, twelve physical API handlers, existing foundations/XP, and the current Astryx/Deep End design. Do not confuse the existing `Specialization` career-label type in `leveling.ts` with the new role ID. Name the new concept `RoleSpecializationId`.
 
 ## Domain and content contract
 
@@ -28,11 +28,11 @@ type EvidenceState =
   | 'self_reviewed' | 'needs_revision';
 ```
 
-Each curriculum definition has immutable ID/version, localized title and outcomes, competency IDs, ordered modules, prerequisite references, activities, required evidence kinds, rubric version, estimated effort, source URLs and review date. Activity IDs remain stable; published versions are immutable. A manifest references existing foundation topics and coding tasks without duplicating them or adding `fde` to `Track`, `CodingTrack` or `RoadmapTopic`.
+Each curriculum definition has immutable ID/version, title and outcomes, competency IDs, ordered modules, prerequisite references, activities, required evidence kinds, rubric version, estimated effort, source URLs and review date. Activity IDs remain stable; published versions are immutable. A manifest references existing foundation topics and coding tasks without duplicating them or adding `fde` to `Track`, `CodingTrack` or `RoadmapTopic`.
 
 Separate the public index (titles, prerequisites, estimates, rubric descriptions) from server task payloads and hidden assertions. Public responses may expose assessment criteria, never solutions, answer indices or hidden fixtures. Reuse `shared/coding-api.ts` DTO conventions and generated-summary pattern where appropriate.
 
-New content validator must verify unique IDs, valid topic/task/competency links, acyclic dependencies, complete translations, at least one valid route to completion, versioned rubrics and source review metadata. Authoring remains code-reviewed; `/dev` shows quality/readiness/reporting, not a second CMS.
+New content validator must verify unique IDs, valid topic/task/competency links, acyclic dependencies, at least one valid route to completion, versioned rubrics and source review metadata. Authoring remains code-reviewed; `/dev` shows quality/readiness/reporting, not a second CMS.
 
 ## Data and migration design
 
@@ -79,7 +79,7 @@ Proposed endpoints reuse `[op].ts` and `resource=` dispatch. Helper implementati
 
 | Method/path | Request | Response/auth |
 |---|---|---|
-| GET `/api/quiz/roadmap?resource=learning-path-catalog` | optional locale; fixed server-allowed scope | Public-safe published manifest, capability/version; guest allowed |
+| GET `/api/quiz/roadmap?resource=learning-path-catalog` | fixed server-allowed scope | Public-safe published manifest, capability/version; guest allowed |
 | GET/PUT `/api/user/learning-preferences` | PUT LearningPreference | Saved preference; authenticated |
 | GET/POST `/api/user/learning-path-enrollment` | POST pathId, curriculumVersion | Owned pinned enrollment; idempotent create; authenticated |
 | GET `/api/user/learning-path-progress` | enrollmentId | Modules, evidence provenance, diagnostics, nextActivity; authenticated |
@@ -92,7 +92,7 @@ Use current `jsonError` envelope. Statuses: 400 invalid data; 401 missing auth; 
 
 Server validates owner, deployment, enrollment, activity, version, purpose, allowed task kind and submitted schema. Sessions bind these fields plus expiry. Reject attempts with tampered version or user binding, client completion flags and out-of-scope activity IDs. Activity purpose is derived from the manifest, not trusted from the request.
 
-Initial limits to validate against existing limits: 64 KiB serialized draft/submission, code at the stricter existing runtime limit, 20 saved drafts per enrollment; submission throttling per account/IP with Retry-After. No arbitrary URL fetch, uploaded archive extraction, shell, network-enabled code or npm install during assessment. Reuse the 2.5-second execution deadline; measure total request against the current 10-second Vercel function configuration. Split the capstone into bounded submissions rather than one long request. Authenticated progress/drafts use private no-store caching; manifests cache by published version and locale.
+Initial limits to validate against existing limits: 64 KiB serialized draft/submission, code at the stricter existing runtime limit, 20 saved drafts per enrollment; submission throttling per account/IP with Retry-After. No arbitrary URL fetch, uploaded archive extraction, shell, network-enabled code or npm install during assessment. Reuse the 2.5-second execution deadline; measure total request against the current 10-second Vercel function configuration. Split the capstone into bounded submissions rather than one long request. Authenticated progress/drafts use private no-store caching; manifests cache by published version.
 
 ## Client and integration map
 
@@ -104,28 +104,28 @@ Initial limits to validate against existing limits: 64 KiB serialized draft/subm
 | Proposed `components/specializations/` | Lazy-loaded overview/workspace/progress; reuse existing coding workspace and UI primitives |
 | `shared/coding-catalog.ts`, `lib/coding/handlers.ts`, `grade.ts` | Existing runtime adapter with enrollment-scoped authorization for assigned tasks; ordinary coding tier locks remain unchanged |
 | `Today.tsx`, `client/src/lib/today.ts`, `queries.ts`, `queryClient.ts` | One resume item and due reviews; deduplicate shared tasks; invalidate only affected account/version queries |
-| `components/dev/DevQuality.tsx`, `DevReports.tsx` | Manifest readiness, sources/translation/grader failures, activity-linked reports; server admin authorization preserved |
-| `client/product-catalog.ts`, translations, landing primitives | Developer-wide promise and honest completion language, devShark only |
+| `components/dev/DevQuality.tsx`, `DevReports.tsx` | Manifest readiness, source/grader failures, activity-linked reports; server admin authorization preserved |
+| `client/product-catalog.ts`, product copy, landing primitives | Developer-wide promise and honest completion language, devShark only |
 
 Routes: `/roadmap/specializations/fde` and `/roadmap/specializations/fde/:moduleId`; preserve current `/learn`, `/roadmap` and `/coding`. Overview is previewable without auth; persistence/grading requires sign-in. The specialization branch of the chooser uses explicit Continue/Back actions rather than auto-closing on first base-track activation.
 
 Workspace: brief and constraints, editable task/artifact, authored hints, public rubric, then criterion feedback. Desktop may use two columns; narrow screens stack brief/editor/feedback with controls reachable without covering the editor. Preserve code overflow locally, never across the whole page. Draft autosave has saved/saving/error/conflict states. Offline allows viewing cached material and retaining a local draft, never authoritative grading; reconnect reconciles revisions without overwriting newer work.
 
-Every changed surface must cover loading, empty, error, offline, permission, disabled, success, stale/expired, long text and narrow layout. Reuse Astryx dialogs, radio cards, toast and query conventions. Validate keyboard/focus, non-color feedback, live save status, reduced motion, touch targets, zoom/reflow, light/dark, EN/CS and widths 360–1440. No new illustration-generation dependency is necessary.
+Every changed surface must cover loading, empty, error, offline, permission, disabled, success, stale/expired, long text and narrow layout. Reuse Astryx dialogs, radio cards, toast and query conventions. Validate keyboard/focus, non-color feedback, live save status, reduced motion, touch targets, zoom/reflow, light/dark and widths 360–1440. No new illustration-generation dependency is necessary.
 
 ## Vertical slice and rollout
 
 1. Shared contracts and static content validator; additive schema/RLS and hidden API.
 2. Two-step preference flow, overview and M01/M02 sample tasks. Prove sign-in, save, start, grade, resume, review and no duplicate result before authoring the full path.
 3. Competency diagnostics, bridges and remaining modules; staged capstone; Today/Profile integration.
-4. Content operations, bilingual product copy, regression and accessibility checks; pilot with the proposed experienced-engineer cohort.
+4. Content operations, product copy, regression and accessibility checks; pilot with the proposed experienced-engineer cohort.
 5. Enable the server capability only after migration and complete content readiness pass. Client reads this capability; a client-only environment flag never authorizes writes.
 
 Missing migration or disabled capability must leave all existing learning working. Rollback disables FDE and keeps additive tables/history; previous application versions ignore the new preference. Do not roll back security grants or drop learner evidence. Preserve account export/deletion even while learning capability is off.
 
 ## Verification and definition of done
 
-Contract/security coverage: wrong deployment, wrong owner, altered client score, expired/wrong-purpose attempt, key reuse with changed payload, concurrent submissions, stale drafts, oversized payloads, disabled/missing-schema behavior, private answer leakage and account deletion. Content coverage: valid alternative solutions, flawed reference variants, all critical edge fixtures, acyclic modules, task links and EN/CS parity. Compatibility: legacy track and XP snapshots unchanged, ordinary coding gates unchanged, guest/account switch isolation, switching tracks and curriculum versions, duplicate Today entries.
+Contract/security coverage: wrong deployment, wrong owner, altered client score, expired/wrong-purpose attempt, key reuse with changed payload, concurrent submissions, stale drafts, oversized payloads, disabled/missing-schema behavior, private answer leakage and account deletion. Content coverage: valid alternative solutions, flawed reference variants, all critical edge fixtures, acyclic modules and task links. Compatibility: legacy track and XP snapshots unchanged, ordinary coding gates unchanged, guest/account switch isolation, switching tracks and curriculum versions, duplicate Today entries.
 
 Run repository release commands during implementation: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, `git diff --check`; also `npm run test:coding` and `npm run test:harness` when grading/content changes. Record actual outcomes and any pre-existing failures. Verify the complete flow in `vercel dev` and a preview with representative accounts. Count physical handlers and inspect bundle/DTO output for answer leakage.
 

@@ -1,5 +1,7 @@
 # Second handoff, 25 September 2026: devShark becomes freemium
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 Read this before touching the repository. It is written for the implementation agents that
 follow, and it records what the owner decided on 25 September 2026, what the research found,
 the design that follows from both, and the order of work. Each step below is one GitHub issue

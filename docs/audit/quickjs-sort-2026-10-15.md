@@ -1,5 +1,7 @@
 # Bounded Node24 sort compatibility — 15 October 2026
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 Issue [#422](https://github.com/lukaskourilcz/react-express-app/issues/422).
 
 The installed SDK0.32 engine skips indexed writes when a sorted value retains

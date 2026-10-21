@@ -1,5 +1,7 @@
 # Handoff `176-w1-2026-09-09` — devShark content audit, first wave
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 For the next session that continues
 [#176](https://github.com/lukaskourilcz/react-express-app/issues/176) on branch
 `claude/qa-hints-audit-i0kh9t`. Read this before touching anything; it says what

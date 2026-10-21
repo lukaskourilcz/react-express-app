@@ -24,7 +24,6 @@ Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. de
 - No AI in devShark. No model calls, no AI copy, no AI settings in the devShark product scope; documentation links replace them.
 - The server owns grading, XP, scope, and one-time claims. Reference solutions never reach the client before a pass or an explicit give-up. Visible tests are not answers and may ship to the client; hidden tests stay on the server.
 - Exactly twelve physical handlers remain under `api/`. Coding endpoints are new `resource=` values on existing handlers, delegating to `lib/coding/`.
-- EN/CS parity for every string, including prompts and hints.
 - Deep End v2 design: ocean ink, tactile paper, editorial type, disciplined accents, restrained motion, visible focus. No Sandpack default theme, no glass, no neon.
 
 ## 3. Content model
@@ -57,7 +56,7 @@ interface CodingTask {
   level: number;              // Learn level 1–25 (index into LEVEL_TITLES)
   tier: CodingTier;           // 1 foundations · 2 fluency · 3 combine · 4 interview · 5 capstone
   focus: string[];            // 'for' | 'while' | 'do-while' | 'for-of' | 'for-in' | 'map' | 'filter' | 'reduce' | 'find' | 'some' | 'every' | 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'slice' | 'sort' | 'flat' | 'hooks' | 'generics' | …
-  title: Localized;           // { en, cs }
+  title: Localized;
   prompt: Localized;          // markdown, deterministic text
   starter: string;
   skeleton?: string;          // hint-ladder rung
@@ -86,7 +85,7 @@ interface CodingTask {
 | `src/challenges/reactTests.js`, `reactTestSupport.js` | — | per-task `suite` fields, `shared/coding-react-support.ts` |
 | `src/lib/methodShapes.js` | — | `focus` tags and the technique index on `/coding` |
 
-Every ported task gets a `level` from its tags (the `techniquesFor` mapping in `methodShapes.js` is the starting point) and Czech copy. The node content test (`npm run test:coding`) asserts unique ids, that every reference solution passes its own visible and hidden tests (jsdom + esbuild for React, the real TypeScript compiler for `typeTests`), and that every Learn level of the three topics has at least one task.
+Every ported task gets a `level` from its tags (the `techniquesFor` mapping in `methodShapes.js` is the starting point). The node content test (`npm run test:coding`) asserts unique ids, that every reference solution passes its own visible and hidden tests (jsdom + esbuild for React, the real TypeScript compiler for `typeTests`), and that every Learn level of the three topics has at least one task.
 
 ### 3.4 New tasks: loops and array methods
 
@@ -120,7 +119,7 @@ The owner's requirement is confidence with every loop form and with `map`, `redu
 | 21 Custom Hooks | 3 | `useQueue`, `usePagination` with `slice` |
 | 23 Performance Patterns | 3 | chunked grid; windowed list |
 
-Every new task has visible tests, hidden tests where hard-coding is easy, a hint ladder, a Czech version, and a reference solution proven by the content test.
+Every new task has visible tests, hidden tests where hard-coding is easy, a hint ladder, and a reference solution proven by the content test.
 
 ## 4. Where coding shows up
 
@@ -200,7 +199,7 @@ interview-prepper's system-design track moves as the fourth Coding track, `syste
 - **Guided walkthroughs** (`src/challenges/designs/guided.js`, five systems): a scenario and a brief, then five multiple-choice questions in the order an interviewer asks them (scope, data, request flow, failure, scale), each with an explanation, and a reference answer shown at the end. A walkthrough passes at four of five.
 - **Drills** (`src/challenges/designDrills.js`, forty): one question each in four formats: `estimate` (a number graded against an accepted band), `tradeoff` and `bottleneck` (one option), `sequence` (steps to order). Graded instantly with the explanation.
 
-Content lives in `lib/coding/tasks/system-design.ts` with the same `CodingTask` envelope (`track: 'system-design'`, `verify: 'guided' | 'drill'`, a `design` or `drill` payload) and EN/CS copy. Correct options, bands, and step orders are answers, so they stay on the server: `coding-task` returns the questions with shuffled options and a sealed answer key (the placement-run token pattern in `lib/quiz-tokens.ts`), `coding-submit` grades against it, and the explanation and reference come back with the verdict. Progress, review queue, XP, and the GitHub garden treat these tasks like any other; the garden file for a design task is a Markdown note with the learner's chosen answers and the reference (`system-design/<nn>-<slug>.md`). The workbench is replaced by a `DesignRunner` screen built from the existing `RadioCards` and quiz feedback patterns. Learn levels are not affected; the `system-design` Learn topic stays as it is.
+Content lives in `lib/coding/tasks/system-design.ts` with the same `CodingTask` envelope (`track: 'system-design'`, `verify: 'guided' | 'drill'`, a `design` or `drill` payload) and English copy. Correct options, bands, and step orders are answers, so they stay on the server: `coding-task` returns the questions with shuffled options and a sealed answer key (the placement-run token pattern in `lib/quiz-tokens.ts`), `coding-submit` grades against it, and the explanation and reference come back with the verdict. Progress, review queue, XP, and the GitHub garden treat these tasks like any other; the garden file for a design task is a Markdown note with the learner's chosen answers and the reference (`system-design/<nn>-<slug>.md`). The workbench is replaced by a `DesignRunner` screen built from the existing `RadioCards` and quiz feedback patterns. Learn levels are not affected; the `system-design` Learn topic stays as it is.
 
 ## 5. Workbench and runner
 
@@ -372,7 +371,7 @@ API surface (twelve handlers unchanged):
 
 ## 10. Validation
 
-Every implementing issue runs `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive` (with the new routes added to its inventory), both production dependency audits, `git diff --check`, and the new `npm run test:coding`. Screens go through the visual QA checklist at desktop, tablet, and phone widths, both locales, both themes, keyboard only, and reduced motion. Nothing is reported as passing without a real run.
+Every implementing issue runs `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive` (with the new routes added to its inventory), both production dependency audits, `git diff --check`, and the new `npm run test:coding`. Screens go through the visual QA checklist at desktop, tablet, and phone widths, both themes, keyboard only, and reduced motion. Nothing is reported as passing without a real run.
 
 ## 11. Issue map and order
 

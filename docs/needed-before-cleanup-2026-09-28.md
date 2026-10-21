@@ -1,5 +1,7 @@
 # Historical snapshot — superseded by root NEEDED.md
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 Kept for implementation details and evidence; unchecked boxes here are not the active backlog. Relative paths in this snapshot were originally rooted at the repository root.
 
 # NEEDED — owner actions

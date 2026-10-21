@@ -1,5 +1,7 @@
 # Release acceptance matrix
 
+> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+
 ## 15 October — local structuredClone own-key correction (#403)
 
 Actual QuickJS probes reproduce loss of an own __proto__ key, changed clone

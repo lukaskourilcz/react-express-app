@@ -35,7 +35,7 @@ Inspected baseline: [`85544c705d0d7d6c7721b03cb26df8055654ba26`](https://github.
 | `client/src/lib/roadmap.ts`, `RoadmapTree.tsx`, `CareerRoadmap.tsx` | Existing level and topic progress stays intact. Add role milestones alongside it; avoid forcing projects into a fixed multiple-choice level ladder. |
 | `docs/product-architecture.md`, `lib/product-scope.ts` | devShark is `webdev` and ships no AI tutor feature. Learning about AI does not require one. |
 | `AGENTS.md`, `package.json`, `vercel.json` | Actual stack is React 19, Vite, Astryx and Vercel handlers; `npm run dev` uses `vercel dev`. No `server/src` exists. The repository planning agent's Express/MUI instructions are stale and must not drive implementation. Keep twelve physical handlers. |
-| `translations.ts`, `translations.cs.ts`, product/design documents | Preserve EN/CS parity, existing design primitives and free access (free access held until 25 September 2026, when devShark became freemium and the learning paths became Premium; the app has shipped English only since 21 September 2026). Some landing copy still frames the journey as starting from zero or reaching senior; make the developer-wide promise accurate. |
+| `translations.ts`, product/design documents | Preserve existing design primitives and free access (free access held until 25 September 2026, when devShark became freemium and the learning paths became Premium). Some landing copy still frames the journey as starting from zero or reaching senior; make the developer-wide promise accurate. |
 
 ## Learner experience
 
@@ -66,7 +66,7 @@ Delivery hypothesis for planning: approximately 6–10 engineer-weeks plus 4–6
 
 Pilot with 6–10 practicing engineers spanning all three tracks; observe misunderstandings, grader disagreements and draft/resume behavior. Define activation as track selection → FDE enrollment → first verified practical task within seven days. Track bridge bypass rate, practical completion, task abandonment, repeat visits, grading appeals and reported relevance. Compare cohorts and sample sizes; do not infer hiring impact or causation from a small pilot. Record only aggregate event properties, never code or free-text artifacts.
 
-Proposed launch gates: every required module and Czech overlay reviewed; reference solutions pass; known flawed solutions fail; no grade/tenant isolation failures; no duplicate rewards; complete guest/sign-in/resume and legacy-progress regression coverage. Pilot relevance and usability feedback informs iteration; no invented target conversion rates.
+Proposed launch gates: every required module reviewed; reference solutions pass; known flawed solutions fail; no grade/tenant isolation failures; no duplicate rewards; complete guest/sign-in/resume and legacy-progress regression coverage. Pilot relevance and usability feedback informs iteration; no invented target conversion rates.
 
 ## Evidence limits and maintenance
 

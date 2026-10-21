@@ -97,6 +97,6 @@ reviewed again) and 141 of those on the free tier.
 
 devShark's marketing is produced outside this repository by **marketingShark**, a project inside
 BoardlessAI (`lukaskourilcz/quorum`). It reads the question bank read-only as a pinned snapshot
-and publishes one question a day, with its answer, as a Czech and an English carousel. No code
-here changes, and nothing posts without a person approving it. See the README for what it does
-and does not touch.
+and publishes one question a day, with its answer, as a carousel. No code here changes, and
+nothing posts without a person approving it. See the README for what it does and does not
+touch.

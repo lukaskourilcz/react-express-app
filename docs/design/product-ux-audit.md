@@ -1,14 +1,14 @@
 # Product and UX audit
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), and 27 September 2026 for pages that draw once after a click (Strengths to preserve) and the `/learn` progress line (P1.8).
+Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), 27 September 2026 for pages that draw once after a click (Strengths to preserve) and the `/learn` progress line (P1.8), and 21 October 2026 for English only.
 
 ## Executive summary
 
-- The repository already has a strong Deep End v2 foundation, centralized product and subject registries, a fixed one-screen shell, bilingual dictionaries, lazy routes, and a server-authoritative assessment model. The overhaul should mature those systems, not replace them.
+- The repository already has a strong Deep End v2 foundation, centralized product and subject registries, a fixed one-screen shell, a central copy dictionary, lazy routes, and a server-authoritative assessment model. The overhaul should mature those systems, not replace them.
 - The largest interface debt is inconsistency inside otherwise good foundations: duplicated inline values, missing warning/info/on-accent tokens, unsupported token names, a few old checkbox-based choice controls, and dense screens that do not consistently use the same surface hierarchy.
 - Accessibility work is substantial and worth preserving, but lesson, skill-check, challenge, and path-picker choices still need the repository's own accessible radio-card primitive. Several fixed feedback colors fail in dark mode.
 - The client already handles many happy and unhappy paths. The most visible gaps are live-room connection feedback, a global offline signal, roadmap no-content handling, sign-in failure feedback, and a guest registration prompt that is not actually restricted to the landing route.
-- Performance is broadly healthy: routes, Czech copy, syntax highlighting, analytics, QR generation, and question banks are split or deferred. The main opportunities are avoiding full-tree timer rerenders, reducing initial Supabase/Motion work, and removing a profile request waterfall.
+- Performance is broadly healthy: routes, syntax highlighting, analytics, QR generation, and question banks are split or deferred. The main opportunities are avoiding full-tree timer rerenders, reducing initial Supabase/Motion work, and removing a profile request waterfall.
 - The API contract baseline passes and the physical Vercel handler count is exactly 12. This design project does not require a schema or handler change.
 
 ## Route and surface inventory
@@ -88,7 +88,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 Se
 - Central `client/product-catalog.ts`, `shared/subject-catalog.ts`, `client/src/lib/products.ts`, and `client/src/lib/subjects.ts` sources of truth.
 - Product identity resolved in `client/product-catalog.ts`, which refuses any product but devShark; a footer of legal links and appearance and sound controls.
 - Server-issued encrypted sessions, one-time grading claims, result receipts, answer proofs, atomic XP/streak/progression, product/subject validation, RLS, and service-role isolation.
-- Real content counts from `SUBJECT_SCOPE_CATALOG` (the questions a learner can be served, checked by `test:launch`), an on-demand question bank, and lazy Czech loading.
+- Real content counts from `SUBJECT_SCOPE_CATALOG` (the questions a learner can be served, checked by `test:launch`) and an on-demand question bank.
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
 - Astryx primitives, `SharkFin`, `LandingKit`, technology glyphs (`CategoryGlyph`), `RadioCards`, dialogs, toast system, and query helpers.
 - Existing loading/error/empty treatment in Quiz, Flashcards, Leaderboard, Profile and much of `/dev`.
