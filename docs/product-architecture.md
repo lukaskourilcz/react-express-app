@@ -1713,3 +1713,18 @@ same task again just because it was reached on another screen. Type-only,
 unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
 The accepted path response stores the actual award and the same complexity
 analysis used to choose it, so retries replay it without paying again.
+
+## OwnDashboard marketing source adapter
+
+`GET /api/quiz/questions?resource=marketing-source` uses a dedicated owner
+integration bearer, fresh counted question overrides and the current curation
+gate. It exports bounded `marketing-source/1` packets with authored answers for
+questions and allowlisted prompts/starters for active coding tasks. Failed,
+truncated or changing override reads hold the export; serving fallbacks do not
+prove marketing eligibility. Retained invalid items yield tombstones, and hard
+removal answers 410 on a recheck. Dated daily packets reuse the platform selector
+and bind their revision to the actual `/daily/<date>` link. OwnDashboard owns
+usage, approvals and publication; this operation reads no learner records and
+adds no model calls or publishing credentials. See
+[marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
+limits and setup.

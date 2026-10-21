@@ -40,6 +40,11 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // Owner-controlled integration; its authored answers never reach quiz callers.
+  if (resource === 'marketing-source') {
+    const { handleMarketingSource } = await import('../../lib/marketing/source');
+    return handleMarketingSource(req, res);
+  }
   if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
 
   // How much of the deliverable pool has a current review record. Answered

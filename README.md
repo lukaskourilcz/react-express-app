@@ -178,67 +178,22 @@ Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.m
 - devShark ships no AI feature. Coding hints are authored and end in documentation links.
 - Native mobile work is intentionally deferred until the web release is stable.
 
-## Marketing (external, read-only)
+## Marketing source integration
 
-devShark is marketed by **marketingShark**, a project inside BoardlessAI
-(`lukaskourilcz/quorum`). One meeting a day there picks a single question out of this
-repository's bank and writes it up as a five-slide carousel in Czech and again in English,
-answer included, with devShark named once at the end.
+OwnDashboard receives English devShark sources through the authenticated,
+read-only `GET /api/quiz/questions?resource=marketing-source` operation. The
+producer uses the current question bank plus fresh `question_edits`, curation
+eligibility and active coding tasks. A failed or incomplete database read holds
+the export. The earlier BoardlessAI base-bank snapshot does not establish
+current eligibility and must not supply new campaigns.
 
-Brand and social rules for that work live here:
+See [the source contract and setup](docs/marketing-social-bridge.md) for bounded
+pagination, source rechecks, daily coordination and the integration header.
+`npm run test:marketing` verifies the producer and its real handler against a
+local database stand-in. Existing bank-import tests remain compatibility checks.
 
-- [`docs/brand/brand-guidelines.md`](docs/brand/brand-guidelines.md): the V9 kit, colours with a
-  contrast table, typography and merchandise sizes.
-- [`docs/marketing/social-skill.md`](docs/marketing/social-skill.md): carousel, square post and
-  story formats with a QA checklist, until the owner's `SKILL.md` replaces it.
-
-marketingShark in `lukaskourilcz/quorum` should adopt that skill and update its carousel
-template: the clean fin at 48 px in the corner of each slide, the full logo on the last slide
-only, and devShark named once at the end.
-
-What that means for this repository, precisely:
-
-- **Nothing here changes.** No handler, catalog, client file or migration is touched by it. The
-  question bank is consumed read-only as a pinned snapshot, and the source commit is recorded in
-  the snapshot's envelope on the quorum side.
-- **The answer is published with the question.** That is the point of the format — the carousel
-  gives a reader the real question and the real answer rather than a teaser. The bank already
-  lives in a public repository, so nothing becomes public that was not.
-- **Which questions have been used is recorded** in `state/marketingshark/ledger.json` in quorum.
-  Every question is served once before any repeats.
-- **Nothing is posted automatically.** Each carousel is stored as a draft behind an approval
-  queue; marketingShark owns no social account and has no publishing path.
-
-### The contract
-
-The importer in quorum reads `lib/webdev-bank.ts` and nothing else. Keep these names and shapes,
-or change the importer upstream first.
-
-- **Exports:** `loadWebdevQuestions()` resolves to the question array and
-  `loadWebdevTranslations()` to the Czech overlays keyed by question id. The importer loads both
-  by name.
-- **Question fields:** `id` (a unique string), `introduction`, `question`, `options` (two or more
-  strings), `correctAnswer` (an index into `options`), `category`, `explanation`, `difficulty`
-  (an integer from 1 to 5) and an optional `importance` (an integer from 1 to 10).
-- **Czech overlay:** optional `introduction`, `question`, `options` and `explanation`. Czech
-  `options` must match the English array's length, because `correctAnswer` indexes both.
-- **Code detection:** the importer marks a question as code when its `question` or
-  `introduction` contains a fenced block (```` ``` ````). A question with `snippet` metadata keeps
-  its code there.
-
-`npm run test:launch` checks every question and its Czech overlay against this list
-(`scripts/webdev-bank-contract.ts`). When it fails, fix the bank. If the contract itself has to
-change, change the quorum adapter first and then this test.
-
-marketingShark reads a pinned snapshot, `state/marketingshark/question-banks/devshark.json`,
-whose envelope records the source commit and a content hash. A bank change reaches marketing
-only after someone re-imports it from a clean checkout on the quorum side and confirms the
-result with `--check`:
-
-```sh
-pnpm marketingshark:import-bank -- --brand devshark --source ../react-express-app
-pnpm marketingshark:import-bank -- --brand devshark --source ../react-express-app --check
-```
-
-The importer refuses uncommitted changes under `lib/` and `shared/`. A re-import keeps the ledger
-of used questions.
+OwnDashboard owns the usage ledger by brand, item and revision, the review queue
+and publication records. The owner approves each prepared revision; account
+connection and templates do not approve future posts. n8n Cloud orchestrates
+this integration. This repository holds no social publishing credentials or
+model calls. Production setup and publication require owner review.
