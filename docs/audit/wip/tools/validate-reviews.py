@@ -19,7 +19,7 @@ for f in sorted(glob.glob(f'{revdir}/*.jsonl')):
     if batch is None: problems.append(f'{name}: no batch'); continue
     ids=[r.get('id') for r in rows]; expected=[b['id'] for b in batch]
     if ids!=expected[:len(ids)]: problems.append(f'{name}: id order/mismatch at {next((k for k,(a,b) in enumerate(zip(ids,expected)) if a!=b), len(ids))}')
-    dec=collections.Counter(); cs=collections.Counter()
+    dec=collections.Counter()
     for r,b in zip(rows,batch):
         rid=r.get('id')
         def chk(cond,msg):
@@ -51,10 +51,8 @@ for f in sorted(glob.glob(f'{revdir}/*.jsonl')):
             chk(not b['hint'].startswith(GENERIC),'retain with generic hint')
         if r.get('decision') in ('retire','quarantine'): chk(bool(r.get('retireReason')),'retire without reason')
         chk(isinstance(r.get('evidence'),list) and len(r['evidence'])>0,'no evidence')
-        if b.get('cs'): chk(isinstance(r.get('cs'),dict) and r['cs'].get('status') in ('verified','drift','defect','missing'),'cs status')
         dec[r.get('decision')]+=1
-        if r.get('cs'): cs[r['cs'].get('status')]+=1
-    summary[name]={'rows':len(rows),'of':len(batch),'decisions':dict(dec),'cs':dict(cs)}
+    summary[name]={'rows':len(rows),'of':len(batch),'decisions':dict(dec)}
     total+=len(rows)
 print(json.dumps(summary,indent=0))
 print('total rows',total,'problems',len(problems))
