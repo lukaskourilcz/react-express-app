@@ -51,7 +51,7 @@ const evaluate = (cases, predictions) => {
 
   for (const item of caseList) {
     if (!item || typeof item !== 'object') continue;
-    const name = typeof item.slice === 'string' && item.slice.trim() !== '' ? item.slice : 'unlabelled';
+    const name = typeof item.slice === 'string' && item.slice !== '' ? item.slice : 'unlabelled';
     if (!Object.prototype.hasOwnProperty.call(slices, name)) slices[name] = tally();
     const slice = slices[name];
     overall.total += 1;

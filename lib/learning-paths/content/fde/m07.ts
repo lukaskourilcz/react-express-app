@@ -619,7 +619,7 @@ export const FDE_M07: ModuleSource = {
             'Choose neither: one ticket of difference on 36 cases is within noise, so the run cannot separate the candidates.',
           ],
           correct: 0,
-          explanation: 'Apply the rule the customer agreed before seeing results. Both candidates clear the 0.80 yield floor; only B has a p95 under 2000 ms, so A is out, and B is also the cheaper one. Choosing A for its extra correct ticket rewrites the rule after the run, which is the move a predeclared rule exists to stop. Swapping p95 for the mean changes the metric the customer agreed; the slow tail is the experience the latency limit protects. The noise argument would matter if the rule ranked yields against each other, but here yield is only a floor both clear, so the decision rests on latency and cost, where the gap is large.',
+          explanation: 'Apply the rule the customer agreed before seeing results. Both candidates clear the 0.80 yield floor; only B has a p95 under 2000 ms, so A is out, and B is also the cheaper one. Choosing A for its extra correct ticket rewrites the rule after the run, which is the move a predeclared rule exists to stop. Swapping p95 for the mean changes the metric the customer agreed; the slow tail is the experience the latency limit protects. The noise concern does not change what the agreed rule selects: yield is only a floor, both measured values clear it, and the rule then decides on latency and cost, where the gap is large. B clears the floor by one ticket (28 of 36 would be 0.78), so report that margin and its uncertainty beside the recommendation.',
           competencies: ['evaluation'],
         },
       ],
@@ -669,14 +669,14 @@ const evaluate = (cases, predictions) => {
   const caseList = Array.isArray(cases) ? cases : [];
   const predictionList = Array.isArray(predictions) ? predictions : [];
 
-  const answers = {};
+  const answers = Object.create(null);
   for (const prediction of predictionList) {
     // skip a non-object, a non-string caseId, and a caseId already recorded
     // keep the whole prediction: cost, latency and trace ride along with the answer
   }
 
   const counts = { total: 0, answered: 0, abstained: 0, correct: 0 };
-  const slices = {};
+  const slices = Object.create(null);
   const failures = { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 0 };
   const latencies = [];
   let cost = 0;
@@ -703,7 +703,7 @@ const evaluate = (cases, predictions) => {
     accuracyWhenAnswered: /* correct over answered */,
   });
 
-  const bySlice = {};
+  const bySlice = Object.create(null);
   // one shaped entry per slice name
 
   const p95LatencyMs = /* sort latencies as numbers, take position Math.ceil(0.95 * n), or 0 */;
@@ -741,7 +741,7 @@ const compare = (baseline, candidate) => {
   };
 };`,
         hints: [
-          'Build the answer lookup in its own pass before you count anything. Record a `caseId` only when the map does not already hold it, and you get “first prediction wins” and “duplicates ignored” from one `hasOwnProperty` check.',
+          'Build the answer lookup in its own pass before you count anything. Record a `caseId` only when the map does not already hold it, and you get “first prediction wins” and “duplicates ignored” from one `hasOwnProperty` check. Make every map keyed by an id or slice name an `Object.create(null)` object, so a case or slice called `__proto__` is stored like any other key.',
           'Keep one tally per slice and one for the whole set, and update both inside the same loop over `cases`. Then shape all of them with the same helper, so a slice can never be computed by a different rule than the total.',
           'Write the abstention test as “this is not a non-empty string”, not as “this is null”. A number, an object and three spaces all have to land on the same side of it, and the fixture sets contain all three.',
           '`Array.prototype.sort` with no comparator sorts as text, so 2400 lands before 900. Pass `(a, b) => a - b`.',

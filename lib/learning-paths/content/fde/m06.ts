@@ -725,8 +725,8 @@ console.log(JSON.stringify(demo.call('refunds.create', { orderId: 'ORD-4471' }))
 `,
         skeleton: `const createDispatcher = (registry, session) => {
   const held = /* the scopes the session was issued */;
-  const completed = {}; // idempotency key -> the result already returned
-  const waiting = {};   // callId -> the call waiting for a person
+  const completed = Object.create(null); // idempotency key -> the result already returned
+  const waiting = Object.create(null);   // callId -> the call waiting for a person
   const queue = [];     // callIds still waiting, oldest first
   let nextId = 1;
 
@@ -762,7 +762,7 @@ console.log(JSON.stringify(demo.call('refunds.create', { orderId: 'ORD-4471' }))
   const delegate = spec => {
     const scopes = /* the requested scopes the session already holds */;
     const maxCalls = /* a positive integer, otherwise 0 */;
-    const keys = {};
+    const keys = Object.create(null);
     let used = 0;
     return {
       call: (name, args, options) => {
@@ -774,7 +774,7 @@ console.log(JSON.stringify(demo.call('refunds.create', { orderId: 'ORD-4471' }))
   return { call: (name, args, options) => gate(held, completed, name, args, options), approve, reject, pending, delegate };
 };`,
         hints: [
-          'Do the idempotency lookup first, before you even look the tool up. `Object.prototype.hasOwnProperty.call(completed, key)` is the test you want, because a key like `"constructor"` is truthy on a plain object without ever having been stored.',
+          'Do the idempotency lookup first, before you even look the tool up. `Object.prototype.hasOwnProperty.call(completed, key)` is the test you want, because a key like `"constructor"` is truthy on a plain object without ever having been stored. Keep the stores as `Object.create(null)` maps too: on a plain object, assigning a key named `"__proto__"` replaces the prototype instead of storing the result.',
           'Validation has two passes over one object. The first walks `Object.keys(schema)` and checks presence, then `typeof`, then `enum`. The second walks `Object.keys(args)` and rejects any name the schema does not declare. Return the first failure you find and let the caller turn it into a result.',
           'Write the gates once, as a helper that takes the scopes and the key store to use, so the dispatcher and every sub-agent share the same code. A sub-agent then differs only in what it passes in and in the budget check it runs first.',
           'Store the key store and the key with each waiting call. `approve` and `reject` can then record the outcome where the original caller will replay it, whether that caller was the dispatcher or a sub-agent.',
