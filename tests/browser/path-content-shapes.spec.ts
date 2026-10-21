@@ -119,6 +119,15 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(firstRadio).toBeFocused();
     expect(await scenario.evaluate((el) => el.querySelector('a, button, input, select, textarea, [tabindex]'))).toBeNull();
 
+    // The answer radios carry the brand accent at 20px on their own
+    // selector, so renaming the check's container cannot drop it.
+    const radioStyle = await firstRadio.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { accent: style.accentColor, width: style.width };
+    });
+    expect(radioStyle.accent).not.toBe('auto');
+    expect(radioStyle.width).toBe('20px');
+
     await expectReflow(page, '.lp-check-view section.lp-brief');
     await expectNoAxeViolations(page, '.lp-check-view section.lp-brief');
 
