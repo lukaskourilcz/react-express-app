@@ -445,3 +445,39 @@ for (const width of [360, 1440]) {
     });
   }
 }
+
+// #493 review: the DSA checks carry their fixtures and probe source inline,
+// up to 2,618 characters a call. The Results row prints the short `shown`
+// form, Run still executes the full call, and a task on a DSA level that
+// does not issue it yet names no level.
+for (const width of [360, 1280]) {
+  test(`DSA Results rows print the short form at ${width}px, and Run executes the full checks`, async ({ page }) => {
+    await prepare(page);
+    await page.setViewportSize({ width, height: 900 });
+    const id = 'alg-dsa-bst-search-insert';
+    await openTask(page, `/coding/algorithms/${id}`);
+    await expect(page.locator('.cd-brief__meta')).toHaveText(/DSA · Level 13$/);
+    const calls = page.locator('.cd-result__call');
+    await expect(calls).toHaveCount(7);
+    for (const text of await calls.allInnerTexts()) {
+      expect(text).not.toContain('__probe');
+      expect(text.length).toBeLessThan(160);
+    }
+    await expect(calls.first()).toContainText('return preorderOf(t); })()');
+    const tallest = await calls.evaluateAll((rows) => Math.max(...rows.map((row) => row.getBoundingClientRect().height)));
+    expect(tallest).toBeLessThan(200);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width < 1280) return;
+    // The editor shares the screen with the brief only on a wide layout.
+    await fillEditor(page, solutionFor(id)!.solution);
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
+    await expect(announced(page)).toHaveText('7 of 7 passing', { timeout: 30_000 });
+  });
+}
+
+test('a DSA task on a level that does not issue it yet names no level', async ({ page }) => {
+  await prepare(page);
+  await openTask(page, '/coding/algorithms/alg-dsa-repair-level-order');
+  await expect(page.locator('.cd-brief__meta')).toHaveText(/· DSA$/);
+  for (const text of await page.locator('.cd-result__call').allInnerTexts()) expect(text).not.toContain('__probe');
+});
