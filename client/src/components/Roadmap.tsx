@@ -79,6 +79,7 @@ import { getCategoryHexColor, categoryLabelKey, hoverFilterOn, onCategoryColorTe
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { learnText } from '../i18n/translations.learn';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { useInPlan } from '../lib/eligibility';
@@ -2237,28 +2238,28 @@ function SkillCheckRunner({
   if (phase === 'intro') {
     return (
       <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <Kicker as="h1" center>{t('placement.kicker')}</Kicker>
+        <Kicker as="h1" center>{learnText('placement.kicker')}</Kicker>
 
         <div style={{ marginTop: 8 }}>
-          <Text color="secondary">{t('placement.subtitle')}</Text>
+          <Text color="secondary">{learnText('placement.subtitle')}</Text>
         </div>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <AxButton variant="primary" label={t('placement.start')} onClick={() => void start()} />
-          <AxButton variant="secondary" label={t('placement.cancel')} onClick={onCancel} />
+          <AxButton variant="primary" label={learnText('placement.start')} onClick={() => void start()} />
+          <AxButton variant="secondary" label={learnText('placement.cancel')} onClick={onCancel} />
         </div>
       </div>
     );
   }
 
   if (phase === 'loading' || phase === 'submitting') {
-    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('placement.loading')} />;
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={learnText('placement.loading')} />;
   }
 
   if (phase === 'error') {
     return (
       <LessonError
-        message={error ?? t('placement.error')}
+        message={error ?? learnText('placement.error')}
         onRetry={() => void start()}
         onExit={onCancel}
         t={t}
@@ -2283,14 +2284,14 @@ function SkillCheckRunner({
           </IconTile>
         </div>
         <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
-          {t('placement.done')}
+          {learnText('placement.done')}
         </h1>
         <div style={{ marginTop: 4 }}>
           <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
         </div>
         {unapplied ? (
           <div role="alert" style={{ marginTop: 8, marginBottom: 24 }}>
-            <Text color="secondary">{t('placement.applyFailed')}</Text>
+            <Text color="secondary">{learnText('placement.applyFailed')}</Text>
           </div>
         ) : (
           <>
@@ -2305,15 +2306,15 @@ function SkillCheckRunner({
             <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
           )}
           <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
-          <AxButton variant="secondary" label={t('placement.retry')} onClick={() => void start()} />
+          <AxButton variant="secondary" label={learnText('placement.retry')} onClick={() => void start()} />
         </div>
-        <section className="rm-placement-review" aria-label={t('placement.review')}>
-          <h2>{t('placement.review')}</h2>
+        <section className="rm-placement-review" aria-label={learnText('placement.review')}>
+          <h2>{learnText('placement.review')}</h2>
           {review.map((item, index) => <article className="ss-info-card" key={item.questionId}>
             <h3>{index + 1}. {t(item.isCorrect ? 'quiz.correct' : 'quiz.incorrect')}</h3>
             {renderQuestion(item.question.question)}
-            <p><strong>{t('placement.yourAnswer')}</strong> {item.question.options[item.selectedIndex] ?? t('placement.idkYet')}</p>
-            <p><strong>{t('placement.correctAnswer')}</strong> {item.question.options[item.correctAnswer]}</p>
+            <p><strong>{learnText('placement.yourAnswer')}</strong> {item.question.options[item.selectedIndex] ?? learnText('placement.idkYet')}</p>
+            <p><strong>{learnText('placement.correctAnswer')}</strong> {item.question.options[item.correctAnswer]}</p>
             <p>{item.explanation}</p>
           </article>)}
         </section>
@@ -2327,9 +2328,9 @@ function SkillCheckRunner({
   // rounds), so the bar advances steadily toward the 20-question total.
   const answeredSoFar = asked + qIndex + (answered ? 1 : 0);
   const progressPct = total > 0 ? (answeredSoFar / total) * 100 : 0;
-  const stepLabel = step === 'up' ? t('placement.steppingUp') : step === 'down' ? t('placement.steppingDown') : t('placement.holding');
-  const stepHint = step === 'up' ? t('placement.steppingUpHint') : step === 'down' ? t('placement.steppingDownHint') : t('placement.converging');
-  const primaryLabel = isLastInRound && round >= totalRounds ? t('placement.finish') : t('placement.next');
+  const stepLabel = step === 'up' ? learnText('placement.steppingUp') : step === 'down' ? learnText('placement.steppingDown') : learnText('placement.holding');
+  const stepHint = step === 'up' ? learnText('placement.steppingUpHint') : step === 'down' ? learnText('placement.steppingDownHint') : learnText('placement.converging');
+  const primaryLabel = isLastInRound && round >= totalRounds ? learnText('placement.finish') : learnText('placement.next');
   const primaryDisabled = isLastInRound ? !roundComplete : !answered;
   const onPrimary = isLastInRound ? () => void submitRound() : goNext;
   const optionValue = answered && answers[current.id] >= 0 ? answers[current.id] : null;
@@ -2342,18 +2343,18 @@ function SkillCheckRunner({
           icon={<CloseIcon size={18} />}
           variant="ghost"
           size="sm"
-          label={t('placement.cancel')}
+          label={learnText('placement.cancel')}
           onClick={onCancel}
         />
         <div style={{ flex: 1 }}>
           <ProgressBar
-            label={t('placement.roundOf', { n: round, total: totalRounds })}
+            label={learnText('placement.roundOf', { n: round, total: totalRounds })}
             value={progressPct}
             isLabelHidden
             variant="accent"
           />
         </div>
-        <Badge variant="neutral" label={t('placement.roundOf', { n: round, total: totalRounds })} />
+        <Badge variant="neutral" label={learnText('placement.roundOf', { n: round, total: totalRounds })} />
       </div>
 
       {/* Between-round feedback: which way the difficulty just moved. role=status
@@ -2441,12 +2442,12 @@ function SkillCheckRunner({
         aria-pressed={answers[current.id] === IDK_INDEX}
         onClick={() => pick(IDK_INDEX)}
       >
-        {t('placement.idkYet')}
+        {learnText('placement.idkYet')}
       </button>
-      <div className="rm-idk-hint">{t('placement.idkYetHint')}</div>
+      <div className="rm-idk-hint">{learnText('placement.idkYetHint')}</div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, gap: 12 }}>
-        <AxButton variant="ghost" label={t('placement.cancel')} onClick={onCancel} />
+        <AxButton variant="ghost" label={learnText('placement.cancel')} onClick={onCancel} />
         <AxButton variant="primary" label={primaryLabel} onClick={onPrimary} isDisabled={primaryDisabled} />
       </div>
     </div>
