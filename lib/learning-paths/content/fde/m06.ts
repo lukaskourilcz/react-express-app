@@ -360,7 +360,7 @@ export const FDE_M06: ModuleSource = {
         },
         {
           kind: 'trace',
-          caption: 'An authored agent run with a budget of three calls. Every proposal in it is a fixture line written for this lesson.',
+          caption: 'An authored agent run whose loop allows three calls. The loop counts them, not the dispatcher. Every proposal in it is a fixture line written for this lesson.',
           trace: {
             shape: 'array',
             frames: [
@@ -391,7 +391,7 @@ export const FDE_M06: ModuleSource = {
               {
                 cells: ['Call 1', 'Call 2', 'Call 3', 'Approval', 'Call 4'],
                 marks: [{ index: 3, role: 'settled' }, { index: 4, role: 'excluded' }],
-                note: 'The next proposal is a second refund for ORD-4472. The budget is spent, so the dispatcher returns budget_exhausted before any gate runs, and the loop hands the task back to the operator.',
+                note: 'The next proposal is a second refund for ORD-4472. The loop’s budget is spent, so the loop never sends it to the dispatcher and hands the task back to the operator. In the exercise, a sub-agent created with maxCalls: 3 returns budget_exhausted at this point.',
                 counter: { label: 'Calls left in the budget', value: 0 },
               },
             ],
@@ -411,7 +411,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Approval is the last bound, and teams fake it more often than any other. An approval means a person agreed to a specific effect, which is only true if they saw the effect: the tool name, the validated arguments the dispatcher will actually pass, the record it lands on, and the amount. "Approve this refund?" with no number on the screen is a button, not an approval.',
+            'Approval is the last bound, and the easiest one to fake. An approval means a person agreed to a specific effect, which is only true if they saw the effect: the tool name, the validated arguments the dispatcher will actually pass, the record it lands on, and the amount. "Approve this refund?" with no number on the screen is a button, not an approval.',
         },
         {
           kind: 'callout',
@@ -483,7 +483,7 @@ export const FDE_M06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Anthropic’s orchestrator-workers pattern has a central model break a task down, delegate the parts to worker models and combine their results. This module calls each worker a sub-agent. Two rules from the first lesson carry over. A sub-agent holds only the scopes it asked for that the operator’s session already holds, so asking for more grants nothing. And a sub-agent gets its own call budget, counted per call, so a worker stuck in a loop stops at its cap.',
+            'Anthropic’s orchestrator-workers pattern has a central model break a task down, delegate the parts to worker models and combine their results. This module calls each worker a sub-agent. The scope rule from the first lesson carries over: a sub-agent holds only the scopes it asked for that the operator’s session already holds, so asking for more grants nothing. The call budget from the loop above applies per sub-agent: each one gets its own, counted per call, so a worker stuck in a loop stops at its cap.',
         },
         {
           kind: 'table',
@@ -492,7 +492,7 @@ export const FDE_M06: ModuleSource = {
           rows: [
             ['Which scopes does the sub-agent hold?', 'ledger.write only', 'refunds.write is not in the session, and a request is not a grant. OWASP LLM06 calls this excess “excessive permissions”.'],
             ['What does its fifth call return?', 'budget_exhausted, before any gate runs', 'Every call counts, refused or not. Retries inside one call count once.'],
-            ['Who settles a refund it proposes?', 'The operator, through the parent dispatcher’s approve or reject', 'The sub-agent has no approve. Its pending call joins the same queue with the next CALL number.'],
+            ['Who settles a refund it proposes?', 'Nobody here: it holds no refunds.write, so refunds.create returns scope_denied', 'A sub-agent whose grant does include refunds.write gets pending_approval instead. That call joins the operator’s queue with the next CALL number, and the operator settles it through the parent dispatcher’s approve or reject. The sub-agent has neither.'],
             ['Can it replay the parent’s idempotency key?', 'No: its keys live in its own store', 'A shared store would hand it a result its own scopes could not have produced.'],
           ],
         },
@@ -649,7 +649,7 @@ export const FDE_M06: ModuleSource = {
             'An agent holding all three tools with no call budget, because the approval at the end already stops any wrong refund.',
           ],
           correct: 0,
-          explanation: 'You know the steps and their order before the request arrives, which is the case Anthropic’s essay gives to workflows: predictable, well-defined, and testable branch by branch. The ten-call agent is bounded, but it spends model calls choosing an order you already know and creates call sequences you now have to test. Three sub-agents turn a three-step path with nothing to decide into three model contexts, adding cost and latency and three more grants to scope. The agent with no budget asks approval to do a job it cannot do: the operator sees the final refund proposal, not the reads and loops that ran before it, and only a budget bounds those.',
+          explanation: 'You know the steps and their order before the request arrives, which is the case Anthropic’s essay gives to workflows: they “offer predictability and consistency for well-defined tasks”. A fixed path also lets you test each step on its own. The ten-call agent is bounded, but it spends model calls choosing an order you already know and creates call sequences you now have to test. Three sub-agents turn a three-step path with nothing to decide into three model contexts, adding cost and latency and three more grants to scope. The agent with no budget asks approval to do a job it cannot do: the operator sees the final refund proposal, not the reads and loops that ran before it, and only a budget bounds those.',
           competencies: ['tools'],
         },
         {
@@ -662,7 +662,7 @@ export const FDE_M06: ModuleSource = {
             'A completed refund of 900 cents, because the sub-agent has calls left in its budget of four and the arguments validate.',
           ],
           correct: 0,
-          explanation: 'A sub-agent’s grant is the intersection of what it asked for and what the session holds. refunds.write is not in the session, so the request grants nothing, and the scope gate refuses before the arguments or the approval step run. Returning pending_approval would let a sub-agent widen the operator’s permissions and then ask the operator to approve the result; approval never adds a scope. budget_exhausted is wrong on the numbers: this is the third of four calls, and the budget counts calls, and this refused call still uses one. A completed refund skips both the scope gate and the approval that refunds.create requires.',
+          explanation: 'A sub-agent’s grant is the intersection of what it asked for and what the session holds. refunds.write is not in the session, so the request grants nothing, and the scope gate refuses before the arguments or the approval step run. Returning pending_approval would let a sub-agent widen the operator’s permissions and then ask the operator to approve the result; approval never adds a scope. budget_exhausted is wrong: this is only the third of four calls, and no rule takes calls away for reaching outside the grant. The refused call uses one unit and leaves one. A completed refund skips both the scope gate and the approval that refunds.create requires.',
           competencies: ['tools'],
         },
       ],
