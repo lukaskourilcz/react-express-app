@@ -506,3 +506,22 @@ describe('the content shapes of #497', () => {
     expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Not started');
   });
 });
+
+describe('the hint ladder', () => {
+  it('moves focus to each revealed hint, so the last press does not drop it', async () => {
+    const { CodeActivity } = await import('../src/components/paths/ActivityViews');
+    render(
+      <LanguageProvider>
+        <CodeActivity code={{ language: 'javascript', prompt: 'Sum it.', starter: '', hints: ['Start at zero.'], approach: ['Add each value.'], tests: [] } as never}
+          draft={null} result={null} onSubmit={() => {}} onDraft={() => {}} draftStatus="idle" busy={false} />
+      </LanguageProvider>,
+    );
+    await press(/Show the next hint \(2 left\)/);
+    expect(document.activeElement?.tagName).toBe('LI');
+    expect(document.activeElement).toHaveTextContent('Start at zero.');
+    await press(/Show the next hint \(1 left\)/);
+    expect(screen.queryByRole('button', { name: /Show the next hint/ })).toBeNull();
+    expect(document.activeElement?.tagName).toBe('LI');
+    expect(document.activeElement).toHaveTextContent('Add each value.');
+  });
+});

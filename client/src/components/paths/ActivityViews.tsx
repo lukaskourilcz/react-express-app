@@ -336,6 +336,15 @@ export function CodeActivity({
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
   const queueDraft = useDraftQueue(onDraft);
+  // A revealed rung takes focus, so a screen reader reads it and the last
+  // press, whose button then disappears, does not drop focus to the page.
+  const ladderList = useRef<HTMLOListElement>(null);
+  const revealed = useRef(false);
+  useEffect(() => {
+    if (!revealed.current) return;
+    revealed.current = false;
+    (ladderList.current?.lastElementChild as HTMLElement | null)?.focus();
+  }, [hintsShown]);
 
   const hints = code.hints;
   const approach = code.approach ?? [];
@@ -368,13 +377,16 @@ export function CodeActivity({
           {ladder.length > 0 && (
             <section className="lp-section">
               <h3>{t('paths.code.hints')}</h3>
-              <ol className="lp-list">
+              <ol className="lp-list" ref={ladderList}>
                 {ladder.slice(0, hintsShown).map((rung, index) => (
-                  <li key={index}>{rung.text}</li>
+                  <li key={index} tabIndex={-1}>{rung.text}</li>
                 ))}
               </ol>
               {hintsShown < ladder.length && (
-                <Button variant="ghost" onClick={() => setHintsShown((n) => n + 1)} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
+                <Button variant="ghost" onClick={() => {
+                  revealed.current = true;
+                  setHintsShown((n) => Math.min(n + 1, ladder.length));
+                }} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
               )}
               {code.skeleton && hintsShown >= ladder.length && (
                 <details>
