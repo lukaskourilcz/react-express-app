@@ -76,7 +76,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 
 ## Content rules
 
-- All reusable UI copy uses translation keys in `translations.ts`.
+- All reusable UI copy uses translation keys in `client/src/i18n/translations.ts`, or in the chunk files beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.privacy.ts` and the rest) that only their routes load.
 - devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 - Public facts come from registries/content, not repeated literals.
 - Curated explanations are authoritative. devShark ships no AI feature.
