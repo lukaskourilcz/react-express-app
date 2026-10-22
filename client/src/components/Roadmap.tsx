@@ -958,7 +958,9 @@ function Roadmap() {
           onJoin={() => void runJoin(section)}
           onRetry={() => void runJoin(section)}
           onSignIn={() => openSignIn({ returnTo: `/learn/${section}` })}
-          fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
+          // The join enrols or resumes by the enrollment it finds, so it waits
+          // for the account's enrollments as well as the catalogue.
+          fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending || enrollments.isLoading, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
         />

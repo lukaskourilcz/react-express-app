@@ -238,6 +238,38 @@ describe('joining Software Engineer', () => {
   });
 });
 
+describe('joining Forward Deployed Engineer', () => {
+  // The join enrols, or resumes a paused enrollment, by the enrollment it
+  // finds. Offered while the account's enrollments were still loading, it
+  // found none and asked to enrol a learner who had paused the path.
+  it('waits for the account’s enrollments before offering the path', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    const manifest = {
+      id: 'fde', kind: 'role_specialization', version: 1, title: 'Forward Deployed Engineer',
+      summary: 'Customer-facing engineering from scoping to handoff.', entryRequirement: 'You ship code in one track.',
+      estimatedHours: { min: 20, max: 30 },
+      modules: [{ id: 'fde-v1-entry', title: 'Entry', activities: [{ id: 'fde-v1-entry-check', title: 'Where you start' }] }],
+    };
+    let release!: () => void;
+    server.use(
+      http.get('*/api/quiz/roadmap', ({ request }) => (new URL(request.url).searchParams.get('resource') === 'learning-path-catalog'
+        ? HttpResponse.json({ versions: { fde: 1 }, paths: [{ manifest, availability: 'available', inventory: { modules: 1, lessons: 0, moduleChecks: 1, moduleCodeExercises: 0, finalCodeExercises: 0 } }] })
+        : undefined)),
+      http.get('*/api/user/*', ({ request }) => (new URL(request.url).searchParams.get('op') === 'learning-path-enrollment'
+        ? new Promise<Response>((resolve) => { release = () => resolve(HttpResponse.json({ enrollments: [] })); })
+        : undefined)),
+    );
+    await mountAt('/learn/forward-deployed-engineer');
+    expect(await screen.findByRole('radio', { name: /^Forward Deployed Engineer/ })).toBeInTheDocument();
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.queryByRole('button', { name: 'Start the FDE path' })).toBeNull();
+    await act(async () => { release(); });
+    expect(await screen.findByRole('button', { name: 'Start the FDE path' })).toBeInTheDocument();
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();
