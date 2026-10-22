@@ -29,7 +29,7 @@ import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } fr
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
 import { createLearningPathSession, pathCodeAttemptVersion } from './session';
-import { canonicalCodingTaskId } from './dsa-coding-tasks';
+import { canonicalCodingTaskId } from './coding-task-id';
 import {
   activityIn,
   activitySummary,
@@ -335,7 +335,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     }
     const {
       LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime, isSkillPathId,
+      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime,
       parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
     } = await import('../../shared/learning-paths');
 
@@ -354,10 +354,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
       return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
     }
-    if (body.skillPaths !== undefined
-        && (!Array.isArray(body.skillPaths) || !body.skillPaths.every(isSkillPathId))) {
-      return jsonError(res, 400, 'bad_request', 'skillPaths must be known skill paths');
-    }
     const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
     if (body.sections !== undefined
         && (!Array.isArray(body.sections) || body.sections.length > LEARN_SECTION_IDS.length
@@ -369,7 +365,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     // track toggle, which sends no profile answers — keeps the rest.
     const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     // Without the saved answers a partial save would write empty goals,
-    // experience, study time and skill paths over them, so nothing is written.
+    // experience and study time over them, so nothing is written.
     if (existingRead.error) {
       return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
     }
@@ -381,7 +377,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
       schemaVersion: 2 as const,
       baseTrack: body.baseTrack,
       specialization,
-      skillPaths: body.skillPaths ?? existing?.skillPaths ?? [],
       ...((body.sections ?? existing?.sections) ? { sections: Array.from(new Set(body.sections ?? existing?.sections)) } : {}),
       goals: body.goals ?? existing?.goals ?? [],
       experience: body.experience ?? existing?.experience ?? ('' as never),
@@ -432,7 +427,10 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     try {
       const rows = await loadEnrollments(supabase, userId);
       res.setHeader('Cache-Control', 'private, no-store');
-      const body: EnrollmentListResponse = { enrollments: rows.map(toEnrollment) };
+      // A stored row of a retired path (dsa-foundations, E5 #496) stays in the
+      // table but is not a path the client can open, so it is left out here
+      // rather than cast to a LearningPathId.
+      const body: EnrollmentListResponse = { enrollments: rows.filter((row) => isLearningPathId(row.path_id)).map(toEnrollment) };
       return res.json(body);
     } catch (error) {
       if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
@@ -458,8 +456,8 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     }
     // Enrollment is free; activity starts and submissions enforce the taster boundary.
     if (action !== 'pause' && await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
-    // A skill path records no career context; a role specialization records the
-    // base track it sat above, for recommendations only.
+    // A role specialization records the base track it sat above, for
+    // recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
 
     const saved = await withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
@@ -1105,7 +1103,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
-    : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
+    : language;
   const packet = { ...acceptParams, p_module_requires: moduleRequirements(module) };
   const codingParams = activity.kind === 'code' ? {
     p_task_id: canonicalTaskId, p_track: codeTrack,

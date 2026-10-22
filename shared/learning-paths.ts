@@ -1,7 +1,7 @@
 import type { DeliveryPhase } from './learning-path-phases';
 /** The learning-path domain: one bounded vocabulary for devShark's optional
- * Forward Deployed Engineer role specialization and its standalone DSA
- * Foundations skill path.
+ * Forward Deployed Engineer role specialization. The standalone DSA
+ * Foundations skill path retired in E5 (#496); its material is Learn content.
  *
  * This module owns ids, kinds, evidence vocabulary, the public manifest shapes
  * and the pure completion arithmetic, so browser and server agree without
@@ -19,22 +19,21 @@ import { isLearnSectionId, type LearnSectionId } from './learn-section-ids';
 /* ── identity ──────────────────────────────────────────────────────────── */
 
 /** Job-role specializations. FDE is the only one, and adding a second is a
- * product decision, not a content edit. DSA Foundations is deliberately not
- * here: it is a skill path, not a role. */
+ * product decision, not a content edit. */
 export const ROLE_SPECIALIZATION_IDS = ['fde'] as const;
 export type RoleSpecializationId = (typeof ROLE_SPECIALIZATION_IDS)[number];
 export const isRoleSpecializationId = (value: unknown): value is RoleSpecializationId =>
   typeof value === 'string' && (ROLE_SPECIALIZATION_IDS as readonly string[]).includes(value);
 
-export const LEARNING_PATH_IDS = ['fde', 'dsa-foundations'] as const;
+export const LEARNING_PATH_IDS = ['fde'] as const;
 export type LearningPathId = (typeof LEARNING_PATH_IDS)[number];
 export const isLearningPathId = (value: unknown): value is LearningPathId =>
   typeof value === 'string' && (LEARNING_PATH_IDS as readonly string[]).includes(value);
 
 /** A role specialization sits above a chosen base track and occupies the
- * learner's single specialization preference. A skill path is entered
- * directly, holds no preference slot, and can run alongside a role. */
-export type LearningPathKind = 'role_specialization' | 'skill_path';
+ * learner's single specialization preference. The `skill_path` kind left with
+ * the DSA path (E5, #496). */
+export type LearningPathKind = 'role_specialization';
 
 /** The base engineering tracks the career flow already offers. Mirrors
  * `Track` in the client without importing it: `shared/` cannot depend on
@@ -462,8 +461,7 @@ export function nextActivityId(
 
 /** The account-synced learning preference. `baseTrack` keeps the career flow's
  * existing choice; `specialization` is the optional role above it and is null
- * for a learner who continued without one. DSA Foundations never appears here:
- * a skill path is an enrollment, not a preference. */
+ * for a learner who continued without one. */
 export interface LearningPreference {
   schemaVersion: 1;
   baseTrack: BaseTrack;
@@ -525,14 +523,6 @@ export type StudyTime = (typeof STUDY_TIMES)[number];
 export const isStudyTime = (value: unknown): value is StudyTime =>
   typeof value === 'string' && (STUDY_TIMES as readonly string[]).includes(value);
 
-/** Skill paths the learner opted into. A skill path is entered directly and
- * holds no preference slot, so it lives beside the role rather than inside it:
- * DSA Foundations can run with or without FDE, and with any base track. */
-export type SkillPathId = Extract<LearningPathId, 'dsa-foundations'>;
-export const SKILL_PATH_IDS: readonly SkillPathId[] = ['dsa-foundations'];
-export const isSkillPathId = (value: unknown): value is SkillPathId =>
-  typeof value === 'string' && (SKILL_PATH_IDS as readonly string[]).includes(value);
-
 /**
  * The versioned learner profile: everything the learner told us about what
  * they are learning and why.
@@ -552,7 +542,6 @@ export interface LearnerProfile {
   schemaVersion: 2;
   baseTrack: BaseTrack;
   specialization: RoleSpecializationId | null;
-  skillPaths: SkillPathId[];
   /** Learn sections the learner chose to join (`shared/learn-sections.ts`).
    * Missing means none chosen: Web Developer comes with the base track and
    * Forward Deployed Engineer with the `fde` specialization regardless, so
@@ -590,9 +579,6 @@ export function parseLearnerProfile(value: unknown): LearnerProfile | null {
   const goals = Array.isArray(raw.goals)
     ? Array.from(new Set(raw.goals.filter(isLearnerGoal))).slice(0, MAX_LEARNER_GOALS)
     : [];
-  const skillPaths = Array.isArray(raw.skillPaths)
-    ? Array.from(new Set(raw.skillPaths.filter(isSkillPathId)))
-    : [];
   // Unknown section ids are dropped; a missing or malformed list stays
   // missing, which means "none chosen", never a guess.
   const sections = Array.isArray(raw.sections)
@@ -602,7 +588,6 @@ export function parseLearnerProfile(value: unknown): LearnerProfile | null {
     schemaVersion: 2,
     baseTrack: raw.baseTrack,
     specialization: isRoleSpecializationId(raw.specialization) ? raw.specialization : null,
-    skillPaths,
     ...(sections ? { sections } : {}),
     goals,
     // An unreadable answer is a missing answer, not a default one.
@@ -635,7 +620,6 @@ export const profileFromPreference = (preference: LearningPreference | null): Le
         schemaVersion: 2,
         baseTrack: preference.baseTrack,
         specialization: preference.specialization,
-        skillPaths: [],
         goals: [],
         experience: '' as ExperienceLevel,
         studyTime: '' as StudyTime,
@@ -650,6 +634,6 @@ export const isPathContentId = (value: unknown): value is string =>
   typeof value === 'string' && value.length >= 3 && value.length <= 96 && ID_PATTERN.test(value);
 
 /** Activity ids carry their path and version so a stale client cannot submit
- * a v1 answer against a v2 activity: `dsa-v1-d07-binary-search`. */
+ * a v1 answer against a v2 activity: `fde-v1-m08-untrusted-content`. */
 export const activityIdPrefix = (pathId: LearningPathId, version: number): string =>
-  `${pathId === 'dsa-foundations' ? 'dsa' : pathId}-v${version}-`;
+  `${pathId}-v${version}-`;

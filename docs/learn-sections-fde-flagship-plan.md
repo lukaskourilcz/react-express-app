@@ -14,7 +14,7 @@ The product ships English only, for good: epic D (section 13) removes the retain
 
 Estimated scope: five epics. A (sections), B (FDE flagship), C (agent workflow skills, in [the audit](agent-workflow-audit.md)), D (English only), E (DSA into Learn). Sequenced so D and the sections ship first with today's FDE v1 inside them, and the flagship content lands module by module behind the same switch.
 
-## 2. Current state (verified)
+## 2. Starting state (verified 21 October 2026)
 
 | Surface | What exists | Files |
 |---|---|---|
@@ -364,3 +364,5 @@ The `dsa-foundations` learning path, its enrollment and progress rows (none exis
 ## 13. English only
 
 The owner decided (D10) that devShark ships English only, for good. Epic D removes the second language rather than keeping it as unshipped work: 81 retained files (`translations.cs.ts`, `levelIntros.cs.ts`, `quiz-data.cs.ts`, the `roadmap-questions*.cs.ts` banks, nine coding task overlays, the 24 learning-path overlays, the audit's `wip/cs/` folder), the language switch and `Lang`'s second value, the `lang` parameter on the API and the client, the `Localized` pair in the learning-path types, the parity checks in the validators and launch contracts, the `/cs/topics/:slug` public guides with their sitemap entries, and every sentence about a second language in CLAUDE.md, AGENTS.md, the skills and the docs. The `t()` dictionary stays as the one source of English copy. D1 goes first so no later issue writes against a stale rule.
+
+Implementation inventory update (E4, 22 October 2026): DSA Foundations 15 levels and DSA Advanced 15 levels now belong to Software Engineer; the gated catalogue issues 2134 questions and 769 coding tasks, 144 of them free. The starting-state table above preserves the original planning snapshot.

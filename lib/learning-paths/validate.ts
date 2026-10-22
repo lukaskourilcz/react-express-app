@@ -334,8 +334,8 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
   if (path.kind === 'role_specialization' && path.id !== 'fde') {
     issues.push(error('unexpected_role', at, 'FDE is the only role specialization'));
   }
-  if (path.id === 'dsa-foundations' && path.kind !== 'skill_path') {
-    issues.push(error('wrong_kind', at, 'DSA Foundations is a skill path, not a role'));
+  if (path.kind !== 'role_specialization') {
+    issues.push(error('wrong_kind', at, 'FDE is a role specialization'));
   }
   if (path.estimatedHours.min <= 0 || path.estimatedHours.min > path.estimatedHours.max) {
     issues.push(error('bad_hours', at, 'estimatedHours must be a positive ascending range'));

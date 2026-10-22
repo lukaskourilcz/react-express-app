@@ -3,7 +3,8 @@ import { runReactSuite } from '../lib/coding/react-runner';
 //   npm run test:paths
 //
 // Three things are checked, and the third is the one that matters most:
-//   1. The validator finds no errors in either published path.
+//   1. The validator finds no errors in the published path (FDE; E5, #496,
+//      retired DSA Foundations).
 //   2. The public projections carry no answer — no correct index, no
 //      explanation, no hidden assertion, no reference implementation.
 //   3. Every reference solution actually passes its own visible AND hidden
@@ -11,14 +12,14 @@ import { runReactSuite } from '../lib/coding/react-runner';
 //      it. A task whose reference cannot pass is a task no learner can pass.
 //
 // Local aids while content is being authored (never set in CI):
-//   PATHS_ONLY=dsa-foundations   check one path
+//   PATHS_ONLY=fde               check one path
 //   PATHS_SKIP_RUN=1             skip the sandbox runs (shape checks only)
 
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LEARNING_PATHS, activitySummary, publicManifest, readinessFor } from '../lib/learning-paths/catalog';
-import { codeFeedback, domainThresholds, gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
+import { codeFeedback, domainThresholds, gradeCheck, gradePathCode, gradePathCodeWith, codeFromReusedTask } from '../lib/learning-paths/grade';
 import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
@@ -26,7 +27,9 @@ import { codingTaskById } from '../lib/coding/active';
 import { isOffLoopModule, moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
-import { DSA_PATH_CODING_TASKS, canonicalCodingTaskId } from '../lib/learning-paths/dsa-coding-tasks';
+import { canonicalCodingTaskId } from '../lib/learning-paths/coding-task-id';
+import { PATH_AUTHORITY_FIXTURES } from './fixtures/path-authority-fixtures';
+import { DOMAIN_PROJECT_CHECK } from './fixtures/domain-check-fixture';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
 import { schemaContracts } from './learning-path-schema-contracts';
@@ -125,7 +128,6 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
 /** The authoring targets the curriculum documents commit to. A path that
  * falls short is not ready to publish, whatever the validator says. */
 const TARGETS: Record<string, { lessons: number; moduleChecks: number; codeExercises: number }> = {
-  'dsa-foundations': { lessons: 18, moduleChecks: 36, codeExercises: 30 },
   fde: { lessons: 20, moduleChecks: 40, codeExercises: 10 },
 };
 
@@ -181,7 +183,8 @@ async function main() {
     /* ── a learner can hold a draft of every exercise and write-up ─────── */
     // Every code exercise and artifact autosaves a draft, one per activity.
     // With a cap below their number, a learner who typed into all of them was
-    // refused from the next one on (DSA has 30 and the cap was 20).
+    // refused from the next one on (the retired DSA path had 30 and the cap
+    // was 20).
     const draftable = inventory.codeExercises + inventory.artifacts;
     if (draftable > PATH_LIMITS.draftsPerEnrollment) {
       fail(`${where}: ${draftable} activities keep drafts, but an enrollment holds at most ${PATH_LIMITS.draftsPerEnrollment}`);
@@ -417,30 +420,40 @@ async function main() {
   }
 
   /* ── the probes, the hidden run and the type check (PATH-1, CODE-2) ─── */
-  const dsaPath = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
-  const dsaActivity = (id: string) => dsaPath?.modules.flatMap((module) => module.activities).find((activity) => activity.id === id);
-  if (!SKIP_RUN && dsaPath) {
-    // The DSA method checks count array reads through a Proxy. Code that
-    // replaced the global Proxy, or RegExp.prototype.test, made every count
-    // zero, so a linear scan passed the binary-search and one-pass budgets.
+  // A path activity that reuses a coding task, as the retired DSA path's
+  // binary search did. Only its reuseTaskId reaches the grader's hidden
+  // assertions; nothing publishes it.
+  const reusing = (id: string, taskId: string): MergedActivity => ({
+    id, kind: 'code', purpose: 'exercise', verification: 'machine_verified', title: id, summary: id,
+    competencies: [], estimatedMinutes: 10, reuseTaskId: taskId,
+  });
+  if (!SKIP_RUN) {
+    // The read probes count array reads through a Proxy. Code that replaced
+    // the global Proxy, or RegExp.prototype.test, made every count zero, so a
+    // linear scan passed the binary-search and one-pass budgets. The linear
+    // search is a private fixture since E5 (#496) retired the DSA path
+    // (scripts/fixtures/path-authority-fixtures.ts).
     const tamperings = [
       ['Proxy replaced', 'var Proxy = function (target) { return target; };'],
       ['RegExp test replaced', 'RegExp.prototype.test = function () { return false; };'],
     ] as const;
-    const binary = dsaActivity('dsa-v1-d07-binary-search');
-    const linear = dsaActivity('dsa-v1-d07-linear-search');
-    if (!binary?.reuseTaskId || !linear?.code) {
-      fail('dsa-foundations: the D07 search exercises are missing');
+    const binary = reusing('synthetic-binary-search', 'js-binary-search');
+    const binaryTask = codingTaskById(binary.reuseTaskId!);
+    const linear = PATH_AUTHORITY_FIXTURES['linear-search'];
+    if (!binaryTask) {
+      fail('js-binary-search: the reused binary search task is missing');
     } else {
-      const binaryCode = codeFromReusedTask(codingTaskById(binary.reuseTaskId)!);
+      const binaryCode = codeFromReusedTask(binaryTask);
       const scan = 'const binarySearch = (sorted, target) => { for (let i = 0; i < sorted.length; i++) if (sorted[i] === target) return i; return -1; };';
       const runOn = 'const linearSearch = (values, target) => { let found = -1; for (let i = values.length - 1; i >= 0; i--) if (values[i] === target) found = i; return found; };';
       for (const [name, tamper] of tamperings) {
         const scanned = await gradePathCode(binary, binaryCode, `${tamper}\n${scan}`);
-        if (scanned.state === 'verified_pass') fail(`dsa-v1-d07-binary-search: a linear scan passes with the ${name}`);
-        const ranOn = await gradePathCode(linear, linear.code, `${tamper}\n${runOn}`);
-        if (ranOn.state === 'verified_pass') fail(`dsa-v1-d07-linear-search: a scan past the match passes with the ${name}`);
+        if (scanned.state === 'verified_pass') fail(`js-binary-search (reused): a linear scan passes with the ${name}`);
+        const ranOn = await gradePathCodeWith(linear.code, linear.solution, `${tamper}\n${runOn}`);
+        if (ranOn.state === 'verified_pass') fail(`linear-search fixture: a scan past the match passes with the ${name}`);
       }
+      if ((await gradePathCode(binary, binaryCode, codingSolutionFor(binaryTask.id)!.solution)).state !== 'verified_pass') fail('js-binary-search (reused): its own reference does not pass the path grader');
+      if ((await gradePathCodeWith(linear.code, linear.solution, linear.solution.solution)).state !== 'verified_pass') fail('linear-search fixture: its own reference does not pass');
     }
     // The hidden assertions run in a fresh program, in a shuffled order, as
     // in the coding section: a table of every expected answer served by call
@@ -449,7 +462,7 @@ async function main() {
     const digits = codingTaskById('js-digit-sum')!;
     const table = [...digits.tests!, ...codingSolutionFor(digits.id)!.hiddenTests!].map((test) => test.expected);
     const byCount = await gradePathCode(
-      { ...binary!, id: 'synthetic-digit-sum', reuseTaskId: digits.id },
+      reusing('synthetic-digit-sum', digits.id),
       codeFromReusedTask(digits),
       `let k = 0; const table = ${JSON.stringify(table)}; const digitSum = () => table[k++];`,
     );
@@ -490,15 +503,16 @@ async function main() {
     }
   }
 
-  /* ── the DSA final's pass rule ─────────────────────────────────────── */
+  /* ── a project check's per-domain pass rule ────────────────────────── */
   // Ten questions, two per domain. An 80% gate per domain meant both of a
   // domain's questions, so one slip anywhere failed a check whose screen said
-  // 80%. The rule is 80% overall and at least one of each domain's two.
+  // 80%. The rule is 80% overall and at least one of each domain's two. No
+  // published check has domains today, so this grades the retired DSA final,
+  // kept as a private fixture (scripts/fixtures/domain-check-fixture.ts).
   {
-    const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
-    const final = dsa?.modules.flatMap((module) => module.activities).find((activity) => activity.id === 'dsa-v1-d10-final-checks');
-    if (!final?.questions || !final.domains) {
-      fail('dsa-foundations: the final check dsa-v1-d10-final-checks is missing');
+    const final = DOMAIN_PROJECT_CHECK;
+    if (!final.questions || !final.domains) {
+      fail('domain-check fixture: the project check has no questions or domains');
     } else {
       const key = final.questions.map((question) => question.correct);
       const missing = (indexes: number[]) => key.map((correct, index) => (indexes.includes(index) ? (correct === 0 ? 1 : 0) : correct));
@@ -513,13 +527,13 @@ async function main() {
       ];
       for (const [label, misses, state, failedDomains] of cases) {
         const graded = gradeCheck(final, key, missing(misses));
-        if (graded.state !== state) fail(`dsa final: ${label} grades ${graded.state}, not ${state}`);
+        if (graded.state !== state) fail(`domain project check: ${label} grades ${graded.state}, not ${state}`);
         if (JSON.stringify(graded.failedDomains) !== JSON.stringify(failedDomains)) {
-          fail(`dsa final: ${label} fails the domains [${graded.failedDomains.join(', ')}], not [${failedDomains.join(', ')}]`);
+          fail(`domain project check: ${label} fails the domains [${graded.failedDomains.join(', ')}], not [${failedDomains.join(', ')}]`);
         }
       }
       if (Object.values(domainThresholds(final)).some((share) => share !== 0.5)) {
-        fail('dsa final: a two-question domain needs 50% on its own');
+        fail('domain project check: a two-question domain needs 50% on its own');
       }
 
       // A domain with five or more questions keeps the check's own 80%. With
@@ -550,17 +564,17 @@ async function main() {
       // A retry deals the same questions reshuffled, so a failed attempt says
       // only which were wrong. The key and explanations come with a pass, and
       // a practice check returns them every time.
-      if (final.purpose !== 'project') fail('dsa final: the final check is a project check');
+      if (final.purpose !== 'project') fail('domain project check: the final check is a project check');
       const failedFinal = gradeCheck(final, key, missing(inDomain(second)));
-      if (!failedFinal.keyWithheld) fail('dsa final: a failed project check does not say it withheld its key');
+      if (!failedFinal.keyWithheld) fail('domain project check: a failed project check does not say it withheld its key');
       const leaked = failedFinal.verdicts.filter((verdict) => 'correctIndex' in verdict || 'explanation' in verdict);
-      if (leaked.length > 0) fail(`dsa final: a failed project check returns the key or an explanation for ${leaked.map((one) => one.questionId).join(', ')}`);
+      if (leaked.length > 0) fail(`domain project check: a failed project check returns the key or an explanation for ${leaked.map((one) => one.questionId).join(', ')}`);
       const wrongIds = failedFinal.verdicts.filter((verdict) => !verdict.correct).map((verdict) => verdict.questionId);
       const expectedWrong = inDomain(second).map((index) => final.questions![index].id);
-      if (wrongIds.join() !== expectedWrong.join()) fail(`dsa final: a failed attempt names [${wrongIds.join(', ')}] wrong, not [${expectedWrong.join(', ')}]`);
+      if (wrongIds.join() !== expectedWrong.join()) fail(`domain project check: a failed attempt names [${wrongIds.join(', ')}] wrong, not [${expectedWrong.join(', ')}]`);
       const passedFinal = gradeCheck(final, key, missing([inDomain(first)[0]]));
       if (passedFinal.keyWithheld || passedFinal.verdicts.some((verdict, index) => verdict.correctIndex !== key[index] || !verdict.explanation)) {
-        fail('dsa final: a passed project check does not return the key and every explanation');
+        fail('domain project check: a passed project check does not return the key and every explanation');
       }
       const practice = paths.flatMap((path) => path.modules.flatMap((module) => module.activities))
         .find((activity) => activity.kind === 'check' && activity.purpose === 'exercise' && (activity.questions?.length ?? 0) > 0);
@@ -592,31 +606,24 @@ async function main() {
   const catalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
 
-  /* ── one coding record per DSA exercise (#493) ─────────────────────── */
-  // A DSA path pass records under the Coding task the exercise became, so it
-  // and a Coding pass share one record and one award. The queue keeps its
-  // path id: its path contract (a harness-declared buffer) is not the task's.
+  /* ── the coding record a path pass is kept under ────────────────────── */
+  // A reused task records under its own id, so a path pass and a Coding pass
+  // share one record and one award. An authored exercise keeps an id derived
+  // from its path and activity. E5 (#496) retired the DSA path, whose
+  // exercises recorded under the alg-dsa-* Coding tasks they became; those
+  // tasks and their records stay, and no path maps onto them any more.
   {
-    const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations')!;
-    const code = dsa.modules.flatMap((module) => module.activities).filter((activity) => activity.kind === 'code');
-    const mapped = code.filter((activity) => !activity.reuseTaskId && activity.id !== 'dsa-v1-d04-head-index-queue');
-    assert.deepEqual(Object.keys(DSA_PATH_CODING_TASKS).sort(), mapped.map((activity) => activity.id).sort(), 'every DSA exercise but the reuse and the queue maps to a Coding task');
-    const targets = Object.values(DSA_PATH_CODING_TASKS);
-    assert.equal(new Set(targets).size, targets.length, 'each Coding task takes one exercise');
-    for (const id of targets) {
-      const task = codingTaskById(id);
-      assert.ok(task && task.topic === 'dsa' && task.track === 'algorithms', `${id} is an issued DSA Foundations task`);
-    }
-    for (const activity of code) {
-      const id = canonicalCodingTaskId(dsa.id, activity);
-      if (activity.reuseTaskId) assert.equal(id, activity.reuseTaskId, `${activity.id} keeps the task it reuses`);
-      else if (activity.id === 'dsa-v1-d04-head-index-queue') assert.match(id, /^path-code-[0-9a-f]{32}$/, 'the queue keeps its path id');
-      else assert.equal(id, DSA_PATH_CODING_TASKS[activity.id]);
-    }
-    assert.equal(canonicalCodingTaskId(dsa.id, { id: 'dsa-v1-d07-binary-search', reuseTaskId: 'js-binary-search' }), 'js-binary-search');
+    assert.equal(canonicalCodingTaskId('fde', { id: 'synthetic-binary-search', reuseTaskId: 'js-binary-search' }), 'js-binary-search');
+    const derived = canonicalCodingTaskId('fde', { id: 'fde-v1-synthetic' });
+    assert.match(derived, /^path-code-[0-9a-f]{32}$/, 'an authored exercise keeps a path-derived id');
+    assert.equal(canonicalCodingTaskId('fde', { id: 'fde-v1-synthetic' }), derived, 'the derived id is stable');
+    assert.notEqual(canonicalCodingTaskId('other', { id: 'fde-v1-synthetic' }), derived, 'the derived id names its path');
     const fde = LEARNING_PATHS.find((path) => path.id === 'fde');
-    for (const activity of (fde?.modules ?? []).flatMap((module) => module.activities).filter((one) => one.kind === 'code' && !one.reuseTaskId)) {
-      assert.match(canonicalCodingTaskId(fde!.id, activity), /^path-code-[0-9a-f]{32}$/, `${activity.id}: an FDE exercise keeps its path id`);
+    for (const activity of (fde?.modules ?? []).flatMap((module) => module.activities).filter((one) => one.kind === 'code')) {
+      const id = canonicalCodingTaskId(fde!.id, activity);
+      if (activity.reuseTaskId) assert.equal(id, activity.reuseTaskId, `${activity.id} keeps the task it reuses`);
+      else assert.match(id, /^path-code-[0-9a-f]{32}$/, `${activity.id}: an FDE exercise keeps its path id`);
+      assert.ok(!id.startsWith('alg-dsa-'), `${activity.id}: no path exercise records under a DSA Foundations task`);
     }
   }
 

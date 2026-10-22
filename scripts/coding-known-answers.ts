@@ -9,8 +9,9 @@
 //
 // KNOWN_RIGHT_CODE lists correct answers a check once refused because it read
 // something the statement does not ask for. Each must keep passing.
+import { DSA_ADVANCED_WRONG } from './fixtures/dsa-advanced-known-answers';
 import { FULLSTACK_APPS } from '../lib/coding/tasks/fullstack';
-import { DSA_FOUNDATIONS_RIGHT, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-foundations-known-answers';
+import { DSA_FOUNDATIONS_RIGHT, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-known-answers';
 
 export interface KnownAnswer {
   id: string;
@@ -44,6 +45,7 @@ const fullstackWrong = FULLSTACK_APPS.flatMap((app): KnownAnswer[] => {
 export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   ...fullstackWrong,
   ...DSA_FOUNDATIONS_WRONG,
+  ...DSA_ADVANCED_WRONG,
   { id: 'ts-fullstack-links-2', label: 'a POST that answers with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);']] },
   { id: 'ts-fullstack-links-3', label: 'a POST and a visit that answer with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);'], ['return reply(200, { ...link });', 'return reply(200, link);']] },
   { id: 'ts-fullstack-links-3', label: 'any method on /api/links/SLUG deleting the link', replace: [['if (link && parts.length === 4 && method === "DELETE") {', 'if (link && parts.length === 4) {']] },

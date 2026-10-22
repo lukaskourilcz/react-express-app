@@ -14,8 +14,8 @@
 // join, because it runs beside the track and beside the specialization; the
 // Forward Deployed Engineer specialization stays one of two exclusive cards,
 // and "Continue without a specialization" is a first-class answer rather than
-// a way out. DSA Foundations is no longer offered here: epic E folds it into
-// Learn, and its own page still reaches it until then.
+// a way out. DSA Foundations is a Learn topic of Software Engineer, not a path
+// (E5, #496, retired the standalone path), so the picker never offers it.
 //
 // Redesigned on the Astryx design system: an Astryx Dialog whose options use
 // the shared radio-card pattern. Arrow keys browse the exclusive options; the

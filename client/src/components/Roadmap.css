@@ -599,14 +599,6 @@
   background-color: var(--color-background-muted);
 }
 .rm-topic-pill--dimmed .rm-topic-glyph { filter: grayscale(1); }
-.rm-topic-also {
-  display: block;
-  font-size: 0.66rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 
 .rm-section-empty {
   max-width: 620px;

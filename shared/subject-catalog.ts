@@ -9,17 +9,17 @@ export const SUBJECT_SCOPE_CATALOG = {
     // The landing prints this as the number of questions. It counts what a
     // learner can be served from the static bank: the audit's gate applied,
     // the retired sections left out. `npm run test:launch` recomputes it.
-    questionCount: 2014,
+    questionCount: 2134,
     // Active challenges listed in the Coding section, excluding hidden tracks.
     // The launch contract recomputes this from the server's active catalogue.
-    codingChallengeCount: 754,
+    codingChallengeCount: 769,
     // `abbreviations`, `testing` and `code-snippets` are gone from `topics`:
     // they are no longer taught as paths of their own (see
     // shared/retired-content.ts). They stay in `categories` on purpose, so
     // every attempt, receipt and progress row written before the retirement
     // still resolves to devShark exactly as it did.
-    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'general', 'ai', 'databases', 'system-design', 'devops', 'security'],
-    categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'ai', 'databases', 'system-design', 'testing', 'devops', 'security', 'code-snippets'],
+    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'dsa-advanced', 'algorithms', 'general', 'ai', 'databases', 'system-design', 'devops', 'security'],
+    categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'dsa-advanced', 'algorithms', 'abbreviations', 'general', 'ai', 'databases', 'system-design', 'testing', 'devops', 'security', 'code-snippets'],
   },
 } as const;
 

@@ -76,6 +76,13 @@
       "status": 308
     },
     {
+      "src": "^/roadmap/paths/dsa-foundations(?:/.*)?$",
+      "headers": {
+        "Location": "/learn/software-engineer?topic=dsa"
+      },
+      "status": 308
+    },
+    {
       "src": "^/cs/topics(?:/.*)?$",
       "dest": "/index.html",
       "status": 404,

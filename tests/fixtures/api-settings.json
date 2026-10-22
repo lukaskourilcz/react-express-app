@@ -43,8 +43,7 @@
   ],
   "learningPaths": {
     "paths": {
-      "fde": { "enabled": false, "version": 1, "availability": "disabled" },
-      "dsa-foundations": { "enabled": false, "version": 1, "availability": "disabled" }
+      "fde": { "enabled": false, "version": 1, "availability": "disabled" }
     }
   },
   "billing": { "enabled": true, "cancellable": true, "cancelByEmail": true, "seller": "link", "launchOffer": false },
