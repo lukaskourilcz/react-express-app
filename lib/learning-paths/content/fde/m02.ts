@@ -1,664 +1,1158 @@
-/** M02 — Integration and data.
+/** M02 — Decomposition cases.
  *
- * The first module that runs code. It takes the scope written in M01 and
- * points it at an external system that does not behave the way its
- * documentation says: fields that are documented as present and are not,
- * pages behind a cursor, the same ticket delivered twice, and a throttled
- * response that has to be waited out rather than dropped.
+ * The second module of the discover-and-scope phase. Two lessons teach how to
+ * decompose a customer request (operator, decision, source authority,
+ * baseline, a bounded first slice, the trade-off and a revised plan when a
+ * constraint moves); twelve scenario checks of four ordered questions each
+ * drill it. Completion needs both lessons and any nine of the twelve cases at
+ * `verified_pass` (`requiresAtLeast`, completed atomically by migration 066).
  *
- * Two lessons, one four-question check, one graded connector adapter. The
- * adapter is the vertical slice this path is proved with, so its criteria are
- * split three ways — correctness, replay, throttling — and each failure
- * detail names the mistake rather than the missing line.
+ * Authored under the temporary module id `fde-v1-m02-cases` (B3, #499) and
+ * placed here by B9 (#505). Lesson, activity and question ids keep the
+ * `fde-v1-m02-cases-` slug: activity ids are permanent.
  *
- * The ticket API is a fixture. `client.listTickets` is an object literal
- * declared in the task harness, `sleep` runs on the sandbox's virtual clock,
- * and nothing here opens a socket or needs a vendor account. Marlbrook
- * Systems, its ticket ids and its customer ids are invented for this module.
- * No real customer data appears anywhere in it. */
-
-import type { ModuleSource } from '../../types';
-
-/** The synthetic ticket API the adapter is graded against, plus the probes
- * the assertions read. Appended after the learner's code, so `sleep` and the
- * client builders cannot be shadowed by a same-named declaration.
- *
- * `sleep` schedules through `setTimeout`, which the sandbox runs on a virtual
- * clock: a 500 ms wait finishes in microseconds and the recorded request
- * times still show the gap, so the same submission grades the same way every
- * run. */
-const TICKET_CLIENT = `
-var sleep = function (ms) {
-  return new Promise(function (resolve) { setTimeout(resolve, ms); });
-};
-
-var __PAGES = [
-  {
-    cursor: null,
-    nextCursor: 'p2',
-    tickets: [
-      { id: 'TCK-1004', customerId: 'CUS-88', subject: 'Export fails at 02:00', channel: 'email', openedAt: '2026-03-02T02:14:00Z' },
-      { id: 'TCK-1001', customerId: 'CUS-12', subject: 'Cannot add a warehouse', channel: 'portal', openedAt: '2026-03-01T09:12:00Z' },
-      { id: 'TCK-1007', customerId: '', subject: 'Invoice question', channel: 'email', openedAt: '2026-03-02T08:40:00Z' }
-    ]
-  },
-  {
-    cursor: 'p2',
-    nextCursor: 'p3',
-    tickets: [
-      { id: 'TCK-1002', customerId: 'CUS-12', subject: 'Duplicate stock rows', channel: 'portal', openedAt: '2026-03-01T14:02:00Z' },
-      { id: 'TCK-1004', customerId: 'CUS-88', subject: 'Export fails at 02:00', channel: 'email', openedAt: '2026-03-02T02:14:00Z' }
-    ]
-  },
-  {
-    cursor: 'p3',
-    nextCursor: null,
-    tickets: [
-      { id: 'TCK-1009', customerId: 'CUS-40', subject: 'Rename a location', channel: 'portal', openedAt: '2026-03-03T11:20:00Z' },
-      { id: 'TCK-1003', customerId: null, subject: 'Password reset', channel: 'email', openedAt: '2026-03-03T07:55:00Z' }
-    ]
-  }
-];
-
-var __makeClient = function (pages, options) {
-  var opts = options || {};
-  var throttleCursor = Object.prototype.hasOwnProperty.call(opts, 'throttleCursor') ? opts.throttleCursor : 'p2';
-  var retryAfterMs = opts.retryAfterMs === undefined ? 500 : opts.retryAfterMs;
-  var throttles = opts.throttles === undefined ? 1 : opts.throttles;
-  var failWith = opts.failWith || null;
-  var budget = {};
-  var started = Date.now();
-  var client = {
-    requests: [],
-    listTickets: function (cursor) {
-      var key = cursor === undefined ? null : cursor;
-      client.requests.push({ cursor: key, at: Date.now() - started });
-      if (failWith && failWith.cursor === key) {
-        return Promise.reject({ status: failWith.status, message: failWith.message });
-      }
-      if (throttleCursor === '*' || throttleCursor === key) {
-        var slot = String(key);
-        if (budget[slot] === undefined) budget[slot] = throttles;
-        if (budget[slot] > 0) {
-          budget[slot] -= 1;
-          return Promise.reject({ status: 429, retryAfterMs: retryAfterMs });
-        }
-      }
-      for (var i = 0; i < pages.length; i++) {
-        if (pages[i].cursor === key) {
-          return Promise.resolve({
-            tickets: pages[i].tickets.map(function (ticket) { return JSON.parse(JSON.stringify(ticket)); }),
-            nextCursor: pages[i].nextCursor
-          });
-        }
-      }
-      return Promise.reject({ status: 404, message: 'unknown cursor ' + String(key) });
-    }
-  };
-  return client;
-};
-
-var __client = function () { return __makeClient(__PAGES, {}); };
-var __ids = function (out) { return out.records.map(function (record) { return record.id; }); };
-var __attempts = function (client, cursor) {
-  return client.requests.filter(function (request) { return request.cursor === cursor; });
-};
-`.trim();
+ * Twelve original fictional customer cases. No real customer data or live
+ * model. */
+import type { ModuleSource } from "../../types";
 
 export const FDE_M02: ModuleSource = {
-  id: 'fde-v1-m02',
-  title: 'Integration and data',
-  outcomes: [
-    'Read a payload against its documentation and say which fields are actually guaranteed, then check them at the boundary instead of trusting the schema.',
-    'Say what your code does with a record it cannot use, and count those records instead of dropping them silently.',
-    'Decide which failures a client may retry on its own, and which need an idempotency key or a person.',
-    'Wait the delay a throttled server asked for, and back off with jitter when it asked for nothing.',
-    'Write a sync that survives duplicate delivery and paged reads, and returns the same result when you run it a second time.',
+  "id": "fde-v1-m02",
+  "title": "Decomposition cases",
+  "outcomes": [
+    "Clarify the operator, source authority and missing constraints before choosing a solution.",
+    "Define a repeatable baseline and a bounded first delivery with explicit exclusions.",
+    "Explain the tradeoff and revise the plan when a constraint changes.",
+    "Apply the visible case rubric: both lessons acknowledged and any nine of twelve four-question cases passed at 80%."
   ],
-  competencies: ['integration'],
-  dependsOn: ['fde-v1-m01'],
-  estimatedMinutes: 110,
-  lessons: [
-    {
-      id: 'fde-v1-m02-l1',
-      title: 'Contracts and the data you actually get',
-      summary:
-        'The documented shape against the shape on the wire, fields that are nullable in practice and not in the docs, encoding surprises, and where the validation belongs.',
-      estimatedMinutes: 25,
-      sources: [
-        { label: 'RFC 9110 — HTTP Semantics', url: 'https://www.rfc-editor.org/rfc/rfc9110', reviewedOn: '2026-09-08' },
-        {
-          label: 'MDN — JSON.parse',
-          url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse',
-          reviewedOn: '2026-09-08',
-        },
-        {
-          label: 'MDN — String.prototype.normalize',
-          url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize',
-          reviewedOn: '2026-09-08',
-        },
-      ],
-      sections: [
-        {
-          kind: 'prose',
-          body:
-            'A customer hands you API documentation and a key. The documentation describes the system somebody intended to build. The wire shows you the one they run. Your first job on any integration is to find the distance between the two, before you have written code that assumes the first one.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'The gap is rarely dramatic. Marlbrook’s ticket API documents `customerId` as a string, required. Pull a thousand tickets and eleven of them carry an empty string, because tickets opened from the public web form have no account attached until an agent links one. Nobody lied. The field was required when the endpoint was written in 2021, the web form shipped in 2024, and the documentation was never the thing that enforced it.',
-        },
-        {
-          kind: 'table',
-          caption: 'Four hypothetical contract mismatches and possible downstream failures if validation does not catch them.',
-          headers: ['The documentation says', 'What arrives', 'What it costs you later'],
-          rows: [
-            [
-              '`customerId`: string, required',
-              'An empty string on tickets opened through the public form',
-              'A join against the customer table returns nothing, and the sync writes rows with no owner',
-            ],
-            [
-              '`priority`: one of low, normal, high',
-              '`urgent`, from a workflow rule added last quarter',
-              'An unhandled priority can be rejected, dropped or misclassified depending on the implementation',
-            ],
-            [
-              '`openedAt`: ISO 8601 timestamp',
-              '`2026-03-02 02:14:00`, no `T`, no offset, in the desk’s local time',
-              'An unspecified timezone or ambiguous local time can produce incorrect instants and inconsistent reports',
-            ],
-            [
-              '`tags`: array of strings',
-              '`null` on tickets migrated from the old system',
-              '`tags.map` throws inside the loop and the sync dies on record 4,113 of 9,000',
-            ],
-          ],
-        },
-        {
-          kind: 'code',
-          language: 'json',
-          code: '{\n  "id": "TCK-1007",\n  "customerId": "",\n  "subject": "Invoice question",\n  "priority": "urgent",\n  "openedAt": "2026-03-02 08:40:00",\n  "tags": null,\n  "assignee": { "id": null, "name": null }\n}',
-          caption: 'A hypothetical ticket with present fields that violate the stated usable-record contract. A complete schema can reject these values.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'A presence/type-only check can accept an empty customerId. A richer schema can enforce non-empty values, nullable alternatives and enum constraints. The issue is the actual validation contract, not an inherent inability of schemas to express useful rules. Missing offsets also require an explicit timestamp interpretation policy; do not silently guess the desk timezone.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'Validate external data at the boundary and return a clearly defined usable record or rejection. Downstream code can then rely on the validated fields within that scope. It still needs authorization, current-state checks and any additional invariants required for the effect it performs. Avoid inconsistent duplicate input checks across callers.',
-        },
-        {
-          kind: 'code',
-          language: 'javascript',
-          code:
-            'const text = value => (typeof value === \'string\' ? value.trim() : \'\');\n\n// One place decides. Downstream code gets a record or a reason, never a maybe.\nconst toRecord = ticket => {\n  const id = text(ticket.id);\n  const customerId = text(ticket.customerId);\n  if (id === \'\') return { ok: false, reason: \'no ticket id\' };\n  if (customerId === \'\') return { ok: false, reason: \'no customer id\' };\n  return { ok: true, record: { id, customerId, subject: text(ticket.subject) } };\n};',
-          caption: 'A deliberately partial boundary for ordinary ticket objects: it validates only ids and normalizes subject text. It does not validate the full ticket, authorization or ownership.',
-        },
-        {
-          kind: 'callout',
-          tone: 'note',
-          body:
-            'A record you cannot use is a decision, not a crash. Count it, keep the reason, and report the count beside the successes. “412 tickets synced” hides the eleven that were dropped; “412 synced, 11 skipped: no customer id” is the sentence the support lead can act on, and it is the one that tells you when the eleven becomes ninety.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'Visually similar strings can differ in code points and fail exact equality. Decide normalization rules from the identifier contract before changing keys: trimming or Unicode normalization can merge values a source intended to keep distinct. NFC handles canonical Unicode equivalence, not every visually similar character or identifier ambiguity.',
-        },
-        {
-          kind: 'code',
-          language: 'javascript',
-          code:
-            'const a = \'Jos\\u00e9\';\nconst b = \'Jose\\u0301\';\na === b; // false\na.normalize(\'NFC\') === b.normalize(\'NFC\'); // true\n\n\'CUS-12\\u00a0\'.trim(); // \'CUS-12\': ECMAScript trim removes NBSP\n\'CUS-12\\u200b\'.trim(); // keeps U+200B ZERO WIDTH SPACE',
-          caption: 'Test the exact characters and the source contract. NBSP is trimmed; zero-width space is not. Normalization is not a general identity or authorization check.',
-        },
-        {
-          kind: 'callout',
-          tone: 'warning',
-          body:
-            'JavaScript JSON.parse normally represents JSON numbers as binary64 Number values. Integers beyond Number.MAX_SAFE_INTEGER are not all exactly representable: parsing 9007199254740993 produces 9007199254740992. Some larger integers are exactly representable, so digit count alone is not the precise boundary. Preserve opaque or potentially large identifiers as JSON strings end to end; validate numeric ranges before converting any identifier to Number.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'Write down the contract you actually got, next to the one you were given. Two columns, one row per field: what the documentation claims, and what a thousand records showed. That document is what you hand the customer when you ask them to fix the source, and it is what stops the next engineer from re-discovering the empty `customerId` in production.',
-        },
-      ],
-    },
-    {
-      id: 'fde-v1-m02-l2',
-      title: 'Retries, duplicates and idempotency',
-      summary:
-        'Why at-least-once delivery is the normal case, what an idempotency key buys you, which failures are safe to retry, and how to honour a Retry-After instead of guessing.',
-      estimatedMinutes: 25,
-      sources: [
-        { label: 'RFC 9110 — HTTP Semantics', url: 'https://www.rfc-editor.org/rfc/rfc9110', reviewedOn: '2026-09-08' },
-        { label: 'RFC 6585 — Additional HTTP Status Codes', url: 'https://www.rfc-editor.org/rfc/rfc6585', reviewedOn: '2026-09-08' },
-        {
-          label: 'MDN — HTTP response status codes',
-          url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status',
-          reviewedOn: '2026-09-08',
-        },
-      ],
-      sections: [
-        {
-          kind: 'prose',
-          body:
-            'A sender can lose the acknowledgement after the receiver processes a request. Retrying can then duplicate the effect. Delivery guarantees depend on the queue, webhook or client: some systems use at-most-once delivery, while bounded retries can still fail to deliver. Do not assume every transport delivers at least once. Design for the documented loss, duplication and ordering behavior.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'For a service with an idempotency contract, reuse a stable operation key across attempts. The receiver must scope it to the caller or tenant and operation, bind it to the intended request, and coordinate the claim, effect and result against concurrent requests and crashes. Document replay behavior, mismatched payloads, failures and retention. A fresh key per attempt defeats deduplication; a key alone does not implement it.',
-        },
-        {
-          kind: 'code',
-          language: 'javascript',
-          code:
-            '// Illustrative APIs. Trusted server code derives tenantId and fingerprint,\n// checks current actor authorization before this call, and keeps all writes local\n// to one transactional database; lockOperation serializes the scoped key.\nconst applyRefund = (tenantId, key, request) =>\n  database.transaction(async tx => {\n    await tx.lockOperation(tenantId, key);\n    const prior = await tx.operations.get(tenantId, key);\n    if (prior) {\n      if (prior.fingerprint !== request.fingerprint) throw new Error(\'key reused\');\n      return prior.result;\n    }\n    // This assumed operation enforces current authorization, approval and balance.\n    const result = await tx.ledger.applyApprovedRefund(tenantId, request);\n    await tx.operations.insert({ tenantId, key, fingerprint: request.fingerprint, result });\n    return result;\n  });',
-          caption: 'A transaction/lock sketch for a local ledger, with an assumed unique scoped operation key. It cannot make an external payment-provider effect atomic with this database; that requires the provider contract and recovery design.',
-        },
-        {
-          kind: 'callout',
-          tone: 'note',
-          body:
-            'For current-state sync, use a stable tenant-scoped ticket id as the upsert identity, not a permanent reason to discard all future updates. An immutable update feed may use tenant, ticket id and version as its event identity. Event ids are another common contract. The connector exercise deliberately keeps the first delivery within one unchanged fixture run; it does not implement persistent current-state synchronization.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'RFC 9110 defines safe methods by their requested read-only semantics; logging and other incidental effects can still occur. Idempotence concerns the intended effect of repeated identical requests, not identical responses or an absence of logs. GET is safe and idempotent; DELETE is idempotent but not safe under standard semantics. POST is not inherently idempotent, but a documented application contract or other reliable knowledge may justify retries. Bound retries and recheck the specific service contract.',
-        },
-        {
-          kind: 'table',
-          caption: 'Retry considerations for an API following standard HTTP semantics. These are not unconditional promises about every service.',
-          headers: ['Failure', 'Retry without asking?', 'Why'],
-          rows: [
-            ['GET returned 429 or 503', 'Usually eligible for bounded retry', 'Respect a valid Retry-After when supplied; read-only requested semantics do not forbid incidental effects'],
-            ['GET timed out with no response', 'Usually eligible for bounded retry', 'The representation may change; retry with an appropriate budget and cancellation policy'],
-            ['POST timed out, no deduplication contract', 'Do not assume it is safe to replay', 'The effect may have happened before the acknowledgement was lost'],
-            ['POST returned 500, key supplied', 'Inspect the actual idempotency contract', 'A header alone does not establish atomicity, stored failure behavior or successful replay'],
-            ['400 or 422 with unchanged invalid input', 'Usually fix the input before retrying', 'Status alone is not a universal claim that all future attempts fail forever'],
-            ['401 or 403', 'Resolve credentials or authorization first', 'Avoid blind loops; documented token refresh may permit a later request'],
-          ],
-        },
-        {
-          kind: 'prose',
-          body:
-            '429 indicates rate limiting. RFC 6585 permits, but does not require, a Retry-After header; its value may be seconds or an HTTP date. The status alone does not establish that nothing was read or changed. For this exercise, the synthetic read rejection returns no page and preserves the cursor. Follow the documented contract, respect a valid delay and stop or defer when the retry budget is exhausted.',
-        },
-        {
-          kind: 'trace',
-          caption:
-            'One sync across three pages, with the second page throttled. Step through it: the retry goes back to the same cursor, not to the start.',
-          trace: {
-            shape: 'array',
-            frames: [
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                note: 'The sync starts with no cursor, no records and no requests sent. Five steps are ahead of it.',
-                counter: { label: 'Requests sent', value: 0 },
-              },
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                marks: [{ index: 0, role: 'active' }],
-                note: 'The first request returns 200 with three tickets and nextCursor p2. Two tickets are kept; one has an empty customerId and is counted as skipped.',
-                counter: { label: 'Requests sent', value: 1 },
-              },
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                marks: [
-                  { index: 0, role: 'settled' },
-                  { index: 1, role: 'excluded' },
-                ],
-                note: 'In this synthetic read, cursor p2 rejects with a two-second delay and no page. No record is added and the cursor stays at p2; that is the fixture contract, not a universal 429 guarantee.',
-                counter: { label: 'Requests sent', value: 2 },
-              },
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                marks: [
-                  { index: 0, role: 'settled' },
-                  { index: 1, role: 'excluded' },
-                  { index: 2, role: 'active' },
-                ],
-                note: 'The client waits the supplied two seconds. An earlier retry would violate this delay; whether it receives another 429 or extends a limiter window depends on the service.',
-                counter: { label: 'Requests sent', value: 2 },
-              },
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                marks: [
-                  { index: 0, role: 'settled' },
-                  { index: 1, role: 'excluded' },
-                  { index: 2, role: 'settled' },
-                  { index: 3, role: 'active' },
-                ],
-                note: 'The same cursor is requested again and returns 200. One new ticket is kept; the other is a second delivery of TCK-1004, which the set of kept ids already holds, so it is counted as a duplicate.',
-                counter: { label: 'Requests sent', value: 3 },
-              },
-              {
-                cells: ['GET (no cursor)', 'GET cursor=p2', 'wait 2 s', 'GET cursor=p2', 'GET cursor=p3'],
-                marks: [
-                  { index: 0, role: 'settled' },
-                  { index: 1, role: 'excluded' },
-                  { index: 2, role: 'settled' },
-                  { index: 3, role: 'settled' },
-                  { index: 4, role: 'active' },
-                ],
-                note: 'The last page returns nextCursor null and the walk stops: four records, two skipped, one duplicate, from four requests for three pages.',
-                counter: { label: 'Requests sent', value: 4 },
-              },
-            ],
-          },
-        },
-        {
-          kind: 'prose',
-          body:
-            'When the service supplies no usable delay, capped exponential backoff with jitter is a common policy. Choose it alongside the service contract, total deadline and retry budget; exponential timing is not universally optimal. What exponential backoff alone does not fix is synchronisation. If fifty clients were throttled by the same overload, all fifty wake up at the same instant and the next wave is identical to the one that caused the problem. Jitter breaks that up by spreading each client’s wait randomly across its window.',
-        },
-        {
-          kind: 'code',
-          language: 'javascript',
-          code:
-            'const nextDelay = (attempt, retryAfterMs) => {\n  if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) return retryAfterMs;\n  const ceiling = Math.min(1000 * 2 ** attempt, 30_000);\n  return Math.random() * ceiling;\n};',
-          caption: 'This helper receives an already parsed finite nonnegative delay, including zero, or null. Attempt is an integer 0–30. Parse HTTP dates elsewhere; apply the total deadline and retry limit outside this helper.',
-        },
-        {
-          kind: 'callout',
-          tone: 'warning',
-          body:
-            'Give every retry loop a budget. A client that retries forever turns a five-minute dependency blip into a self-inflicted outage, and it does it while reporting that everything is fine. Choose a documented attempt/deadline budget, stop when exhausted and surface useful recovery context. Resuming later requires a persisted valid checkpoint and the source cursor contract; a cursor alone may expire or omit state needed for a consistent resume.',
-        },
-      ],
-    },
+  "competencies": [
+    "discovery"
   ],
-  activities: [
-    {
-      id: 'fde-v1-m02-l1-read',
-      kind: 'lesson',
-      purpose: 'exercise',
-      verification: 'self_reviewed',
-      title: 'Read: contracts and the data you actually get',
-      summary: 'Documented and observed field contracts, boundary validation, explicit identifier normalization and safe numeric ranges.',
-      competencies: ['integration'],
-      estimatedMinutes: 25,
-      lessonId: 'fde-v1-m02-l1',
-    },
-    {
-      id: 'fde-v1-m02-l2-read',
-      kind: 'lesson',
-      purpose: 'exercise',
-      verification: 'self_reviewed',
-      title: 'Read: retries, duplicates and idempotency',
-      summary: 'Documented delivery semantics, atomic scoped idempotency, retry eligibility, optional Retry-After delays and bounded recovery.',
-      competencies: ['integration'],
-      estimatedMinutes: 25,
-      lessonId: 'fde-v1-m02-l2',
-    },
-    {
-      id: 'fde-v1-m02-checks',
-      kind: 'check',
-      purpose: 'exercise',
-      verification: 'machine_verified',
-      title: 'Integration decisions',
-      summary: 'Four integration decisions: justified retry semantics, rate-limit instructions, a documented stable keyset boundary, and tenant-scoped ticket-version deduplication.',
-      competencies: ['integration'],
-      estimatedMinutes: 15,
-      passThreshold: 0.8,
-      questions: [
-        {
-          id: 'fde-v1-m02-q1',
-          prompt:
-            'Which retry is justified by standard HTTP method semantics and the supplied header alone, without an extra application-specific idempotency guarantee? Assume the API follows those semantics and the client has a bounded retry budget.',
-          options: [
-            '`GET /v1/tickets?cursor=p2`, which returned 429 with `Retry-After: 2`.',
-            '`POST /v1/tickets/TCK-1002/replies`, which timed out with no response and no idempotency key.',
-            '`POST /v1/refunds` with an amount and no idempotency key, which returned 500.',
-            '`PATCH /v1/customers/CUS-12` with a partial body, which returned 503 while a nightly job was editing the same record.',
-          ],
-          correct: 0,
-          explanation:
-            'GET is defined as safe: its requested effect is read-only, though logging, accounting or other incidental effects can occur and the representation can change between requests. Respect Retry-After and the bounded retry policy. Idempotent methods can also justify retries; safety is not the only possible basis. The timed-out POST is the hard case: no response means you cannot tell whether the reply was written, so a retry risks a second message to the customer, and no deduplication contract is supplied, so the client cannot assume two writes will collapse. The refund is that same ambiguity with money attached, and a 500 tells you the server failed somewhere, not that it failed before the ledger write. PATCH is not inherently idempotent. Its operation semantics and preconditions matter; conditional requests can protect against lost updates. This option supplies no such guarantee, and the concurrent edit makes an unconditional replay especially unsafe to assume.',
-          competencies: ['integration'],
-        },
-        {
-          id: 'fde-v1-m02-q2',
-          prompt: 'The ticket API answers `HTTP/1.1 429 Too Many Requests` with `Retry-After: 2`. What has the server told you?',
-          options: [
-            'The caller hit a rate limit; wait at least two seconds before a permitted retry. The response does not define account-wide scope.',
-            'The request was processed but the response was truncated, so re-reading the page in two seconds gets you the rest of it.',
-            'Your whole account is rate limited for two seconds, so every other request you have in flight will fail during that window too.',
-            'The server has queued the request and will answer it within two seconds, so sending it again would create a second copy of the work.',
-          ],
-          correct: 0,
-          explanation:
-            '429 reports too many requests in a time window. Retry-After: 2 asks for at least a two-second wait; other responses may use an HTTP date instead. It does not promise the next attempt will succeed, prove a transaction was rolled back, or identify the limiter’s scope. Retry only operations whose semantics make that safe. The truncation answer describes a partial response, which is what ranged requests and 206 are for; a 429 may include an explanatory error body rather than a successful page. The account-wide answer invents a scope the header never states, because the limit may be per key, per endpoint or per tenant and the response does not say which, so assuming the widest one stalls work that would have succeeded. Nothing in 429 or this header promises queued work or a later response; treating it as a successful fetch can leave a sync incomplete.',
-          competencies: ['integration'],
-        },
-        {
-          id: 'fde-v1-m02-q3',
-          prompt:
-            'The API sorts open tickets by unique immutable ticket id. Its documented cursor resumes strictly after the last returned id, without a snapshot guarantee; offset skips a current row count. Agents open and close tickets during the sync. Which advantage does this keyset cursor have?',
-          options: [
-            'Removing an earlier row shifts offset positions; the stable last-id boundary still resumes after the same key.',
-            'A cursor lets the server use an index, while an offset always forces a full scan, so only the cursor finishes within the sync window.',
-            'A cursor guarantees you see every ticket exactly once, including the ones created after the sync started.',
-            'An offset cannot be resumed after a crash, because the client has no way of knowing how far it got.',
-          ],
-          correct: 0,
-          explanation:
-            'Skipping 300 rows means skipping 300 rows of whatever the result set holds at that moment. Close a ticket that sorted into page one and everything after it shifts down by one, so the first row of page four moves to the last row of page three and your sync never sees it. This documented keyset cursor resumes after an immutable unique id, so removing earlier rows does not shift that boundary. An arbitrary API token called a cursor need not have these semantics. Both approaches can use indexes; actual performance depends on the query and implementation, so the always-full-scan claim is false. The exactly-once claim overreaches: a record becoming eligible behind the current key can be missed in this run, while one ahead may appear. This is not a consistent snapshot of the initial open-ticket set; reconciliation, deduplication or change tracking may still be needed. The resume answer is simply wrong, since an offset is a number the client already has and can store.',
-          competencies: ['integration'],
-        },
-        {
-          id: 'fde-v1-m02-q4',
-          prompt:
-            'For one tenant, ticket ids are unique and each logical ticket version has a stable version number. The webhook delivers at least once and generates a fresh deliveryId per attempt. You store one row per ticket version. Which key deduplicates that row?',
-          context: {
-            language: 'json',
-            code: '{\n  "deliveryId": "dlv-7c1f",\n  "deliveredAt": "2026-03-02T02:14:07Z",\n  "ticket": {\n    "id": "TCK-1004",\n    "version": 3,\n    "customerId": "CUS-88",\n    "subject": "Export fails at 02:00",\n    "updatedAt": "2026-03-02T02:14:00Z"\n  }\n}',
-          },
-          options: [
-            '`ticket.id` together with `ticket.version`.',
-            '`deliveryId`, since it is unique for every delivery.',
-            'A SHA-256 hash of the whole payload.',
-            '`ticket.id` on its own.',
-          ],
-          correct: 0,
-          explanation:
-            'A row means one version of one ticket, so the key has to name exactly that: the id says which ticket, the version says which state of it. A redelivery of version 3 matches the row you already wrote, and a genuine edit arrives as version 4 and does not. `deliveryId` is unique per attempt rather than per update, which is the opposite of what you need — every redelivery looks new and you store version 3 as many times as the webhook retries. Hashing the whole payload fails for the same reason one level down, because `deliveryId` and `deliveredAt` differ between attempts, so the hash differs too; a canonical content hash can sometimes help under a documented content-deduplication policy, but is not a general replacement for stable event/version identity when separate updates can have equal content. The id alone collapses every version of a ticket into one row, so the second real update is discarded as a duplicate and the ticket is frozen at whatever state arrived first.',
-          competencies: ['integration'],
-        },
-      ],
-    },
-    {
-      id: 'fde-v1-m02-connector-adapter',
-      kind: 'code',
-      purpose: 'exercise',
-      verification: 'machine_verified',
-      title: 'Connector adapter: pages, duplicates and a throttled read',
-      summary:
-        'Sync three cursor-paged ticket pages from a synthetic client that skips a customer id, delivers one ticket twice and throttles a page once. Graded on correctness, on replay and on honouring the wait.',
-      competencies: ['integration'],
-      estimatedMinutes: 45,
-      code: {
-        language: 'javascript',
-        prompt:
-          'Write `syncTickets(client)`, returning a promise for `{ records, skipped, duplicates }`.\n\n`client.listTickets(cursor)` is the only way in. Call it with `null` for the first page. It resolves with `{ tickets, nextCursor }`; keep calling with the `nextCursor` it hands you until that is `null`. Each ticket carries `id`, `customerId`, `subject` and fields you do not need.\n\nFour things go wrong on the way, and all four are graded:\n\n1. **A ticket you cannot use.** Trim `id` and `customerId`. If either is not a string or is empty after trimming, do not keep the ticket: add one to `skipped` and move on. A ticket you skipped never becomes a record, so a second delivery of it is skipped again rather than counted as a duplicate.\n2. **The same ticket twice.** One id arrives on two different pages. Keep the first copy exactly as it was, add one to `duplicates`, and do not overwrite anything.\n3. **Three pages behind a cursor.** An empty `tickets` array does not mean the walk is over. Only a `nextCursor` of `null` does.\n4. **A throttled page.** One call rejects with `{ status: 429, retryAfterMs }`. In this fixture no page was returned, so the page still has to be fetched: `await sleep(retryAfterMs)`, then request the same cursor again. Give a page at most three retries; if it is still throttled after that, let the rejection reach your caller. A rejection whose status is not 429 is never retried and always propagates.\n\nA kept record is exactly `{ id, customerId, subject }` with the trimmed id and customer id, and `subject` copied through unchanged. Sort `records` by `id` ascending, comparing their UTF-16 code units with ordinary < and > (not locale collation), so `TCK-10` sorts before `TCK-9`.\n\nRun `syncTickets` twice on the same client and it must return the same thing both times, with the same counts. Keep every array, set and counter inside the function.\n\nInput bounds: 1–20 finite cursor-linked pages, at most 50 ordinary ticket objects per page; no cycles, getters or proxies. Non-null cursors are strings. Subjects are strings copied unchanged; string fields have at most 1,000 UTF-16 code units. A throttle delay is finite and nonnegative. Do not mutate the returned page or ticket objects.\n\nTarget: O(n log n) time, where n is the total page and ticket count, using bounded-length text comparisons and the usual hash-set cost model; network/virtual waiting is excluded.\n\nThe client is a fixture written for this exercise, not a live API. `sleep` runs on the sandbox’s virtual clock, so a 500 ms wait finishes instantly and still records as a 500 ms gap. Nothing here opens a network connection, and no real customer data appears in the pages.',
-        contract: [
-          '`client.listTickets(cursor)` is the only source of tickets. Start at `null` and follow `nextCursor` until it is `null`.',
-          'Request each page once, plus its retries. Do not restart the walk from the first page after a failure.',
-          'Retry only a rejection whose `status` is 429, at most three times per page, and `await sleep(retryAfterMs)` before each retry. Let every other rejection propagate.',
-          'Keep records, counters and the set of seen ids inside `syncTickets`, so a second call on the same client starts from zero.',
-          '`sleep(ms)` comes from the task harness. Do not define your own and do not use real timers.',
-        ],
-        starter: `const syncTickets = async client => {
-
-};
-
-// Scratch pad — change this before submitting.
-const demoPage = cursor => ({
-  tickets: [
-    { id: 'TCK-1', customerId: cursor === null ? 'CUS-1' : '', subject: 'Demo', channel: 'email' },
+  "dependsOn": [
+    "fde-v1-m01"
   ],
-  nextCursor: cursor === null ? 'p2' : null,
-});
-const demoClient = { listTickets: cursor => Promise.resolve(demoPage(cursor)) };
-syncTickets(demoClient).then(out => console.log(JSON.stringify(out)));
-`,
-        skeleton: `const syncTickets = async client => {
-  const records = [];
-  const seen = /* the ids already kept */;
-  let skipped = 0;
-  let duplicates = 0;
-
-  const fetchPage = async cursor => {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await client.listTickets(cursor);
-      } catch (error) {
-        // rethrow anything that is not a 429, and anything past the retry budget
-        // otherwise: await sleep(error.retryAfterMs) and go round again
-      }
+  "lessons": [
+    {
+      "id": "fde-v1-m02-cases-l1",
+      "title": "Decompose the customer’s decision",
+      "summary": "Clarify the operator, baseline, authority and scope before choosing a mechanism.",
+      "estimatedMinutes": 20,
+      "sources": [
+        {
+          "label": "NIST AI Risk Management Framework: Map function",
+          "url": "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/#map",
+          "reviewedOn": "2026-10-21"
+        },
+        {
+          "label": "Google SRE Book: Service Level Objectives",
+          "url": "https://sre.google/sre-book/service-level-objectives/",
+          "reviewedOn": "2026-10-21"
+        },
+        {
+          "label": "Palantir careers: customer workflows and deployed engineering",
+          "url": "https://www.palantir.com/careers/",
+          "reviewedOn": "2026-10-22"
+        },
+        {
+          "label": "OpenAI Forward Deployed Software Engineer: iterative customer delivery",
+          "url": "https://openai.com/careers/forward-deployed-software-engineer-sf-san-francisco/",
+          "reviewedOn": "2026-10-22"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "prose",
+          "body": "These original fictional cases practise customer-workflow decomposition and iterative scoping, informed by the cited employer role descriptions. The rubric below is devShark’s practice rubric, not an employer’s scoring key or a claim about its current interview process. They reproduce no employer’s interview questions. Every organisation, observation, model response and record is an authored fixture; no external system or live model runs."
+        },
+        {
+          "kind": "prose",
+          "body": "Start with the person making a decision. Ask for a recent disputed example and follow it through the current workflow. A request for a dashboard, model or automation names a mechanism; establish the outcome and its constraints before accepting that mechanism as the requirement. Record what you know, what you assume and the evidence that could overturn the assumption."
+        },
+        {
+          "kind": "table",
+          "caption": "A decomposition that a reviewer can inspect",
+          "headers": [
+            "Step",
+            "Evidence to name"
+          ],
+          "rows": [
+            [
+              "Clarify",
+              "Operator, decision, source authority and explicit constraints."
+            ],
+            [
+              "Baseline",
+              "Quantity, population, observation window and repeatable measurement method."
+            ],
+            [
+              "Bound the first slice",
+              "One workflow and acceptance conditions, with exclusions and a fallback."
+            ],
+            [
+              "Compare tradeoffs",
+              "Quality, access, latency, operating effort and cost against the actual workload."
+            ],
+            [
+              "Handle change",
+              "Name which assumption changed and revise scope, evidence or promise explicitly."
+            ]
+          ]
+        },
+        {
+          "kind": "prose",
+          "body": "Preserve authority at each boundary. A read-only pilot cannot repair source data. A request timeout proves neither success nor failure; stable operation ids and reconciliation protect side effects. Received order is not necessarily source order. A fixture result establishes only the behaviour the fixture tests. For evidence-backed answers, check permitted sources and freshness, and abstain when the required support is absent."
+        },
+        {
+          "kind": "prose",
+          "body": "Bounded capacity and disconnected work require visible promises. More workers do not remove a downstream limit. A local cache does not establish a final shared-stock reservation. State what may queue, what remains provisional and which human or system may resolve the uncertainty. Reusable components keep common mechanics separate from customer-specific identity and retention rules."
+        },
+        {
+          "kind": "callout",
+          "tone": "note",
+          "body": "devShark’s practice rubric: clarify the operator and constraints; define a repeatable baseline; choose a useful bounded slice; explain the tradeoff; revise the plan when evidence changes. Each case has four ordered questions and passes at 80%, so all four must pass. Retry after reading the feedback. Finish any nine of twelve cases and acknowledge both lessons; the remaining cases stay available for practice."
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-l2",
+      "title": "Two worked decompositions",
+      "summary": "Follow the dashboard and employee-sync cases from uncertainty to a bounded test and a changed constraint.",
+      "estimatedMinutes": 20,
+      "sources": [
+        {
+          "label": "NIST AI Risk Management Framework: Map function",
+          "url": "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/#map",
+          "reviewedOn": "2026-10-21"
+        },
+        {
+          "label": "Google SRE Book: Service Level Objectives",
+          "url": "https://sre.google/sre-book/service-level-objectives/",
+          "reviewedOn": "2026-10-21"
+        },
+        {
+          "label": "Palantir careers: customer workflows and deployed engineering",
+          "url": "https://www.palantir.com/careers/",
+          "reviewedOn": "2026-10-22"
+        },
+        {
+          "label": "OpenAI Forward Deployed Software Engineer: iterative customer delivery",
+          "url": "https://openai.com/careers/forward-deployed-software-engineer-sf-san-francisco/",
+          "reviewedOn": "2026-10-22"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "prose",
+          "body": "Dashboard example: the operator chooses late shipments to investigate, while two source totals disagree. Trace disputed shipments before replacing the interface. A one-shift reconciliation can expose definitions and missing records without claiming write authority. Measure minutes per investigation over a named population and shift with a saved observation method. A delayed billing export changes the recency of the evidence: show its timestamp and restrict the pilot to decisions that tolerate that delay."
+        },
+        {
+          "kind": "prose",
+          "body": "Employee-sync example: immutable employee ids join the records; payroll owns employment status and Facilities owns badge groups. Ask how lifecycle events are versioned and how a termination is represented. Propose a reviewed change set for twenty employees before enabling writes. A late active event must not undo a newer termination, while a genuine rehire needs a distinguishable newer lifecycle event. A last-arrival-wins merge cannot establish either fact."
+        },
+        {
+          "kind": "table",
+          "caption": "The worked examples use the same reasoning without assuming the same implementation",
+          "headers": [
+            "Question",
+            "Dashboard",
+            "Employee sync"
+          ],
+          "rows": [
+            [
+              "Whose decision?",
+              "Operations chooses an investigation.",
+              "Facilities controls badge access."
+            ],
+            [
+              "Unknown authority?",
+              "Which status definition each total uses.",
+              "Which source owns each field and lifecycle version."
+            ],
+            [
+              "First safe slice?",
+              "Read-only reconciliation for one shift.",
+              "Reviewed proposed changes for twenty employees."
+            ],
+            [
+              "Changed constraint?",
+              "A source becomes a day old.",
+              "A stale active event follows termination."
+            ]
+          ]
+        },
+        {
+          "kind": "prose",
+          "body": "Use the remaining cases to transfer the reasoning. A shorter deadline changes scope rather than erasing acceptance. A requested feature may conflict with an approval policy even when a useful lookup is permitted. Tail failures require slices and traces rather than a favourable mean. Hosting choices need task evidence and approved data controls, with operating cost included. Workflow adoption, queueing, offline promises and reusable abstractions each need a bounded test of their own uncertainty."
+        }
+      ]
     }
-  };
-
-  let cursor = null;
-  for (;;) {
-    const page = await fetchPage(cursor);
-
-    for (const ticket of page.tickets) {
-      // trim id and customerId; count a skip when either is unusable
-      // count a duplicate when the id is already in \`seen\`
-      // otherwise remember the id and push { id, customerId, subject }
-    }
-
-    if (/* nextCursor is null */) break;
-    cursor = page.nextCursor;
-  }
-
-  /* sort records by id, ascending, as text */
-  return { records, skipped, duplicates };
-};`,
-        hints: [
-          'Put the retry in its own helper that fetches one page. Then the walk stays a plain loop over cursors and the retry logic lives in exactly one place.',
-          '`client.listTickets` rejects with a plain object, not an Error. Catch it, check `error.status === 429`, `await sleep(error.retryAfterMs)`, then call `client.listTickets` again with the same cursor. Rethrow everything else.',
-          'A `Set` of the ids you have kept answers both questions: `seen.has(id)` means duplicate, and adding to it after you push keeps the first copy. Declare it inside `syncTickets` so the second run starts empty.',
-        ],
-        approach: [
-          'Write `fetchPage(cursor)`: call `client.listTickets(cursor)`, and on a rejection with `status === 429` await `sleep(error.retryAfterMs)` and try the same cursor again, up to three retries. Rethrow anything else and anything past the budget.',
-          'Declare `records`, a `Set` of kept ids and the two counters inside `syncTickets`.',
-          'Walk from `cursor = null`, fetching a page and then following `page.nextCursor` until it is `null`. An empty page still has a next cursor to follow.',
-          'For each ticket, trim the id and the customer id: count a skip when either is empty, count a duplicate when the id is already in the set, otherwise add the id and push `{ id, customerId, subject }`.',
-          'Sort `records` by id with a text comparison and return `{ records, skipped, duplicates }`.',
-        ],
-        criteria: [
-          {
-            id: 'core',
-            label: 'Correct records, skips and duplicates',
-            critical: true,
-            weight: 3,
-            detail:
-              'The walk, the boundary check or the record shape is off. Check that you follow `nextCursor` through all three pages, that a record is exactly `{ id, customerId, subject }` with both ids trimmed, that a whitespace-only customer id counts as a skip, that a repeat of an id you kept counts as a duplicate without overwriting the first copy, and that `records` is sorted by id as text.',
-          },
-          {
-            id: 'idempotent',
-            label: 'The same result when the sync is replayed',
-            critical: true,
-            weight: 2,
-            detail:
-              'A second `syncTickets(client)` on the same client returned something different from the first. The usual cause is state that outlives one call: an array, a `Set` or a counter declared outside the function, so the replay appends to the first run instead of starting fresh. Move every one of them inside `syncTickets`.',
-          },
-          {
-            id: 'throttling',
-            label: 'The throttled page is retried and the wait is honoured',
-            critical: true,
-            weight: 2,
-            detail:
-              'The 429 was mishandled. Either the page was dropped instead of retried, or the retry went out sooner than `retryAfterMs`, or the whole walk restarted from the first page instead of re-requesting the same cursor. Catch the rejection, `await sleep(error.retryAfterMs)`, then call `client.listTickets` again with the cursor you were already on.',
-          },
-        ],
-        tests: [
-          {
-            call: '(function () { return syncTickets(__client()).then(__ids); })()',
-            expected: ['TCK-1001', 'TCK-1002', 'TCK-1004', 'TCK-1009'],
-            label: 'four usable tickets across three pages, sorted by id',
-            async: true,
-          },
-          {
-            call: '(function () { return syncTickets(__client()).then(function (out) { return out.records[0]; }); })()',
-            expected: { id: 'TCK-1001', customerId: 'CUS-12', subject: 'Cannot add a warehouse' },
-            label: 'a record carries id, customerId and subject, and nothing else',
-            async: true,
-          },
-          {
-            call:
-              '(function () { return syncTickets(__client()).then(function (out) { return { skipped: out.skipped, duplicates: out.duplicates }; }); })()',
-            expected: { skipped: 2, duplicates: 1 },
-            label: 'two tickets have no usable customer id, one ticket arrives twice',
-            async: true,
-          },
-          {
-            call:
-              "(function () { var pages = [{ cursor: null, nextCursor: null, tickets: [{ id: ' TCK-2001 ', customerId: ' CUS-77 ', subject: 'Padded' }, { id: 'TCK-2002', customerId: '   ', subject: 'Blank customer' }] }]; return syncTickets(__makeClient(pages, { throttleCursor: '__none' })).then(function (out) { return { records: out.records, skipped: out.skipped, duplicates: out.duplicates }; }); })()",
-            expected: { records: [{ id: 'TCK-2001', customerId: 'CUS-77', subject: 'Padded' }], skipped: 1, duplicates: 0 },
-            label: 'ids are trimmed, and a whitespace-only customer id is a skip',
-            edge: true,
-            async: true,
-          },
-          {
-            call:
-              "(function () { return syncTickets(__client()).then(function (out) { return out.records.some(function (record) { return record.id === 'TCK-1002'; }); }); })()",
-            expected: true,
-            label: 'the ticket behind the throttled page survives',
-            edge: true,
-            async: true,
-            criterion: 'throttling',
-          },
-          {
-            call:
-              "(function () { var c = __client(); return syncTickets(c).then(function () { var tries = __attempts(c, 'p2'); return tries.length === 2 && tries[1].at - tries[0].at >= 500; }); })()",
-            expected: true,
-            label: 'the retry waits the retryAfterMs the rejection carried',
-            async: true,
-            criterion: 'throttling',
-          },
-          {
-            call:
-              '(function () { var c = __client(); return syncTickets(c).then(function () { return c.requests.map(function (request) { return request.cursor; }); }); })()',
-            expected: [null, 'p2', 'p2', 'p3'],
-            label: 'three pages and one retry: four requests, and the retry repeats the same cursor',
-            async: true,
-            criterion: 'throttling',
-          },
-          {
-            call:
-              '(function () { var c = __client(); return syncTickets(c).then(function (first) { return syncTickets(c).then(function (second) { return JSON.stringify(first) === JSON.stringify(second); }); }); })()',
-            expected: true,
-            label: 'replaying the sync on the same client returns the same result',
-            async: true,
-            criterion: 'idempotent',
-          },
-          {
-            call:
-              '(function () { var c = __client(); return syncTickets(c).then(function () { return syncTickets(c); }).then(function (out) { return { records: out.records.length, skipped: out.skipped, duplicates: out.duplicates }; }); })()',
-            expected: { records: 4, skipped: 2, duplicates: 1 },
-            label: 'the replay does not double-count records, skips or duplicates',
-            edge: true,
-            async: true,
-            criterion: 'idempotent',
-          },
-        ],
-        harness: TICKET_CLIENT,
-      },
+  ],
+  "activities": [
+    {
+      "id": "fde-v1-m02-cases-l1-read",
+      "kind": "lesson",
+      "purpose": "exercise",
+      "verification": "self_reviewed",
+      "title": "Decompose the customer’s decision",
+      "summary": "Clarify the operator, baseline, authority and scope before choosing a mechanism.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 20,
+      "lessonId": "fde-v1-m02-cases-l1"
     },
+    {
+      "id": "fde-v1-m02-cases-l2-read",
+      "kind": "lesson",
+      "purpose": "exercise",
+      "verification": "self_reviewed",
+      "title": "Two worked decompositions",
+      "summary": "Follow the dashboard and employee-sync cases from uncertainty to a bounded test and a changed constraint.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 20,
+      "lessonId": "fde-v1-m02-cases-l2"
+    },
+    {
+      "id": "fde-v1-m02-cases-dashboard",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "The dashboard nobody trusts",
+      "summary": "Trace disputed shipment totals without writing to either source.",
+      "scenario": "A fictional operations desk uses a dashboard to choose which late shipments to investigate. Its totals differ from the billing export. The sponsor asks for a new dashboard in two weeks; the operator still compares CSV files by hand. You have read-only access to both sources and can observe one morning shift. No source has been declared authoritative for shipment status.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-dashboard-q1",
+          "prompt": "What evidence should you gather before choosing a dashboard replacement?",
+          "options": [
+            "Trace several disputed shipments through both sources with the operator.",
+            "Compare dashboard libraries using the current screenshot as the specification.",
+            "Ask the sponsor to pick one total and use it as the reporting baseline.",
+            "Copy the billing export into the dashboard and compare the new colours."
+          ],
+          "correct": 0,
+          "explanation": "Tracing disputed records shows which decisions the totals affect and where the definitions diverge. Library selection assumes presentation is the problem. Picking a total supplies authority without evidence. Copying the export hides the disagreement before anyone explains it.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-dashboard-q2",
+          "prompt": "Which first deliverable tests the main uncertainty within the access you have?",
+          "options": [
+            "A read-only reconciliation for one shift, with unmatched records and definitions.",
+            "A replacement status service that writes corrections into both source systems.",
+            "A complete reporting warehouse that replaces every operational export.",
+            "A new dashboard using one source, with the discrepancy left out of the pilot."
+          ],
+          "correct": 0,
+          "explanation": "The reconciliation exposes the disagreement without requiring write access and gives the desk something it can inspect. A correction service exceeds the access boundary. A whole warehouse exceeds the narrow uncertainty. Hiding the second source prevents the pilot from testing trust.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-dashboard-q3",
+          "prompt": "Which baseline can support a later comparison of investigation time?",
+          "options": [
+            "Median minutes per late-shipment investigation during a named shift, from saved observations.",
+            "The sponsor’s target of a fifty-percent reduction after the dashboard launch.",
+            "The total number of shipments displayed on the dashboard this morning.",
+            "The number of page views the current dashboard receives each working day."
+          ],
+          "correct": 0,
+          "explanation": "The observed investigation times define the work, population, window and measurement method. The reduction is a target rather than a starting value. Shipment count measures volume, while page views measure visits; neither measures time spent investigating.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-dashboard-q4",
+          "prompt": "The billing export is now delayed by a day. What should change in the pilot?",
+          "options": [
+            "Show source timestamps and test decisions that tolerate the known delay.",
+            "Treat the delayed export as current because its totals are more complete.",
+            "Estimate missing shipments and write those estimates back as confirmed status.",
+            "Remove the export timestamp so operators judge only the reconciled total."
+          ],
+          "correct": 0,
+          "explanation": "The new constraint changes what decisions the evidence can support. Treating old data as current or hiding its age conceals that limit. Writing estimates as confirmed facts changes source data without evidence or permission.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-employee-sync",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Synchronise two employee systems",
+      "summary": "Define field ownership and ordering before synchronising employee records.",
+      "scenario": "A fictional company keeps payroll details in one service and office access in another. Names and email addresses can change; both systems expose an immutable employee identifier. Payroll owns employment status, Facilities owns badge groups. The requested pilot covers twenty employees, runs nightly and must not grant access to a person whose employment has ended.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-employee-sync-q1",
+          "prompt": "Which unresolved question most affects the synchronisation contract?",
+          "options": [
+            "Which source owns each employee field and how changes, deletions and conflicting updates are ordered.",
+            "Which shared email address can join records, assuming every account keeps it unchanged.",
+            "Which export arrived most recently, using arrival time to resolve every conflicting field.",
+            "Which source contains the most populated fields, making that source authoritative for the entire record."
+          ],
+          "correct": 0,
+          "explanation": "Field ownership and change semantics define the sync contract. Email may change or be reused, so it is not a safe identity assumption. Arrival order can differ from source order. Completeness does not establish authority for every field.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-employee-sync-q2",
+          "prompt": "Which ownership rule follows the stated source responsibilities?",
+          "options": [
+            "Match immutable ids; payroll supplies status and Facilities supplies badge groups.",
+            "Match current email; whichever system replies last supplies every field.",
+            "Match full name; payroll supplies badge groups because it owns employment status.",
+            "Match immutable ids; copy all Facilities fields over the payroll record nightly."
+          ],
+          "correct": 0,
+          "explanation": "Stable ids survive name changes, and field ownership follows the stated contract. Email and names are mutable identifiers. Last response is not authority. Payroll does not own badge groups, and Facilities does not own payroll status.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-employee-sync-q3",
+          "prompt": "What is the smallest pilot that can expose dangerous differences before granting access?",
+          "options": [
+            "Generate a proposed change set and have Facilities review status conflicts before writes.",
+            "Replace both employee directories after one successful end-to-end API request.",
+            "Send every differing field to both APIs and inspect failures the next morning.",
+            "Synchronise active records only and ignore termination events during the pilot."
+          ],
+          "correct": 0,
+          "explanation": "A reviewed proposal tests mapping and lifecycle behaviour before its side effect. Replacing directories exceeds the pilot. Blind writes discover mistakes after they affect access. Ignoring termination removes the explicit safety requirement.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-employee-sync-q4",
+          "prompt": "A late active-status event arrives after a confirmed termination. What should the design do?",
+          "options": [
+            "Use the agreed source version or lifecycle order so stale data cannot restore access.",
+            "Restore access because the most recently received event is always the freshest fact.",
+            "Discard every later status update, including a confirmed rehire with a newer version.",
+            "Resolve the conflict from the employee’s current display name in the office directory."
+          ],
+          "correct": 0,
+          "explanation": "Source versions or an explicit lifecycle order distinguish a stale event from a genuine rehire. Arrival time alone cannot. Discarding every later change also blocks valid rehiring. A display name establishes neither status nor event order.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-deadline",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Two weeks or two months",
+      "summary": "Negotiate a useful delivery within a fixed deadline and access boundary.",
+      "scenario": "A fictional support team asks for ticket classification, knowledge search, automatic replies and reporting. A review with operators identifies classification as their largest repetitive task. The sponsor needs usable evidence in two weeks; a full integration is estimated at two months. Existing policy requires a person to approve customer messages. The pilot can read one ticket queue but cannot send messages.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-deadline-q1",
+          "prompt": "Which question should settle the first release’s purpose?",
+          "options": [
+            "What operator decision must improve, and what evidence can the sponsor review in two weeks?",
+            "Which four requested features should receive equal engineering time in the pilot?",
+            "Which launch date should be announced before the integration estimate is checked?",
+            "Which model should generate replies despite the pilot having no send permission?"
+          ],
+          "correct": 0,
+          "explanation": "A decision and measurable evidence anchor the short release. Equal feature allocation ignores the observed bottleneck. An unchecked announcement creates a promise without a plan. Reply generation chooses a mechanism that the pilot cannot deliver safely.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-deadline-q2",
+          "prompt": "Which scope fits the evidence and permissions?",
+          "options": [
+            "Classify one queue for operator review and measure correction effort against a baseline.",
+            "Implement all four features with reduced testing to preserve the two-week date.",
+            "Launch automatic replies first and add human approval after the pilot.",
+            "Wait two months without testing whether classification helps the operators."
+          ],
+          "correct": 0,
+          "explanation": "A reviewed classification slice tests the known repetitive task with read access. Reducing tests to fit every feature increases uncertainty. Automatic replies violate approval and access constraints. Waiting for everything gives up the chance to test value earlier.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-deadline-q3",
+          "prompt": "Which exclusion belongs in the written pilot agreement?",
+          "options": [
+            "No automatic customer messages; the pilot ends with a measured go-or-stop review.",
+            "No operator feedback until the complete integration reaches production.",
+            "No limitations in the sponsor update because they could weaken confidence.",
+            "No named population because the classifier should eventually cover every queue."
+          ],
+          "correct": 0,
+          "explanation": "The exclusion makes the permissions and decision point explicit. Removing operator feedback prevents learning. Hiding limitations misrepresents the evidence. A pilot needs a defined population even if a later release broadens it.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-deadline-q4",
+          "prompt": "The sponsor adds a second queue after the first week. What should you do?",
+          "options": [
+            "Estimate the added work and trade a named scope item or move the review date explicitly.",
+            "Add it without changing the agreement because queues are the same kind of input.",
+            "Keep the date by dropping the operator review that made the pilot measurable.",
+            "Promise the additional queue and leave the original acceptance conditions unchanged."
+          ],
+          "correct": 0,
+          "explanation": "The change needs a visible tradeoff in scope, evidence or time. Similar inputs can have different labels and permissions. Dropping review removes the value test. An unchanged promise does not remove the additional work.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-wrong-feature",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "The requested feature conflicts with the workflow",
+      "summary": "Check the operator’s decision before accepting a requested feature.",
+      "scenario": "A fictional account team asks for automatic approval of refund requests. Observation shows that most time goes into finding the purchase and checking an existing eligibility policy. The finance owner requires a person to approve each payment. You may prototype a read-only purchase lookup and eligibility summary, but you cannot change the approval policy.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-wrong-feature-q1",
+          "prompt": "Which response best reframes the request using the observed workflow?",
+          "options": [
+            "Confirm the delay to remove, then test whether lookup and evidence preparation reduce it.",
+            "Accept automatic approval as the requirement and treat the finance rule as a later detail.",
+            "Reject the entire project because one requested mechanism conflicts with policy.",
+            "Build a refund-writing API before asking how eligibility is decided today."
+          ],
+          "correct": 0,
+          "explanation": "The observed delay may be reduced without changing the approval boundary. Accepting the mechanism ignores that boundary. Rejecting the whole project misses a permitted improvement. A payment API starts implementation before the decision contract exists.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-wrong-feature-q2",
+          "prompt": "Which prototype fits the authority you have?",
+          "options": [
+            "A purchase lookup with an eligibility explanation and an explicit handoff to the approver.",
+            "An automatic refund for amounts below a threshold chosen by the prototype author.",
+            "A summary page that quietly marks the refund approved after showing its evidence.",
+            "A payment screen that sends the refund when the operator opens the ticket."
+          ],
+          "correct": 0,
+          "explanation": "The lookup prepares the decision while leaving payment approval with its owner. An invented threshold grants authority nobody supplied. Marking approval or paying on page view crosses the same boundary through a different interface.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-wrong-feature-q3",
+          "prompt": "What should the sponsor update make explicit?",
+          "options": [
+            "The measured lookup improvement and the approval-policy change still outside this project.",
+            "A claim that faster summaries prove autonomous refunds are safe for every request.",
+            "A promise to remove the approver once operators become familiar with the prototype.",
+            "A statement that policy compliance is guaranteed because no model provider is named."
+          ],
+          "correct": 0,
+          "explanation": "Report what the prototype measures and which decision remains with Finance. Faster lookup does not prove refund correctness. Familiarity does not change approval authority. Omitting a provider name establishes no compliance result.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-wrong-feature-q4",
+          "prompt": "Finance authorises a limited payment pilot. What must happen before adding writes?",
+          "options": [
+            "Agree the eligible cases, approval evidence, audit trail and rollback or compensation procedure.",
+            "Reuse the read-only pilot’s acceptance unchanged because its lookup already worked.",
+            "Enable writes for every request and use complaints to identify exceptional cases.",
+            "Remove the operator confirmation so the limited pilot demonstrates full automation."
+          ],
+          "correct": 0,
+          "explanation": "Write authority introduces side effects that need bounded cases, evidence and recovery. Read-only acceptance does not cover payments. Complaint-driven discovery exposes customers to avoidable mistakes. A limited pilot does not authorise removing confirmation.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-timeouts",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Intermittent production API timeouts",
+      "summary": "Resolve uncertain side effects without treating timeouts as proof of failure.",
+      "scenario": "A fictional integration times out on roughly one request in a hundred. Operators report that large exports are affected more often. The customer asks for a database rewrite. You have request ids, latency traces and a read-only log sample; the external API has a documented rate limit. Retrying a write can create duplicate jobs unless its idempotency key is reused.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-timeouts-q1",
+          "prompt": "What should you inspect first?",
+          "options": [
+            "Correlate timed-out request ids with payload size and dependency timings.",
+            "Choose a replacement database based on the overall average latency.",
+            "Increase every timeout before separating external and local processing time.",
+            "Compare frontend bundle sizes without tracing the export requests."
+          ],
+          "correct": 0,
+          "explanation": "Correlated traces can locate the delay and test the large-export hypothesis. An average hides the slow tail. Raising all deadlines can increase saturation without identifying the cause. Bundle size does not locate the server-side export timeout.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-timeouts-q2",
+          "prompt": "Which first intervention best respects the known write contract?",
+          "options": [
+            "Trial bounded retries with the same idempotency key for a defined transient failure.",
+            "Retry every failed write immediately with a fresh key until it succeeds.",
+            "Send duplicate export jobs to several workers and keep the earliest response.",
+            "Remove the external rate limit in the client configuration for the pilot."
+          ],
+          "correct": 0,
+          "explanation": "Bounded retries preserve the write identity and should apply only to an agreed transient class. Fresh keys and duplicate jobs can repeat side effects. Client configuration cannot remove a provider-enforced rate limit.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-timeouts-q3",
+          "prompt": "Which result would justify a claim about the affected users?",
+          "options": [
+            "Tail latency and failure rate by export-size slice over a comparable observation window.",
+            "A lower mean latency after excluding all timed-out exports from the sample.",
+            "One small export that succeeds after the retry change reaches a staging server.",
+            "The total number of retries performed without a count of completed jobs."
+          ],
+          "correct": 0,
+          "explanation": "Comparable slices include the affected large exports and failures. Excluding timeouts changes the population. One staging success cannot establish production improvement. Retry count alone says nothing about completion or duplicate writes.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-timeouts-q4",
+          "prompt": "The external API reduces its rate limit. What should change first?",
+          "options": [
+            "Recalculate retry and concurrency budgets and expose a bounded queue or backpressure policy.",
+            "Double retry concurrency so each export has more chances before its deadline.",
+            "Preserve the old retry rate and describe new rejections as random network failures.",
+            "Rewrite the database before measuring whether the external limit now binds."
+          ],
+          "correct": 0,
+          "explanation": "A tighter dependency limit changes how much work can safely enter. More retries can amplify overload. Relabelling rejections hides the new constraint. A local database rewrite does not remove an external throughput ceiling.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-hosting",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "A regulated customer considers model hosting",
+      "summary": "Compare a hosting plan against workload and operating constraints.",
+      "scenario": "A fictional customer’s written data policy permits sensitive document processing only in an approved private network. No hosted model endpoint is approved yet. The customer has a small platform team and an eight-week pilot window. A deterministic rules baseline solves a narrow subset of requests. You must compare options without treating a hosting label as evidence of security.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-hosting-q1",
+          "prompt": "Which question belongs before provider or deployment selection?",
+          "options": [
+            "Which data classes, network paths and retention controls must the approval review verify?",
+            "Which hosted provider has the most persuasive public demonstration?",
+            "Which model has the highest general benchmark score without the customer’s data?",
+            "Which self-hosted model can be deployed before an operator workflow is chosen?"
+          ],
+          "correct": 0,
+          "explanation": "The explicit policy determines which options can be considered. Demonstrations and general benchmarks do not establish permitted data flow. A self-hosted deployment also needs a defined workflow and security review.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-hosting-q2",
+          "prompt": "Which pilot can start within the stated approval boundary?",
+          "options": [
+            "Evaluate the rules baseline and approved-network fixtures while the endpoint review proceeds.",
+            "Send sensitive documents to an unapproved endpoint and delete them after evaluation.",
+            "Declare self-hosting approved because the customer owns the virtual machines.",
+            "Remove sensitive fields by hand and assume the remaining text cannot contain them."
+          ],
+          "correct": 0,
+          "explanation": "The baseline and fixtures permit progress without bypassing the data gate. Deleting later does not authorise initial disclosure. Ownership does not prove network, access or retention controls. Ad hoc redaction does not establish that sensitive content is absent.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-hosting-q3",
+          "prompt": "Which comparison exposes a real hosting tradeoff for this team?",
+          "options": [
+            "Task quality, reviewable data controls, operating effort and cost at the expected workload.",
+            "The model’s public rank alone, with security and operation deferred until purchase.",
+            "A claim that private machines eliminate the need for monitoring and patching.",
+            "The lowest token price, with retries and platform staffing left out of the estimate."
+          ],
+          "correct": 0,
+          "explanation": "Quality, controls, workload and operating responsibility make the alternatives comparable. Public rank alone omits the customer constraints. Self-hosting retains operational obligations. Unit token price omits significant parts of delivery cost.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-hosting-q4",
+          "prompt": "The hosted endpoint gains approval with a strict request cap. What follows?",
+          "options": [
+            "Re-evaluate the bounded use case and fallback against that cap before expanding the pilot.",
+            "Send all queued requests because approval implies unlimited authorised capacity.",
+            "Discard the deterministic baseline because approval proves the model is more accurate.",
+            "Move all sensitive work off the private network without reading the approval’s conditions."
+          ],
+          "correct": 0,
+          "explanation": "Approval has conditions; capacity and fallback must fit the actual use case. It is neither an unlimited quota nor quality evidence. A network exception cannot be inferred beyond the approved data flow.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-invoices",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Duplicate invoice events",
+      "summary": "Reconcile an uncertain payment and prevent a duplicate external effect.",
+      "scenario": "A fictional accounts team receives payment events from a provider. Delivery is at least once; each event has a stable event id and each invoice has its own id. The team wants an internal settlement workflow. A timeout can occur after the provider commits a payment. The pilot must never pay an invoice twice and may keep a reconciliation queue for uncertain outcomes.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-invoices-q1",
+          "prompt": "Which distinction must the integration contract make first?",
+          "options": [
+            "The identity of a delivery, an invoice and an individual payment operation.",
+            "Which local timeout duration should trigger a new payment operation with a fresh id.",
+            "Which database transaction can cover both the local write and the external provider without provider cooperation.",
+            "Which provider error status can be treated as proof that no payment occurred."
+          ],
+          "correct": 0,
+          "explanation": "First establish operation identity, the provider’s idempotency contract and how to reconcile uncertain outcomes. A timeout does not prove absence of a payment. A local transaction cannot atomically commit a separate provider’s side effect. An error response alone may follow an applied operation and must be interpreted using the provider contract.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-invoices-q2",
+          "prompt": "What should happen when a payment request times out with an unknown outcome?",
+          "options": [
+            "Look up the original operation or reconcile it before retrying with its stable identity.",
+            "Create a new payment operation because a timeout proves no payment committed.",
+            "Mark the invoice paid because any timeout implies the provider accepted it.",
+            "Delete the failed request so the next nightly run treats the invoice as new."
+          ],
+          "correct": 0,
+          "explanation": "A timeout does not prove success or failure. Looking up or reconciling the original operation resolves uncertainty without creating a second identity. Assuming either outcome can misstate payment state, and deleting the record loses the evidence needed to reconcile.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-invoices-q3",
+          "prompt": "Which pilot acceptance test probes the named safety requirement?",
+          "options": [
+            "Replay the uncertain operation and verify one provider payment with the expected settled amount and one reconciled local record.",
+            "Replay the same operation and verify one local invoice record, without checking the provider’s payment ledger.",
+            "Send many distinct fresh invoices and verify their throughput and provider settlement totals.",
+            "Replay with a new operation id after each timeout and verify that each request receives a success response."
+          ],
+          "correct": 0,
+          "explanation": "An uncertain-outcome replay must establish one external payment and its settled amount as well as stable identity and the local record. One local record does not exclude duplicate provider charges. Fresh-invoice throughput avoids the ambiguous retry branch. A fresh operation id can create another charge; individual success responses do not prove one payment for the original operation.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-invoices-q4",
+          "prompt": "The provider cannot look up an operation by key. What tradeoff should you present?",
+          "options": [
+            "Hold uncertain payments for reconciliation until an agreed source can establish the outcome.",
+            "Repeat uncertain payments with new keys because manual review slows settlement.",
+            "Treat every timeout as a permanent failure without reconciling the invoice later.",
+            "Remove idempotency keys because the provider cannot search them directly."
+          ],
+          "correct": 0,
+          "explanation": "Holding uncertainty costs time but avoids pretending the outcome is known. Fresh-key retries can duplicate a payment. Permanent failure without reconciliation can leave financial records wrong. Removing keys does not add outcome visibility.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-knowledge",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Answers from a private knowledge base",
+      "summary": "Bound evidence-backed answers by source access and freshness.",
+      "scenario": "A fictional support desk wants faster answers from a knowledge base. Documents have tenant access rules and revision dates; some articles are superseded. The pilot uses fixed retrieval results and authored model responses, not a live model. Every suggested answer must cite an accessible current source, or abstain for human review.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-knowledge-q1",
+          "prompt": "Which first question most affects whether an answer is permitted?",
+          "options": [
+            "How the caller’s tenant and permissions limit the documents it may retrieve.",
+            "Which embedding index offers the highest benchmark recall before testing document-level access rules.",
+            "Which global confidence threshold should publish answers before defining acceptable source freshness.",
+            "Which shared cache key maximises reuse across users before examining their document permissions."
+          ],
+          "correct": 0,
+          "explanation": "Permitted sources, document access and freshness determine whether an answer may be given. Retrieval benchmarks alone do not prove authorised retrieval. A confidence threshold does not establish freshness. A shared cache needs permission-aware boundaries before reuse.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-knowledge-q2",
+          "prompt": "Which first slice fits the pilot’s stated evidence contract?",
+          "options": [
+            "One tenant and document family, with current citations, inaccessible-source tests and abstention.",
+            "All tenants at once, relying on answer wording to conceal restricted source names.",
+            "A search across old and new articles, with whichever result has the highest raw score.",
+            "A live model demonstration that omits sources because the pilot uses fixtures."
+          ],
+          "correct": 0,
+          "explanation": "A bounded tenant slice can test freshness, access and refusal explicitly. Hiding source names does not prevent leakage. A high similarity score does not establish current authority. Fixture work cannot establish live-model performance or remove the citation requirement.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-knowledge-q3",
+          "prompt": "Which evaluation distinguishes better answers from more confident guesses?",
+          "options": [
+            "Correct, supported answers and justified abstentions, broken down by access and freshness cases.",
+            "The fraction of requests receiving any answer, with abstention counted as a defect.",
+            "The average response length, with longer answers treated as more complete.",
+            "The number of retrieved documents, without checking which documents support a claim."
+          ],
+          "correct": 0,
+          "explanation": "The evaluation must cover support and warranted refusal on the named failure slices. Answer rate alone rewards guessing. Length and retrieval count do not establish whether a claim is supported.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-knowledge-q4",
+          "prompt": "The current policy document disappears from the fixture results. What should happen?",
+          "options": [
+            "Abstain and identify the missing current evidence for human review.",
+            "Use the superseded policy because a citation is better than no citation.",
+            "Infer the new policy from the titles of the remaining documents.",
+            "Return the draft answer unchanged and omit its broken source link."
+          ],
+          "correct": 0,
+          "explanation": "Missing required evidence triggers the agreed abstention. A superseded policy can contradict the current one. Titles do not supply the missing terms, and removing a link hides the reason the answer cannot be supported.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-adoption",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "The pilot is fast but unused",
+      "summary": "Measure an operational outcome and plan for adoption.",
+      "scenario": "A fictional operations pilot passes its offline checks and reduces a demonstrated lookup from ninety seconds to ten. Two weeks later, operators rarely open it. They explain that it lives outside their main ticket tool and loses their current ticket context. The sponsor asks for a larger model. You can modify a browser link and a read-only lookup, but not the ticket vendor’s core interface.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-adoption-q1",
+          "prompt": "What should you clarify before accepting the model request?",
+          "options": [
+            "Where the lookup fits in a live ticket and what causes the operator to abandon it.",
+            "Which larger model has the highest published score for general reasoning.",
+            "Whether the pilot can advertise the ninety-to-ten-second demo result more prominently.",
+            "Which operator has the lowest login count and should receive a reminder."
+          ],
+          "correct": 0,
+          "explanation": "The observed barrier is workflow friction, so inspect context loss and abandonment. Model scores do not explain that barrier. Promoting a demo or targeting a person does not establish why the workflow is unused.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-adoption-q2",
+          "prompt": "Which intervention tests that adoption hypothesis within your control?",
+          "options": [
+            "Open the read-only lookup with the current ticket context through an agreed browser link.",
+            "Replace the ticket vendor’s interface and migrate all operator shortcuts immediately.",
+            "Require operators to copy each ticket into the pilot before continuing their work.",
+            "Increase model size while keeping the separate login and manual context transfer."
+          ],
+          "correct": 0,
+          "explanation": "A contextual link changes the suspected friction without replacing the vendor system. A full migration exceeds control and scope. Mandatory copying adds the same friction. A larger model leaves the stated adoption barrier unchanged.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-adoption-q3",
+          "prompt": "Which observation can support a claim about useful adoption?",
+          "options": [
+            "Use during eligible tickets, successful returns to the workflow and operator correction effort.",
+            "The number of people who received an email announcing the pilot.",
+            "The number of logins after a compulsory training session on the new screen.",
+            "The number of tokens consumed by the proposed larger model."
+          ],
+          "correct": 0,
+          "explanation": "Eligible-workflow use and correction effort connect adoption to actual work. Emails measure reach, compulsory logins can measure attendance, and token use measures consumption. None alone establishes usefulness.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-adoption-q4",
+          "prompt": "The link cannot carry sensitive ticket data in a URL. What should you change?",
+          "options": [
+            "Pass an opaque permitted identifier and resolve authorised context on the server.",
+            "Put the full ticket text in a fragment and assume every environment keeps it private.",
+            "Encode the ticket text as base64 and send it as a query parameter.",
+            "Remove access checks from the lookup so operators need not sign in again."
+          ],
+          "correct": 0,
+          "explanation": "An opaque identifier avoids copying content into the URL while server authorisation still controls the read. Fragments and base64 do not establish permission or reliable privacy. Removing access checks crosses a security boundary to solve a workflow problem.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-surge",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "A tenfold traffic spike",
+      "summary": "Plan burst traffic around a shared downstream request budget.",
+      "scenario": "A fictional service handles fifty jobs a minute under a two-minute completion objective. A launch may send five hundred jobs a minute. The downstream API accepts at most one hundred requests a minute; some jobs are urgent and others may wait. Repeating an accepted job must not repeat its customer notification. The sponsor asks to scale every worker tenfold.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-surge-q1",
+          "prompt": "Which question most changes the capacity plan?",
+          "options": [
+            "Which jobs are urgent, what may queue and how the downstream cap applies to each job.",
+            "Which worker instance has the highest maximum thread count.",
+            "Which chart makes the five-hundred-job launch forecast easiest to present.",
+            "Which notification template should be reused for all job classes."
+          ],
+          "correct": 0,
+          "explanation": "Priority, queue tolerance and dependency demand determine the admitted workload. Instance size cannot remove the external cap. Presentation and wording do not determine how many downstream requests a job needs.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-surge-q2",
+          "prompt": "Which initial design respects the hard dependency limit?",
+          "options": [
+            "Enforce at most 100 downstream requests per minute across workers and retries, with a bounded queue and an explicit urgent-work policy.",
+            "Limit each worker to 100 requests per minute and add workers when urgent jobs queue.",
+            "Cap concurrent calls at 100 and retry every rejection immediately, without a shared time-based budget.",
+            "Apply a shared 100-per-minute budget to first attempts while retries use a separate unbounded pool."
+          ],
+          "correct": 0,
+          "explanation": "A shared request-rate budget includes retries and respects the dependency’s time-based limit. A per-worker budget multiplies the total. Concurrency bounds in-flight work rather than requests per minute, and immediate retries add load. Excluding retries from the shared budget can still exceed the cap. The bounded queue and urgent policy define what users may expect when demand exceeds capacity.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-surge-q3",
+          "prompt": "Which test is needed beside raw throughput?",
+          "options": [
+            "A sustained burst with queue growth, priority, rate-limit handling and duplicate-notification checks.",
+            "The peak arrival rate with retries disabled and no priority classes in the generated workload.",
+            "The full priority mix with an unlimited dependency stub that never rate-limits requests.",
+            "The real dependency limit at steady average traffic without the launch-sized burst."
+          ],
+          "correct": 0,
+          "explanation": "The acceptance must combine the burst, bounded queue, priority, retries and duplicate-notification checks. Disabling retries and priority removes relevant load and scheduling behaviour. An unlimited stub bypasses the bottleneck. Average traffic does not establish burst behaviour.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-surge-q4",
+          "prompt": "Sustained urgent work now requires more than 100 downstream requests per minute. What should you tell the sponsor?",
+          "options": [
+            "The current objective cannot cover all urgent work; choose a bounded fallback or change the promise.",
+            "Every urgent job can retain its deadline if the queue is moved to a faster database.",
+            "The cap can be ignored temporarily because urgent jobs have a higher business value.",
+            "The objective still holds if unfinished urgent jobs are omitted from the report."
+          ],
+          "correct": 0,
+          "explanation": "The constraint forces a visible product tradeoff. A faster queue cannot create downstream capacity. Business value does not remove a provider limit. Omitting unfinished jobs hides the objective’s failure.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-offline",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Two warehouses with intermittent connectivity",
+      "summary": "Keep disconnected reservations honest about shared-stock authority.",
+      "scenario": "A fictional inventory pilot spans two warehouses. Scanners can be offline for an hour. Each scan has a device-generated operation id; the same operation can upload again after reconnection. The central inventory service owns available-to-sell quantities. The customer asks both sites to promise stock immediately even while offline.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-offline-q1",
+          "prompt": "Which question must precede an offline stock promise?",
+          "options": [
+            "Which offline actions are permitted and how conflicting reservations are reconciled centrally.",
+            "Whether last-write-wins on device timestamps can settle conflicts while both sites make final promises.",
+            "Whether each site can reserve against the full cached central quantity until its next reconnect.",
+            "Whether duplicate-operation suppression alone can prevent two different reservations spending the same stock."
+          ],
+          "correct": 0,
+          "explanation": "The permission and reconciliation contract comes first. Device timestamps cannot make mutually incompatible final promises valid. Letting both sites spend the full cached quantity can oversell. Deduplication protects one operation from replay, not distinct operations competing for stock.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-offline-q2",
+          "prompt": "Which pilot preserves the central authority the scenario names?",
+          "options": [
+            "Queue uniquely identified scans locally and show reservations as provisional until confirmed.",
+            "Let each scanner issue final stock promises from its last cached quantity.",
+            "Overwrite central inventory with each device’s full snapshot on reconnection.",
+            "Discard offline scans so reconnection never encounters duplicate operations."
+          ],
+          "correct": 0,
+          "explanation": "Provisional state makes the lack of central confirmation visible while stable ids support replay. Final promises from stale caches can oversell. Snapshot overwrite can lose other work, and discarding scans loses actual operations.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-offline-q3",
+          "prompt": "What must the replay acceptance cover?",
+          "options": [
+            "Repeated uploads of one operation and conflicting work from both sites in different arrival orders.",
+            "Repeated uploads from one site with no overlapping stock or operations from the other site.",
+            "Conflicting reservations from both sites delivered once each in their original order only.",
+            "Equal final totals after reconnect without checking whether individual reservations were accepted twice."
+          ],
+          "correct": 0,
+          "explanation": "Duplicates and cross-site conflicts must both be exercised under reordered delivery. A one-site replay omits conflict. One ordered delivery omits replay and reordering. Matching totals can conceal compensating duplicate effects, so inspect operation outcomes as well as inventory.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-offline-q4",
+          "prompt": "The sponsor insists that every offline reservation be final. What should you do?",
+          "options": [
+            "Explain the conflict with shared central stock and negotiate a bounded per-site allocation or a provisional promise.",
+            "Guarantee both final reservations because each device has a unique operation id.",
+            "Accept the promise and reconcile any overselling without changing the written scope.",
+            "Treat the last reconnected site as correct and erase reservations from the other site."
+          ],
+          "correct": 0,
+          "explanation": "A bounded allocation can change the constraint; a provisional promise exposes it. Unique ids prevent duplicate operations but do not create stock. Quietly accepting or erasing conflicting reservations hides the tradeoff from the people who must own it.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fde-v1-m02-cases-patterns",
+      "kind": "check",
+      "purpose": "exercise",
+      "verification": "machine_verified",
+      "title": "Turn repeated custom work into a product proposal",
+      "summary": "Separate reusable mechanics from customer-specific boundaries.",
+      "scenario": "A fictional delivery team has integrated three customers’ ticket exports. Each adapter repeats pagination, tenant-scoped configuration and field validation, while the customers use different status vocabularies and retention policies. Product has one planning slot next month. The sponsor wants to copy the most recent customer’s adapter for everyone.",
+      "competencies": [
+        "discovery"
+      ],
+      "estimatedMinutes": 15,
+      "passThreshold": 0.8,
+      "questions": [
+        {
+          "id": "fde-v1-m02-cases-patterns-q1",
+          "prompt": "What evidence should the product proposal distinguish?",
+          "options": [
+            "Repeated technical behaviour, customer-specific rules and the cost or failure history of each.",
+            "The newest customer’s terminology, presented as the common vocabulary for every account.",
+            "The total line count of the newest adapter without its operational history.",
+            "The number of features competitors advertise without checking these customer workflows."
+          ],
+          "correct": 0,
+          "explanation": "Generalisation needs evidence about both the repeated behaviour and its variation. Recent terminology is not automatically common. Line count and competitor lists do not show which abstraction would help these integrations.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-patterns-q2",
+          "prompt": "Which first reusable boundary fits the observed repetition?",
+          "options": [
+            "A tenant-scoped pagination and validation core with explicit status and retention adapters.",
+            "One global status map and retention setting shared across every customer.",
+            "A copy of the latest adapter with its customer identifiers replaced in comments.",
+            "A generic platform that supports every possible connector before the next planning slot."
+          ],
+          "correct": 0,
+          "explanation": "The common mechanics can be reused while domain rules remain explicit per customer. Global settings conflate distinct policies. Comment edits do not remove embedded assumptions. An unlimited platform exceeds the evidence and the immediate scope.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-patterns-q3",
+          "prompt": "Which proposal can Product evaluate in the available planning slot?",
+          "options": [
+            "One bounded common component, evidence from three integrations and explicit adoption and support costs.",
+            "A declaration that three deployments prove the component will fit every future customer.",
+            "A long backlog of optional connector features without a proposed first user.",
+            "A request to rewrite the product before estimating migration or maintenance effort."
+          ],
+          "correct": 0,
+          "explanation": "A bounded component with users, evidence and cost supports a decision. Three integrations do not prove universal fit. An unprioritised feature list and an uncosted rewrite leave the decision undefined.",
+          "competencies": [
+            "discovery"
+          ]
+        },
+        {
+          "id": "fde-v1-m02-cases-patterns-q4",
+          "prompt": "A fourth customer needs a different identity boundary. What should change?",
+          "options": [
+            "Test that boundary explicitly and revise or decline the reuse claim where it does not fit.",
+            "Keep the adapter API unchanged and map the new roles to the nearest existing roles before testing isolation.",
+            "Include the new identity model in the common core immediately, then estimate the impact on existing tenants.",
+            "Build a separate connector and claim the common core fits all four customers based on the first three."
+          ],
+          "correct": 0,
+          "explanation": "The new boundary needs explicit access cases before the reuse claim can extend. Nearest-role mapping may broaden permissions. Expanding the core before checking existing tenants assumes compatibility. A separate connector may be appropriate, but it cannot substantiate a claim that the common core covers that fourth identity model.",
+          "competencies": [
+            "discovery"
+          ]
+        }
+      ]
+    }
   ],
-  requires: [
-    { activityId: 'fde-v1-m02-checks', state: 'verified_pass' },
-    { activityId: 'fde-v1-m02-connector-adapter', state: 'verified_pass' },
+  "requires": [
+    {
+      "activityId": "fde-v1-m02-cases-l1-read",
+      "state": "self_reviewed"
+    },
+    {
+      "activityId": "fde-v1-m02-cases-l2-read",
+      "state": "self_reviewed"
+    }
   ],
+  "requiresAtLeast": {
+    "count": 9,
+    "of": [
+      "fde-v1-m02-cases-dashboard",
+      "fde-v1-m02-cases-employee-sync",
+      "fde-v1-m02-cases-deadline",
+      "fde-v1-m02-cases-wrong-feature",
+      "fde-v1-m02-cases-timeouts",
+      "fde-v1-m02-cases-hosting",
+      "fde-v1-m02-cases-invoices",
+      "fde-v1-m02-cases-knowledge",
+      "fde-v1-m02-cases-adoption",
+      "fde-v1-m02-cases-surge",
+      "fde-v1-m02-cases-offline",
+      "fde-v1-m02-cases-patterns"
+    ],
+    "state": "verified_pass"
+  },
+  "estimatedMinutes": 220
 };

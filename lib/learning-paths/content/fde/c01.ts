@@ -389,7 +389,6 @@ export const FDE_C01: ModuleSource = {
   ],
   competencies: ['discovery', 'integration', 'boundaries', 'ai-architecture', 'retrieval', 'evaluation', 'ai-security', 'operations', 'handoff'],
   dependsOn: [
-    'fde-v1-m02-cases',
     'fde-v1-m01',
     'fde-v1-m02',
     'fde-v1-m03',
@@ -400,6 +399,10 @@ export const FDE_C01: ModuleSource = {
     'fde-v1-m08',
     'fde-v1-m09',
     'fde-v1-m10',
+    'fde-v1-m11',
+    'fde-v1-m12',
+    'fde-v1-m13',
+    'fde-v1-m14',
   ],
   estimatedMinutes: 360,
   lessons: [],

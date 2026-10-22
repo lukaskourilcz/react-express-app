@@ -33,7 +33,7 @@ const READ = 'fde-v1-x01-read';
 const CASE = 'fde-v1-x01-case';
 const DRILL = 'fde-v1-x01-drill';
 
-const CASES_MODULE = 'fde-v1-m02-cases';
+const CASES_MODULE = 'fde-v1-m02';
 const CASES_COUNT = 12;
 const CASES_NEEDED = 9;
 

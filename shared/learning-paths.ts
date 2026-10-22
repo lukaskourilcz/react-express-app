@@ -265,7 +265,8 @@ export interface LearningPathManifest {
   diagnosticActivityId: string | null;
   estimatedHours: { min: number; max: number };
   sources: SourceReference[];
-  /** ISO date of the last full content review. */
+  /** ISO date of the latest curriculum authoring review. Individual source
+   * references retain their own claim-verification dates. */
   reviewedOn: string;
   /** Wording the completion screen may use. No certification, no hiring claim. */
   completionLabel: string;

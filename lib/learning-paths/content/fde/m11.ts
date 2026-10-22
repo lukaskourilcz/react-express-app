@@ -138,8 +138,8 @@ const CLEAN_RECORD = {
   checkedAt: '2026-10-21T09:30:00Z',
 };
 
-export const FDE_M11_DEPLOY: ModuleSource = {
-  id: 'fde-v1-m11-deploy',
+export const FDE_M11: ModuleSource = {
+  id: 'fde-v1-m11',
   title: 'Deploy in the customer’s environment',
   outcomes: [
     'Read a Dockerfile the way a customer’s platform reviewer does: the base image, the user the process runs as, the health check, and where a secret could end up in a layer.',
@@ -149,7 +149,7 @@ export const FDE_M11_DEPLOY: ModuleSource = {
     'Write a release gate that refuses a rollout on failed health, configuration or migration evidence, records why, and prices the rollback before the schema moves.',
   ],
   competencies: ['deployment'],
-  dependsOn: ['fde-v1-m03', 'fde-v1-m08'],
+  dependsOn: ['fde-v1-m04', 'fde-v1-m10'],
   estimatedMinutes: 125,
   lessons: [
     {
