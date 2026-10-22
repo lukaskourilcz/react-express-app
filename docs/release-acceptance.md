@@ -5798,6 +5798,8 @@ Local evidence, Node 24.22.0, at the branch head: `test:coding` passed in full (
 
 Not run: `ci:parity` (it needs port 4173, which other work held), the 18 browser specs, Storybook and `test:sql` (no migration). The workbench brief's "DSA · Level n" was not seen in a browser, because the preview serves no task API; the list row was, at 360 px light and 1280 px dark. The reviews are same-session model reviews, not an independent reading. The issue stays open until a checked merge.
 
+*22 October 2026:* PR #530 merged this work and #493 is closed; see "DSA coding tasks and FDE artifacts".
+
 Review fixes, same day. A DSA task on a held level (1, 2, 10, 11, 14) no longer names that level: `DSA_LEVELS_AWAITING_E3` moved to `shared/coding-catalog.ts`, where `hasLearnLevel` reads it, so the linear search stopped reading "DSA · Level 10" (Sorting Algorithms). Each criterion-tagged known wrong answer must now fail a check tagged with its criterion, not just fail somewhere; all 103 do. A visible DSA check carries a short `shown` form for the Results row, so the longest row is 319 characters instead of 2,618. The halving senior board halves with `Math.floor` instead of a 32-bit shift, and the prompt bounds n at `Number.MAX_SAFE_INTEGER`; `Math.floor(Math.log2(n))` is now a known wrong answer (49 for 2^49 - 1). The max-gap senior board reduces once instead of spreading into `Math.max`, which QuickJS refuses past 65,534 arguments. The queue prompt names its three counted operations correctly. 22 ledger rows took new hashes and a regrade of 177 cases.
 
 Local evidence for the fixes, Node 24.22.0: `test:coding` passed in full (799 tasks, 754 issued; 165 known answers keep their verdict; 103 criterion-tagged wrong answers graded against their criterion's checks). `test:launch`, `test:coding-auth`, `test:grading-integrity`, `test:paths`, `test:path-authority`, both typechecks, `check:unused`, `check:security`, `build`, `check:public` and `check:bundle` passed; the initial download measured 240,784 gzip bytes against the unchanged 241,651 budget. On a preview at port 4473, `check:responsive` passed 264 probes, and `coding-workbench.spec.ts` with `coding-pages.spec.ts` passed 33 tests, including new ones that open the BST task at 360 and 1280 px and run its reference to 7 of 7. The workbench brief was seen in a browser this time, through the spec's stand-in task API. Not run: `ci:parity` (port 4173), Storybook, `test:sql`.
@@ -5893,6 +5895,8 @@ Final head b08c280661776ae62803a68a78b50facdd7002a5 composes with B2 and passes 
 
 This establishes the observed guest flow, not authenticated production grading, physical-device acceptance, or independent-human review of the whole catalogue. E4 and E5 remain separate open work.
 
+*22 October 2026:* E4 (#495) and E5 (#496) merged later that day; see "DSA Advanced and minimal Learn topic cards" and "Standalone DSA path retired".
+
 ## B12 free FDE taster release — 22 October 2026
 
 Issue #508 allows free enrollment, the diagnostic and first required FDE module, with server checks at both start and submit. Later work requires Premium; stored verified/self-reviewed work can reopen after entitlement lapses. Client hub, overview, resume and picker mirror the server rule. Reward amounts, owner isolation and the twelve physical handlers remain unchanged.
@@ -5900,6 +5904,8 @@ Issue #508 allows free enrollment, the diagnostic and first required FDE module,
 Fast parity passed 28 checks with 25 skipped at eea6ae42. Final head 9dc6743dae93363bab8b9ba06b1b278c5fc67c7a includes actual B2/E3 main, passes ten selected checks and 24 browser tests. One earlier browser invocation used the wrong base-URL variable; the corrected TEST_BASE_URL invocation supplies the quoted 24 passing tests. PR #551 merged at 920ac1f43984307947d11b501cd2c1f70d6ef211. Required run 39730505010 passed verify (2s aggregate after dependent jobs) and SQL (34s). READY production dpl_HMA8Td1EmucESFsZAwzKC2UnaBRe matches that merge. Read-only guest browser acceptance at 390px confirms the canonical FDE outline is 200, with five delivery phases, 13 competencies, no overflow, page errors or API writes. Evidence: /private/tmp/codex-b12-production-smoke.log.
 
 The production FDE switch remains disabled pending B14. Authenticated production taster submission and completion are not claimed; no production learning data, migration or feature flag changed during acceptance.
+
+*22 October 2026:* B14 (#510) merged in PR #559. The FDE switch now waits only on the owner.
 
 
 ## B13 public FDE positioning release — 22 October 2026
@@ -5912,6 +5918,8 @@ READY production dpl_7qigZgX2t7RY4yPTqRdKggxwSibx matches that exact merge. Read
 
 A deployment-scoped 15-minute runtime scan found two stderr entries categorized as errors, both Node 24 DEP0169 url.parse deprecation warnings on /api/quiz/roadmap. The targeted runtime-error query returned that same warning group; no other group was returned. The accepted guest requests were 200. This is not a claim of warning-free logs or authenticated production completion. The warning is recorded for follow-up; FDE stays disabled until B14.
 
+*22 October 2026:* #477 is closed. The DEP0169 warning comes from Vercel's Node launcher (upstream vercel/vercel#16109), not from devShark code. B14 merged in PR #559; FDE stays off until the owner sets the Production variable.
+
 ## DSA Advanced and minimal Learn topic cards — 22 October 2026
 
 Issue #495 (PR #556, merge 4206cc16): DSA Advanced joins Software Engineer as an opt-in Premium topic, with 15 levels, 120 questions and 15 new plus 9 placed coding tasks. Required run passed after one spec fix (1327b1af): the topic-card helper matched by prefix and found both DSA cards. Owner request (PR #557, merge 132633be): Learn topic cards show the logo, the topic name and the levels line only; the "Also in …" line and its accessible-name suffix are gone, and section membership is unchanged. Main had moved after #557's CI, so the merged tree was rechecked locally before merging: types, client, launch, build, bundle, and learning-release plus learn-sections (32/32).
@@ -5923,6 +5931,8 @@ A read-only guest check on devshark.app after the deploy, in headless Chromium a
 Issue #496 (PR #555, merge c1d1c1dd67b6d07e99b972508caaa7e3322104e1): the DSA Foundations learning path is retired; FDE is the only path. Its exercises remain the Coding tasks E2 created: all 769 coding-index ids are identical before and after the merge, and the graders and solutions are unchanged apart from a file rename. The eighteen original `dsa-v1-*` readings are still served by Learn and stay bound to their eighteen archived lesson reviews by content hash (`audit:native-reviews` reports 18/33 Learn lessons); the other 111 path records moved verbatim to `history/`, none rescored or rebound. Stored `dsa-foundations` enrollments are left out of the enrollment list and Today; their progress and activity routes answer 404. `/roadmap/paths/dsa-foundations` and everything under it answer a permanent 308 to `/learn/software-engineer?topic=dsa`. Every authority script kept or gained assertions (path-authority 17→21, handler contracts 63→71, lesson contract 42→47). Head 0cebac71 passed required run 39758404194 (coding 21m49s, browser 14m10s) with main already merged into it.
 
 Open owner items: the Terms of use still name "the FDE and DSA learning paths"; remove `LEARNING_PATH_DSA_ENABLED` from Vercel if any environment still sets it.
+
+*22 October 2026:* no Vercel environment sets `LEARNING_PATH_DSA_ENABLED`, and no code reads it. The Terms wording is still open.
 
 ## Migration 066 in production — 22 October 2026
 
@@ -5985,5 +5995,7 @@ Issue #510 verifies the FDE release on the merged head of epics A to E (main 1b7
 **Preview deployment, guest only.** `dpl_7kMw6eye5C7WppeumxmNCj67zMuX` (b287b937, the final application code; an earlier pass on `dpl_FTUYvF1WbFsKCJeRgASiN2apL7aa` at ec1c1da8 gave the same results) runs with a branch-scoped Preview `LEARNING_PATH_FDE_ENABLED=true` and shares the production database, so it was checked read-only and signed out, at 390 and 1280: `/api/health` 200 healthy; the catalog reports FDE `available`; the FDE section, the hub, M01 and its first activity answer 200 with their h1, show the sign-in prompts ("Sign in to record graded work", "Signing in is what makes results stick"), no horizontal overflow, no page errors and no API write. The only outbound POSTs were Sentry pageload transactions (10 % sampling), not errors.
 
 PR #559 is open and not merged; the owner merges it. Frozen head c6667b01 passes required run 39815358042: coding 24m16s (the slowest gate), browser 13m52s with all 20 browser runs, tests 4m19s, static 2m46s, SQL 38s, verify green. The commit after c6667b01 adds only this entry. There is no production deployment of this work yet; production `dpl_BuNpmNWHMWfv4JLxQ2mchLqLBVp2` (B11's merge, READY) still serves FDE off.
+
+*22 October 2026:* PR #559 merged as `1f5a3b11` and #510 is closed. The branch-scoped Preview `LEARNING_PATH_FDE_ENABLED` was removed, so no Vercel environment sets it; production serves FDE off until the owner switches it on.
 
 Non-claims: no authenticated run against production or the preview, no production enrollment, submission or Premium check; the walk-through's accounts were dedicated local accounts and its database a local one. No physical devices or assistive technology were used; field data (real learners' use, completion and error rates) is unknown until the switch is on. The production switch is not set by this work.
