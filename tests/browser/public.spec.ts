@@ -90,6 +90,9 @@ test('all three Learn sections have public previews without JavaScript', async (
       await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://devshark.app/learn/${id}`);
       expect(await page.locator('a[href*="?topic="]').count()).toBeGreaterThan(0);
+      for (const link of await page.locator('a[href*="?topic="]').all()) {
+        expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
   } finally { await context.close(); }

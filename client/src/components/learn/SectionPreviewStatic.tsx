@@ -14,9 +14,9 @@ export function SectionPreviewStatic({ name, description, topics, paths }: {
     <p>{description}</p>
     <p>{learnText('learn.preview.access')}</p>
     <h2>{learnText('learn.preview.topics')}</h2>
-    <ul>{topics.map(topic => <li key={topic.href}><a href={topic.href}>{topic.name}</a></li>)}</ul>
+    <ul>{topics.map(topic => <li key={topic.href}><div className="ss-text-links"><a href={topic.href}>{topic.name}</a></div></li>)}</ul>
     {paths.map(path => <section key={path.href}>
-      <h2><a href={path.href}>{path.title}</a></h2>
+      <h2 className="ss-text-links"><a href={path.href}>{path.title}</a></h2>
       <p>{path.summary}</p>
       <p>{learnText('learn.preview.inventory', { modules: path.inventory.modules, lessons: path.inventory.lessons, checks: path.inventory.moduleChecks, exercises: path.inventory.moduleCodeExercises + path.inventory.finalCodeExercises })}</p>
       <p>{learnText('learn.preview.availability')}</p>
