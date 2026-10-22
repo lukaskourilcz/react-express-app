@@ -32,6 +32,10 @@ export function createResultShareFile(input: ResultShareCardInput): Promise<File
  * the typing racer). The caller passes only numbers, dates and product words;
  * the card has no field for a name, an e-mail, a room code or a question. */
 export interface ShareCardInput {
+  theme?: 'light' | 'dark';
+  /** Manifest labels and recorded counts only; no account or artifact text. */
+  evidenceLegend?: string;
+  evidence?: { label: string; verified: number; selfReviewed: number; total: number }[];
   brand: string;
   /** What was played, e.g. "Biggest Shark Challenge". */
   label: string;
@@ -54,14 +58,15 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   if (!ctx) return null;
 
   const accent = /^#[0-9a-f]{6}$/i.test(input.accent.trim()) ? input.accent.trim() : '#2d7a2d';
+  const dark = input.theme === 'dark';
   const background = ctx.createLinearGradient(0, 0, 1200, 630);
-  background.addColorStop(0, '#f8faf9');
-  background.addColorStop(1, '#edf6f0');
+  background.addColorStop(0, dark ? '#0c161e' : '#f8faf9');
+  background.addColorStop(1, dark ? '#0a1219' : '#edf6f0');
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, 1200, 630);
 
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#dce7e0';
+  ctx.fillStyle = dark ? '#101c24' : '#ffffff';
+  ctx.strokeStyle = dark ? '#30404b' : '#dce7e0';
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.roundRect(64, 54, 1072, 522, 44);
@@ -71,17 +76,34 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   // The brand appears first here, so the card carries the full V9 logo, not
   // the name set in a system font.
   drawLogo(ctx, 120, 94, 44, accent);
-  ctx.fillStyle = '#53666f';
+  if (input.evidence) {
+    ctx.fillStyle = dark ? '#e8eef0' : '#132019';
+    ctx.font = '700 42px system-ui, -apple-system, sans-serif';
+    ctx.fillText(fit(ctx, input.headline, 960), 120, 205);
+    ctx.font = '500 21px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = dark ? '#b0bec6' : '#53666f';
+    ctx.fillText(fit(ctx, input.evidenceLegend ?? '', 960), 120, 247);
+    const rows = Math.max(1, Math.ceil(input.evidence.length / 2));
+    const step = Math.min(34, 260 / rows);
+    input.evidence.forEach((item, index) => {
+      const column = Math.floor(index / rows);
+      const row = index % rows;
+      ctx.fillText(fit(ctx, `${item.label}: ${item.verified} / ${item.selfReviewed} / ${item.total}`, 450), 120 + column * 490, 290 + row * step);
+    });
+    const evidenceBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png', 0.92));
+    return evidenceBlob ? new File([evidenceBlob], 'devshark-fde-guided-path.png', { type: 'image/png' }) : null;
+  }
+  ctx.fillStyle = dark ? '#b0bec6' : '#53666f';
   ctx.font = '600 27px system-ui, -apple-system, sans-serif';
   ctx.fillText(fit(ctx, input.label, 960), 120, 188);
 
-  ctx.fillStyle = '#132019'; // --brand-ink; a canvas cannot read CSS variables
+  ctx.fillStyle = dark ? '#e8eef0' : '#132019'; // --brand-ink; a canvas cannot read CSS variables
   ctx.font = '800 118px system-ui, -apple-system, sans-serif';
   ctx.fillText(fit(ctx, input.headline, 960), 120, 352);
   ctx.fillStyle = accent;
   ctx.font = '800 42px system-ui, -apple-system, sans-serif';
   ctx.fillText(fit(ctx, input.detail, 500), 124, 416);
-  ctx.fillStyle = '#6c7d84';
+  ctx.fillStyle = dark ? '#b0bec6' : '#6c7d84';
   ctx.font = '500 23px system-ui, -apple-system, sans-serif';
   ctx.fillText(input.date, 120, 510);
 
