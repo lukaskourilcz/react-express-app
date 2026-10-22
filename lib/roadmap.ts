@@ -20,7 +20,7 @@ import { levelLessonId } from './learn-lessons/levels';
 
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
-  | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
+  | 'html' | 'css' | 'git' | 'dsa' | 'dsa-advanced' | 'algorithms'
   | 'abbreviations' | 'general' | 'ai' | 'cool-stuff'
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 
@@ -29,7 +29,7 @@ export type RoadmapTopic =
 // every historical id still resolve; they are simply never offered.
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
-  'html', 'css', 'git', 'dsa', 'algorithms',
+  'html', 'css', 'git', 'dsa', 'dsa-advanced', 'algorithms',
   'general', 'ai', 'cool-stuff',
   'databases', 'system-design', 'devops', 'security',
 ];
@@ -55,6 +55,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   css: 'rm-css',
   git: 'rm-git',
   dsa: 'rm-dsa',
+  'dsa-advanced': 'rm-dsaa',
   algorithms: 'rm-algorithms',
   abbreviations: 'rm-abbr',
   general: 'rm-general',
@@ -70,6 +71,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
 // length of each array defines how many levels the topic has.
 const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
+  "dsa-advanced": ["Heaps and priority queues", "Graph representation", "Breadth-first and depth-first search", "Shortest paths", "Topological sort and union-find", "Tries", "Backtracking", "Greedy algorithms", "Intervals", "Sliding window and two pointers", "One-dimensional dynamic programming", "Two-dimensional dynamic programming", "Bit manipulation", "Sorting algorithms and proofs", "Advanced review"],
   javascript: [
     'Values & Math', 'Strings', 'Booleans & Comparison', 'Arrays: Basics', 'Objects: Basics',
     'Array Iteration', 'Filter & Find', 'Reduce', 'Destructuring', 'Spread & Rest',

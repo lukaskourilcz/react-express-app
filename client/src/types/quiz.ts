@@ -1,7 +1,7 @@
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { PublicItemReview } from '../../../shared/curation';
 import type { LearnRepeatXp } from '../../../shared/repeat-xp';
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'dsa-advanced' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
 export interface Question {
   id: string;
@@ -45,7 +45,7 @@ export type QuizState = 'loading' | 'ready' | 'in-progress' | 'submitted' | 'err
 
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
-  | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
+  | 'html' | 'css' | 'git' | 'dsa' | 'dsa-advanced' | 'algorithms'
   | 'abbreviations' | 'general' | 'ai' | 'cool-stuff'
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 

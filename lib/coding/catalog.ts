@@ -30,7 +30,8 @@ import { TYPESCRIPT_LOOP_TASKS } from './tasks/typescript-loops';
 import { REACT_LOOP_TASKS } from './tasks/react-loops';
 import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
 import { ALGORITHM_TASKS } from './tasks/algorithms';
-import { DSA_FOUNDATIONS_TASKS } from './tasks/dsa-foundations';
+import { DSA_FOUNDATIONS_TASKS } from './tasks/dsa';
+import { DSA_ADVANCED_TASKS } from './tasks/dsa-advanced';
 import { EASY_JAVASCRIPT_A_TASKS } from './tasks/easy-javascript-a';
 import { EASY_JAVASCRIPT_B_TASKS } from './tasks/easy-javascript-b';
 import { EASY_JAVASCRIPT_C_TASKS } from './tasks/easy-javascript-c';
@@ -91,8 +92,8 @@ const MEDIUM_HARD_BAND: CodingTaskSource[][] = [
 /** Ids of the Medium and Hard waves; `tasksForLevel` in `./active` skips them. */
 export const MEDIUM_HARD_BAND_TASK_IDS: ReadonlySet<string> = new Set(MEDIUM_HARD_BAND.flat().map((task) => task.id));
 
-/** The DSA Foundations tasks (#493): the DSA path's code exercises as coding
- * tasks on the algorithms track with topic `dsa`, levelled to the DSA Learn
+/** The DSA Foundations tasks (#493): the code exercises of the DSA path that
+ * E5 (#496) retired, kept as coding tasks on the algorithms track with topic `dsa`, levelled to the DSA Learn
  * topic. Listed in `sources` before the bands, so a tier-1 task here sorts
  * ahead of a band task of the same level and tier. */
 export const DSA_FOUNDATIONS_TASK_IDS: ReadonlySet<string> = new Set(DSA_FOUNDATIONS_TASKS.map((task) => task.id));
@@ -108,6 +109,7 @@ const sources: CodingTaskSource[][] = [
   SYSTEM_DESIGN_TASKS,
   ALGORITHM_TASKS,
   DSA_FOUNDATIONS_TASKS,
+  DSA_ADVANCED_TASKS,
   ...EASY_BAND,
   ...MEDIUM_HARD_BAND,
 ];

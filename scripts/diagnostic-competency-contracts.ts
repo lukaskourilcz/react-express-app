@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {LEARNING_PATHS} from '../lib/learning-paths/catalog';
 import {gradeCheck} from '../lib/learning-paths/grade';
+import { DOMAIN_PROJECT_CHECK } from './fixtures/domain-check-fixture';
 import {activityDomainScores, diagnosticCompetencies, diagnosticEvidence} from '../lib/learning-paths/competencies';
 
 export function diagnosticCompetencyContracts() {
@@ -28,8 +29,10 @@ export function diagnosticCompetencyContracts() {
   assert.throws(()=>diagnosticEvidence(activity,graded.verdicts.slice(1)),/Incomplete/);
   assert.throws(()=>diagnosticEvidence(activity,[...graded.verdicts.slice(1),graded.verdicts[1]]),/Incomplete/);
   assert.equal(activityDomainScores(activity,counts),null);
-  const dsa=LEARNING_PATHS.find(p=>p.id==='dsa-foundations')!;
-  const gated=dsa.modules.flatMap(m=>m.activities).find(a=>a.domains?.length)!;
+  // A domain-gated check keeps only its own domains' scores. No published
+  // check has domains since E5 (#496) retired DSA Foundations, so the retired
+  // final stands in as a private fixture.
+  const gated=DOMAIN_PROJECT_CHECK;
   assert.deepEqual(activityDomainScores(gated,{...counts,[gated.domains![0]]:0.5}),{[gated.domains![0]]:0.5});
   assert.equal(graded.keyWithheld,false);assert(graded.verdicts.every(v=>v.correctIndex!==undefined&&v.explanation));
   assert.equal(activity.purpose,'diagnostic');assert(path.modules.find(m=>m.activities.includes(activity))?.optional);

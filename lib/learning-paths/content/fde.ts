@@ -18,17 +18,18 @@ import type { PathSource } from '../types';
 import { FDE_DIAGNOSTIC } from './fde/diagnostic';
 import { FDE_BRIDGES } from './fde/bridges';
 import { FDE_M01 } from './fde/m01';
+import { FDE_M02 } from './fde/m02';
 import { FDE_M03 } from './fde/m03';
 import { FDE_M04 } from './fde/m04';
+import { FDE_M05 } from './fde/m05';
 import { FDE_M06 } from './fde/m06';
 import { FDE_M07 } from './fde/m07';
-import { FDE_M05 } from './fde/m05';
 import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
+import { FDE_M11 } from './fde/m11';
 import { FDE_M12 } from './fde/m12';
 import { FDE_M13 } from './fde/m13';
-import { FDE_M11 } from './fde/m11';
 import { FDE_M14 } from './fde/m14';
 import { FDE_C01 } from './fde/c01';
 
@@ -75,6 +76,7 @@ export const FDE_PATH: PathSource = {
     FDE_DIAGNOSTIC,
     FDE_BRIDGES,
     { ...FDE_M01, deliveryPhase: 'discover-scope' },
+    { ...FDE_M02, deliveryPhase: 'discover-scope' },
     { ...FDE_M03, deliveryPhase: 'integrate' },
     { ...FDE_M04, deliveryPhase: 'integrate' },
     { ...FDE_M05, deliveryPhase: 'integrate' },

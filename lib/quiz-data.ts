@@ -10,6 +10,7 @@ import {
   roadmapHtmlQuestions,
   roadmapCssQuestions,
   roadmapDsaQuestions,
+  roadmapDsaAdvancedQuestions,
   roadmapAlgorithmsQuestions,
   roadmapAbbreviationsQuestions,
   roadmapGeneralQuestions,
@@ -21,7 +22,7 @@ import {
   roadmapSecurityQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'dsa-advanced' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
 export interface Question {
   id: string;
@@ -10415,6 +10416,7 @@ export const questions: Question[] = [
   ...roadmapHtmlQuestions,
   ...roadmapCssQuestions,
   ...roadmapDsaQuestions,
+  ...roadmapDsaAdvancedQuestions,
   ...roadmapAlgorithmsQuestions,
   ...roadmapAbbreviationsQuestions,
   ...roadmapGeneralQuestions,

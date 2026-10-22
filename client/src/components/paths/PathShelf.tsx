@@ -37,7 +37,7 @@ export function PathCard({ entry, enrollment, premium }: {
       <div className="lp-module__head">
         <h3 className="lp-module__title">
           <span className="lp-module__index">
-            {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
+            {t('paths.kicker.role')}
           </span>
           <Link to={pathHref(manifest.id)}>{manifest.title}</Link>
         </h3>

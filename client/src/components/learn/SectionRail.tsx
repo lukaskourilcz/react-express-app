@@ -17,7 +17,6 @@ import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../.
 import type { TranslationKey } from '../../i18n/translations';
 import { learnText } from '../../i18n/translations.learn';
 import { LEVELS_TO_UNLOCK_NEXT, passedLevelCount, type VerifiedProgress } from '../../../../shared/progression';
-import type { LearnSectionId } from '../../../../shared/learn-sections';
 import type { RailEntry } from './sections';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -28,12 +27,6 @@ export const LockIcon = ({ size = 18 }: { size?: number }) => (
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 );
-
-/** "Web Developer", "Web Developer and Forward Deployed Engineer". */
-function sectionList(ids: readonly LearnSectionId[]): string {
-  const names = ids.map((id) => learnText(`learn.section.${id}`));
-  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}
 
 export function SectionRail({
   sectionName,
@@ -77,16 +70,14 @@ export function SectionRail({
           section, no card is checked. */}
       <RadioCardGroup value={entries.some((entry) => entry.topic === value && entry.state === 'open') ? value : ''} onChange={(next) => onSelect(String(next))} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
         {entries.map((entry, index) => {
-          const { topic, state, alsoIn, premium } = entry;
+          const { topic, state, premium } = entry;
           const color = getCategoryHexColor(topic);
           const label = t(categoryLabelKey(topic));
-          const also = alsoIn.length > 0 ? sectionList(alsoIn) : null;
           const name = [
             state === 'open' ? label
               : state === 'locked' ? `${label} — ${t('roadmap.locked')}`
                 : learnText('learn.rail.notJoinedAria', { topic: label, section: sectionName }),
             premium ? t('premium.badge') : null,
-            also ? learnText('learn.rail.alsoInAria', { sections: also }) : null,
           ].filter(Boolean).join(', ');
           return (
             <RadioCard
@@ -116,7 +107,6 @@ export function SectionRail({
                     ? levelCounts[topic] === undefined ? null : t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] })
                     : state === 'locked' ? t('roadmap.locked') : learnText('learn.rail.notJoined')}
                 </span>
-                {also && <span className="rm-topic-also" aria-hidden="true">{learnText('learn.rail.alsoIn', { sections: also })}</span>}
               </span>
               {state === 'locked' && <span className="rm-topic-lock" aria-hidden><LockIcon size={13} /></span>}
             </RadioCard>

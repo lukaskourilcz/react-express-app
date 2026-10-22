@@ -220,10 +220,10 @@ export function localDraftOver(enrollmentId: string, activityId: string, server:
  * and vercel.json spell the same path; the route-head test holds them equal. */
 export const FDE_PATH_ROUTE = '/learn/forward-deployed-engineer/path';
 
-/** The role specialization lives in its section; the skill path keeps its
- * route until epic E folds it into Learn. */
-export function pathHref(pathId: LearningPathId): string {
-  return pathId === 'fde' ? FDE_PATH_ROUTE : '/roadmap/paths/dsa-foundations';
+/** The role specialization lives in its section. The retired DSA path's old
+ * routes redirect to Learn (App.tsx, vercel.json). */
+export function pathHref(_pathId: LearningPathId): string {
+  return FDE_PATH_ROUTE;
 }
 
 export function moduleHref(pathId: LearningPathId, moduleId: string): string {
