@@ -5840,3 +5840,15 @@ Production `dpl_EfMNsmEY4Cza7MhTa5tbnHxgdhSa` is READY at the merge SHA. Its cat
 ## CI install audit separation — 22 October 2026
 
 Maintenance PR #546 merged at `8189bae09d8ffbcc3437ac13b1ffb33d7e827462`, required run `39717156563` green. All five CI install steps now match local parity with `npm ci --no-audit`; the explicit root/client production audit gates remain required and both passed after the npm endpoint recovered. Clean head `f38914b0` passed launch parity in 0.68 minutes; the current-main integration passed the parity-plan check. This is CI configuration only.
+
+## Public Learn entry points — 22 October 2026
+
+A5, PR #547, merged at `99fe9eac27ada76e1d9cdd998a04c1d9b81d420a` with required run `39720314130` green. Clean `0e46e700` passed 28 fast checks in 26.24 minutes; after A3 integration, `a8423066` passed eight selected checks in 2.72 minutes and 25 browser cases in 32.7 seconds. A current-main/B8 tree `8f786429` passed five build/public/type/launch checks in 1.55 minutes.
+
+Production `dpl_MAKdNfuxNhYM9hwN8NojtFaomtTo` is READY at the merge SHA. A read-only 390px guest check confirmed all three section pages return HTTP 200 with their own visible h1, title and canonical, no horizontal overflow, no page errors and no API writes. Epic A is closed. This establishes guest public navigation, not authenticated completion.
+
+## Recorded FDE hub and completion artwork — 22 October 2026
+
+B2, PR #549, merged at `4daff81519e53acdc38d8b4cfe28472932a1f57a`; required run `39723762922` passed. Clean `e85bd096` passed all 28 fast checks in 25.09 minutes. Current-main/A5/B8 integration `065c3c06` passed six selected checks in 1.80 minutes; final documentation head `fb9d9b21` passed launch in 0.84 minutes. Two focused browser cases covered both themes, seven widths, 200% zoom, keyboard, axe, touch targets and real 1200×630 card downloads. Both downloaded images were visually inspected. The initial keyboard fixture raced route focus and was corrected to await it.
+
+Production `dpl_6SNo3ggTA56WbmrowpnzQ9Ldn9yy` is READY at the merge SHA. A 390px guest check on the canonical overview found all five phases and thirteen competency groups, with no overflow, page errors or API writes. Recording remains disabled by the owner switch. No authenticated production activity or completion card was created; completion artwork was checked against dedicated local fixtures.
