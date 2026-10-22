@@ -11,7 +11,7 @@ import { Editor } from '../../coding/Editor';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
-import { LessonView, RichText } from './LessonBody';
+import { LessonView, RichText } from '../learn/LessonBody';
 import type {
   CheckQuestionPayload,
   CheckQuestionVerdict,

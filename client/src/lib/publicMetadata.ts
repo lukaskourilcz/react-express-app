@@ -1,17 +1,15 @@
 import { TOPIC_LANDINGS, type TopicLandingDefinition } from './topicCatalog';
 import { PREMIUM_PRICE } from '../../../shared/tiers';
 export const PUBLIC_ORIGIN = 'https://devshark.app';
-/** The languages a public topic guide is published in. The app itself is English only. */
-export type GuideLocale = 'en' | 'cs'; // removed by D3 (#486)
-export const GUIDE_LOCALES: readonly GuideLocale[] = ['en', 'cs']; // removed by D3 (#486)
-export function topicFromPath(pathname: string): { topic: TopicLandingDefinition; locale: GuideLocale } | null {
-  const match = /^(\/cs)?\/topics\/([a-z0-9-]+)\/?$/.exec(pathname);
+/** Resolve only the published English guide addresses. */
+export function topicFromPath(pathname: string): { topic: TopicLandingDefinition } | null {
+  const match = /^\/topics\/([a-z0-9-]+)\/?$/.exec(pathname);
   if (!match) return null;
-  const topic = TOPIC_LANDINGS.find(topic => topic.slug === match[2]);
-  return topic ? { topic, locale: match[1] ? 'cs' : 'en' } : null;
+  const topic = TOPIC_LANDINGS.find(topic => topic.slug === match[1]);
+  return topic ? { topic } : null;
 }
-export function topicSchema(title: string, description: string, url: string, locale: GuideLocale) {
-  return { '@context': 'https://schema.org', '@type': 'LearningResource', name: title, description, url, inLanguage: locale, learningResourceType: 'Quick guide', isAccessibleForFree: true };
+export function topicSchema(title: string, description: string, url: string) {
+  return { '@context': 'https://schema.org', '@type': 'LearningResource', name: title, description, url, inLanguage: 'en', learningResourceType: 'Quick guide', isAccessibleForFree: true };
 }
 
 /** App routes with their own static HTML, canonical URL and sitemap entry

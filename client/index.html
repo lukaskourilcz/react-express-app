@@ -3,18 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      Theme and language before first paint.
+      Theme before first paint.
 
       The theme was applied from a React effect, which runs only after the
       entry bundle has downloaded, parsed and rendered. On a phone on a slow
       connection that is a second or more of white page for a learner who chose
       dark, on every cold load.
-
-      The app is English, and LanguageProvider sets lang="en" when it mounts. A
-      prerendered public guide names its own language in data-public-locale
-      (vite.config.ts). The language lines below are left from the second
-      language: this script's hash is pinned in the CSP in vercel.json, so they
-      leave together with the /cs guides in D3 (#486).
 
       Kept deliberately small and duplicated rather than imported: it has to run
       before anything else, so it cannot be a module. The keys and the fallback
@@ -33,23 +27,17 @@
       (function () {
         var root = document.documentElement;
         var mode = 'light';
-        var lang = null;
         try {
           var stored = localStorage.getItem('devquiz:color-mode');
           if (stored === 'light' || stored === 'dark') mode = stored;
           else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) mode = 'dark';
-          var storedLang = localStorage.getItem('devquiz.lang');
-          if (storedLang === 'cs' || storedLang === 'en') lang = storedLang;
         } catch (e) {
           /* storage unavailable — the media query answer, or the default, stands */
-        }
-        if (!lang) {
-          lang = (navigator.language || '').toLowerCase().indexOf('cs') === 0 ? 'cs' : 'en';
         }
         root.dataset.colorMode = mode;
         root.dataset.theme = mode;
         root.style.colorScheme = mode;
-        root.lang = root.dataset.publicLocale || lang;
+        root.lang = 'en';
       })();
     </script>
     <!-- devShark V9 icons (client/public/brand/v9/favicon): the clean fin,

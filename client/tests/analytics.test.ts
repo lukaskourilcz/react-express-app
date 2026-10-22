@@ -181,8 +181,8 @@ it('captures activation without allowing raw learner data into its properties', 
   // The home page's events carry no language: the app has one.
   await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('landing_sample_completed', { product: 'devshark', source: 'home', category: 'react' }));
   // A topic guide's event names the language the guide was read in.
-  analytics.captureActivation('learning_cta_clicked', { product: 'devshark', locale: 'cs', source: 'topic_guide', category: 'react' });
-  await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('learning_cta_clicked', { product: 'devshark', locale: 'cs', source: 'topic_guide', category: 'react' }));
+  analytics.captureActivation('learning_cta_clicked', { product: 'devshark', locale: 'en', source: 'topic_guide', category: 'react' });
+  await vi.waitFor(() => expect(client.capture).toHaveBeenCalledWith('learning_cta_clicked', { product: 'devshark', locale: 'en', source: 'topic_guide', category: 'react' }));
   expect(client.init.mock.calls[0][1]).toMatchObject({ autocapture: false, disable_session_recording: true, respect_dnt: true });
 });
 

@@ -271,11 +271,12 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   );
 }
 
-export function LessonView({ lesson }: { lesson: LessonBodyDto }) {
+export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto; headingLevel?: 1 | 2 }) {
+  const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const t = useT();
   return (
     <article className="lp-lesson">
-      <h2>{lesson.title}</h2>
+      <Heading>{lesson.title}</Heading>
       {lesson.sections.map((section, index) => (
         <Section key={index} section={section} />
       ))}

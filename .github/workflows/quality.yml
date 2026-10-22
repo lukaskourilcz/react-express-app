@@ -173,7 +173,7 @@ jobs:
           npm run test:browser -- tests/browser/launch-offer.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures
-          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC,/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440
+          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440
           RESPONSIVE_THEME=dark npm run check:responsive -- --routes /,/topics/$TOPIC,/daily --widths 390,768,1280
           npm run test:harness
       - if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
