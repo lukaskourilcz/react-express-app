@@ -230,8 +230,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const rungs = useMemo(() => ladderRungs(task), [task]);
   const taken = Math.min(hintsTaken, rungs.length);
 
-  // Format the code for display once the learner pauses.
+  // Format the code for display once the learner pauses, which tells the
+  // Format button whether it has anything to do. Not while a puzzle or the
+  // wait for a bigger screen stands in for the editor: there is no Format
+  // button then, and a phone downloaded Prettier for nothing.
+  const formatterNeeded = !puzzleMode && !pendingOnDesktop;
   useEffect(() => {
+    if (!formatterNeeded) return;
     let active = true;
     const timer = window.setTimeout(() => {
       if (!code.trim()) { setFormattedCode(code); setFormatSource(code); return; }
@@ -242,7 +247,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       });
     }, 350);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [code, task.track]);
+  }, [code, task.track, formatterNeeded]);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // The runner, and TypeScript's compiler, load while the brief is read: the
