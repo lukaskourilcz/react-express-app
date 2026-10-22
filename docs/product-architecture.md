@@ -1539,33 +1539,31 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
 
 `DELETE /api/user/delete-account` ends any live Stripe subscription first and
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
-which since migration 044 erases every table that holds an account id in one
-routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions, 051 with the merchandise the account held, 056 with
-the month's XP ledger (`user_xp_days`), 058 with the question hours
-(`user_question_xp`) and 060 with the Learn step hours
-(`user_learn_step_xp`). An order
-Spreadshop never received gives its stock reservation back (a claimed package
-reserved none): one awaiting payment is deleted, and a paid one is cancelled,
-which takes it off the fulfilment queue, and kept without the person as the
-record of what was paid. A few rows stay without the person: those cancelled
-orders, a merchandise order already with Spreadshop and its package claim (the
-claim's account part becomes `deleted-account:<order id>`), a settled month's
-ranks, a referral the account made (`deleted-account`), and a voucher the
-account created as an admin, which keeps its counts (`created_by` becomes
-`deleted-account`). The handler calls
-no other routine. After the Auth identity is deleted it calls
-`delete_user_data` once more, because the webhook of the subscription it
-cancelled can write billing rows in between. Once the identity is gone,
-migration 053's `link_billing_customer` and `upsert_provider_entitlement`
-refuse the id. The four that 039 to 042 shipped
-(`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
-`delete_referral_data`) deleted nothing once 044 held their statements, and
-migration 046 drops them; production runs it after the code that stopped
-calling them is deployed. The Auth identity goes after the first erasure. `erasureContracts()` in
-`scripts/test-launch-contracts.ts` fails when a migration creates a table with
-an account column that the newest `delete_user_data` does not erase, or when
-that body loses a statement of the four routines.
+the one routine that erases every table holding an account id (restated last
+in `supabase/supabase-schema-060.sql`, which covers the voucher redemptions,
+merchandise, the month's XP ledger `user_xp_days`, the question hours
+`user_question_xp` and the Learn step hours `user_learn_step_xp`). Tables that
+reference an erased table with `ON DELETE CASCADE` go with it, as
+`shark_name_allocations` goes with `user_handles`.
+
+An order Spreadshop never received gives its stock reservation back (a
+claimed package reserved none): one awaiting payment is deleted, and a paid
+one is cancelled, which takes it off the fulfilment queue, and kept without
+the person as the record of what was paid. A few rows stay without the
+person: those cancelled orders, a merchandise order already with Spreadshop
+and its package claim (the claim's account part becomes
+`deleted-account:<order id>`), a settled month's ranks, a referral the
+account made (`deleted-account`), and a voucher the account created as an
+admin, which keeps its counts (`created_by` becomes `deleted-account`).
+
+The handler calls no other routine. After the Auth identity is deleted it
+calls `delete_user_data` once more, because the webhook of the subscription it
+cancelled can write billing rows in between; once the identity is gone,
+`link_billing_customer` and `upsert_provider_entitlement` refuse the id.
+`erasureContracts()` in `scripts/test-launch-contracts.ts` fails when a
+migration creates a table with an account column that the newest
+`delete_user_data` does not erase, and `supabase/tests/080-delete-user-data.test.sql`
+seeds a row in every such table.
 
 ## Cookie consent, analytics and the privacy policy
 
