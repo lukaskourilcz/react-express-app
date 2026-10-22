@@ -541,9 +541,9 @@ were repaired. Server React execution now uses disposable isolated VMs.
 | Hostile submission verdict integrity | QuickJS regression PASS; React OPEN — #191; VM isolation alone does not resolve this |
 
 The mobile workbench still requires a larger screen for editing, as before.
-See the [hardening follow-up](./launch-hardening-2026-09-16.md) and [full audit](./launch-audit-2026-09-15.md)
-for exact scope, live-account changes, preview evidence and outstanding gates,
-and [operations](./react-grading-operations.md) for snapshot maintenance.
+The hardening follow-up (`docs/launch-hardening-2026-09-16.md`) and the full audit (`docs/launch-audit-2026-09-15.md`),
+both deleted on 22 October 2026 and kept in Git history, recorded the exact scope, live-account changes, preview evidence and outstanding gates.
+[Operations](./react-grading-operations.md) covers snapshot maintenance.
 
 ## Keyboard shortcut keycaps — 2026-09-15
 
@@ -3106,7 +3106,7 @@ Not run: Storybook (no story changed), `check:responsive`, the dependency audits
 
 ## DESIGN-AUDIT-2026-09-27
 
-Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in the round-one design brief (`design-audit/CLAUDE_CODE_PROMPT.md`, removed on 2026-09-28 and kept in Git history), one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` lists every ID with its commit and any deviation.
+Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in the round-one design brief (`design-audit/CLAUDE_CODE_PROMPT.md`, removed on 2026-09-28 and kept in Git history), one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` (deleted on 22 October 2026, kept in Git history) listed every ID with its commit and any deviation.
 
 | Check on the final `audit/p2` | Result |
 | --- | --- |
@@ -4464,7 +4464,7 @@ PR #428 passed required run38790894296 at exact head bf88c1e0e59cb628075924c229f
 
 ## #422 runtime implementation — 15October2026
 
-Pinned shared wasm fixes the37 constructed Node24/worker sort cases and compiled React guest regression. Separate-source local rebuild is byte-identical; types, launch, full grading/Learn, build, native bindings, unused/security and zero-vulnerability dependency audits pass. Full coding run had one9352ms React negative-budget failure; its focused unchanged-task rerun passes. Required Linux rebuild/full CI and exact preview/production acceptance are pending. See [bounded runtime evidence](audit/quickjs-sort-2026-10-15.md); #422 stays open.
+Pinned shared wasm fixes the37 constructed Node24/worker sort cases and compiled React guest regression. Separate-source local rebuild is byte-identical; types, launch, full grading/Learn, build, native bindings, unused/security and zero-vulnerability dependency audits pass. Full coding run had one9352ms React negative-budget failure; its focused unchanged-task rerun passes. Required Linux rebuild/full CI and exact preview/production acceptance are pending. The bounded runtime evidence was in `docs/audit/quickjs-sort-2026-10-15.md` (deleted on 22 October 2026, kept in Git history); #422 stays open.
 
 ## B074 five-item audit — 15October2026
 
