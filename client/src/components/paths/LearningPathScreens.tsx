@@ -1028,6 +1028,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               </span>
               <span>{error}</span>
               {briefChanged && <Button className="lp-brief-refresh" variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
+              {/* The activity never opened (a dropped connection, a timeout):
+                  without this the only way on was Close and open it again. */}
+              {!open && !busy && <Button className="lp-brief-refresh" variant="secondary" onClick={() => setDeal((count) => count + 1)} label={t('error.tryAgain')} />}
             </div>
           )}
 

@@ -37,6 +37,7 @@ const calls = vi.hoisted(() => ({
   startSignals: [] as (AbortSignal | undefined)[],
   startDelay: 0,
   startExpired: false,
+  startFailures: [] as unknown[],
   submit: [] as Record<string, unknown>[],
   drafts: [] as { expected: number; code: unknown; activityId: string }[],
   serverRevision: 0,
@@ -89,6 +90,8 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
       calls.start.push(activityId);
       calls.startSignals.push(signal);
       if (calls.startDelay) await new Promise((resolve) => setTimeout(resolve, calls.startDelay));
+      const startFailure = calls.startFailures.shift();
+      if (startFailure) throw startFailure;
       const base = {
         attemptId: `attempt-${calls.start.length}`,
         ...(previousSession && calls.changedOnRenewal ? { needsBriefReview: true } : {}),
@@ -135,6 +138,7 @@ beforeEach(() => {
   calls.startSignals.length = 0;
   calls.startDelay = 0;
   calls.startExpired = false;
+  calls.startFailures.length = 0;
   calls.submit.length = 0;
   calls.drafts.length = 0;
   calls.serverRevision = 0;
@@ -347,6 +351,19 @@ describe('a submission that lands after the learner moved on', () => {
     expect(calls.startSignals[0]?.aborted).toBe(true);
     expect(calls.startSignals[1]?.aborted).toBe(false);
     await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${B}`));
+  });
+});
+
+describe('an activity that fails to open', () => {
+  it('offers Try again, which opens it, instead of leaving only Close', async () => {
+    calls.startFailures.push(new ApiError('Network error', 0, 'network'));
+    await mount(A);
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.queryByRole('textbox', { name: 'Your solution' })).toBeNull();
+    await press('Try again');
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    expect(calls.start).toEqual([A, A]);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
