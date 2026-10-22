@@ -166,193 +166,148 @@ assessment); it refuses a Learn session.
 
 ## Leaderboards
 
-`/leaderboard` opens on the last 30 days, so a new learner can reach the top;
-the all-time board is one tab away and Today is the daily challenge.
-`supabase/supabase-schema-040.sql` adds `user_activity_days` (user, UTC day,
-category, correct, answered). Three verified routines write it and nothing else
-does: `record_verified_quiz_result_v2` for quizzes and the daily challenge,
-`record_roadmap_answer_v2` for a signed-in learner's first answer to a Learn
-question, and `record_challenge_completion` for a finished Biggest Shark
-Challenge run. Each write sits behind the receipt that already makes its routine
-idempotent. A known limitation stays visible here: a Biggest Shark Challenge run
-submits its answer proofs from the client (`api/quiz/challenge.ts`), and without a
-server-side append-only attempt ledger a determined client may still leave out
-earlier proof batches. Do not claim the record is cryptographically complete; a
-full fix has to fit an existing typed handler and keep the twelve-function limit. A Learn answer counts only while its level or part test is not yet
-passed, and a question counts at most once per learner and UTC day: a level's
-questions never change and each answer returns the correct option, so a replayed
-level would otherwise add correct answers without limit. A quiz question
-counts the same way from migration 048: `record_verified_quiz_result_v2` builds
-its category counts (for `user_category_stats` and this board) from the
-outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it. XP has its
-own rule: a correct answer pays its XP (`api/quiz/submit.ts`: 2 + 2 ×
-difficulty) again once the account's last XP for that question is at least
-60 minutes old (migration 058, owner decision of 9 October 2026). Each
-receipt outcome carries its question's XP; the routine claims each correct
-answer's question in `user_question_xp` (`question_xp_claim`, one upsert, so
-two results paying one question at once pay it once) and pays the receipt's
-XP less that of the answers whose question is still inside its hour. The
-daily challenge keeps its minimum of 20. A receipt without per-question XP
-(minted before 052) is paid as it is. 056 paid every repeat (owner decision
-of 1 October), 052 only the questions not answered earlier the same UTC day,
-and 048 scaled the quiz by the share of such questions. A repeat after its
-hour earns XP and coins, never a place on a board. The awarded XP is kept on the receipt row
-(`quiz_attempts.quest_xp`) and the stats handler credits coins for that
-amount, also when a retry finds the result already recorded after a commit
-that timed out: the credit is keyed to the attempt and pays once, and a NULL
-amount (a refused second daily) pays nothing. `total_quizzes` still counts every quiz. A Biggest Shark Challenge
-answer counts the same way on the boards from 052: the handler sends the
-run's answers with their categories (`p_outcomes`), and
-`record_challenge_completion` dates only the questions the learner had not
-answered earlier the same UTC day and updates `user_question_history`, so a
-replayed run adds nothing. The run's Challenge XP is 5 a correct answer, and
-from 058 the handler names each answer's XP in `p_outcomes`: an answer whose
-question paid this account XP (in a quiz or a run) less than an hour ago pays
-nothing, the run is awarded the rest, and a run whose every correct answer is
-inside its hour is awarded nothing, like a run with none right. The handler
-credits coins for, and announces, the XP the award row holds. Without
-`p_outcomes` (the handler before 052) it counts the run's breakdown in full,
-as before, and an answer without its own XP (the handler before 058) is paid
-as before. From migration 060 (owner decision of 9 October 2026, afternoon)
-the stats write and the Challenge completion ask
-`record_verified_quiz_result_v3` and `record_challenge_completion_v2`, which
-record the result with 058's routine unchanged and then name the correct
-answers whose question's hour held their XP back, with the time the last of
-them pays again (`xpHeld`). They read `user_question_xp` in the same
-transaction: a question this result paid carries the transaction's `NOW()`,
-any other was held back, and a replayed result names none. The browser says
-it in a toast after the gain, on the learner's own clock ("No XP for 2
-answers this time: you can earn it again from 14:32, an hour after you last
-earned it."). Before 060 the handlers fall back to 058's routines and say
-nothing about held answers. Coding passes are not answers and are not
-counted.
+`/leaderboard` opens on the last 30 days, so a new learner can reach the top.
+"This month", all time and Today (the daily challenge) are the other tabs.
+
+**What counts.** `user_activity_days` (user, UTC day, category, correct,
+answered) feeds the 30-day and all-time boards. Three verified routines write
+it and nothing else does: `record_verified_quiz_result_v2` for quizzes and the
+daily challenge, `record_roadmap_answer_v2` for a signed-in learner's first
+answer to a Learn question, and `record_challenge_completion` for a finished
+Biggest Shark Challenge run. Each write sits behind the receipt that makes its
+routine idempotent. A question counts at most once per learner and UTC day,
+in a quiz, a Learn level or a Challenge run, and a Learn answer counts only
+while its level or part test is not yet passed. Coding passes are not
+answers and do not count. Quiz history from before 26 September 2026 lives
+only in `user_category_stats`; the boards do not read it.
+
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
-Since `supabase/supabase-schema-049.sql` the all-time boards
-(`subject_leaderboard`, `category_leaderboard`) read the same
-`user_activity_days` rows with no date window, so they count quiz, daily
-challenge, Learn and Biggest Shark Challenge answers under the same rule and
-the same five-answer minimum. `user_activity_days` starts at migration 040
-(26 September 2026). Quiz history from before it lives only in
-`user_category_stats` and is not copied in: the rows written since 040 are in
-both tables, so a copy would count them twice. Today (`daily_leaderboard_v2`)
-ranks by correct answers alone. Equal scores keep the order they were
-recorded in and share a rank; the time is shown and recorded but decides
-nothing. The all-time boards and Today arrive in order without a rank, and
-the Leaderboard screen numbers them so equal results share a rank there too.
+The all-time boards (`subject_leaderboard`, `category_leaderboard`) read the
+same rows with no date window and the same five-answer minimum. Today
+(`daily_leaderboard_v2`) ranks by correct answers alone; the time is shown
+but decides nothing. The all-time boards and Today arrive in order without a
+rank, and the Leaderboard screen numbers them so equal results share a rank
+there too.
 
-Leaderboard names are mandatory from migration 064. Profile's independent
-`leaderboard-name` operation chooses `nickname` (default) or `account`;
-`board_display_name(user_id)` applies that choice on every board. Account
-names come from the verified provider identity, or the local part of a
-confirmed email; the full email and browser-editable `user_metadata` are
-never accepted as public identity. Missing nicknames receive the server's
-unique generated shark name. This choice does not change what friends see.
-`user_stats.show_on_leaderboards` now controls only the optional public
-photo, retaining previous photo consent. `leaderboard-visibility` remains
-the photo operation and cannot remove a name from a board. Changes invalidate
-the learner's board caches; public reads refresh within about a minute.
-The viewer's own row follows the same name/photo rules. Challenge uses this
-server identity when automatically saving a completed positive score; guests
-get a generated name tied to the run. There is no name-entry form and zero
-scores create no score or guest-name allocation.
-`api/leaderboard.ts` serves every shared board (`period=30d`, `global`,
-`category` and `daily`) to everyone with `public, s-maxage=60` and no
-`stale-while-revalidate`, so the CDN never serves a board older than a
-minute; with the five minutes of stale-while-revalidate it had before, a name
-switched off could stay on a board for about six. A request with a Bearer
-token or `me=1` also gets the learner's own line and is answered
-`Cache-Control: private, no-store`. A `limit` is served as the next of 10,
-25, 50, 100 or 200 rows, and a read that reaches the function (the CDN did
-not answer it) takes the address read bucket below. `friend_list` orders friends by
-correct answers and accuracy, shows each friend's live streak by the rule
-above, and marks a friend active today when their last verified learning day
-is today. No board ranks by streak, and only "This month" ranks by XP.
+**XP for a repeated question.** A correct quiz answer pays 2 + 2 × difficulty
+XP (`api/quiz/submit.ts`), and pays again once the account's last XP for that
+question is at least 60 minutes old. `user_question_xp` holds that hour;
+`question_xp_claim` claims each correct answer's question in one upsert, so
+two results paying one question at once pay it once. The daily challenge
+keeps its minimum of 20. A Challenge run pays 5 XP a correct answer, under
+the same hour. A repeat earns XP and coins and never a place on a board.
+`record_verified_quiz_result_v3` and `record_challenge_completion_v2` also
+return the correct answers whose hour held their XP back (`xpHeld`), and the
+browser says so after the gain, on the learner's own clock ("No XP for 2
+answers this time: you can earn it again from 14:32, an hour after you last
+earned it."). The awarded XP is kept on the receipt row
+(`quiz_attempts.quest_xp`), and the stats handler credits coins for that
+amount once per attempt, also when a retry finds the result already
+recorded.
 
-"This month" (`period=month`, migration 056, owner decision of 1 October
-2026) ranks the active subject's current calendar month (UTC) by the verified
-XP each learner earned in it, the ranking the month's top three are paid by.
-`user_xp_days` holds that XP per learner, UTC day and subject, and only
-`add_xp_day` writes it, inside each verified award's own transaction:
-`record_verified_quiz_result_v2` (a quiz or daily result, a repeated question
-once its hour is up), `record_verified_activity_xp` (a Biggest Shark Challenge
-run, a coding challenge's first pass or repeat XP, a Learn step's repeat XP
-from 060) and `complete_verified_roadmap_attempt` (a Learn level
-or part test passed for the first time, at `learn_step_xp`, the numbers of
-`shared/progression.ts`; learning XP is derived from progress and is not in
-`user_xp`). Verified code inside learning paths shares the canonical task and XP ledger with Coding; lessons, checks and self-reviewed artifacts award no XP. Guest XP merged at sign-in
-(`merge_user_xp`) does not count, because nothing verified it, and nothing
-from before 056 was copied in: a month counts from the moment 056 was
-applied. A launch contract fails if a routine starts adding to `user_xp`
-without adding to the ledger. `month_xp_ranks` is the one ranking (`RANK()`:
-equal XP shares a place, 1, 1, 3); `month_xp_leaderboard` and
-`month_xp_leaderboard_rank` serve the board and the learner's own line,
-naming a learner with `board_display_name` (055) as every board does and
-showing the photo only behind `show_on_leaderboards`. Any XP that month puts a learner on it. The handler serves it
-like the 30-day board: shared and `public, s-maxage=60` without a session,
-the learner's own line and `private, no-store` with a Bearer token or `me=1`.
-The screen draws the server's ranks, so tied learners show the same number,
-pins the learner's own line under the list, and has no topic filter, since XP
-is not counted per topic. Below 480px the period control is the small size
-with short labels ("30 days", "Month", "All time", "Today") so the four fit
-at 320px.
+**This month** (`period=month`) ranks the current calendar month (UTC) by the
+verified XP each learner earned in it; the month's top three are paid coins
+on this ranking ("Coins"). `user_xp_days` holds that XP per learner, UTC day
+and subject, and only `add_xp_day` writes it, inside each verified award's
+own transaction: `record_verified_quiz_result_v2`,
+`record_verified_activity_xp` (a Challenge run, a coding pass and its repeat
+XP, a Learn step's repeat XP) and `complete_verified_roadmap_attempt` (a Learn
+level or part test passed for the first time, at `learn_step_xp`, the numbers
+of `shared/progression.ts`). Guest XP merged at sign-in (`merge_user_xp`) does
+not count, because nothing verified it. A launch contract fails if a routine
+adds to `user_xp` without adding to the ledger. `month_xp_ranks` is the one
+ranking (`RANK()`: 1, 1, 3); `month_xp_leaderboard` and
+`month_xp_leaderboard_rank` serve the board and the learner's own line. The
+screen pins the learner's own line under the list and has no topic filter,
+since XP is not counted per topic. Below 480px the period control uses short
+labels ("30 days", "Month", "All time", "Today") so the four fit at 320px.
+
+**Names and photos.** Every board names a learner through
+`board_display_name(user_id)`. Profile's `leaderboard-name` operation
+chooses `nickname` (the default, the sharkname) or `account`: a name from
+the verified provider identity or the local part of a confirmed email, never
+the full email or browser-editable `user_metadata`. This choice does not
+change what friends see. `user_stats.show_on_leaderboards`, set through
+`leaderboard-visibility`, controls only the optional public photo; no
+setting removes a name from a board.
+
+**Serving.** `api/leaderboard.ts` serves every shared board (`period=30d`,
+`month`, `global`, `category` and `daily`) to everyone with
+`public, s-maxage=60` and no `stale-while-revalidate`, so the CDN never serves
+a board older than a minute. A request with a Bearer token or `me=1` also gets
+the learner's own line and is answered `private, no-store`. A `limit` is
+served as the next of 10, 25, 50, 100 or 200 rows, and a read that reaches the
+function takes the address read bucket ("Sign-in, caching and limits").
+
+`friend_list` orders friends by correct answers and accuracy, shows each
+friend's live streak by the streak rule, and marks a friend active today when
+their last verified learning day is today.
+
+### Biggest Shark Challenge
+
+Every Challenge question allows 90 seconds. The learner picks topics before
+starting, and the run seals them; refills cannot change them. A completed run
+with a positive score saves itself under one run id, for a signed-in learner
+under the server identity above and for a guest under a generated name tied
+to the run. There is no name-entry form, and a zero score creates no score or
+guest name. The board shows a count of the run's topics with the topics in a
+tooltip, or a gold fin for a run over every available topic.
+
+A known limit: a run submits its answer proofs from the client
+(`api/quiz/challenge.ts`), and without a server-side append-only attempt
+ledger a determined client can still leave out earlier proof batches. Do not
+claim the record is complete; a full fix has to fit an existing handler.
 
 ### XP again for a replayed Learn step
 
 A Learn level or part test pays its learning XP on its first pass: the XP is
-derived from verified progress (`learn_step_xp`, the numbers of
-`shared/progression.ts`) and is not in `user_xp`. From migration 060 (owner
-decision of 9 October 2026, afternoon) a signed-in pass of a step already
-passed pays that XP again when the step last paid the account at least 60
-minutes ago. `api/quiz/roadmap.ts` completes the attempt with
-`complete_verified_roadmap_attempt_v2`, which runs 056's
-`complete_verified_roadmap_attempt` unchanged, so mastery, spaced review,
-the streak and the first-pass XP stay as they were, and then claims the step
-in `user_learn_step_xp`. The claim is one guarded UPDATE, taken under the
-attempt and progress row locks 056 takes, so two completions at once pay
-once (`supabase/tests/231`). The first pass starts the hour; a step first
-passed before 060 counts it from its first passed attempt still on record,
-and one whose attempts were purged pays at once. A repeat is XP only, under
-its own award id (`learn-repeat:<attempt>`), into the balance and the
-month's ledger through `record_verified_activity_xp`: no coins, no badge and
-no first-pass reward such as an invitation's. A pass inside the hour pays
-nothing, and a failed replay or a guest's pays nothing either. Part test n
-pays 300 × n each time, so part test 3 can pay 900 XP once an hour.
+derived from verified progress (`learn_step_xp`) and is not in `user_xp`. A
+signed-in pass of a step already passed pays that XP again when the step last
+paid the account at least 60 minutes ago. `api/quiz/roadmap.ts` completes the
+attempt with `complete_verified_roadmap_attempt_v2`, which runs
+`complete_verified_roadmap_attempt` unchanged (mastery, spaced review, the
+streak and the first-pass XP) and then claims the step in
+`user_learn_step_xp`. The claim is one guarded UPDATE under the attempt and
+progress row locks, so two completions at once pay once
+(`supabase/tests/231`). A repeat is XP only, under its own award id
+(`learn-repeat:<attempt>`), into the balance and the month's ledger through
+`record_verified_activity_xp`: no coins, no badge and no first-pass reward. A
+pass inside the hour, a failed replay and a guest's pass pay nothing. Part
+test n pays 300 × n each time, so part test 3 can pay 900 XP once an hour.
 
-The completion's `repeatXp` says what the pass paid again (`xp`), or that
-the hour held it back (`withheld: 'cooldown'`), and when the step's XP opens
-(`availableAt`). The browser toasts "+N XP again", then syncs the balance,
-or "No XP this time: you can earn it again from 14:32, an hour after you
-last earned it." in the learner's own clock time (`XpToaster`, the held
-toast). On a database before 060 the handler falls back to 056's routine, a
-replay pays nothing, and nothing is said.
+The completion's `repeatXp` says what the pass paid again (`xp`), or that the
+hour held it back (`withheld: 'cooldown'`), and when the step's XP opens
+(`availableAt`). The browser toasts "+N XP again" and syncs the balance, or
+says when the XP opens again, on the learner's own clock (`XpToaster`).
 
 ### Sharknames and what friends see
 
-A learner's handle is their sharkname: the address friends add them by,
-3 to 32 characters (`shared/handles.ts`, the same rule as the
-`user_handles_handle_check` CHECK and `set_user_handle`, raised from 24 in
-055). "Your sharkname" on the Profile's Overview (`SharknameCard`) shows it,
-rolls a new one with Generate (`shared/sharkname.ts`: lower-case
-kebab-case, always a shark word, about 6,800 names, deterministic for a
-seeded source), lets the learner edit it, and saves through
+A learner's handle is their sharkname: the address friends add them by, 3 to
+32 characters (`shared/handles.ts`, the same rule as the
+`user_handles_handle_check` CHECK and `set_user_handle`). "Your sharkname" on
+the Profile's Overview (`SharknameCard`) shows it, rolls a new one with
+Generate (`shared/sharkname.ts`: a camelCase shark name such as
+`thirstySharkie`), lets the learner edit it, and saves through
 `op=friends-handle`; a taken name answers 409 `handle_taken` and the card
-offers another roll. A handle still changes once every 30 days. The Friends
-tab says what friends add you by and links to the card.
+offers another roll. A handle changes at most once every 30 days. Every
+handle and every positive guest Challenge run holds one global ordinal from a
+transactional counter (`supabase/supabase-schema-063.sql`): a generated name
+is the camelCase base plus that number, the number survives a rename and is
+never reused, the API sends it as a string, and a preview roll allocates
+nothing. The Friends tab says what friends add you by and links to the card.
 
-What friends see is two switches on `user_handles` (055), both off by
-default, set through `op=identity` (GET/PUT, signed in, PUT on the
-per-account write limit): `show_real_name` (friends see the Google name
-instead of the sharkname, offered only to an account with one) and
-`show_photo_to_friends` (friends see the Google photo instead of an
-initials avatar, `ui/InitialsAvatar`). Switching either on copies the
-verified Google name and photo into `user_stats`, where the routines read
-them. `friend_display_name()` is the name rule: `friend_list` returns it
-and the photo only when switched on; an incoming request carries the
-asker's chosen name; a lookup carries it only for an accepted friend, and
-everyone else sees the sharkname. The same name choice reaches the boards
-through `board_display_name()`, above.
+What friends see is two switches on `user_handles`, both off by default, set
+through `op=identity` (GET/PUT, signed in, PUT on the per-account write
+limit): `show_real_name` (friends see the Google name instead of the
+sharkname, offered only to an account with one) and `show_photo_to_friends`
+(friends see the Google photo instead of an initials avatar,
+`ui/InitialsAvatar`). Switching either on copies the verified Google name and
+photo into `user_stats`, where the routines read them.
+`friend_display_name()` is the name rule: `friend_list` returns it and the
+photo only when switched on; an incoming request carries the asker's chosen
+name; a lookup carries it only for an accepted friend, and everyone else sees
+the sharkname.
 
 ## Live rooms (Play)
 
