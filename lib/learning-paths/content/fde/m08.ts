@@ -232,7 +232,7 @@ export const FDE_M08: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Give each tool one permission name and check it against the session. The session’s scopes come from whatever authenticated the operator; an argument called `scope` or `tenantId` is a value the model chose, and a value the model chose can never widen what the operator may do. That is the same rule M03 applied to the tenant, applied here to the verb.',
+            'Give each tool one permission name and check it against the session. The session’s scopes come from whatever authenticated the operator; an argument called `scope` or `tenantId` is a value the model chose, and a value the model chose can never widen what the operator may do. That is the same rule M04 applied to the tenant, applied here to the verb.',
         },
         {
           kind: 'prose',
@@ -339,7 +339,7 @@ export const FDE_M08: ModuleSource = {
             [
               'Put each incoming ticket in one of four queues',
               'One model call inside a workflow',
-              'One decision with one output you can validate, as in M04.',
+              'One decision with one output you can validate, as in M06.',
             ],
             [
               'Refund an order the customer named: read it, check the balance, propose the refund',

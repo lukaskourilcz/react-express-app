@@ -454,9 +454,9 @@ export const FDE_M09: ModuleSource = {
           headers: ['Label', 'What the trace shows', 'Where the fix starts'],
           rows: [
             ['Unclassified', 'No retrieved ids and no tool name: nothing was logged', 'Instrumentation. Record the trace before you change the system.'],
-            ['Retrieval miss', 'The article that supports the case’s label is not among the retrieved ids', 'The index, the chunking or the access filter from M05. A prompt change cannot fix evidence the model never saw.'],
-            ['Tool misuse', 'The run called a different tool from the one the case expects', 'The tool definitions and the gates from M06.'],
-            ['Hallucination', 'The right article arrived and the right tool ran, and the answer is still wrong', 'The generation step: the prompt, the model choice, the output validation from M04.'],
+            ['Retrieval miss', 'The article that supports the case’s label is not among the retrieved ids', 'The index, the chunking or the access filter from M07. A prompt change cannot fix evidence the model never saw.'],
+            ['Tool misuse', 'The run called a different tool from the one the case expects', 'The tool definitions and the gates from M08.'],
+            ['Hallucination', 'The right article arrived and the right tool ran, and the answer is still wrong', 'The generation step: the prompt, the model choice, the output validation from M06.'],
           ],
         },
         {
@@ -606,7 +606,7 @@ export const FDE_M09: ModuleSource = {
             'Unclassified: one trace cannot separate retrieval from generation, so the fix starts with more logging before any change.',
           ],
           correct: 0,
-          explanation: 'The retrieved ids do not include KB-returns, so the model never saw the evidence for this label. That is a retrieval miss, and the fix belongs in M05’s territory: what the index holds, how it was chunked, and whether an access filter dropped the article. Calling it a hallucination skips the earlier check: in this module, hallucination applies only when the right evidence arrived and the answer is still wrong, and a stricter prompt cannot supply a missing article. It is not tool misuse, because the run called the tool the case expects; a wrong queue value is the wrong answer, not a wrong tool. It is not unclassified either: the trace records both the retrieved ids and the tool, which is enough to place it.',
+          explanation: 'The retrieved ids do not include KB-returns, so the model never saw the evidence for this label. That is a retrieval miss, and the fix belongs in M07’s territory: what the index holds, how it was chunked, and whether an access filter dropped the article. Calling it a hallucination skips the earlier check: in this module, hallucination applies only when the right evidence arrived and the answer is still wrong, and a stricter prompt cannot supply a missing article. It is not tool misuse, because the run called the tool the case expects; a wrong queue value is the wrong answer, not a wrong tool. It is not unclassified either: the trace records both the retrieved ids and the tool, which is enough to place it.',
           competencies: ['evaluation'],
         },
         {
