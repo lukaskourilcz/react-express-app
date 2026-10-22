@@ -1,36 +1,20 @@
 # devShark brand guidelines (V9)
 
-## Navigation wordmark update — 2026-10-12
+## The navigation logo
 
-The owner selected the plain heavy **devShark** lettering in
-`Screenshot 2026-10-12 at 10.28.40.png` and explicitly retained the existing
-fin and wave. This supersedes the V9 lettering only in the header and mobile
-menu, both rendered by `BrandLogo`. The other V9 assets remain the archived kit.
+The header and the mobile menu show `BrandLogo`: the V9 fin and wave beside a plain heavy **devShark** wordmark the owner chose on 12 October 2026. Everywhere else the V9 kit applies.
 
-`client/src/assets/brand/devshark-wordmark.svg` contains deterministic outlines of the supplied 1500 × 452
-pixel screenshot, not a replacement font: foreground luminance below 170,
-crop x=61…1407 and y=97…325, pixel contours simplified within 0.8 source pixels,
-with even-odd counters. The resulting wordmark is 1347 × 229 units; “dev” and
-“Shark” are separate solid fills. No generator was called for this integration.
-The normal k and uncut S follow the selected reference. The source is a raster;
-these outlines are a trace, not the original font/vector master.
+`client/src/assets/brand/devshark-wordmark.svg` holds the wordmark as deterministic outlines traced from the owner's raster reference, not a font: 1347 × 229 units, with "dev" and "Shark" as separate solid fills, a normal k and an uncut S. The outlines are a trace; no font or vector master exists in the repository.
 
-The original V9 fin paths and wave stroke are unchanged. Its visible height is
-100% of the wordmark height: the fin tip aligns with the top of the lettering,
-and the bottom of the wave stroke aligns with its bottom. The gap is 28% of the wordmark height. The fin and “dev” use
-`--brand-accent`; “Shark” uses `--brand-ink` in light mode and white in dark mode.
-The logo has fixed dimensions (about 166 × 22 px in the header and
-151 × 20 px in the mobile menu), needs no font and inherits the
-existing home link's accessible name. Existing V9 export and
-single-colour rules below still apply to the archived assets.
-The two lettering paths share one hashed SVG request, cached independently of
-JavaScript. SVG use instances inherit their theme colours from BrandLogo.
+The fin paths and wave stroke are the V9 ones, unchanged. The fin and wave stand as tall as the wordmark: the fin tip aligns with the top of the lettering and the bottom of the wave stroke with its bottom. The gap is 28% of the wordmark height. The fin and "dev" use `--brand-accent`; "Shark" uses `--brand-ink` in light mode and white in dark mode. The logo has fixed dimensions (about 166 × 22 px in the header, 151 × 20 px in the mobile menu), needs no font and takes the home link's accessible name. The two lettering paths share one hashed SVG request, cached apart from JavaScript, and the SVG `use` instances inherit their theme colours from `BrandLogo`.
 
-The owner chose V9 on 2026-09-27. Compared with the earlier one-wave revision (`client/public/brand/devshark-approved/`), V9 moves the fin up to the top ascender line, draws the wave as thick as the letter stems, and sets the lettering optically bolder with rounded corners.
+`scripts/render-og-image.mjs --logo-svg` exports the same lockup to `client/public/brand/approved/navbar-logo-ink.svg`, which the share images use.
 
-The kit lives in [`client/public/brand/v9/`](../../client/public/brand/v9/README.md). The owner's generator produced every file from one exact geometry. The lettering is outlines, so no file depends on a font, and every PNG has a transparent background. The generator, the HTML brand manual, the change list and the social templates stay in the owner's archive.
+## The V9 kit
 
-## The kit
+The kit lives in [`client/public/brand/v9/`](../../client/public/brand/v9/README.md). Compared with the earlier one-wave revision (`client/public/brand/devshark-approved/`), V9 moves the fin up to the top ascender line, draws the wave as thick as the letter stems, and sets the lettering optically bolder with rounded corners. The owner's generator produced every file from one geometry; the lettering is outlines, so no file depends on a font, and every PNG has a transparent background. The generator, the HTML brand manual and the change list stay in the owner's archive.
+
+### Files
 
 `recommended/` holds the brand family in green `#2D7A2D`, ink `#132019` and white `#FFFFFF`, each as SVG and PNG.
 
@@ -74,7 +58,7 @@ The app serves copies from the root of `client/public/`: `/favicon.ico`, `/favic
 | Mobile menu | `BrandLogo`, compact, 20 px | The menu covers the header, so it repeats the logo. |
 | Loader, study-mode loader | `SwimmingShark`, clean fin | A loader is an icon, and a logo animating in a loop wears thin. |
 | Footer ocean | `Waterline` with clean `SwimmingFin`s | The footer carries only legal links, devShark's own social profiles and settings; the fins are decoration. |
-| Page headers (curation, public info, GitHub settings) | `SwimmingFin`, clean fin, 26 px | An icon beside a kicker, under the header logo. |
+| Page headers (public info, GitHub settings) | `SwimmingFin`, clean fin, 26 px | An icon beside a kicker, under the header logo. |
 | Buttons, cards, progress, lives, empty states | `SharkFin`, clean fin | Icons and decoration. |
 | Result share card | Compact logo, 44 px, and a clean fin on the waterline | The card leaves the app, so the brand appears there first. |
 | Favicon, app icons | Clean fin | The kit reserves the favicon for the clean fin. |
@@ -146,8 +130,4 @@ Placement proposals. The supplier's template decides the final size, bleed, cut 
 | Cap, embroidered | Clean fin | 35 mm wide |
 | Sticker | Stacked or horizontal logo | 100 mm |
 
-Spreadshop prints and ships devShark merchandise.
-
-## Social
-
-`docs/marketing/social-skill.md` holds the carousel, post and story rules for marketingShark.
+Spreadshop prints and ships devShark merchandise. Merchandise is paused (`MERCH_ENABLED` in `shared/rewards.ts`), so these placements wait for its return.
