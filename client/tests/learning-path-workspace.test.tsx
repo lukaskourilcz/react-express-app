@@ -423,6 +423,32 @@ describe('the draft autosave', () => {
     expect(calls.drafts.map((one) => [one.activityId, one.code])).toEqual([[A, 'typed just before leaving']]);
   });
 
+  it('keeps unsaved writing, last keystrokes included, for the account a session sign-out ended, and only for it', async () => {
+    const { clearAccountData, forgetOthersKeptDrafts } = await import('../src/lib/accountData');
+    const key = `devshark:path:draft:${ENROLLMENT}:${A}`;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    Object.defineProperty(window.navigator, 'onLine', { value: false, configurable: true });
+    await type('typed as the session ended');
+    // The session ends inside the debounce.
+    expect(clearAccountData('user-1')).toBe(true);
+    expect(localStorage.getItem(key)).toBeNull();
+    // Another account signing in deletes it unread.
+    const kept = localStorage.getItem('devshark:path:kept:v1');
+    forgetOthersKeptDrafts('user-2');
+    expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
+    expect(localStorage.getItem(key)).toBeNull();
+    // The same account signing in gets it back in place.
+    localStorage.setItem('devshark:path:kept:v1', kept ?? '');
+    forgetOthersKeptDrafts('user-1');
+    expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
+    expect(localStorage.getItem(key)).toContain('typed as the session ended');
+    // A sign-out the learner chose keeps nothing.
+    expect(clearAccountData()).toBe(false);
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
+  });
+
   it('opens with the copy kept on this device when the server has nothing newer, and saves it', async () => {
     localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 0, content: { code: 'kept from last time' } }));
     await mount(A);

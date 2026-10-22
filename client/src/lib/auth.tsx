@@ -255,8 +255,9 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   }, []);
 
   // An account is here. Drafts an involuntary sign-out kept for another
-  // account are deleted unread; its own come back when it opens a coding
-  // task (coding/drafts.ts).
+  // account are deleted unread; its own learning-path drafts go back in place
+  // now, and its coding drafts come back when it opens a coding task
+  // (coding/drafts.ts).
   function signedIn(id: string) {
     accountSignedIn = true;
     accountId = id;

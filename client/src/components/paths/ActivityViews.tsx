@@ -9,6 +9,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Editor } from '../../coding/Editor';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
+import { beforeAccountChange } from '../../lib/accountData';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { LessonView, RichText } from '../learn/LessonBody';
 import type {
@@ -299,6 +300,9 @@ function useDraftQueue<T>(send: (value: T) => void): (value: T) => void {
     if (waiting) latest.current(waiting.value);
   }, []);
   useEffect(() => flush, [flush]);
+  // A sign-out writes what waits first, so the device copy it keeps for the
+  // account (lib/accountData.ts) holds the last keystrokes too.
+  useEffect(() => beforeAccountChange(flush), [flush]);
   return useCallback(
     (value: T) => {
       pending.current = { value };
