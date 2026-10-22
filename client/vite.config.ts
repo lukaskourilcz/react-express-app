@@ -23,9 +23,9 @@ import { addDays, qotdImagePath, qotdPath, qotdTrack, utcToday, QOTD_EPOCH } fro
 
 import { LEARN_SECTIONS } from '../shared/learn-sections';
 import { pathInventory } from '../shared/learning-paths';
-import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
+import { FDE_PATH } from '../lib/learning-paths/content/fde';
+import { mergePath } from '../lib/learning-paths/types';
 import { SectionPreviewStatic } from './src/components/learn/SectionPreviewStatic';
-import { categoryLabelKey } from './src/lib/categories';
 
 /** The English dictionary for the static pages, with the app's {name} slots. */
 const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
@@ -34,9 +34,10 @@ const sectionBody = (id: string) => ({ t }: { t: Translate }) => {
   const page = PUBLIC_PAGES.find(one => one.path === `/learn/${id}`)!;
   return createElement(SectionPreviewStatic, {
     name: t(page.titleKey).replace(' · devShark', ''), description: t(page.descriptionKey),
-    topics: section.topics.map(topic => ({ name: t(categoryLabelKey(topic)), href: `/learn/${id}?topic=${encodeURIComponent(topic)}` })),
+    topics: section.topics.map(topic => ({ name: t(`category.${topic}` as TranslationKey), href: `/learn/${id}?topic=${encodeURIComponent(topic)}` })),
     paths: section.paths.map(pathId => {
-      const path = LEARNING_PATHS.find(one => one.id === pathId)!;
+      if (pathId !== FDE_PATH.id) throw new Error(`No public preview for path ${pathId}`);
+      const path = mergePath(FDE_PATH);
       return { title: path.title, summary: path.summary, href: `/learn/${id}/path`, inventory: pathInventory(path) };
     }),
   });
