@@ -26,7 +26,7 @@ const supabase = createServiceClient();
 const logEvent = createLogger('leaderboard');
 
 // The windowed boards (migration 040). 30 days is the default board; 7 days
-// costs nothing extra and is here for the weekly leagues that will build on it.
+// costs nothing extra to serve as well. (Weekly leagues were dropped, #208.)
 const WINDOW_DAYS: Readonly<Record<string, number>> = { '30d': 30, '7d': 7 };
 const WINDOW_MIN_ANSWERS = 5;
 
