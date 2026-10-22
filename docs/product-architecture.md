@@ -57,96 +57,88 @@ ownership map. Extend these sources instead.
 
 ## Daily-habit layer
 
-The spaced-mastery, Today queue, forgiving-streak, badge, Shark Card,
-study-advisor, and adaptive-placement additions are additive and change no
-product or subject scope. Their shared sources of truth are `shared/mastery.ts`
-(cleared/mastered state and spaced-review scheduling), `shared/badges.ts` (the
-server-verifiable badge catalog, kept for the API and the coding badges after
-the Profile stopped displaying a badge section), and `shared/shark-cards.ts`
-(where a saved question's "Learn this topic" link goes). The collectible card
-packs of `shared/cards.ts` are retired; see "Owner decisions of 1 October
-2026" below. Every new endpoint is a
-`resource=`/`op=` branch inside an existing handler, so the twelve-handler budget
-is unchanged, and all new storage lives in `supabase/supabase-schema-024.sql` (additive,
-idempotent; see `NEEDED.md` to apply it). Cards and badges are cosmetic retention only
-and never affect access, content, XP, scores, streaks, ranks, or AI
-availability. Streak protection is the one bounded exception, and it is written
-out in full in `shared/rewards.ts`: two a month free, extras bought with coins
-earned from verified learning (10% of verified XP, doubled on Premium, plus
-milestones; no cash price), a ceiling that never rises above two, and an
-effect limited to the day count of a streak. No leaderboard in this product
-ranks by streak — the answer boards rank by correct answers and accuracy, and
-"This month" by verified XP — so a protected streak moves nobody up anything.
+Spaced mastery, the Today queue, forgiving streaks, badges, Shark Cards, the
+study advisor and adaptive placement change no product or subject scope.
+Their shared sources are `shared/mastery.ts` (cleared and mastered state and
+spaced-review scheduling), `shared/badges.ts` (the server-verifiable badge
+catalog; the API and the coding badges use it, and the Profile shows no badge
+section) and `shared/shark-cards.ts` (where a saved question's "Learn this
+topic" link goes). Their endpoints are `resource=`/`op=` branches inside the
+existing handlers, and their storage starts in
+`supabase/supabase-schema-024.sql`. Shark Cards and badges never affect
+access, content, XP, scores, streaks or ranks.
 
-A streak day is a UTC day with verified learning, not only a quiz
-(`supabase/supabase-schema-048.sql`). `advance_verified_streak` is the one place
-a day is counted, and four routines call it behind the receipts that already
-make them idempotent: `record_verified_quiz_result_v2` (a quiz or daily
-result), `complete_verified_roadmap_attempt` (a Learn level or part test with
-every question answered, passed or not), `record_coding_verdict` (any
-passing verdict, in the coding section or inside a Learn level) and
+Streak protection is the one bounded exception, written out in
+`shared/rewards.ts`: two a month free, extras bought with coins earned from
+verified learning (no cash price), a ceiling that never rises above two, and
+an effect limited to the day count of a streak. No board ranks by streak: the
+answer boards rank by correct answers and accuracy, and "This month" by
+verified XP.
+
+A streak day is a UTC day with verified learning, not only a quiz.
+`advance_verified_streak` is the one place a day is counted, and four routines
+call it behind the receipts that make them idempotent:
+`record_verified_quiz_result_v2` (a quiz or daily result),
+`complete_verified_roadmap_attempt` (a Learn level or part test with every
+question answered, passed or not), `record_coding_verdict` (any passing
+verdict, in the coding section or inside a Learn level) and
 `record_challenge_completion` (a Biggest Shark Challenge run that earned XP).
 A level ended by running out of hearts is closed by `api/quiz/roadmap.ts`
-without the completion routine, so the request that closes it calls
+without the completion routine, so that request calls
 `advance_verified_streak` directly: a Learn level counts however it ends. A
-database without the routine (before 048) leaves that level uncounted and
-the completion succeeds.
-A second source the same day adds nothing, and a replayed receipt moves
+second source the same day adds nothing, and a replayed receipt moves
 nothing. `user_stats.last_quiz_date` keeps its name and means the last UTC day
-with verified learning; a learner with no stats row gets one with zero totals
-on their first learning day. Missed days are bridged first by the shield, then
-by the month's protections. A shield covers exactly two UTC dates, the one it
-was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
-day after tomorrow, and `shield_until - 48 hours` is the raise date, which
-also holds for a shield stored as "raised + 48 hours" before 048. From
-`supabase/supabase-schema-052.sql` every date a shield covered in the last 40
-days is kept in `user_streak_freezes.shield_days`, because `shield_until` holds
-only the latest shield: a second shield used to turn the first one's days into
-missed days. A day is shielded when it is in `shield_days` or in the window
-of `shield_until` (all a row from before 052 has); `streak_day_shielded`,
-`streak_missed_days` and `streak_live` are that one rule, used by
-`advance_verified_streak`, `activate_streak_shield`, `friend_list`,
-`settle_coin_milestones` (the Shop's streak milestones) and, in the same
-terms, `liveStreak` on the Profile. `activate_streak_shield` refuses and
-spends nothing when a missed day still needs the protection the shield would
-take (`remaining - 1 < missed`): the handler answers 409
-`shield_would_end_streak`, "Learn today to keep your streak", and the Profile
-does not offer the shield then. The month change restores the two
-protections and never clears a shield (`refresh_streak_freezes`, 052); when
-the Profile cannot read the protections it shows a streak that depends on
-them as "—" rather than 0. The server keeps UTC days; the streak card,
-Today's target, done and empty panels, the daily challenge and the
-cleared-level tooltip say when the day changes on the learner's clock
-(`client/src/lib/utcDay.ts`). Reaching Today's target hands out nothing: the
-panel says the plan is complete and when the next day starts.
+with verified learning.
 
-### Question of the day (#239)
+Missed days are bridged first by the shield, then by the month's
+protections. A shield covers two UTC dates, the one it was raised on and the
+next: `activate_streak_shield` ends it at 00:00 UTC the day after tomorrow.
+`user_streak_freezes.shield_days` keeps every date a shield covered in the
+last 40 days, so a second shield never turns the first one's days into missed
+days. `streak_day_shielded`, `streak_missed_days` and `streak_live` hold that
+one rule, used by `advance_verified_streak`, `activate_streak_shield`,
+`friend_list`, `settle_coin_milestones` and, in the same terms, `liveStreak` on
+the Profile. `activate_streak_shield` refuses and spends nothing when a missed
+day still needs the protection the shield would take: the handler answers 409
+`shield_would_end_streak` ("Learn today to keep your streak"), and the Profile
+does not offer the shield then. The month change restores the two
+protections and never clears a shield (`refresh_streak_freezes`). When the
+Profile cannot read the protections, it shows a streak that depends on them
+as "—" rather than 0.
+
+The server keeps UTC days. The streak card, Today's target, the done and
+empty panels, the daily challenge and the cleared-level tooltip say when the
+day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
+Today's target hands out nothing: the panel says the plan is complete and
+when the next day starts.
+
+### Question of the day
 
 `/daily` and `/daily/<date>` show one public question a day. The track is a
 pure function of the date (`shared/daily-question.ts`, fifteen served
 categories in rotation from `QOTD_EPOCH`), so the build writes each day's page
 head and share image (`client/src/og/ogImages.ts`) ahead of the day, as it does
-for every coding task. The app keeps such a head once it starts:
-`client/src/lib/routeHead.ts` reads it before the first route writes one, so a
-dated page or a task page keeps its own title, description and canonical URL
-instead of the generic "Coding" or "Question of the day" head. The Coding home
-and its track pages (`/coding`, `/coding/<track>`, `/coding/fullstack`) get a
-head the same way and are in the sitemap (owner decision, 9 Oct 2026); the
-task pages are not. `/coding/review` names `/coding` as canonical and stays
-out. `/coding/system-design` and every address under it are one prerendered
-not-found page, `noindex` in the HTML and with no canonical (`vercel.json`
-sends them all there), because system design is hidden. The
-question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
-(`lib/daily-question.ts`, inside the daily handler so the count stays at
-twelve): a seeded pick from that track in the served bank, options shuffled by
-the same seed, the answer sealed in a quiz session with scope `qotd`. A future
-date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
+for every coding task. `client/src/lib/routeHead.ts` reads such a prerendered
+head before the first route writes one, so a dated page or a task page keeps
+its own title, description and canonical URL. The Coding home and its track
+pages (`/coding`, `/coding/<track>`, `/coding/fullstack`) get a head the same
+way and are in the sitemap; the task pages are not. `/coding/review` names
+`/coding` as canonical and stays out. `/coding/system-design` and every
+address under it are one prerendered not-found page, `noindex` and with no
+canonical (`vercel.json` sends them all there), because system design is
+hidden.
+
+The question comes from `GET /api/quiz/daily?qotd=<date|today>`
+(`lib/daily-question.ts`, inside the daily handler): a seeded pick from that
+track in the served bank, options shuffled by the same seed, the answer
+sealed in a quiz session with scope `qotd`. A future date answers 404
+`qotd_not_yet`, so nobody reads tomorrow's question today.
 `api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
 it: no result receipt, answer proof, XP, streak day, leaderboard entry or
 concept-review record. Every read seals a fresh session and one check claims
 it, so the response is `private, no-store` and the page fetches it with
-`cache: 'no-store'`; after a claimed or expired session, "Load it again" starts
-the question over with the new one.
+`cache: 'no-store'`. After a claimed or expired session, "Load it again"
+starts the question over.
 
 ### Daily challenge
 
@@ -154,8 +146,8 @@ the question over with the new one.
 A signed-in learner's session carries one attempt id for the day
 (`stableAttemptId('daily', user, subject, date)`), and `api/quiz/submit.ts`
 ranks only that attempt: a daily fetched signed out and submitted signed in is
-graded as practice, with no receipt. The recorded time runs from the first time
-the learner was handed the day's questions, kept as a `daily-start:<attempt>`
+graded as practice, with no receipt. The recorded time runs from the first
+time the learner got the day's questions, kept as a `daily-start:<attempt>`
 marker row in `quiz_submissions` and sealed into every later session of the
 day, so fetching again just before submitting does not shorten it. The same
 lookup tells the client the day is already played. The response is
@@ -163,14 +155,14 @@ lookup tells the client the day is already played. The response is
 `/quiz?mode=daily` starts the daily challenge once the sign-in is known and
 then drops the parameter; the Home "Daily challenge" tile and the empty Today
 leaderboard link there.
+
 A daily fetched signed in also names that account (`userId` in the session).
 `api/quiz/submit.ts` refuses it with 401 `sign_in_required` when the submit
 carries no credentials and with 409 `session_owner_mismatch` when another
 account sends it, both before anything is claimed, so the day's one attempt is
-never spent as a guest's and the same answers still rank once they come back
-signed in.
-`api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
-question of the day, challenge batch, assessment); a Learn session is refused.
+never spent as a guest's. `api/quiz/submit.ts` grades only the sessions it
+serves (quiz, review, daily, question of the day, challenge batch,
+assessment); it refuses a Learn session.
 
 ## Leaderboards
 
