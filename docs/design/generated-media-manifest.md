@@ -1,10 +1,8 @@
 # Generated media manifest
 
-Updated: 12 October 2026.
+The share image's background is the one generated asset in the product, accepted on 12 October 2026 after three reviewed directions; its provenance is below. Every other brand asset is deterministic.
 
-The owner-selected Higgsfield OG background was accepted on 12 October 2026 after three completed review directions. Its full provenance and exact deterministic logo composition are recorded below. Earlier brand assets remain deterministic.
-
-## Current deterministic brand assets
+## Current brand assets
 
 | Asset ID | Purpose | Source | Paths | Provenance / restrictions |
 |---|---|---|---|---|
@@ -12,15 +10,6 @@ The owner-selected Higgsfield OG background was accepted on 12 October 2026 afte
 | `pwa-icons` | Install icons | V9 kit `favicon/app-icon-*.png` | `client/public/icon.svg`, `client/public/icon-192.png`, `client/public/icon-512.png`, `client/public/apple-touch-icon.png` | White clean fin on the green tile; the platform adds the corner radius. |
 | `og-share` | Product share image | `scripts/render-og-image.mjs`, approved October navbar outlines and accepted Higgsfield background | `client/public/og-image.png` | 1200×630 raster; exact vector logo over generated art. See accepted record below. |
 | `paper-grain` | Tactile surface | Inline deterministic SVG turbulence | `client/src/styles/astryx-theme.css` | Decorative, tiny, theme-safe. |
-
-## Required production continuation
-
-1. Research at least three current cheap/free services from official pricing, license, privacy, and model documentation; record the dated comparison and source links in `generated-media-opportunity-audit.md`.
-2. Recommend the lowest-risk verified service or manual owner generation based on cost, commercial rights, privacy, watermark-free export, and output quality. Do not sign up, purchase, or alter billing automatically.
-3. Run the three devShark directions in `generated-media-art-direction.md` at review resolution using the owner-authorized provider, or give the owner exact website prompts and inspect the uploaded originals.
-4. Inspect every output and record visual rejection reasons. Do not select the first merely usable result.
-5. Refine one direction, generate 16:9 and 9:16 finals, verify a square crop, and create deterministic English typography and authentic-UI composites.
-6. Optimize selected stills, integrate product-aware metadata without hard-coded deployment URLs, validate the matrix, then replace this continuation section with accepted asset records.
 
 ## Accepted generated asset record format
 
