@@ -660,12 +660,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     startActivity({ enrollmentId, activityId }, controller.signal)
       .then((started) => {
         if (cancelled) return;
-        const kept = localDraftOver(enrollmentId, activityId, started.draft);
+        const kept = localDraftOver(enrollmentId, activityId, started.draft, started.draftUnavailable === true);
         attempt.current = { session: started.session, expiresAt: started.expiresAt, key: newIdempotencyKey(), usedUp: false };
         drafts.current = {
           enrollmentId,
           activityId,
-          revision: started.draft?.revision ?? 0,
+          revision: started.draft?.revision ?? kept?.revision ?? 0,
           inFlight: false,
           queued: kept?.content ?? null,
           epoch: accountEpoch(),

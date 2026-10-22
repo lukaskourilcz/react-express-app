@@ -52,12 +52,23 @@ function isDraftContent(value: unknown): value is PathDraft['content'] {
 
 /** The copy kept on this device when it is newer than the server's draft,
  * shaped as a draft at the server's revision; otherwise null. */
-export function localDraftOver(enrollmentId: string, activityId: string, server: PathDraft | null): PathDraft | null {
+export function localDraftOver(
+  enrollmentId: string,
+  activityId: string,
+  server: PathDraft | null,
+  serverUnknown = false,
+): PathDraft | null {
   const kept = readJSON<{ baseRevision?: unknown; content?: unknown } | null>(localDraftKey(enrollmentId, activityId), null);
   if (!kept) return null;
   if (!isDraftContent(kept.content)) {
     forgetLocalDraft(enrollmentId, activityId);
     return null;
+  }
+  // The server could not read its draft, so nothing proves this copy stale:
+  // keep it, at the revision it was based on, for the next save to settle.
+  if (serverUnknown) {
+    const base = typeof kept.baseRevision === 'number' && Number.isInteger(kept.baseRevision) && kept.baseRevision >= 0 ? kept.baseRevision : 0;
+    return { activityId, revision: base, content: kept.content, updatedAt: new Date().toISOString() };
   }
   const revision = server?.revision ?? 0;
   if (kept.baseRevision !== revision || JSON.stringify(kept.content) === JSON.stringify(server?.content ?? null)) {

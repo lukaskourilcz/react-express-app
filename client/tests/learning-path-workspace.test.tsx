@@ -45,6 +45,7 @@ const calls = vi.hoisted(() => ({
   inFlight: 0,
   mostInFlight: 0,
   serverDraft: null as null | { activityId: string; revision: number; content: Record<string, unknown>; updatedAt: string },
+  draftUnavailable: false,
   next: null as string | null,
   submitFailures: [] as unknown[],
   submitDelay: 0,
@@ -104,6 +105,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         },
         purpose: 'exercise',
         draft: activityId === C ? null : calls.serverDraft,
+        ...(calls.draftUnavailable ? { draftUnavailable: true } : {}),
         previous: null,
       };
       if (activityId === C) {
@@ -146,6 +148,7 @@ beforeEach(() => {
   calls.inFlight = 0;
   calls.mostInFlight = 0;
   calls.serverDraft = null;
+  calls.draftUnavailable = false;
   calls.next = null;
   calls.submitFailures.length = 0;
   calls.submitDelay = 0;
@@ -513,6 +516,15 @@ describe('the draft autosave', () => {
     await wait(50);
     expect(calls.drafts).toHaveLength(0);
     expect(localStorage.getItem(`devshark:path:draft:${ENROLLMENT}:${A}`)).toBeNull();
+  });
+
+  it('keeps the copy on this device when the server could not read its draft', async () => {
+    localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 3, content: { code: 'unsaved, from here' } }));
+    calls.draftUnavailable = true;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe('unsaved, from here'));
+    expect(localStorage.getItem(`devshark:path:draft:${ENROLLMENT}:${A}`)).toContain('unsaved, from here');
+    await waitFor(() => expect(calls.drafts.map((one) => [one.expected, one.code])).toEqual([[3, 'unsaved, from here']]));
   });
 
   it('prefers the server\'s draft when another device saved after the copy on this one', async () => {
