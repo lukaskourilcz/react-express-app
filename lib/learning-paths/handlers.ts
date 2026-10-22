@@ -599,13 +599,16 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const found = activityIn(path, body.activityId);
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
+  // One read of the progress rows serves both the plan check's "already
+  // passed" exception and the previous result the workspace shows.
+  let progress: Promise<ProgressRow[]> | null = null;
+  const progressRows = () => (progress ??= loadProgressRows(supabase, row.enrollment_id));
   if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
     cleared: async () => {
-      const state = stateMap(await loadProgressRows(supabase, row.enrollment_id)).get(activity.id);
+      const state = stateMap(await progressRows()).get(activity.id);
       return state === 'verified_pass' || state === 'self_reviewed';
     },
   })) return;
-
 
   if (body.previousSession !== undefined && (typeof body.previousSession !== 'string' || body.previousSession.length > 16_384)) {
     return jsonError(res, 400, 'bad_request', 'The previous session is invalid');
@@ -620,16 +623,25 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const attemptId = newId();
   // Purpose comes from the manifest, never from the request: it decides
   // whether a result can count as placement evidence or as core completion.
-  const opened = await withTimeout(supabase.rpc('open_learning_path_attempt', {
-    p_user_id: userId,
-    p_attempt_id: attemptId,
-    p_enrollment_id: row.enrollment_id,
-    p_activity_id: activity.id,
-    p_purpose: activity.purpose,
-    p_curriculum_version: path.version,
-    p_rubric_version: path.rubric.version,
-    p_ttl_minutes: 180,
-  }));
+  // The attempt, the saved draft and the prior result are independent, so the
+  // three round trips run together; the attempt's answer is still judged
+  // first, and a payload failure is rethrown only once the attempt is open.
+  const [opened, built, rows] = await Promise.all([
+    withTimeout(supabase.rpc('open_learning_path_attempt', {
+      p_user_id: userId,
+      p_attempt_id: attemptId,
+      p_enrollment_id: row.enrollment_id,
+      p_activity_id: activity.id,
+      p_purpose: activity.purpose,
+      p_curriculum_version: path.version,
+      p_rubric_version: path.rubric.version,
+      p_ttl_minutes: 180,
+    })),
+    buildActivityPayload(path, activity, supabase, row.enrollment_id)
+      .then((payload) => ({ payload }), (failure: unknown) => ({ failure })),
+    // Prior state is context, not a precondition: a workspace still opens.
+    progressRows().catch(() => null),
+  ]);
   if (opened.error) {
     if (migrationMissing(res, opened.error)) return;
     return jsonError(res, 500, 'db_error', 'Could not start the activity');
@@ -640,7 +652,8 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     return jsonError(res, 404, 'not_found', 'Unknown enrollment');
   }
 
-  const payload = await buildActivityPayload(path, activity, supabase, row.enrollment_id);
+  if ('failure' in built) throw built.failure;
+  const { payload } = built;
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
   const session = createLearningPathSession({
@@ -656,20 +669,14 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     ...(payload.answerKey ? { answerKey: payload.answerKey } : {}),
   });
 
-  let previous: StartActivityResponse['previous'] = null;
-  try {
-    const rows = await loadProgressRows(supabase, row.enrollment_id);
-    const recorded = rows.find((one) => one.module_id === module.id)?.activity_states?.[activity.id];
-    if (recorded) {
-      previous = {
+  const recorded = rows?.find((one) => one.module_id === module.id)?.activity_states?.[activity.id];
+  const previous: StartActivityResponse['previous'] = recorded
+    ? {
         state: (recorded.state as EvidenceState) ?? 'not_started',
         score: typeof recorded.score === 'number' ? recorded.score : null,
         attempts: Number(recorded.attempts ?? 0),
-      };
-    }
-  } catch {
-    // Prior state is context, not a precondition: a workspace still opens.
-  }
+      }
+    : null;
 
   res.setHeader('Cache-Control', 'private, no-store');
   const out: StartActivityResponse = {
