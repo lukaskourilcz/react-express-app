@@ -1,16 +1,16 @@
 # Product, brand, and deployment architecture
 
-This repository implements one public product, **devShark**, whose one subject
-is developer learning (`webdev`). Every scored server flow still validates the
-subject before selecting questions or writing progress, because progress, XP,
-tokens and the database are keyed by subject.
+This repository implements one product, **devShark**: an English-only
+developer-learning app whose one subject is `webdev`. It runs as one
+React/Vite client, twelve Vercel handlers under `api/` and one Supabase
+database. Every scored server flow still validates the subject before it
+selects questions or writes progress, because progress, XP, coins and the
+database are keyed by subject.
 
-StudyShark, the general-subject product (geography, mathematics, history,
-biology, chess and poker), shared this code until 2026-09-24 and now lives in
-its own repository, `lukaskourilcz/studyshark`. Nothing here builds, links to or
-serves it. StudyShark's rows were deleted from the production database on
-2026-09-25 (issue #215). The subject checks in the schema still accept its six
-subjects; the API's subject scope refuses them.
+StudyShark, the general-subject product, lives in its own repository
+(`lukaskourilcz/studyshark`). Nothing here builds, links to or serves it. The
+database's subject checks still accept its six subjects; the API's subject
+scope refuses them.
 
 ## Sources of truth
 
@@ -800,7 +800,6 @@ Home’s topic chooser links directly into the first section that owns a topic.
 Today keeps unfinished → review → new priority, orders within those buckets
 by `planTopics(profile)`, and exposes one `startHereId`; joining a section
 adds work after the track rather than replacing the next action.
-
 
 `shared/learn-sections.ts` groups the Learn topics and paths into three
 sections: Web Developer, Software Engineer and Forward Deployed Engineer
@@ -1941,7 +1940,6 @@ The FDE path’s canonical overview and module addresses are
 module and the client’s query/fragment. Career groups its topics under the
 three section headings and links into Learn; the FDE path shelf lives inside
 its section.
-
 
 ### Optional FDE interview shelf (B10)
 
