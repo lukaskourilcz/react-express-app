@@ -198,6 +198,10 @@ export interface DesignDrill {
   correct?: number;
   /** sequence: steps in the correct order */
   steps?: string[];
+  /** sequence: other orders that are also right, each a permutation of the
+   * authored step indices (`[0, 1, 3, 2, 4]` lets steps 3 and 4 swap). Graded
+   * on the server only; the browser never sees them. */
+  acceptedOrders?: number[][];
 }
 
 export interface CodingTask {
