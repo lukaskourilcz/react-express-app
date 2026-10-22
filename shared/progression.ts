@@ -103,6 +103,7 @@ export const TOPIC_PREREQS: Record<string, readonly string[]> = {
   general: ['javascript'],
   git: ['javascript'],
   dsa: ['javascript'],
+  'dsa-advanced': ['dsa'],
   algorithms: ['javascript'],
   nodejs: ['javascript'],
   testing: ['javascript'],

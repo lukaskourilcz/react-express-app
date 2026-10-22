@@ -69,7 +69,7 @@ export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '4.99', 
  * objects, sorting and recursion in Algorithms). JavaScript 41, TypeScript 18,
  * React 19, Algorithms 12: with the opening stages of the 29 projects and
  * short paths (three tasks in each of the eleven ten-stage projects, two in
- * each of the three FullStack apps, one in each short path), 144 of the 754
+ * each of the three FullStack apps, one in each short path), 144 of the 769
  * issued tasks, 19.1 % (JavaScript 68, TypeScript 32, React 30,
  * Algorithms 14). The DSA Foundations tasks of #493 added three: the first
  * loops and recursion tasks of the Algorithms track, which the first-task
@@ -263,7 +263,7 @@ export function isFreeCodingTask(taskId: string): boolean {
 }
 
 /** How many of these coding tasks the free tier opens, and of how many: the
- * "144 of 754 tasks free" that share images and copy print (#239). Pass the
+ * "144 of 769 tasks free" that share images and copy print (#239). Pass the
  * catalogue's ids; the count is this module's rule, not a stored number. */
 export function freeCodingCounts(taskIds: readonly string[]): { free: number; total: number } {
   return { free: taskIds.filter(isFreeCodingTask).length, total: taskIds.length };

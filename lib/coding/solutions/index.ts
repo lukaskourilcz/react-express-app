@@ -12,6 +12,7 @@ import { REACT_LOOP_SOLUTIONS } from './react-loops';
 import { JAVASCRIPT_DEBUG_SOLUTIONS } from './javascript-debug';
 import { ALGORITHM_SOLUTIONS } from './algorithms';
 import { DSA_FOUNDATIONS_SOLUTIONS } from './dsa-foundations';
+import { DSA_ADVANCED_SOLUTIONS } from './dsa-advanced';
 import { EASY_JAVASCRIPT_A_SOLUTIONS } from './easy-javascript-a';
 import { EASY_JAVASCRIPT_B_SOLUTIONS } from './easy-javascript-b';
 import { EASY_JAVASCRIPT_C_SOLUTIONS } from './easy-javascript-c';
@@ -40,6 +41,7 @@ const AUTHORED: Record<string, CodingSolution> = {
   ...ALGORITHM_SOLUTIONS,
   // DSA Foundations (#493), right after the Algorithms file it sits beside in `sources`.
   ...DSA_FOUNDATIONS_SOLUTIONS,
+  ...DSA_ADVANCED_SOLUTIONS,
   // The Easy-band waves of #226, in the order `EASY_BAND` lists them.
   ...EASY_JAVASCRIPT_A_SOLUTIONS,
   ...EASY_JAVASCRIPT_B_SOLUTIONS,

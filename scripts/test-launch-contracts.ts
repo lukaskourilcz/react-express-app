@@ -69,6 +69,7 @@ import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH }
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
 import { learnLessonContracts } from './learn-lesson-contract';
+import { dsaAdvancedContracts } from './dsa-advanced-contracts';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -317,7 +318,7 @@ async function auditGateContracts() {
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
   assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
   const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
-  assert.equal(reviewedCoding.length, 754, 'all currently issued coding identities are included in the completed wave');
+  assert.equal(reviewedCoding.length, 769, 'all currently issued coding identities are included in the completed wave');
   for (const task of reviewedCoding) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
     assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
@@ -3758,14 +3759,14 @@ async function main() {
   assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
   // Each DSA task names its matching Learn level after the E3 re-sequence.
   for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
-    assert.equal(hasLearnLevel(row), row.topic === 'dsa', `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' || row.topic === 'dsa-advanced', `${row.id}: only a Foundations or Advanced Learn task names its curriculum level`);
   }
   for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
     const row = CODING_INDEX.find((one) => one.id === id);
     assert.ok(row && hasLearnLevel(row), `${id}: names its aligned Foundations level`);
   }
   assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
-  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
+  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa' && row.topic !== 'dsa-advanced').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
   const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
@@ -5846,6 +5847,7 @@ async function main() {
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
   await learnLessonContracts();
+  await dsaAdvancedContracts();
   consentContracts();
   classroomRevealContracts();
   monthlyXpContracts();
