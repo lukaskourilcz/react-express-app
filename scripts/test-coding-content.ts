@@ -467,6 +467,13 @@ async function main() {
         if (d.format === 'estimate' && !(typeof d.answer === 'number' && typeof d.min === 'number' && typeof d.max === 'number' && d.min <= d.answer && d.answer <= d.max && d.unit)) fail(`${where}: estimate needs answer, band and unit`);
         if ((d.format === 'tradeoff' || d.format === 'bottleneck') && !(d.options && d.options.length >= 3 && typeof d.correct === 'number' && d.correct >= 0 && d.correct < d.options.length)) fail(`${where}: choice drill needs options and a correct index`);
         if (d.format === 'sequence' && !(d.steps && d.steps.length >= 3)) fail(`${where}: sequence needs at least 3 steps`);
+        // Another right order is a permutation of the authored steps, and not
+        // the authored order itself.
+        for (const order of d.acceptedOrders ?? []) {
+          const steps = d.steps ?? [];
+          const isPermutation = d.format === 'sequence' && order.length === steps.length && [...order].sort((a, b) => a - b).every((step, index) => step === index);
+          if (!isPermutation || order.every((step, index) => step === index)) fail(`${where}: an accepted order must be another order of the authored steps`);
+        }
         break;
       }
       default:
@@ -664,6 +671,65 @@ async function main() {
             : [(prepared.key.correct! + 1) % task.drill!.options!.length];
       if (gradeDesign(task, prepared.key, right as DesignAnswer[]).outcome !== 'passed') fail(`${task.id}: its grader fails the right answers`);
       if (gradeDesign(task, prepared.key, wrong as DesignAnswer[]).outcome !== 'failed') fail(`${task.id}: its grader passes wrong answers`);
+    }
+
+    // The review of 22 Oct 2026 (docs/audit/system-design-review-2026-10-22.md)
+    // found answers the grader got wrong. These pin the fixes.
+    const hiddenById = (id: string) => {
+      const task = hidden.find((one) => one.id === id);
+      assert.ok(task, `${id}: the reviewed task is missing`);
+      return task;
+    };
+    const estimateOutcome = (id: string, value: number) => {
+      const task = hiddenById(id);
+      return gradeDesign(task, prepareDesign(task, (list) => list).key, [value] as DesignAnswer[]).outcome;
+    };
+    // An estimate band must refuse the answer one skipped factor gives.
+    for (const [id, value, mistake] of [
+      ['dd-rows-in-two-years', 182_500, 'one year instead of two'],
+      ['dd-a-year-of-photos', 365, 'ignoring the 2 MB photo size'],
+      ['dd-a-year-of-photos', 1_460, 'counting the 2 MB twice'],
+    ] as const) {
+      if (estimateOutcome(id, value) !== 'failed') fail(`${id}: its band accepts ${value} (${mistake})`);
+    }
+    for (const [id, value] of [['dd-rows-in-two-years', 360_000], ['dd-a-year-of-photos', 713]] as const) {
+      if (estimateOutcome(id, value) !== 'passed') fail(`${id}: its band refuses the fair rounding ${value}`);
+    }
+    // Filling the cache and returning the record may come in either order;
+    // any other swap is still wrong.
+    {
+      const task = hiddenById('dd-reading-through-a-cache');
+      const prepared = prepareDesign(task, (list) => [...list].reverse());
+      const shown = (authored: number[]) => [authored.map((step) => prepared.key.order![step])] as DesignAnswer[];
+      if (gradeDesign(task, prepared.key, shown([0, 1, 2, 3, 4])).outcome !== 'passed') fail(`${task.id}: the authored order fails`);
+      if (gradeDesign(task, prepared.key, shown([0, 1, 3, 2, 4])).outcome !== 'passed') fail(`${task.id}: returning the record before filling the cache fails`);
+      if (gradeDesign(task, prepared.key, shown([1, 0, 2, 3, 4])).outcome !== 'failed') fail(`${task.id}: reading the database before asking the cache passes`);
+      if (gradeDesign(task, prepared.key, shown([0, 1, 2, 4, 3])).outcome !== 'failed') fail(`${task.id}: removing the entry before returning the record passes`);
+    }
+    // The length of an option must not give the answer away: a learner who
+    // always picks the longest option (a tie counted in their favour) passes
+    // no more than a minority of the choice tasks, and the right option is
+    // strictly the longest no more often than chance would make it.
+    {
+      const choiceTasks = hidden.filter((task) => task.design || task.drill?.options);
+      let longestPasses = 0;
+      let strictlyLongest = 0;
+      let byChance = 0;
+      for (const task of choiceTasks) {
+        const prepared = prepareDesign(task, (list) => [...list].reverse());
+        const items = prepared.design
+          ? prepared.design.steps.map((step, index) => ({ options: step.options, correct: prepared.key.steps![index] }))
+          : [{ options: prepared.drill!.options!, correct: prepared.key.correct! }];
+        const picks = items.map(({ options, correct }) => {
+          const longest = Math.max(...options.map((option) => option.length));
+          if (options.every((option, index) => index === correct || option.length < options[correct].length)) strictlyLongest += 1;
+          byChance += 1 / options.length;
+          return options[correct].length === longest ? correct : options.findIndex((option) => option.length === longest);
+        });
+        if (gradeDesign(task, prepared.key, picks as DesignAnswer[]).outcome === 'passed') longestPasses += 1;
+      }
+      if (longestPasses * 2 >= choiceTasks.length) fail(`always picking the longest option passes ${longestPasses} of ${choiceTasks.length} system-design choice tasks`);
+      if (strictlyLongest > byChance) fail(`the right option is strictly the longest in ${strictlyLongest} system-design choice items; chance is ${byChance.toFixed(1)}`);
     }
     for (const topic of ['javascript', 'typescript', 'react', 'system-design', 'algorithms', 'dsa', 'dsa-advanced'] as const) {
       for (let level = 0; level <= 25; level++) if (tasksForLevel(topic, level).some((task) => !CODING_SECTION_TRACKS.includes(task.track))) fail(`${topic} level ${level} holds a hidden task`);

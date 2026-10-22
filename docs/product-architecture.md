@@ -1900,6 +1900,22 @@ module and the client’s query/fragment. Career groups its topics under the
 three section headings and links into Learn; the FDE path shelf lives inside
 its section.
 
+
+### Optional FDE interview shelf (B10)
+
+IP01–IP04 follow the required path and use the existing optional
+`interview-prep` shelf. Six original code exercises have complete 300–500-line
+fixtures, server-only references, hidden assertions and intentionally flawed
+variants. Twelve design cases use objective questions; five reflection
+artifacts remain self-reviewed. All eight lessons carry primary references.
+Shelf work never changes guided completion, the competency/phase count or the
+path's required time estimate.
+
+The lesson renderer recognizes safe Markdown links in prose and table cells
+while preserving inline code as text. Only HTTPS and canonical internal Learn
+routes become anchors; unsafe URLs and unsupported markup stay visible text.
+The IP04 case bank links to the final M02 case activities from B3 and B9.
+
 ### Public FDE positioning (B13)
 
 The landing introduces the FDE path with existing landing primitives and reads its inventory from the fetched public manifest through `pathInventory`. Failed or pending catalogue reads show no invented inventory. The section remains a preview while its availability is disabled. The shared Premium inclusion list names FDE and states the free diagnostic/first-module boundary; the live page, upgrade sheet and static Premium article all reuse that list. These access claims require B12 before release. The public Learn description names all three sections.

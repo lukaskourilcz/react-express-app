@@ -84,3 +84,29 @@ The loop has fourteen teaching modules (M01–M14) plus the required C01 capston
 Module file names, exported constants, module ids and module dependency references follow the final numbering. Existing lesson, activity, check-question and solution-map keys stay stable so recorded activity evidence is not renamed: a renumbered module's items keep the slug they were authored under, so M02's items start `fde-v1-m02-cases-`, M03's start `fde-v1-m02-`, M05's start `fde-v1-m05-data-` and M11's start `fde-v1-m11-deploy-`. The new M14 uses its own new stable ids. Bridge references still point to those activities, and the Python bridge additionally points to the two new reading checks.
 
 With B3 and B11 integrated, `content:snapshot` reports 15 required modules (14 teaching modules plus C01), 28 lessons, 120 module check questions (48 of them in M02's twelve cases), 19 code exercises and 10 artifacts (four of them in C01); the optional diagnostic and bridge checks add 29 questions. All 13 competencies and four bridges derive from the manifest. These are current authored counts, not the final release target.
+
+## Optional interview practice (B10)
+
+Four modules sit on the interview-prep shelf after the required loop. They
+have no completion requirements and add nothing to guided progress, phase
+counts, the guided time estimate or completion rewards.
+
+| Module | Practice |
+| --- | --- |
+| IP01 Learning round | Two lessons and three original 300–500-line TypeScript services to extend: rate cards, event selectors and an asset ledger. |
+| IP02 Re-engineering round | Two lessons and three changed v2 services to debug: tenant quote batches, actor-scoped event pages and ledger previews. Earlier helpers may be familiar; the new contracts differ. |
+| IP03 System design | Two lessons and twelve fictional customer scenarios, each with four objective questions and authored feedback. |
+| IP04 Case bank and reflections | Two lessons linking the twelve original M02 cases, plus five capped STAR-style self-review artifacts. |
+
+Suggested rehearsal times are guidance; no timer runs. Exercises execute only
+in the existing sandbox and call no customer system. Machine checks establish
+the authored bounded assertions, not engineering or interview readiness.
+Reflection fields establish presence and length only; their quality stays
+self-reviewed. Fictional rehearsal must be labelled, and no fabricated work
+history or measured result is requested. These are original exercises, with
+no employer question, scoring key or hiring guarantee.
+
+The case bank links to the final M02 cases from B3 and B9 (`fde-v1-m02` and
+its `fde-v1-m02-cases-…` activities). These modules add no required module,
+so the counts above stay as stated. All lesson and activity identifiers
+remain stable.
