@@ -1628,12 +1628,22 @@ function LessonRunner({
     [revealed, grading, playable.sessionId, question.id, isCheckpoint, reportError],
   );
 
+  // One completion at a time, and none after the attempt finished. Finish, the
+  // coding step's Continue, Check completion and the focus and visibility
+  // re-checks can each ask, sometimes at once (returning to the tab fires
+  // both events); a second answer recorded the pass again, toasted its XP
+  // twice and could replace the result with "timed out". A ref, because the
+  // second ask can come before `completing` re-renders.
+  const completionRef = useRef<'idle' | 'sending' | 'done'>('idle');
   const complete = useCallback(async () => {
+    if (completionRef.current !== 'idle') return;
+    completionRef.current = 'sending';
     setCompleting(true);
     setAnswerError(null);
     try {
       const result = await completeRoadmapAttempt(playable.sessionId);
       if (result.invalidated) {
+        completionRef.current = 'done';
         setInvalidated(true);
         setCodingPhase(false);
         setFinished(true);
@@ -1646,6 +1656,7 @@ function LessonRunner({
         setCodingPhase(true);
         return;
       }
+      completionRef.current = 'done';
       // A level that fails its coding gate is recorded as not passed even with
       // a full question score; report the percentage the server computed but
       // keep the local pass record honest.
@@ -1655,6 +1666,7 @@ function LessonRunner({
     } catch (error) {
       reportError(error);
     } finally {
+      if (completionRef.current === 'sending') completionRef.current = 'idle';
       setCompleting(false);
     }
   }, [onFinished, playable.passPct, playable.sessionId, reportError]);
@@ -1678,10 +1690,13 @@ function LessonRunner({
 
   const advance = useCallback(async () => {
     if (outOfHearts) {
+      if (completionRef.current !== 'idle') return;
+      completionRef.current = 'sending';
       setCompleting(true);
       setAnswerError(null);
       try {
         const result = await completeRoadmapAttempt(playable.sessionId);
+        completionRef.current = 'done';
         if (result.invalidated) {
           setInvalidated(true);
           setFinished(true);
@@ -1696,6 +1711,7 @@ function LessonRunner({
       } catch (error) {
         reportError(error);
       } finally {
+        if (completionRef.current === 'sending') completionRef.current = 'idle';
         setCompleting(false);
       }
     } else if (qIndex < total - 1) {

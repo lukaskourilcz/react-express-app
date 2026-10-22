@@ -381,6 +381,35 @@ describe('a level whose session cannot be used', () => {
     expect(screen.queryByText(/Coding tasks are not checked while you’re signed out/)).toBeNull();
   });
 
+  // Returning to the tab fires focus and visibilitychange together. Each
+  // re-check found the coding task passed and completed the level, so the
+  // pass was recorded, and its XP announced, twice.
+  it('completes a level once when the coding re-checks land together', async () => {
+    signInAs();
+    let completions = 0;
+    answer({
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] },
+      complete: () => {
+        completions += 1;
+        return HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: true, applied: true, codingPending: [] });
+      },
+    });
+    server.use(http.post('*/api/quiz/roadmap', ({ request }) => (new URL(request.url).searchParams.get('resource') === 'attempt-status'
+      ? HttpResponse.json({ completed: false, coding: [{ taskId: 'js-digit-sum', passed: true, revealed: false }] })
+      : undefined)));
+    await openLevelAndAnswer();
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    await screen.findByRole('button', { name: 'Finish the coding task' });
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Level complete' })).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(completions).toBe(1);
+    expect(screen.queryByRole('heading', { name: 'This level timed out' })).toBeNull();
+  });
+
   // CODE-4: revealing a solution inside a level completed the attempt at once,
   // and the finish screen replaced the solution the learner had just paid for.
   it('keeps a revealed solution on screen until the learner finishes the level', async () => {
