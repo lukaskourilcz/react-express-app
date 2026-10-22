@@ -864,10 +864,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         <div className="lp-head__actions">
           <span className="lp-module__meta">
             {/* An off-loop module never completes, so "In progress" would
-                read as unfinished for good. */}
+                read as unfinished for good. A module with no recorded
+                evidence has not started, whatever the enrollment says. */}
             {offLoop(module)
               ? t('paths.module.optional')
-              : moduleProgress?.completed ? t('paths.module.complete') : t('paths.module.inProgress')}
+              : moduleProgress?.completed ? t('paths.module.complete')
+                : moduleProgress?.activities.some((one) => one.state !== 'not_started') ? t('paths.module.inProgress') : t('paths.module.notStarted')}
           </span>
         </div>
       </header>

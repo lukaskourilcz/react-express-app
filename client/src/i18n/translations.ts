@@ -1959,6 +1959,7 @@ export const en = {
   'paths.module.optional': 'Optional',
   'paths.module.complete': 'Complete',
   'paths.module.inProgress': 'In progress',
+  'paths.module.notStarted': 'Not started',
   'paths.inventory.modules': 'modules',
   'paths.inventory.lessons': 'lessons',
   'paths.inventory.checks': 'checks',
