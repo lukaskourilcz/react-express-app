@@ -27,7 +27,6 @@ import { FDE_M08_SOLUTIONS } from './fde-m08';
 import { FDE_M09_SOLUTIONS } from './fde-m09';
 import { FDE_M10_SOLUTIONS } from './fde-m10';
 import { FDE_C01_SOLUTIONS } from './fde-c01';
-import { FDE_DRYRUN_SOLUTIONS } from './fde-dryrun';
 
 const ALL: Record<string, PathCodeSolution> = {
   ...DSA_D01_SOLUTIONS,
@@ -53,7 +52,6 @@ const ALL: Record<string, PathCodeSolution> = {
   ...FDE_M09_SOLUTIONS,
   ...FDE_M10_SOLUTIONS,
   ...FDE_C01_SOLUTIONS,
-  ...FDE_DRYRUN_SOLUTIONS,
 };
 
 export const solutionFor = (activityId: string): PathCodeSolution | undefined => ALL[activityId];
