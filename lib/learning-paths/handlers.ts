@@ -100,6 +100,8 @@ const notAvailable = (res: VercelResponse) =>
   jsonError(res, 404, 'not_available', 'Learning paths are not part of this product');
 
 const ID = /^[A-Za-z0-9_-]{16,64}$/;
+/** The highest revision save_learning_path_draft accepts (migration 026). */
+const MAX_DRAFT_REVISION = 1_000_000;
 const newId = () => randomBytes(18).toString('base64url');
 
 /** Storage readiness is discovered, not configured: the first call that hits a
@@ -1439,7 +1441,10 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     if (typeof body.activityId !== 'string' || !/^[a-z0-9-]{3,96}$/.test(body.activityId)) {
       return jsonError(res, 400, 'bad_request', 'An activityId is required');
     }
-    if (!Number.isInteger(body.expectedRevision) || (body.expectedRevision as number) < 0) {
+    // save_learning_path_draft raises on a revision outside 0..1,000,000, and
+    // a raise is a 500; the bound is checked here so a bad value is a 400.
+    if (!Number.isInteger(body.expectedRevision) || (body.expectedRevision as number) < 0
+        || (body.expectedRevision as number) > MAX_DRAFT_REVISION) {
       return jsonError(res, 400, 'bad_request', 'expectedRevision must be a whole number');
     }
     const content = body.content;
@@ -1464,6 +1469,12 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     }));
     if (saved.error) {
       if (migrationMissing(res, saved.error)) return;
+      // Every other field the routine checks was checked above, so its raise
+      // means the stored form outgrew its 64 kB (pg_column_size measures the
+      // binary JSONB, which can exceed the text this handler measured).
+      if (/invalid_learning_path_draft/.test(saved.error.message ?? '')) {
+        return jsonError(res, 413, 'too_large', 'A draft is limited to 64 kB');
+      }
       return jsonError(res, 500, 'db_error', 'Could not save the draft');
     }
     markStorageInstalled();

@@ -428,6 +428,23 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a draft save the routine would refuse is the learner's 4xx ───── */
+    // save_learning_path_draft raises on a revision past 1,000,000 and on a
+    // stored form past 64 kB; a raise must not reach the learner as a 500.
+    {
+      const writer = `user-draft-bounds-${stamp}`;
+      const draft = { user_id: writer, enrollmentId, activityId: codeActivity.id, content: { code: 'const x = 1;' } };
+      const called: string[] = [];
+      let res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 1_000_001 }), res as never,
+        fakeSupabase({ rpc: (name) => { called.push(name); return {}; } }));
+      if (res.statusCode !== 400 || called.length > 0) fail(`a draft revision past the routine's bound answers ${res.statusCode} after ${called.length} calls, not 400 before any`);
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 3 }), res as never,
+        fakeSupabase({ rpc: () => ({ error: { code: 'P0001', message: 'invalid_learning_path_draft' } }) }));
+      if (res.statusCode !== 413 || code(res) !== 'too_large') fail(`a draft the routine refuses as oversized answers ${res.statusCode} ${code(res)}, not 413 too_large`);
+    }
+
     /* ── every off-loop decision goes through one helper ──────────────── */
     // A shelf module is off the loop even if its optional flag slipped. The
     // validator refuses that, but completion, the next action and the reward's
