@@ -1,3 +1,4 @@
+import { FdeHub } from './FdeHub';
 // The learning-path screens, shared by the FDE role specialization and the
 // DSA Foundations skill path:
 //
@@ -172,6 +173,7 @@ function ModuleCard({
           {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
         <span className="lp-module__meta">
+          {module.shelf && <span className="ss-premium-label">{t('premium.badge')}</span>}
           {t('paths.minutes', { minutes: module.estimatedMinutes })}
           {completed ? ` · ${t('paths.module.complete')}` : ''}
         </span>
@@ -203,7 +205,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const { userId, isAuthenticated, catalog, entry, enrollment, enrollments, progress } = usePathState(pathId);
   const [track] = useTrack();
   const { lockOf } = useLocks();
   const [enrolling, setEnrolling] = useState(false);
@@ -372,6 +374,11 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <h2>{t('paths.entryRequirement')}</h2>
         <p className="lp-lead">{manifest.entryRequirement}</p>
       </section>
+
+      {pathId === 'fde' && <FdeHub manifest={manifest} progress={progress.data} reachable={reachable}
+        pending={Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending))}
+        error={Boolean(enrollments.error || progress.error)}
+        retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
 
       {progress.data && (
         <section className="lp-card lp-completion">
