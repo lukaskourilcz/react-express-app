@@ -275,8 +275,9 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   // opens anything: the tier gate is applied here exactly as it is everywhere,
   // the Learn levels that open JavaScript tier 3 included. A plan that cannot
   // be read suggests from the free set, which only narrows.
-  const [passed, cleared] = await Promise.all([passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId)]);
-  const plan = await resolveTier(userId).catch((): Tier => 'free');
+  const [passed, cleared, plan] = await Promise.all([
+    passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId), resolveTier(userId).catch((): Tier => 'free'),
+  ]);
   const next = nextAfterSkip(task.id, passed, plan, cleared);
 
   logEvent({ status: 200, kind: 'skip_recorded', reason: body.reason });
@@ -464,14 +465,13 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     if ('error' in when) return jsonError(res, 400, 'bad_request', when.error);
     const topic = typeof body.topic === 'string' && isCodingSectionTrack(body.topic) ? body.topic : null;
 
-    const [passed, cleared] = await Promise.all([passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId)]);
+    // The plan, the passed tasks and the cleared Learn levels are read
+    // together; none of them needs another.
+    const [passed, cleared, plan] = await Promise.all([
+      passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId), resolveTier(userId).catch(() => null),
+    ]);
+    if (plan === null) return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
     const due = new Set<string>();
-    let plan: Tier;
-    try {
-      plan = await resolveTier(userId);
-    } catch {
-      return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
-    }
 
     const queue = buildQueue({ minutes: minutes ?? 0, count, order, topic, plan, passed, due, javascriptLevelsCleared: cleared });
     if (queue.length === 0) {
