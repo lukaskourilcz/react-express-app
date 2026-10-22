@@ -12,10 +12,10 @@ export default function TopicLandingPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const resolved = topicFromPath(pathname);
-  const topic = resolved?.topic; const locale = resolved?.locale;
-  if (!topic || !locale) return <div className="ss-info-page"><Heading level={1}>{t('topicLanding.notFound')}</Heading><Button variant="primary" label={t('topicLanding.goHome')} onClick={() => navigate('/')} /></div>;
-  return <TopicArticle topic={topic} locale={locale} brand={CURRENT_PRODUCT.brand} related={TOPIC_LANDINGS} onPractice={event => {
-    captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, locale, source: 'topic_guide', category: topic.category });
+  const topic = resolved?.topic;
+  if (!topic) return <div className="ss-info-page"><Heading level={1}>{t('topicLanding.notFound')}</Heading><Button variant="primary" label={t('topicLanding.goHome')} onClick={() => navigate('/')} /></div>;
+  return <TopicArticle topic={topic} brand={CURRENT_PRODUCT.brand} related={TOPIC_LANDINGS} onPractice={event => {
+    captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, locale: 'en', source: 'topic_guide', category: topic.category });
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     navigate(`/quiz?category=${encodeURIComponent(topic.category)}`);

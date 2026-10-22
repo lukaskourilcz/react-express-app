@@ -125,8 +125,17 @@ export function vercelRoutingContracts(): void {
   // Every rule before the filesystem check only adds headers, so none of them
   // ends the request early and every rule after it still runs.
   for (const route of phases.main) {
+    if (route.src === '^/cs/topics(?:/.*)?$') {
+      assert.equal(route.dest, '/index.html');
+      assert.equal(route.status, 404);
+      assert.equal(route.continue, undefined);
+      assert.equal(route.headers?.['X-Robots-Tag'], 'noindex');
+      continue;
+    }
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs before the filesystem check and must only add headers`);
   }
+  const retiredGuides = phases.main.filter((route) => route.src === '^/cs/topics(?:/.*)?$');
+  assert.equal(retiredGuides.length, 1, 'retired guide URLs answer the app shell with HTTP 404');
   // Vercel accepts nothing else after `handle: hit`.
   for (const route of phases.hit) {
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs after a file matched and may only add headers`);

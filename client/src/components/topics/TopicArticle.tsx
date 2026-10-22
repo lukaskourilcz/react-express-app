@@ -1,24 +1,20 @@
 import { useLayoutEffect, useRef, type MouseEventHandler } from 'react';
 import type { TopicLandingDefinition } from '../../lib/topicCatalog';
 import { takePublicGuide } from '../../lib/publicGuideHandoff';
-import type { GuideLocale } from '../../lib/publicMetadata';
-export const topicLabels = {
-  en: { home: 'Home', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides', language: 'Guide language' },
-  cs: { home: 'Domů', kicker: 'Rychlé vysvětlení', example: 'Jak to funguje', misconception: 'Častý omyl', practice: 'Krátké procvičení', cta: 'Procvičit v kvízu', reference: 'Přečíst dokumentaci', related: 'Další témata', language: 'Jazyk průvodce' },
-} satisfies Record<GuideLocale, Record<string, string>>;
-export function topicPath(slug: string, locale: GuideLocale) { return `${locale === 'cs' ? '/cs' : ''}/topics/${slug}`; }
+export const topicLabels = { home: 'Home', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides' };
+export function topicPath(slug: string) { return `/topics/${slug}`; }
 /** Identical, escaped React markup for build-time HTML and the live route.
  * Only the public teaching catalogue enters this view; never scored answers. */
-export function TopicArticle({ topic, locale, brand, related, onPractice }: {
-  topic: TopicLandingDefinition; locale: GuideLocale; brand: string;
+export function TopicArticle({ topic, brand, related, onPractice }: {
+  topic: TopicLandingDefinition; brand: string;
   related: TopicLandingDefinition[]; onPractice?: MouseEventHandler<HTMLAnchorElement>;
 }) {
-  const copy = topicLabels[locale];
+  const copy = topicLabels;
   const articleRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const previous = takePublicGuide(), article = articleRef.current;
     if (!previous || !article || previous.pathname !== location.pathname || previous.historyKey !== history.state?.key ||
-        previous.article.dataset.topicGuide !== topic.slug || previous.article.lang !== locale) return;
+        previous.article.dataset.topicGuide !== topic.slug || previous.article.lang !== 'en') return;
     const before = previous.article.querySelectorAll<HTMLDetailsElement>('details.topic-practice');
     article.querySelectorAll<HTMLDetailsElement>('details.topic-practice').forEach((detail, index) => {
       const old = before[index], summary = detail.querySelector<HTMLElement>('summary');
@@ -26,18 +22,16 @@ export function TopicArticle({ topic, locale, brand, related, onPractice }: {
       detail.open = old.open;
       if (previous.focus === old.querySelector('summary') && document.activeElement === document.body) summary?.focus({ preventScroll: true });
     });
-  }, [topic.slug, locale]);
-  return <article ref={articleRef} data-topic-guide={topic.slug} className="ss-info-page ss-topic-article" lang={locale}>
-    <nav className="ss-topic-nav" aria-label={copy.language}>
+  }, [topic.slug]);
+  return <article ref={articleRef} data-topic-guide={topic.slug} className="ss-info-page ss-topic-article" lang="en">
+    <nav className="ss-topic-nav" aria-label={copy.home}>
       <a href="/">{brand} · {copy.home}</a>
-      <a href={topicPath(topic.slug, 'en')} hrefLang="en" lang="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>
-      <a href={topicPath(topic.slug, 'cs')} hrefLang="cs" lang="cs" aria-current={locale === 'cs' ? 'page' : undefined}>Česky</a>
     </nav>
-    <header className="ss-info-page__header"><span className="ss-info-page__kicker"><span className="ss-brand-name">{brand}</span> · {copy.kicker}</span><h1>{topic.title[locale]}</h1><p>{topic.description[locale]}</p></header>
-    {topic.explanation && <section><h2>{copy.example}</h2><p>{topic.explanation[locale]}</p>{topic.example && <pre tabIndex={0} aria-label={copy.example}><code>{topic.example}</code></pre>}{topic.reference && <a href={topic.reference}>{copy.reference}</a>}</section>}
-    <section><h2>{copy.misconception}</h2><p>{topic.misconception[locale]}</p></section>
-    <section><h2>{copy.practice}</h2>{topic.practice[locale].map(([question, answer], index) => <details key={question} className="topic-practice"><summary>{index + 1}. {question}</summary><p>{answer}</p></details>)}</section>
+    <header className="ss-info-page__header"><span className="ss-info-page__kicker"><span className="ss-brand-name">{brand}</span> · {copy.kicker}</span><h1>{topic.title}</h1><p>{topic.description}</p></header>
+    {topic.explanation && <section><h2>{copy.example}</h2><p>{topic.explanation}</p>{topic.example && <pre tabIndex={0} aria-label={copy.example}><code>{topic.example}</code></pre>}{topic.reference && <a href={topic.reference}>{copy.reference}</a>}</section>}
+    <section><h2>{copy.misconception}</h2><p>{topic.misconception}</p></section>
+    <section><h2>{copy.practice}</h2>{topic.practice.map(([question, answer], index) => <details key={question} className="topic-practice"><summary>{index + 1}. {question}</summary><p>{answer}</p></details>)}</section>
     <div><a className="ss-topic-cta" href={`/quiz?category=${encodeURIComponent(topic.category)}`} onClick={onPractice}>{copy.cta}</a></div>
-    <section><h2>{copy.related}</h2><ul className="ss-topic-links">{related.filter(item => item.slug !== topic.slug).map(item => <li key={item.slug}><a href={topicPath(item.slug, locale)}>{item.title[locale]}</a></li>)}</ul></section>
+    <section><h2>{copy.related}</h2><ul className="ss-topic-links">{related.filter(item => item.slug !== topic.slug).map(item => <li key={item.slug}><a href={topicPath(item.slug)}>{item.title}</a></li>)}</ul></section>
   </article>;
 }
