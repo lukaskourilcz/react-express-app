@@ -60,7 +60,7 @@ for (const theme of ['light', 'dark'] as const) {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download card' }).click();
     const file = await download; expect(file.suggestedFilename()).toBe('devshark-fde-guided-path.png');
-    await file.saveAs(`/private/tmp/codex-b2-card-${theme}.png`);
+    await file.saveAs(info.outputPath(`fde-card-${theme}.png`));
     await page.screenshot({ path: info.outputPath(`fde-hub-${theme}.png`), fullPage: false });
   });
 }
