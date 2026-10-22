@@ -1567,8 +1567,6 @@ seeds a row in every such table.
 
 ## Cookie consent, analytics and the privacy policy
 
-Owner decisions 2 and 4 (1 October 2026).
-
 - **The choice.** `client/src/lib/consent.ts` holds three categories:
   `necessary` (always on: sign-in, settings, progress kept in the browser, the
   choice itself), `analytics` (PostHog) and `marketing` (GA4 and the Meta
@@ -1612,9 +1610,8 @@ Owner decisions 2 and 4 (1 October 2026).
   every check. A no or a withdrawal calls `reset()` then
   `opt_out_capturing()` (in that order: `reset()` clears PostHog's flag) and
   removes every `ph_` / `__ph_` cookie and storage key and the campaign,
-  including what builds before the banner left for visitors who never
-  agreed. Sign-out calls `reset()` and opts back in. The URL scrubbing
-  (`before_send`) is unchanged.
+  whenever they were written. Sign-out calls `reset()` and opts back in.
+  `before_send` scrubs URLs before anything leaves the browser.
 - **Marketing readiness** (`client/src/lib/marketing.ts`). `MARKETING_LOADERS`
   (`lib/marketingTags.ts`) is empty, so `main.tsx` never loads `marketing.ts`
   and nothing runs: no `dataLayer`, no script, no CSP change. A loader added
@@ -1623,7 +1620,7 @@ Owner decisions 2 and 4 (1 October 2026).
   `ad_user_data`, `ad_personalization` denied; a yes grants all four, since
   GA4 sits under marketing). Connecting a tag also needs its hosts in the CSP
   of `vercel.json`, a raised `CONSENT_VERSION` and the policy's marketing
-  section and cookie table updated (NEEDED.md).
+  section and cookie table updated.
 - **Sentry** stays under necessary because it stores nothing in the browser
   and sends no personal data: no cookie, no storage (`linkPreviousTrace`
   pinned to `in-memory`), `sendDefaultPii: false`, no Session Replay, no
