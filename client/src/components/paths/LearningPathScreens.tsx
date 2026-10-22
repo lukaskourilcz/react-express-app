@@ -822,13 +822,14 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             state: graded.state,
           });
         }
-        const refreshed = queryClient.invalidateQueries({
+        // In the background: the verdict is on screen now, and the controls
+        // need not wait a further round trip for the outline's badges.
+        void queryClient.invalidateQueries({
           queryKey: learningPathKeys.progress(userId, enrollment.enrollmentId, enrollment.curriculumVersion),
         });
         if (!live()) return;
         setAttemptUsedUp(false);
         setResult(graded);
-        await refreshed;
       } catch (caught) {
         // A late refusal belongs to the activity it was sent for, not to the
         // one on screen now, whose attempt is untouched.
