@@ -1883,3 +1883,7 @@ The FDE path’s canonical overview and module addresses are
 module and the client’s query/fragment. Career groups its topics under the
 three section headings and links into Learn; the FDE path shelf lives inside
 its section.
+
+### Public FDE positioning (B13)
+
+The landing introduces the FDE path with existing landing primitives and reads its inventory from the fetched public manifest through `pathInventory`. Failed or pending catalogue reads show no invented inventory. The section remains a preview while its availability is disabled. The shared Premium inclusion list names FDE and states the free diagnostic/first-module boundary; the live page, upgrade sheet and static Premium article all reuse that list. These access claims require B12 before release. The public Learn description names all three sections.
