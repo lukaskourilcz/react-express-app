@@ -103,7 +103,16 @@ export const en = {
 
   // Home / landing page
   'home.title': 'Lessons, quizzes and coding tasks for web developers.',
-  'home.subtitle': 'Guided lessons, quizzes and graded coding tasks for frontend and backend. HTML, CSS and JavaScript are free for every account.',
+  'home.subtitle': 'Explore Web Developer, Software Engineer and Forward Deployed Engineer in Learn. Practice with lessons, quizzes and graded coding tasks. HTML, CSS and JavaScript are free for every account.',
+  'home.fde.kicker': 'The FDE path',
+  'home.fde.title': 'Forward Deployed Engineer',
+  'home.fde.body': 'Practice discovery, make eval-driven decisions, plan deployment in the customer’s environment, and codify reusable patterns. Work through TypeScript exercises and authored customer scenarios. Practice reading Python.',
+  'home.fde.inventory': '{modules} required modules · {lessons} lessons · {questions} module and capstone questions · {exercises} code exercises',
+  'home.fde.access': 'The diagnostic and first module are free. Premium opens the rest as it becomes available. Completion records your work in these exercises.',
+  'home.fde.preview': 'You can preview the outline. Recording work is unavailable right now.',
+  'home.fde.loading': 'Loading the path outline…',
+  'home.fde.unavailable': 'The path outline could not load here. Try opening it in Learn.',
+  'home.fde.cta': 'Explore the FDE path',
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaLearn': 'Go to learning path',
   // The path picker's title and Current mark live in translations.picker.ts.
@@ -1260,7 +1269,7 @@ export const en = {
   'premium.sheet.include2': 'React from level {level}, with its later part tests',
   'premium.sheet.include3': 'Every coding challenge, including each new one',
   'premium.sheet.include4': 'Every stage of the evolving projects and short paths',
-  'premium.sheet.include5': 'The FDE and DSA learning paths as they open',
+  'premium.sheet.include5': 'Our flagship Forward Deployed Engineer path: diagnostic and first module free; Premium opens the rest as it becomes available',
   'premium.sheet.include6': 'Coins you can redeem for devShark merchandise, once redemption opens',
   'premium.sheet.price': '{symbol}{monthly} a month or {symbol}{annual} a year, before VAT. Cancel any time.',
   // The launch offer (shared/launch-offer.ts). Shown only while it is on:
