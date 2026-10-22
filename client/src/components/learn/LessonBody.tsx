@@ -342,8 +342,10 @@ export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto
   return (
     <article className="lp-lesson">
       <Heading>{lesson.title}</Heading>
+      {/* Keyed by lesson as well: a view reused for the next lesson otherwise
+          kept an example's edited code and a trace's step from the last one. */}
       {lesson.sections.map((section, index) => (
-        <Section key={index} section={section} />
+        <Section key={`${lesson.id}:${index}`} section={section} />
       ))}
       {/* One control for the page: the abbreviations its prose actually uses,
           explained where the learner meets them. */}

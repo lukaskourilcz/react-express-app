@@ -58,3 +58,13 @@ it('stops a running lesson example when the lesson goes away', () => {
   view.unmount();
   expect(runner.signals[0]?.aborted).toBe(true);
 });
+
+it('opens the next lesson with its own example code, not the edits from the last one', () => {
+  const lesson = (id: string, code: string) => ({ id, title: id, sources: [], sections: [
+    { kind: 'example' as const, caption: 'Try it', code, note: 'Nothing here is graded.' },
+  ] });
+  const view = render(<LanguageProvider><LessonView lesson={lesson('first', 'first()')} /></LanguageProvider>);
+  fireEvent.change(screen.getByLabelText('Try it'), { target: { value: 'edited()' } });
+  view.rerender(<LanguageProvider><LessonView lesson={lesson('second', 'second()')} /></LanguageProvider>);
+  expect(screen.getByLabelText('Try it')).toHaveValue('second()');
+});
