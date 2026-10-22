@@ -650,8 +650,8 @@ Hard (`difficultyOf`), projected from its tier, or for a project milestone or
 path level from its position; a checkpoint reads its tier like a standalone
 task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
 gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
-754 tasks in `shared/coding-index.ts`, 480 are Easy, 179 Medium and 95 Hard; by
-track, 316 JavaScript, 156 TypeScript, 183 React and 99 Algorithms. The 45
+769 tasks in `shared/coding-index.ts`, 480 are Easy, 189 Medium and 100 Hard; by
+track, 316 JavaScript, 156 TypeScript, 183 React and 114 Algorithms. The 45
 hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` on a task's first verified pass, and
 again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
 verified pass after the learner reset the task to its starter (the
@@ -1018,7 +1018,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   after free passes only. `npm run build:coding-index` projects all of it
   into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
   catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
-  contracts; 144 of 754 today: JavaScript 68, TypeScript 32, React 30,
+  contracts; 144 of 769 today: JavaScript 68, TypeScript 32, React 30,
   Algorithms 14). Every free task reads Easy except two debugging paths whose
   authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
@@ -1655,7 +1655,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 799 tasks (754
+routes, unlocks and progress. The full catalogue contains 814 tasks (769
 issued, with system design hidden), and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass. A stage's
@@ -1887,3 +1887,28 @@ its section.
 ### Public FDE positioning (B13)
 
 The landing introduces the FDE path with existing landing primitives and reads its inventory from the fetched public manifest through `pathInventory`. Failed or pending catalogue reads show no invented inventory. The section remains a preview while its availability is disabled. The shared Premium inclusion list names FDE and states the free diagnostic/first-module boundary; the live page, upgrade sheet and static Premium article all reuse that list. These access claims require B12 before release. The public Learn description names all three sections.
+
+## DSA Advanced in Learn — 22 October 2026 (E4)
+
+Software Engineer adds `dsa-advanced` after DSA Foundations: fifteen levels,
+eight reviewed questions each, with the first five Foundations levels as the
+existing prerequisite milestone. Advanced levels and part tests are Premium
+throughout. The eight new lessons serve all fifteen levels in pairs, with a
+closing synthesis reading. Lesson reading itself remains public and records
+nothing under E1; starting a graded Advanced attempt enforces its tier.
+
+Sixteen heap/graph source concepts move from E3’s preserved holding bank into
+new `rm-dsaa-N` identities; their provenance is archived and unsupported old
+measurement anecdotes are removed. 104 original questions complete the bank.
+The fifteen new Algorithms tasks add server-only reference/junior/senior
+solutions, visible and hidden checks and thirty intentionally flawed variants.
+Nine existing Medium/Hard tasks keep their ids and graders but join matching
+Advanced levels; fresh placement reviews archive their previous records. Those
+band tasks now participate in Advanced Learn quotas only. Other band quotas
+stay unchanged.
+
+All 144 new/renewed item reviews are model self-reviews, explicitly independent:
+false. Automated checks prove the authored bounded cases, not every program’s
+complexity. The issued inventory is recomputed from the gated registry: 769
+coding tasks (480 Easy, 189 Medium, 100 Hard), 144 free, and 2134 served questions.
+The FDE production flag remains separate from this Learn topic.

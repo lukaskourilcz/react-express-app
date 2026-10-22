@@ -129,7 +129,7 @@ describe('the section switcher', () => {
     answer();
     await mountAt('/learn?topic=dsa');
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/software-engineer?topic=dsa'));
-    expect(await screen.findByRole('radio', { name: /^DSA/ })).toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: /^DSA Foundations/ })).toBeInTheDocument();
   });
 
   it('opens no level from a ?level deep link into a topic that is locked on this device', async () => {

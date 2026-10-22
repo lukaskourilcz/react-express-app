@@ -586,6 +586,12 @@ async function main() {
     if (!held && chosen.length === 0 && !ALLOW_GAPS) fail(`dsa level ${level} issues no coding task`);
     if (chosen.some((t) => t.verify === 'checklist' || formatOf(t) === 'debug')) fail(`dsa level ${level} would gate on a checklist or repair task`);
   }
+  // Advanced levels all seal aligned work, including the synthesis task.
+  for (let level = 1; level <= 15; level++) {
+    const chosen = levelCodingTasks('dsa-advanced', level);
+    if (chosen.length === 0 && !ALLOW_GAPS) fail(`dsa-advanced level ${level} issues no coding task`);
+    if (chosen.some(task => task.topic !== 'dsa-advanced' || task.level !== level)) fail(`dsa-advanced level ${level} seals misaligned work`);
+  }
   if (levelCodingTasks('algorithms', 1).length > 0 || levelCodingTasks('system-design', 0).length > 0) fail('only the Learn coding topics seal coding into a level');
 
   /* ── DSA Foundations (#493) ─────────────────────────────────────────── */
@@ -743,7 +749,12 @@ async function main() {
     const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
     if (visibleChecks < 5) fail(`${id}: at least five visible checks`);
     if (hiddenChecks < 4) fail(`${id}: at least four hidden checks`);
-    if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: a Medium or Hard band task never enters a Learn level's quota`);
+    const inLearnQuota = tasksForLevel(task.topic, task.level).some((one) => one.id === id);
+    // E4 admits the nine individually reviewed DSA Advanced placements. Other
+    // Medium and Hard band tasks stay outside Learn quotas.
+    if (task.topic === 'dsa-advanced') {
+      if (!inLearnQuota) fail(`${id}: a DSA Advanced placement must enter its Learn level's quota`);
+    } else if (inLearnQuota) fail(`${id}: a Medium or Hard band task never enters a Learn level's quota`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */

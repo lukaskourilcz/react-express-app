@@ -28,6 +28,7 @@ export const LEARN_ID_PREFIXES: Readonly<Record<string, string>> = {
   css: 'rm-css',
   git: 'rm-git',
   dsa: 'rm-dsa',
+  'dsa-advanced': 'rm-dsaa',
   algorithms: 'rm-algorithms',
   general: 'rm-general',
   ai: 'rm-ai',
