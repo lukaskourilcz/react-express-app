@@ -1901,17 +1901,22 @@ unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
 The accepted path response stores the actual award and the same complexity
 analysis used to choose it, so retries replay it without paying again.
 
-## OwnDashboard marketing source adapter
+## Marketing source export
 
-`GET /api/quiz/questions?resource=marketing-source` uses a dedicated owner
-integration bearer, fresh counted question overrides and the current curation
-gate. It exports bounded `marketing-source/1` packets with authored answers for
-questions and allowlisted prompts/starters for active coding tasks. Failed,
-truncated or changing override reads hold the export; serving fallbacks do not
-prove marketing eligibility. Retained invalid items yield tombstones, and hard
-removal answers 410 on a recheck. Dated daily packets reuse the platform selector
-and bind their revision to the actual `/daily/<date>` link. OwnDashboard owns
-usage, approvals and publication; this operation reads no learner records and
-adds no model calls or publishing credentials. See
-[marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
-limits and setup.
+`GET /api/quiz/questions?resource=marketing-source` (`lib/marketing/source.ts`)
+exports bounded `marketing-source/1` packets for OwnDashboard, the owner's
+separate marketing tool: questions with their authored answers and
+allowlisted prompts and starters of active coding tasks, behind the current
+curation gate and fresh question overrides. It reads no learner records and
+makes no model or publishing calls. A failed, truncated or changing override
+read holds the export, a retained invalid item yields a tombstone, and a hard
+removal answers 410 on a recheck. Dated daily packets reuse the platform
+selector and bind their revision to the real `/daily/<date>` link.
+
+The export is inactive. It needs a bearer secret of at least 32 characters in
+`DEVSHARK_MARKETING_EXPORT_SECRET`, which no Vercel environment sets, so the
+operation answers 503 `marketing_not_configured`. `npm run test:marketing`
+(part of `test:launch`) keeps the contract proven. Nothing in this repository
+posts to social networks. See
+[marketing-social-bridge.md](marketing-social-bridge.md) for the header
+contract and limits.
