@@ -35,7 +35,7 @@ A Learn question reaches a learner only when the audit ledger holds a passing re
 - The explanation says why the key is right and why each wrong option is wrong. `scripts/report-devshark-content.ts` flags an explanation over 100 words, a hint over 28 words, a key of ten words or more that runs four times the average distractor's length (a length cue) and joke distractors (`unseriousDistractor`).
 - Declare `snippet` when the question asks the learner to read code: `{ version: 1, language, subtype, objective }` from `SnippetMeta` in `shared/snippet-format.ts`. Declared, never inferred. A declared snippet needs a fenced block in the question or hint (`scripts/webdev-bank-contract.ts`). Restored entries declare `javascript`/`predict` with the entry's `objective` for any question containing a fenced `js` block (`restoredQuestions`); a restored question that asks for another kind of reading cannot say so.
 - `contentHash` covers the category, so moving a question to another topic is an edit the reviewer did not see (`contentHash` doc comment in `lib/curation.ts`).
-- Write original questions. Paraphrase closely only with attribution in the explanation and after checking the source's license (`docs/question-sources.md`, "Licensing"). Prefer why, when and trade-off questions over trivia (`docs/question-sources.md`, "Workflow", step 2).
+- Write original questions. Paraphrase closely only with attribution in the explanation and after checking the source's license (the "Licensing" note at the top of `docs/question-sources.md`). Prefer why, when and trade-off questions over trivia (`docs/question-sources.md`, "Workflow", step 2).
 
 ## The gate
 
