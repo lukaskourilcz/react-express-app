@@ -1,0 +1,4 @@
+interface:
+  display_name: "API Operation"
+  short_description: "Add an API operation within the handler budget"
+  default_prompt: "Use $api-operation to add this operation with its server authority, rate limits and launch contract."

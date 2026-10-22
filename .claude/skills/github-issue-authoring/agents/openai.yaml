@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Issue Authoring"
+  short_description: "Write issues with scope, blockers and acceptance"
+  default_prompt: "Use $github-issue-authoring to turn this scoped plan into issues with clear acceptance and verification."
