@@ -814,9 +814,10 @@ coding tier ladder), assertions grouped into named criteria (so a
 security-critical failure cannot be averaged away), and evidence recorded in
 `learning_path_*` only. A path pass writes no tier unlock. Verified coding activities use the shared
 canonical coding reward (migration 065): a reused ordinary task cannot earn a
-second first-pass reward, and a DSA exercise that became a coding task (#493)
-records under that task's id (`canonicalCodingTaskId`), so a path pass and a
-Coding pass share one record. Non-coding activities keep their existing reward rules.
+second first-pass reward. Until E5 (#496) retired the DSA path, a DSA exercise
+that had become a coding task (#493) recorded under that task's id, so a path
+pass and a Coding pass shared one record; those `alg-dsa-*` records stay.
+Non-coding activities keep their existing reward rules.
 Native code sessions bind exact activity/grader material and rubric version.
 A stale unaccepted session is refused before grading or evidence/XP writes;
 loading its latest brief keeps the editor source. Automatic retries send their previous
@@ -828,8 +829,9 @@ again. Runtime-only native grading changes must bump the attempt tag in
 `lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
-check (`purpose: 'project'`, the DSA final) deals the same questions again on a
-retry, only reshuffled, so after a failed attempt it returns only which
+check (`purpose: 'project'` on a check; none is published since E5 (#496)
+retired the DSA final, and the FDE capstone's project stages are code and
+written pieces) deals the same questions again on a retry, only reshuffled, so after a failed attempt it returns only which
 questions were wrong; the correct options and the explanations come back once
 it is passed. A diagnostic or exercise check returns them after every attempt.
 A domain-gated check needs its threshold overall and a minimum in every domain:
@@ -1852,7 +1854,7 @@ The four restored Strings questions remain in source with retired ledger rows.
 Heaps and graph questions are preserved in the unserved E4 holding file.
 
 All fifteen levels open with reading. The eighteen original readings now live
-in `lib/learn-lessons/dsa/` and remain shared with the legacy path until E5;
+in `lib/learn-lessons/dsa/` and are Learn-only since E5 (#496) retired the path;
 five paired readings group intact lessons, and two synthesis readings close
 the topic. Every level except the closing review seals its aligned coding
 tasks. Coding reached through a free Learn level uses that level's access

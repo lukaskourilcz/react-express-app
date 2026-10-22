@@ -299,7 +299,7 @@ export function resetAnalytics(): void {
 /* ── learning-path pilot funnel ────────────────────────────────────────── */
 
 /**
- * The four events the FDE and DSA pilot needs, with an explicit allow-list of
+ * The four events the FDE path pilot needs, with an explicit allow-list of
  * properties.
  *
  * Nothing a learner wrote ever leaves the app: no code, no free text, no
