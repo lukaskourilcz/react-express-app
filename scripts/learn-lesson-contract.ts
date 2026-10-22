@@ -62,11 +62,13 @@ export async function learnLessonContracts() {
       assert.ok(LEARN_LESSONS.has(id), `${topic} level ${level} names a lesson the registry holds (${id})`);
     }
   }
-  assert.deepEqual(LEVEL_LESSONS.dsa, { 1: 'dsa-v1-d01-l1', 2: 'dsa-v1-d01-l2' }, 'the Big O introduction is DSA levels 1 and 2, the first two DSA lessons');
+  assert.equal(LEVEL_LESSONS.dsa?.[1], 'dsa-v1-d01-l1');
+  assert.equal(LEVEL_LESSONS.dsa?.[2], 'dsa-v1-d01-l2');
+  assert.equal(Object.keys(LEVEL_LESSONS.dsa ?? {}).length, 15, 'every Foundations level has its reading');
   const dsaMap = topicLevels('dsa');
   assert.equal(dsaMap[0].lessonId, 'dsa-v1-d01-l1');
   assert.equal(dsaMap[1].lessonId, 'dsa-v1-d01-l2');
-  assert.ok(dsaMap.slice(2).every((level) => level.lessonId === undefined), 'a level without a lesson carries no lessonId');
+  assert.ok(dsaMap.every((level) => level.lessonId && LEARN_LESSONS.has(level.lessonId)), 'all fifteen DSA levels resolve their reading');
   assert.ok(topicLevels('javascript').every((level) => !('lessonId' in level)), 'other topics behave as before');
   const byId = await getEffectiveQuestionsById();
   const live = buildLiveTopic('dsa', (id) => byId.has(id));
@@ -81,14 +83,16 @@ export async function learnLessonContracts() {
 
   // ── the same words as the path ──────────────────────────────────────────
   const pathLessons = LEARNING_PATHS.flatMap((path) => path.modules.flatMap((module) => module.lessons));
-  for (const [id, lesson] of LEARN_LESSONS) {
-    const inPath = pathLessons.find((one) => one.id === id);
-    assert.ok(inPath, `${id} is still a path lesson`);
+  for (const inPath of pathLessons.filter(one => one.id.startsWith('dsa-v1-') && LEARN_LESSONS.has(one.id))) {
+    const id = inPath.id;
+    const lesson = LEARN_LESSONS.get(id)!;
     // What the path's lesson activity sends (lib/learning-paths/handlers.ts).
     assert.deepEqual(lessonProjection(lesson), { id: inPath.id, title: inPath.title, sections: inPath.sections, sources: inPath.sources },
       `${id}: Learn serves the path's text, unchanged`);
     assert.deepEqual(Object.keys(lessonProjection(lesson)).sort(), ['id', 'sections', 'sources', 'title'], `${id}: the projection names its fields`);
   }
+
+  assert.equal(pathLessons.filter(one => one.id.startsWith('dsa-v1-') && LEARN_LESSONS.has(one.id)).length, 18, 'all eighteen original DSA readings stay shared with the path');
 
   // ── a guest reads it, cached by its hash ────────────────────────────────
   const first = publicLesson('dsa-v1-d01-l1')!;

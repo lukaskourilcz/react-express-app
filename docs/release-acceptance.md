@@ -5792,3 +5792,51 @@ The FDE path stays switched off in production, so no learner sees the new fields
 PR #530 is merged at `d03f263288923d7537fd61ad30aafba17c983b41`. Its required `verify` and `sql` checks passed in run `39692357767` after retrying the browser download failure. On the merged tree `db5e392e`, Node 24.22.1 passed nine selected CI-parity steps in 3.19 minutes: API/scripts types, native-review audit, build, bundle, launch, grading integrity, path authority and full path content. The initial download measured 239,389 gzip bytes against 241,651. READY production `dpl_6hBTzKD3K5N9X5sZwvEz4f4KMNc6` matches the merge SHA. A read-only 390px Chromium check of devshark.app showed 29 DSA task rows with three free task links, the DSA Learn link resolving to Software Engineer, and no page errors. The first smoke assertion incorrectly expected every task row to be a link; the corrected assertion checks all rows and the three free links separately. No signed-in coding submission was performed.
 
 PR #533 is merged at `5d61ab0d6d3e8afd209464964782dacb56d6de08`. Required checks passed in run `39691864470`. Its integration tree `10f09d89` passed API/scripts types, native-review audit, launch and the full path suite in 1.60 minutes. READY production `dpl_A9cXjwTXbpJ3eQv9U6dPY6ptL5fW` matches the merge SHA. The guest DSA listing check above also passed on this later deployment. The FDE path remains switched off, so this is publication evidence for the authored artifacts rather than authenticated path acceptance.
+
+## Data plumbing, tools and evaluation — 22 October 2026
+
+B6, PR #535, merged at `0f11f701e6611c8c11878ff127163adce8d92020` after required run `39691896523` passed. Clean integration tree `8413812d` passed the five content/type parity steps in 1.57 minutes (Node 24.22.1, `artifacts/codex-pr535-merged`). Production `dpl_23pcYM9tNeJHiSGZhSAyQU6sRxKD` is READY at that SHA. B7, PR #534, merged at `b5c184bec6e250c3c9bd8b4a9d13bd649a06be18` after required run `39708140950` passed on integrated head `537d00f0`; five local content/type parity steps passed in 1.41 minutes (`artifacts/codex-b7-updated-main`). Production `dpl_EbG3W8FsiiJT9kH6FmUTpYAZcNca` is READY at that merge SHA.
+
+Both publications retain the FDE production switch as off. No authenticated module completion, live model call or external vendor integration is claimed. The checked examples and tool traces are fixtures.
+
+## Path authoring workflow — 22 October 2026
+
+C4, PR #540, merged at `2bb4855cd40b6ae7023e92f1c33f8cd84462ed76` with required run `39708320451` green. Head `cc2521f5` passed five selected parity steps in 1.69 minutes (`artifacts/codex-c4-final`, Node 24.22.1) and skill validation. The temporary authored test module was removed after its real content tests passed. An independent read-forward review corrected overstated validator guarantees, teaching guidance and stale examples. This is a workflow-only change; no runtime or schema rollout is claimed.
+
+## English-only public pages — 22 October 2026
+
+D3, PR #542, merged at `d639df26ee09c040bc2474f3cae521a887b0fdf0`; required run `39709841473` passed. The final two tooling/launch parity steps passed in 0.88 minutes (`artifacts/codex-d3-final`, Node 24.22.1). Build/public output had 15 sitemap URLs, no second-language addresses and no hreflang alternates. Thirteen browser checks and fourteen responsive probes passed. Initial analytics/prepaint fixture assertions were corrected before the final checks.
+
+Preview `dpl_EEUs8wK71c8TYQKW1C6J1sjL2LRQ` and production `dpl_DLH4CcS4HfNdWM1VckFRVgCEJ6Ko` are READY at their checked heads. A read-only 390px Chromium check on devshark.app confirmed `/cs/topics/javascript-closures` returns HTTP 404 and the app not-found heading, with no-store and noindex. Preview response inspection also checked the CSP bootstrap hash. No account or production record was created.
+
+## Reading before Learn questions — 22 October 2026
+
+E1, PR #541, merged at `02875113300fc66ec5e64b8ba17e36c398b168a1` with required run `39709836239` green on head `67fe15ef`. Seven selected parity steps passed in 4.15 minutes (`artifacts/codex-e1-targeted`, Node 24.22.1), along with nine focused client checks and two browser cases across seven widths, both themes and axe. Production `dpl_G4rsbALqgQRuVzCLrsSfeKfMCryj` is READY at the merge SHA.
+
+On devshark.app at 390px, a guest opened `/learn/big-o`, chose Complexity Basics and saw “Counting work, not seconds”, with no page errors and no non-GET roadmap requests. The lesson endpoint returned 200, its explicit lesson/hash projection, public max-age 300 and a hash ETag. Two initial smoke attempts omitted the lesson-button click; the corrected navigation passed. Reading records no attempt or progress. No signed-in level completion was performed in production.
+
+## Enterprise identity content — 22 October 2026
+
+B5, PR #537, merged at `fc0cbe2e83209a7def14daa742d6d3325c5b5f12`. Required run `39710700413` passed after retrying npm security-endpoint timeouts; its coding job passed in 28m02s. Clean integration tree `6214df07` passed API/scripts types, path content, launch and exact native-review bindings in 1.46 minutes (`artifacts/codex-b5-current-main`, Node 24.22.1).
+
+Production `dpl_BEcuDZV4x34qAfHjUyiKTQUeNTG6` is READY at the merge SHA. A read-only catalogue GET on that deployment returned 200 and the Enterprise boundaries and identity module with its delegated-access/SSO/webhook/audit reading and tenant-scoped webhook exercise. Availability remains disabled. No production enrollment, signed-in submission or switch-on was performed.
+
+## Workflow and documentation inventory — 22 October 2026
+
+C7, PR #544, merged at `e03d69446e8dc987091b43881aa87ccadbc40219`. Required run `39712881596` passed after retrying the same npm endpoint timeout. Clean integration tree `4136521d` included B5 and passed the launch parity step in 0.72 minutes (`artifacts/codex-c7-current-main`, Node 24.22.1). Both instruction maps list all 46 current workflows; the added skill descriptors were checked for their required shape. This documentation-only change introduces no runtime or schema behavior and needs no authenticated production acceptance.
+
+## Canonical FDE section addresses — 22 October 2026
+
+A3, PR #543, merged at `12b3f17f4d09d7ee7f4804179f1b832a6812ec5a`; required run `39712723315` passed after retrying npm audit timeouts. Initial full parity found fixture/type errors and an unmounted FDE shelf; those were corrected. Clean integration tree `f0a3a9c9` passed seven relevant checks in 2.65 minutes and 32 browser cases passed in 1.3 minutes, including the current B5/C7 tree. The later CI-install-only integration passed the parity plan check.
+
+Production `dpl_BmhJqrej5xr5SdUaoiJS2bpBvwnW` is READY at the merge SHA. A read-only 390px guest check on devshark.app followed both legacy overview and module addresses through HTTP 308 to their canonical Learn addresses, preserving query and fragment; the FDE section shelf points there. No page errors or API writes occurred. This did not complete an authenticated path activity.
+
+## Deployment and release-gate curriculum — 22 October 2026
+
+B8, PR #536, merged at `b09a24df72f46541b3c030a319209a38dcf5b02b`; required run `39718231957` passed. Clean current-main integration `abdd25d8` passed five API/scripts/path/launch/native-review checks in 1.65 minutes (`artifacts/codex-b8-current-main`, Node 24.22.1). An existing auth-recovery test was corrected to await its specific heading before the successful rerun.
+
+Production `dpl_EfMNsmEY4Cza7MhTa5tbnHxgdhSa` is READY at the merge SHA. Its catalogue returned HTTP 200 with the deployment module, two sourced lessons, six-question check and release-gate code activity. Availability remains disabled. No live infrastructure, authenticated submission or production flag change was performed.
+
+## CI install audit separation — 22 October 2026
+
+Maintenance PR #546 merged at `8189bae09d8ffbcc3437ac13b1ffb33d7e827462`, required run `39717156563` green. All five CI install steps now match local parity with `npm ci --no-audit`; the explicit root/client production audit gates remain required and both passed after the npm endpoint recovered. Clean head `f38914b0` passed launch parity in 0.68 minutes; the current-main integration passed the parity-plan check. This is CI configuration only.

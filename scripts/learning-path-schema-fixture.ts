@@ -34,7 +34,7 @@ export function schemaFixtureSource(): PathSource {
     ],
     modules: [
       {
-        id: 'fde-v1-x01',
+        id: 'fde-v1-x01', deliveryPhase: 'discover-scope',
         title: 'Decomposition cases',
         outcomes: ['Ask the first question that narrows a vague complaint'],
         competencies: ['scoping', 'integration'],

@@ -34,7 +34,7 @@ const ACTIVITY_SUMMARY_KEYS = new Set([
 ]);
 const MODULE_SUMMARY_KEYS = new Set([
   'id', 'title', 'outcomes', 'competencies', 'dependsOn', 'lessons', 'activities', 'requires', 'estimatedMinutes',
-  'optional', 'shelf',
+  'optional', 'shelf', 'deliveryPhase',
 ]);
 const MANIFEST_KEYS = [
   'id', 'kind', 'version', 'title', 'summary', 'outcomes', 'nonGoals', 'entryRequirement', 'competencies', 'modules',
@@ -113,6 +113,8 @@ export function schemaContracts(fail: Fail): void {
     delete shelf.optional;
     shelf.requires = [{ activityId: 'fde-v1-ip01-check', state: 'verified_pass' }];
   }, ['shelf_not_optional', 'optional_requirements']);
+  expectErrors('unknown delivery phase', (s) => { (moduleOf(s, LOOP) as { deliveryPhase?: string }).deliveryPhase = 'other'; }, ['unknown_delivery_phase']);
+  expectErrors('missing delivery phase', (s) => { delete moduleOf(s, LOOP).deliveryPhase; }, ['missing_delivery_phase']);
   expectErrors('unknown shelf', (s) => { (moduleOf(s, SHELF) as { shelf?: string }).shelf = 'other'; }, ['unknown_shelf']);
   expectErrors('two-question scenario', (s) => { activityOf(s, 'fde-v1-x01-case').questions!.pop(); }, ['scenario_too_few_questions']);
   expectErrors('three-question scenario', () => {}, [], ['scenario_too_few_questions']);

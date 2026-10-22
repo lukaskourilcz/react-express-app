@@ -1,3 +1,4 @@
+import { DELIVERY_PHASES } from '../../shared/learning-path-phases';
 /** The learning-path content validator.
  *
  * Publishing authority stays with code review; this is the mechanical half of
@@ -382,6 +383,12 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       issues.push(...validateActivity(path, module.id, activity, seenActivities, competencyIds, rubricIds, lessonIds));
     }
 
+    if (module.deliveryPhase !== undefined && !(DELIVERY_PHASES as readonly string[]).includes(module.deliveryPhase)) {
+      issues.push(error('unknown_delivery_phase', mAt, `unknown delivery phase ${module.deliveryPhase}`));
+    }
+    if (path.id === 'fde' && !isOffLoopModule(module) && module.id !== 'fde-v1-c01' && module.deliveryPhase === undefined) {
+      issues.push(error('missing_delivery_phase', mAt, 'an FDE loop module needs its delivery phase'));
+    }
     if (module.shelf !== undefined && !(MODULE_SHELVES as readonly string[]).includes(module.shelf)) {
       issues.push(error('unknown_shelf', mAt, `unknown shelf ${module.shelf}`));
     }
