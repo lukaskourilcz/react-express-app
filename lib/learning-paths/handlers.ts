@@ -427,7 +427,10 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     try {
       const rows = await loadEnrollments(supabase, userId);
       res.setHeader('Cache-Control', 'private, no-store');
-      const body: EnrollmentListResponse = { enrollments: rows.map(toEnrollment) };
+      // A stored row of a retired path (dsa-foundations, E5 #496) stays in the
+      // table but is not a path the client can open, so it is left out here
+      // rather than cast to a LearningPathId.
+      const body: EnrollmentListResponse = { enrollments: rows.filter((row) => isLearningPathId(row.path_id)).map(toEnrollment) };
       return res.json(body);
     } catch (error) {
       if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;

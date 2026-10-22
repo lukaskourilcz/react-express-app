@@ -353,6 +353,51 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a stored enrollment of the retired DSA path ─────────────────── */
+    // E5 (#496) deletes no data, so a learning_path_enrollments row with
+    // path_id 'dsa-foundations' may still exist beside an FDE one. The list
+    // leaves it out instead of casting it to a LearningPathId, and progress
+    // or an activity start on it answers 404 without reaching any path data.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const retiredId = `RETIRED${stamp}`.padEnd(20, 'a');
+      const fdeId = `FDELIST${stamp}`.padEnd(20, 'a');
+      const retiredRow = { ...enrollmentRow('active'), enrollment_id: retiredId, path_id: 'dsa-foundations', curriculum_version: 1 };
+      const fdeRow = { ...enrollmentRow('active'), enrollment_id: fdeId, path_id: 'fde', curriculum_version: fde.version };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        let res = response();
+        await handleEnrollment(request('GET', `retired-list-${stamp}`, { user_id: learner }), res as never,
+          fakeSupabase({ lists: { learning_path_enrollments: [fdeRow, retiredRow] } }));
+        const listed = (res.body as { enrollments?: { enrollmentId: string; pathId: string }[] } | undefined)?.enrollments ?? [];
+        if (res.statusCode !== 200) fail(`listing enrollments beside a retired row answered ${res.statusCode} ${code(res)}`);
+        if (listed.some((one) => one.pathId === 'dsa-foundations' || one.enrollmentId === retiredId)) fail('a stored dsa-foundations enrollment reached the client');
+        if (listed.length !== 1 || listed[0]?.enrollmentId !== fdeId || listed[0]?.pathId !== 'fde') fail('the FDE enrollment beside a retired row was not listed');
+
+        const touched: string[] = [];
+        const retiredDb = fakeSupabase({ rows: { learning_path_enrollments: retiredRow }, lists: { learning_path_progress: [] },
+          onQuery: (table, op) => { if (op === 'select') touched.push(table); },
+          rpc: (name) => (fail(`a retired enrollment reached RPC ${name}`), {}) });
+        res = response();
+        await handlePathProgress(request('GET', `retired-progress-${stamp}`, { user_id: learner }, { query: { enrollmentId: retiredId } }), res as never, retiredDb);
+        if (res.statusCode !== 404 || code(res) !== 'not_found') fail(`progress on a retired enrollment answered ${res.statusCode} ${code(res)}`);
+
+        const activityId = 'dsa-v1-d01-linear-accumulator';
+        const req = request('POST', `retired-start-${stamp}`, { user_id: learner, enrollmentId: retiredId, activityId });
+        res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(req, res as never, retiredDb);
+        });
+        if (res.statusCode !== 404 || code(res) !== 'not_found') fail(`starting an activity on a retired enrollment answered ${res.statusCode} ${code(res)}`);
+        if (touched.some((table) => table !== 'learning_path_enrollments')) fail(`a retired enrollment read path data: ${touched.join(', ')}`);
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── every off-loop decision goes through one helper ──────────────── */
     // A shelf module is off the loop even if its optional flag slipped. The
     // validator refuses that, but completion, the next action and the reward's

@@ -37,6 +37,7 @@ const state = vi.hoisted(() => ({
   availability: 'available',
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
   progressLoaded: true,
+  progressRequests: [] as string[],
   shelf: false,
   noArtifacts: false,
   secondModule: false,
@@ -95,7 +96,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
     },
     pathProgressQuery: (_user: string | undefined, enrollmentId: string | undefined) => ({
       queryKey: ['learning-path', 'progress', 'test', enrollmentId ?? ''],
-      queryFn: () => (state.progressLoaded
+      queryFn: () => (state.progressRequests.push(enrollmentId ?? ''), state.progressLoaded
         ? Promise.resolve(progressFor(state.enrollments.find((one) => one.enrollmentId === enrollmentId)!.pathId))
         : new Promise(() => {})),
       staleTime: Infinity,
@@ -107,7 +108,9 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   };
 });
 
-const enrolled = (pathId: 'fde', status = 'active') => ({ enrollmentId: `ENROLL-${pathId}-0000000000`, pathId, curriculumVersion: 1, status });
+// 'dsa-foundations' is the retired path (E5, #496): its stored rows are not
+// deleted, so a test may still hand one to the client.
+const enrolled = (pathId: 'fde' | 'dsa-foundations', status = 'active') => ({ enrollmentId: `ENROLL-${pathId}-0000000000`, pathId, curriculumVersion: 1, status });
 
 beforeAll(async () => {
   const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
@@ -129,6 +132,7 @@ beforeEach(() => {
   state.availability = 'available';
   state.enrollments = [];
   state.progressLoaded = true;
+  state.progressRequests = [];
   state.shelf = false;
   state.noArtifacts = false;
   state.secondModule = false;
@@ -326,6 +330,17 @@ describe('Today', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Learning paths' })).toBeInTheDocument());
     expect(screen.queryByText('Skill path')).toBeNull();
     expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
+  });
+
+  it('offers nothing, and asks for no progress, for a stored enrollment of the retired DSA path', async () => {
+    const retired = enrolled('dsa-foundations');
+    state.enrollments = [enrolled('fde'), retired];
+    await today();
+    await waitFor(() => expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument());
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: /dsa-foundations/ })).toBeNull();
+    expect(state.progressRequests).toEqual([enrolled('fde').enrollmentId]);
+    expect(state.progressRequests).not.toContain(retired.enrollmentId);
   });
 
   it('offers the free next step after Premium lapses', async () => {
