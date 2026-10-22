@@ -90,13 +90,13 @@ async function refuseSavedLock(res: VercelResponse, supabase: SupabaseClient, us
 /* ── saved challenges and collections ─────────────────────────────────── */
 
 async function readBookmarks(supabase: SupabaseClient, userId: string): Promise<CodingBookmarksResponse | 'missing' | 'error'> {
-  const saved = await withTimeout(
-    supabase.from('coding_bookmarks').select('task_id').eq('user_id', userId).order('created_at', { ascending: false }),
-  );
+  // The saved list and the collections are independent reads; only the
+  // collections' items wait for the collection ids.
+  const [saved, collections] = await Promise.all([
+    withTimeout(supabase.from('coding_bookmarks').select('task_id').eq('user_id', userId).order('created_at', { ascending: false })),
+    withTimeout(supabase.from('coding_collections').select('collection_id,name,position').eq('user_id', userId).order('position')),
+  ]);
   if (saved.error) return isRpcMissing(saved.error) ? 'missing' : 'error';
-  const collections = await withTimeout(
-    supabase.from('coding_collections').select('collection_id,name,position').eq('user_id', userId).order('position'),
-  );
   if (collections.error) return isRpcMissing(collections.error) ? 'missing' : 'error';
   const ids = (collections.data ?? []).map((row) => String(row.collection_id));
   const items = ids.length
