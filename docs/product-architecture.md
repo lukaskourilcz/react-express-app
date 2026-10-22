@@ -982,7 +982,7 @@ no claim about employment.
 
 Finishing the path would also earn the merchandise package
 (`path_is_complete`, every module completed within the one enrolment of the
-published curriculum version). Merchandise is paused ("Coins"), so
+published curriculum version). Merchandise is paused ("Merchandise"), so
 `learning-path-reward` answers 404 `merch_unavailable` today.
 
 ## Practice, scheduling and what the product claims about it
@@ -1785,46 +1785,40 @@ passes, by the rule above. The longer projects stay where they were: ten on
 the Coding home and the three apps on the FullStack screen. So the registry
 counts fourteen projects with 146 stages and fifteen paths with 75 levels.
 
-## Owner decisions of 1 October 2026: merchandise, Premium copy, Shark Cards
+## Merchandise
 
-**Merchandise is paused until next quarter (decision 10).** No package has
-shipped, and the first merchandise package comes next quarter. One switch,
-`MERCH_ENABLED` in `shared/rewards.ts`, is false until then, and with it:
+Merchandise is paused (owner decision, 1 October 2026). No package has
+shipped. One switch, `MERCH_ENABLED` in `shared/rewards.ts`, is false, and
+with it:
 
-- the server answers `op=orders` GET and POST and `op=learning-path-reward` GET
-  and POST with 404 `merch_unavailable` before touching the database, whatever
-  the owner's shop settings say. Cancelling an order (`op=orders` DELETE)
-  stays, so an order from before the pause can still be stopped and its coins
+- the server answers `op=orders` GET and POST and `op=learning-path-reward`
+  GET and POST with 404 `merch_unavailable` before touching the database,
+  whatever the owner's shop settings say. Cancelling an order (`op=orders`
+  DELETE) stays, so an older order can still be stopped and its coins
   returned;
-- `op=shop` lists no item and reports the shop and cash checkout off; the crown
-  and streak protection are unchanged;
+- `op=shop` lists no item and reports the shop and cash checkout off; the
+  crown and streak protection are unchanged;
 - `/api/settings` reports redemption closed (`merchRedemptionOpen` checks the
   switch) and asks Spreadshop for no promotion;
-- the browser shows no merchandise section, redemption form, orders and claims,
-  path package (`PathRewardClaim` is not mounted), Premium merchandise line or
-  coin row in the plan table, even when a cached settings answer says
-  otherwise. The Terms no longer mention merchandise. `/dev` → Merchandise
-  stays, with a banner that says merchandise is off.
+- the browser shows no merchandise section, redemption form, orders and
+  claims, path package (`PathRewardClaim` is not mounted), Premium
+  merchandise line or coin row in the plan table, even when a cached settings
+  answer says otherwise. The Terms do not mention merchandise. `/dev` →
+  Merchandise stays, with a banner that says merchandise is off.
 
 The tables (`merch_orders`, `merch_stock`, `path_reward_claims`), the routines
-and the handlers' merchandise code stay; the handlers take the switch as a last
-parameter only so the contracts can still drive that code. `delete_user_data`
-still erases orders. Turning merchandise back on is the switch plus the copy
-and the Terms lines that were taken out with it.
+and the handlers' merchandise code stay; the handlers take the switch as a
+last parameter so the contracts can still drive that code, and
+`delete_user_data` still erases orders. Turning merchandise back on is the
+switch plus the copy and the Terms lines that went out with it. How
+merchandise works once it is on is under "Coins".
 
-**Premium copy shows reality (decision 11).** The yearly plan no longer says
-"Two months free". `annualSaving` in `shared/launch-offer.ts` works out twelve
-months of the monthly price minus the yearly price in cents, and `/premium`
-prints "Save 7.89 EUR a year" at the regular prices and "Save 3.60 EUR a year"
-next to the launch prices while the launch offer shows them (1.80 × 12 − 18.00).
-The static `/premium` prints the regular saving. The 14-day refund line in the
-small print, the FAQ answer and the account-deletion note say "once per
-account", as the Terms and `claimRefund` (`lib/billing/cancel.ts`) do.
+## Shark Cards
 
-**Shark Cards are saved questions that explain their topic (decision 12).** The
-collectible card packs are retired: `op=cards` answers 410 `gone`, nothing calls
-`grant_daily_queue_cards`, and `shared/cards.ts` is gone. `user_cards` and its
-rows stay, and `delete_user_data` still erases them (SQL test 200).
+Shark Cards are saved questions that explain their topic. The collectible
+card packs are retired: `op=cards` answers 410 `gone`, and nothing grants
+cards. `user_cards` and its rows stay, and `delete_user_data` still erases
+them (SQL test 200).
 
 - **Saving.** Wherever a graded explanation is shown (the quiz and daily
   challenge review, the question of the day, a wrong Learn answer, and the
@@ -1832,24 +1826,23 @@ rows stay, and `delete_user_data` still erases them (SQL test 200).
   "Save as Shark Card" (`SaveSharkCard.tsx`). It saves a `flashcards` row
   through `/api/flashcards`: the question, its topic, and the correct option
   and explanation the grading of the learner's own answer returned. Pressed
-  again it takes the card out. The button does not read the deck; it knows a
-  card is saved from the deck when this visit read it, else from this device's
-  bookmark list.
-- **No answer leaks.** `/api/flashcards` stores what the learner was shown after
-  grading and reads the bank only to check the question belongs to the subject
-  and to take its category. It never reads an answer or an explanation from
-  the bank, so saving a card for an unanswered question reveals nothing, and
-  every read, write and delete is filtered to the caller's own rows. The launch
-  contracts (`scripts/product-cleanup-contracts.ts`) hold both.
-- **Review.** `/collection` opens on the Shark Cards tab (the navigation says
-  Shark Cards; saved coding challenges are the second tab), and `/cards` shows
-  the same deck on its own. One card at a time: the front is the question and
-  its topic; "Show the answer" turns it to the correct answer, the
-  explanation and "Learn this topic", which goes to the question's own Learn
-  level (`rm-<topic>-<n>` ids, eight per level), else the topic in Learn, else
-  a quiz on a topic Learn does not teach (`sharkCardStudyLink`). Previous and
-  Next (and ← →) move through the deck; "Got it" takes the card out with an
-  Undo. Empty, signed-out, loading and error states say how to get cards.
+  again, it takes the card out. The button knows a card is saved from the
+  deck when this visit read it, else from this device's bookmark list.
+- **No answer leaks.** `/api/flashcards` stores what the learner was shown
+  after grading and reads the bank only to check the question belongs to the
+  subject and to take its category. It never reads an answer or an
+  explanation from the bank, so saving a card for an unanswered question
+  reveals nothing, and every read, write and delete is filtered to the
+  caller's own rows. `scripts/product-cleanup-contracts.ts` holds both.
+- **Review.** `/collection` opens on the Shark Cards tab (saved coding
+  challenges are the second tab), and `/cards` shows the same deck on its
+  own. One card at a time: the front is the question and its topic; "Show
+  the answer" turns it to the correct answer, the explanation and "Learn this
+  topic", which goes to the question's own Learn level (`rm-<topic>-<n>` ids,
+  eight per level), else the topic in Learn, else a quiz on a topic Learn does
+  not teach (`sharkCardStudyLink`). Previous and Next (and ← →) move through
+  the deck; "Got it" takes the card out with an Undo. Empty, signed-out,
+  loading and error states say how to get cards.
 
 ## Marketing source export
 
