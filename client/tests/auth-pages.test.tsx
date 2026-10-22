@@ -192,7 +192,7 @@ describe('/reset-password', () => {
       http.post(`${AUTH}/logout`, () => new HttpResponse(null, { status: 204 })),
     );
     await openPage(`/reset-password${linkFragment('recovery')}`);
-    expect(await h1()).toHaveTextContent('Set a new password');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Set a new password' })).toBeInTheDocument();
     expect(screen.getByText('Choose a new password for ada@example.com.')).toBeInTheDocument();
     expect(screen.getByLabelText('New password')).toHaveAttribute('autocomplete', 'new-password');
     expect(screen.getByLabelText('Confirm new password')).toHaveAttribute('autocomplete', 'new-password');

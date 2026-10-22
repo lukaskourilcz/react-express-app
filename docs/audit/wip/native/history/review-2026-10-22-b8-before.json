@@ -1,0 +1,148 @@
+[
+  {
+    "id": "fde-v1-m08-l2",
+    "kind": "native-lesson",
+    "path": "fde",
+    "module": "fde-v1-m08",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m08.ts",
+    "contentHash": "83c98d166d5376dc",
+    "previousHash": "0276f0008ff00704",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Enforce an explicit per-call limit and distinguish cumulative budgets, recovery policy and bounded adversarial evidence.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Bounded tool agency remains current.",
+      "practicalUtility": "An enforced cap limits one effect.",
+      "transferable": "Per-call and cumulative effects differ.",
+      "audienceFit": "The 25-case policy has explicit testable boundaries.",
+      "riskOutcome": "Corrects unenforced flags and overstated restore/security evidence."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read both tables, registry snippet, six lifecycle frames and all prose/callouts. Decorative maxIds previously enforced nothing; handler now validates ids and refuses an entire 200-id proposal before DB access. A separate 25-case proposal requires its own approval, not automatic truncation. A stipulated 30-day restore and purge is not a guarantee implemented by a metadata string or removal of backups. Rate and cumulative budgets address repeated calls separately. Selected benign/injected probes do not establish all-branch security or structural-field authorship.",
+    "evidence": [
+      "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
+      "repo: lib/learning-paths/content/fde/m08.ts l2",
+      "run: check-native-2026-10-15-n038.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n038-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n038"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Final full reading and inert recorder check verify 200-id/blank refusals, one 25-id call with trusted context and 30−12=18 arithmetic. No real approval, recovery, deletion, model, database or cumulative-control implementation was exercised. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
+        "repo: lib/learning-paths/content/fde/m08.ts l2",
+        "run: check-native-2026-10-15-n038.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n038-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "fde-v1-m08-l2-read",
+    "kind": "native-activity",
+    "path": "fde",
+    "module": "fde-v1-m08",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m08.ts",
+    "contentHash": "01d787d3a5d45c1e",
+    "previousHash": "14671ddeda599557",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Open the reviewed limits, recovery and adversarial-evidence lesson.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Agency constraints remain relevant.",
+      "practicalUtility": "The action links to reviewed material.",
+      "transferable": "Recovery claims need implemented evidence.",
+      "audienceFit": "Summary matches concrete cap and lifecycle examples.",
+      "riskOutcome": "Avoids claiming a reading action validates operations."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read linked lesson completely and verify exact lessonId. Summary names enforced per-call/cumulative limits, explicit recovery policy and bounded adversarial evidence. Retain title, time, competency and self-review semantics.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m08.ts l2-read and l2",
+      "run: check-native-2026-10-15-n038.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n038-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n038"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Final reading confirms fde-v1-m08-l2. No live restore/purge, human approval or independent acceptance is inferred from this reading activity. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m08.ts l2-read and l2",
+        "run: check-native-2026-10-15-n038.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n038-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  }
+]
