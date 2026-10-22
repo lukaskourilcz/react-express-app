@@ -53,3 +53,5 @@ ffmpeg -i devshark-demo.mp4 -an -vf "scale=1280:-2" -r 30 -c:v libvpx-vp9 -crf 3
 The CRF value is a starting point, not a measured quality guarantee. Inspect code readability and test file size; lower CRF for sharper text if needed. [Official WebM VP9 encoding guide](https://wiki.webmproject.org/ffmpeg/vp9-encoding-guide), [FFmpeg codec options](https://ffmpeg.org/ffmpeg-codecs.html#libvpx).
 
 `HomeVideoBanner` accepts `webmSrc`, `posterSrc` and optional `mp4Src`. Add the finished public assets and pass that object from `Home.tsx`. Until then, pass no video: there is no media request, fake play button, carousel, editor or quiz. Playback is explicit using native controls, with `preload="none"`, inline playback and no autoplay/loop. This avoids automatic motion, including for visitors who prefer reduced motion. The existing unrelated `preview.webm` is not used.
+
+Update, 22 October 2026: `HomeVideoBanner` was removed unused, with its styles and copy. A finished recording would bring it back from Git history (commit `7da6301a` deletes it) with the playback rules above.
