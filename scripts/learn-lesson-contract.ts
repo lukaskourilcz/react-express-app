@@ -14,6 +14,7 @@ import roadmapHandler from '../api/quiz/roadmap';
 import { checkRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 import { handleLessonRead, LESSON_CACHE_CONTROL } from '../lib/learn-lessons/serve';
 import { LEARN_LESSONS, lessonProjection, publicLesson } from '../lib/learn-lessons';
+import { nativeContentHash } from '../lib/learning-paths/audit';
 import { LEVEL_LESSONS } from '../lib/learn-lessons/levels';
 import { buildLiveTopic, isRoadmapTopic, isValidLevel, topicLevels } from '../lib/roadmap';
 import { getEffectiveQuestionsById } from '../lib/questions-store';
@@ -92,6 +93,19 @@ export async function learnLessonContracts() {
     assert.deepEqual(Object.keys(lessonProjection(lesson!)).sort(), ['id', 'sections', 'sources', 'title'], `${id}: the projection names its fields`);
   }
   assert.equal([...LEARN_LESSONS.keys()].filter((id) => id.startsWith('dsa-v1-')).length, 18, 'all eighteen original DSA readings stay in Learn');
+  // Each reading is still the text its native-lesson review read: the records
+  // in docs/audit/wip/native/learn bind it by content hash, so an edit to a
+  // reading fails here until it is reviewed again (audit:native-reviews too).
+  const reviewed = new Map(readFileSync(join(process.cwd(), 'docs/audit/wip/native/learn/review-dsa-readings.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((line) => JSON.parse(line) as { id: string; kind: string; contentHash: string })
+    .map((record) => [record.id, record]));
+  for (const id of originalReadings) {
+    const record = reviewed.get(id);
+    assert.ok(record, `${id}: the reading keeps its native-lesson review`);
+    assert.equal(record!.kind, 'native-lesson', `${id}: the review is a lesson review`);
+    assert.equal(nativeContentHash(LEARN_LESSONS.get(id)), record!.contentHash, `${id}: Learn serves exactly the reviewed reading`);
+  }
+  assert.equal(reviewed.size, originalReadings.length, 'one review per original reading');
 
   // ── a guest reads it, cached by its hash ────────────────────────────────
   const first = publicLesson('dsa-v1-d01-l1')!;
