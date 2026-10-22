@@ -93,6 +93,13 @@ export async function learnLessonContracts() {
     assert.deepEqual(Object.keys(lessonProjection(lesson!)).sort(), ['id', 'sections', 'sources', 'title'], `${id}: the projection names its fields`);
   }
   assert.equal([...LEARN_LESSONS.keys()].filter((id) => id.startsWith('dsa-v1-')).length, 18, 'all eighteen original DSA readings stay in Learn');
+  // A trace with no frames has nothing to step through; the path validator
+  // refuses one too (empty_trace in lib/learning-paths/validate.ts).
+  for (const lesson of LEARN_LESSONS.values()) {
+    lesson.sections.forEach((section, index) => {
+      if (section.kind === 'trace') assert.ok(section.trace.frames.length > 0, `${lesson.id} section ${index}: a trace needs at least one frame`);
+    });
+  }
   // Each reading is still the text its native-lesson review read: the records
   // in docs/audit/wip/native/learn bind it by content hash, so an edit to a
   // reading fails here until it is reviewed again (audit:native-reviews too).

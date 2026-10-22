@@ -153,6 +153,12 @@ export function schemaContracts(fail: Fail): void {
     });
     if (!at.includes('missing_copy@fde/fde-v1-x01-l1.section[1].note')) fail(`schema blank example note: expected missing_copy, got ${at.join(', ')}`);
   }
+  expectErrors('trace with no frames', (s) => {
+    moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'trace', caption: 'Step through it.', trace: { shape: 'array', frames: [] } });
+  }, ['empty_trace']);
+  expectErrors('trace with a frame', (s) => {
+    moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'trace', caption: 'Step through it.', trace: { shape: 'array', frames: [{ cells: ['1'], note: 'One cell.' }] } });
+  }, [], ['empty_trace']);
   expectErrors('scenario on a code activity', (s) => { activityOf(s, 'fde-v1-x01-drill').scenario = 'A case.'; }, ['misplaced_scenario']);
   expectErrors('fixture note on a check', (s) => { activityOf(s, 'fde-v1-x01-case').fixtureNote = 'A note.'; }, ['misplaced_fixture_note']);
   expectErrors('fixture note on a reused task', (s) => {

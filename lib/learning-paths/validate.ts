@@ -380,6 +380,11 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       seenLessons.add(lesson.id);
       lessonIds.add(lesson.id);
       if (lesson.sections.length === 0) issues.push(error('empty_lesson', lAt, 'a lesson needs a body'));
+      lesson.sections.forEach((section, index) => {
+        if (section.kind === 'trace' && section.trace.frames.length === 0) {
+          issues.push(error('empty_trace', `${lAt}/section[${index}]`, 'a trace needs at least one frame to step through'));
+        }
+      });
       if (lesson.sources.length === 0) {
         issues.push(error('no_sources', lAt, 'a lesson must cite at least one source the author checked'));
       }
