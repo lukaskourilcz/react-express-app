@@ -47,7 +47,7 @@ GRANT EXECUTE ON FUNCTION public.<routine>(<arg types>) TO service_role;
 COMMIT;
 ```
 
-- The header says what the file adds, what it needs and why the running code survives it. Sources: the headers of `supabase/supabase-schema-059.sql` and `supabase/supabase-schema-060.sql`; `docs/launch-runbook.md`, "Database rollout", step 9 ("each file's header says what it adds and needs").
+- The header says what the file adds, what it needs and why the running code survives it. Sources: the headers of `supabase/supabase-schema-059.sql` and `supabase/supabase-schema-060.sql`; `docs/launch-runbook.md`, "Database rollout", step 9 ("Each file's header says what it adds, what it needs and why the running code survives it").
 - `BEGIN;` and `COMMIT;` wrap the whole file. Source: `supabase/supabase-schema-065.sql`.
 - A `DO` guard refuses to run before the objects the file builds on exist. Source: `supabase/supabase-schema-060.sql`, the block that raises "migration 060 needs migrations 056 and 058 first".
 - Every statement survives a second run: `IF NOT EXISTS` on tables, columns and indexes, `CREATE OR REPLACE` on routines, `DROP POLICY IF EXISTS` before `CREATE POLICY`. Sources: `supabase/supabase-schema-065.sql` (`ADD COLUMN IF NOT EXISTS`), `supabase/supabase-schema-063.sql` (`CREATE TABLE IF NOT EXISTS`), `supabase/supabase-schema-018.sql`, line 23 (`DROP POLICY IF EXISTS` before its `CREATE POLICY`); `docs/release-acceptance.md`, "Migration 045 proof" (the "then 045 again" row), which proves a re-run leaves the catalog fingerprint unchanged.
@@ -102,7 +102,7 @@ Production applies the migration while the previous code still serves traffic, a
    ```
 
    Source: `CLAUDE.md`, "Session routine & markdown conventions", for the markers.
-2. Add a sentence that names the migration to the section of `docs/product-architecture.md` that owns the behaviour. Source: `docs/product-architecture.md`, "Learning and Challenge updates, 13 October 2026" ("… in one transaction (migration 065)") and "Account erasure".
+2. Add a sentence that names the migration to the section of `docs/product-architecture.md` that owns the behaviour. Source: `docs/product-architecture.md`, "Learning paths" > "Contract and grading" ("… in one transaction (`supabase/supabase-schema-065.sql`)", "`accept_learning_path_quota_result` (migration 066)") and "Account erasure".
 3. When someone applies it, tick the item and add the date and the pull request it preceded, then remove it at the next `markdown-checkup`.
 
 ## 6. Apply it to production
