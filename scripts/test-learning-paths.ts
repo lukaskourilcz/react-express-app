@@ -57,6 +57,17 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
+  // B6 (#502): the two flaws the issue names, plus two that break the
+  // order-free merge, one that sorts by locale collation and one that writes
+  // into the caller's ledger.
+  'fde-v1-m05-data-reconcile': [
+    { label: 'the last row delivered always wins (non-idempotent replay)', replace: ['if (current === undefined || supersedes(result, current)) {', 'if (true) {'], criterion: 'replay' },
+    { label: 'an identical replay counted as a fresh write', replace: ['incoming.updatedAt > current.updatedAt', 'incoming.updatedAt >= current.updatedAt'], criterion: 'replay' },
+    { label: 'an equal timestamp decided by arrival order', replace: ['\n  || (incoming.updatedAt === current.updatedAt && SOURCE_RANK[incoming.source] > SOURCE_RANK[current.source])', ''], criterion: 'replay' },
+    { label: 'rejected rows dropped without a count', replace: ['report.rejected.push({ ref: row.ref, reason: result });', ''], criterion: 'accounted' },
+    { label: 'the ledger sorted by locale collation instead of UTF-16 code units', replace: ['(a.id < b.id ? -1 : a.id > b.id ? 1 : 0)', 'a.id.localeCompare(b.id)'], criterion: 'core' },
+    { label: 'the merged ledger written back into the ledger it was given', replace: ['  return { ledger: out, report };', '  (ledger as AccountRecord[]).splice(0, ledger.length, ...out);\n  return { ledger: out, report };'], criterion: 'atomic' },
+  ],
 };
 
 /** The authoring targets the curriculum documents commit to. A path that
