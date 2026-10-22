@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { storeFakeSession, localAuth } from './fake-session';
 import { pathById, publicManifest, activitySummary } from '../../lib/learning-paths/catalog';
 import { lessonProjection } from '../../lib/learn-lessons';
@@ -38,6 +39,22 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(free).not.toContainText('Premium'); await free.click();
     await expect(page.getByRole('button', { name: 'Mark as read' })).toBeVisible();
     expect(starts).toEqual([first.id]);
+    // On a phone the lesson's tables and code scroll sideways; each scrolling
+    // region is a named tab stop with a visible ring (B14 visual QA, #510).
+    await page.setViewportSize({ width: 390, height: 900 });
+    const regions = page.locator('.lp-lesson .lp-scroll-region');
+    expect(await regions.count()).toBeGreaterThan(0);
+    for (const region of await regions.all()) {
+      await expect(region).toHaveAttribute('tabindex', '0');
+      await expect(region).toHaveAccessibleName(/\S/);
+    }
+    // The shell's delayed route focus finishes before keyboard interaction.
+    await expect(page.locator('#main-content')).toBeFocused();
+    await regions.first().focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+    await expect(regions.first()).toBeFocused();
+    await expect.poll(() => regions.first().evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+    expect((await new AxeBuilder({ page }).include('.lp-lesson').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(`/learn/forward-deployed-engineer/path/${loop[1].id}`);
     const locked = page.locator(`a.lp-activity[href$="activity=${second.id}"]`);
     await expect(locked).toContainText('Premium'); await locked.click();

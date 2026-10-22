@@ -264,6 +264,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-figure figcaption { font-size: 0.86rem; color: var(--color-text-secondary); line-height: 1.5; }
 
 .lp-table-wrap { overflow-x: auto; border-radius: var(--radius-element); border: 1px solid var(--ss-card-line); }
+.lp-scroll-region:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 .lp-table { border-collapse: collapse; width: 100%; min-width: 32rem; font-size: 0.9rem; }
 .lp-table th, .lp-table td { padding: 10px 12px; text-align: left; vertical-align: top; line-height: 1.5; }
 .lp-table thead th { background: var(--color-background-muted); font-weight: 600; }
