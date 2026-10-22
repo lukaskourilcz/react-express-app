@@ -5,7 +5,7 @@ description: Reproduce the `verify` CI job locally with `npm run ci:parity`, the
 
 # CI parity and pull requests
 
-`main` is protected: GitHub merges a pull request only when the `verify` and `sql` jobs of `.github/workflows/quality.yml` pass, for admins too, and refuses force-pushes (CLAUDE.md, "Git workflow"). The `verify` gates run 55 steps. In one job they took 40 to 45 minutes (PR #521: 44m23s), so they now run as five parallel jobs of at most 30 minutes each, and the job named `verify` passes only when all five passed. Every step you skip locally risks another cycle of that length. PR #401 failed `check:bundle` by 182 gzip bytes after passing the six commands `shark-release-validation` used to list ("15 October — PR #401 initial-load correction").
+`main` is protected: GitHub merges a pull request only when the `verify` and `sql` jobs of `.github/workflows/quality.yml` pass, for admins too, and refuses force-pushes (CLAUDE.md, "Git workflow"). The `verify` gates run 55 steps as five parallel jobs of at most 30 minutes each, and the job named `verify` passes only when all five passed. A step you skip locally can cost a whole CI cycle: PR #401 passed a short local check list and then failed `check:bundle` by 182 gzip bytes ("15 October — PR #401 initial-load correction" in `docs/release-acceptance.md`).
 
 `scripts/ci-parity.mjs` runs the same steps in the same order with the same environment and prints each step's real result. Before it runs anything it reads `quality.yml` and checks two things: the job's `npm` and `npx playwright` commands, in order and with their env prefixes, must equal the plan's, and every other line of the job (setup, `env:`, `if:`, shell glue) must equal `KNOWN_GLUE` in the script. On any difference it exits 2 and prints the first one. Change `PLAN` or `KNOWN_GLUE` and the table below in the same commit as the workflow.
 
@@ -89,7 +89,7 @@ The script tests the working tree, but CI sees only committed files, so commit b
    Not run: <check> (<why>).
 
    ## Notes
-   <Where the issue and the plan disagree, the plan's section 10 wins: say which line and that the issue was updated. Owner items added to NEEDED.md.>
+   <Where the issue and the code disagree, say which line and that the issue was updated. Owner items added to NEEDED.md.>
 
    Closes #<issue>
 
@@ -97,7 +97,7 @@ The script tests the working tree, but CI sees only committed files, so commit b
    ```
 
    End the body with the attribution line the session's instructions give. A planning or documentation PR that only references implementation issues uses `Refs #N`, never `Closes`.
-5. **Migrations first.** When the diff adds a file under `supabase/`, the migration goes to production before the code merges (`docs/launch-runbook.md`, "Database rollout"; the `supabase-migration` skill once C2 lands). Merge only after the migration is applied, by the owner or by an agent the owner authorised for that task, and record it in `NEEDED.md` as an `[owner:me] [kind:deploy]` item until then.
+5. **Migrations first.** When the diff adds a file under `supabase/`, the migration goes to production before the code merges (`docs/launch-runbook.md`, "Database rollout"; `.claude/skills/supabase-migration/SKILL.md`). Merge only after the migration is applied, by the owner or by an agent the owner authorised for that task, and record it in `NEEDED.md` as an `[owner:me] [kind:deploy]` item until then.
 6. **Wait for the required checks**: `gh pr checks <pr> --watch --required`. Run it in the background and move on. When a check fails, read its log with `gh run view <run-id> --log-failed`, fix the cause on the branch, push, and wait again. Never merge around a red check.
 7. **Recheck a moved `main`.** Branch protection does not require an up-to-date branch, so CI tested your branch merged with the `main` of the moment it ran. If `main` has since gained changes your diff depends on (shared types, loaders, scripts, contracts), rebase, rerun the affected checks, push with `--force-with-lease` and wait for CI again. PR #527 passed CI and would have broken `typecheck:scripts` on `main` after #526 changed `loadSubjectQuestionBank`.
 8. **Merge** with a merge commit and delete the remote branch: `gh pr merge <pr> --merge --delete-branch`. The repository merges with merge commits ("Merge pull request #518 from …").
@@ -113,7 +113,7 @@ Vercel deploys `main` to production. For a change that alters production behavio
 
 ## The `docs/release-acceptance.md` entry
 
-Recent entries are appended at the end of the file (the 17 October entries, such as "PR #472 exact production acceptance"); older ones near the top run newest first. Append yours at the end:
+New entries go at the end of the file, as "B14 FDE release verification — 22 October 2026" does; the oldest entries near the top run newest first. Append yours at the end:
 
 ```markdown
 ## <What shipped> — <D Month YYYY>
