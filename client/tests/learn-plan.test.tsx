@@ -308,6 +308,34 @@ describe('the account’s record', () => {
     expect(document.getElementById('placement-question')).toHaveFocus();
   });
 
+  // A second click on Finish before the page re-rendered sent the round
+  // again, and the server's placement_round_used answer ended the placement.
+  it('submits a placement round once when Finish is clicked twice', async () => {
+    const ask = { id: 'p-1', tags: [], introduction: '', question: 'Placement question 1?', options: ['Yes', 'No'], category: 'javascript', difficulty: 3 };
+    answer({ placement: { done: false, round: 4, totalRounds: 4, difficulty: 3, asked: 15, total: 16, idkCountsAsMiss: true, placementToken: 'token-4', questions: [ask] } });
+    let rounds = 0;
+    server.use(http.post('*/api/quiz/roadmap', ({ request }) => {
+      if (new URL(request.url).searchParams.get('resource') !== 'placement') return undefined;
+      rounds += 1;
+      return rounds === 1
+        ? HttpResponse.json({ done: true, correct: 12, total: 16, difficulty: 3, unlockedPreview: [], review: [] })
+        : HttpResponse.json({ error: { code: 'placement_round_used', message: 'This placement round was already submitted. Start the placement again.' } }, { status: 409 });
+    }));
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Yes/ }, { timeout: 3000 }));
+    const finish = screen.getByRole('button', { name: 'Finish' });
+    act(() => {
+      finish.click();
+      finish.click();
+    });
+    expect(await screen.findByRole('heading', { name: 'Placement complete' }, { timeout: 3000 })).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(rounds).toBe(1);
+    expect(screen.queryByText(/already submitted/)).toBeNull();
+  });
+
   it('does not fall back to the score’s own unlocks after a failure', async () => {
     signInAs(BACKEND);
     answer({

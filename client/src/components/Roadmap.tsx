@@ -2442,8 +2442,13 @@ function SkillCheckRunner({
     }
   }, [subject, applyRound, finishFrom]);
 
+  // One submit per round. A ref, not only the phase: a second click on Next
+  // or Finish can land before "submitting" re-renders, and the server answers
+  // a round sent twice with placement_round_used, which ended the placement.
+  const submittingRef = useRef(false);
   const submitRound = useCallback(async () => {
-    if (!token) return;
+    if (!token || submittingRef.current) return;
+    submittingRef.current = true;
     setPhase('submitting');
     setError(null);
     try {
@@ -2464,6 +2469,8 @@ function SkillCheckRunner({
     } catch (err) {
       setError(friendlyError(err));
       setPhase('error');
+    } finally {
+      submittingRef.current = false;
     }
   }, [token, answers, difficulty, questions, applyRound, finishFrom]);
 
