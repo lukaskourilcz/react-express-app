@@ -412,6 +412,33 @@ it('opens the other device’s draft on request, and keeps this code on this dev
   expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine', other);
 });
 
+// The other draft is the account's: one that arrived after a sign-out was
+// opened in the editor for whoever was at the device by then.
+it('does not open the other draft when the account changed while it loaded', async () => {
+  const loaded = iso(NOW - minutes(10));
+  const other = '2026-10-09T11:59:00.123456+00:00';
+  serve('// loaded', loaded);
+  let answer!: () => void;
+  const answered = new Promise<void>((resolve) => { answer = resolve; });
+  let asked = false;
+  server.use(http.get('*/api/user/*', async () => {
+    asked = true;
+    await answered;
+    return HttpResponse.json({ code: '// the account’s other draft', updatedAt: other });
+  }));
+  mount();
+  refuse(other);
+  await run('// mine');
+  await waitFor(() => expect(conflictNote()).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'Open the other draft' }));
+  await waitFor(() => expect(asked).toBe(true));
+  act(() => { clearAccountData(); });
+  answer();
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+  expect(screen.getByLabelText('Code')).toHaveValue('// mine');
+  expect(screen.queryByText(/the account’s other draft/)).toBeNull();
+});
+
 it('offers back a copy set aside on an earlier visit until a Run saves', async () => {
   const saved = iso(NOW - minutes(1));
   localStorage.setItem(`devshark:coding:draft-aside:${ID}`, '// set aside before');
