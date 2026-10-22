@@ -527,10 +527,14 @@ export async function handlePathProgress(req: VercelRequest, res: VercelResponse
     const path = pathById(row.path_id);
     if (!path) return jsonError(res, 404, 'not_found', 'Unknown learning path');
 
-    const rows = await loadProgressRows(supabase, enrollmentId);
+    // Independent reads of an enrollment already proven to be the caller's.
+    const [rows, evidence] = await Promise.all([
+      loadProgressRows(supabase, enrollmentId),
+      loadDiagnosticEvidence(supabase, userId, enrollmentId, path),
+    ]);
     const manifest = publicManifest(path);
     const states = stateMap(rows);
-    const competencies = diagnosticCompetencies(path, await loadDiagnosticEvidence(supabase, userId, enrollmentId, path));
+    const competencies = diagnosticCompetencies(path, evidence);
     const enrollment = toEnrollment(row);
     const body: PathProgressResponse = {
       enrollment,
@@ -1407,12 +1411,16 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
       return jsonError(res, 400, 'bad_request', 'An activityId is required');
     }
     try {
-      const owned = await loadEnrollment(supabase, userId, enrollmentId);
+      // The draft read carries the owner too, so it can run beside the
+      // ownership check instead of after it.
+      const [owned, { data, error }] = await Promise.all([
+        loadEnrollment(supabase, userId, enrollmentId),
+        withTimeout(
+          supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
+            .eq('enrollment_id', enrollmentId).eq('activity_id', activityId).eq('user_id', userId).maybeSingle(),
+        ),
+      ]);
       if (!owned) return jsonError(res, 404, 'not_found', 'Unknown enrollment');
-      const { data, error } = await withTimeout(
-        supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
-          .eq('enrollment_id', enrollmentId).eq('activity_id', activityId).maybeSingle(),
-      );
       if (error) return jsonError(res, 500, 'db_error', 'Could not load the draft');
       res.setHeader('Cache-Control', 'private, no-store');
       const out: DraftGetResponse = {
