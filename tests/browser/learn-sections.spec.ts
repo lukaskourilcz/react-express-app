@@ -437,7 +437,7 @@ test.describe('FDE routes and Career sections', () => {
 
   test('links each Career group into Learn and shows the FDE path on its section shelf', async ({ page }) => {
     await prepare(page);
-    await stand(page, 'guest');
+    await stand(page, 'guest', { catalogEnabled: true });
     await page.goto('/roadmap');
     for (const [id, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
       const heading = page.getByRole('heading', { name, exact: true });
