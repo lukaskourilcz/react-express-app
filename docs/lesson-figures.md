@@ -28,13 +28,11 @@ Twenty-three figures, one objective each, keyed to the level whose objective the
 | DSA | 2 Big O and Growth | What the notation is saying | table |
 | DSA | 6 Stacks | A stack: last in, first out | stepped trace |
 | DSA | 7 Queues | A queue: first in, first out | stepped trace |
-| DSA | 11 Basic Sorting | Halving a sorted array | stepped trace |
+| DSA | 10 Linear and Binary Search | Halving a sorted array | stepped trace |
 | General | 2 Clients & Servers | One click, end to end | flow |
 | General | 16 What Tests Can Prove | What each kind of test can prove | table |
 | Node.js | 10 Streams | Why a stream reads a 2 GB file on a 512 MB box | flow |
 | System Design | 4 Load Balancing | What a load balancer has to know | flow |
-
-The binary-search figure still sits on DSA level 11. Since the DSA levels were rebuilt, binary search is level 10 (Linear and Binary Search) and level 11 is Basic Sorting, so the figure's `level` in `shared/lesson-figures.ts` no longer matches its objective.
 
 The three contrast pairs the interleaver cares about most (`map`, `filter` and `reduce`; stacks and queues; the two joins) use the same data and the same shape within each pair, so the difference between them is the only thing that differs.
 
@@ -72,7 +70,7 @@ A figure marked `afterSubmission` stays hidden until the level is finished, for 
 - A figure held until after submission is not returned before it.
 - The named topics stay covered, so the set cannot collapse into whichever topic was easiest to author.
 
-The test checks the level number, not whether the level's title still matches the figure; the DSA level 11 mismatch above passes it.
+The test checks the level number, not whether the level's title still matches the figure, so moving a level's content needs a manual check of its figure.
 
 Every number in every figure was worked by hand: the box model sums to 376px, the grid fractions divide 700px into 233.33 and 466.67, the binary search finds 23 in two comparisons taking the lower middle, the growth table's `n log n` at n = 1000 is 9,966, and the join returns three rows inner and four left.
 
