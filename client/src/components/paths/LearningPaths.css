@@ -666,3 +666,6 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 }
 .rm-path-shelf__error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .rm-path-shelf__error p { margin: 0; color: var(--color-text-secondary); }
+
+.lp-portfolio-export__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 12px; }
+.lp-portfolio-export__actions .astryx-button { min-height: 44px; }

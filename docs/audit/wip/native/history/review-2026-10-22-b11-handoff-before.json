@@ -1,0 +1,76 @@
+[
+  {
+    "id": "fde-v1-c01-handoff",
+    "kind": "native-activity",
+    "path": "fde",
+    "module": "fde-v1-c01",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/c01.ts",
+    "contentHash": "519838f49364ec72",
+    "previousHash": "0b9a425b40c1d9d8",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Write a bounded incident/handoff analysis with unknown causality, recovery estimates and explicitly supplied evidence.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Operational handoff remains current.",
+      "practicalUtility": "Unsupported diagnosis or recovery claims can mislead operators.",
+      "transferable": "Chronology differs from causal proof.",
+      "audienceFit": "Supplied logs support evidence-limited analysis.",
+      "riskOutcome": "Prevents fabricated baseline, customer and semantic-review claims."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read complete brief, six required fields, optional repo URL, incident chronology, limits/rubric and module completion requirements against structural grader. Log events are not a complete span tree; coincident index rebuild is a candidate trigger, not proven cause. State recovery estimates/prerequisites and unknown baseline/UAT/customer costs instead of inventing results, interviews or other customers. Repo link has configuredhttpsshape/lengthcheck only and is not fetched/reviewed. Keep self_reviewed portfolio separate from four machine-graded exercises and bounded path completion, without production/employment claims.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/c01.ts handoff",
+      "repo: lib/learning-paths/grade.ts gradeArtifact",
+      "run: check-native-2026-10-15-n041.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n041-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n041"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Final full English reading verifies observed slow retrieval versus fallback policy, missing permission evidence, no automatic rollback reversal and distinction between actual/hypothetical demo results. Structural required/blank/exact/overcap and optional URL checks pass, including nonsubstantive x acceptance; no real incident, account artifact, URL fetch or UAT was performed. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/c01.ts handoff",
+        "repo: lib/learning-paths/grade.ts gradeArtifact",
+        "run: check-native-2026-10-15-n041.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n041-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  }
+]

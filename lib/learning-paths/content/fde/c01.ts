@@ -1,7 +1,7 @@
 /** C01 — the staged capstone.
  *
- * No lessons and no objective check. Six staged deliverables that reuse what
- * M01–M10 taught, against one brief: Marlbrook Systems wants to cut the time
+ * No lessons and no objective check. Eight staged deliverables that reuse what
+ * M01–M14 taught, against one brief: Marlbrook Systems wants to cut the time
  * its four support agents spend triaging cases, and it has a ticket API, a
  * CSV customer export and a knowledge base with stale and tenant-restricted
  * articles. An operator reviews every proposed action before it leaves the
@@ -18,10 +18,10 @@
  * Chemicals, and every ticket, customer, case and KB id below are invented
  * for this path.
  *
- * Completion wording is a graded invariant, not a style choice. Passing the
- * four code activities and submitting both artifacts records “FDE guided
- * path completed”, and the packet is displayed separately as “Portfolio
- * self-reviewed”. There is no certification, no rank change and no claim
+ * Completion wording is a graded invariant, not a style choice. With M01–M14
+ * complete, passing the four code activities and submitting all four artifacts
+ * records “FDE guided path completed”, and the writing is shown separately as
+ * self-reviewed. There is no certification, no rank change and no claim
  * about production experience anywhere in it. */
 
 import type { ModuleSource } from '../../types';
@@ -383,9 +383,9 @@ export const FDE_C01: ModuleSource = {
     'Join a cursor-paged ticket API to a CSV customer export into one deduplicated, tenant-tagged case list, and report every record you could not use instead of dropping it.',
     'Ground a proposed triage action in permitted knowledge-base articles, cite it by article id, refuse when nothing permitted supports it, and keep article text as data that can never authorize an action or widen a permission.',
     'Score a deterministic router against supplied model-result candidates on a held-out set, report quality separately from abstention, cost and latency, and block a candidate whose average hides a failing slice.',
-    'Absorb a change request — a third restricted tenant and a tighter latency budget — without breaking one earlier acceptance case.',
-    'Leave behind an incident diagnosis read from a trace, a rollback plan, a runbook, a UAT checklist, a demo outline and one product improvement.',
-    'Read what finishing says. The four graded exercises and the two submitted packets record “FDE guided path completed”, and the packets are displayed separately as “Portfolio self-reviewed”. Neither is a certification, a Senior rank or a claim about your production experience, and optional local projects, Python practice and live-model experiments carry no XP, no access and no effect on completion.',
+    'Absorb a change request — a third restricted tenant and a tighter latency budget — without breaking one earlier acceptance case, and explain it to the sponsor in a written update.',
+    'Leave behind an incident diagnosis read from a trace, a rollback plan, a runbook, a UAT checklist, a demo outline, one product improvement and a five-minute walkthrough script.',
+    'Read what finishing says. Once every earlier required module is complete, passing the four graded exercises and submitting the four packets records “FDE guided path completed”. The packets also show separately as self-reviewed writing. Neither is a certification, a Senior rank or a claim about your production experience, and optional local projects, Python practice and live-model experiments carry no XP, no access and no effect on completion.',
   ],
   competencies: ['discovery', 'integration', 'boundaries', 'ai-architecture', 'retrieval', 'evaluation', 'ai-security', 'operations', 'handoff'],
   dependsOn: [
@@ -404,7 +404,7 @@ export const FDE_C01: ModuleSource = {
     'fde-v1-m13',
     'fde-v1-m14',
   ],
-  estimatedMinutes: 360,
+  estimatedMinutes: 415,
   lessons: [],
   activities: [
     {
@@ -419,7 +419,7 @@ export const FDE_C01: ModuleSource = {
       estimatedMinutes: 60,
       artifact: {
         brief:
-          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations wants the time four support agents spend triaging cases cut, and has given you three things and a fortnight: a ticket API behind a cursor, a nightly CSV export of customers, and a knowledge base whose articles are a mix of current, superseded and tenant-restricted. Two tenants are live today, Dunfold Freight and Kestrel Foods. Whatever you build, an operator reviews every proposed action before it leaves the workbench — that is a condition of the engagement, not a phase-two idea.\n\nYou already know what the fixtures contain, because the next five stages run against them: a duplicate ticket, a ticket with no customer id, a customer whose export rows disagree about which tenant it belongs to, one throttled page, superseded and forbidden articles, malformed model output and an article whose text tries to issue instructions. Scope with that in view.\n\nSeven fields, all required: the workflow as it runs today, five questions you would ask before writing code, the baseline, what this phase delivers, what it does not, the risks, and the condition that would let the sponsor, the support lead and you agree this worked.\n\nMarlbrook, its tenants, its volumes and its data are invented for this capstone. There is no live system to query, no model to call and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer.\n\nThis submission is recorded as self-reviewed and displayed as “Portfolio self-reviewed”, separately from the four graded exercises. The automated check confirms required presence and configured length limits after trimming; list presence does not count questions, judge authorship or establish substantive quality. That is all it establishes: it cannot tell whether your baseline can be re-measured, whether your exclusions are the right ones, or whether your acceptance condition is testable. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you start stage two.',
+          'Marlbrook Systems sells warehouse software to mid-sized distributors. Its VP of Customer Operations wants the time four support agents spend triaging cases cut, and has given you three things and a fortnight: a ticket API behind a cursor, a nightly CSV export of customers, and a knowledge base whose articles are a mix of current, superseded and tenant-restricted. Two tenants are live today, Dunfold Freight and Kestrel Foods. Whatever you build, an operator reviews every proposed action before it leaves the workbench — that is a condition of the engagement, not a phase-two idea.\n\nYou already know what the fixtures contain, because the next five stages run against them: a duplicate ticket, a ticket with no customer id, a customer whose export rows disagree about which tenant it belongs to, one throttled page, superseded and forbidden articles, malformed model output and an article whose text tries to issue instructions. Scope with that in view.\n\nSeven fields, all required: the workflow as it runs today, five questions you would ask before writing code, the baseline, what this phase delivers, what it does not, the risks, and the condition that would let the sponsor, the support lead and you agree this worked.\n\nMarlbrook, its tenants, its volumes and its data are invented for this capstone. There is no live system to query, no model to call and no customer to interview, so where you would have to ask someone, write the question down rather than inventing the answer.\n\nThis submission is recorded and shown as self-reviewed, separately from the four graded exercises. The automated check confirms required presence and configured length limits after trimming; list presence does not count questions, judge authorship or establish substantive quality. That is all it establishes: it cannot tell whether your baseline can be re-measured, whether your exclusions are the right ones, or whether your acceptance condition is testable. Read your own answer against the problem framing and communication rows of the path rubric, then revise it before you start stage two.',
         fields: [
           {
             id: 'workflow-map',
@@ -1210,6 +1210,71 @@ const routeCase = request => {
       },
     },
     {
+  "id": "fde-v1-c01-executive-update",
+  "kind": "artifact",
+  "purpose": "project",
+  "verification": "self_reviewed",
+  "title": "Stage 5 — executive update on the change request",
+  "summary": "Write the sponsor a self-reviewed update on the change request: what changed, the decision you need and the evidence you still lack.",
+  "competencies": [
+    "discovery",
+    "handoff",
+    "boundaries",
+    "operations"
+  ],
+  "estimatedMinutes": 25,
+  "artifact": {
+    "brief": "Use the change request from the stage-five exercise: Ardwell Chemicals as a third restricted tenant, and a tighter latency budget. Write for the sponsor who decides what happens next. Keep fixture observations apart from estimates and unknowns; the capstone supplies no live performance result and no customer approval. This update is self-reviewed. The automated check confirms each required field is present and inside its length limit; compare the substance with the problem-framing, security and communication rows of the path rubric.",
+    "fields": [
+      {
+        "id": "audience-decision",
+        "label": "Audience and decision",
+        "help": "Name the sponsor role and the decision you need from them: scope, sequencing or rollout. The form checks required text and length, not whether you asked for the right decision.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 700
+      },
+      {
+        "id": "change-impact",
+        "label": "What changed and why it matters",
+        "help": "Explain what the new tenant restriction and the tighter latency budget change for the operator, and say which earlier acceptance conditions still hold. Refer to the baseline, exclusions and acceptance condition you proposed in stage one, and label any value nobody measured as a proposal. The form checks required text and length, not whether your description is accurate.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1300
+      },
+      {
+        "id": "evidence-limits",
+        "label": "Evidence and remaining uncertainty",
+        "help": "Name the fixture checks you passed and the ones you still need, and say what each cannot show. Keep that apart from any impact estimate, which stays hypothetical, and do not invent live measurements. The form checks required text and length, not whether your evidence supports your claims.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1400
+      },
+      {
+        "id": "recommendation",
+        "label": "Recommendation and alternative",
+        "help": "Compare a bounded next step with a credible alternative or a deferral. Explain the tradeoff between the latency budget and the deterministic fallback; tenant restrictions hold in every option. The form checks required text and length, not the soundness of your recommendation.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1400
+      },
+      {
+        "id": "owner-next",
+        "label": "Owner, next step and stop condition",
+        "help": "Name an accountable role, the evidence needed to proceed, and the signal that stops or reverses the change. State what a rollback cannot undo. The form checks required text and length, not whether the plan would work.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1000
+      }
+    ],
+    "rubricDimensions": [
+      "problem-framing",
+      "security",
+      "communication"
+    ]
+  }
+},
+    {
       id: 'fde-v1-c01-handoff',
       kind: 'artifact',
       purpose: 'project',
@@ -1221,13 +1286,13 @@ const routeCase = request => {
       estimatedMinutes: 60,
       artifact: {
         brief:
-          'The workbench went to 25% of Marlbrook’s case volume at 10:02 on a Tuesday. By 10:15 the support lead was asking why Kestrel Foods cases had stopped arriving with citations, and why a run of Dunfold cases came back refusing to propose anything at all. The trace in the first field is what the workbench recorded. Nothing else was captured, which is itself part of the answer.\n\nSix fields to write and one optional link. The diagnosis reads the trace and says what failed, what did not, and what you would have needed to be sure. The rollback plan says how you get back, what that cannot undo, and who decides. The runbook is what the next engineer runs at three in the morning. The UAT checklist is what the support lead ticks before accepting. The demo outline is fifteen minutes in front of the VP who asked for this. The product improvement is the one thing you would send back to whoever owns the platform, written so they could act on it.\n\nThe trace, the timings, the incident and the company are fixtures written for this capstone. No system was rolled out, no operator was interrupted, and no customer data appears anywhere in it.\n\nThis submission is recorded as self-reviewed and displayed as “Portfolio self-reviewed”, separately from the four graded exercises above. The automated check confirms each required field is present and inside its length limit — it cannot tell whether your rollback is safe to run, whether your runbook would work under pressure, or whether your diagnosis is right. Read your own answer against the operability, communication and security rows of the path rubric, then revise it.\n\nFinishing every requirement of this module records “FDE guided path completed”. That sentence is the whole claim: it says what you passed in devShark’s exercises. It is not a certification, not a rank, not evidence of production experience and not a statement about employment. Optional local projects, Python practice and any live-model experiments you run on your own carry no XP, no access and no effect on completion.',
+          'The workbench went to 25% of Marlbrook’s case volume at 10:02 on a Tuesday. By 10:15 the support lead was asking why Kestrel Foods cases had stopped arriving with citations, and why a run of Dunfold cases came back refusing to propose anything at all. The trace in the first field is what the workbench recorded. Nothing else was captured, which is itself part of the answer.\n\nSix fields to write and one optional link. The diagnosis reads the trace and says what failed, what did not, and what you would have needed to be sure. The rollback plan says how you get back, what that cannot undo, and who decides. The runbook is what the next engineer runs at three in the morning. The UAT checklist is what the support lead ticks before accepting. The demo outline is fifteen minutes in front of the VP who asked for this. The product improvement is the one thing you would send back to whoever owns the platform, written so they could act on it.\n\nThe trace, the timings, the incident and the company are fixtures written for this capstone. No system was rolled out, no operator was interrupted, and no customer data appears anywhere in it.\n\nThis submission is recorded and shown as self-reviewed, separately from the four graded exercises above. The automated check confirms each required field is present and inside its length limit — it cannot tell whether your rollback is safe to run, whether your runbook would work under pressure, or whether your diagnosis is right. Read your own answer against the operability, communication and security rows of the path rubric, then revise it.\n\nCompleting every required module in the path, this capstone included, records “FDE guided path completed”. That sentence is the whole claim: it says what you passed in devShark’s exercises. It is not a certification, not a rank, not evidence of production experience and not a statement about employment. Optional local projects, Python practice and any live-model experiments you run on your own carry no XP, no access and no effect on completion.',
         fields: [
           {
             id: 'incident-diagnosis',
             label: 'Incident diagnosis',
             help:
-              'Read this trace and say what happened. These are chronological synthetic log events, not a complete span tree; `path` is the routing path the workbench took, and `ms` is the whole-case latency. The budget was 1200 ms.\n\n10:02:14 route.case tenant=TEN-4021 path=assisted ms=940 status=proposed cites=1\n10:03:48 route.case tenant=TEN-7788 path=assisted ms=1180 status=proposed cites=2\n10:06:05 kb.index.rebuild started (both tenants, no rollout notice)\n10:07:02 kb.search tenant=TEN-7788 ms=1520\n10:07:03 route.case tenant=TEN-7788 path=deterministic reason=latency-budget\n10:09:40 kb.search tenant=TEN-7788 ms=2100\n10:09:42 route.case tenant=TEN-7788 path=deterministic reason=latency-budget\n10:11:15 route.case tenant=TEN-4021 path=assisted ms=980 status=refused reason=no-permitted-article\n10:12:50 route.case tenant=TEN-4021 path=assisted ms=910 status=refused reason=no-permitted-article\n10:15:00 operator queue: 61% of TEN-7788 cases arrived with no citation; 14 TEN-4021 cases refused\n\nDescribe which observations match the defined fallback policy and which merit investigation; distinguish the observed index-rebuild timing from a proven causal trigger, and say what evidence is missing — this trace does not tell you everything you would want. Distinguish what you can support from what you are inferring. No automated check reads this for correctness.',
+              'Read this trace and say what happened. These are chronological synthetic log events, not a complete span tree; `path` is the routing path the workbench took, and `ms` is the whole-case latency. The budget was 1200 ms.\n\n10:02:14 route.case tenant=TEN-4021 path=assisted ms=940 status=proposed cites=1\n10:03:48 route.case tenant=TEN-7788 path=assisted ms=1180 status=proposed cites=2\n10:06:05 kb.index.rebuild started (both tenants, no rollout notice)\n10:07:02 kb.search tenant=TEN-7788 ms=1520\n10:07:03 route.case tenant=TEN-7788 path=deterministic reason=latency-budget\n10:09:40 kb.search tenant=TEN-7788 ms=2100\n10:09:42 route.case tenant=TEN-7788 path=deterministic reason=latency-budget\n10:11:15 route.case tenant=TEN-4021 path=assisted ms=980 status=refused reason=no-permitted-article\n10:12:50 route.case tenant=TEN-4021 path=assisted ms=910 status=refused reason=no-permitted-article\n10:15:00 operator queue: 61% of TEN-7788 cases arrived with no citation; 14 TEN-4021 cases refused\n\nDescribe which observations match the defined fallback policy and which merit investigation; distinguish the observed index-rebuild timing from a proven causal trigger, and say what evidence is missing — this trace does not tell you everything you would want. Distinguish what you can support from what you are inferring. The form checks required text and length, not the correctness of your diagnosis.',
             kind: 'long-text',
             required: true,
             maxLength: 2500,
@@ -1236,7 +1301,7 @@ const routeCase = request => {
             id: 'rollback-plan',
             label: 'Rollback plan',
             help:
-              'The steps that put Marlbrook back where it was, in order, with the command or action for each and who is allowed to decide. State estimated timing and unknown prerequisites, what it does not undo — cases already routed, an index still rebuilding, an operator halfway through a queue — and how you reconcile that state afterwards. Say what you would watch for ten minutes after to know the rollback worked.',
+              'The steps that put Marlbrook back where it was, in order, with the command or action for each and who is allowed to decide. State estimated timing and unknown prerequisites, what it does not undo — cases already routed, an index still rebuilding, an operator halfway through a queue — and how you reconcile that state afterwards. Say what you would watch for ten minutes after to know the rollback worked. The form checks required text and length; it does not execute or validate the rollback.',
             kind: 'long-text',
             required: true,
             maxLength: 2000,
@@ -1245,7 +1310,7 @@ const routeCase = request => {
             id: 'runbook',
             label: 'Runbook',
             help:
-              'What the next engineer needs at 03:00 with no context: what the workbench does, what it depends on, the signals that say it is healthy, the three alerts most likely to fire and the first thing to check for each, how to put it in a safe state, who owns it, and how to escalate. Include the tenant-isolation check somebody should run after any change to retrieval, and say what a failure of it would mean. Written for a reader who has never seen this system.',
+              'What the next engineer needs at 03:00 with no context: what the workbench does, what it depends on, the signals that say it is healthy, the three alerts most likely to fire and the first thing to check for each, how to put it in a safe state, who owns it, and how to escalate. Include the tenant-isolation check somebody should run after any change to retrieval, and say what a failure of it would mean. Written for a reader who has never seen this system. The form checks required text and length, not alert coverage or operational safety.',
             kind: 'long-text',
             required: true,
             maxLength: 3000,
@@ -1254,7 +1319,7 @@ const routeCase = request => {
             id: 'uat-checklist',
             label: 'UAT checklist',
             help:
-              'One line per check the support lead performs before accepting, each written so that passing or failing is unambiguous and an operator could run it without you. Cover at least: a case routed with a citation the operator can open, a case the workbench refuses, a case belonging to each tenant, an operator rejecting a proposal, and the behaviour when retrieval is slow. Say for each what a failure means for acceptance.',
+              'One line per check the support lead performs before accepting, each written so that passing or failing is unambiguous and an operator could run it without you. Cover at least: a case routed with a citation the operator can open, a case the workbench refuses, a case belonging to each tenant, an operator rejecting a proposal, and the behaviour when retrieval is slow. Say for each what a failure means for acceptance. The form checks required text and length, not the coverage, execution or quality of these checks.',
             kind: 'list',
             required: true,
             maxLength: 2000,
@@ -1263,7 +1328,7 @@ const routeCase = request => {
             id: 'demo-outline',
             label: 'Demo outline',
             help:
-              'Fifteen minutes for the VP who asked for this, in order, with a time against each part. Show the baseline, the workbench on a real-shaped case, a refusal and why refusing is the right outcome, and the supplied or explicitly hypothetical observations against stage-one targets; no measured baseline or real user result is supplied. Say which part you would cut first if the meeting runs short, and where you expect the hardest question. Do not demonstrate anything the fixtures cannot actually do.',
+              'Fifteen minutes for the VP who asked for this, in order, with a time against each part. Show the baseline, the workbench on a real-shaped case, a refusal and why refusing is the right outcome, and the supplied or explicitly hypothetical observations against stage-one targets; no measured baseline or real user result is supplied. Say which part you would cut first if the meeting runs short, and where you expect the hardest question. Do not demonstrate anything the fixtures cannot actually do. The form checks required text and length, not timing totals or demonstrated behavior.',
             kind: 'long-text',
             required: true,
             maxLength: 2000,
@@ -1272,7 +1337,7 @@ const routeCase = request => {
             id: 'product-feedback',
             label: 'Product improvement',
             help:
-              'One thing you would send back to whoever owns the platform, written so they can act on it: what you hit, how often, what you did instead, and what would have to exist for the next engagement to avoid it. Separate measured costs and known affected users from estimates and research questions; do not invent another customer or an interview. One well-evidenced item beats five assertions.',
+              'One thing you would send back to whoever owns the platform, written so they can act on it: what you hit, how often, what you did instead, and what would have to exist for the next engagement to avoid it. Separate measured costs and known affected users from estimates and research questions; do not invent another customer or an interview. One well-evidenced item beats five assertions. The form checks required text and length, not evidence quality or impact estimates.',
             kind: 'long-text',
             required: true,
             maxLength: 2000,
@@ -1290,6 +1355,71 @@ const routeCase = request => {
         rubricDimensions: ['operability', 'communication', 'security'],
       },
     },
+    {
+  "id": "fde-v1-c01-walkthrough-script",
+  "kind": "artifact",
+  "purpose": "project",
+  "verification": "self_reviewed",
+  "title": "Stage 6 — five-minute walkthrough script",
+  "summary": "Write a five-minute script: what to show, in what order, and what to say about the workbench’s limits. You submit text only, with no video or upload.",
+  "competencies": [
+    "handoff",
+    "operations",
+    "evaluation",
+    "ai-security"
+  ],
+  "estimatedMinutes": 30,
+  "artifact": {
+    "brief": "Write an original five-minute walkthrough script for the fictional Marlbrook support lead and incoming engineer. devShark stores your script as text; nothing records, plays or times a demo. Split 300 seconds across the five segments below, show one permitted case and one refusal, and explain the fixture and self-review limits. The automated check confirms each required field is present and inside its length limit. It does not add up your timings or judge what you would show, whether it is safe or how well you present it. Review your script against the communication, operability and security rows of the path rubric.",
+    "fields": [
+      {
+        "id": "opening",
+        "label": "Opening and decision context",
+        "help": "Give this segment a duration. Say whose workflow you scoped, the baseline you proposed in stage one and why its value is still unknown, and the acceptance condition. The form checks required text and length, not what your opening says.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1000
+      },
+      {
+        "id": "permitted-case",
+        "label": "Show the permitted operator flow",
+        "help": "Give this segment a duration. Name the fixture case you would show, the tenant-scoped citation the operator checks, the proposed action and the point where a person approves it. The form checks required text and length, not whether the case behaves as you describe.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1600
+      },
+      {
+        "id": "refusal-change",
+        "label": "Show a refusal and the changed constraint",
+        "help": "Give this segment a duration. Show the workbench refusing a cross-tenant or unsupported request, then explain the stage-five restriction check and the fallback the latency budget triggers. The deterministic fallback cites no articles, and the projected timing that selects it does not guarantee that a real request meets its deadline. Name the exercise tests that support the tenant boundary and what they cannot prove. The form checks required text and length, not whether your explanation is correct.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1600
+      },
+      {
+        "id": "limits-recovery",
+        "label": "Explain evidence limits and recovery",
+        "help": "Give this segment a duration. Say that the graded exercises ran on synthetic fixtures and that no live integration was tested. Name one remaining unknown, the signal that triggers a safe stop, what recovery cannot undo and how you would reconcile the state left behind. The form checks required text and length, not whether your recovery plan is safe.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1600
+      },
+      {
+        "id": "handoff-close",
+        "label": "Close with the handoff and next decision",
+        "help": "Give this segment the remaining time, so the five segments total 300 seconds. Name the runbook, the acceptance checks, the accountable role and the next decision. Say “FDE guided path completed” only once every required activity in the path is complete; until then, name the work you have finished and the requirements still open. Keep self-reviewed writing apart from machine-verified exercises, and claim no certification or production experience. The form checks required text and length, not the accuracy of your claims.",
+        "kind": "long-text",
+        "required": true,
+        "maxLength": 1200
+      }
+    ],
+    "rubricDimensions": [
+      "communication",
+      "operability",
+      "security"
+    ]
+  }
+},
   ],
   requires: [
     { activityId: 'fde-v1-c01-discovery', state: 'self_reviewed' },
@@ -1298,5 +1428,7 @@ const routeCase = request => {
     { activityId: 'fde-v1-c01-evaluation', state: 'verified_pass' },
     { activityId: 'fde-v1-c01-change-request', state: 'verified_pass' },
     { activityId: 'fde-v1-c01-handoff', state: 'self_reviewed' },
+    { activityId: 'fde-v1-c01-executive-update', state: 'self_reviewed' },
+    { activityId: 'fde-v1-c01-walkthrough-script', state: 'self_reviewed' },
   ],
 };

@@ -1920,6 +1920,12 @@ The IP04 case bank links to the final M02 case activities from B3 and B9.
 
 The landing introduces the FDE path with existing landing primitives and reads its inventory from the fetched public manifest through `pathInventory`. Failed or pending catalogue reads show no invented inventory. The section remains a preview while its availability is disabled. The shared Premium inclusion list names FDE and states the free diagnostic/first-module boundary; the live page, upgrade sheet and static Premium article all reuse that list. These access claims require B12 before release. The public Learn description names all three sections.
 
+### Capstone writing and export (B11)
+
+Two additional required self-reviewed artifacts capture the change-request executive update and five-minute handoff walkthrough script. The capstone's `dependsOn` names the fourteen teaching modules M01–M14 explicitly, and a schema contract in `scripts/learning-path-schema-contracts.ts` fails when that list omits or reorders a required teaching module or names an optional shelf module. Shared guided completion still requires each artifact's self-reviewed state.
+
+Authenticated path overviews can export the latest server-saved artifact drafts through the existing caller-owned `learning-path-draft` GET. Two reads at most run concurrently. A failed read produces no partial file; unmount/account or enrollment changes cancel pending reads. JSON preserves revision/state metadata, and Markdown renders saved text literally. The export explains that saved drafts may differ from the last submission and does not claim independent review. No submission, XP event, new handler or migration is involved.
+
 ## DSA Advanced in Learn — 22 October 2026 (E4)
 
 Software Engineer adds `dsa-advanced` after DSA Foundations: fifteen levels,

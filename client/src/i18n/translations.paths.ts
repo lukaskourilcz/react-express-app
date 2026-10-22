@@ -3,6 +3,11 @@
 // Follows translations.drafts.ts and translations.privacy.ts so route-only
 // words do not add to every visitor’s initial download.
 export const pathsEn = {
+  'paths.export.note': 'Download the latest saved version of each written piece, drafts included. It can differ from what you last submitted, and edits you have not saved are left out.',
+  'paths.export.markdown': 'Export writing as Markdown',
+  'paths.export.json': 'Export writing as JSON',
+  'paths.export.busy': 'Preparing your saved writing…',
+  'paths.export.ready': 'Your export file is ready.',
   'paths.hub.title': 'Competency evidence',
   'paths.hub.note': 'Recorded activity states, not a competency score. Reading and self-reviewed work stay distinct from verified passes. Diagnostic results appear separately below.',
   'paths.hub.preview': 'Preview of the evidence you can build. No account evidence is loaded here; activities start as not started.',

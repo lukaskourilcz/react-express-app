@@ -53,9 +53,11 @@ Fixtures include two tenants, duplicate tickets, missing customer IDs, outdated 
 2. **Build:** pass bounded adapter, authorization, retrieval, validation and operator-interaction tasks using the existing sandbox. These are linked components, not a claim that devShark deployed a whole service.
 3. **Evaluate:** compare a deterministic baseline with supplied model-result candidates on at least 30 synthetic cases including failures. Hold out a labeled evaluation slice. Define quality, abstention, cost and latency measures; explain how fixture results differ from live model behavior.
 4. **Change request:** the customer adds a restricted tenant and tightens latency requirements. Update the design and pass changed fixture checks without breaking earlier acceptance cases.
-5. **Incident and handoff:** explain a failed rollout from traces; submit rollback/runbook/UAT checklist, demo outline and one reusable product improvement.
+5. **Incident and handoff:** explain a failed rollout from traces; submit rollback/runbook/UAT checklist, demo outline and one reusable product improvement. A separate self-reviewed five-minute walkthrough script names what to show, in order, and states the fixture, timing and evidence limits.
 
-Portfolio outputs can be copied/exported as Markdown/JSON. Saving a repository URL is optional and does not grant a verified badge; v1 does not fetch or execute it. Optional local projects, Python practice and real-model experiments carry no additional XP, access or completion requirements.
+The change-request stage also requires a self-reviewed executive update: audience/decision, changed constraints, evidence and uncertainty, recommendation/alternative, and owner/next step/stop condition. Both new artifacts are required for guided completion. The capstone's `dependsOn` lists the fourteen teaching modules M01–M14 and no interview-prep shelf module; the schema contracts in `test:paths` fail when that list drifts from the manifest's teaching modules.
+
+The path overview exports the learner’s latest writing saved online as Markdown or JSON, including the executive update and walkthrough. Each entry preserves its recorded state and saved revision; saved text may have changed after its last submission. Exporting neither starts an attempt nor changes completion. Unsaved local edits are not included. Markdown writes learner text as literal fenced text. Failed reads produce no partial file, and changing the account/enrollment cancels pending reads. The existing owner-checked draft GET serves these exports; no new API handler or schema is added. Saving a repository URL is optional and does not grant a verified badge; v1 does not fetch or execute it. Optional local projects, Python practice and real-model experiments carry no additional XP, access or completion requirements.
 
 ## Assessment design
 
@@ -81,7 +83,7 @@ The loop has fourteen teaching modules (M01–M14) plus the required C01 capston
 
 Module file names, exported constants, module ids and module dependency references follow the final numbering. Existing lesson, activity, check-question and solution-map keys stay stable so recorded activity evidence is not renamed: a renumbered module's items keep the slug they were authored under, so M02's items start `fde-v1-m02-cases-`, M03's start `fde-v1-m02-`, M05's start `fde-v1-m05-data-` and M11's start `fde-v1-m11-deploy-`. The new M14 uses its own new stable ids. Bridge references still point to those activities, and the Python bridge additionally points to the two new reading checks.
 
-With B3 integrated, `content:snapshot` reports 15 required modules (14 teaching modules plus C01), 28 lessons, 120 module check questions (48 of them in M02's twelve cases), 19 code exercises and 8 artifacts; the optional diagnostic and bridge checks add 29 questions. All 13 competencies and four bridges derive from the manifest. These are current authored counts, not the final release target.
+With B3 and B11 integrated, `content:snapshot` reports 15 required modules (14 teaching modules plus C01), 28 lessons, 120 module check questions (48 of them in M02's twelve cases), 19 code exercises and 10 artifacts (four of them in C01); the optional diagnostic and bridge checks add 29 questions. All 13 competencies and four bridges derive from the manifest. These are current authored counts, not the final release target.
 
 ## Optional interview practice (B10)
 
@@ -106,5 +108,5 @@ no employer question, scoring key or hiring guarantee.
 
 The case bank links to the final M02 cases from B3 and B9 (`fde-v1-m02` and
 its `fde-v1-m02-cases-…` activities). These modules add no required module,
-so the B9 counts above stay as stated. All lesson and activity identifiers
+so the counts above stay as stated. All lesson and activity identifiers
 remain stable.
