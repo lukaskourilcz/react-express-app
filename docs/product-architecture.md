@@ -1035,9 +1035,9 @@ costs 4.99 EUR a month or 59.88 EUR a year before VAT (`PREMIUM_PRICE` in
 content a learner may start. Grading, explanations, XP amounts, scores,
 streaks, ranks, leaderboards and matchmaking work the same on both tiers.
 
-Billing is built and off: Stripe sales wait for the owner's Stripe account,
-Prices and environment (#221, `NEEDED.md`). Until then Premium opens through
-a manual grant or a voucher.
+Billing is built and off: the owner keeps sales disabled (#221;
+`STRIPE_INTEGRATION_TODO.md` tracks the Stripe setup). Until sales open,
+Premium opens through a manual grant or a voucher.
 
 ### The free tier
 
@@ -1492,9 +1492,9 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   logged like any sign-in.
 - **Scanner-safe links.** Both pages also accept
   `?token_hash=…&type=email|signup` and `?token_hash=…&type=recovery`, the
-  links the Supabase email templates in `NEEDED.md` send, and verify them only when the learner
-  presses the button: a mail filter that fetches every link cannot use one
-  up. Both pages are client routes behind the catch-all rewrite, kept out
+  links the templates in `docs/auth-email-templates.md` send, and verify
+  them only when the learner presses the button: a mail filter that fetches
+  every link cannot use one up. Both pages are client routes behind the catch-all rewrite, kept out
   of search (`NOINDEX_PATHS`), with no handler of their own.
 - **An account without Google.** It has no name or picture. Its header and
   Profile show the first part of its address. Friends and live rooms never
