@@ -976,6 +976,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   let questions: SubmitActivityResponse['questions'] = null;
   let code: SubmitActivityResponse['code'] = null;
   let complexity: ComplexityReport | null = null;
+  /** Set for a graded code submission: what the coding ledger records. */
+  let coding: { track: string; codeHash: string } | null = null;
   let feedback: SubmitActivityResponse['feedback'] = [];
   let artifact: Record<string, string | string[]> | null = null;
 
@@ -1044,8 +1046,13 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
-      complexity = assessComplexity(activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!
-        : { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
+      // A reused task resolved above (merged is non-null), so its lookup holds.
+      const task = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId) : undefined;
+      complexity = assessComplexity(task ?? { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
+      coding = {
+        track: task?.track ?? merged.language,
+        codeHash: createHash('sha256').update(body.code).digest('hex'),
+      };
       feedback = codeFeedback(graded);
       break;
     }
@@ -1136,14 +1143,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // The DSA exercises E2 turned into coding tasks record under the task's id,
   // so a path pass and a Coding pass share one record and one award (#493).
   const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
-  const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
-  const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
-    : language;
   const packet = { ...acceptParams, p_module_requires: moduleRequirements(module) };
-  const codingParams = activity.kind === 'code' ? {
-    p_task_id: canonicalTaskId, p_track: codeTrack,
+  const codingParams = coding ? {
+    p_task_id: canonicalTaskId, p_track: coding.track,
     p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
-    p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+    p_code_hash: coding.codeHash,
   } : {};
   let accepted = module.requiresAtLeast
     ? await withTimeout(supabase.rpc('accept_learning_path_quota_result', {
