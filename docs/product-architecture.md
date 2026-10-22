@@ -1675,8 +1675,9 @@ to legacy daily and challenge rows and keeps legacy total XP beside the
 subject map. Server-verified receipts and attempts make progress idempotent.
 Migrations only move forward. Rolling application code back leaves every
 applied migration in place: their new columns are backward-compatible, their
-revoked browser writes are security controls, and the handlers fall back to
-older routines where a newer one is missing (`npm run test:fallbacks`).
+revoked browser writes are security controls. Where a newer routine is
+missing, a handler either falls back to the older one or refuses with 503
+`migration_required` (`npm run test:fallbacks`).
 
 ## No AI features
 
