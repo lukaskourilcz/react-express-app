@@ -61,6 +61,8 @@ const tables: Record<string, Row[]> = {
 };
 /** Every routine the handler called, with its arguments, in order. */
 const rpcCalls: { name: string; args: Row }[] = [];
+/** Every table the handler read, in order. */
+const tableReads: string[] = [];
 /** Answer advance_verified_streak as a database before migration 048 does. */
 let streakRoutineMissing = false;
 /** Answer complete_verified_roadmap_attempt_v2 as a database before 060 does. */
@@ -224,6 +226,7 @@ async function startStandIn() {
       const rows = tables[table] ?? [];
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
       if (req.method === 'GET') {
+        tableReads.push(table);
         const found = rows.filter((row) => matches(row, filters));
         return single ? (found.length === 1 ? send(200, found[0]) : send(406, { code: 'PGRST116', message: 'no rows' })) : send(200, found);
       }
@@ -590,6 +593,7 @@ async function main() {
           if (answer.statusCode !== 200) break; // out of hearts
         }
         rpcCalls.length = 0;
+        tableReads.length = 0;
         const done = await call('POST', { resource: 'complete' }, REPEAT.token, { sessionId: level.body.sessionId });
         assert.equal(done.statusCode, 200, JSON.stringify(done.body));
         return done;
@@ -602,6 +606,8 @@ async function main() {
       assert.equal(first.body.repeatXp?.xp, 0, 'a first pass pays learning XP, not repeat XP');
       assert.equal(first.body.repeatXp?.withheld, null);
       assert.ok(credits().some((one) => one.name === 'credit_verified_xp_tokens'), 'a first pass credits its coins');
+      assert.equal(tableReads.filter((table) => table === 'roadmap_progress').length, 1,
+        `060 says it was the first pass, so the progress row is read once, after the completion (${tableReads.join(', ')})`);
 
       const soon = await playLevel(true);
       assert.equal(soon.body.passed, true);

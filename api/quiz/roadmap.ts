@@ -1268,8 +1268,11 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   } else if (userId) {
     // Only a first pass earns a step's learning XP, so only a first pass
-    // credits coins. Read before the completion writes the pass (#227).
-    const passedBefore = passed ? await stepPassed(userId, session) : null;
+    // credits coins (#227). From migration 060 the completion says whether
+    // it was the step's first pass, read under the progress lock it holds
+    // while recording it; before 060 the record is read here, before the
+    // completion writes the pass.
+    let passedBefore: boolean | null = null;
     const completion = {
       p_user_id: userId,
       p_attempt_id: session.attemptId,
@@ -1280,6 +1283,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // 2026), and says so. Before 060 the completion of 056 answers alone.
     let completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt_v2', completion));
     if (isRpcMissing(completed.error)) {
+      passedBefore = passed ? await stepPassed(userId, session) : null;
       completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt', completion));
     }
     if (completed.error) {
@@ -1294,16 +1298,17 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       }
       return jsonError(res, 500, 'db_error', 'Could not save learning progress');
     }
-    const outcome = completed.data as { applied?: unknown; repeatXp?: unknown } | boolean | null;
+    const outcome = completed.data as { applied?: unknown; repeatXp?: unknown; firstPass?: unknown } | boolean | null;
     applied = typeof outcome === 'object' && outcome !== null ? outcome.applied === true : outcome === true;
     // XP only: a repeat credits no coins and is no first pass.
     repeatXp = typeof outcome === 'object' && outcome !== null ? learnRepeatXpOf(outcome.repeatXp) : null;
+    const firstPass = typeof outcome === 'object' && outcome !== null ? outcome.firstPass === true : passedBefore === false;
     const row = await withTimeout(
       supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
     );
     if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
     progress = sanitize(row.data?.data);
-    if (applied && passedBefore === false && progressStepPassed(row.data?.data, session)) {
+    if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
       await creditLearnPass(supabase, {
         userId,
         subject: session.subject!,
