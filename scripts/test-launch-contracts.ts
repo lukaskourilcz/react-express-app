@@ -197,7 +197,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpoint } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, DSA_LEVELS_AWAITING_E3, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -316,7 +316,7 @@ async function auditGateContracts() {
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
   assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
   const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
-  assert.equal(reviewedCoding.length, 725, 'all currently issued coding identities are included in the completed wave');
+  assert.equal(reviewedCoding.length, 754, 'all currently issued coding identities are included in the completed wave');
   for (const task of reviewedCoding) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
     assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
@@ -3727,8 +3727,8 @@ async function main() {
   // exactly what happened when they were added: javascript level 3 (quota 1)
   // swapped js-fizz-values for js-debug-average, and level 10 dropped
   // js-activate-user.
-  for (const codeTopic of ['javascript', 'typescript', 'react'] as const) {
-    for (let level = 1; level <= ROADMAP_LEVELS; level++) {
+  for (const codeTopic of ['javascript', 'typescript', 'react', 'dsa'] as const) {
+    for (let level = 1; level <= (codeTopic === 'dsa' ? 15 : ROADMAP_LEVELS); level++) {
       for (const task of levelCodingTasks(codeTopic, level)) {
         assert.notEqual(
           formatOf(task),
@@ -3738,6 +3738,29 @@ async function main() {
       }
     }
   }
+  // DSA Foundations (#493): the DSA path's exercises fill the DSA Learn
+  // levels through the same parent-attempt flow. Level 3 seals its one task;
+  // the Big O introduction (1-2) and the levels E3 re-sequences (10, 11, 14)
+  // seal none yet. The Coding section lists all 29 under Algorithms, and only
+  // they name a Learn level there.
+  assert.deepEqual(levelCodingTasks('dsa', 3).map((task) => task.id), ['alg-dsa-reverse-in-place'], 'DSA level 3 seals the reverse-in-place task');
+  assert.deepEqual(levelCodingTasks('dsa', 9).map((task) => task.id), ['alg-dsa-factorial', 'alg-dsa-recursive-list-sum'], 'DSA level 9 seals factorial and the recursive sum');
+  for (const level of [1, 2, 10, 11, 14, 15]) assert.deepEqual(levelCodingTasks('dsa', level), [], `DSA level ${level} seals no coding task before E3`);
+  assert.deepEqual(levelCodingTasks('algorithms', 1), [], 'the algorithms topic is never sealed into a Learn level');
+  const dsaRows = CODING_INDEX.filter((row) => row.topic === 'dsa');
+  assert.equal(dsaRows.length, 29, 'the index lists the 29 DSA Foundations tasks');
+  assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
+  // A DSA task names its Learn level only once that level issues it: levels
+  // 10, 11 and 14 still carry titles their tasks do not match until E3.
+  for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' && !DSA_LEVELS_AWAITING_E3.has(row.level), `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+  }
+  for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
+    const row = CODING_INDEX.find((one) => one.id === id);
+    assert.ok(row && !hasLearnLevel(row), `${id}: sits on a DSA level that does not issue it yet, so it names no level`);
+  }
+  assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
+  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
   const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
@@ -5607,6 +5630,11 @@ async function main() {
     const outside = codingTaskById('js-count-multiples');
     assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
     assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
+    // #493: a DSA task its level issues comes back; one on a level held back
+    // for E3, and an Algorithms task no Learn level issues, do not.
+    assert.equal(skipPostpones('alg-dsa-reverse-in-place'), true, 'a DSA task DSA level 3 issues comes back');
+    assert.equal(skipPostpones('alg-dsa-linear-search'), false, 'DSA level 10 issues nothing until E3');
+    assert.equal(skipPostpones('alg-easy2-count-jewels'), false, 'an Algorithms task is optional');
 
     // C1-8: ten cleared JavaScript Learn levels open tier 3 on the task page
     // (handleCodingTask reads them from the roadmap row). A practice run and
