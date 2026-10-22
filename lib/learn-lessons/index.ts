@@ -2,19 +2,17 @@
  *
  * A Learn level names its lesson in `./levels.ts`; `GET /api/quiz/roadmap?
  * resource=lesson&id=` (`./serve.ts`) answers with the public projection
- * below. The DSA lessons are the path module's own objects, not copies, so
- * the text a learner reads in Learn is the text the path shows. When the
- * DSA Foundations path goes (plan section 12.4), its lesson bodies move here
- * and this registry keeps the same ids. */
+ * below. The DSA lessons are shared objects under `./dsa`, so
+ * the text a learner reads in Learn is the text the path shows. The transitional DSA path imports the same objects until E5 retires it. */
 
 import { createHash } from 'node:crypto';
 import type { LessonBody } from '../../shared/learning-path-api';
-import { DSA_D01 } from '../learning-paths/content/dsa/d01';
+import { DSA_LESSONS } from './dsa';
 import { mergeLessonSection, type LessonSource } from './types';
 
 export type { LessonSource } from './types';
 
-const LESSONS: readonly LessonSource[] = [...DSA_D01.lessons];
+const LESSONS: readonly LessonSource[] = DSA_LESSONS;
 
 export const LEARN_LESSONS: ReadonlyMap<string, LessonSource> = new Map(LESSONS.map((lesson) => [lesson.id, lesson]));
 

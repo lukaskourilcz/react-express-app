@@ -10,7 +10,12 @@
  * also the Big O introduction at /learn/big-o. */
 
 export const LEVEL_LESSONS: Readonly<Partial<Record<string, Readonly<Record<number, string>>>>> = {
-  dsa: { 1: 'dsa-v1-d01-l1', 2: 'dsa-v1-d01-l2' },
+  dsa: {
+    1: 'dsa-v1-d01-l1', 2: 'dsa-v1-d01-l2', 3: 'dsa-v1-d02-l1', 4: 'dsa-v1-d02-l2',
+    5: 'dsa-learn-d03', 6: 'dsa-v1-d04-l1', 7: 'dsa-v1-d04-l2', 8: 'dsa-learn-d05',
+    9: 'dsa-learn-d06', 10: 'dsa-learn-d07', 11: 'dsa-learn-d08',
+    12: 'dsa-v1-d09-l1', 13: 'dsa-v1-d09-l2', 14: 'dsa-learn-complexity-practice', 15: 'dsa-learn-foundation-review',
+  },
 };
 
 /** The lesson a level opens with, or null for a level that starts with its

@@ -313,6 +313,7 @@ async function main() {
     // asks with its token. Fetched without the token, the same level is served
     // as a preview; answering and completing it with the token must not record
     // it for the account.
+    const attemptsBeforePreview = tables.roadmap_attempts.filter(row => row.user_id === LEARNER.id).length;
     const refused = await call('GET', { topic: 'javascript', level: '10' }, LEARNER.token);
     assert.equal(refused.statusCode, 403, 'a new account is refused a level it has not reached');
     const preview = await call('GET', { topic: 'javascript', level: '10' });
@@ -326,7 +327,7 @@ async function main() {
     assert.equal(foreignComplete.statusCode, 409, 'a guest session is not completed with a token');
     assert.equal(foreignComplete.body?.error?.code, 'session_owner_mismatch');
     assert.equal(tables.roadmap_progress.find((row) => row.user_id === LEARNER.id), undefined, 'nothing was recorded for the account');
-    assert.equal(tables.roadmap_attempts.filter((row) => row.user_id === LEARNER.id).length, 0, 'no attempt was opened for the account');
+    assert.equal(tables.roadmap_attempts.filter((row) => row.user_id === LEARNER.id).length, attemptsBeforePreview, 'the guest preview opened no additional attempt for the account');
     // The coding tasks inside the level carry the same owner.
     const codingItem = (preview.body.coding ?? [])[0] as { session: string } | undefined;
     assert.ok(codingItem, 'JavaScript level 10 carries a coding task');
@@ -657,10 +658,10 @@ async function main() {
       const opened = await call('POST', { resource: 'coding-task', id: 'alg-dsa-reverse-in-place' }, DSA.token, { session: coding[0].session });
       assert.equal(opened.statusCode, 200, `the coding resource opens the linked task: ${JSON.stringify(opened.body?.error)}`);
       assert.equal(opened.body.task.id, 'alg-dsa-reverse-in-place');
-      // Held back until E3: the Big O introduction and DSA level 10 seal none.
+      // The aligned Foundations introduction now seals its coding task too.
       const intro = await call('GET', { topic: 'dsa', level: '1' });
       assert.equal(intro.statusCode, 200, JSON.stringify(intro.body?.error));
-      assert.equal((intro.body.coding ?? []).length, 0, 'a guest on DSA level 1 is asked for no coding task before E3');
+      assert.deepEqual((intro.body.coding ?? []).map((item: { task: { id: string } }) => item.task.id), ['alg-dsa-sum-of-evens'], 'DSA level 1 seals its aligned single-pass task');
     }
     console.log('PASS learn: DSA level 3 seals its coding task into the parent attempt and the coding resource opens it');
 
@@ -668,8 +669,16 @@ async function main() {
     // rather than open successfully and then fail its SQL prerequisite.
     const bigO=await call('GET',{topic:'dsa',level:'2'},OTHER.token);
     assert.equal(bigO.statusCode,200,JSON.stringify(bigO.body));
-    assert.equal((bigO.body.coding??[]).length,0,'the introductory Big O lesson needs no locked coding task');
+    const bigOCoding = bigO.body.coding as Array<{ task: { id: string }; session: string }>;
+    assert.deepEqual(bigOCoding.map(item => item.task.id), ['alg-dsa-halving-steps'], 'the second introductory level seals repeated halving');
+    const freeCoding = await call('POST', { resource: 'coding-task', id: bigOCoding[0].task.id }, OTHER.token, { session: bigOCoding[0].session });
+    assert.equal(freeCoding.statusCode, 200, 'a free account opens coding sealed to its free Learn level');
     assert.ok((await answerAll(bigO.body.sessionId,OTHER.token)).every(status=>status===200));
+    const bigOPending = await call('POST', { resource: 'complete' }, OTHER.token, { sessionId: bigO.body.sessionId });
+    assert.equal(bigOPending.body.passed, false, 'answering the questions alone leaves the coding pending');
+    assert.deepEqual(bigOPending.body.codingPending, ['alg-dsa-halving-steps']);
+    const bigOAttempt = tokens.decodeSessionEnvelope(bigO.body.sessionId)!.attemptId;
+    tables.roadmap_attempt_coding.push({ attempt_id: bigOAttempt, task_id: bigOCoding[0].task.id, passed: true, verified: true, revealed: false });
     const bigODone=await call('POST',{resource:'complete'},OTHER.token,{sessionId:bigO.body.sessionId});
     assert.equal(bigODone.statusCode,200,JSON.stringify(bigODone.body));
     assert.equal(bigODone.body.passed,true,'a free beginner completes Big O without DSA level one or placement');
