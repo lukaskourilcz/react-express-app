@@ -600,16 +600,24 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   // (#227). The last stage of a project or short path is a Premium milestone.
   // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
-  if (xpAwarded && data.xpKind !== 'repeat') {
-    await creditVerifiedXp(supabase, {
-      userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
-    });
-  }
-  // From migration 048 every applied verified pass is also a streak day, which
-  // can reach a Premium streak milestone; an unverified (checklist) pass
-  // settles nothing.
-  if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
-  const progress = await loadProgressRow(supabase, userId, task.id);
+  const rewards = async () => {
+    if (xpAwarded && data.xpKind !== 'repeat') {
+      await creditVerifiedXp(supabase, {
+        userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
+      });
+    }
+    // From migration 048 every applied verified pass is also a streak day,
+    // which can reach a Premium streak milestone; an unverified (checklist)
+    // pass settles nothing.
+    if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
+  };
+  // The progress row the verdict wrote does not depend on the coins, so it is
+  // read beside them. Both settle before the answer: a read that fails must
+  // not end the request while a credit is still in flight.
+  const [read, credited] = await Promise.allSettled([loadProgressRow(supabase, userId, task.id), rewards()]);
+  if (credited.status === 'rejected') throw credited.reason;
+  if (read.status === 'rejected') throw read.reason;
+  const progress = read.value;
   return {
     progress,
     firstPass: data.firstPass === true,
