@@ -10,7 +10,7 @@ Shared by `learn-question-authoring`, `coding-task-authoring` and `learning-path
 
 ## What can be gated
 
-`GatedContent` in `shared/tiers.ts` lists the kinds: `learn-level`, `learn-part-test`, `coding-task`, `evolving-stage`, `learning-path` and `merch-redemption`. `contentTier(content, index)` decides each one:
+`GatedContent` in `shared/tiers.ts` lists the kinds: `learn-level`, `learn-part-test`, `coding-task`, `evolving-stage`, `learning-path`, `learning-path-activity` and `merch-redemption`. `contentTier(content, index)` decides each one:
 
 | Kind | Rule in `contentTier` | Where the data lives |
 |---|---|---|
@@ -18,7 +18,8 @@ Shared by `learn-question-authoring`, `coding-task-authoring` and `learning-path
 | `learn-part-test` | Free for a `FREE_LEARN_TOPICS` topic; Premium when any level in the part is Premium (`partRanges` from `shared/progression.ts`) | `shared/tiers.ts`, `shared/progression.ts` |
 | `coding-task` | Free when the index row carries `free: true`; an evolving stage falls through to the stage rule | `shared/coding-index.ts`, generated |
 | `evolving-stage` | Free for the first `freeStageCount(stages)` stages, Premium after | `shared/tiers.ts` `freeStageCount`, `shared/evolving.ts` |
-| `learning-path` | Premium in full | `shared/tiers.ts` |
+| `learning-path` | Free: enrolling opens nothing by itself, the activity rule decides access | `shared/tiers.ts` |
+| `learning-path-activity` | Free for the activities of the first loop module (not `optional`, no `shelf`) and of the module that holds the path's diagnostic; Premium otherwise | `shared/tiers.ts`, the manifest in `index.learningPaths` |
 | `merch-redemption` | Premium | `shared/tiers.ts` |
 
 Unknown content is Premium, so a gap in the index can only lock, never open (`contentTier` doc comment). `isOpenTo(tier, content, index)` answers "may this tier start it" with the same function.
