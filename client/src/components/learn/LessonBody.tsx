@@ -279,17 +279,27 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const labelId = useId();
+  // Leaving the lesson mid-run stops the worker; an endless loop otherwise
+  // kept a thread busy until the run's own time limit.
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => active.current?.abort(), []);
 
   const run = useCallback(async () => {
+    const controller = new AbortController();
+    active.current = controller;
     setRunning(true);
     setError(null);
     try {
-      const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false });
+      const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false, signal: controller.signal });
+      if (controller.signal.aborted) return;
       setOutput(outcome.logs);
       // A runner that never loaded is not the snippet's error.
       setError(outcome.runnerUnavailable ? t('coding.results.runnerUnavailable') : outcome.codeError);
     } finally {
-      setRunning(false);
+      if (active.current === controller) {
+        active.current = null;
+        setRunning(false);
+      }
     }
   }, [code, t]);
 
