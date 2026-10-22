@@ -987,45 +987,43 @@ published curriculum version). Merchandise is paused ("Merchandise"), so
 
 ## Practice, scheduling and what the product claims about it
 
-Four shared modules were added alongside the learning paths, each owning one
-job and deliberately not the next one.
+Four shared modules each own one job.
 
 `shared/concepts.ts` names the unit practice is scheduled and ordered by. A
-category is a shelf — "javascript" says where a question lives, not what it
-teaches — so twenty authored groups resolve fifty concepts from tags the banks
-already carry. A concept never spans categories, which is what stops a mixed
+category is a shelf ("javascript" says where a question lives, not what it
+teaches), so twenty authored groups resolve fifty concepts from tags the
+banks already carry. A concept never spans categories, which stops a mixed
 session reaching into a topic the learner has not unlocked.
 
-`shared/spaced-practice.ts` decides *which* concepts are due.
+`shared/spaced-practice.ts` decides *which* concepts are due, and
 `shared/interleave.ts` decides *what order* a session is played in. Keeping
-them apart is what makes both testable and what stops the ordering policy
-quietly becoming a second scheduler. Both are pure with the clock injected;
-persistence is `concept_reviews` (migration 030), written only through an
-idempotent service-role routine. Only independent retrieval lengthens an
-interval — a hinted, revealed or recognition-shaped answer holds the rung it
-already earned. Review grants no XP of its own and never widens the pool it
-draws from. See `docs/practice-scheduling.md`.
+them apart keeps both testable and stops the ordering policy turning into a
+second scheduler. Both are pure with the clock injected; persistence is
+`concept_reviews` (migration 030), written only through an idempotent
+service-role routine. Only independent retrieval lengthens an interval: a
+hinted, revealed or recognition-shaped answer holds the rung it already
+earned. Review grants no XP of its own and never widens the pool it draws
+from. See `docs/practice-scheduling.md`.
 
-`shared/curation.ts` owns what the product is allowed to *say* about its
-content: the two gates (relevance out of ten, quality out of five, both
-required), and the derivations that fail closed — no record is not reviewed, a
-record for a different version is not reviewed, "more than once" needs more
-than one recorded human review, and unreadable metadata produces no sentence at
-all. `lib/curation.ts` computes the keyed content version that makes "an edit
-invalidates the approval" enforceable rather than a promise, and applies the
-eligibility rule: a recorded decision in the registry generated from the audit
-ledger (`docs/audit/devshark-content-ledger.json` →
-`lib/curation-registry.ts`) holds for exactly the content it was made about —
-a retirement withholds, a current passing review serves — and in a category
-the ledger's scope lists as complete an item with no applicable record is
-withheld too. The rule is applied once, in the questions store and the active
-coding catalogue, so every selector sees the same set. Every roadmap category
-is now in that scope, so an unrecorded roadmap item is withheld rather than
-served; the coding catalogue is not audited yet, and an unrecorded task there
-is served as before with no claim. See `docs/curation-claims.md`.
+`shared/curation.ts` owns what the product may *say* about its content: the
+two gates (relevance out of ten, quality out of five, both required) and the
+derivations that fail closed. No record means not reviewed, a record for a
+different version means not reviewed, "more than once" needs more than one
+recorded human review, and unreadable metadata produces no sentence at all.
+`lib/curation.ts` computes the keyed content version that makes "an edit
+invalidates the approval" enforceable, and applies the eligibility rule: a
+recorded decision in the registry generated from the audit ledger
+(`docs/audit/devshark-content-ledger.json` → `lib/curation-registry.ts`)
+holds for exactly the content it was made about (a retirement withholds, a
+current passing review serves), and in scope an item with no applicable
+record is withheld too. The ledger's scope covers every served question
+category and the coding catalogue (`codingTasks: true`), so an unrecorded
+question or coding task is withheld rather than served. The rule runs once,
+in the questions store and the active coding catalogue, so every selector
+sees the same set. See `docs/curation-claims.md`.
 
 `shared/lesson-figures.ts` holds the authored worked examples shown in Learn
-level intros — deterministic HTML and CSS, never generated imagery, each
+level intros: deterministic HTML and CSS, never generated imagery, each
 carrying its content in words rather than a caption. See
 `docs/lesson-figures.md`.
 
