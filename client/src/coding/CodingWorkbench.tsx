@@ -558,7 +558,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // tooltip, and a click on one does nothing.
   const hintUnavailable = solution ? t('coding.hintTip.solutionShown') : !nextRung ? t('coding.hintExhausted') : !attemptReady ? t('coding.hintTip.locked') : '';
   const giveUpUnavailable = !canGiveUp(taken, rungs.length) ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : '';
-  const takeHint = () => { if (!hintUnavailable && nextRung) setHintsTaken(taken + 1); };
+  // A revealed rung takes focus, so a screen reader reads it: it appears in
+  // the pane beside the editor, away from the button that asked for it.
+  const hintList = useRef<HTMLOListElement | null>(null);
+  const hintRevealed = useRef(false);
+  useEffect(() => {
+    if (!hintRevealed.current) return;
+    hintRevealed.current = false;
+    (hintList.current?.lastElementChild as HTMLElement | null)?.focus();
+  }, [taken]);
+  const takeHint = () => {
+    if (hintUnavailable || !nextRung) return;
+    hintRevealed.current = true;
+    setHintsTaken(taken + 1);
+  };
   // Revealing the solution before a pass costs this task its XP and coins: the
   // server records the reveal against the account, and a later first pass then
   // pays nothing. After a recorded pass it costs nothing, so a section task
@@ -1208,9 +1221,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {notesOpen && (
             <div className="cd-pane cd-pane--controls">
               {hintsOpen && <div className="cd-hints" role="group" aria-label={t('coding.hint')}>
-                <ol className="cd-hint-list">
+                <ol className="cd-hint-list" ref={hintList}>
                   {rungs.slice(0, taken).map((rung, index) => (
-                    <li key={index} className="cd-hint">
+                    <li key={index} className="cd-hint" tabIndex={-1}>
                       <span className="cd-hint__label">
                         {rung.kind === 'hint' ? t('coding.hint.hint', { n: rung.index + 1 }) : rung.kind === 'approach' ? t('coding.hint.approach', { n: rung.index + 1 }) : rung.kind === 'skeleton' ? t('coding.hint.skeleton') : t('coding.hint.docs')}
                       </span>

@@ -329,6 +329,19 @@ it('tells a signed-out visitor what a reveal really does, and Keep trying return
   expect(document.activeElement).toBe(solution);
 });
 
+// A rung appeared in the pane beside the editor while focus stayed on Hint,
+// so a screen reader never read it.
+it('moves focus to each hint as it is revealed', () => {
+  mount();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000);
+  fireEvent.change(editor(), { target: { value: 'const double = (list) => list.map((n) => n);' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Hint' }));
+  expect(document.activeElement).toHaveTextContent('Use map.');
+  fireEvent.click(screen.getByRole('button', { name: 'Next hint' }));
+  expect(document.activeElement).toHaveTextContent('Array.prototype.map()');
+  clock.mockRestore();
+});
+
 // C3-15: the documentation rung printed the task's tag slug ("map-set").
 it('names the documentation page by its title on the last rung', () => {
   mount();
