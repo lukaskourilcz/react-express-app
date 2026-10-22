@@ -33,18 +33,18 @@ import { FDE_C01 } from './fde/c01';
 
 /** The capstone depends on every required teaching module in manifest order. */
 const FDE_LOOP_MODULES = [
-    FDE_M01,
-    FDE_M02,
-    FDE_M03,
-    FDE_M05_DATA,
-    FDE_M04,
-    FDE_M05,
-    FDE_M06,
-    FDE_M07,
-    FDE_M08,
-    FDE_M11_DEPLOY,
-    FDE_M09,
-    FDE_M10,
+    { ...FDE_M01, deliveryPhase: 'discover-scope' },
+    { ...FDE_M02, deliveryPhase: 'integrate' },
+    { ...FDE_M03, deliveryPhase: 'integrate' },
+    { ...FDE_M05_DATA, deliveryPhase: 'integrate' },
+    { ...FDE_M04, deliveryPhase: 'build-models' },
+    { ...FDE_M05, deliveryPhase: 'build-models' },
+    { ...FDE_M06, deliveryPhase: 'build-models' },
+    { ...FDE_M07, deliveryPhase: 'build-models' },
+    { ...FDE_M08, deliveryPhase: 'harden-ship' },
+    { ...FDE_M11_DEPLOY, deliveryPhase: 'harden-ship' },
+    { ...FDE_M09, deliveryPhase: 'harden-ship' },
+    { ...FDE_M10, deliveryPhase: 'enable-codify' },
 ] satisfies ModuleSource[];
 
 export const FDE_PATH: PathSource = {
@@ -261,6 +261,6 @@ export const FDE_PATH: PathSource = {
       reviewedOn: '2026-09-08',
     },
   ],
-  reviewedOn: '2026-09-08',
+  reviewedOn: '2026-10-22',
   completionLabel: 'FDE guided path completed',
 };

@@ -101,7 +101,7 @@ describe('the result card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download card' }));
     await waitFor(() => expect(card.download).toHaveBeenCalled());
     const input = card.create.mock.calls[0][0] as unknown as Record<string, unknown>;
-    expect(Object.keys(input).sort()).toEqual(['accent', 'brand', 'date', 'detail', 'fileSuffix', 'headline', 'label']);
+    expect(Object.keys(input).sort()).toEqual(['accent', 'brand', 'date', 'detail', 'fileSuffix', 'headline', 'label', 'theme']);
     expect(input).toMatchObject({ brand: 'devShark', label: 'Biggest Shark Challenge', headline: '14 correct', detail: 'before three strikes', fileSuffix: 'challenge' });
     expect(await screen.findByText('Card saved to your downloads.')).toHaveAttribute('role', 'status');
     expect(analytics.capture).toHaveBeenCalledWith('share_initiated', { kind: 'challenge_result', source: 'challenge', method: 'download' });
