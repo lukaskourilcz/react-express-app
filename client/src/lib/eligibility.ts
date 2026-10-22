@@ -36,7 +36,7 @@ export interface EligibilityResponse {
   signedIn: boolean;
   profileComplete: boolean;
   missingProfileFields: RequiredProfileField[];
-  plan: { baseTrack: string; specialization: string | null; skillPaths: string[] } | null;
+  plan: { baseTrack: string; specialization: string | null } | null;
   plans: EligiblePlan[];
 }
 

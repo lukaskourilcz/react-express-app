@@ -81,7 +81,7 @@ export function tasksForLevel(topic: CodingTask['topic'], level: number): Coding
       task.verify !== 'checklist' &&
       formatOf(task) !== 'debug' &&
       !EASY_BAND_TASK_IDS.has(task.id) &&
-      !MEDIUM_HARD_BAND_TASK_IDS.has(task.id),
+      (!MEDIUM_HARD_BAND_TASK_IDS.has(task.id) || task.topic === 'dsa-advanced'),
   );
 }
 

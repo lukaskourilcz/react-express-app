@@ -62,13 +62,14 @@ import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, re
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession as encodeLegacyCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
-import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
+import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor, pathById } from '../lib/learning-paths/catalog';
 import { contentVersion, contentHash, taskHash, itemReview, codingTaskReview, codingTaskEligibility, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
 import { learnLessonContracts } from './learn-lesson-contract';
+import { dsaAdvancedContracts } from './dsa-advanced-contracts';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -172,6 +173,7 @@ import { gradeCheck } from '../lib/learning-paths/grade';
 import {
   LEARNING_PATH_IDS,
   ROLE_SPECIALIZATION_IDS,
+  isLearningPathId,
   isRoleSpecializationId,
   parseLearningPreference,
   pathGuidedComplete,
@@ -318,7 +320,7 @@ async function auditGateContracts() {
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
   assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
   const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
-  assert.equal(reviewedCoding.length, 754, 'all currently issued coding identities are included in the completed wave');
+  assert.equal(reviewedCoding.length, 769, 'all currently issued coding identities are included in the completed wave');
   for (const task of reviewedCoding) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
     assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
@@ -668,7 +670,7 @@ async function tierContracts() {
   assert.equal(contentTier({ kind: 'learn-level', topic: 'typescript', level: 1 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'free');
   assert.equal(contentTier({ kind: 'coding-task', taskId: 'js-no-such-task' }, index), 'premium', 'unknown content can only lock');
-  assert.equal(isOpenTo('premium', { kind: 'learning-path', pathId: 'dsa-foundations' }, index), true);
+  assert.equal(isOpenTo('premium', { kind: 'learning-path', pathId: 'fde' }, index), true);
   for (const path of LEARNING_PATHS) {
     const tasterIndex = { ...index, learningPaths: [publicManifest(path)] };
     const first = path.modules.find(module => !isOffLoopModule(module))!;
@@ -3750,7 +3752,7 @@ async function main() {
       }
     }
   }
-  // DSA Foundations (#493): the DSA path's exercises fill the DSA Learn
+  // DSA Foundations (#493): the retired DSA path's exercises fill the DSA Learn
   // levels through the same parent-attempt flow. Level 3 seals its one task;
   // every Foundations level now aligns with its task. The Coding section
   // lists all 29 under Algorithms, and only
@@ -3769,14 +3771,14 @@ async function main() {
   assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
   // Each DSA task names its matching Learn level after the E3 re-sequence.
   for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
-    assert.equal(hasLearnLevel(row), row.topic === 'dsa', `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' || row.topic === 'dsa-advanced', `${row.id}: only a Foundations or Advanced Learn task names its curriculum level`);
   }
   for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
     const row = CODING_INDEX.find((one) => one.id === id);
     assert.ok(row && hasLearnLevel(row), `${id}: names its aligned Foundations level`);
   }
   assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
-  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
+  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa' && row.topic !== 'dsa-advanced').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
   const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
@@ -4154,15 +4156,19 @@ async function main() {
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
 
   /* ── learning paths ─────────────────────────────────────────────────── */
-  // FDE is the only role specialization; DSA Foundations is a skill path and
-  // must never become a fourth base track or a second role.
+  // FDE is the only role specialization and, since E5 (#496) retired DSA
+  // Foundations, the only learning path. The retired id names nothing: no
+  // path, no role, no attempt session. Its Coding tasks and Learn readings
+  // stay (scripts/test-coding-content.ts, lib/learn-lessons).
+  const RETIRED_PATH_ID = 'dsa-foundations';
   assert.deepEqual([...ROLE_SPECIALIZATION_IDS], ['fde'], 'FDE must remain the only role specialization');
-  assert.deepEqual([...LEARNING_PATH_IDS], ['fde', 'dsa-foundations']);
-  assert.ok(!isRoleSpecializationId('dsa-foundations'), 'DSA Foundations is not a role');
-  const dsaPath = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
+  assert.deepEqual([...LEARNING_PATH_IDS], ['fde']);
+  assert.equal(isLearningPathId(RETIRED_PATH_ID), false, 'the retired DSA path id is no learning path');
+  assert.equal(pathById(RETIRED_PATH_ID), undefined, 'the retired DSA path is not published');
+  assert.ok(!isRoleSpecializationId(RETIRED_PATH_ID), 'the retired DSA path id is no role');
   const fdePath = LEARNING_PATHS.find((path) => path.id === 'fde');
-  assert.ok(dsaPath && fdePath, 'both learning paths must be published');
-  assert.equal(dsaPath!.kind, 'skill_path');
+  assert.ok(fdePath, 'the FDE learning path must be published');
+  assert.deepEqual(LEARNING_PATHS.map((path) => path.id), ['fde'], 'FDE is the only published path');
   assert.equal(fdePath!.kind, 'role_specialization');
 
   // A path opens only when the deployment switch is on, the content validates
@@ -4170,10 +4176,10 @@ async function main() {
   // can tell a half-written curriculum from a closed one.
   assert.equal(pathEnabledInEnv('fde', {}), false, 'a path is off unless the deployment says otherwise');
   assert.equal(pathEnabledInEnv('fde', { LEARNING_PATH_FDE_ENABLED: 'true' }), true);
-  assert.equal(pathEnabledInEnv('dsa-foundations', { LEARNING_PATH_FDE_ENABLED: 'true' }), false,
-    'the two paths have independent switches, so either can launch alone');
-  assert.equal(availabilityFor({ path: dsaPath!, enabled: false, storageInstalled: true }), 'disabled');
-  assert.equal(availabilityFor({ path: dsaPath!, enabled: true, storageInstalled: false }), 'storage_missing');
+  assert.equal(pathEnabledInEnv('fde', { LEARNING_PATH_DSA_ENABLED: 'true' }), false,
+    'the retired DSA switch opens nothing');
+  assert.equal(availabilityFor({ path: fdePath!, enabled: false, storageInstalled: true }), 'disabled');
+  assert.equal(availabilityFor({ path: fdePath!, enabled: true, storageInstalled: false }), 'storage_missing');
 
   // The published manifest is answer-free. Every option a learner might be
   // shown arrives shuffled with the key sealed in the attempt session, so the
@@ -4206,9 +4212,9 @@ async function main() {
 
   // A path with unmet requirements is not complete, and an optional
   // placement module never counts toward completion.
-  assert.equal(pathGuidedComplete(publicManifest(dsaPath!), new Map()), false);
-  const dsaInventory = pathInventory(publicManifest(dsaPath!));
-  assert.ok(dsaInventory.modules > 0, 'DSA Foundations must publish required modules');
+  assert.equal(pathGuidedComplete(publicManifest(fdePath!), new Map()), false);
+  const fdeInventory = pathInventory(publicManifest(fdePath!));
+  assert.ok(fdeInventory.modules > 0, 'FDE must publish required modules');
 
   // The account preference is validated on read: a malformed record degrades
   // to null rather than blocking a learner or granting a role.
@@ -4219,9 +4225,9 @@ async function main() {
     'a future schema version is not guessed at');
   // A bad specialization costs the specialization, not the track: the learner
   // keeps the career choice they made instead of being sent back to the picker.
-  const salvaged = parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: 'dsa-foundations' });
+  const salvaged = parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: RETIRED_PATH_ID });
   assert.equal(salvaged?.baseTrack, 'frontend', 'a valid base track survives a bad specialization');
-  assert.equal(salvaged?.specialization, null, 'DSA Foundations can never be stored as a role specialization');
+  assert.equal(salvaged?.specialization, null, 'the retired DSA path can never be stored as a role specialization');
 
   // The attempt session binds owner, enrollment, activity, purpose and both
   // versions, so a submit handler never has to trust any of them from the body.
@@ -4229,8 +4235,8 @@ async function main() {
     attemptId: 'attempt-0123456789abcd',
     enrollmentId: 'enroll-0123456789abcd',
     userId: 'user-0001-abcdef',
-    pathId: 'dsa-foundations',
-    activityId: 'dsa-v1-d01-checks',
+    pathId: 'fde',
+    activityId: 'fde-v1-m01-checks',
     activityKind: 'check',
     purpose: 'exercise',
     curriculumVersion: 1,
@@ -4243,6 +4249,12 @@ async function main() {
   assert.equal(decodeLearningPathSession('v2.not.a.token'), null);
   assert.equal(decodeLearningPathSession(tamperToken(pathSession.token)), null,
     'a tampered attempt session must not decode');
+  const retiredSession = encodeLearningPathSession({
+    attemptId: 'attempt-0123456789abcd', enrollmentId: 'enroll-0123456789abcd', userId: 'user-0001-abcdef',
+    pathId: RETIRED_PATH_ID as never, activityId: 'retired-activity', activityKind: 'check', purpose: 'exercise',
+    curriculumVersion: 1, rubricVersion: 1, answerKey: [0],
+  });
+  assert.equal(decodeLearningPathSession(retiredSession.token), null, 'an attempt session for the retired DSA path no longer decodes');
 
   const paths026 = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-026.sql'), 'utf8');
   for (const table of ['learning_path_enrollments', 'learning_path_attempts', 'learning_path_evidence', 'learning_path_progress', 'learning_path_drafts']) {
@@ -4840,15 +4852,16 @@ async function main() {
   // in the FDE bridge, so every learner who did not take the specialisation was
   // refused it as "not in your plan".
   {
-    const withTrack = (baseTrack: string) => ({
-      schemaVersion: 2, baseTrack, specialization: null, skillPaths: [],
+    const withTrack = (baseTrack: string, sections: readonly string[] = []) => ({
+      schemaVersion: 2, baseTrack, specialization: null, sections,
       goals: ['job'], experience: 'some', studyTime: 15,
     } as unknown as Parameters<typeof isTopicInPlan>[0]);
     const tracks = Object.keys(WEBDEV_PLAN_STAGES);
     const stranded = [...SUBJECT_SCOPE_CATALOG.webdev.topics].filter(
-      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)),
+      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)
+        || OPT_IN_SECTIONS.some((section) => isTopicInPlan(withTrack(track, [section.id]), 'webdev', topic))),
     );
-    assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
+    assert.deepEqual(stranded, [], `every deployable topic needs a base track or joined section that plans it: ${stranded.join(', ')}`);
   }
 
   // TypeScript is a late topic, deliberately. It used to sit one stage after a
@@ -4880,7 +4893,7 @@ async function main() {
   // open the levels they already passed.
   {
     const backend = {
-      schemaVersion: 2, baseTrack: 'backend', specialization: null, skillPaths: [],
+      schemaVersion: 2, baseTrack: 'backend', specialization: null,
       goals: ['job'], experience: 'some', studyTime: 15,
     } as unknown as Parameters<typeof isTopicInPlan>[0];
     assert.equal(isTopicInPlan(backend, 'webdev', 'nextjs'), false, 'the premise: backend does not plan nextjs');
@@ -4915,7 +4928,7 @@ async function main() {
     assert.deepEqual(section('web-developer').topics,
       ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general']);
     assert.deepEqual(section('software-engineer').topics,
-      ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
+      ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
     assert.deepEqual(section('forward-deployed-engineer').topics,
       ['ai', 'nodejs', 'databases', 'general', 'devops', 'security']);
     assert.deepEqual(LEARN_SECTIONS.map((one) => [one.id, one.membership, [...one.paths]]), [
@@ -4942,7 +4955,7 @@ async function main() {
     // FDE comes with the specialization, so its bridge carries every FDE topic.
     for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
       const fde = planTopics({
-        schemaVersion: 2, baseTrack: track, specialization: 'fde', skillPaths: [],
+        schemaVersion: 2, baseTrack: track, specialization: 'fde',
         goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
       });
       for (const topic of section('forward-deployed-engineer').topics) {
@@ -4951,7 +4964,7 @@ async function main() {
     }
 
     const frontend = {
-      schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null, skillPaths: [],
+      schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null,
       goals: ['level-up' as const], experience: 'some' as const, studyTime: '15-30' as const, updatedAt: null,
     };
     const joined = { ...frontend, sections: ['software-engineer' as const] };
@@ -4961,8 +4974,8 @@ async function main() {
     // The acceptance order: the section's topics in section order (those the
     // track already plans keep their stage position), then Node.js, the
     // prerequisite of System Design, DevOps & Cloud and Databases.
-    assert.deepEqual(withSection.slice(base.length), ['algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
-    for (const topic of ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
+    assert.deepEqual(withSection.slice(base.length), ['dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
+    for (const topic of ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
       assert.ok(withSection.includes(topic), `a Frontend learner in Software Engineer plans ${topic}`);
     }
     for (const topic of withSection) {
@@ -4971,6 +4984,8 @@ async function main() {
       }
     }
     // The server's plan check (`stepRefusal` → 403 not_in_plan) reads the same rule.
+    assert.equal(isTopicInPlan(joined, 'webdev', 'dsa-advanced'), true);
+    assert.equal(isTopicInPlan(frontend, 'webdev', 'dsa-advanced'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'system-design'), true);
     assert.equal(isTopicInPlan(frontend, 'webdev', 'system-design'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'cool-stuff'), false);
@@ -5014,7 +5029,6 @@ async function main() {
       schemaVersion: 2 as const,
       baseTrack: track,
       specialization: null,
-      skillPaths: [],
       goals: ['level-up' as const],
       experience: 'some' as const,
       studyTime: '15-30' as const,
@@ -5033,7 +5047,6 @@ async function main() {
     schemaVersion: 2 as const,
     baseTrack: 'fullstack' as const,
     specialization: null,
-    skillPaths: [],
     goals: ['interview-prep' as const],
     experience: 'professional' as const,
     studyTime: '60-plus' as const,
@@ -5857,6 +5870,7 @@ async function main() {
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
   await learnLessonContracts();
+  await dsaAdvancedContracts();
   consentContracts();
   classroomRevealContracts();
   monthlyXpContracts();

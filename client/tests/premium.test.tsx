@@ -106,7 +106,7 @@ describe('locks mirror the server', () => {
 describe('the Today plan', () => {
   it('keeps base-track work before a joined section and exposes one next action', () => {
     const profile: LearnerProfile = { schemaVersion: 2, baseTrack: 'frontend', specialization: null,
-      skillPaths: [], sections: ['software-engineer'], goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null };
+      sections: ['software-engineer'], goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null };
     const topicOrder = planTopics(profile);
     const unfinished = { levels: { 1: { passed: false, bestPct: 0 } }, checkpoints: {} };
     const plan = buildToday({ javascript: unfinished, html: unfinished, dsa: unfinished }, 'webdev', {

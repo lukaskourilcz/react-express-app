@@ -119,7 +119,9 @@ worker the Run button uses — never in the page, never on the server. On a narr
 screen the editor is not offered; the snippet stays readable and runnable, which
 is the same policy a coding task follows.
 
-**Source:** `kind: 'example'` sections in `lib/learning-paths/content/dsa/`.
+**Source:** `kind: 'example'` sections in `lib/learn-lessons/dsa/`. These are
+the original DSA readings, which Learn serves on the DSA Foundations levels;
+the standalone DSA path they were written for retired in #496.
 
 | Lesson | What the learner can change |
 | --- | --- |
@@ -128,7 +130,7 @@ is the same policy a coding task follows.
 | D04 — stacks | A stack driven far enough to reach the empty case, and what `pop` should answer there |
 | D07 — search | Binary search with its comparisons counted; unsort the list and watch the answer stop being trustworthy |
 
-**Gaps.** DSA lessons only, and four of the eighteen. The FDE lessons have none:
+**Gaps.** DSA readings only, and four of the eighteen originals. The FDE lessons have none:
 their material is architectural rather than executable, and a runnable snippet
 would have to be invented to fill a quota rather than because it explains
 something. JavaScript, TypeScript and React have no lessons of this kind at all
@@ -577,3 +579,5 @@ Progression comes from the graph in `shared/progression.ts` and from
 server-verified evidence, and nothing in this document touches either.
 
 Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.
+
+E4 (22 October 2026) adds fifteen original Advanced tasks and aligns nine existing Algorithms tasks without changing their ids or graders. The current issued inventory is 769 (480 Easy, 189 Medium, 100 Hard; 144 free), with 114 Algorithms tasks. Eight new readings serve the fifteen Advanced levels.

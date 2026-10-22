@@ -637,7 +637,7 @@ async function main() {
     }
     console.log('PASS learn: a replayed step pays its XP again after an hour, as XP only, and says when it opens');
     // ── DSA level 3 seals its coding task (#493) ──────────────────────────
-    // The DSA path's exercises fill the DSA levels through the same parent
+    // The retired DSA path's exercises fill the DSA levels through the same parent
     // attempt as JavaScript: the level seals the task, stores the attempt with
     // that task list before the intro is served, and hands back a coding
     // session bound to the attempt, which the coding resource accepts.

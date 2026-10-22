@@ -61,7 +61,7 @@ export const hasLearnLevel = (task: { track: CodingTrack; level: number; topic?:
 /** The Learn topics whose levels seal coding tasks into a level attempt
  * (`levelCodingTasks` in `lib/coding/active.ts`, `api/quiz/roadmap.ts`).
  * E4 appends `dsa-advanced`. */
-export const LEARN_CODING_TOPICS = ['javascript', 'typescript', 'react', 'dsa'] as const;
+export const LEARN_CODING_TOPICS = ['javascript', 'typescript', 'react', 'dsa', 'dsa-advanced'] as const;
 export type LearnCodingTopic = (typeof LEARN_CODING_TOPICS)[number];
 export const isLearnCodingTopic = (topic: string): topic is LearnCodingTopic =>
   (LEARN_CODING_TOPICS as readonly string[]).includes(topic);

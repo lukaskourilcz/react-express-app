@@ -1,0 +1,290 @@
+[
+  {
+    "id": "dsa-v1-d07-q1",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d07.ts",
+    "contentHash": "c773ebe84a55cbc0",
+    "previousHash": "e5dce01139894e7d",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Trace the actual unsorted-input failure without inventing validation or an indexing exception.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "The shown binary search remains ordinary JavaScript.",
+      "practicalUtility": "Recognizing violated preconditions prevents silent missing records.",
+      "transferable": "Tracing discarded intervals transfers to other search bugs.",
+      "audienceFit": "Five literal values keep the counterexample manageable.",
+      "riskOutcome": "Distinguishing absent validation from impossibility avoids a false API claim."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The actual function returns -1 after midpoint indices 2 and 0 discard the target at 1. Remove the explanation's claim that no implementation validates order: a wrapper can at linear cost. Balance the previously longest correct choice against similarly sized plausible input-validation, inevitable-success and range-error misconceptions. The literal code and key are unchanged; same-output distractors remain wrong because their claimed cause is absent.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/3/",
+      "repo: lib/learning-paths/content/dsa/d07.ts binary-search context",
+      "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n005"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread all options against each branch of the exact context. Execution returns -1, no exception; source has no sortedness pass. The explanation identifies the two interval moves and qualifies validation as an extra linear operation. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://cs50.harvard.edu/x/notes/3/",
+        "repo: lib/learning-paths/content/dsa/d07.ts binary-search context",
+        "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d07-q2",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d07.ts",
+    "contentHash": "7fba29ba665401b9",
+    "previousHash": "d2327e954f70d0e1",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Identify the inclusive live-interval invariant, including duplicate targets.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Inclusive binary-search invariants remain current.",
+      "practicalUtility": "A preserved matching position supports correctness.",
+      "transferable": "The argument transfers to interval algorithms.",
+      "audienceFit": "Explicit finite ordered input fits the preceding lesson.",
+      "riskOutcome": "Existential wording avoids a false claim that every duplicate remains."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "State the sorted dense finite-Number domain and target, and say at least one matching index remains rather than implying a unique target position. Preserve distinct plausible distractors about bracketing, exact halving and monotonic bounds alone. Qualify the absent-target bracketing counterexample and give the exact continuing interval bound floor(m/2). No option-position references are introduced.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/3/",
+      "repo: lib/learning-paths/content/dsa/d07.ts inclusive search",
+      "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n005"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread prompt, four options and explanation. Sampled sorted arrays with duplicates preserve at least one matching index at each iteration; an absent low target disproves universal value bracketing, and an odd live length disproves exact halving. These examples supplement the manual invariant argument. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://cs50.harvard.edu/x/notes/3/",
+        "repo: lib/learning-paths/content/dsa/d07.ts inclusive search",
+        "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d07-q3",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d07.ts",
+    "contentHash": "4df552e690f80e25",
+    "previousHash": "547371e738be1c99",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Compute the deterministic first midpoint on duplicates and distinguish any-match from lower-bound search.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "relevanceRationale": {
+      "presentDay": "Duplicate values remain supported by ordered search.",
+      "practicalUtility": "Knowing whether an API returns any or first match matters.",
+      "transferable": "The distinction transfers to range queries.",
+      "audienceFit": "One explicit midpoint is accessible at this stage.",
+      "riskOutcome": "It prevents a bounded first-match assumption."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "A bare 'middle' leaves floor versus ceiling unspecified, and the old correct option claimed any run index on a different array of the same shape. State low=0, high=5 and floor((low+high)/2), then give the concrete result 2 and its immediate match. Other choices retain the leftmost/rightmost/distinct-values misconceptions. The explanation correctly points to the separately defined half-open lower-bound form for a reliable first occurrence.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/3/",
+      "repo: lib/learning-paths/content/dsa/d07.ts lower-bound discussion",
+      "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n005"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread explicit interval and floor convention with all four options. The actual lesson algorithm returns 2 for the shown six-element array; no claim about every implementation's duplicate tie-breaking remains. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://cs50.harvard.edu/x/notes/3/",
+        "repo: lib/learning-paths/content/dsa/d07.ts lower-bound discussion",
+        "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d07-q4",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d07.ts",
+    "contentHash": "12ead60ab11a2bf9",
+    "previousHash": "8d22dc063b58fbb8",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Account for one-time sorting and repeated lookup work without treating Big O as an exact timing guarantee.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Preparation-versus-query tradeoffs remain current.",
+      "practicalUtility": "They inform index choices for stable data.",
+      "transferable": "Amortizing one-time work transfers beyond searching.",
+      "audienceFit": "The stated comparison-sort/full-scan model is clear.",
+      "riskOutcome": "Qualified asymptotics prevent a universal finite-input timing promise."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The old fixed-size question and 'single lookup never' answer treated growth bounds as exact measured inequalities. Ask which accounting is correct under stable data, comparison sorting and full scans. Balance all four options around ignoring preparation, charging it repeatedly or claiming permanent domination. Preserve O(n log n+k log n) versus O(kn), but explicitly separate it from constants and an exact measured crossover.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/3/",
+      "repo: lib/learning-paths/content/dsa/d07.ts preparation model",
+      "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n005"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread every option and the explanation. An explicit unit-cost n log2(n)+k log2(n) model at n=100000 costs more than one full scan for k=1 and less than 100 full scans for k=100. This illustrates possible amortization, not an empirical break-even threshold. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://cs50.harvard.edu/x/notes/3/",
+        "repo: lib/learning-paths/content/dsa/d07.ts preparation model",
+        "run: check-native-2026-10-15-n005.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n005-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  }
+]

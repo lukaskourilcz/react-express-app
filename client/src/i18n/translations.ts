@@ -103,7 +103,16 @@ export const en = {
 
   // Home / landing page
   'home.title': 'Lessons, quizzes and coding tasks for web developers.',
-  'home.subtitle': 'Guided lessons, quizzes and graded coding tasks for frontend and backend. HTML, CSS and JavaScript are free for every account.',
+  'home.subtitle': 'Explore Web Developer, Software Engineer and Forward Deployed Engineer in Learn. Practice with lessons, quizzes and graded coding tasks. HTML, CSS and JavaScript are free for every account.',
+  'home.fde.kicker': 'The FDE path',
+  'home.fde.title': 'Forward Deployed Engineer',
+  'home.fde.body': 'Practice discovery, make eval-driven decisions, plan deployment in the customer’s environment, and codify reusable patterns. Work through TypeScript exercises and authored customer scenarios. Practice reading Python.',
+  'home.fde.inventory': '{modules} required modules · {lessons} lessons · {questions} module and capstone questions · {exercises} code exercises',
+  'home.fde.access': 'The diagnostic and first module are free. Premium opens the rest as it becomes available. Completion records your work in these exercises.',
+  'home.fde.preview': 'You can preview the outline. Recording work is unavailable right now.',
+  'home.fde.loading': 'Loading the path outline…',
+  'home.fde.unavailable': 'The path outline could not load here. Try opening it in Learn.',
+  'home.fde.cta': 'Explore the FDE path',
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaLearn': 'Go to learning path',
   // The path picker's title and Current mark live in translations.picker.ts.
@@ -977,6 +986,7 @@ export const en = {
   'category.nodejs': 'Node.js',
   'category.git': 'Git',
   'category.dsa': 'DSA Foundations',
+  'category.dsa-advanced': 'DSA Advanced',
   'category.algorithms': 'Algorithms',
   'category.abbreviations': 'Abbreviations',
   'category.general': 'General',
@@ -1002,6 +1012,7 @@ export const en = {
   'topicDetail.general': 'How the web works: HTTP, caching, auth.',
   'topicDetail.databases': 'SQL, schema design, indexing, transactions.',
   'topicDetail.dsa': 'Growth, arrays, maps, lists, search, sorting and trees.',
+  'topicDetail.dsa-advanced': 'Heaps, graphs, greedy choices and dynamic programming.',
   'topicDetail.algorithms': 'Problem-solving: recursion, combinatorics, math.',
   'topicDetail.testing': 'Unit, integration, and end-to-end testing.',
   'topicDetail.system-design': 'Caching, queues, sharding, trade-offs.',
@@ -1260,7 +1271,7 @@ export const en = {
   'premium.sheet.include2': 'React from level {level}, with its later part tests',
   'premium.sheet.include3': 'Every coding challenge, including each new one',
   'premium.sheet.include4': 'Every stage of the evolving projects and short paths',
-  'premium.sheet.include5': 'Learning paths: the diagnostic and first module are free; Premium opens the rest as each path opens',
+  'premium.sheet.include5': 'Our flagship Forward Deployed Engineer path: diagnostic and first module free; Premium opens the rest as it becomes available',
   'premium.sheet.include6': 'Coins you can redeem for devShark merchandise, once redemption opens',
   'premium.sheet.price': '{symbol}{monthly} a month or {symbol}{annual} a year, before VAT. Cancel any time.',
   // The launch offer (shared/launch-offer.ts). Shown only while it is on:
@@ -1419,8 +1430,8 @@ export const en = {
   'landing.compare.rowCoding': 'Coding challenges',
   'landing.compare.freeCoding': 'A starter set, plus the opening stages of every project',
   'landing.compare.premiumCoding': 'Every challenge, plus each new one',
-  'landing.compare.rowPaths': 'FDE and DSA learning paths',
-  'landing.compare.premiumPaths': 'Yes, as each one opens',
+  'landing.compare.rowPaths': 'The FDE learning path',
+  'landing.compare.premiumPaths': 'Yes, once it opens',
   'landing.compare.rowCoins': 'Coins for merchandise',
   'landing.compare.premiumCoins': 'Yes, once redemption opens',
   'premium.page.title': 'Everything in devShark for {symbol}{monthly} a month',
@@ -1898,13 +1909,12 @@ export const en = {
   'home.stripCodingTitle': 'Coding challenges',
   'home.stripCodingText': 'Loops, array methods, types and components with real tests.',
 
-  /* ── Learning paths (devShark: the FDE specialization and DSA Foundations) ── */
+  /* ── Learning paths (devShark: the FDE specialization) ── */
   'paths.loading': 'Loading the path',
   'paths.loadingActivity': 'Opening the activity',
   'paths.error.catalog': 'The learning paths could not be loaded.',
   'paths.error.module': 'That module could not be loaded.',
   'paths.kicker.role': 'Role',
-  'paths.kicker.skill': 'Skill path',
   'paths.guestPreview': 'You can read the whole outline. Sign in to record graded work.',
   'paths.signInToRecord': 'You can read everything here. Signing in is what makes results stick.',
   'paths.notEnrolled': 'Start this path to open its activities.',
@@ -2040,11 +2050,10 @@ export const en = {
   'paths.domain.sorting': 'Sorting',
   'paths.domain.trees': 'Trees',
   // The path picker and the Profile paths card read the rest of their copy from
-  // translations.picker.ts, which only the Profile chunk loads. These four stay
+  // translations.picker.ts, which only the Profile chunk loads. These three stay
   // here for the Career page and the route titles.
   'paths.picker.fdeLabel': 'Forward Deployed Engineer',
   'paths.picker.saving': 'Saving…',
-  'paths.picker.dsaLabel': 'DSA Foundations',
   'paths.picker.saveFailed': 'Your choice is saved on this device but not on your account yet. Try again.',
   'profile.pathSaved': 'Saved: {track}{role}',
   'today.pathSection': 'Learning paths',

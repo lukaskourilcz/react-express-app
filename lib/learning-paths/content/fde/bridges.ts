@@ -6,10 +6,10 @@
  * across the backend, the operator screen, delivery and Python can skip it
  * whole and lose nothing.
  *
- * Four activities, one per bridge in `fde.ts`: a TypeScript mapping exercise
+ * The original activities cover each bridge in `fde.ts`: a TypeScript mapping exercise
  * for Backend and data, a reducer for Operator interface, an incident case for
  * Delivery operations, and five Python reading questions for Python
- * interoperability.
+ * interoperability. Two added readings and checks cover API clients and async loaders.
  *
  * Every payload, timeline and snippet is a fixture written for this exercise.
  * No customer data, no live system, no vendor account, and no Python runs on
@@ -93,8 +93,110 @@ export const FDE_BRIDGES: ModuleSource = {
   ],
   competencies: ['integration', 'boundaries', 'handoff', 'operations', 'python-reading'],
   dependsOn: [],
-  estimatedMinutes: 105,
-  lessons: [],
+  estimatedMinutes: 156,
+  lessons: [
+  {
+    "id": "fde-v1-bridge-python-api-lesson",
+    "title": "Read an asynchronous API boundary",
+    "summary": "Follow await, HTTP status handling and JSON reshaping in a FastAPI-shaped client.",
+    "estimatedMinutes": 12,
+    "sources": [
+      {
+        "label": "FastAPI: concurrency and async / await",
+        "url": "https://fastapi.tiangolo.com/async/",
+        "reviewedOn": "2026-10-22"
+      },
+      {
+        "label": "HTTPX: asynchronous clients",
+        "url": "https://www.python-httpx.org/async/",
+        "reviewedOn": "2026-10-22"
+      },
+      {
+        "label": "HTTPX: network timeout phases",
+        "url": "https://www.python-httpx.org/advanced/timeouts/",
+        "reviewedOn": "2026-10-22"
+      },
+      {
+        "label": "HTTPX: status checks and JSON responses",
+        "url": "https://www.python-httpx.org/quickstart/",
+        "reviewedOn": "2026-10-22"
+      }
+    ],
+    "sections": [
+      {
+        "kind": "callout",
+        "tone": "note",
+        "body": "These are original Python 3.10+ reading fixtures. The .invalid host cannot supply a real customer record. devShark does not run this Python fixture or start its API server. No network call or vendor account is needed. The check grades reading only; optional local experiments are self-reviewed."
+      },
+      {
+        "kind": "prose",
+        "body": "Calling an async def function creates a coroutine. Await it from asynchronous code to obtain its result. FastAPI invokes its async route function; the ordinary helper it calls still needs an explicit await. An async declaration does not turn synchronous HTTP or CPU work into nonblocking work."
+      },
+      {
+        "kind": "code",
+        "language": "python",
+        "caption": "Authored API client and route: assume the response body has id and display_name on a successful request.",
+        "code": "from fastapi import FastAPI\nimport httpx\n\napp = FastAPI()\n\nasync def read_account(client: httpx.AsyncClient, account_id: int) -> dict:\n    response = await client.get(f\"/accounts/{account_id}\")\n    response.raise_for_status()\n    return response.json()\n\n@app.get(\"/accounts/{account_id}\")\nasync def account(account_id: int):\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        record = await read_account(client, account_id)\n    return {\"id\": record[\"id\"], \"name\": record[\"display_name\"]}\n"
+      },
+      {
+        "kind": "prose",
+        "body": "The request is awaited; status validation and JSON decoding follow it. raise_for_status rejects a non-success status instead of letting this route treat an error payload as an account. JSON decoding still does not validate the expected keys or types. A 200 body without display_name therefore fails at the final mapping; a real boundary needs a stated schema policy."
+      },
+      {
+        "kind": "prose",
+        "body": "The async context owns the client and closes it on exit. The route maps display_name to name and forwards only the selected fields. A five-second HTTPX timeout controls network timeout phases; it is not proof of a five-second end-to-end route deadline. Retries, an overall budget and the error response policy would need explicit design."
+      }
+    ]
+  },
+  {
+    "id": "fde-v1-bridge-python-loader-lesson",
+    "title": "Read a bounded asynchronous loader",
+    "summary": "Distinguish concurrency limits, result order and failure behavior in an authored batch.",
+    "estimatedMinutes": 15,
+    "sources": [
+      {
+        "label": "Python: coroutines, tasks and gather",
+        "url": "https://docs.python.org/3/library/asyncio-task.html",
+        "reviewedOn": "2026-10-22"
+      },
+      {
+        "label": "Python: asyncio semaphores",
+        "url": "https://docs.python.org/3/library/asyncio-sync.html",
+        "reviewedOn": "2026-10-22"
+      },
+      {
+        "label": "HTTPX: asynchronous clients",
+        "url": "https://www.python-httpx.org/async/",
+        "reviewedOn": "2026-10-22"
+      }
+    ],
+    "sections": [
+      {
+        "kind": "callout",
+        "tone": "note",
+        "body": "This Python 3.10+ batch is an authored reading fixture. It makes no real requests here. Each question supplies its ids list. Successful bodies have the requested id, and request completion order may differ from input order."
+      },
+      {
+        "kind": "code",
+        "language": "python",
+        "caption": "One client for the batch, with at most two entries in the guarded request/parse region at a time.",
+        "code": "import asyncio\nimport httpx\n\nasync def load_accounts(ids: list[int]) -> list[dict]:\n    limit = asyncio.Semaphore(2)\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        async def read_one(account_id: int) -> dict:\n            async with limit:\n                response = await client.get(f\"/accounts/{account_id}\")\n                response.raise_for_status()\n                return response.json()\n        return await asyncio.gather(*(read_one(i) for i in ids))\n"
+      },
+      {
+        "kind": "prose",
+        "body": "gather schedules the supplied coroutines. The semaphore allows at most two read_one calls into the guarded region at once for this invocation. That is a concurrency bound, not a requests-per-second rate limit. Another invocation creates a separate semaphore; this code establishes no process-wide or tenant-wide limit. One batch client avoids creating a fresh connection pool inside each iteration."
+      },
+      {
+        "kind": "prose",
+        "body": "On success, gather returns results in the order of its input awaitables, even when responses finish in a different order. This code keeps duplicates: ids [7, 3, 7] schedules three reads. The semaphore does not deduplicate records, authorize tenant access, paginate results or decide how a retry is safe."
+      },
+      {
+        "kind": "prose",
+        "body": "With the default return_exceptions=False, gather propagates the first raised exception to its caller. It does not automatically cancel the other submitted awaitables; they may still be running as this function unwinds and its client scope exits. Do not infer a settled partial-result list, atomic rollback or guaranteed sibling cancellation from this code. A production loader needs explicit failure, cancellation and cleanup policy. TaskGroup, available in Python 3.11+, has different sibling-cancellation semantics and is not used here."
+      }
+    ]
+  }
+],
   activities: [
     {
       id: 'fde-v1-bridge-backend-mapping',
@@ -699,6 +801,217 @@ def fetch_page(client: httpx.Client, cursor: str | None) -> dict:
         },
       ],
     },
+    {
+  "id": "fde-v1-bridge-python-api-lesson-read",
+  "kind": "lesson",
+  "purpose": "diagnostic",
+  "verification": "self_reviewed",
+  "title": "Read: asynchronous API boundary",
+  "summary": "Follow await, HTTP status handling and JSON reshaping in a FastAPI-shaped client.",
+  "competencies": [
+    "python-reading"
+  ],
+  "estimatedMinutes": 12,
+  "lessonId": "fde-v1-bridge-python-api-lesson"
+},
+
+    {
+  "id": "fde-v1-bridge-python-loader-lesson-read",
+  "kind": "lesson",
+  "purpose": "diagnostic",
+  "verification": "self_reviewed",
+  "title": "Read: bounded asynchronous loader",
+  "summary": "Distinguish concurrency limits, result order and failure behavior in an authored batch.",
+  "competencies": [
+    "python-reading"
+  ],
+  "estimatedMinutes": 15,
+  "lessonId": "fde-v1-bridge-python-loader-lesson"
+},
+
+    {
+  "id": "fde-v1-bridge-python-api-client",
+  "kind": "check",
+  "purpose": "diagnostic",
+  "verification": "machine_verified",
+  "title": "Read an API client boundary",
+  "summary": "Four authored Python reading questions. At the 80% threshold, all four must pass; no Python is executed.",
+  "competencies": [
+    "python-reading"
+  ],
+  "estimatedMinutes": 12,
+  "passThreshold": 0.8,
+  "questions": [
+    {
+      "id": "fde-v1-bridge-python-api-q1",
+      "prompt": "Assume a successful JSON object with id and display_name. Which step obtains the dictionary returned by read_account?",
+      "context": {
+        "language": "python",
+        "code": "from fastapi import FastAPI\nimport httpx\n\napp = FastAPI()\n\nasync def read_account(client: httpx.AsyncClient, account_id: int) -> dict:\n    response = await client.get(f\"/accounts/{account_id}\")\n    response.raise_for_status()\n    return response.json()\n\n@app.get(\"/accounts/{account_id}\")\nasync def account(account_id: int):\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        record = await read_account(client, account_id)\n    return {\"id\": record[\"id\"], \"name\": record[\"display_name\"]}\n"
+      },
+      "options": [
+        "The annotation -> dict runs the helper and validates its result.",
+        "Calling read_account alone executes all of its requests immediately.",
+        "Awaiting read_account runs the coroutine and receives its returned value.",
+        "The route decorator replaces every helper coroutine with a dictionary."
+      ],
+      "correct": 2,
+      "explanation": "The explicit await obtains the helper result. A return annotation does not run or validate the body. Calling the async helper creates a coroutine; the FastAPI route decorator does not replace ordinary helper calls with their results.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-api-q2",
+      "prompt": "The upstream request returns HTTP 404. Which behavior follows from the displayed helper?",
+      "context": {
+        "language": "python",
+        "code": "from fastapi import FastAPI\nimport httpx\n\napp = FastAPI()\n\nasync def read_account(client: httpx.AsyncClient, account_id: int) -> dict:\n    response = await client.get(f\"/accounts/{account_id}\")\n    response.raise_for_status()\n    return response.json()\n\n@app.get(\"/accounts/{account_id}\")\nasync def account(account_id: int):\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        record = await read_account(client, account_id)\n    return {\"id\": record[\"id\"], \"name\": record[\"display_name\"]}\n"
+      },
+      "options": [
+        "It returns the error JSON and the route maps it as a normal account.",
+        "raise_for_status raises before the helper returns a decoded account.",
+        "HTTPX retries until the endpoint returns a successful account.",
+        "FastAPI automatically turns this upstream response into the same HTTP 404 response."
+      ],
+      "correct": 1,
+      "explanation": "Status validation raises before response.json is returned. This snippet has no retry loop or explicit upstream-to-route error mapping. You cannot infer the outward HTTP status without the application’s exception policy.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-api-q3",
+      "prompt": "The upstream returns 200 and JSON {\"id\": 7, \"name\": \"Cedar\"}, with no display_name. Which statement is supported?",
+      "context": {
+        "language": "python",
+        "code": "from fastapi import FastAPI\nimport httpx\n\napp = FastAPI()\n\nasync def read_account(client: httpx.AsyncClient, account_id: int) -> dict:\n    response = await client.get(f\"/accounts/{account_id}\")\n    response.raise_for_status()\n    return response.json()\n\n@app.get(\"/accounts/{account_id}\")\nasync def account(account_id: int):\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        record = await read_account(client, account_id)\n    return {\"id\": record[\"id\"], \"name\": record[\"display_name\"]}\n"
+      },
+      "options": [
+        "The return annotation rejects the response before parsing it.",
+        "HTTP status validation guarantees all keys used by the route exist.",
+        "HTTPX renames name to display_name from the route return shape.",
+        "The final record[\"display_name\"] lookup fails; the snippet lacks shape validation."
+      ],
+      "correct": 3,
+      "explanation": "JSON decoding produces a value but does not enforce the dictionary shape expected by this route. The missing-key lookup fails. Neither the annotation nor HTTP status checking establishes the required keys, and HTTPX does not invent the rename.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-api-q4",
+      "prompt": "Which ownership and timing claim is justified by the displayed async-with block?",
+      "context": {
+        "language": "python",
+        "code": "from fastapi import FastAPI\nimport httpx\n\napp = FastAPI()\n\nasync def read_account(client: httpx.AsyncClient, account_id: int) -> dict:\n    response = await client.get(f\"/accounts/{account_id}\")\n    response.raise_for_status()\n    return response.json()\n\n@app.get(\"/accounts/{account_id}\")\nasync def account(account_id: int):\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        record = await read_account(client, account_id)\n    return {\"id\": record[\"id\"], \"name\": record[\"display_name\"]}\n"
+      },
+      "options": [
+        "Its context closes the client on exit; timeout=5.0 alone does not prove an overall route deadline.",
+        "The client stays open indefinitely so later route invocations can reuse its pool.",
+        "A five-second network timeout makes retries and JSON validation unnecessary.",
+        "The async keyword moves all synchronous helper work to a separate thread."
+      ],
+      "correct": 0,
+      "explanation": "The context owns cleanup. HTTPX network timeouts do not by themselves establish a whole-route budget or validate payloads. This locally created client is not a persistent application-wide pool, and async does not move ordinary synchronous work to a thread.",
+      "competencies": [
+        "python-reading"
+      ]
+    }
+  ]
+},
+
+    {
+  "id": "fde-v1-bridge-python-async-loader",
+  "kind": "check",
+  "purpose": "diagnostic",
+  "verification": "machine_verified",
+  "title": "Read an asynchronous data loader",
+  "summary": "Four authored Python reading questions on a bounded batch. At 80%, all four must pass; no Python is executed.",
+  "competencies": [
+    "python-reading"
+  ],
+  "estimatedMinutes": 12,
+  "passThreshold": 0.8,
+  "questions": [
+    {
+      "id": "fde-v1-bridge-python-loader-q1",
+      "prompt": "For one invocation with ids [7, 3, 9, 4], what exactly does Semaphore(2) bound?",
+      "context": {
+        "language": "python",
+        "code": "import asyncio\nimport httpx\n\nasync def load_accounts(ids: list[int]) -> list[dict]:\n    limit = asyncio.Semaphore(2)\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        async def read_one(account_id: int) -> dict:\n            async with limit:\n                response = await client.get(f\"/accounts/{account_id}\")\n                response.raise_for_status()\n                return response.json()\n        return await asyncio.gather(*(read_one(i) for i in ids))\n"
+      },
+      "options": [
+        "All requests from every concurrent caller to at most two per second.",
+        "At most two read_one calls inside this invocation’s guarded region at a time.",
+        "The total number of records returned, so two ids are discarded.",
+        "The number of scheduled coroutines, so gather creates only two results."
+      ],
+      "correct": 1,
+      "explanation": "The shared local semaphore bounds entry into its region. All four awaitables are submitted and can produce results. It does not establish a rate per second or share a limit with separate invocations.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-loader-q2",
+      "prompt": "All four reads succeed for ids [7, 3, 9, 4], but finish in order 3, 9, 4, 7. In which id order does gather return their bodies?",
+      "context": {
+        "language": "python",
+        "code": "import asyncio\nimport httpx\n\nasync def load_accounts(ids: list[int]) -> list[dict]:\n    limit = asyncio.Semaphore(2)\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        async def read_one(account_id: int) -> dict:\n            async with limit:\n                response = await client.get(f\"/accounts/{account_id}\")\n                response.raise_for_status()\n                return response.json()\n        return await asyncio.gather(*(read_one(i) for i in ids))\n"
+      },
+      "options": [
+        "3, 9, 4, 7, matching completion order.",
+        "3, 4, 7, 9, because gather sorts numeric ids.",
+        "7, 3, 9, 4, matching the input awaitables.",
+        "7, 9 only, because the concurrency limit drops the others."
+      ],
+      "correct": 2,
+      "explanation": "On success gather preserves the ordering of its supplied awaitables. Scheduling and completion order can differ. Neither sorting nor dropping work is present in this code.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-loader-q3",
+      "prompt": "One read raises while other submitted reads are still pending. Which guarantee must a reviewer refuse to infer from this default gather call?",
+      "context": {
+        "language": "python",
+        "code": "import asyncio\nimport httpx\n\nasync def load_accounts(ids: list[int]) -> list[dict]:\n    limit = asyncio.Semaphore(2)\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        async def read_one(account_id: int) -> dict:\n            async with limit:\n                response = await client.get(f\"/accounts/{account_id}\")\n                response.raise_for_status()\n                return response.json()\n        return await asyncio.gather(*(read_one(i) for i in ids))\n"
+      },
+      "options": [
+        "Every sibling is cancelled and settled before gather raises to its caller.",
+        "The first raised exception is propagated to the awaiting caller.",
+        "A request can fail at raise_for_status before it returns its body.",
+        "The function needs a stated policy for unfinished work and cleanup."
+      ],
+      "correct": 0,
+      "explanation": "Default gather propagates the first exception without automatically cancelling its other awaitables. Siblings may still be pending as the client context unwinds, so guaranteed cancellation and settlement need an explicit policy. The other statements follow from the displayed status check and failure behavior.",
+      "competencies": [
+        "python-reading"
+      ]
+    },
+    {
+      "id": "fde-v1-bridge-python-loader-q4",
+      "prompt": "For ids [7, 3, 7], assuming all requests succeed, which property still needs a separate policy?",
+      "context": {
+        "language": "python",
+        "code": "import asyncio\nimport httpx\n\nasync def load_accounts(ids: list[int]) -> list[dict]:\n    limit = asyncio.Semaphore(2)\n    async with httpx.AsyncClient(\n        base_url=\"https://crm.example.invalid\", timeout=5.0\n    ) as client:\n        async def read_one(account_id: int) -> dict:\n            async with limit:\n                response = await client.get(f\"/accounts/{account_id}\")\n                response.raise_for_status()\n                return response.json()\n        return await asyncio.gather(*(read_one(i) for i in ids))\n"
+      },
+      "options": [
+        "The same id must be removed because a semaphore deduplicates inputs.",
+        "The output must be sorted because AsyncClient normalizes result order.",
+        "The second 7 must fail because HTTPX forbids repeated URLs.",
+        "Duplicate handling: this code schedules three reads and preserves both 7 results."
+      ],
+      "correct": 3,
+      "explanation": "The generator creates one coroutine per input occurrence. Neither the semaphore nor the client deduplicates ids. A consumer must decide whether repeated records are wanted or need a separate identity and reconciliation policy.",
+      "competencies": [
+        "python-reading"
+      ]
+    }
+  ]
+},
   ],
   requires: [],
   optional: true,

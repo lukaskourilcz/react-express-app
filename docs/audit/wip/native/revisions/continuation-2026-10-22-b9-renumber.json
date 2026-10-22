@@ -1,0 +1,23 @@
+{
+  "kind": "b9-native-individual-review",
+  "reviewedIds": [
+    "fde-v1-m05-l2",
+    "fde-v1-m05-grounded-answer",
+    "fde-v1-m06-l1",
+    "fde-v1-m06-l2",
+    "fde-v1-m07-l2",
+    "fde-v1-m07-checks",
+    "fde-v1-m07-q5"
+  ],
+  "uniqueCoverageAdded": 0,
+  "currentReviewFiles": [
+    "review-2026-10-15-n027.jsonl",
+    "review-2026-10-15-n035.jsonl",
+    "review-2026-10-15-n036.jsonl",
+    "review-2026-10-15-n037.jsonl",
+    "review-2026-10-22-b7.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b9-renumber-before.json",
+  "proof": null,
+  "note": "Issue #505 (B9) renumbered the FDE modules, but learner copy in three modules still named modules by their old numbers. The edit corrects those cross-references only: M07 lesson 2 and its grounded-answer prompt (M03 to M04, M07 to M09), M08 lesson 1 (M03 to M04) and lesson 2 (M04 to M06), M09 lesson 2 (M05, M06, M04 to M07, M08, M06) and M09 q5's explanation (M05 to M07), which also moves the parent check's hash. Seven records are replaced in place after a fresh full reading of each item (previousHash = the replaced contentHash; previousGradingHash for the grounded-answer activity, whose prompt is part of its grading hash). Each record's module and source now name where the item lives. Model review in the integrating session; no independent or human acceptance. Placing the B3 cases module at M02 changed no item hash, so the 64 B3 records stay as written, with module and source naming where they were reviewed."
+}

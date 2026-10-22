@@ -16,12 +16,11 @@ import type {
 } from '../../shared/learning-paths';
 import { pathInventory, type PathInventory } from '../../shared/learning-paths';
 import type { PathAvailability } from '../../shared/learning-path-api';
-import { DSA_PATH } from './content/dsa';
 import { FDE_PATH } from './content/fde';
 import { mergePath, type MergedActivity, type MergedModule, type MergedPath } from './types';
 import { validatePath, type ValidationIssue } from './validate';
 
-export const LEARNING_PATHS: readonly MergedPath[] = [DSA_PATH, FDE_PATH].map(mergePath);
+export const LEARNING_PATHS: readonly MergedPath[] = [FDE_PATH].map(mergePath);
 
 const BY_ID = new Map<string, MergedPath>(LEARNING_PATHS.map((path) => [path.id, path]));
 
@@ -77,6 +76,7 @@ export function moduleSummary(module: MergedModule): ModuleSummary {
     })),
     activities: module.activities.map(activitySummary),
     requires: module.requires,
+    ...(module.requiresAtLeast ? { requiresAtLeast: module.requiresAtLeast } : {}),
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
     ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),
@@ -167,13 +167,11 @@ export function availabilityFor(input: {
   return 'available';
 }
 
-/** The environment switch, one variable per path so DSA can launch while FDE
- * content is still being authored. Absent means off: a path never turns
+/** The FDE environment switch. Absent means off: a path never turns
  * itself on because its content happens to validate. */
 export function pathEnabledInEnv(
-  pathId: LearningPathId,
+  _pathId: LearningPathId,
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const key = pathId === 'dsa-foundations' ? 'LEARNING_PATH_DSA_ENABLED' : 'LEARNING_PATH_FDE_ENABLED';
-  return env[key] === 'true';
+  return env.LEARNING_PATH_FDE_ENABLED === 'true';
 }

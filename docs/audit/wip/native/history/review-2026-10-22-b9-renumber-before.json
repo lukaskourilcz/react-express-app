@@ -1,0 +1,532 @@
+[
+  {
+    "id": "fde-v1-m07-checks",
+    "kind": "native-activity",
+    "path": "fde",
+    "module": "fde-v1-m07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m07.ts",
+    "contentHash": "cd9b180eb61c5077",
+    "previousHash": "82d4abb6506df4ce",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Apply six evaluation-report decisions with immediate feedback at the 0.8 pass threshold.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Leakage, denominators, slices, failure modes and release rules are current.",
+      "practicalUtility": "Each question is a report-reading decision an FDE makes.",
+      "transferable": "Transfers to any evaluation report.",
+      "audienceFit": "Six questions fit a 20-minute check.",
+      "riskOutcome": "Covers the misreadings that ship regressions."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read the parent and all six questions. q1-q4 are unchanged and keep their bound n027 records; q5 and q6 get individual records in this batch, q6 with the explanation fix described there. Summary lists all six decisions. Six questions at 0.8 need five correct. Machine verification and evaluation competency retained.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m07.ts checks",
+      "repo: lib/learning-paths/grade.ts gradeCheck",
+      "repo: docs/audit/wip/native/review-2026-10-15-n027.jsonl q1-q4"
+    ],
+    "reviewedAt": "2026-10-22",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Claude Code review subagent 2026-10-22, separate from the B7 content author; individual native batch b7 (#503)"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same reviewer/session, separate final English reading of the bound version",
+      "notes": "Since n027 the check grew from four to six questions (failure mode from a trace, predeclared release rule) and the summary was updated; this review changed q6's explanation, which also changes this parent hash. Final reading confirms the summary and question set. No independent/human approval, live provider, production or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m07.ts checks",
+        "repo: lib/learning-paths/grade.ts gradeCheck",
+        "repo: docs/audit/wip/native/review-2026-10-15-n027.jsonl q1-q4"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "id": "fde-v1-m05-l2",
+    "kind": "native-lesson",
+    "path": "fde",
+    "module": "fde-v1-m05",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m05.ts",
+    "contentHash": "973b9787de1f335e",
+    "previousHash": "4a5308767279999c",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Investigate actual generation evidence and policy-scoped selection without mistaking similarity, a trace or a refusal reason for semantic/root-cause proof.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Retrieval quality/access remains current.",
+      "practicalUtility": "Wrong diagnoses waste work and can expose data.",
+      "transferable": "Ranking, authorization, support and synthesis are distinct.",
+      "audienceFit": "The six-candidate trace makes late top-k filtering inspectable.",
+      "riskOutcome": "Removes sole-cause, embedding-only, universal-window and citation guarantees."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read all thirteen sections, five-row failure table, transcript and five selection frames. Explicitly assume retrieved is actual authorized generation input before attributing the7-versus14 contradiction to synthesis/later processing; multiple failures can coexist. Tracing does not automatically record/deliver text. Retrieval scores can be lexical/hybrid/reranked, not only embeddings. The0.6cutoff is fixture selection, not semantic support. Pre-ranking authorization is this workbench's policy; trusted shared rankers/replenishment can exist elsewhere. Current-policy mode excludes superseded content but historical modes may differ. Refusal codes are not unique root causes; report accuracy and coverage separately. Citations need actual authorized resolution, not a mandatory separateversion field when an immutable reference already suffices.",
+    "evidence": [
+      "https://opentelemetry.io/docs/concepts/signals/traces/",
+      "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+      "repo: lib/learning-paths/content/fde/m05.ts l2",
+      "run: check-native-2026-10-15-n035.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n035-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n035"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Final full English reading confirms high-ranked forbidden rows empty the early top3 while filtering first retains KB118/204. Scores/trace are authored examples and do not prove real retrieval accuracy, session verification or policy enforcement. Retaining old sources does not imply unlimited retention. No live model/retriever or source-resolution acceptance is claimed. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://opentelemetry.io/docs/concepts/signals/traces/",
+        "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+        "repo: lib/learning-paths/content/fde/m05.ts l2",
+        "run: check-native-2026-10-15-n035.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n035-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "fde-v1-m05-grounded-answer",
+    "kind": "native-activity",
+    "path": "fde",
+    "module": "fde-v1-m05",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m05.ts; lib/learning-paths/solutions/fde-m05.ts",
+    "contentHash": "caffa5abd8bfd255",
+    "previousHash": "f2bc5fd4b72f0722",
+    "gradingHash": "e0e3e3375b4bed41",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Select eligible scored evidence under a valid viewer tenant, preserve inputs and distinguish selection from generated truth or immutable citation proof.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": 5,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Scoped evidence selection remains current.",
+      "practicalUtility": "Missing viewer identity must fail closed.",
+      "transferable": "Eligibility, rank cutoff and semantic support differ.",
+      "audienceFit": "Bounded pre-scored fixtures test deterministic selection.",
+      "riskOutcome": "Fixes undefined-tenant matching and adds frozen/max-size probes."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Read prompt/starter/skeleton/hints/approach, all visible/hidden calls, harness, reference and critical criteria. Old viewer fallback{} could match a malformed result's undefined tenant and select it despite missing identity. Require a non-array viewer with nonblank string tenantId, preserve exacttenant comparison. State ordinary/no-accessor1000result domain, fixed originalid UTF16 tie-break and nonmutation. Minimal id/timestamp projections are not versioned-resolvable citations; answered:true only means evidence selection. Permission fields decide authority while validity/score still affect selection. Add invalid/missing viewer, malformed/nonfinite entries, clearance-shape, frozen input,1000tied rows and padded-id preservation. Reference/loop alternative pass; starter/old missing-viewer/input-sort/strict-threshold wrongs fail. Both valid target analyses keep25XP without false penalty.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m05.ts grounded-answer",
+      "repo: lib/learning-paths/solutions/fde-m05.ts",
+      "repo: docs/audit/wip/tools/native-2026-10-15-n035-candidates.json",
+      "run: check-native-2026-10-15-n035.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n035-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n035"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Final full English/code reading confirms no-query precedence, invalidviewer refusal, exacttenant and clearance rules, unknown/superseded rejection, finite scores,0.6inclusive cutoff, top3, stable code-unit tie-break, originalmetadata and distinct refusal reasons. Six real sandbox verdicts pass; two baseline mutants previously passed. No real session verification, source loader, archive resolution, semantic answer generation or retrieved-data nonloading is proved. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m05.ts grounded-answer",
+        "repo: lib/learning-paths/solutions/fde-m05.ts",
+        "repo: docs/audit/wip/tools/native-2026-10-15-n035-candidates.json",
+        "run: check-native-2026-10-15-n035.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n035-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "fde-v1-m06-l1",
+    "kind": "native-lesson",
+    "path": "fde",
+    "module": "fde-v1-m06",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m06.ts",
+    "contentHash": "7a7ed465d92ccd28",
+    "previousHash": "89a0d880cfa4de08",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Separate what a custom argument-only schema decides from live authority and business state, and read MCP 2026-07-28 tool definitions, its two error kinds and per-request version handling without guessing.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "MCP 2026-07-28 is the current revision; the page cites it and the legacy 2025-11-25 lifecycle.",
+      "practicalUtility": "A refund tool is the place where a model proposal becomes an effect.",
+      "transferable": "Schema, scope and live-state checks transfer to any tool runtime.",
+      "audienceFit": "Marlbrook registry and ordered gate trace keep the scope explicit.",
+      "riskOutcome": "Distinguishes structural validity from permission and funds."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "Read all sections, the registry code, the six-row gate table, the five-frame trace, the MCP error table and version paragraph. Checked against the 2026-07-28 tools page: inputSchema MUST be a valid JSON Schema object (not null); protocol errors (unknown tool, malformed request, server error) are JSON-RPC errors clients MAY pass to the model; tool execution errors (API, input validation, business logic) use isError:true and clients SHOULD pass them; servers MUST validate inputs, apply access controls, rate limit and sanitize outputs; clients MUST treat annotations as untrusted unless from trusted servers and SHOULD show inputs. Versioning page: _meta per-request version, UnsupportedProtocolVersionError -32022 listing supported versions, client SHOULD retry with a mutual version or surface an error; legacy 2025-11-25 SHOULD disconnect. typeof null is object per MDN, so the null-as-type-failure rule is correct. Mapping unknown_tool to protocol error and invalid_arguments/tool_failed to execution errors matches the spec lists. Wording 4: several hedged paragraphs (decoder/framework callout, compatibility callout) are dense and partly repeat each other; no factual defect.",
+    "evidence": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+      "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
+      "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof",
+      "repo: lib/learning-paths/content/fde/m06.ts l1"
+    ],
+    "reviewedAt": "2026-10-22",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Claude Code review subagent 2026-10-22, separate from the B7 content author; individual native batch b7 (#503)"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same reviewer/session, separate final English reading of the bound version",
+      "notes": "Since the n036 review the lesson moved its sources to the 2026-07-28 tools/versioning pages and 2025-11-25 lifecycle, added the MCP inputSchema and server/client security paragraphs, the protocol-versus-execution error table and a rewritten version paragraph; the gate trace now marks the proposal as an authored fixture. Final reading confirms every normative MUST/SHOULD quoted matches the opened pages and the trace stops at amountCents before currency. Every cited URL was opened on 2026-10-22 and supports the lesson text; reviewedOn 2026-10-21 is retained. No independent/human approval, live provider, production or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+        "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
+        "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
+        "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof",
+        "repo: lib/learning-paths/content/fde/m06.ts l1"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "id": "fde-v1-m06-l2",
+    "kind": "native-lesson",
+    "path": "fde",
+    "module": "fde-v1-m06",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m06.ts",
+    "contentHash": "6ce10818e8fd9275",
+    "previousHash": "acd41ee4cc87ebaa",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Choose a fixed workflow over an agent when the steps are known, bound an agent loop with a call budget, hold high-impact calls in an approve/reject state, narrow a sub-agent's grant and budget, and keep retry and idempotency limits explicit.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Agent loops, approval and sub-agents are current FDE work; both cited postings name it.",
+      "practicalUtility": "Budgets, approvals and scoped delegation prevent runaway or unauthorized effects.",
+      "transferable": "Workflow-versus-agent and least-privilege delegation apply to any agent framework.",
+      "audienceFit": "Four-row build table, loop trace and delegation table are concrete and answerable.",
+      "riskOutcome": "Shows the double refund an unchecked approval causes and the atomic re-check that prevents it."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "Read all sections, the workflow/agent table, the five-frame loop trace, both approval traces, the delegation table and the idempotency table. Quotes verified against Building effective agents (19 Dec 2024): predefined code paths, dynamically direct, simplest solution, stopping conditions such as a maximum number of iterations, pause for human feedback at checkpoints, orchestrator-workers. MCP tools page: SHOULD always be a human in the loop with the ability to deny tool invocations. OWASP LLM06:2025: human approval for high-impact actions; excessive permissions as a root cause. Snowflake posting text and Harvey listing (removed 9 Feb 2026, page still served) contain the quoted phrases. RFC 9110 9.2.2 defines idempotence by intended effect and notes the response might differ. Arithmetic checked: 4x4x4=64; loop trace budget 3-2-1-0 and CALL-1 numbering match the exercise (only pending calls are numbered); 24050+24050=48100. Wording 4: the approval trace shows an approved call still held until 09:17, a fourth state the prose's three-state model (pending, approved-and-ran, rejected) does not name; it is labelled hypothetical, so not a correctness defect.",
+    "evidence": [
+      "https://www.anthropic.com/engineering/building-effective-agents",
+      "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+      "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/",
+      "https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87",
+      "https://builtin.com/job/forward-deployment-engineer/7406694",
+      "https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2",
+      "repo: lib/learning-paths/content/fde/m06.ts l2"
+    ],
+    "reviewedAt": "2026-10-22",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Claude Code review subagent 2026-10-22, separate from the B7 content author; individual native batch b7 (#503)"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same reviewer/session, separate final English reading of the bound version",
+      "notes": "Since the n036 review the lesson was rebuilt around the agent loop: new sources (Anthropic agents essay, MCP human-in-the-loop, OWASP LLM06:2025, Snowflake and Harvey postings, RFC 9110 9.2.2), the workflow-versus-agent table, the call-budget loop trace, the approve/reject state, sub-agent delegation table; the async runner sketch was removed and the retry/idempotency material shortened. Final reading confirms quotes, arithmetic and agreement with the exercise contract. Every cited URL was opened on 2026-10-22 and supports the lesson text; reviewedOn 2026-10-21 is retained. No independent/human approval, live provider, production or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://www.anthropic.com/engineering/building-effective-agents",
+        "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+        "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/",
+        "https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87",
+        "https://builtin.com/job/forward-deployment-engineer/7406694",
+        "https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2",
+        "repo: lib/learning-paths/content/fde/m06.ts l2"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "id": "fde-v1-m07-l2",
+    "kind": "native-lesson",
+    "path": "fde",
+    "module": "fde-v1-m07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m07.ts",
+    "contentHash": "3f592dfe8935db96",
+    "previousHash": "086516f3ad9be57f",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Report accuracy, coverage, cost per request and p95 latency together, classify wrong answers by a trace-based failure taxonomy, read slices an aggregate hides, and apply a predeclared comparison rule.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Cost, latency and failure-mode analysis beside quality are current eval practice.",
+      "practicalUtility": "Customers agree budgets and latency limits; the report must carry them.",
+      "transferable": "Denominators, percentiles and taxonomies transfer to any system.",
+      "audienceFit": "Fixture numbers are consistent with the exercise and checked below.",
+      "riskOutcome": "Shows how an eight-point aggregate win hides a returns regression."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "Read all sections, tables, the five-frame slice trace and the report object. Verified against fixture patterns: baseline 8/9/10 of 12 (27/36), candidate 11/12/7 (30/36), cautious 22 correct of 24 answered; candidate's five returns errors are three retrieval misses (C-32..34), one refunds.create (C-35) and one hallucination (C-36); baseline nine errors unclassified; p95 2400 ms by nearest rank with 33 cases at 900 ms; mean 1880 ms and nearest-rank p95 400 ms / p99 30 s in the latency example; 0.9167-0.6111≈30.56 points. Sources: Anthropic evals article (latency, token usage, cost per task and error rates on a static bank of tasks; read transcripts and grades from many trials), Snowflake preferred qualification quoting the four failure categories, Harvey listing (evals & harnesses, client-by-client, crisp success metrics), SRE book (distributions over averages), OpenTelemetry spans. The taxonomy is correctly presented as this module's convention. Wording 4: the latency and cost paragraphs are dense with caveats.",
+    "evidence": [
+      "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+      "https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87",
+      "https://builtin.com/job/forward-deployment-engineer/7406694",
+      "https://sre.google/sre-book/service-level-objectives/",
+      "https://opentelemetry.io/docs/concepts/signals/traces/",
+      "repo: lib/learning-paths/content/fde/m07.ts l2",
+      "repo: lib/learning-paths/content/fde/m07.ts evaluation fixtures"
+    ],
+    "reviewedAt": "2026-10-22",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Claude Code review subagent 2026-10-22, separate from the B7 content author; individual native batch b7 (#503)"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same reviewer/session, separate final English reading of the bound version",
+      "notes": "Since n037 the lesson added cost per request and p95 latency beside quality, the four-label failure taxonomy with its trace rules, the candidate comparison table with cost and p95, and new sources (Snowflake, Harvey, SRE, OpenTelemetry). Final reading confirms every figure against the fixtures. Every cited URL was opened on 2026-10-22 and supports the lesson text; reviewedOn 2026-10-21 is retained. No independent/human approval, live provider, production or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+        "https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87",
+        "https://builtin.com/job/forward-deployment-engineer/7406694",
+        "https://sre.google/sre-book/service-level-objectives/",
+        "https://opentelemetry.io/docs/concepts/signals/traces/",
+        "repo: lib/learning-paths/content/fde/m07.ts l2",
+        "repo: lib/learning-paths/content/fde/m07.ts evaluation fixtures"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "id": "fde-v1-m07-q5",
+    "kind": "native-check-question",
+    "path": "fde",
+    "module": "fde-v1-m07",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m07.ts",
+    "contentHash": "8f4b0674d369241a",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Classify a wrong answer whose trace lacks the supporting article as a retrieval miss and place the fix in retrieval.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Trace-based failure analysis is current eval practice.",
+      "practicalUtility": "Sends the fix to the index instead of the prompt.",
+      "transferable": "The retrieval-before-generation order transfers to any RAG system.",
+      "audienceFit": "C-33 matches the exercise fixture trace.",
+      "riskOutcome": "Prevents a prompt change aimed at evidence the model never saw."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "C-33 in the fixture is a candidate returns error with trace 'r': retrieved KB-delivery, tool queue.assign; the case's sourceId is KB-returns. Under the stated rule order the key is retrieval miss. Distractors match the other three labels and each explanation rejects them on the trace facts, including that hallucination applies here only when the right evidence arrived.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m07.ts q5",
+      "repo: lib/learning-paths/content/fde/m07.ts EVALUATION_FIXTURES __RUNS.candidate"
+    ],
+    "reviewedAt": "2026-10-22",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Claude Code review subagent 2026-10-22, separate from the B7 content author; individual native batch b7 (#503)"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same reviewer/session, separate final English reading of the bound version",
+      "notes": "New question; final reading confirms the key against the fixture trace and the l2 taxonomy table. No independent/human approval, live provider, production or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m07.ts q5",
+        "repo: lib/learning-paths/content/fde/m07.ts EVALUATION_FIXTURES __RUNS.candidate"
+      ]
+    }
+  }
+]
