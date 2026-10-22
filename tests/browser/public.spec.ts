@@ -79,3 +79,18 @@ test('retired guide addresses show the app not-found page without an English red
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('That page is out of the water.');
   await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 });
+
+test('all three Learn sections have public previews without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const [id, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
+      await page.goto(`${process.env.TEST_BASE_URL || 'http://localhost:4173'}/learn/${id}`);
+      await expect(page).toHaveTitle(`${name} · devShark`);
+      await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://devshark.app/learn/${id}`);
+      expect(await page.locator('a[href*="?topic="]').count()).toBeGreaterThan(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  } finally { await context.close(); }
+});

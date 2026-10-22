@@ -197,3 +197,5 @@ and publication records. The owner approves each prepared revision; account
 connection and templates do not approve future posts. n8n Cloud orchestrates
 this integration. This repository holds no social publishing credentials or
 model calls. Production setup and publication require owner review.
+
+Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.

@@ -7,10 +7,11 @@ const sitemap = new JSDOM(readFileSync(`${dir}/sitemap.xml`, 'utf8'), { contentT
 const urls = [...sitemap.window.document.querySelectorAll('loc')].map(node => new URL(node.textContent));
 assert(!urls.some(url => url.pathname.startsWith('/cs/')), 'retired guide URLs stay out of the sitemap');
 assert(!existsSync(`${dir}/cs`), 'no retired guide HTML is emitted');
-assert.equal(urls.length, 15, 'Home, five English guides, /premium, /premium/cancel, /daily, /coding and its five track pages');
+assert.equal(urls.length, 18, 'Home, five English guides, three Learn sections, /premium, /premium/cancel, /daily, /coding and its five track pages');
 // The app pages with public HTML (#222, #239). /premium/success stays out: a
 // Stripe return means nothing to anyone else, and the app marks it noindex.
-const APP_PAGES = ['/premium', '/premium/cancel', '/daily'];
+const LEARN_SECTION_PAGES = ['/learn/web-developer', '/learn/software-engineer', '/learn/forward-deployed-engineer'];
+const APP_PAGES = [...LEARN_SECTION_PAGES, '/premium', '/premium/cancel', '/daily'];
 assert.deepEqual(urls.filter(url => APP_PAGES.includes(url.pathname)).map(url => url.pathname), APP_PAGES);
 // The Coding home and its track pages (owner decision, 9 Oct 2026). The task
 // pages, /coding/review and hidden system design stay out.
@@ -39,7 +40,12 @@ for (const url of urls) {
     assert.equal(doc.documentElement.lang, 'en');
     assert.equal(doc.querySelectorAll('link[hreflang]').length, 0, `${url}: English only`);
     const text = doc.querySelector('#root').textContent;
-    if (url.pathname === '/premium') {
+    if (LEARN_SECTION_PAGES.includes(url.pathname)) {
+      assert(!doc.querySelector('#public-schema'), `${url}: preview makes no certification or paid-course schema claim`);
+      assert(doc.querySelectorAll('#root li a[href*="?topic="]').length > 0, `${url}: authored topics are readable without JavaScript`);
+      assert.match(text, /Sign in to save progress/, `${url}: preview and saved work are distinct`);
+      if (url.pathname.endsWith('forward-deployed-engineer')) assert.match(text, /modules.*lessons.*check questions.*code exercises/, `${url}: inventory comes from the manifest`);
+    } else if (url.pathname === '/premium') {
       const schema = JSON.parse(doc.querySelector('#public-schema').textContent);
       assert.equal(schema['@type'], 'LearningResource'); assert.equal(schema.url, url.href); assert.equal(schema.name, doc.title);
       assert.equal(schema.isAccessibleForFree, false, 'Premium is the paid subscription');

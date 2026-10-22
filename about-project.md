@@ -100,3 +100,5 @@ BoardlessAI (`lukaskourilcz/quorum`). It reads the question bank read-only as a 
 and publishes one question a day, with its answer, as a carousel. No code here changes, and
 nothing posts without a person approving it. See the README for what it does and does not
 touch.
+
+Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.

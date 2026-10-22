@@ -136,6 +136,14 @@ export function vercelRoutingContracts(): void {
   }
   const retiredGuides = phases.main.filter((route) => route.src === '^/cs/topics(?:/.*)?$');
   assert.equal(retiredGuides.length, 1, 'retired guide URLs answer the app shell with HTTP 404');
+  // Public Learn previews must reach their own HTML before the SPA fallback.
+  for (const id of ['web-developer', 'software-engineer', 'forward-deployed-engineer']) {
+    const source = `/learn/${id}`;
+    const rewrite = (config.rewrites ?? []).find(one => one.source === source);
+    assert.equal(rewrite?.destination, `${source}/index.html`, `${source} serves its public preview`);
+    const fallback = (config.rewrites ?? []).findIndex(one => one.destination === '/index.html');
+    assert.ok((config.rewrites ?? []).indexOf(rewrite!) < fallback, `${source} precedes the SPA fallback`);
+  }
   // Vercel accepts nothing else after `handle: hit`.
   for (const route of phases.hit) {
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs after a file matched and may only add headers`);

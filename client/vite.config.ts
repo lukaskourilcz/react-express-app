@@ -21,9 +21,30 @@ import { CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { freeCodingCounts } from '../shared/tiers';
 import { addDays, qotdImagePath, qotdPath, qotdTrack, utcToday, QOTD_EPOCH } from '../shared/daily-question';
 
+import { LEARN_SECTIONS } from '../shared/learn-sections';
+import { pathInventory } from '../shared/learning-paths';
+import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
+import { SectionPreviewStatic } from './src/components/learn/SectionPreviewStatic';
+import { categoryLabelKey } from './src/lib/categories';
+
 /** The English dictionary for the static pages, with the app's {name} slots. */
 const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
+const sectionBody = (id: string) => ({ t }: { t: Translate }) => {
+  const section = LEARN_SECTIONS.find(one => one.id === id)!;
+  const page = PUBLIC_PAGES.find(one => one.path === `/learn/${id}`)!;
+  return createElement(SectionPreviewStatic, {
+    name: t(page.titleKey).replace(' · devShark', ''), description: t(page.descriptionKey),
+    topics: section.topics.map(topic => ({ name: t(categoryLabelKey(topic)), href: `/learn/${id}?topic=${encodeURIComponent(topic)}` })),
+    paths: section.paths.map(pathId => {
+      const path = LEARNING_PATHS.find(one => one.id === pathId)!;
+      return { title: path.title, summary: path.summary, href: `/learn/${id}/path`, inventory: pathInventory(path) };
+    }),
+  });
+};
 const STATIC_PAGE_BODIES = {
+  '/learn/web-developer': sectionBody('web-developer'),
+  '/learn/software-engineer': sectionBody('software-engineer'),
+  '/learn/forward-deployed-engineer': sectionBody('forward-deployed-engineer'),
   '/premium': PremiumStaticArticle,
   '/premium/cancel': PremiumCancelStaticArticle,
   '/daily': DailyStaticArticle,

@@ -8,6 +8,11 @@
 // shell from importing this file.
 
 export const learnEn = {
+  'learn.preview.access': 'Preview the topics and path outline. Sign in to save progress. Each activity shows whether it is free or needs Premium.',
+  'learn.preview.topics': 'Topics',
+  'learn.preview.inventory': '{modules} modules · {lessons} lessons · {checks} check questions · {exercises} code exercises',
+  'learn.preview.availability': 'The outline reflects authored content. A path opens for recorded work only when its release checks and availability switch permit it.',
+
   'learn.lesson.startQuestions': 'Start the questions',
   'learn.lesson.readingOnly': 'Reading is optional. It records no progress and earns no XP.',
   'learn.lesson.error': 'The lesson could not load. Try again or start the questions.',

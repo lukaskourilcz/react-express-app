@@ -5,6 +5,12 @@
 // to t(key, vars).
 
 export const en = {
+  'title.learnWebDeveloper': 'Web Developer · devShark',
+  'title.learnSoftwareEngineer': 'Software Engineer · devShark',
+  'title.learnFde': 'Forward Deployed Engineer · devShark',
+  'learn.preview.webDeveloper': 'Explore web development topics, guided Learn levels and coding practice across the frontend and backend.',
+  'learn.preview.softwareEngineer': 'Explore algorithms, data structures, databases, testing, security and delivery topics in the Software Engineer section.',
+  'learn.preview.fde': 'Explore the Forward Deployed Engineer path: customer discovery, integration, evaluation, security, deployment and handoff.',
   'designPreview.label': 'Compare interface designs',
   'designPreview.local': 'Local preview',
   'designPreview.original': 'Original',

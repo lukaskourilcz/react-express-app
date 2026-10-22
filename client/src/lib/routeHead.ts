@@ -50,6 +50,8 @@ export function routeTitle(pathname: string, t: Translate): string {
   const publicTopic = topicFromPath(pathname);
   if (publicTopic) return `${publicTopic.topic.title} · ${CURRENT_PRODUCT.brand}`;
   if (pathname === '/') return CURRENT_PRODUCT.title;
+  const sectionPage = publicPage(pathname);
+  if (sectionPage) return t(sectionPage.titleKey);
   const titleKey = ROUTE_TITLE_KEYS[pathname];
   if (titleKey) return t(titleKey);
   // A Learn section (/learn/web-developer, …) carries the Learn title.
