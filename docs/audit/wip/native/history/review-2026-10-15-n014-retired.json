@@ -1,0 +1,362 @@
+[
+  {
+    "id": "dsa-v1-d10-q6",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d10",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d10.ts",
+    "contentHash": "4c34e07d4168023e",
+    "previousHash": "6d7ab2b817e76df1",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Count worst-case absent-target midpoint probes for the taught binary-search convention.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Binary-search probe counts remain current.",
+      "practicalUtility": "Bounds matter in indexed lookup.",
+      "transferable": "Exact counts differ from growth classes across implementations.",
+      "audienceFit": "A power-of-two comparison fits the final foundation check.",
+      "riskOutcome": "Naming the convention avoids treating all iterative sources as identical."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Specify distinct 1..1000000, closed interval, floored midpoint, one cached value read per probe and midpoint exclusion. Ask for the maximum across absent finite targets. The former generic iterative-search wording did not determine an exact element-read count. Retain 20 versus linear/square-root/base-ten distractors and state floor(log2 n)+1 for the chosen convention.",
+    "evidence": [
+      "repo: lib/learning-paths/content/dsa/d07.ts closed interval",
+      "repo: lib/learning-paths/content/dsa/d10.ts q6",
+      "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n014"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread prompt, all four numbers and feedback. The declared algorithm reads 20 midpoints for target 1000001 and 19 for target 0, confirming the maximum need not be every query's count. No engine timing or arbitrary-source read guarantee is claimed. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/dsa/d07.ts closed interval",
+        "repo: lib/learning-paths/content/dsa/d10.ts q6",
+        "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d10-q7",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d10",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d10.ts",
+    "contentHash": "5543c4617f2adc49",
+    "previousHash": "75d0ead61de100df",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Recognize the sorted processed-prefix boundary of the specifically taught insertion implementation.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Insertion invariants remain current.",
+      "practicalUtility": "Intermediate state helps debugging loops.",
+      "transferable": "An invariant is different from identifying arbitrary source.",
+      "audienceFit": "The final check reuses the taught methods with new values.",
+      "riskOutcome": "Explicit completed passes remove partial-pass and unknown-implementation ambiguity."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Restrict the snapshot question to this path's exact implementations between completed passes. Shorten the keyed option and keep parallel prefix/global-minimum/merge-writeback/bubble-maximum rationales. Explicitly say a snapshot cannot prove which arbitrary program produced it. The taught merge sort returns a fresh array and never writes this state into the caller's input.",
+    "evidence": [
+      "repo: lib/learning-paths/content/dsa/d08.ts exact implementations",
+      "repo: lib/learning-paths/content/dsa/d10.ts q7",
+      "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n014"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread every option and explanation against actual D08 source. The insertion state after its fourth completed pass is [1,3,5,8,9,2]. Selection must bring the global 2 forward by its second pass; a completed left-to-right bubble pass moves the maximum to the end. No universal algorithm detector is claimed. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/dsa/d08.ts exact implementations",
+        "repo: lib/learning-paths/content/dsa/d10.ts q7",
+        "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d10-q8",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d10",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d10.ts",
+    "contentHash": "5b02d6ec1f8fdbad",
+    "previousHash": "ac5f4175f3dd092e",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Distinguish fresh stable sorting from a mutating same-array stable sort.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Current JavaScript sort is stable and mutating.",
+      "practicalUtility": "Aliasing changes caller-visible behavior.",
+      "transferable": "Mutation does not determine auxiliary storage.",
+      "audienceFit": "A replacement call site is a practical final question.",
+      "riskOutcome": "Valid syntax and a worst-case-qualified lower bound remove misleading details."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The old combined context redeclared const sorted in one scope. Put before/after calls in separate blocks and label them alternative call sites. Specify dense mutable string-name records, and ask for the guaranteed alias change even when an array is already sorted. Shorten the key. Retain the ES2019 stability correction, qualify the comparison lower bound as worst-case arbitrary distinct values, and remove an unsupported universal engine-space inference.",
+    "evidence": [
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+      "repo: lib/learning-paths/content/dsa/d08.ts mergeSort",
+      "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n014"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread actual compilable context, four choices and explanation against current primary documentation. The taught merge returns a separate stable [2,3,1] record order; sort returns the same rows array with ties retaining identity/order. The source no longer depends on invalid duplicate declarations or claims every input costs n log n. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+        "repo: lib/learning-paths/content/dsa/d08.ts mergeSort",
+        "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d10-q9",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d10",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d10.ts",
+    "contentHash": "aa0e4d15781db39e",
+    "previousHash": "6d386d6780075f11",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Derive inorder from a slot-indexed tree listing with missing children.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Tree traversal remains current.",
+      "practicalUtility": "Explicit null slots prevent shape mistakes.",
+      "transferable": "Translating representations transfers to nested data.",
+      "audienceFit": "Five nodes keep the final item inspectable.",
+      "riskOutcome": "Each distractor is a real alternate traversal of this tree."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "The prompt explicitly defines slot indexing 2i+1/2i+2 and null children. The key [3,4,5,7,8] is correct. The other three equal-format arrays are respectively level, pre and post order, and feedback explains the literal shape. No rewriting is needed.",
+    "evidence": [
+      "repo: lib/learning-paths/content/dsa/d10.ts q9 literal listing",
+      "repo: lib/learning-paths/content/dsa/d09.ts traversal definitions",
+      "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n014"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread the entire stem, four arrays and explanation. Constructed the stated five-node tree and independently checked all four sequences. Its ascending inorder is consistent with this particular valid BST; the item does not claim all nondecreasing outputs fully validate every duplicate-side policy. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/dsa/d10.ts q9 literal listing",
+        "repo: lib/learning-paths/content/dsa/d09.ts traversal definitions",
+        "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "dsa-v1-d10-q10",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d10",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d10.ts",
+    "contentHash": "7bdb044b9196f8a5",
+    "previousHash": "4c67992b81577c9c",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Compare an ordering-guided root-to-leaf bound with an exhaustive unordered-tree search.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 5,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "BST versus binary-tree search remains current.",
+      "practicalUtility": "Ordering changes how much absence requires inspecting.",
+      "transferable": "A structural bound differs from a balanced-shape assumption.",
+      "audienceFit": "Parallel numeric bounds fit a final foundation check.",
+      "riskOutcome": "Removing positional feedback keeps shuffled choices meaningful."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Define finite nonempty ordinary numeric trees and edge-height h. Shorten the key and parallelize the four bounds. Explain unsuccessful node comparisons rather than claiming each equality comparison discards a subtree. Replace second/third/fourth option references with the actual assumptions, and distinguish at-most h+1 from an exact count for every query.",
+    "evidence": [
+      "repo: lib/learning-paths/content/dsa/d09.ts shape-dependent search",
+      "repo: lib/learning-paths/content/dsa/d10.ts q10",
+      "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n014"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread every option and final feedback. The five-node literal BST settles absent 6 in three visits and absent 9 in two; an unstructured absence can require all five. Plain chains can reach n visits, so a universal log bound is false, while a short tree disproves an always-all-n BST claim. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/dsa/d09.ts shape-dependent search",
+        "repo: lib/learning-paths/content/dsa/d10.ts q10",
+        "run: check-native-2026-10-15-n014.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n014-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  }
+]

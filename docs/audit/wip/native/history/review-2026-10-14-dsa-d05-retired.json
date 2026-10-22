@@ -1,0 +1,685 @@
+[
+  {
+    "id": "dsa-v1-d05-l1",
+    "kind": "native-lesson",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "f43b4e4ea1a43981",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Represent a finite null-terminated chain and distinguish indexed access from a node walk.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "Expository lesson: examples and trace are reviewed directly; there are no answer options.",
+      "hint": "This lesson has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Plain fields, bounded comparisons and dense-array costs are explicit models. The four-node search trace matches three visits for 7 and four for an absent value; engine layout does not establish a universal faster structure.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Read every node example, trace frame and table row; no positional index, stored length or guaranteed engine duration is claimed.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Read every node example, trace frame and table row; no positional index, stored length or guaranteed engine duration is claimed. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-l2",
+    "kind": "native-lesson",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "aa9984d5f72c9934",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Separate O(k+1) position search from constant rewiring and linear link reversal.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "Expository lesson: examples and trace are reviewed directly; there are no answer options.",
+      "hint": "This lesson has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The literal line swap throws before initialization; the corrected warning distinguishes that from losing an unsaved suffix. Reachability assumes no other strong references, O(k+1) covers a fixed k, and three-reference reversal separates temporary storage from visiting nodes.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Memory_management",
+      "Executed preserved insertion/suffix links, null lastValue behavior, line-swap ReferenceError and n exact reversal writes for 0/1/2/8/32 nodes; no collection timing is inferred.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Executed preserved insertion/suffix links, null lastValue behavior, line-swap ReferenceError and n exact reversal writes for 0/1/2/8/32 nodes; no collection timing is inferred. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-l1-read",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "6102a953823fceb9",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Acknowledge the linked-node representation lesson without treating reading as measured mastery.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "Self-reviewed reading acknowledgement with a lesson binding, not a scored choice item.",
+      "hint": "No pre-answer hint is present on this reading acknowledgement."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 1,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 8,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "The activity references the existing first lesson, costs 20 minutes and retains self_reviewed verification. Its node/lookup objective matches the corrected lesson rather than an algorithmic pass.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Read acknowledgement metadata, lesson binding and competencies; this record has no independent answer key or pre-answer hint.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Read acknowledgement metadata, lesson binding and competencies; this record has no independent answer key or pre-answer hint. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-l2-read",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "bd048396b04b6383",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Acknowledge rewiring and reversal reasoning separately from machine-verified exercises.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "Self-reviewed reading acknowledgement with a lesson binding, not a scored choice item.",
+      "hint": "No pre-answer hint is present on this reading acknowledgement."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 1,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 8,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "retain",
+    "correctnessBlocker": null,
+    "rationale": "The second acknowledgement references the corrected rewiring lesson and remains self_reviewed. Its summary separates the constant rewrite from the walk to reach a place.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Read lesson binding, 20-minute estimate, competencies and verification; no performance or mastered-skill claim is manufactured.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Read lesson binding, 20-minute estimate, competencies and verification; no performance or mastered-skill claim is manufactured. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-checks",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "1b33676addf1d258",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Check known-node insertion, root reachability, empty-list access and reversal time/space.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "answerOptions": "Assessment wrapper has no own options; each child question is individually scored in this file.",
+      "hint": "The assessment wrapper has no authored pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "All four child questions have one answer under explicit ordinary-field/allocation assumptions. At threshold 0.8, four questions require all four correct; the questions are not domain-gated and their explanations address each misconception.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Read each child question and original keyed index; execute the null context and counted walk/rewire examples. Total module estimates still sum to 115 minutes.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Read each child question and original keyed index; execute the null context and counted walk/rewire examples. Total module estimates still sum to 115 minutes. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-q1",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "d5e0cfa4096e14d0",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Contrast known-node insertion with worst-case sequential value search.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "No pre-answer hint is authored for this check question; feedback explanation is reviewed separately."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The worst-case search and constant field/allocation model remove best-case ambiguity. Parallel options distinguish no shifting from no traversal and supplied-node access from a head walk.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Exact insertion retains the old successor with constant rewiring; absent walks visit n nodes at sizes 0/1/2/8/32.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Exact insertion retains the old successor with constant rewiring; absent walks visit n nodes at sizes 0/1/2/8/32. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-q2",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "9b71c050e05da15c",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Distinguish an unreachable prefix from a reachable suffix and immediate deallocation.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "No pre-answer hint is authored for this check question; feedback explanation is reviewed separately."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "At least three plain nodes and no other strong references establish the keyed reachability statement. Reassignment retains the suffix; collection is possible later, not guaranteed at the assignment.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Memory_management",
+      "Executed suffix identity after dropping two links; compared every option with root reachability. No garbage collector timing experiment or guarantee is claimed.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Executed suffix identity after dropping two links; compared every option with root reachability. No garbage collector timing experiment or guarantee is claimed. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-q3",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "72caa9c1133b2071",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Recognize that reading null.next occurs before a loop can guard the empty input.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "No pre-answer hint is authored for this check question; feedback explanation is reviewed separately."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The finite acyclic/null-tail premise excludes unrelated malformed/cyclic inputs. Null throws, while one and two nodes return the tail; similarly structured distractors diagnose assignment and off-by-one errors.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Ran the exact lastValue context: null TypeError, one-node 3, two-node 3; verified the explanation against all four options.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Ran the exact lastValue context: null TypeError, one-node 3, two-node 3; verified the explanation against all four options. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-q4",
+    "kind": "native-check-question",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "6fd39390bf180ca8",
+    "gradingHash": null,
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Separate linear traversal from growing temporary storage in two reversals.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "No pre-answer hint is authored for this check question; feedback explanation is reviewed separately."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 1
+    },
+    "relevanceScore": 9,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Field/allocation and amortized append assumptions are stated. The temporary array alone is O(n), even excluding output nodes, while three working references are O(1); option lengths and claims are comparable.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Read both described algorithms and counted n visits/writes. The explanation does not equate touching values with allocating storage or claim measured arbitrary memory use.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Read both described algorithms and counted n visits/writes. The explanation does not equate touching values with allocating storage or claim measured arbitrary memory use. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-prepend-and-find",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "cc32f4fdc399cc7f",
+    "gradingHash": "47a0b2fc7a402da7",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Build a fresh front node and find the first strict-equality match without changing existing fields.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": 4,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {},
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Object/symbol identity, NaN non-match and signed-zero match are explicit. Final finite witnesses reject SameValueZero, loose equality, last-match search and added fields while accepting an independent for-loop implementation.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Original SameValueZero and added-field candidates passed; final reference/alternative pass and starter/four wrong variants fail. Read every visible/hidden assertion, hint, skeleton and approach.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Original SameValueZero and added-field candidates passed; final reference/alternative pass and starter/four wrong variants fail. Read every visible/hidden assertion, hint, skeleton and approach. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-delete-first-match",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "c3a42f3708714cd6",
+    "gradingHash": "01502bf2c0d446d7",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Unlink only the first strictly equal node and preserve original surviving values and identity.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": 4,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {},
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Signed-zero and NaN witnesses distinguish strict equality from Object.is, and object identity/removed-node links are preserved on finite examples. Independent previous/current traversal passes; rebuilding and all-match removal fail.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Original Object.is candidate passed; final reference/alternative pass and starter/three wrong variants fail. Cost is an authored model, not proof from elapsed time or all allocation behavior.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Original Object.is candidate passed; final reference/alternative pass and starter/three wrong variants fail. Cost is an authored model, not proof from elapsed time or all allocation behavior. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  },
+  {
+    "id": "dsa-v1-d05-reverse-list",
+    "kind": "native-activity",
+    "path": "dsa-foundations",
+    "module": "dsa-v1-d05",
+    "contentHash": "89cee9b2b11e1481",
+    "gradingHash": "0b16c7cde16bc2bf",
+    "locale": "en",
+    "source": "lib/learning-paths/content/dsa/d05.ts",
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 binds complete server-only solutions and raw hidden/type fixtures",
+    "objective": "Reverse original links while preserving node and value identity, with a constant-space goal.",
+    "intendedLevel": "foundation",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 4,
+      "technicalCorrectness": 4,
+      "wording": 4,
+      "answerOptions": 4,
+      "hint": 4,
+      "explanation": 4
+    },
+    "qualityScore": 4,
+    "notApplicable": {},
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "Cloned object values now fail strict snapshots and retained nodes must end at null in reverse order. Three-reference and array-of-node-reference implementations both pass semantics; the finite criterion explicitly does not establish auxiliary space.",
+    "evidence": [
+      "https://cs50.harvard.edu/x/notes/5/",
+      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+      "Original cloned-value variant passed; final reference/two alternatives pass and starter/three wrong variants fail. Read both criteria, all tests, hints/skeleton/approach; unknown advisory cost is not penalized.",
+      "Local final worker: 20/20 selected expected verdicts (7 valid, 3 starters, 10 wrong); question contexts/counted examples executed separately."
+    ],
+    "reviewedAt": "2026-10-14",
+    "reviewer": {
+      "kind": "model",
+      "independent": false
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model and session, separate final reading",
+      "notes": "Original cloned-value variant passed; final reference/two alternatives pass and starter/three wrong variants fail. Read both criteria, all tests, hints/skeleton/approach; unknown advisory cost is not penalized. Final full material reread; no independent/human review, arbitrary-complexity proof or complete-catalogue approval claimed."
+    }
+  }
+]
