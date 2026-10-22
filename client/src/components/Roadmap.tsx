@@ -1774,6 +1774,21 @@ function LessonRunner({
     if (finished || restart) resultHeadingRef.current?.focus({ preventScroll: true });
   }, [finished, restart]);
 
+  // Focus follows the lesson. An answer disables the option that held focus
+  // and the next question removes the Continue that did, and focus fell to
+  // the page: a keyboard learner had to tab through the whole shell to go on.
+  // A revealed answer takes focus to its Continue (or Try again); a question
+  // takes it to the question, where the number keys still answer.
+  const questionRef = useRef<HTMLDivElement>(null);
+  const feedbackActionRef = useRef<HTMLButtonElement>(null);
+  const showingQuestion = !finished && !restart && !showIntro && !codingPhase;
+  useEffect(() => {
+    if (showingQuestion) questionRef.current?.focus({ preventScroll: true });
+  }, [showingQuestion, qIndex]);
+  useEffect(() => {
+    if (revealed || answerError) feedbackActionRef.current?.focus({ preventScroll: true });
+  }, [revealed, answerError]);
+
   if (restart) {
     return (
       <div
@@ -2076,7 +2091,9 @@ function LessonRunner({
       </div>
 
       {/* Question — the only region that scrolls when long. */}
-      <div id="lesson-question" style={{ fontWeight: 500, marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+      {/* Focused when a question opens (see above); not in the tab order, and
+          no ring, as for <main>: it is a place to read, not a control. */}
+      <div id="lesson-question" ref={questionRef} tabIndex={-1} style={{ fontWeight: 500, marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', outline: 'none' }}>
         {renderQuestion(question.question)}
         {/* One control for the whole item: the question, every option and the
             explanation. Beside the block rather than inside an option, so it
@@ -2164,6 +2181,7 @@ function LessonRunner({
               <>
                 <div role="alert" style={{ fontWeight: 700, color: 'var(--ss-error)' }}>{answerError}</div>
                 <button
+                  ref={feedbackActionRef}
                   type="button"
                   className="rm-accent-btn"
                   onClick={() => revealed ? void advance() : selected !== null ? void choose(selected) : undefined}
@@ -2187,6 +2205,7 @@ function LessonRunner({
                   <SaveSharkCard question={question} correctIndex={grade.correctAnswer} explanation={grade.explanation ?? ''} />
                 )}
                 <button
+                  ref={feedbackActionRef}
                   type="button"
                   className="rm-accent-btn"
                   onClick={() => void advance()}

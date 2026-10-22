@@ -398,6 +398,25 @@ describe('a level whose session cannot be used', () => {
     expect(answers).toBe(1);
   });
 
+  // An answer disabled the option that held focus, and Continue then removed
+  // itself, so focus fell to the page each time.
+  it('moves focus to Continue when an answer is revealed, then to the next question', async () => {
+    const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
+    answer({ playable: { ...PLAYABLE, questions: [QUESTION, second] } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    const question = document.getElementById('lesson-question')!;
+    expect(question).toHaveFocus();
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    const next = await screen.findByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(next).toHaveFocus());
+    fireEvent.click(next);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull());
+    expect(document.getElementById('lesson-question')).toHaveFocus();
+    expect(screen.getByRole('radio', { name: /Option A/ })).not.toBeDisabled();
+  });
+
   // Returning to the tab fires focus and visibilitychange together. Each
   // re-check found the coding task passed and completed the level, so the
   // pass was recorded, and its XP announced, twice.
