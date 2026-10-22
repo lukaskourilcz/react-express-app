@@ -62,7 +62,7 @@ for (const theme of ['light', 'dark'] as const) {
         .filter(el => { const box = el.getBoundingClientRect(); return box.width > 0 && box.right > edge; })
         .map(el => (el.textContent ?? '').trim().slice(0, 40));
     })).toEqual([]);
-    await wide.evaluate(el => el.remove());
+    await wide.evaluate(el => (el as Element).remove());
     await page.addStyleTag({ content: 'html { font-size: 100% !important; }' });
     expect((await new AxeBuilder({ page }).include('[aria-labelledby="fde-evidence-title"]').include('[aria-labelledby="fde-loop-title"]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
     complete = true; await page.reload();
