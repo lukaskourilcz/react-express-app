@@ -17,6 +17,9 @@ export function topicSchema(title: string, description: string, url: string) {
  * same canonical and description at runtime, and check:public reads them back
  * from the sitemap. Descriptions are translation keys, resolved by the caller. */
 export const PUBLIC_PAGES = [
+  { path: '/learn/web-developer', titleKey: 'title.learnWebDeveloper', descriptionKey: 'publicSection.webDeveloper', schema: null },
+  { path: '/learn/software-engineer', titleKey: 'title.learnSoftwareEngineer', descriptionKey: 'publicSection.softwareEngineer', schema: null },
+  { path: '/learn/forward-deployed-engineer', titleKey: 'title.learnFde', descriptionKey: 'publicSection.fde', schema: null },
   { path: '/premium', titleKey: 'title.premium', descriptionKey: 'premium.page.lead', schema: 'premium' },
   { path: '/premium/cancel', titleKey: 'title.premiumCancel', descriptionKey: 'billing.cancel.lead', schema: null },
   // #239: the public question of the day (its dated pages /daily/<date> have

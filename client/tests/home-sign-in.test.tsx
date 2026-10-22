@@ -95,7 +95,7 @@ it('starts the selected learning path from its renamed action', async () => {
   }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/']}><LanguageProvider><Routes>
-    <Route path="/" element={<Home />} /><Route path="/learn" element={<Where />} />
+    <Route path="/" element={<Home />} /><Route path="/learn/:section" element={<Where />} />
   </Routes></LanguageProvider></MemoryRouter></QueryClientProvider>);
   fireEvent.click(screen.getByRole('button', { name: 'Learn TypeScript' }));
   const path = screen.getByRole('list', { name: 'Learn path for TypeScript' });
@@ -104,7 +104,7 @@ it('starts the selected learning path from its renamed action', async () => {
   expect(screen.getByRole('group', { name: 'What does this return?' })).toHaveTextContent('2 ** 3;');
   expect(screen.queryByRole('button', { name: 'Start learning JavaScript' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Start learning TypeScript' }));
-  expect(await screen.findByTestId('location')).toHaveTextContent('/learn?topic=typescript');
+  expect(await screen.findByTestId('location')).toHaveTextContent('/learn/web-developer?topic=typescript');
 });
 
 it.each([

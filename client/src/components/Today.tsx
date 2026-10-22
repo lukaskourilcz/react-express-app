@@ -1,3 +1,5 @@
+import { planTopics } from '../../../shared/progression';
+import { learnerProfileOf } from '../lib/trackPref';
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
@@ -155,7 +157,7 @@ function useTodayFirstData() {
 export default function Today() {
   useTodayFirstData();
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [subject] = useSubject();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
@@ -171,6 +173,7 @@ export default function Today() {
   );
   // The server serves nothing new outside the learner's chosen track.
   const inPlan = useInPlan();
+  const topicOrder = useMemo(() => planTopics(learnerProfileOf(user)), [user]);
 
   // buildToday is pure and offline: it reads local roadmap progress + the shared
   // spaced-mastery rules, so the plan renders even when the structure fetch
@@ -184,8 +187,9 @@ export default function Today() {
         extraUnlocks,
         canStart,
         inPlan,
+        topicOrder,
       }),
-    [progress, subject, extraUnlocks, structure, canStart, inPlan],
+    [progress, subject, extraUnlocks, structure, canStart, inPlan, topicOrder],
   );
   const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
 
