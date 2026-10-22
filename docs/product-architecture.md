@@ -375,11 +375,12 @@ The section lists four tracks: `javascript`, `typescript`, `react` and
 `algorithms`. The first three are also Learn topics. `algorithms` holds sixty
 interview problems in plain JavaScript and two short paths, all graded and
 paid like any other task, plus the 29 DSA Foundations tasks (`alg-dsa-*`,
-topic `dsa`) and the 15 DSA Advanced tasks (`alg-dsaa-*`). `levelCodingTasks`
-seals a `dsa` task into its DSA Learn level (levels 1 to 14; level 15, the
-review, has none), and `hasLearnLevel` names a level for the JavaScript,
-TypeScript and React tracks and for a `dsa` task, which the row, the
-workbench and the GitHub commit message show as "DSA · Level n". The other
+topic `dsa`) and the 15 DSA Advanced tasks (`alg-dsaa-*`, topic
+`dsa-advanced`). `levelCodingTasks` seals a DSA task into its Learn level
+(DSA Foundations level 15, the review, has none), and `hasLearnLevel` names a
+level for the JavaScript, TypeScript and React tracks and for a `dsa` or
+`dsa-advanced` task; the row, the workbench and the GitHub commit message
+show it (for example "DSA · Level n"). The other
 algorithms tasks carry `algorithms` as their topic and never join a Learn
 level's quota; their `level` is an ordering key.
 
@@ -564,8 +565,8 @@ fail them.
 
 ### Coding inside Learn levels
 
-Learn levels of the `javascript`, `typescript`, `react` and `dsa` topics carry
-one to three coding tasks sealed into the level session; for an account,
+Learn levels of the `LEARN_CODING_TOPICS` (`javascript`, `typescript`,
+`react`, `dsa` and `dsa-advanced`) carry one to three coding tasks sealed into the level session; for an account,
 completion requires a verified, unrevealed pass of each. Learn creates the
 parent attempt, with its sealed task list, before it serves the intro or a
 coding link. A `Build it` link opens a new tab with the coding session in the
