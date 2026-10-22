@@ -80,6 +80,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
 import { LearnLesson } from './learn/LearnLesson';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { NO_PENDING, useInPlan, useLearnerSections, type PendingJoin } from '../lib/eligibility';
 import { entryFor, isOpen, useEnrollments, usePathCatalog } from '../lib/learningPaths';
@@ -548,6 +549,16 @@ function Roadmap() {
   // state names the section it belongs to, so a switch during a save never
   // shows its result under another section.
   const [join, setJoin] = useState<(JoinState & { section: LearnSectionId }) | null>(null);
+  // A join, and one the session has not read back yet, belong to the account
+  // that made it. Kept across a sign-out, the next account on this page was
+  // planned with sections it never joined and told it had joined them.
+  const accountId = user?.id ?? null;
+  const [joinAccount, setJoinAccount] = useState(accountId);
+  if (joinAccount !== accountId) {
+    setJoinAccount(accountId);
+    setPending(NO_PENDING);
+    setJoin(null);
+  }
   // The saved line is said once: leaving the section drops it.
   useEffect(() => {
     setJoin((current) => (current?.status === 'saved' && current.section !== section ? null : current));
@@ -561,7 +572,9 @@ function Roadmap() {
   const runJoin = async (id: LearnSectionId) => {
     if (!user || !profile || join?.status === 'saving') return;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
-    setJoin({ section: id, status: 'saving' });
+    const started = { section: id, status: 'saving' as const };
+    const epoch = accountEpoch();
+    setJoin(started);
     const outcome = id === 'software-engineer'
       ? await joinSoftwareEngineer(user.id, profile, queryClient)
       : await joinFde({
@@ -573,6 +586,11 @@ function Roadmap() {
         queryClient,
         skipEnroll: retryAfterSave,
       });
+    // The account changed during the save: its outcome is not this page's.
+    if (accountEpoch() !== epoch) {
+      setJoin((current) => (current === started ? null : current));
+      return;
+    }
     if (outcome.ok) {
       setPending((current) => (id === 'software-engineer'
         ? { ...current, sections: [...current.sections, id] }

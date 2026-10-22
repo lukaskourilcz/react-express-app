@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Roadmap from '../src/components/Roadmap';
+import { clearAccountData } from '../src/lib/accountData';
 import type { RoadmapStructure } from '../src/types/quiz';
 import { server } from './mocks/server';
 
@@ -169,6 +170,40 @@ describe('joining Software Engineer', () => {
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/web-developer'));
     fireEvent.click(screen.getByRole('radio', { name: /^Software Engineer/ }));
     expect(await screen.findByRole('radio', { name: /^Algorithms/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
+  });
+
+  // The session had not read the join back (its refresh failed) when the
+  // account signed out and another signed in on the same page: the pending
+  // join planned the next account with a section it never joined.
+  it('drops a join the session has not read back when the account changes', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    expect(notInPlan()).toHaveLength(0);
+
+    auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
+    act(() => clearAccountData());
+    expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
+    expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeInTheDocument();
+  });
+
+  it('drops a join whose save lands after the account changed', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    let land!: (outcome: unknown) => void;
+    saves.results.push(new Promise((resolve) => { land = resolve; }));
+    await mountAt('/learn/software-engineer');
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    await waitFor(() => expect(saves.calls).toHaveLength(1));
+
+    auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
+    act(() => clearAccountData());
+    await act(async () => { land({ ok: true, preference: FRONTEND }); });
+    expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
     expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
   });
 
