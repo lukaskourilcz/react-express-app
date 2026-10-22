@@ -739,6 +739,48 @@ section. It replaces neither, and it changes no product or subject scope.
   `skillPaths` field is dropped on the next save. Migration 026's tables stay;
   no rows were deleted.
 
+### Shipped state (B14, 22 October 2026)
+
+Epics A to E are merged; B14 (#510) verified the release. What production
+serves once the owner sets `LEARNING_PATH_FDE_ENABLED=true` (until then the
+path is previewable and reports `disabled`):
+
+- **One path, FDE.** Its guided loop is fourteen teaching modules, M01
+  Customer discovery to M14 Codify the pattern, in five delivery phases, then
+  the staged capstone C01 (the support operations workbench, eight stages:
+  four graded code stages and four self-reviewed written pieces). Guided
+  completion needs every loop module and every capstone stage; it records
+  "FDE guided path completed" and unlocks the downloadable evidence card.
+  Activity ids keep the slugs they were authored under (#550), so M03's items
+  start `fde-v1-m02-` and M02's `fde-v1-m02-cases-`. The path header counts
+  15 modules, 28 lessons, 120 checks, 15 coding exercises, 10 written artifacts
+  and 40–60 hours (`pathInventory`, the same manifest the API sends).
+- **Off the loop.** The diagnostic ("Where you already are", twelve scenario
+  questions and two debugging exercises) reports per competency and never
+  gates; the optional bridges (backend mapping, operator state, an incident
+  case, and Python reading: two lessons and three checks) are
+  recommendations. The
+  interview-practice shelf IP01–IP04 (`shelf: 'interview-prep'`, #554) holds
+  two code rounds, twelve design cases and five reflections; it never supplies
+  the next action or counts toward completion.
+- **Any nine of twelve.** M02 Decomposition cases completes with both lessons
+  and any nine of its twelve four-question cases at `verified_pass`
+  (`requiresAtLeast`, #545). Migration 066 adds
+  `accept_learning_path_quota_result`, which counts the quota under the
+  enrollment lock; without it a quota submit answers 503
+  `migration_required`. It is applied in production (22 October 2026).
+- **Taster.** A free account enrolls, takes the diagnostic and works through
+  M01; the server checks the tier at both start and submit and answers any
+  later activity with 402 `premium_required` (#551). Stored passes reopen
+  after Premium lapses.
+- **Positioning.** Home and Premium introduce the path from the fetched
+  manifest (#553); `shared/tiers.ts` remains the only statement of what
+  Premium opens.
+- **DSA as Learn topics.** DSA Foundations (fifteen levels, the first five
+  free) and DSA Advanced (fifteen levels, Premium, opt-in) are Learn topics of
+  the Software Engineer section (#494, #556); the standalone DSA path is gone
+  (#555).
+
 `shared/learning-paths.ts` owns the vocabulary — `LearningPathId`,
 `LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
 completion arithmetic. It stays deliberately apart from the existing
