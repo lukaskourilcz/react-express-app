@@ -1630,7 +1630,7 @@ Local evidence, on `2abfd35` (the commit after it adds this section only):
 
 | Check | Result |
 | --- | --- |
-| The #230 acceptance grep over every Markdown file | three lines: the dated history lines in `docs/design/brand-system.md` and `docs/design/design-thesis.md`, and line 389 of `SECOND-HANDOFF-25-9-2026.md`, the dated handoff that orders this sweep and names the old heading |
+| The #230 acceptance grep over every Markdown file | three lines: the dated history lines in `docs/design/brand-system.md` and `docs/design/design-thesis.md`, and line 389 of `SECOND-HANDOFF-25-9-2026.md` (deleted on 22 October 2026, kept in Git history), the dated handoff that orders this sweep and names the old heading |
 | `npm run typecheck:api` | exit 0 |
 | `npm run test:launch` | exit 0; with a planted `navigate('/support')` in `Quiz.tsx` exit 1, and with `questionCount` back at 2487 exit 1 |
 | `npm run build`, `npm run check:bundle` | exit 0; 218,282 of 243,000 gzip bytes |
