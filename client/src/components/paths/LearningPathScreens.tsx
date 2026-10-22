@@ -610,6 +610,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // The autosave for the open activity: one save in flight at a time, the
   // revision the next one expects, and the newest content waiting behind it.
   const drafts = useRef<DraftChannel | null>(null);
+  // The channel of the activity just left. Its view sends what its debounce
+  // still holds as it unmounts, after this screen has moved on: that save
+  // goes to the activity it was typed in, never to the next one.
+  const leftDrafts = useRef<DraftChannel | null>(null);
 
   const module = entry?.manifest.modules.find((one) => one.id === moduleId);
   const activity = module?.activities.find((one) => one.id === activityId);
@@ -626,6 +630,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     setError(null);
     attempt.current = null;
     working.current = null;
+    if (drafts.current) leftDrafts.current = drafts.current;
     drafts.current = null;
     setBusy(Boolean(activityId && enrollmentId));
     if (!activityId || !enrollmentId) return;
@@ -671,8 +676,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     };
   }, [activityId, enrollmentId, curriculumVersion, deal, pathId]);
 
-  const pushDraft = useCallback(async () => {
-    const channel = drafts.current;
+  const pushDraft = useCallback(async (channel: DraftChannel | null) => {
     if (!channel || channel.inFlight || !channel.queued) return;
     const live = () => drafts.current === channel;
     channel.inFlight = true;
@@ -716,12 +720,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   }, []);
 
   const saveDraft = useCallback(
-    (content: PathDraft['content']) => {
-      const channel = drafts.current;
+    (forActivity: string, content: PathDraft['content']) => {
+      const channel = [drafts.current, leftDrafts.current].find((one) => one?.activityId === forActivity);
       if (!channel) return;
       channel.queued = content;
       keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, content);
-      void pushDraft();
+      void pushDraft(channel);
     },
     [pushDraft],
   );
@@ -729,10 +733,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // A copy kept on this device from an earlier visit goes out as soon as the
   // activity opens, and anything waiting goes out when the connection is back.
   useEffect(() => {
-    if (open) void pushDraft();
+    if (open) void pushDraft(drafts.current);
   }, [open, pushDraft]);
   useEffect(() => {
-    const resend = () => void pushDraft();
+    const resend = () => {
+      void pushDraft(drafts.current);
+      void pushDraft(leftDrafts.current);
+    };
     window.addEventListener('online', resend);
     return () => window.removeEventListener('online', resend);
   }, [pushDraft]);
@@ -1025,7 +1032,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               result={result}
               busy={busy}
               draftStatus={draftStatus}
-              onDraft={(source) => saveDraft({ code: source })}
+              onDraft={(source) => saveDraft(open.activity.id, { code: source })}
               onSubmit={(source) => submit({ code: source })}
             />
           )}
@@ -1039,7 +1046,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               result={result}
               busy={busy}
               draftStatus={draftStatus}
-              onDraft={(values) => saveDraft({ artifact: values })}
+              onDraft={(values) => saveDraft(open.activity.id, { artifact: values })}
               onSubmit={(values) => submit({ artifact: values })}
             />
           )}

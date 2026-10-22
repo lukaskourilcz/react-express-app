@@ -273,6 +273,17 @@ describe('switching activities', () => {
     expect(calls.drafts.filter((one) => one.activityId === B && one.code === 'my solution for A')).toHaveLength(0);
   });
 
+  it('saves the last keystrokes to the activity they were typed in when the learner switches within the debounce', async () => {
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await type('typed just before switching');
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: /Activity B/ })); });
+    await waitFor(() => expect(screen.getByText(`prompt ${B}`)).toBeInTheDocument());
+    await waitFor(() => expect(calls.drafts.map((one) => [one.activityId, one.code])).toEqual([[A, 'typed just before switching']]));
+    expect(editor().value).toBe(`STARTER_FOR_${B}`);
+    expect(status()).not.toBe('Draft saved');
+  });
+
 describe('a submission that lands after the learner moved on', () => {
   it('leaves the next activity\'s attempt and screen alone when it is refused', async () => {
     calls.submitDelay = 300;
