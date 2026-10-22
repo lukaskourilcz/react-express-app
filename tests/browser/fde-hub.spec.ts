@@ -51,8 +51,18 @@ for (const theme of ['light', 'dark'] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `reflow ${width}`).toBe(true);
     }
     await page.setViewportSize({ width: 360, height: 900 });
+    // 200% text in a wide font (Verdana here, DejaVu Sans on the Linux runner):
+    // no button label, status pill or long word may run past the column (B14, #510).
+    const wide = await page.addStyleTag({ content: 'body, body * { font-family: Verdana, "DejaVu Sans", sans-serif !important; }' });
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.evaluate(() => {
+      const edge = document.querySelector('#main-content')!.getBoundingClientRect().right + 1;
+      return [...document.querySelectorAll('#main-content :is(h1, h2, h3, p, li, a, button, span, summary)')]
+        .filter(el => { const box = el.getBoundingClientRect(); return box.width > 0 && box.right > edge; })
+        .map(el => (el.textContent ?? '').trim().slice(0, 40));
+    })).toEqual([]);
+    await wide.evaluate(el => el.remove());
     await page.addStyleTag({ content: 'html { font-size: 100% !important; }' });
     expect((await new AxeBuilder({ page }).include('[aria-labelledby="fde-evidence-title"]').include('[aria-labelledby="fde-loop-title"]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
     complete = true; await page.reload();
