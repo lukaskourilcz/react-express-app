@@ -319,17 +319,16 @@ the whole round with the key, and everyone sees it once the room is finished.
 `create` and `join` name the host and each player on the server
 (`roomDisplayName` in `lib/public-identity.ts`): the account's Google name
 from its verified identity, else its sharkname, else "Player" and four digits
-taken from the account id, the same in every room. A name in the request body
-is ignored, and the client sends none: until round 4 it sent the part of the
-address before the @ for every account without a Google name, and anyone with
-the room code saw it (`npm run test:launch`, play-rooms suite).
+taken from the account id, the same in every room. The server ignores a name
+in the request body, and the client sends none, so no part of an email
+address reaches a room (`npm run test:launch`, play-rooms suite).
 `join` and `state` also send `question_count` and `server_now`. The screens
 count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
 limit plus a 2 s grace, or when the teacher reveals it.
 
 A classroom question closes when its clock runs out or when the teacher
-presses "Reveal answer" (migration 056, owner decision of 1 October 2026).
+presses "Reveal answer" (migration 056).
 The button is a `control` action, `reveal`: the server stores the question in
 `matches.revealed_idx` and `answer` then refuses it with 409
 `question_closed` (a retry of an answer that landed before the reveal still
@@ -345,9 +344,9 @@ scoreboard counts only closed questions: `state` passes `match_scoreboard`
 is closed. The presenter's projected scoreboard and every pupil's therefore
 move only when a question closes, and a live count never tells the room which
 option scores. A finished room, and every multiplayer room, counts every
-answer as before. A multiplayer scoreboard shows that a player scored on the
+answer. A multiplayer scoreboard shows that a player scored on the
 open question, never what they picked, and a multiplayer race tells each
-player their own result at once by design, so it is unchanged.
+player their own result at once by design.
 
 A class shares one school address, and each state read spends that address's
 bucket. Realtime therefore carries only changes of the room: `match_updated`
