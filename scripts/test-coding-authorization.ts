@@ -59,23 +59,27 @@ async function main() {
   console.log('Coding account-bound submit and reveal authorization passed: guests and other signed-in accounts are refused, the owner is not.');
 
   // #493: a Learn-linked DSA session is gated as the DSA level it belongs to.
-  // DSA level 3 is Premium, so a guest and a free account are refused with
+  // DSA level 6 is Premium, so a guest and a free account are refused with
   // the shared 402 before anything is graded; DSA level 1 is free, so a
   // linked session there passes the tier gate and stops at the missing
   // parent attempt instead.
   for (const account of [null, 'account-free'] as const) {
-    const linked = encodeCodingSession({ taskId: 'alg-dsa-reverse-in-place', track: 'algorithms', userId: account, roadmapAttemptId: 'dsa-level-three-attempt-0123' });
+    const linked = encodeCodingSession({ taskId: 'alg-dsa-stack', track: 'algorithms', userId: account, roadmapAttemptId: 'dsa-level-six-attempt-012345' });
     const refused = response();
-    await handleCodingSubmit({ ...request(linked, account), body: { session: linked, code: 'const reverseInPlace = values => values.reverse();', hintsUsed: 0 } } as never, refused as never, null);
-    assert.equal(refused.statusCode, 402, `${account ?? 'a guest'}: a DSA level 3 task is Premium (${JSON.stringify(refused.body)})`);
+    await handleCodingSubmit({ ...request(linked, account), body: { session: linked, code: 'const createStack = () => ({});', hintsUsed: 0 } } as never, refused as never, null);
+    assert.equal(refused.statusCode, 402, `${account ?? 'a guest'}: a DSA level 6 task is Premium (${JSON.stringify(refused.body)})`);
     assert.equal(errorCode(refused.body), 'premium_required');
-    assert.equal((refused.body as { error?: { ref?: string } }).error?.ref, 'dsa:3', 'the refusal names the DSA level');
+    assert.equal((refused.body as { error?: { ref?: string } }).error?.ref, 'dsa:6', 'the refusal names the DSA level');
   }
   const linkedFree = encodeCodingSession({ taskId: 'alg-dsa-sum-of-evens', track: 'algorithms', userId: null, roadmapAttemptId: 'dsa-level-one-attempt-01234' });
   const openLevel = response();
   await handleCodingSubmit({ ...request(linkedFree, null), body: { session: linkedFree, code: 'const sumOfEvens = values => 0;', hintsUsed: 0 } } as never, openLevel as never, null);
   assert.notEqual(openLevel.statusCode, 402, `a guest's DSA level 1 session passes the tier gate (${JSON.stringify(openLevel.body)})`);
-  console.log('Coding Learn-linked DSA sessions passed: level 3 is refused to guests and free accounts as dsa:3, level 1 passes the tier gate.');
+  const thirdFree = encodeCodingSession({ taskId: 'alg-dsa-reverse-in-place', track: 'algorithms', userId: null, roadmapAttemptId: 'dsa-level-three-attempt-0123' });
+  const openThird = response();
+  await handleCodingSubmit({ ...request(thirdFree, null), body: { session: thirdFree, code: 'const reverseInPlace = values => values.reverse();', hintsUsed: 0 } } as never, openThird as never, null);
+  assert.notEqual(openThird.statusCode, 402, 'the aligned third-level task uses the free Learn tier rather than its standalone Coding tier');
+  console.log('Coding Learn-linked DSA sessions passed: level 6 is refused to guests and free accounts as dsa:6, level 1 passes the tier gate.');
 
   // A task opens with the account's own draft and the time it was saved, so
   // the browser can open the newer of it and the copy on the device (C5-4).
