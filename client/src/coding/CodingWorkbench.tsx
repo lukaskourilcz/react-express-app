@@ -761,7 +761,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     return (
       <li key={index} className={`cd-result cd-result--${status}`}>
         <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
-        <span className="cd-result__call">{test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
+        <span className="cd-result__call">{test.shown ?? test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
         {test.label && <span className="cd-result__label">{test.label}</span>}
         <span className="cd-result__detail">
           {result?.error
@@ -1012,7 +1012,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const Title = mode === 'section' ? 'h1' : 'h2';
   const briefMeta = evolution
     ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length })
-    : `${trackLabel} · ${tierLabel}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
+    : `${trackLabel} · ${tierLabel}${task.topic === 'dsa' ? ` · ${t('category.dsa')}` : ''}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
 
   // The brief opens the pane the learner works in, whichever pane that is: one
   // green line with where the task sits and what it is called, then what it asks.

@@ -142,14 +142,22 @@ export function CheckCard({
   checked,
   onChange,
   label,
+  labelledBy,
+  describedBy,
   padding = 3,
+  className,
   style,
   children,
 }: {
   checked: boolean;
   onChange: () => void;
   label?: string;
+  /** Ids of the visible name, when only part of the card names it. */
+  labelledBy?: string;
+  /** Ids of the card's other text, read after the name. */
+  describedBy?: string;
   padding?: number;
+  className?: string;
   style?: CSSProperties;
   children: ReactNode;
 }) {
@@ -159,7 +167,9 @@ export function CheckCard({
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
-      className="ss-radio-card"
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
+      className={className ? `ss-radio-card ${className}` : 'ss-radio-card'}
       data-selected={checked}
       onClick={onChange}
       style={{ padding: padding * 4, ...style }}
@@ -175,6 +185,10 @@ interface CardProps {
   index: number;
   /** Accessible name; falls back to the visible children. */
   label?: string;
+  /** Ids of the card's other text (a blurb, a Premium mark), read after the
+   *  name: `label` replaces the children as the name, so without this a
+   *  screen reader hears none of them. */
+  describedBy?: string;
   /** Padding in 4px steps, matching Astryx spacing. */
   padding?: number;
   disabled?: boolean;
@@ -189,7 +203,7 @@ interface CardProps {
   children: ReactNode;
 }
 
-export function RadioCard({ value, index, label, padding = 3, disabled, tone = 'default', width, style, className, 'data-locked': dataLocked, children }: CardProps) {
+export function RadioCard({ value, index, label, describedBy, padding = 3, disabled, tone = 'default', width, style, className, 'data-locked': dataLocked, children }: CardProps) {
   const ctx = useContext(Ctx);
   const ref = useRef<HTMLButtonElement>(null);
   if (!ctx) throw new Error('RadioCard must render inside RadioCardGroup');
@@ -209,6 +223,7 @@ export function RadioCard({ value, index, label, padding = 3, disabled, tone = '
       role="radio"
       aria-checked={isSelected}
       aria-label={label}
+      aria-describedby={describedBy}
       disabled={disabled}
       tabIndex={tabbable ? 0 : -1}
       className={className ? `ss-radio-card ${className}` : 'ss-radio-card'}

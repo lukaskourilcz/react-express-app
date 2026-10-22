@@ -297,7 +297,7 @@ function ProfileBody({
             />
 
             {/* One card owns the track: the paths card, which carries the
-                specialization and the picker as well. */}
+                joined Learn sections, the specialization and the picker. */}
             <LearningPathsCard />
           </VStack>
 

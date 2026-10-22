@@ -29,6 +29,7 @@ import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } fr
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
 import { createLearningPathSession, pathCodeAttemptVersion } from './session';
+import { canonicalCodingTaskId } from './dsa-coding-tasks';
 import {
   activityIn,
   activitySummary,
@@ -1082,7 +1083,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // other. With the requirements, the routine (migration 054) decides
   // completion again from the states it writes, one result at a time. Before
   // 054 is installed it does not take them, and the call is made without.
-  const canonicalTaskId = activity.reuseTaskId ?? `path-code-${createHash('sha256').update(`${path.id}:${activity.id}`).digest('hex').slice(0,32)}`;
+  // The DSA exercises E2 turned into coding tasks record under the task's id,
+  // so a path pass and a Coding pass share one record and one award (#493).
+  const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
     : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
