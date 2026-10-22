@@ -209,11 +209,31 @@ export function forgetLocalDraft(enrollmentId: string, activityId: string): void
   removeStored(localDraftKey(enrollmentId, activityId));
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** A stored copy has the shape a save sends: code as text, or artifact fields
+ * as text or lists of text. Anything else (an older format, a hand-edited or
+ * truncated entry) would only be refused by the server on every keystroke. */
+function isDraftContent(value: unknown): value is PathDraft['content'] {
+  if (!isPlainObject(value)) return false;
+  const { code, artifact } = value;
+  if (code === undefined && artifact === undefined) return false;
+  if (code !== undefined && typeof code !== 'string') return false;
+  if (artifact === undefined) return true;
+  return isPlainObject(artifact) && Object.values(artifact).every((field) =>
+    typeof field === 'string' || (Array.isArray(field) && field.every((one) => typeof one === 'string')));
+}
+
 /** The copy kept on this device when it is newer than the server's draft,
  * shaped as a draft at the server's revision; otherwise null. */
 export function localDraftOver(enrollmentId: string, activityId: string, server: PathDraft | null): PathDraft | null {
   const kept = readJSON<{ baseRevision?: unknown; content?: unknown } | null>(localDraftKey(enrollmentId, activityId), null);
-  if (!kept || !kept.content || typeof kept.content !== 'object') return null;
+  if (!kept) return null;
+  if (!isDraftContent(kept.content)) {
+    forgetLocalDraft(enrollmentId, activityId);
+    return null;
+  }
   const revision = server?.revision ?? 0;
   if (kept.baseRevision !== revision || JSON.stringify(kept.content) === JSON.stringify(server?.content ?? null)) {
     forgetLocalDraft(enrollmentId, activityId);
@@ -222,7 +242,7 @@ export function localDraftOver(enrollmentId: string, activityId: string, server:
   return {
     activityId,
     revision,
-    content: kept.content as PathDraft['content'],
+    content: kept.content,
     updatedAt: server?.updatedAt ?? new Date().toISOString(),
   };
 }

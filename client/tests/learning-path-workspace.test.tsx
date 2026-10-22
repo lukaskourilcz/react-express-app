@@ -394,6 +394,15 @@ describe('the draft autosave', () => {
     await waitFor(() => expect(calls.drafts.map((one) => [one.expected, one.code])).toEqual([[0, 'kept from last time']]));
   });
 
+  it('drops a copy on this device that is not a draft, rather than sending it', async () => {
+    localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 0, content: { code: 42 } }));
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await wait(50);
+    expect(calls.drafts).toHaveLength(0);
+    expect(localStorage.getItem(`devshark:path:draft:${ENROLLMENT}:${A}`)).toBeNull();
+  });
+
   it('prefers the server\'s draft when another device saved after the copy on this one', async () => {
     localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 1, content: { code: 'older, from here' } }));
     calls.serverRevision = 2;
