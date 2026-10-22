@@ -684,7 +684,7 @@ export function CodingTaskScreen() {
   const { track: trackParam, taskId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf, premiumOf, passed: passedIds } = useStatuses(progress.data);
   // A track the section does not offer (system design is hidden) is not
@@ -744,10 +744,14 @@ export function CodingTaskScreen() {
   // Signed in on this page (the sign-in dialog, another tab): the task is
   // read again for the account, and the editor reopens on whichever copy the
   // rules choose, the code kept at a sign-out the learner did not choose
-  // included (lib/accountData.ts).
+  // included (lib/accountData.ts). Signed out on it, the task is read again
+  // for nobody: the account's code does not stay in the editor for whoever
+  // uses the device next, on a session whose saves and Submit were its own.
   const fetchedSignedIn = task.data?.signedIn;
   const refetchTask = task.refetch;
-  useEffect(() => { if (fetchedSignedIn === false && isAuthenticated) void refetchTask(); }, [fetchedSignedIn, isAuthenticated, refetchTask]);
+  useEffect(() => {
+    if (!authLoading && fetchedSignedIn !== undefined && fetchedSignedIn !== isAuthenticated) void refetchTask();
+  }, [authLoading, fetchedSignedIn, isAuthenticated, refetchTask]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     setCompletedTask(verdict.verdict === 'passed' && !verdict.graderUnavailable ? taskId ?? null : null);

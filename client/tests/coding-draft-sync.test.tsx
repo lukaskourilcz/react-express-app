@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   signedIn: true,
   response: null as unknown,
   save: vi.fn(async (_id: string, _code: string, _base: string | null): Promise<{ ok: true; updatedAt: string | null }> => ({ ok: true, updatedAt: null })),
+  refetch: vi.fn(async () => undefined),
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: mocks.signedIn }), signedInAccount: () => (mocks.signedIn ? 'user-1' : null) }));
 vi.mock('../src/coding/practice', () => ({
@@ -40,7 +41,7 @@ vi.mock('../src/coding/api', () => ({
   saveCodingDraft: mocks.save,
   useCodingProgress: () => ({ data: undefined }),
   // One response object per load, as the query cache hands out.
-  useCodingTask: () => ({ data: mocks.response }),
+  useCodingTask: () => ({ data: mocks.response, refetch: mocks.refetch }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({
   CodingWorkbench: ({ initialCode, task, onDraft, onEdit }: CodingWorkbenchProps) => {
@@ -475,6 +476,24 @@ it('gives the code kept at that sign-out back when the same account opens the ta
   expect(note()).toHaveTextContent('Other code for this task is kept on this device until you Run or Submit.');
   fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
   expect(screen.getByLabelText('Code')).toHaveValue('// typed as a guest since');
+});
+
+// Signing out from the header left the account's code in the editor, on a
+// page whose saves and Submit no longer belonged to anyone, for whoever used
+// the device next.
+it('reads the task again on a sign-out, and leaves none of the account’s code on screen', async () => {
+  serve('// the account’s code', iso(NOW - minutes(1)));
+  const view = mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// the account’s code');
+  mocks.refetch.mockClear();
+  mocks.refetch.mockImplementationOnce(async () => { serve(null, null); });
+  // A chosen sign-out: the account's copies on this device go.
+  act(() => { clearAccountData(); mocks.signedIn = false; });
+  view.refetch();
+  await waitFor(() => expect(mocks.refetch).toHaveBeenCalledTimes(1));
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
+  expect(screen.queryByText(/the account’s code/)).toBeNull();
 });
 
 it('never opens code kept for another account', () => {
