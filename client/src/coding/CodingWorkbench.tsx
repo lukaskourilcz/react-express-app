@@ -200,7 +200,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const resetRef = useRef<HTMLButtonElement | null>(null);
   const revealRef = useRef<HTMLButtonElement | null>(null);
   const solutionRef = useRef<HTMLDivElement | null>(null);
-  // The browser's own run during a Submit, which the server's answer replaces.
+  // The browser's run in progress: a Run, or the preview during a Submit,
+  // which the server's answer replaces.
   const localRun = useRef<AbortController | null>(null);
   const harness = useReactHarness();
   // What a narrow screen gets instead of an editor: the task's puzzle when it
@@ -251,7 +252,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // has no Run for. Choosing the editor starts it.
   const editorShown = !puzzleMode && !pendingOnDesktop;
   useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
-  // A Submit's browser preview has nowhere to report once the task is left.
+  // A Run, or a Submit's browser preview, has nowhere to report once the task
+  // is left.
   useEffect(() => () => localRun.current?.abort(), []);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
 
@@ -312,10 +314,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         if (outcome.status !== 'done' || outcome.failed > 0) setFailedRun(true);
         setTab(task.suite ? 'results' : 'preview');
       } else {
+        // Leaving the task stops the run (the unmount below aborts it), so a
+        // loop or a first compile does not keep a worker busy for nothing.
+        const controller = new AbortController();
+        localRun.current = controller;
         setRunPhase('starting');
         const outcome = await runCodeTests({
-          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
+          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase, signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
         setRun(outcome);
         setServerChecked(false);
         // A runner that never loaded is not an attempt, so it opens no hint.

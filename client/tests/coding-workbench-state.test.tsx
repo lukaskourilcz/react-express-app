@@ -257,6 +257,19 @@ it('keeps Run focusable while it runs', async () => {
   expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('aria-disabled');
 });
 
+// A Run kept its worker going after the learner left the task: a loop ran on
+// to its budget, a first TypeScript compile for up to 45 s.
+it('stops a Run in progress when the task is left', async () => {
+  let signal: AbortSignal | undefined;
+  vi.mocked(runCodeTests).mockImplementationOnce((input) => { signal = input.signal; return new Promise(() => {}); });
+  const view = mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  await waitFor(() => expect(runCodeTests).toHaveBeenCalledTimes(1));
+  expect(signal?.aborted).toBe(false);
+  view.unmount();
+  expect(signal?.aborted).toBe(true);
+});
+
 it('closes the Reset confirmation on Escape, keeps the code and gives focus back to Reset', () => {
   mount();
   fireEvent.change(editor(), { target: { value: 'const double = () => [];' } });
