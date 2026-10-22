@@ -1452,7 +1452,7 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
 
 ## Sign-in, caching and limits
 
-- **Two ways in (owner decision 3, 1 Oct 2026).** Every "Log in" and "Sign
+- **Two ways in.** Every "Log in" and "Sign
   in" opens one dialog (`openSignIn` in `client/src/lib/signInDialog.ts`,
   rendered by `components/auth/SignInDialogHost.tsx` in the shell, its code
   loaded on the first press like the upgrade sheet's). "Continue with
@@ -1492,15 +1492,15 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   logged like any sign-in.
 - **Scanner-safe links.** Both pages also accept
   `?token_hash=…&type=email|signup` and `?token_hash=…&type=recovery`, the
-  links NEEDED.md's templates send, and verify them only when the learner
+  links the Supabase email templates in `NEEDED.md` send, and verify them only when the learner
   presses the button: a mail filter that fetches every link cannot use one
   up. Both pages are client routes behind the catch-all rewrite, kept out
   of search (`NOINDEX_PATHS`), with no handler of their own.
 - **An account without Google.** It has no name or picture. Its header and
   Profile show the first part of its address, which only the learner sees;
   friends, the boards and live rooms never show the address (its sharkname,
-  "Learner", or "Player" and a number), the Hall of Fame box starts empty,
-  and deleting it works as for any account: nothing in
+  "Learner", or "Player" and a number), a Challenge score saves under its
+  sharkname, and deleting it works as for any account: nothing in
   `delete-account` reads a Google identity (`npm run test:launch`,
   verified-caller suite).
 - **The token on a request.** `apiFetch` (`client/src/lib/api.ts`) attaches
