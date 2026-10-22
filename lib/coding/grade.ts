@@ -85,7 +85,12 @@ function gradeDesignWithKey(task: CodingTask, key: CodingDesignKey, answers: Des
       };
     } else if (format === 'sequence' && key.order) {
       const order = asOrder(given[0]);
-      const correct = order !== null && order.length === key.order.length && order.every((position, index) => position === key.order![index]);
+      // `key.order[step]` is where authored step `step` sits in the shuffled
+      // list. The authored order is always right; `acceptedOrders` names any
+      // other order of the authored steps that is right too.
+      const authoredOrders = [key.order.map((_, step) => step), ...(drill.acceptedOrders ?? [])];
+      const correct = order !== null && order.length === key.order.length &&
+        authoredOrders.some((steps) => steps.length === order.length && steps.every((step, index) => order[index] === key.order![step]));
       verdict = { correct, given: order, correctOrder: key.order, explanation: drill.explanation };
     } else {
       const chosen = asIndex(given[0]);

@@ -55,6 +55,7 @@ export interface SourceDrill {
   options?: string[];
   correct?: number;
   steps?: string[];
+  acceptedOrders?: number[][];
 }
 
 export interface CodingTaskSource {
@@ -186,6 +187,7 @@ export function mergeTask(source: CodingTaskSource): CodingTask {
       ...(d.options ? { options: [...d.options] } : {}),
       ...(d.correct !== undefined ? { correct: d.correct } : {}),
       ...(d.steps ? { steps: [...d.steps] } : {}),
+      ...(d.acceptedOrders ? { acceptedOrders: d.acceptedOrders.map((order) => [...order]) } : {}),
     };
   }
   return task;
