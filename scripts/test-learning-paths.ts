@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LEARNING_PATHS, activitySummary, publicManifest, readinessFor } from '../lib/learning-paths/catalog';
-import { codeFeedback, domainThresholds, gradeCheck, gradePathCode, gradePathCodeWith, codeFromReusedTask } from '../lib/learning-paths/grade';
+import { codeFeedback, domainThresholds, gradeArtifact, gradeCheck, gradePathCode, gradePathCodeWith, codeFromReusedTask } from '../lib/learning-paths/grade';
 import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
@@ -886,6 +886,28 @@ async function main() {
       else assert.match(id, /^path-code-[0-9a-f]{32}$/, `${activity.id}: an FDE exercise keeps its path id`);
       assert.ok(!id.startsWith('alg-dsa-'), `${activity.id}: no path exercise records under a DSA Foundations task`);
     }
+  }
+
+  /* ── artifacts: untrusted list entries ──────────────────────────────── */
+  // A list field keeps only string entries. An object or a nested array in
+  // the JSON body is not a written answer and must not satisfy a required
+  // field as "[object Object]".
+  {
+    const artifactActivity: MergedActivity = {
+      id: 'fde-v1-synthetic-artifact', kind: 'artifact', purpose: 'exercise', verification: 'self_reviewed',
+      title: 'Synthetic', summary: 'Synthetic', competencies: [], estimatedMinutes: 10,
+      artifact: {
+        brief: 'Synthetic',
+        fields: [{ id: 'risks', label: 'Risks', help: 'List the risks.', kind: 'list', required: true, maxLength: 200 }],
+        rubricDimensions: [],
+      },
+    };
+    const junk = gradeArtifact(artifactActivity, { risks: [{}, ['nested'], 42] } as unknown as Record<string, string[]>);
+    assert.equal(junk.state, 'needs_revision', 'non-string list entries do not count as a written answer');
+    assert.deepEqual(junk.cleaned, {}, 'non-string list entries are never stored');
+    const mixed = gradeArtifact(artifactActivity, { risks: [' Vendor lock-in ', {}, ''] } as unknown as Record<string, string[]>);
+    assert.equal(mixed.state, 'self_reviewed');
+    assert.deepEqual(mixed.cleaned, { risks: ['Vendor lock-in'] }, 'string entries are kept, trimmed');
   }
 
   /* ── the handlers: availability, refusals, rate limits ─────────────── */

@@ -480,10 +480,17 @@ export function gradeArtifact(
 
   let complete = true;
   for (const field of artifact.fields) {
-    const raw = given[field.id];
+    // Own keys only, so a field id can never resolve to an inherited member.
+    const raw: unknown = Object.prototype.hasOwnProperty.call(given, field.id) ? given[field.id] : undefined;
     const isList = field.kind === 'list';
+    // The body is untrusted JSON: a list keeps its string entries only, so an
+    // object or nested array is never stored as "[object Object]" and counted
+    // as a written answer.
     const value = isList
-      ? (Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : []).map((entry) => String(entry).trim()).filter(Boolean)
+      ? (Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [])
+          .filter((entry): entry is string => typeof entry === 'string')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
       : typeof raw === 'string' ? raw.trim() : '';
     const present = isList ? (value as string[]).length > 0 : (value as string).length > 0;
     const serialized = isList ? (value as string[]).join('\n') : (value as string);
