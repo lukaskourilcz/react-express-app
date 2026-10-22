@@ -2338,6 +2338,13 @@ function SkillCheckRunner({
   useEffect(() => {
     if (phase === 'result') resultHeadingRef.current?.focus({ preventScroll: true });
   }, [phase]);
+  // Next disables itself on the question it opens (nothing is picked yet), and
+  // a new round replaces the whole view, so focus fell to the page. Each
+  // question takes it instead, as a Learn level's do.
+  const questionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (phase === 'playing') questionRef.current?.focus({ preventScroll: true });
+  }, [phase, qIndex, questions]);
 
   // Swap in a fetched round and reset the per-round answer sheet. `dir` drives
   // the stepping-up / stepping-down banner (null on the opening round).
@@ -2598,7 +2605,7 @@ function SkillCheckRunner({
         </div>
       </div>
 
-      <div id="placement-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
+      <div id="placement-question" ref={questionRef} tabIndex={-1} style={{ fontWeight: 500, marginBottom: 16, outline: 'none' }}>{renderQuestion(current.question)}</div>
 
       <RadioCardGroup
         value={optionValue}

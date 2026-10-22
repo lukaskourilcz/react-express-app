@@ -293,6 +293,21 @@ describe('the account’s record', () => {
     expect(getExtraUnlocks()).toEqual(['typescript']);
   });
 
+  // Next disables itself on the question it opens, so focus fell to the page.
+  it('moves focus to each placement question', async () => {
+    const ask = (n: number) => ({ id: `p-${n}`, tags: [], introduction: '', question: `Placement question ${n}?`, options: ['Yes', 'No'], category: 'javascript', difficulty: 3 });
+    answer({ placement: { done: false, round: 1, totalRounds: 4, difficulty: 3, asked: 0, total: 20, idkCountsAsMiss: true, placementToken: 'token-1', questions: [ask(1), ask(2)] } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    expect(await screen.findByText('Placement question 1?', {}, { timeout: 3000 })).toBeInTheDocument();
+    await waitFor(() => expect(document.getElementById('placement-question')).toHaveFocus());
+    fireEvent.click(screen.getByRole('radio', { name: /Yes/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Placement question 2?')).toBeInTheDocument();
+    expect(document.getElementById('placement-question')).toHaveFocus();
+  });
+
   it('does not fall back to the score’s own unlocks after a failure', async () => {
     signInAs(BACKEND);
     answer({
