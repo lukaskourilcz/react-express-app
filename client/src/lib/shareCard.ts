@@ -54,6 +54,18 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   const canvas = document.createElement('canvas');
   canvas.width = 1200;
   canvas.height = 630;
+  try {
+    return await paintShareCard(canvas, input);
+  } finally {
+    // The 1200x630 pixel buffer (about 3 MB) otherwise lives until garbage
+    // collection, and iOS Safari caps the total canvas memory of a page, so a
+    // few cards in a row could fail. A zero size frees it now.
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
+async function paintShareCard(canvas: HTMLCanvasElement, input: ShareCardInput): Promise<File | null> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
@@ -171,8 +183,18 @@ export function downloadShareFile(file: File): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = file.name;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  anchor.hidden = true;
+  // Some browsers (Firefox before 75, several in-app web views) ignore a click
+  // on an anchor that is not in the document.
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+  }
+  // A slow phone can still be reading a large export a second later, and
+  // revoking the URL then cancels the download; 40 s is FileSaver's margin.
+  window.setTimeout(() => URL.revokeObjectURL(url), 40_000);
 }
 
 // The kit's fin body, mirrored with translate(24 0) scale(-1 1) so the tip

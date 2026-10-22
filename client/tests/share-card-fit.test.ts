@@ -51,4 +51,21 @@ describe('createShareCardFile', () => {
     expect(file?.name).toBe('devshark-typing.png');
     expect(calls).toContain('arcTo');
   });
+
+  it('frees the canvas pixel buffer once the file is made', async () => {
+    const { ctx } = fakeContext();
+    vi.stubGlobal('Path2D', class {});
+    let canvas: HTMLCanvasElement | undefined;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
+      canvas = this;
+      return ctx as unknown as CanvasRenderingContext2D;
+    } as never);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, done: BlobCallback) {
+      expect(this.width).toBe(1200);
+      done(new Blob(['png'], { type: 'image/png' }));
+    });
+    await createShareCardFile({ brand: 'devShark', label: 'Typing', headline: '62 WPM', detail: '97%', date: '22 October 2026', accent: '#2d7a2d', fileSuffix: 'typing' });
+    expect(canvas?.width).toBe(0);
+    expect(canvas?.height).toBe(0);
+  });
 });
