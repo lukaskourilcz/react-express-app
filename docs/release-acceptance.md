@@ -5824,3 +5824,19 @@ Production `dpl_BEcuDZV4x34qAfHjUyiKTQUeNTG6` is READY at the merge SHA. A read-
 ## Workflow and documentation inventory — 22 October 2026
 
 C7, PR #544, merged at `e03d69446e8dc987091b43881aa87ccadbc40219`. Required run `39712881596` passed after retrying the same npm endpoint timeout. Clean integration tree `4136521d` included B5 and passed the launch parity step in 0.72 minutes (`artifacts/codex-c7-current-main`, Node 24.22.1). Both instruction maps list all 46 current workflows; the added skill descriptors were checked for their required shape. This documentation-only change introduces no runtime or schema behavior and needs no authenticated production acceptance.
+
+## Canonical FDE section addresses — 22 October 2026
+
+A3, PR #543, merged at `12b3f17f4d09d7ee7f4804179f1b832a6812ec5a`; required run `39712723315` passed after retrying npm audit timeouts. Initial full parity found fixture/type errors and an unmounted FDE shelf; those were corrected. Clean integration tree `f0a3a9c9` passed seven relevant checks in 2.65 minutes and 32 browser cases passed in 1.3 minutes, including the current B5/C7 tree. The later CI-install-only integration passed the parity plan check.
+
+Production `dpl_BmhJqrej5xr5SdUaoiJS2bpBvwnW` is READY at the merge SHA. A read-only 390px guest check on devshark.app followed both legacy overview and module addresses through HTTP 308 to their canonical Learn addresses, preserving query and fragment; the FDE section shelf points there. No page errors or API writes occurred. This did not complete an authenticated path activity.
+
+## Deployment and release-gate curriculum — 22 October 2026
+
+B8, PR #536, merged at `b09a24df72f46541b3c030a319209a38dcf5b02b`; required run `39718231957` passed. Clean current-main integration `abdd25d8` passed five API/scripts/path/launch/native-review checks in 1.65 minutes (`artifacts/codex-b8-current-main`, Node 24.22.1). An existing auth-recovery test was corrected to await its specific heading before the successful rerun.
+
+Production `dpl_EfMNsmEY4Cza7MhTa5tbnHxgdhSa` is READY at the merge SHA. Its catalogue returned HTTP 200 with the deployment module, two sourced lessons, six-question check and release-gate code activity. Availability remains disabled. No live infrastructure, authenticated submission or production flag change was performed.
+
+## CI install audit separation — 22 October 2026
+
+Maintenance PR #546 merged at `8189bae09d8ffbcc3437ac13b1ffb33d7e827462`, required run `39717156563` green. All five CI install steps now match local parity with `npm ci --no-audit`; the explicit root/client production audit gates remain required and both passed after the npm endpoint recovered. Clean head `f38914b0` passed launch parity in 0.68 minutes; the current-main integration passed the parity-plan check. This is CI configuration only.
