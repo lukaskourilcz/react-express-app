@@ -689,6 +689,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     ...(payload.code ? { code: payload.code } : {}),
     ...(payload.artifact ? { artifact: payload.artifact } : {}),
     draft: payload.draft,
+    ...(payload.draftUnavailable ? { draftUnavailable: true } : {}),
     previous,
   };
   logEvent({ status: 200, kind: 'start', path: path.id, activityKind: activity.kind, purpose: activity.purpose });
@@ -704,6 +705,8 @@ type ActivityPayload =
       code?: StartActivityResponse['code'];
       artifact?: StartActivityResponse['artifact'];
       draft: PathDraft | null;
+      /** The draft read failed, so `draft: null` does not mean "no draft". */
+      draftUnavailable?: boolean;
     };
 
 /** Builds the learner-facing payload. Options are shuffled per attempt and the
@@ -715,6 +718,7 @@ async function buildActivityPayload(
   enrollmentId: string,
 ): Promise<ActivityPayload> {
   let draft: PathDraft | null = null;
+  let draftUnavailable = false;
   if (activity.kind === 'code' || activity.kind === 'artifact') {
     const { data, error } = await withTimeout(
       supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
@@ -722,7 +726,10 @@ async function buildActivityPayload(
     );
     // The activity still opens, from its starter; the log line (with the
     // request id) is how a draft that seems lost gets traced.
-    if (error) logEvent({ kind: 'draft_read_failed', activityKind: activity.kind, code: (error as { code?: string }).code ?? null });
+    if (error) {
+      draftUnavailable = true;
+      logEvent({ kind: 'draft_read_failed', activityKind: activity.kind, code: (error as { code?: string }).code ?? null });
+    }
     if (data) {
       draft = {
         activityId: activity.id,
@@ -789,6 +796,7 @@ async function buildActivityPayload(
           ...(code.suite ? { suite: code.suite } : {}),
         },
         draft,
+        ...(draftUnavailable ? { draftUnavailable: true } : {}),
       };
     }
     case 'artifact': {
@@ -800,6 +808,7 @@ async function buildActivityPayload(
           rubricDimensions: activity.artifact.rubricDimensions,
         },
         draft,
+        ...(draftUnavailable ? { draftUnavailable: true } : {}),
       };
     }
   }

@@ -379,6 +379,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         });
         if (res.statusCode !== 200) fail(`a failed draft read must still open the activity, got ${res.statusCode} ${code(res)}`);
         else if ((res.body as StartActivityResponse).draft !== null) fail('a failed draft read must open without a draft');
+        else if ((res.body as StartActivityResponse).draftUnavailable !== true) fail('a failed draft read must say the draft is unknown, so the browser keeps its copy');
         const logged = lines.map((line) => { try { return JSON.parse(line) as Record<string, unknown>; } catch { return null; } })
           .find((entry) => entry?.kind === 'draft_read_failed');
         if (!logged) fail('a failed draft read must be logged');
