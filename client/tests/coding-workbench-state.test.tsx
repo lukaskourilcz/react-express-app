@@ -270,6 +270,24 @@ it('stops a Run in progress when the task is left', async () => {
   expect(signal?.aborted).toBe(true);
 });
 
+// A drag the browser cancelled (a touch turned into a scroll) never sent
+// pointerup, and the split went on following the pointer afterwards.
+it('ends a splitter drag the browser cancels', () => {
+  // jsdom has no pointer capture.
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { value: () => {}, configurable: true });
+  mount();
+  const separator = screen.getByRole('separator');
+  vi.spyOn(separator.parentElement!, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 1000 } as DOMRect);
+  fireEvent.pointerDown(separator, { pointerId: 1 });
+  act(() => { window.dispatchEvent(new MouseEvent('pointermove', { clientX: 400 })); });
+  expect(separator).toHaveAttribute('aria-valuenow', '40');
+  act(() => { window.dispatchEvent(new MouseEvent('pointercancel')); });
+  act(() => { window.dispatchEvent(new MouseEvent('pointermove', { clientX: 700 })); });
+  expect(separator).toHaveAttribute('aria-valuenow', '40');
+  delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+  localStorage.removeItem('devshark:coding:layout:v1');
+});
+
 it('closes the Reset confirmation on Escape, keeps the code and gives focus back to Reset', () => {
   mount();
   fireEvent.change(editor(), { target: { value: 'const double = () => [];' } });

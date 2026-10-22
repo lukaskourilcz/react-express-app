@@ -281,12 +281,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (box.width <= 0) return;
       setSplit(((moveEvent.clientX - box.left) / box.width) * 100);
     };
+    // A drag the browser takes over (a touch that turns into a scroll, a
+    // lost capture) ends with pointercancel and no pointerup: without it the
+    // split kept following the pointer after the drag was over.
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }, [setSplit]);
 
   const onCodeChange = useCallback((next: string) => {
