@@ -5,11 +5,24 @@
  * press Approve on something a model proposed, and the on-call engineer who
  * opens your runbook at three in the morning having never seen the service.
  *
- * Two lessons, one four-question check, one graded exercise. The first lesson
- * is the operator's screen — the four questions an approval has to answer,
- * and the states a happy-path demo never shows. The second is acceptance,
- * the demo, the runbook and the one recurring need worth taking back to a
- * product team.
+ * Two lessons, one four-question check, one graded exercise and three written
+ * artifacts. The first lesson is the operator's screen: the four questions
+ * an approval has to answer, and the states a happy-path demo never shows.
+ * The second is acceptance, the demo, the runbook, the workshop that leaves
+ * the customer's team able to maintain the thing, the written push-back on a
+ * feature that will not move the customer's number, and the one recurring
+ * need worth taking back to a product team.
+ *
+ * The three artifacts (runbook, workshop outline, push-back email) are
+ * recorded as self-reviewed: the server confirms each required field is
+ * present and inside its cap, nothing more. The module requires all three,
+ * so guided completion waits for them. Their scenarios are fixtures stated in
+ * each brief. The practitioner sources (Qureshi, The Pragmatic Engineer,
+ * PostHog, and the Vercel posting) were read in October 2026 and
+ * are cited for what they say, never as a hiring standard.
+ *
+ * This file becomes M13 when B9 renumbers the manifest; its id stays
+ * `fde-v1-m10` until then, and every activity id keeps the v1 prefix.
  *
  * Two claims are repeated on purpose. A cancel stops the screen from acting
  * on an answer; it does not un-send a request that already left the browser,
@@ -127,11 +140,14 @@ export const FDE_M10: ModuleSource = {
     'Handle loading, partial failure, retry, an openable citation and a cancel that abandons the in-flight request, so a late answer cannot overwrite a newer state.',
     'Announce every change of state where a screen reader will read it, and say what a check on those messages proves and what it leaves to your own review.',
     'Run a UAT that can end in a rejection, against acceptance conditions written before anybody sat down, and record accept, accept-with-conditions or reject with the numbers behind it.',
-    'Write the runbook an on-call engineer can follow at three in the morning, and turn one recurring customer need into product input you can state without naming the customer.',
+    'Write the runbook an on-call engineer can follow at three in the morning: the trigger, the steps with a signal after each, the rollback and what it cannot undo, and the owner.',
+    'Plan a workshop backwards from one task the customer’s team must do alone after you leave, with a hands-on exercise and a check you can both observe.',
+    'Push back in writing on a feature that will not move the customer’s number: restate the request, name the need behind it with evidence, offer the alternative and ask for one decision.',
+    'Turn one recurring customer need into product input you can state without naming the customer.',
   ],
   competencies: ['handoff'],
   dependsOn: ['fde-v1-m09'],
-  estimatedMinutes: 110,
+  estimatedMinutes: 230,
   lessons: [
     {
       id: 'fde-v1-m10-l1',
@@ -292,9 +308,29 @@ export const FDE_M10: ModuleSource = {
       id: 'fde-v1-m10-l2',
       title: 'Acceptance, communication and what you leave behind',
       summary:
-        'A UAT with three possible endings, a demo that shows the failure mode, the runbook somebody reads at three in the morning, and the difference between one customer’s request and product input.',
-      estimatedMinutes: 25,
+        'A UAT with three possible endings, a demo that shows the failure mode, the runbook somebody reads at three in the morning, a workshop that hands the system over, a written push-back on the wrong feature, and the difference between one customer’s request and product input.',
+      estimatedMinutes: 40,
       sources: [
+        {
+          label: 'Vercel, Forward-Deployed Engineer job posting',
+          url: 'https://vercel.com/careers/forward-deployed-engineer-5752684004',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Nabeel S. Qureshi, “Reflections on Palantir” (October 2024)',
+          url: 'https://nabeelqu.co/reflections-on-palantir',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'PostHog, “WTF is a forward deployed engineer? (and why everyone is hiring them)” (February 2026)',
+          url: 'https://posthog.com/blog/forward-deployed-engineer',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'The Pragmatic Engineer, “What are Forward Deployed Engineers, and why are they so in demand?” (August 2025)',
+          url: 'https://newsletter.pragmaticengineer.com/p/forward-deployed-engineers',
+          reviewedOn: '2026-10-21',
+        },
         {
           label: 'Google SRE Book — Postmortem culture',
           url: 'https://sre.google/sre-book/postmortem-culture/',
@@ -349,6 +385,11 @@ export const FDE_M10: ModuleSource = {
           tone: 'warning',
           body:
             'Watch for the condition that gets quietly rewritten after the result is known. A median of six minutes twenty against a four-minute target is not a pass because the sponsor is pleased; it is a miss with a happy sponsor, and recording it that way is what lets you find out in October whether the number ever came down.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Orosz’s account of OpenAI’s forward deployed engineers in The Pragmatic Engineer ends their validation phase with a final report showing eval performance compared to the objectives. A UAT record does the same job for an operator workflow: each measured result sits beside the condition agreed before the session, including the ones that missed.',
         },
         {
           kind: 'prose',
@@ -416,6 +457,72 @@ export const FDE_M10: ModuleSource = {
         {
           kind: 'prose',
           body:
+            'Give the rollback its own heading rather than leaving it inside “If it does not work”. Say what it restores (the previous build, the previous value of one setting), where the engineer runs it and with which access, how long it takes, the signal that confirms it worked, and what it leaves behind. The runbook you write at the end of this module asks for four parts in that spirit: the trigger, the steps, the rollback and the owner.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'A handoff made of a document and a farewell call leaves the customer’s team owning code they have never changed. Vercel’s forward-deployed engineer posting puts teaching inside the job. It lists running workshops and pair programming sessions so customer teams can maintain what you ship, and describes success as customer teams able to extend the work on their own.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Plan the workshop backwards from one task the customer’s team must do alone after you leave. At Marlbrook that task could be adding a routing rule and shipping it behind the existing tests. Put their engineer at the keyboard for one hands-on exercise on that task, against fixtures or a staging copy, and keep your own hands off it. End with a check you can both observe: they make the change and roll it back without your help, or you write down what stopped them and who fixes that.',
+        },
+        {
+          kind: 'table',
+          caption: 'A fixture outline for a ninety-minute Marlbrook handover workshop. Most of the time goes to the customer’s team doing the work.',
+          headers: ['Block', 'Minutes', 'What the customer’s team does'],
+          rows: [
+            ['The system on one page', '10', 'Marks where data enters, where an operator approves, and who can change each part'],
+            ['Walk the runbook', '15', 'One engineer reads it aloud while another follows the signals on the dashboard'],
+            ['Hands-on: add a routing rule', '40', 'Their engineer writes the rule and its test and ships it to staging; you answer questions only'],
+            ['Drill: roll the change back', '15', 'They run the rollback from the runbook and confirm the verify signal moved'],
+            ['What is still yours', '10', 'They list what they could not yet do alone, with an owner and a date for each'],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Some requests will not move the number the customer cares about, and some arrive with conviction and a deadline attached. Answer those in writing, so the reasoning outlives the meeting where it was argued. Restate the request in the customer’s words. Name the need you think sits behind it and the evidence for that. Recommend what you would build instead and what it costs. Say what would have to be true before you would build what they asked, the way a non-goal carries the condition that reopens it. Ask for one decision, from a named role, by a date.',
+        },
+        {
+          kind: 'code',
+          language: 'text',
+          code: `Subject: Confidence scores on proposals: a different fix for the same worry
+
+You asked for a confidence percentage on every proposal, so operators
+know which ones to check closely.
+
+What we saw in UAT: operators opened the cited article on 9 of 10
+proposals before approving. The two wrong proposals both cited a
+superseded article. A score from the model is not calibrated against
+your tickets, so 90% would not mean nine in ten are right.
+
+What I recommend: mark a citation as superseded on the proposal itself,
+and show the warnings the screen already receives. About three days.
+
+What would change my mind: a labelled set of 200 of your tickets that
+shows a score separating right from wrong proposals.
+
+Decision: may we build the superseded marker instead? Support lead,
+by Thursday.`,
+          caption: 'A fixture push-back to a different request than the one in the exercise. One page, evidence before the recommendation, one decision at the end.',
+        },
+        {
+          kind: 'callout',
+          tone: 'note',
+          body:
+            'The customer can still overrule you. When they do, record the decision, who made it and the evidence you gave, the same way the UAT record keeps a waiver apart from the measurement. A push-back that leaves no record gets argued again next month.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'What you learn in one deployment is also the raw material for the product. Nabeel Qureshi describes the split at Palantir: the forward deployed engineer solves the customer’s problem without worrying about generality, and product development takes what was built and generalises it so it can be sold elsewhere. Jina Yoon’s PostHog explainer describes the same loop, with core product teams taking the field learnings and generalising them for other customers. Vercel’s posting asks the same engineer to share repeatable patterns with Product and Engineering. Your part of that loop is evidence the product team can assess.',
+        },
+        {
+          kind: 'prose',
+          body:
             "Turn customer observations into evidence the product team can assess. State the underlying need, where it occurred, frequency, impact and alternatives without disclosing unnecessary identity. Repeated independent workarounds can strengthen a hypothesis, but one urgent request can also matter. Three sites of one customer do not prove demand across customers.",
         },
         {
@@ -454,7 +561,7 @@ export const FDE_M10: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Finishing this path records what you passed in these exercises. It is not a certification, not evidence of production experience, and not a claim about employment. Your runbook, your UAT record and your product memo are your own work, self-reviewed, and they are worth more to the next reader than any completion label attached to them.',
+            'Finishing this path records what you passed in these exercises. It is not a certification, not evidence of production experience, and not a claim about employment. Your runbook, your workshop outline and your push-back email are your own work, self-reviewed: the server checks that each part is present and inside its limit, and you judge the rest against the rubric. They are worth more to the next reader than any completion label attached to them. The postings cited in this lesson were open when they were read in October 2026; they show what a few employers asked for then, and nothing here claims that finishing the path qualifies you for any role.',
         },
       ],
     },
@@ -477,9 +584,9 @@ export const FDE_M10: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: acceptance, communication and what you leave behind',
-      summary: 'Authorized acceptance decisions, bounded demo evidence, verified runbooks and customer observations for product research.',
+      summary: 'Authorized acceptance decisions, bounded demo evidence, runbooks with a rollback, a handover workshop, a written push-back, and customer observations for product research.',
       competencies: ['handoff'],
-      estimatedMinutes: 25,
+      estimatedMinutes: 40,
       lessonId: 'fde-v1-m10-l2',
     },
     {
@@ -811,9 +918,192 @@ console.log(createOperatorSession(demoDeps));
         harness: OPERATOR_FIXTURE,
       },
     },
+    {
+      id: 'fde-v1-m10-runbook',
+      kind: 'artifact',
+      purpose: 'exercise',
+      verification: 'self_reviewed',
+      title: 'Runbook: approvals stuck after a release',
+      summary:
+        'Write the runbook for a fixture incident on the Marlbrook workbench: the trigger, the steps with a signal after each, the rollback and what it cannot undo, and the owner. Recorded as self-reviewed.',
+      competencies: ['handoff'],
+      estimatedMinutes: 40,
+      artifact: {
+        brief:
+          'The Marlbrook triage workbench shipped release 2026.10.3 on Tuesday. It turned on a setting, APPROVAL_BATCHING, that groups operator approvals into one call to the ticket service every five seconds. Since then the fixture dashboard shows approval_latency_p95 rising from 1.2 seconds to 14 seconds during the morning peak, the ticket service logging lock-wait timeouts on its refunds table, and operators reporting proposals that sit on “Sending your approval” and then show an error. Release 2026.10.2 is still deployable. The integrations rota owns the workbench; the platform rota owns the ticket service. Approvals that reached the ticket service before a timeout may have been applied even though the screen showed an error.\n\nWrite the runbook the next on-call engineer opens when this happens again. Four fields, all required, each with a character limit you can see before you type: the trigger (800), the owner and escalation (300), the steps (2,000) and the rollback (1,200). You review it against two rows of the path rubric, shown beside the form: operability and communication.\n\nThe release, the setting, the dashboard and the numbers are fixtures written for this module. There is no live system to inspect, so write commands and dashboard names as the fixture states them, and mark anything you would have to confirm with the platform rota as a question rather than a fact.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each field is present and inside its limit, and nothing more: it cannot tell whether a stranger could follow your steps at three in the morning. Read it as that stranger, against the rubric, before you submit.',
+        fields: [
+          {
+            id: 'trigger',
+            label: 'Trigger',
+            help:
+              'The alert or report that sends someone to this page: its name, its threshold, and what the operator sees on screen in their own words. Say how the engineer tells this incident apart from a ticket-service outage. The check confirms the field is filled and inside 800 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 800,
+          },
+          {
+            id: 'owner',
+            label: 'Owner and escalation',
+            help:
+              'The rota that owns this page, the rota to page next, and after how many minutes. Name rotas, not people. The check confirms the field is filled and inside 300 characters; it cannot tell whether the rota answers.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 300,
+          },
+          {
+            id: 'steps',
+            label: 'Steps',
+            help:
+              'One step per line, in order. Each check names the signal and where to read it; each action names what to change, the access it needs and its scope; each is followed by the number that should move, which way, and how long to wait. Include the point where the engineer stops and escalates. The check tests non-empty content and a total of 2,000 characters; it cannot run your steps.',
+            kind: 'list',
+            required: true,
+            maxLength: 2000,
+          },
+          {
+            id: 'rollback',
+            label: 'Rollback',
+            help:
+              'What to roll back (the setting, the release, or both, and in which order), where it is run, how long it takes, and the signal that confirms it worked. Then say what it cannot undo: approvals the ticket service applied while the screen showed an error stay applied. Name who reconciles them and how. The check confirms the field is filled and inside 1,200 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 1200,
+          },
+        ],
+        rubricDimensions: ['operability', 'communication'],
+      },
+    },
+    {
+      id: 'fde-v1-m10-workshop-outline',
+      kind: 'artifact',
+      purpose: 'exercise',
+      verification: 'self_reviewed',
+      title: 'Workshop outline: hand the workbench over',
+      summary:
+        'Outline a handover workshop for Marlbrook’s engineers, planned backwards from one task they must do alone after you leave: audience and goal, prerequisites, a timed agenda, the hands-on exercise and the check that shows it worked. Recorded as self-reviewed.',
+      competencies: ['handoff'],
+      estimatedMinutes: 35,
+      artifact: {
+        brief:
+          'Your engagement at Marlbrook ends in three weeks. Two Marlbrook engineers will own the triage workbench after you leave: one has maintained the ticket service for years, the other joined last month and has never deployed the workbench. The support lead will attend for the first half hour. You have one session of at most two hours, a staging copy of the workbench with fixture tickets, and the runbook from the previous exercise.\n\nOutline the workshop. Five fields, all required, each with a character limit you can see before you type: the audience and the one task they must do alone afterwards (600), the prerequisites (600), a timed agenda that fits in two hours (1,500), the hands-on exercise (1,200), and the check that tells you and them whether it worked (600). You review it against two rows of the path rubric, shown beside the form: communication and operability.\n\nThe engineers, the staging copy and the timeline are fixtures written for this module. Nobody will attend a real session, so state what you would ask the attendees beforehand rather than inventing what they know.\n\nThis submission is recorded as self-reviewed. The automated check confirms that each field is present and inside its limit; it does not add up your agenda minutes and cannot tell whether two hours is enough. Check the timing yourself and read the outline against the rubric before you submit.',
+        fields: [
+          {
+            id: 'audience-goal',
+            label: 'Audience and goal',
+            help:
+              'Who attends, by role, what each already knows, and the one task the team must do without you after the session. Make the task concrete enough to observe, such as shipping a routing rule and rolling it back. The check confirms the field is filled and inside 600 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 600,
+          },
+          {
+            id: 'prerequisites',
+            label: 'Prerequisites',
+            help:
+              'One line per thing that must be ready before the session: access to the staging copy, accounts, anything to read beforehand, and who sets each one up. The check tests non-empty content and a total of 600 characters.',
+            kind: 'list',
+            required: true,
+            maxLength: 600,
+          },
+          {
+            id: 'agenda',
+            label: 'Agenda',
+            help:
+              'One block per line with its minutes and what the customer’s team does in it. Give most of the time to their hands on the keyboard. Keep the total at two hours or less; the check counts characters (1,500 in total), not minutes.',
+            kind: 'list',
+            required: true,
+            maxLength: 1500,
+          },
+          {
+            id: 'exercise',
+            label: 'Hands-on exercise',
+            help:
+              'The task the attendees perform, who is at the keyboard, which fixtures or staging data they use, what you do while they work, and what you do if they get stuck. The check confirms the field is filled and inside 1,200 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 1200,
+          },
+          {
+            id: 'success-check',
+            label: 'How you will know it worked',
+            help:
+              'The observable result at the end of the session, and what you record and who owns each gap if the team could not finish the task alone. The check confirms the field is filled and inside 600 characters; it cannot tell whether the team learned anything.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 600,
+          },
+        ],
+        rubricDimensions: ['communication', 'operability'],
+      },
+    },
+    {
+      id: 'fde-v1-m10-pushback-email',
+      kind: 'artifact',
+      purpose: 'exercise',
+      verification: 'self_reviewed',
+      title: 'Push-back email: the wrong feature',
+      summary:
+        'Answer a sponsor who asks you to remove the approval step for small refunds: restate the request, name the need with the fixture evidence, recommend the alternative and ask for one decision. Recorded as self-reviewed.',
+      competencies: ['handoff'],
+      estimatedMinutes: 30,
+      artifact: {
+        brief:
+          'After the UAT, Marlbrook’s VP of Customer Operations writes to you: “Operators are too slow. UAT says six minutes twenty against a four-minute target. Turn off the approval step for refunds under EUR 50 and let the workbench send them. Can it be live next week?”\n\nWhat the fixtures give you. The UAT ran ten cases. In seven of them the operator reloaded the ticket before approving, to check whether it had changed since the proposal was built; the session notes put the median time spent on those reloads at two minutes ten seconds per case. The UAT build tracked the ticket-moved state from this module’s exercise, but Marlbrook’s ticket service was not yet sending it revision events, so the screen never marked a ticket as moved. The screen also does not show when a proposal was built. Refunds become irreversible once the payment provider accepts them. Since discovery, finance has named an approver and an amount limit for refunds an operator approves, and nobody for refunds sent without a person. Use only these facts; where you would need a number you do not have, say so.\n\nWrite the email. Five fields, all required, each with a character limit you can see before you type: the subject line (120), the request restated in the VP’s words (400), the need behind it and your evidence (1,000), your recommendation with its cost and the condition that would make you build what they asked (1,000), and the one decision you ask for, from whom and by when (300). You review it against two rows of the path rubric, shown beside the form: communication and problem framing.\n\nMarlbrook, its VP and its numbers are fixtures written for this module, and no email is sent. This submission is recorded as self-reviewed. The automated check confirms that each field is present and inside its limit; it cannot tell whether the VP would agree or whether your tone would keep the conversation open. Read it as the VP would, against the rubric, before you submit.',
+        fields: [
+          {
+            id: 'subject',
+            label: 'Subject line',
+            help:
+              'A subject that tells the VP what the email asks of them. The check confirms the field is filled and inside 120 characters.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 120,
+          },
+          {
+            id: 'request',
+            label: 'Their request, restated',
+            help:
+              'What the VP asked for and why, in their terms, so they can see you understood it before you disagree. The check confirms the field is filled and inside 400 characters.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 400,
+          },
+          {
+            id: 'need-evidence',
+            label: 'The need behind it, and the evidence',
+            help:
+              'The problem you think the request is meant to solve, and the fixture numbers that support your reading. Separate what was measured from what you infer. The check confirms the field is filled and inside 1,000 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 1000,
+          },
+          {
+            id: 'recommendation',
+            label: 'Recommendation',
+            help:
+              'What you would build instead, roughly what it costs, and what you expect it to change. Then the condition that would make you build what they asked, such as finance naming, in writing, an owner and an amount limit for refunds sent without an operator’s approval. The check confirms the field is filled and inside 1,000 characters.',
+            kind: 'long-text',
+            required: true,
+            maxLength: 1000,
+          },
+          {
+            id: 'decision',
+            label: 'Decision requested',
+            help:
+              'The one decision you need, answerable with a yes, a no or a name, the role that makes it and the date. The check confirms the field is filled and inside 300 characters.',
+            kind: 'short-text',
+            required: true,
+            maxLength: 300,
+          },
+        ],
+        rubricDimensions: ['communication', 'problem-framing'],
+      },
+    },
   ],
   requires: [
     { activityId: 'fde-v1-m10-checks', state: 'verified_pass' },
     { activityId: 'fde-v1-m10-operator-state', state: 'verified_pass' },
+    { activityId: 'fde-v1-m10-runbook', state: 'self_reviewed' },
+    { activityId: 'fde-v1-m10-workshop-outline', state: 'self_reviewed' },
+    { activityId: 'fde-v1-m10-pushback-email', state: 'self_reviewed' },
   ],
 };
