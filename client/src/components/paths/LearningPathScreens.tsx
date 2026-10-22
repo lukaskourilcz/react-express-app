@@ -601,6 +601,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // after a network failure reuses the key, and the server replays its stored
   // result instead of grading twice.
   const attempt = useRef<Attempt | null>(null);
+  // The submission or brief refresh running for the open activity, one at a
+  // time. Opening another activity drops it, so an answer that lands late
+  // changes nothing on the new activity's screen.
+  const working = useRef<object | null>(null);
   const [attemptUsedUp, setAttemptUsedUp] = useState(false);
   const [briefChanged, setBriefChanged] = useState(false);
   // The autosave for the open activity: one save in flight at a time, the
@@ -619,11 +623,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     setBriefChanged(false);
     setResult(null);
     setAttemptUsedUp(false);
-    attempt.current = null;
-    drafts.current = null;
-    if (!activityId || !enrollmentId) return;
-    setBusy(true);
     setError(null);
+    attempt.current = null;
+    working.current = null;
+    drafts.current = null;
+    setBusy(Boolean(activityId && enrollmentId));
+    if (!activityId || !enrollmentId) return;
     startActivity({ enrollmentId, activityId })
       .then((started) => {
         if (cancelled) return;
@@ -740,25 +745,35 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   }, [open]);
 
   const refreshBrief = async () => {
-    const current = attempt.current;
-    if (!open || !enrollment || !current || busy) return;
+    if (!open || !enrollment || !attempt.current || working.current) return;
+    const token = {};
+    working.current = token;
+    const live = () => working.current === token;
     setBusy(true);
     try {
       const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
-      if (attempt.current !== current) return;
+      if (!live()) return;
       attempt.current = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
       setOpen(fresh);
       setBriefChanged(false);
       setError(null);
       setResult(null);
-    } catch (caught) { setError(friendlyError(caught)); }
-    finally { setBusy(false); }
+    } catch (caught) {
+      if (live()) setError(friendlyError(caught));
+    } finally {
+      if (live()) {
+        working.current = null;
+        setBusy(false);
+      }
+    }
   };
 
   const submit = useCallback(
     async (payload: Record<string, unknown>) => {
       const current = attempt.current;
-      if (!open || !enrollment || !current || briefChanged) return;
+      // One submission at a time: a second click before the first re-render
+      // would otherwise open a second attempt or grade the work twice.
+      if (!open || !enrollment || !current || briefChanged || working.current) return;
       const expired = Date.parse(current.expiresAt) <= Date.now();
       // A check's answers index its own attempt's order, so a check whose
       // attempt is used up is dealt again rather than resubmitted.
@@ -766,13 +781,18 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         retry();
         return;
       }
+      const token = {};
+      working.current = token;
+      // False once the learner opened another activity (or dealt this check
+      // again): this submission's answer then belongs to a screen that is gone.
+      const live = () => working.current === token;
       setBusy(true);
       setError(null);
+      let target = current;
       try {
-        let target = current;
         if (current.usedUp || expired) {
           const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id, previousSession: current.session });
-          if (attempt.current !== current) return;
+          if (!live()) return;
           target = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
           attempt.current = target;
           if (fresh.needsBriefReview) {
@@ -788,10 +808,8 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           ...payload,
         });
         target.usedUp = true;
-        // The learner moved to another activity while this one was graded.
-        if (attempt.current !== target) return;
-        setAttemptUsedUp(false);
-        setResult(graded);
+        // The server recorded the result whatever the learner opened since,
+        // so its XP, its event and the progress it changed are kept current.
         if (!graded.replayed && graded.xpAwarded > 0) {
           announceVerifiedQuestXp(graded.xpAwarded);
           void syncXpWithServer({ announceRankUp: true });
@@ -804,20 +822,30 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             state: graded.state,
           });
         }
-        await queryClient.invalidateQueries({
+        const refreshed = queryClient.invalidateQueries({
           queryKey: learningPathKeys.progress(userId, enrollment.enrollmentId, enrollment.curriculumVersion),
         });
+        if (!live()) return;
+        setAttemptUsedUp(false);
+        setResult(graded);
+        await refreshed;
       } catch (caught) {
+        // A late refusal belongs to the activity it was sent for, not to the
+        // one on screen now, whose attempt is untouched.
+        if (!live()) return;
         // An attempt that expired or already holds a result cannot take this
         // submission; the next one goes to a new attempt.
-        if (caught instanceof ApiError && caught.code && ATTEMPT_USED_UP.has(caught.code) && attempt.current) {
-          attempt.current.usedUp = true;
+        if (caught instanceof ApiError && caught.code && ATTEMPT_USED_UP.has(caught.code)) {
+          target.usedUp = true;
           setAttemptUsedUp(true);
         }
         if (caught instanceof ApiError && caught.code === 'task_changed') setBriefChanged(true);
         setError(friendlyError(caught));
       } finally {
-        setBusy(false);
+        if (live()) {
+          working.current = null;
+          setBusy(false);
+        }
       }
     },
     [open, enrollment, retry, queryClient, userId, pathId, briefChanged, t],

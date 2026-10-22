@@ -43,6 +43,7 @@ const calls = vi.hoisted(() => ({
   serverDraft: null as null | { activityId: string; revision: number; content: Record<string, unknown>; updatedAt: string },
   next: null as string | null,
   submitFailures: [] as unknown[],
+  submitDelay: 0,
   codePassed: false,
   changedOnRenewal: false,
   scenario: undefined as string | undefined,
@@ -104,6 +105,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
     }),
     submitActivity: vi.fn(async (input: Record<string, unknown>) => {
       calls.submit.push(input);
+      if (calls.submitDelay) await new Promise((resolve) => setTimeout(resolve, calls.submitDelay));
       const failure = calls.submitFailures.shift();
       if (failure) throw failure;
       const check = Array.isArray(input.answers);
@@ -134,6 +136,7 @@ beforeEach(() => {
   calls.serverDraft = null;
   calls.next = null;
   calls.submitFailures.length = 0;
+  calls.submitDelay = 0;
   calls.scenario = undefined;
   calls.fixtureNote = undefined;
   Object.defineProperty(window.navigator, 'onLine', { value: true, configurable: true });
@@ -262,6 +265,42 @@ describe('switching activities', () => {
     expect(editor().value).toBe(`STARTER_FOR_${B}`);
     await wait(1100);
     expect(calls.drafts.filter((one) => one.activityId === B && one.code === 'my solution for A')).toHaveLength(0);
+  });
+});
+
+describe('a submission that lands after the learner moved on', () => {
+  it('leaves the next activity\'s attempt and screen alone when it is refused', async () => {
+    calls.submitDelay = 300;
+    calls.submitFailures.push(new ApiError('That submission key was already used with different work', 409, 'idempotency_conflict'));
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await press('Submit');
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: /Activity B/ })); });
+    await waitFor(() => expect(screen.getByText(`prompt ${B}`)).toBeInTheDocument());
+    await wait(400); // A's refusal arrives while B is open
+    expect(screen.queryByRole('alert')).toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+    await press('Submit');
+    await waitFor(() => expect(calls.submit).toHaveLength(2));
+    // B's own attempt takes the submission; nothing opened a third one.
+    expect(calls.start).toEqual([A, B]);
+    expect(calls.submit[1].session).toBe(`SESSION_${B}_2`);
+  });
+
+  it('still announces the XP it earned', async () => {
+    const { announceVerifiedQuestXp } = await import('../src/lib/xp');
+    vi.mocked(announceVerifiedQuestXp).mockClear();
+    calls.codePassed = true;
+    calls.submitDelay = 300;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await press('Submit');
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: /Activity B/ })); });
+    await waitFor(() => expect(screen.getByText(`prompt ${B}`)).toBeInTheDocument());
+    await wait(400);
+    expect(announceVerifiedQuestXp).toHaveBeenCalledWith(25);
+    // A's verdict never reaches B's screen.
+    expect(screen.queryByRole('heading', { name: 'Passed +25 XP' })).toBeNull();
   });
 });
 
