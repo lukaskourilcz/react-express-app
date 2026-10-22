@@ -205,6 +205,14 @@ describe('the path page', () => {
     expect(within(report).queryByRole('link', { name: 'Open the diagnostic' })).toBeNull();
   });
 
+  it('a paused path lists its activities without links and offers Resume', async () => {
+    state.enrollments = [enrolled('fde', 'paused')];
+    await overview('fde');
+    expect(screen.getByText(/This path is paused/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
+  });
+
   it('on the free plan, Start enrolls in the taster without an upgrade', async () => {
     state.tier = 'free';
     await overview('fde');
@@ -315,6 +323,18 @@ describe('the module page status', () => {
     expect(screen.getByText(/Your evidence could not be loaded/)).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('alert')).getByRole('button'));
     expect(state.enrollmentRefetches).toBe(1);
+  });
+  it('a paused enrollment lists its activities without links and leads to Resume instead of opening one the server refuses', async () => {
+    state.enrollments = [enrolled('fde', 'paused')];
+    await mount('/p/fde-m01?activity=fde-m01-l1-read', '/p/:moduleId', async () => {
+      const { ModuleWorkspace } = await import('../src/components/paths/LearningPathScreens');
+      return <ModuleWorkspace pathId="fde" />;
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.getByText(/This path is paused/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path');
+    expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
+    expect(document.querySelector('.lp-workspace')).toBeNull();
   });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;

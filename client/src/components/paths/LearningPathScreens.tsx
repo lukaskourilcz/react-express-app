@@ -284,8 +284,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
     .map((shelf) => ({ shelf, modules: manifest.modules.filter((one) => one.shelf === shelf) }))
     .filter((one) => one.modules.length > 0);
   // Activities link only while the path is open to this learner; a closed
-  // path, or a lapsed plan, keeps its outline and evidence without dead ends.
-  const reachable = Boolean(enrollment) && open && !barred;
+  // path, a lapsed plan or a paused enrollment (the server refuses its
+  // activities with enrollment_paused until Resume) keeps its outline and
+  // evidence without dead ends.
+  const reachable = Boolean(enrollment) && enrollment?.status !== 'paused' && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
   const diagnosticModule = manifest.diagnosticActivityId
     ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
@@ -592,7 +594,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
 
   const activityId = search.get('activity');
-  const enrollmentId = enrollment?.enrollmentId;
+  // A paused enrollment opens no activity: the server would refuse it with
+  // enrollment_paused. The page says it is paused and leads to Resume.
+  const paused = enrollment?.status === 'paused';
+  const enrollmentId = paused ? undefined : enrollment?.enrollmentId;
   const curriculumVersion = enrollment?.curriculumVersion;
   const [open, setOpen] = useState<StartActivityResponse | null>(null);
   const [result, setResult] = useState<SubmitActivityResponse | null>(null);
@@ -910,9 +915,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const states = statesOf(progress.data);
   const moduleProgress = progress.data?.modules.find((one) => one.moduleId === module.id);
-  // A path that is switched off, or that the plan no longer opens, lists its
-  // activities without links: starting one would be refused.
-  const reachable = Boolean(enrollment) && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
+  // A path that is switched off, that the plan no longer opens or that is
+  // paused lists its activities without links: starting one would be refused.
+  const reachable = Boolean(enrollment) && !paused && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
   // Only the dimensions this artifact is judged against, so the learner reads
   // the criteria that apply rather than the whole rubric.
   const rubric = entry.manifest.rubric.dimensions
@@ -979,6 +984,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           </span>
         </div>
       )}
+      {paused && (
+        <div className="lp-notice">
+          <span className="lp-notice__glyph" aria-hidden="true">
+            ⏸
+          </span>
+          <span>
+            {t('paths.paused')} <Link to={pathHref(pathId)}>{t('paths.action.resume')}</Link>
+          </span>
+        </div>
+      )}
 
       <section className="lp-section">
         <h2 ref={listHeading} tabIndex={-1}>{t('paths.activities')}</h2>
@@ -997,7 +1012,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         </ul>
       </section>
 
-      {activityId && enrollment && (
+      {activityId && enrollmentId && (
         // No live region here: it would read the whole activity (a lesson, the
         // editor) aloud on every change. Errors are alerts, the draft status
         // is its own live region, and focus carries the rest.
