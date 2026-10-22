@@ -381,6 +381,23 @@ describe('a level whose session cannot be used', () => {
     expect(screen.queryByText(/Coding tasks are not checked while you’re signed out/)).toBeNull();
   });
 
+  // Two answer keys pressed before the first one re-rendered each sent an
+  // answer for the same question.
+  it('sends one answer when two keys land before the page re-renders', async () => {
+    let answers = 0;
+    answer({ answer: () => { answers += 1; return HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' }); } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+    });
+    expect(await screen.findByText('Because it is first.')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(answers).toBe(1);
+  });
+
   // Returning to the tab fires focus and visibilitychange together. Each
   // re-check found the coding task passed and completed the level, so the
   // pass was recorded, and its XP announced, twice.

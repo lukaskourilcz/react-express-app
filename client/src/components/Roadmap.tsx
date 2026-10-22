@@ -1601,9 +1601,14 @@ function LessonRunner({
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
   const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
 
+  // The question an answer was sent for. A ref, not only `grading`: a second
+  // key press or click can land before the first one's state re-renders, and
+  // each sent its own answer. Cleared when the send fails, so Try again works.
+  const answeredRef = useRef<string | null>(null);
   const choose = useCallback(
     async (index: number) => {
-      if (revealed || grading) return;
+      if (revealed || grading || answeredRef.current === question.id) return;
+      answeredRef.current = question.id;
       setGrading(true);
       setAnswerError(null);
       setSelected(index);
@@ -1620,6 +1625,7 @@ function LessonRunner({
           window.setTimeout(() => setHeartHit(false), 500);
         }
       } catch (error) {
+        answeredRef.current = null;
         reportError(error);
       } finally {
         setGrading(false);
