@@ -1,32 +1,50 @@
+// Path grading authority (npm run test:path-authority).
+//
+// The probes below were written against the DSA Foundations path's harnesses.
+// E5 (#496) retired that path, so they now grade the private fixtures in
+// scripts/fixtures/path-authority-fixtures.ts (the same code, references and
+// hidden assertions, copied verbatim) through gradePathCodeWith, the body of
+// the production gradePathCode: the same protected harness, shuffled hidden
+// run and critical-criterion fold. The published FDE path is graded too, so
+// the live entry point stays under test.
 import assert from 'node:assert/strict';
 import { pathById } from '../lib/learning-paths/catalog';
-import { gradePathCode } from '../lib/learning-paths/grade';
+import { gradePathCode, gradePathCodeWith } from '../lib/learning-paths/grade';
 import { solutionFor } from '../lib/learning-paths/solutions';
-import { PATH_AUTHORITY_FIXTURES } from './fixtures/path-authority-fixtures';
-import type { SourceCallTest } from '../lib/coding/types';
+import { PATH_AUTHORITY_FIXTURES, type PathAuthorityFixtureId } from './fixtures/path-authority-fixtures';
+import type { MergedCallTest } from '../lib/learning-paths/types';
 import { protectedPathHarness } from '../lib/learning-paths/harness';
 import { runChecks } from '../lib/coding/sandbox';
 import { allPassed } from '../shared/coding-evaluate';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 await buildSandboxWorker();
-// The public path is FDE only. Private historical regression fixtures keep
-// input-budget/probe attacks covered without publishing a retired curriculum.
-const executeFixture = async (id: string, source: string, extra: SourceCallTest[] = []) => {
+const gradeFixture = (id: PathAuthorityFixtureId, source: string, extra: MergedCallTest[] = []) => {
   const fixture = PATH_AUTHORITY_FIXTURES[id];
-  const visible = [...fixture.code.tests, ...extra];
-  const harness = protectedPathHarness(fixture.code.harness ?? '', [...visible, ...fixture.hiddenTests].map(test => test.call));
-  return runChecks({ code: `${harness.before}\n;\n${source}\n;\n${harness.after}`, visible, hidden: fixture.hiddenTests, shuffle: values => values });
+  return gradePathCodeWith({ ...fixture.code, tests: [...fixture.code.tests, ...extra] }, fixture.solution, source);
 };
-const check = async (id: string, source: string, passed: boolean, label: string) => {
-  const result = await executeFixture(id, source);
-  assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), passed, label);
+const check = async (id: PathAuthorityFixtureId, source: string, passed: boolean, label: string) => {
+  const result = await gradeFixture(id, source);
+  assert.equal(result.state === 'verified_pass', passed, label);
   console.log(`PASS path authority: ${label}`);
 };
+
+// Every fixture's own reference passes, so a refusal below is the probe's
+// doing and not a broken fixture.
+for (const [id, fixture] of Object.entries(PATH_AUTHORITY_FIXTURES) as [PathAuthorityFixtureId, (typeof PATH_AUTHORITY_FIXTURES)[PathAuthorityFixtureId]][]) {
+  assert.ok(fixture.code.harness, `${id}: an authority fixture carries a harness`);
+  await check(id, fixture.solution.solution, true, `${id}: the fixture reference passes`);
+}
+
+// The published path goes through the same body: its reference passes and a
+// blank submission does not.
 const fde = pathById('fde')!;
-const real = fde.modules.flatMap(module => module.activities).find(activity => activity.kind === 'code' && activity.code)!;
-assert.equal((await gradePathCode(real, real.code!, solutionFor(real.id)!.solution)).state, 'verified_pass', 'a published FDE reference uses the protected grading path');
-assert.notEqual((await gradePathCode(real, real.code!, '')).state, 'verified_pass', 'the same published FDE activity rejects a blank submission');
+const real = fde.modules.flatMap(module => module.activities)
+  .find(activity => activity.kind === 'code' && activity.code?.language === 'javascript' && activity.code.harness && !activity.reuseTaskId)!;
+assert.ok(real, 'the FDE path publishes a JavaScript exercise with a harness');
+assert.equal((await gradePathCode(real, real.code!, solutionFor(real.id)!.solution)).state, 'verified_pass', `${real.id}: the published reference passes`);
+assert.notEqual((await gradePathCode(real, real.code!, '')).state, 'verified_pass', `${real.id}: a blank submission does not pass`);
+console.log(`PASS path authority: published ${real.id} grades through the protected harness`);
 
 // This candidate passed the old appended harness: warm up with a linear
 // call, replace the read helper, then perform quadratic input traversals.
@@ -118,7 +136,7 @@ for (const [label, source, accepted] of [
 
 
 const singleWriteQueue = 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);},dequeue(){if(h>=a.length)return null;const value=a[h];a[h++]=null;return value;},size(){return a.length-h;}};}';
-const exactCount = await executeFixture('counted-queue', singleWriteQueue, [{ call: '__measureQueue(32).ops', expected: 96, criterion: 'constant-dequeue' }]);
-assert.equal(allPassed(exactCount.visible) && Boolean(exactCount.hidden && allPassed(exactCount.hidden)), true, 'queue append/read/clear are exactly three counted operations per value');
+const exactCount = await gradeFixture('counted-queue', singleWriteQueue, [{ call: '__measureQueue(32).ops', expected: 96, criterion: 'constant-dequeue' }]);
+assert.equal(exactCount.state, 'verified_pass', 'queue append/read/clear are exactly three counted operations per value');
 console.log('PASS path authority: queue ordinary assignment is counted once');
 console.log('Native path authority checks passed. No production tampering probe was performed.');
