@@ -21,7 +21,7 @@ import { LEARNING_PATHS, activitySummary, moduleSummary, publicManifest } from '
 import { moduleRequirements } from '../lib/learning-paths/handlers';
 import { mergePath, type MergedActivity, type ModuleSource, type PathSource } from '../lib/learning-paths/types';
 import { validatePath } from '../lib/learning-paths/validate';
-import { isOffLoopModule, nextActivityId, pathGuidedComplete, pathInventory, type EvidenceState, type LearningPathManifest } from '../shared/learning-paths';
+import { artifactTally, isOffLoopModule, nextActivityId, pathGuidedComplete, pathInventory, type EvidenceState, type LearningPathManifest } from '../shared/learning-paths';
 import { SCHEMA_FIXTURE_NOTE, SCHEMA_FIXTURE_SCENARIO, schemaFixture, schemaFixtureSource } from './learning-path-schema-fixture';
 
 type Fail = (message: string) => void;
@@ -245,6 +245,10 @@ export function schemaContracts(fail: Fail): void {
       if (got !== value) fail(`schema inventory: ${key} is ${got}, expected ${value} with the shelf left out`);
     }
     if (counted.estimatedMinutes !== inventory.estimatedMinutes) fail('schema inventory: shelf minutes reached the path estimate');
+    // The progress screen says all of the tally's total are required, so a
+    // shelf write-up must stay out of it, submitted or not.
+    const tally = artifactTally(stocked, new Map([['fde-v1-ip01-star', 'self_reviewed']]));
+    if (tally.total !== 0 || tally.submitted !== 0) fail(`schema tally: a shelf artifact reached the required artifact count (${tally.submitted}/${tally.total})`);
   }
 
   /* ── 7. the shelf stays off the loop even without its optional flag ── */
