@@ -749,7 +749,12 @@ async function main() {
     const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
     if (visibleChecks < 5) fail(`${id}: at least five visible checks`);
     if (hiddenChecks < 4) fail(`${id}: at least four hidden checks`);
-    if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: a Medium or Hard band task never enters a Learn level's quota`);
+    const inLearnQuota = tasksForLevel(task.topic, task.level).some((one) => one.id === id);
+    // E4 admits the nine individually reviewed DSA Advanced placements. Other
+    // Medium and Hard band tasks stay outside Learn quotas.
+    if (task.topic === 'dsa-advanced') {
+      if (!inLearnQuota) fail(`${id}: a DSA Advanced placement must enter its Learn level's quota`);
+    } else if (inLearnQuota) fail(`${id}: a Medium or Hard band task never enters a Learn level's quota`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */

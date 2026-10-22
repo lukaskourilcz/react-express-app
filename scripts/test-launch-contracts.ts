@@ -4841,15 +4841,16 @@ async function main() {
   // in the FDE bridge, so every learner who did not take the specialisation was
   // refused it as "not in your plan".
   {
-    const withTrack = (baseTrack: string) => ({
-      schemaVersion: 2, baseTrack, specialization: null, skillPaths: [],
+    const withTrack = (baseTrack: string, sections: readonly string[] = []) => ({
+      schemaVersion: 2, baseTrack, specialization: null, skillPaths: [], sections,
       goals: ['job'], experience: 'some', studyTime: 15,
     } as unknown as Parameters<typeof isTopicInPlan>[0]);
     const tracks = Object.keys(WEBDEV_PLAN_STAGES);
     const stranded = [...SUBJECT_SCOPE_CATALOG.webdev.topics].filter(
-      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)),
+      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)
+        || OPT_IN_SECTIONS.some((section) => isTopicInPlan(withTrack(track, [section.id]), 'webdev', topic))),
     );
-    assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
+    assert.deepEqual(stranded, [], `every deployable topic needs a base track or joined section that plans it: ${stranded.join(', ')}`);
   }
 
   // TypeScript is a late topic, deliberately. It used to sit one stage after a
@@ -4962,8 +4963,8 @@ async function main() {
     // The acceptance order: the section's topics in section order (those the
     // track already plans keep their stage position), then Node.js, the
     // prerequisite of System Design, DevOps & Cloud and Databases.
-    assert.deepEqual(withSection.slice(base.length), ['algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
-    for (const topic of ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
+    assert.deepEqual(withSection.slice(base.length), ['dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
+    for (const topic of ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
       assert.ok(withSection.includes(topic), `a Frontend learner in Software Engineer plans ${topic}`);
     }
     for (const topic of withSection) {
@@ -4972,6 +4973,8 @@ async function main() {
       }
     }
     // The server's plan check (`stepRefusal` → 403 not_in_plan) reads the same rule.
+    assert.equal(isTopicInPlan(joined, 'webdev', 'dsa-advanced'), true);
+    assert.equal(isTopicInPlan(frontend, 'webdev', 'dsa-advanced'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'system-design'), true);
     assert.equal(isTopicInPlan(frontend, 'webdev', 'system-design'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'cool-stuff'), false);
