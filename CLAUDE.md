@@ -79,7 +79,7 @@ This repo follows a shared markdown contract (see the `session-start`,
   `- [ ] **Title** — desc. [imp:1-5] [owner:me|ai] [time:30m] [kind:K]`, where
   `[kind:K]` is one of `setup` `deploy` `legal` `content` `decision`.
 - **`about-project.md`** — project summary + the tech stack.
-- **`scaling.md`** — cost & scaling only (renamed from `stack-and-scaling.md`).
+- **`scaling.md`** — cost & scaling only.
 - **`monetization.md`** — how the project could earn (options table).
 
 At session start, check `NEEDED.md` for `[owner:ai]` tasks that can now be done;
