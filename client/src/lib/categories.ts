@@ -33,6 +33,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'nodejs', label: 'Node.js', color: '#339933' },
   { value: 'git', label: 'Git', color: '#f05032' },
   { value: 'dsa', label: 'DSA', color: '#6741d9' },
+  { value: 'dsa-advanced', label: 'DSA Advanced', color: '#5b3ab5' },
   { value: 'algorithms', label: 'Algorithms', color: '#ae3ec9' },
   { value: 'abbreviations', label: 'Abbreviations', color: '#0ea5e9' },
   { value: 'general', label: 'General', color: '#14b8a6' },

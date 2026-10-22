@@ -10,6 +10,7 @@
  * also the Big O introduction at /learn/big-o. */
 
 export const LEVEL_LESSONS: Readonly<Partial<Record<string, Readonly<Record<number, string>>>>> = {
+  "dsa-advanced": {"1": "dsaa-learn-representation", "2": "dsaa-learn-representation", "3": "dsaa-learn-graph-search", "4": "dsaa-learn-graph-search", "5": "dsaa-learn-dependency-prefix", "6": "dsaa-learn-dependency-prefix", "7": "dsaa-learn-choice-proof", "8": "dsaa-learn-choice-proof", "9": "dsaa-learn-ordered-boundaries", "10": "dsaa-learn-ordered-boundaries", "11": "dsaa-learn-dynamic-programming", "12": "dsaa-learn-dynamic-programming", "13": "dsaa-learn-bits-sorting", "14": "dsaa-learn-bits-sorting", "15": "dsaa-learn-advanced-review"},
   dsa: {
     1: 'dsa-v1-d01-l1', 2: 'dsa-v1-d01-l2', 3: 'dsa-v1-d02-l1', 4: 'dsa-v1-d02-l2',
     5: 'dsa-learn-d03', 6: 'dsa-v1-d04-l1', 7: 'dsa-v1-d04-l2', 8: 'dsa-learn-d05',

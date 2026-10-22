@@ -279,7 +279,19 @@ export async function gradePathCode(
   submitted: string,
   reactRunner?: (input: {suite:string;appSource:string}) => Promise<ReactSuiteOutcome>,
 ): Promise<PathCodeGrade> {
-  const solution: PathCodeSolution | undefined = hiddenAssertionsFor(activity);
+  return gradePathCodeWith(code, hiddenAssertionsFor(activity), submitted, reactRunner);
+}
+
+/** The grading body of `gradePathCode`, given the hidden assertions directly.
+ * The handlers never call it: the path-authority suite grades private
+ * fixtures through it, so the protected harness stays under test without a
+ * published activity to borrow (#496). */
+export async function gradePathCodeWith(
+  code: MergedCode,
+  solution: PathCodeSolution | undefined,
+  submitted: string,
+  reactRunner?: (input: {suite:string;appSource:string}) => Promise<ReactSuiteOutcome>,
+): Promise<PathCodeGrade> {
   const visible: MergedCallTest[] = code.tests;
   const hidden: MergedCallTest[] = (solution?.hiddenTests ?? []).map((test) => ({
     call: test.call,

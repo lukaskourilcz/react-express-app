@@ -19,7 +19,7 @@ const passed = (count: number) => ({
 const PROGRESS = { javascript: passed(5), git: passed(1) };
 
 const profile = (extra: Record<string, unknown> = {}) => ({
-  schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
+  schemaVersion: 2, baseTrack: 'frontend', specialization: null,
   goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null, ...extra,
 });
 
@@ -92,7 +92,8 @@ async function stand(page: Page, account: Account, {
 const switcherItem = (page: Page, name: string) =>
   page.getByRole('radiogroup', { name: 'Learn sections' }).getByRole('radio', { name: new RegExp(`^${name}`) });
 const topicCard = (page: Page, name: string) =>
-  page.getByRole('radiogroup', { name: 'Choose a topic' }).getByRole('radio', { name: new RegExp(`^${name.replace(/[&]/g, '\\$&')}`) });
+  // The whole label: "DSA Foundations" must not also match "DSA Advanced".
+  page.getByRole('radiogroup', { name: 'Choose a topic' }).getByRole('radio', { name: new RegExp(`^${name.replace(/[&]/g, '\\$&')}(?:$|,| —)`) });
 
 test.describe('Learn section routes', () => {
   test('resolve /learn, deep links, unknown sections and this device’s last section', async ({ page }) => {
@@ -104,7 +105,7 @@ test.describe('Learn section routes', () => {
 
     await page.goto('/learn?topic=dsa');
     await expect(page).toHaveURL(/\/learn\/software-engineer\?topic=dsa$/);
-    await expect(topicCard(page, 'DSA')).toHaveAttribute('aria-checked', 'true');
+    await expect(topicCard(page, 'DSA Foundations')).toHaveAttribute('aria-checked', 'true');
 
     await page.goto('/learn?topic=react&part=1');
     await expect(page).toHaveURL(/\/learn\/web-developer\?topic=react&part=1$/);
@@ -189,13 +190,16 @@ test.describe('A Frontend learner and Software Engineer', () => {
       await expect(topicCard(page, name)).toBeDisabled();
       await expect(topicCard(page, name)).toHaveAccessibleName(/not in your plan/);
     }
-    for (const name of ['Git', 'General', 'DSA']) {
+    for (const name of ['Git', 'General', 'DSA Foundations']) {
       await expect(topicCard(page, name)).not.toHaveAccessibleName(/not in your plan/);
     }
     const join = page.getByRole('button', { name: 'Add Software Engineer to your plan' });
     await expect(join).toHaveCount(1);
-    await expect(topicCard(page, 'Git')).toContainText('Also in Web Developer');
-    await expect(topicCard(page, 'Databases')).toContainText('Also in Web Developer and Forward Deployed Engineer');
+    // A card shows the logo, the topic name and its levels; no "Also in" line.
+    for (const name of ['Git', 'Databases', 'General']) {
+      await expect(topicCard(page, name)).not.toContainText('Also in');
+      await expect(topicCard(page, name)).not.toHaveAccessibleName(/also in/i);
+    }
 
     await join.focus();
     await page.keyboard.press('Enter');
@@ -209,7 +213,7 @@ test.describe('A Frontend learner and Software Engineer', () => {
     await expect(page.getByText(/Software Engineer is in your plan\./)).toBeFocused();
     expect(state.puts.at(-1)).toMatchObject({ baseTrack: 'frontend', specialization: null, sections: ['software-engineer'] });
     await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toHaveCount(0);
-    for (const name of ['Algorithms', 'Security', 'DSA']) await expect(topicCard(page, name)).toBeEnabled();
+    for (const name of ['Algorithms', 'Security', 'DSA Foundations']) await expect(topicCard(page, name)).toBeEnabled();
     for (const name of ['System Design', 'DevOps & Cloud', 'Databases']) await expect(topicCard(page, name)).toHaveAccessibleName(/Locked/);
 
     await switcherItem(page, 'Web Developer').click();
@@ -435,6 +439,19 @@ test.describe('FDE routes and Career sections', () => {
     await page.goto('/roadmap/specializations/fde/fde-v1-m01?activity=fde-v1-m01-l1-read#lesson');
     await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer\/path\/fde-v1-m01\?activity=fde-v1-m01-l1-read#lesson$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  // E5 (#496) retired the standalone DSA path. Its overview and module links
+  // land on DSA Foundations in the Software Engineer section, where its
+  // readings and Coding tasks live; vercel.json answers crawlers with a 308.
+  test('lands an old DSA path link on DSA Foundations in Learn', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest');
+    for (const old of ['/roadmap/paths/dsa-foundations', '/roadmap/paths/dsa-foundations/dsa-v1-d04?activity=dsa-v1-d04-l1-read']) {
+      await page.goto(old);
+      await expect(page).toHaveURL(/\/learn\/software-engineer\?topic=dsa$/);
+      await expect(topicCard(page, 'DSA Foundations')).toHaveAttribute('aria-checked', 'true');
+    }
   });
 
   test('links each Career group into Learn and shows the FDE path on its section shelf', async ({ page }) => {

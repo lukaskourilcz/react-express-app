@@ -567,10 +567,10 @@ ordinary graded track with the same
 XP and one-award-per-task ledger. Those tasks carry `algorithms` as their
 topic, so none of them can be drawn into a Learn level's quota, and their
 `level` is an ordering key rather than a Learn level. The track also holds
-the 29 DSA Foundations tasks of #493, the DSA path's exercises, whose topic is
+the 29 DSA Foundations tasks of #493, the exercises of the DSA path that E5
+(#496) retired, whose topic is
 `dsa`: their level is a DSA Learn level, and `levelCodingTasks` seals them
-into DSA levels 3 to 9, 12 and 13 (levels 1, 2, 10, 11 and 14 wait for E3,
-#494). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
+into DSA levels 1 to 14 (level 15, the foundation review, has none). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
 tracks and for a `dsa` task, which the row and the workbench show as
 "DSA · Level n"; the row, the workbench and the GitHub commit message read it
 before naming one.
@@ -650,8 +650,8 @@ Hard (`difficultyOf`), projected from its tier, or for a project milestone or
 path level from its position; a checkpoint reads its tier like a standalone
 task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
 gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
-754 tasks in `shared/coding-index.ts`, 480 are Easy, 179 Medium and 95 Hard; by
-track, 316 JavaScript, 156 TypeScript, 183 React and 99 Algorithms. The 45
+769 tasks in `shared/coding-index.ts`, 480 are Easy, 189 Medium and 100 Hard; by
+track, 316 JavaScript, 156 TypeScript, 183 React and 114 Algorithms. The 45
 hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` on a task's first verified pass, and
 again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
 verified pass after the learner reset the task to its starter (the
@@ -721,17 +721,23 @@ A level may name `lessonId` from `lib/learn-lessons/levels.ts`. The public, addr
 
 ## Learning paths
 
-Two optional paths sit on top of the existing Learn levels and the Coding
-section. Neither replaces them, and neither changes product or subject scope.
+One optional path sits on top of the existing Learn levels and the Coding
+section. It replaces neither, and it changes no product or subject scope.
 
 - **Forward Deployed Engineer** is a *role specialization*: the learner picks
   Fullstack, Frontend or Backend first, then optionally adds FDE on top. It is
   the only role, and it occupies the single `specialization` slot of the
   account preference.
-- **DSA Foundations** is a *skill path*: entered directly at
-  `/roadmap/paths/dsa-foundations`, with no base track, no role and no XP rank
-  required. It can run alongside a career path, and the two enrollments are
-  independent.
+- **DSA Foundations** was a *skill path* until E5 (#496, 22 October 2026)
+  retired it. Its material lives on in Learn (fifteen levels in the Software
+  Engineer section, the eighteen original readings under their `dsa-v1-*`
+  ids) and in Coding (the 29 `alg-dsa-*` tasks with their graders).
+  `/roadmap/paths/dsa-foundations` and every module address under it answer a
+  308 to `/learn/software-engineer?topic=dsa` (`vercel.json`; the client
+  redirects the same way). `LEARNING_PATH_IDS` is `['fde']`, the `skill_path`
+  kind, `SkillPathId` and the profile's `skillPaths` are gone, and a stored
+  `skillPaths` field is dropped on the next save. Migration 026's tables stay;
+  no rows were deleted.
 
 `shared/learning-paths.ts` owns the vocabulary — `LearningPathId`,
 `LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
@@ -808,9 +814,10 @@ coding tier ladder), assertions grouped into named criteria (so a
 security-critical failure cannot be averaged away), and evidence recorded in
 `learning_path_*` only. A path pass writes no tier unlock. Verified coding activities use the shared
 canonical coding reward (migration 065): a reused ordinary task cannot earn a
-second first-pass reward, and a DSA exercise that became a coding task (#493)
-records under that task's id (`canonicalCodingTaskId`), so a path pass and a
-Coding pass share one record. Non-coding activities keep their existing reward rules.
+second first-pass reward. Until E5 (#496) retired the DSA path, a DSA exercise
+that had become a coding task (#493) recorded under that task's id, so a path
+pass and a Coding pass shared one record; those `alg-dsa-*` records stay.
+Non-coding activities keep their existing reward rules.
 Native code sessions bind exact activity/grader material and rubric version.
 A stale unaccepted session is refused before grading or evidence/XP writes;
 loading its latest brief keeps the editor source. Automatic retries send their previous
@@ -822,8 +829,9 @@ again. Runtime-only native grading changes must bump the attempt tag in
 `lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
-check (`purpose: 'project'`, the DSA final) deals the same questions again on a
-retry, only reshuffled, so after a failed attempt it returns only which
+check (`purpose: 'project'` on a check; none is published since E5 (#496)
+retired the DSA final, and the FDE capstone's project stages are code and
+written pieces) deals the same questions again on a retry, only reshuffled, so after a failed attempt it returns only which
 questions were wrong; the correct options and the explanations come back once
 it is passed. A diagnostic or exercise check returns them after every attempt.
 A domain-gated check needs its threshold overall and a minimum in every domain:
@@ -856,9 +864,9 @@ Endpoints are new `resource=`/`op=` branches on existing handlers
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
 `api/user/[op].ts`), so the twelve-handler budget is unchanged. Storage is
 `supabase/supabase-schema-026.sql` (additive, idempotent). Availability is per
-path — `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` — so either
-can launch or pause without the other, and a path opens only when its switch
-is on, its content validates and the migration is installed.
+path — `LEARNING_PATH_FDE_ENABLED` for FDE, the one published path — and a
+path opens only when its switch is on, its content validates and the migration
+is installed.
 
 A code exercise or a written piece autosaves one draft per activity, up to
 `PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
@@ -870,7 +878,14 @@ holds, so a passed exercise reopens with what the learner wrote;
 submitted written piece against any weaker later attempt, which is still stored
 as evidence. It accepts one result per enrollment at a time and decides module
 completion from the module's requirements, which the submit handler sends, so
-two submits finishing a module together still complete it. The merchandise
+two submits finishing a module together still complete it. Quota modules such as decomposition cases use
+`accept_learning_path_quota_result` (migration 066): all plain requirements
+and any nine of twelve verified case passes are counted from recorded states
+under the same enrollment lock. A precomputed completion flag cannot bypass
+either condition. Coding quota activities retain the atomic coding award;
+replays never award twice. A missing quota routine refuses the submission with
+503 `migration_required` rather than falling back to AND-only completion.
+The merchandise
 package needs every module completed within the one enrollment of the
 curriculum version the deployment publishes (`path_is_complete`, 054). Its
 claim checks the address the way a shop order does (`validateAddress`): a
@@ -1018,7 +1033,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   after free passes only. `npm run build:coding-index` projects all of it
   into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
   catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
-  contracts; 144 of 754 today: JavaScript 68, TypeScript 32, React 30,
+  contracts; 144 of 769 today: JavaScript 68, TypeScript 32, React 30,
   Algorithms 14). Every free task reads Easy except two debugging paths whose
   authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
@@ -1655,7 +1670,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 799 tasks (754
+routes, unlocks and progress. The full catalogue contains 814 tasks (769
 issued, with system design hidden), and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass. A stage's
@@ -1792,10 +1807,11 @@ the name nor the photo shared with friends. Existing public-photo consent is
 kept; the old visibility flag can no longer hide a leaderboard name.
 
 Verified native-path code now records acceptance and the shared coding award
-in one transaction (migration 065). A reused task keeps its ordinary task ID,
-and so does a DSA exercise E2 turned into a coding task
-(`lib/learning-paths/dsa-coding-tasks.ts`; the queue, whose path contract
-differs, keeps its own); any other path exercise has a stable scoped ID. This prevents paying the
+in one transaction (migration 065). A reused task keeps its ordinary task ID;
+any other path exercise has a stable scoped ID
+(`lib/learning-paths/coding-task-id.ts`). Until E5 (#496) retired the DSA
+path, its exercises recorded under the `alg-dsa-*` Coding tasks E2 turned them
+into; those tasks and their records stay. This prevents paying the
 same task again just because it was reached on another screen. Type-only,
 unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
 The accepted path response stores the actual award and the same complexity
@@ -1845,7 +1861,7 @@ The four restored Strings questions remain in source with retired ledger rows.
 Heaps and graph questions are preserved in the unserved E4 holding file.
 
 All fifteen levels open with reading. The eighteen original readings now live
-in `lib/learn-lessons/dsa/` and remain shared with the legacy path until E5;
+in `lib/learn-lessons/dsa/` and are Learn-only since E5 (#496) retired the path;
 five paired readings group intact lessons, and two synthesis readings close
 the topic. Every level except the closing review seals its aligned coding
 tasks. Coding reached through a free Learn level uses that level's access
@@ -1884,8 +1900,37 @@ module and the client’s query/fragment. Career groups its topics under the
 three section headings and links into Learn; the FDE path shelf lives inside
 its section.
 
+### Public FDE positioning (B13)
+
+The landing introduces the FDE path with existing landing primitives and reads its inventory from the fetched public manifest through `pathInventory`. Failed or pending catalogue reads show no invented inventory. The section remains a preview while its availability is disabled. The shared Premium inclusion list names FDE and states the free diagnostic/first-module boundary; the live page, upgrade sheet and static Premium article all reuse that list. These access claims require B12 before release. The public Learn description names all three sections.
+
 ### Capstone writing and export (B11)
 
-Two additional required self-reviewed artifacts capture the change-request executive update and five-minute handoff walkthrough script. The capstone dependency list derives from all required teaching modules, so the final M01–M14 curriculum cannot omit a module from that list. Shared guided completion still requires each artifact's self-reviewed state. The final B9/B3 integration remains a release prerequisite.
+Two additional required self-reviewed artifacts capture the change-request executive update and five-minute handoff walkthrough script. The capstone's `dependsOn` names the fourteen teaching modules M01–M14 explicitly, and a schema contract in `scripts/learning-path-schema-contracts.ts` fails when that list omits or reorders a required teaching module or names an optional shelf module. Shared guided completion still requires each artifact's self-reviewed state.
 
 Authenticated path overviews can export the latest server-saved artifact drafts through the existing caller-owned `learning-path-draft` GET. Two reads at most run concurrently. A failed read produces no partial file; unmount/account or enrollment changes cancel pending reads. JSON preserves revision/state metadata, and Markdown renders saved text literally. The export explains that saved drafts may differ from the last submission and does not claim independent review. No submission, XP event, new handler or migration is involved.
+
+## DSA Advanced in Learn — 22 October 2026 (E4)
+
+Software Engineer adds `dsa-advanced` after DSA Foundations: fifteen levels,
+eight reviewed questions each, with the first five Foundations levels as the
+existing prerequisite milestone. Advanced levels and part tests are Premium
+throughout. The eight new lessons serve all fifteen levels in pairs, with a
+closing synthesis reading. Lesson reading itself remains public and records
+nothing under E1; starting a graded Advanced attempt enforces its tier.
+
+Sixteen heap/graph source concepts move from E3’s preserved holding bank into
+new `rm-dsaa-N` identities; their provenance is archived and unsupported old
+measurement anecdotes are removed. 104 original questions complete the bank.
+The fifteen new Algorithms tasks add server-only reference/junior/senior
+solutions, visible and hidden checks and thirty intentionally flawed variants.
+Nine existing Medium/Hard tasks keep their ids and graders but join matching
+Advanced levels; fresh placement reviews archive their previous records. Those
+band tasks now participate in Advanced Learn quotas only. Other band quotas
+stay unchanged.
+
+All 144 new/renewed item reviews are model self-reviews, explicitly independent:
+false. Automated checks prove the authored bounded cases, not every program’s
+complexity. The issued inventory is recomputed from the gated registry: 769
+coding tasks (480 Easy, 189 Medium, 100 Hard), 144 free, and 2134 served questions.
+The FDE production flag remains separate from this Learn topic.

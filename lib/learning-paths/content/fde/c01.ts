@@ -1,6 +1,7 @@
 /** C01 — the staged capstone.
  *
- * No lessons and no objective check. Eight staged deliverables that reuse the delivery-loop skills, against one brief: Marlbrook Systems wants to cut the time
+ * No lessons and no objective check. Eight staged deliverables that reuse what
+ * M01–M14 taught, against one brief: Marlbrook Systems wants to cut the time
  * its four support agents spend triaging cases, and it has a ticket API, a
  * CSV customer export and a knowledge base with stale and tenant-restricted
  * articles. An operator reviews every proposed action before it leaves the
@@ -387,8 +388,22 @@ export const FDE_C01: ModuleSource = {
     'Read what finishing says. The four graded exercises and the four submitted packets record “FDE guided path completed”, and the packets are displayed separately as “Portfolio self-reviewed”. Neither is a certification, a Senior rank or a claim about your production experience, and optional local projects, Python practice and live-model experiments carry no XP, no access and no effect on completion.',
   ],
   competencies: ['discovery', 'integration', 'boundaries', 'ai-architecture', 'retrieval', 'evaluation', 'ai-security', 'operations', 'handoff'],
-  // The path assembly fills this with every required teaching module.
-  dependsOn: [],
+  dependsOn: [
+    'fde-v1-m01',
+    'fde-v1-m02',
+    'fde-v1-m03',
+    'fde-v1-m04',
+    'fde-v1-m05',
+    'fde-v1-m06',
+    'fde-v1-m07',
+    'fde-v1-m08',
+    'fde-v1-m09',
+    'fde-v1-m10',
+    'fde-v1-m11',
+    'fde-v1-m12',
+    'fde-v1-m13',
+    'fde-v1-m14',
+  ],
   estimatedMinutes: 415,
   lessons: [],
   activities: [

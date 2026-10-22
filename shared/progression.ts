@@ -20,7 +20,7 @@
  *
  * Keep this module pure: no storage, no network, no clock. */
 
-import { isLearningPathId, type BaseTrack, type LearnerProfile, type SkillPathId } from './learning-paths';
+import { isLearningPathId, type BaseTrack, type LearnerProfile } from './learning-paths';
 import { OPT_IN_SECTIONS, type LearnSection } from './learn-section-ids';
 import { isRetiredTopic } from './retired-content';
 import { SUBJECT_SCOPE_CATALOG } from './subject-catalog';
@@ -103,6 +103,7 @@ export const TOPIC_PREREQS: Record<string, readonly string[]> = {
   general: ['javascript'],
   git: ['javascript'],
   dsa: ['javascript'],
+  'dsa-advanced': ['dsa'],
   algorithms: ['javascript'],
   nodejs: ['javascript'],
   testing: ['javascript'],
@@ -455,15 +456,8 @@ export const SPECIALIZATION_BRIDGE_TOPICS: Record<string, readonly string[]> = {
   fde: ['nodejs', 'databases', 'general', 'ai', 'security', 'devops'],
 };
 
-/** Topics a skill path leans on. DSA Foundations is entered directly, so this
- * is small on purpose: it names what the path assumes, not a gate in front of
- * it. The path's own modules run under their own sequential rules. */
-export const SKILL_PATH_BRIDGE_TOPICS: Record<SkillPathId, readonly string[]> = {
-  'dsa-foundations': ['javascript', 'dsa', 'algorithms'],
-};
-
 /** Ordered topics of a learner's plan: the base track's stages, then whatever
- * the chosen specialization and skill paths add, then the topics of each
+ * the chosen specialization adds, then the topics of each
  * opt-in Learn section the learner joined (in section order), then every
  * prerequisite those section topics need that the plan does not hold yet.
  * First-seen order, without repeats.
@@ -485,7 +479,6 @@ export function planTopics(profile: LearnerProfile | null): string[] {
   };
   for (const stage of WEBDEV_PLAN_STAGES[profile.baseTrack] ?? []) for (const topic of stage) push(topic);
   if (profile.specialization) for (const topic of SPECIALIZATION_BRIDGE_TOPICS[profile.specialization] ?? []) push(topic);
-  for (const path of profile.skillPaths) for (const topic of SKILL_PATH_BRIDGE_TOPICS[path] ?? []) push(topic);
   const appended: string[] = [];
   for (const section of OPT_IN_SECTIONS) {
     if (!profile.sections?.includes(section.id)) continue;
@@ -655,11 +648,6 @@ export function validateProgressionGraph(
   for (const [role, topics] of Object.entries(SPECIALIZATION_BRIDGE_TOPICS)) {
     for (const topic of topics) {
       if (!webdevTopics.has(topic)) problems.push({ kind: 'unknown-plan-topic', topic, detail: role });
-    }
-  }
-  for (const [path, topics] of Object.entries(SKILL_PATH_BRIDGE_TOPICS)) {
-    for (const topic of topics) {
-      if (!webdevTopics.has(topic)) problems.push({ kind: 'unknown-plan-topic', topic, detail: path });
     }
   }
 

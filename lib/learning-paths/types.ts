@@ -14,6 +14,7 @@ import type {
   EvidenceState,
   LearningPathId,
   LearningPathKind,
+  ModuleRequirementQuota,
   ModuleShelf,
   PathCodeLanguage,
   SourceReference,
@@ -150,6 +151,9 @@ export interface ModuleSource {
   lessons: LessonSource[];
   activities: ActivitySource[];
   requires: { activityId: string; state: EvidenceState }[];
+  /** At least `count` of `of` must reach `state`, beside every entry of
+   * `requires`. Server-side completion reads it; see `moduleRequirements`. */
+  requiresAtLeast?: ModuleRequirementQuota;
   estimatedMinutes: number;
   /** Placement diagnostics and bridge practice live in modules a learner may
    * skip entirely; they never gate completion. */
@@ -395,6 +399,7 @@ export interface MergedModule {
   lessons: MergedLesson[];
   activities: MergedActivity[];
   requires: { activityId: string; state: EvidenceState }[];
+  requiresAtLeast?: ModuleRequirementQuota;
   estimatedMinutes: number;
   optional?: boolean;
   shelf?: ModuleShelf;
@@ -410,6 +415,7 @@ export function mergeModule(module: ModuleSource): MergedModule {
     lessons: module.lessons.map(mergeLesson),
     activities: module.activities.map(mergeActivity),
     requires: module.requires,
+    ...(module.requiresAtLeast ? { requiresAtLeast: module.requiresAtLeast } : {}),
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
     ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),

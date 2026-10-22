@@ -299,7 +299,7 @@ export function resetAnalytics(): void {
 /* ── learning-path pilot funnel ────────────────────────────────────────── */
 
 /**
- * The four events the FDE and DSA pilot needs, with an explicit allow-list of
+ * The four events the FDE path pilot needs, with an explicit allow-list of
  * properties.
  *
  * Nothing a learner wrote ever leaves the app: no code, no free text, no
@@ -314,7 +314,7 @@ export type PathFunnelEvent =
   | 'learning_path_returned';
 
 export interface PathFunnelProperties {
-  /** 'fde' | 'dsa-foundations' — a published id, not a learner's. */
+  /** 'fde' — a published id, not a learner's. */
   pathId: string;
   curriculumVersion: number;
   /** Manifest activity id. Public in the catalogue. */

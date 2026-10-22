@@ -33,8 +33,8 @@ const ACTIVITY_SUMMARY_KEYS = new Set([
   'passThreshold', 'domains', 'language', 'reuseTaskId', 'rubricDimensions', 'scenario', 'fixtureNote',
 ]);
 const MODULE_SUMMARY_KEYS = new Set([
-  'id', 'title', 'outcomes', 'competencies', 'dependsOn', 'lessons', 'activities', 'requires', 'estimatedMinutes',
-  'optional', 'shelf', 'deliveryPhase',
+  'id', 'title', 'outcomes', 'competencies', 'dependsOn', 'lessons', 'activities', 'requires', 'requiresAtLeast',
+  'estimatedMinutes', 'optional', 'shelf', 'deliveryPhase',
 ]);
 const MANIFEST_KEYS = [
   'id', 'kind', 'version', 'title', 'summary', 'outcomes', 'nonGoals', 'entryRequirement', 'competencies', 'modules',
@@ -99,6 +99,13 @@ export function schemaContracts(fail: Fail): void {
   const capstone = fde.modules.find(module => module.id === 'fde-v1-c01')!;
   const teaching = fde.modules.filter(module => !isOffLoopModule(module) && module.id !== capstone.id);
   if (JSON.stringify(capstone.dependsOn) !== JSON.stringify(teaching.map(module => module.id))) fail('capstone dependencies omit or reorder a required teaching module');
+  // The final curriculum is exactly M01–M14; shelf modules never gate completion.
+  const finalTeaching = Array.from({ length: 14 }, (_, index) => `fde-v1-m${String(index + 1).padStart(2, '0')}`);
+  if (JSON.stringify(capstone.dependsOn) !== JSON.stringify(finalTeaching)) fail(`capstone dependsOn must be exactly M01–M14, got ${capstone.dependsOn.join(', ')}`);
+  for (const id of capstone.dependsOn) {
+    const module = fde.modules.find(candidate => candidate.id === id);
+    if (!module || isOffLoopModule(module)) fail(`capstone depends on ${id}, which is not a required teaching module`);
+  }
   for (const id of ['fde-v1-c01-executive-update', 'fde-v1-c01-walkthrough-script']) {
     if (!capstone.requires.some(requirement => requirement.activityId === id && requirement.state === 'self_reviewed')) fail(`capstone does not require ${id}`);
     const states = new Map<string, EvidenceState>();

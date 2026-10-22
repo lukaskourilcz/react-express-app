@@ -35,13 +35,15 @@ Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` a
   on a missed day or in advance as a 48-hour shield) and a read-only **study
   advisor**.
 - A devShark **typing racer** and flashcards.
-- Two optional devShark **learning paths**: the **Forward Deployed Engineer**
+- One optional devShark **learning path**: the **Forward Deployed Engineer**
   role specialization, which sits on top of the Fullstack/Frontend/Backend
-  track a learner already chose, and **DSA Foundations**, a focused skill path
-  entered directly with no track, role or XP rank required. Both grade through
-  the existing server sandbox, keep verified checks visibly apart from
-  self-reviewed writing. Verified code shares the canonical task and XP
-  ledger with Coding, so a reused task cannot earn another first-pass award. Neither claims a certification.
+  track a learner already chose. It grades through the existing server
+  sandbox and keeps verified checks visibly apart from self-reviewed writing.
+  Verified code shares the canonical task and XP ledger with Coding, so a
+  reused task cannot earn another first-pass award. It claims no
+  certification. DSA Foundations, once a separate skill path, is a fifteen-level
+  Learn topic of the Software Engineer section with its readings and Coding
+  tasks; its old path addresses redirect there.
 - A devShark **Coding** section across JavaScript, TypeScript, React
   and Algorithms (system design is hidden), labelled Easy, Medium or Hard, graded on the
   server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
@@ -54,7 +56,7 @@ Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` a
   the habit of tracing before fixing; and a signed-in learner can shape a
   **challenge run** (track, count, order) and plan it for a date and time.
 - **Premium and coins**: Premium opens every Learn topic, every coding task and,
-  once their switches are on, the FDE and DSA paths. Coins, earned from verified learning, buy the crown
+  once its switch is on, the FDE path. Coins, earned from verified learning, buy the crown
   and streak protections for every account, and merchandise for Premium once
   it returns next quarter (paused behind `MERCH_ENABLED`); an
   invite link pays both friends. Leaderboards rank the last 30 days by default.
@@ -98,3 +100,5 @@ nothing posts without a person approving it. See the README for what it does and
 touch.
 
 Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.
+
+DSA Foundations and DSA Advanced each contain fifteen Learn levels in Software Engineer. Advanced uses the first five Foundations levels as its prerequisite and requires Premium for graded levels and part tests.

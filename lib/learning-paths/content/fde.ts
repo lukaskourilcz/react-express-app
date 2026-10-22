@@ -14,7 +14,7 @@
  * responses, retrieval results and tool traffic are synthetic fixtures, and
  * every module says so where a learner might otherwise assume a live system. */
 
-import type { ModuleSource, PathSource } from '../types';
+import type { PathSource } from '../types';
 import { FDE_DIAGNOSTIC } from './fde/diagnostic';
 import { FDE_BRIDGES } from './fde/bridges';
 import { FDE_M01 } from './fde/m01';
@@ -22,30 +22,16 @@ import { FDE_M02 } from './fde/m02';
 import { FDE_M03 } from './fde/m03';
 import { FDE_M04 } from './fde/m04';
 import { FDE_M05 } from './fde/m05';
-import { FDE_M05_DATA } from './fde/m05-data';
 import { FDE_M06 } from './fde/m06';
 import { FDE_M07 } from './fde/m07';
 import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
-import { FDE_M11_DEPLOY } from './fde/m11-deploy';
+import { FDE_M11 } from './fde/m11';
+import { FDE_M12 } from './fde/m12';
+import { FDE_M13 } from './fde/m13';
+import { FDE_M14 } from './fde/m14';
 import { FDE_C01 } from './fde/c01';
-
-/** The capstone depends on every required teaching module in manifest order. */
-const FDE_LOOP_MODULES = [
-    { ...FDE_M01, deliveryPhase: 'discover-scope' },
-    { ...FDE_M02, deliveryPhase: 'integrate' },
-    { ...FDE_M03, deliveryPhase: 'integrate' },
-    { ...FDE_M05_DATA, deliveryPhase: 'integrate' },
-    { ...FDE_M04, deliveryPhase: 'build-models' },
-    { ...FDE_M05, deliveryPhase: 'build-models' },
-    { ...FDE_M06, deliveryPhase: 'build-models' },
-    { ...FDE_M07, deliveryPhase: 'build-models' },
-    { ...FDE_M08, deliveryPhase: 'harden-ship' },
-    { ...FDE_M11_DEPLOY, deliveryPhase: 'harden-ship' },
-    { ...FDE_M09, deliveryPhase: 'harden-ship' },
-    { ...FDE_M10, deliveryPhase: 'enable-codify' },
-] satisfies ModuleSource[];
 
 export const FDE_PATH: PathSource = {
   id: 'fde',
@@ -89,8 +75,21 @@ export const FDE_PATH: PathSource = {
   modules: [
     FDE_DIAGNOSTIC,
     FDE_BRIDGES,
-    ...FDE_LOOP_MODULES,
-    { ...FDE_C01, dependsOn: FDE_LOOP_MODULES.map(module => module.id) },
+    { ...FDE_M01, deliveryPhase: 'discover-scope' },
+    { ...FDE_M02, deliveryPhase: 'discover-scope' },
+    { ...FDE_M03, deliveryPhase: 'integrate' },
+    { ...FDE_M04, deliveryPhase: 'integrate' },
+    { ...FDE_M05, deliveryPhase: 'integrate' },
+    { ...FDE_M06, deliveryPhase: 'build-models' },
+    { ...FDE_M07, deliveryPhase: 'build-models' },
+    { ...FDE_M08, deliveryPhase: 'build-models' },
+    { ...FDE_M09, deliveryPhase: 'build-models' },
+    { ...FDE_M10, deliveryPhase: 'harden-ship' },
+    { ...FDE_M11, deliveryPhase: 'harden-ship' },
+    { ...FDE_M12, deliveryPhase: 'harden-ship' },
+    { ...FDE_M13, deliveryPhase: 'enable-codify' },
+    { ...FDE_M14, deliveryPhase: 'enable-codify' },
+    FDE_C01,
   ],
   bridges: [
     {
@@ -156,6 +155,8 @@ export const FDE_PATH: PathSource = {
       competencies: ['python-reading', 'integration'],
       references: [
         { kind: 'path-activity', ref: 'fde-v1-bridge-python-reading', label: 'Bridge check: read typed and asynchronous Python' },
+        { kind: 'path-activity', ref: 'fde-v1-bridge-python-api-client', label: 'Bridge check: read an API client boundary' },
+        { kind: 'path-activity', ref: 'fde-v1-bridge-python-async-loader', label: 'Bridge check: read an asynchronous data loader' },
         { kind: 'doc', ref: 'https://docs.python.org/3/library/typing.html', label: 'Python docs — typing' },
         { kind: 'doc', ref: 'https://docs.python.org/3/library/asyncio-task.html', label: 'Python docs — asyncio tasks and coroutines' },
       ],

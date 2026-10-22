@@ -29,7 +29,7 @@ import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } fr
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
 import { createLearningPathSession, pathCodeAttemptVersion } from './session';
-import { canonicalCodingTaskId } from './dsa-coding-tasks';
+import { canonicalCodingTaskId } from './coding-task-id';
 import {
   activityIn,
   activitySummary,
@@ -335,7 +335,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     }
     const {
       LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime, isSkillPathId,
+      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime,
       parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
     } = await import('../../shared/learning-paths');
 
@@ -354,10 +354,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
       return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
     }
-    if (body.skillPaths !== undefined
-        && (!Array.isArray(body.skillPaths) || !body.skillPaths.every(isSkillPathId))) {
-      return jsonError(res, 400, 'bad_request', 'skillPaths must be known skill paths');
-    }
     const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
     if (body.sections !== undefined
         && (!Array.isArray(body.sections) || body.sections.length > LEARN_SECTION_IDS.length
@@ -369,7 +365,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     // track toggle, which sends no profile answers — keeps the rest.
     const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     // Without the saved answers a partial save would write empty goals,
-    // experience, study time and skill paths over them, so nothing is written.
+    // experience and study time over them, so nothing is written.
     if (existingRead.error) {
       return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
     }
@@ -381,7 +377,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
       schemaVersion: 2 as const,
       baseTrack: body.baseTrack,
       specialization,
-      skillPaths: body.skillPaths ?? existing?.skillPaths ?? [],
       ...((body.sections ?? existing?.sections) ? { sections: Array.from(new Set(body.sections ?? existing?.sections)) } : {}),
       goals: body.goals ?? existing?.goals ?? [],
       experience: body.experience ?? existing?.experience ?? ('' as never),
@@ -432,7 +427,10 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     try {
       const rows = await loadEnrollments(supabase, userId);
       res.setHeader('Cache-Control', 'private, no-store');
-      const body: EnrollmentListResponse = { enrollments: rows.map(toEnrollment) };
+      // A stored row of a retired path (dsa-foundations, E5 #496) stays in the
+      // table but is not a path the client can open, so it is left out here
+      // rather than cast to a LearningPathId.
+      const body: EnrollmentListResponse = { enrollments: rows.filter((row) => isLearningPathId(row.path_id)).map(toEnrollment) };
       return res.json(body);
     } catch (error) {
       if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
@@ -458,8 +456,8 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     }
     // Enrollment is free; activity starts and submissions enforce the taster boundary.
     if (action !== 'pause' && await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
-    // A skill path records no career context; a role specialization records the
-    // base track it sat above, for recommendations only.
+    // A role specialization records the base track it sat above, for
+    // recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
 
     const saved = await withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
@@ -813,7 +811,10 @@ export function recordedState(prior: EvidenceState | undefined, next: EvidenceSt
  * `accept_learning_path_result` takes: each required activity with every
  * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
  * applies). An off-loop module (optional or on a shelf) sends none and never
- * completes. */
+ * completes.
+ *
+ * Quota modules send these AND requirements alongside their separate quota;
+ * migration 066 evaluates both from the states written under its lock. */
 export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
   if (isOffLoopModule(module)) return [];
   return module.requires.map((requirement) => ({
@@ -947,7 +948,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     case 'lesson': {
       if (body.acknowledged !== true) return jsonError(res, 400, 'bad_request', 'acknowledged must be true');
       state = 'self_reviewed';
-      feedback = ['Marked as read. Reading is recorded for your own overview; it is not a verified check and never gates a module.'];
+      feedback = [module.requires.some((one) => one.activityId === activity.id)
+        ? 'Marked as read. This module requires its lesson acknowledgements as self-reviewed evidence, alongside its verified case passes.'
+        : 'Marked as read. Reading is recorded for your own overview; it is not a verified check and does not gate this module.'];
       break;
     }
     case 'check': {
@@ -1100,15 +1103,25 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
-    : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
-  let accepted = activity.kind === 'code'
-    ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', {
-      p_accept: { ...acceptParams, p_module_requires: moduleRequirements(module) },
-      p_task_id: canonicalTaskId, p_track: codeTrack, p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
-      p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+    : language;
+  const packet = { ...acceptParams, p_module_requires: moduleRequirements(module) };
+  const codingParams = activity.kind === 'code' ? {
+    p_task_id: canonicalTaskId, p_track: codeTrack,
+    p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
+    p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+  } : {};
+  let accepted = module.requiresAtLeast
+    ? await withTimeout(supabase.rpc('accept_learning_path_quota_result', {
+      p_accept: packet,
+      p_module_quota: { ...module.requiresAtLeast, states: SATISFYING_STATES[module.requiresAtLeast.state] },
+      ...codingParams,
     }))
-    : await withTimeout(supabase.rpc('accept_learning_path_result', { ...acceptParams, p_module_requires: moduleRequirements(module) }));
-  if (activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
+    : activity.kind === 'code'
+      ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', { p_accept: packet, ...codingParams }))
+      : await withTimeout(supabase.rpc('accept_learning_path_result', packet));
+  // An older AND-only routine cannot preserve an any-N quota. Refuse with
+  // migration_required rather than silently accepting incomplete progress.
+  if (!module.requiresAtLeast && activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
     accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
   }
   if (accepted.error) {

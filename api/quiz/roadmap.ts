@@ -1493,7 +1493,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         profileComplete: isLearnerProfileComplete(profile),
         missingProfileFields: missing,
         plan: profile
-          ? { baseTrack: profile.baseTrack, specialization: profile.specialization, skillPaths: profile.skillPaths }
+          ? { baseTrack: profile.baseTrack, specialization: profile.specialization }
           : null,
         plans,
       });

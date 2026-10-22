@@ -19,7 +19,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { isBarred, useLocks } from '../../lib/locks';
 import { activityHref, entryFor, isOpen, pathProgressQuery, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
-import type { LearningPathId } from '../../../../shared/learning-paths';
+import { isLearningPathId, type LearningPathId } from '../../../../shared/learning-paths';
 import type { PathEnrollment } from '../../../../shared/learning-path-api';
 
 const ArrowGlyph = ({ size = 16 }: { size?: number }) => (
@@ -83,7 +83,9 @@ export function PathResumeSection() {
   const manifests = useMemo(() => catalog.data?.paths.map(entry => entry.manifest) ?? [], [catalog.data]);
   const { lockOf } = useLocks(undefined, { paths: manifests });
   const enrollments = useEnrollments(userId);
-  const active = (enrollments.data?.enrollments ?? []).filter((one) => one.status === 'active');
+  // The server leaves out a stored enrollment of a retired path (E5, #496);
+  // this guard keeps one that still arrives from costing a progress request.
+  const active = (enrollments.data?.enrollments ?? []).filter((one) => one.status === 'active' && isLearningPathId(one.pathId));
   const progress = useQueries({
     queries: active.map((enrollment) => ({
       ...pathProgressQuery(userId, enrollment.enrollmentId, enrollment.curriculumVersion),
@@ -111,8 +113,7 @@ export function PathResumeSection() {
   });
   if (rows.length === 0) return null;
 
-  // FDE is a role and DSA Foundations a skill path, so the heading names
-  // neither.
+  // The heading names no path, so it holds whichever paths are published.
   return (
     <section className="today-section" aria-label={t('today.pathSection')}>
       <h2 className="today-section__title">{t('today.pathSection')}</h2>

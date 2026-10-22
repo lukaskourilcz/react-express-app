@@ -21,7 +21,7 @@ const passed = (count: number) => ({
 });
 
 const frontend: LearnerProfile = {
-  schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
+  schemaVersion: 2, baseTrack: 'frontend', specialization: null,
   goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
 };
 const backend: LearnerProfile = { ...frontend, baseTrack: 'backend' };
@@ -76,7 +76,7 @@ describe('railEntries', () => {
   it('dims what a Frontend learner has not joined, and keeps planned topics', () => {
     const entries = railEntries('software-engineer', ctx(frontend, 'software-engineer', ['web-developer']));
     expect(stateOf(entries)).toEqual({
-      dsa: 'locked', algorithms: 'dimmed', 'system-design': 'dimmed', devops: 'dimmed',
+      dsa: 'locked', 'dsa-advanced': 'dimmed', algorithms: 'dimmed', 'system-design': 'dimmed', devops: 'dimmed',
       security: 'dimmed', databases: 'dimmed', git: 'locked', general: 'locked',
     });
     const withJs = railEntries('software-engineer', ctx(frontend, 'software-engineer', ['web-developer'], { javascript: passed(5) }));
@@ -94,7 +94,7 @@ describe('railEntries', () => {
       expect(entries.some((entry) => entry.state === 'dimmed')).toBe(false);
     }
     expect(railEntries('software-engineer', ctx(null, 'software-engineer', [])).map((entry) => entry.topic))
-      .toEqual(['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
+      .toEqual(['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
   });
 
   it('hides from a member what the plan leaves out, as the page always did', () => {
@@ -108,7 +108,7 @@ describe('railEntries', () => {
     const joined = withPendingJoin(frontend, { sections: ['software-engineer'], fde: false });
     const se = railEntries('software-engineer', ctx(joined, 'software-engineer', ['web-developer', 'software-engineer']));
     expect(se.some((entry) => entry.state === 'dimmed')).toBe(false);
-    expect(se.map((entry) => entry.topic)).toHaveLength(8);
+    expect(se.map((entry) => entry.topic)).toHaveLength(9);
     const wd = railEntries('web-developer', ctx(joined, 'web-developer', ['web-developer', 'software-engineer']));
     expect(wd.map((entry) => entry.topic)).toContain('nodejs');
 
@@ -120,11 +120,11 @@ describe('railEntries', () => {
     expect(withPendingJoin(frontend, NO_PENDING)).toBe(frontend);
   });
 
-  it('names the other sections of a shared topic', () => {
-    const entries = railEntries('software-engineer', ctx(null, 'software-engineer', []));
-    expect(entries.find((entry) => entry.topic === 'git')?.alsoIn).toEqual(['web-developer']);
-    expect(entries.find((entry) => entry.topic === 'databases')?.alsoIn).toEqual(['web-developer', 'forward-deployed-engineer']);
-    expect(entries.find((entry) => entry.topic === 'dsa')?.alsoIn).toEqual([]);
+  it('keeps a shared topic in every section that lists it', () => {
+    const se = railEntries('software-engineer', ctx(null, 'software-engineer', [])).map((entry) => entry.topic);
+    const web = railEntries('web-developer', ctx(null, 'web-developer', [])).map((entry) => entry.topic);
+    expect(se).toEqual(expect.arrayContaining(['git', 'databases', 'dsa']));
+    expect(web).toEqual(expect.arrayContaining(['git', 'databases']));
   });
 
   it('marks a topic Premium from its first level, never a dimmed one', () => {

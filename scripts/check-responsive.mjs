@@ -78,7 +78,6 @@ const DEFAULT_ROUTES = [
   '/coding/system-design',
   '/coding/review',
   '/coding/javascript/js-double-numbers',
-  '/roadmap/paths/dsa-foundations',
   '/learn/forward-deployed-engineer/path',
   '/settings/github',
   '/profile',

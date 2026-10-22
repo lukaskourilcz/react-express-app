@@ -28,7 +28,7 @@ export interface LearnSection {
 
 export const SOFTWARE_ENGINEER: LearnSection = {
   id: 'software-engineer',
-  topics: ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general'],
+  topics: ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general'],
   paths: [],
   membership: 'opt-in',
 };

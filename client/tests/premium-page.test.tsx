@@ -177,13 +177,13 @@ describe('the plan table', () => {
     expect(rows).toContain('React');
     // Nothing that has not opened yet (design audit P0.1), and no ads row:
     // the footnote says it once.
-    expect(rows).not.toContain('FDE and DSA learning paths');
+    expect(rows).not.toContain('The FDE learning path');
     expect(rows).not.toContain('Coins for merchandise');
     expect(rows).not.toContain('Ads');
     expect(rows.join(' ')).not.toMatch(/AI|[Ll]anguage|[Tt]ranslat/);
     expect(screen.getByText(/No ads on either plan\./)).toBeInTheDocument();
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
-    expect(within(table).getByText('All 16')).toBeInTheDocument();
+    expect(within(table).getByText('All 17')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
   });
 
@@ -193,11 +193,11 @@ describe('the plan table', () => {
   it('adds the path row once its switch is on, and no coin row while merchandise is paused', async () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({
       merch: { redemptionOpen: true },
-      learningPaths: { paths: { fde: { enabled: false }, 'dsa-foundations': { enabled: true } } },
+      learningPaths: { paths: { fde: { enabled: true } } },
     })));
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
-    expect(await within(table).findByRole('rowheader', { name: 'FDE and DSA learning paths' })).toBeInTheDocument();
+    expect(await within(table).findByRole('rowheader', { name: 'The FDE learning path' })).toBeInTheDocument();
     expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 
