@@ -8,6 +8,12 @@ defines system typography, rounded materials, quiet elevation and translucent
 chrome. These rules replace the paper stock and textured-dialog treatments
 below. Preserve the Deep End blue-green background in dark mode. Brand geometry,
 accent, content and access rules still follow the existing sources.
+`client/src/main.tsx` sets the attribute before the first paint, and
+[the design system](docs/design/design-system.md#apple-layer) lists what the
+layer styles. Keep the pill shape to buttons, the header nav links, tags,
+compact filters such as the topic pills, small inline toggles and compact
+segmented controls; cards, panels, inputs, radio cards, drawer links and
+dialogs use the radius tokens.
 
 These rules govern every visual change in this codebase. They come from the
 `Deep End v2` design. Read them before touching any component, style file, or
