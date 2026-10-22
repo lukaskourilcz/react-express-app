@@ -28,6 +28,13 @@ export const LockIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+/** The passed-step tick of the Learn map and a level's result. */
+export const CheckIcon = ({ size = 22 }: { size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export function SectionRail({
   sectionName,
   entries,
