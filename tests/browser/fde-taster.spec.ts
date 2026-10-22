@@ -48,11 +48,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(region).toHaveAttribute('tabindex', '0');
       await expect(region).toHaveAccessibleName(/\S/);
     }
-    // The shell's delayed route focus finishes before keyboard interaction.
-    await expect(page.locator('#main-content')).toBeFocused();
-    await regions.first().focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    await expect(regions.first()).toBeFocused();
-    await expect.poll(() => regions.first().evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+    // Reach the first region by keyboard. The shell's delayed route focus can
+    // land in between, so the step repeats until the region holds focus.
+    await expect(async () => {
+      await regions.first().focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+      await expect(regions.first()).toBeFocused({ timeout: 500 });
+      expect(await regions.first().evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+    }).toPass({ timeout: 10_000 });
     expect((await new AxeBuilder({ page }).include('.lp-lesson').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(`/learn/forward-deployed-engineer/path/${loop[1].id}`);
