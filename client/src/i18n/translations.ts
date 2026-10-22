@@ -1262,7 +1262,7 @@ export const en = {
   'premium.sheet.include2': 'React from level {level}, with its later part tests',
   'premium.sheet.include3': 'Every coding challenge, including each new one',
   'premium.sheet.include4': 'Every stage of the evolving projects and short paths',
-  'premium.sheet.include5': 'The FDE and DSA learning paths as they open',
+  'premium.sheet.include5': 'Learning paths: the diagnostic and first module are free; Premium opens the rest as each path opens',
   'premium.sheet.include6': 'Coins you can redeem for devShark merchandise, once redemption opens',
   'premium.sheet.price': '{symbol}{monthly} a month or {symbol}{annual} a year, before VAT. Cancel any time.',
   // The launch offer (shared/launch-offer.ts). Shown only while it is on:

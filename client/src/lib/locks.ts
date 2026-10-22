@@ -26,8 +26,8 @@ import { contentTier, type ContentIndex, type GatedContent } from '../../../shar
 
 /** The browser's content index: the generated coding index, the evolving
  * registry, and the level counts of the roadmap structure the page loaded. */
-export function clientContentIndex(levelCounts: ContentIndex['levelCounts'] = {}): ContentIndex {
-  return { levelCounts, coding: CODING_INDEX, evolving: EVOLVING_CHALLENGES };
+export function clientContentIndex(levelCounts: ContentIndex['levelCounts'] = {}, learningPaths?: ContentIndex['learningPaths']): ContentIndex {
+  return { levelCounts, coding: CODING_INDEX, evolving: EVOLVING_CHALLENGES, learningPaths };
 }
 
 export type LockState = 'open' | 'locked' | 'preview' | 'unknown';
@@ -39,9 +39,9 @@ export const isBarred = (state: LockState): boolean => state === 'locked' || sta
 /** `lockOf(content)` for the current account. Pass the loaded level counts
  * when part tests are involved, and `held` when the page's first-data hold
  * read the plan (useEntitlement). */
-export function useLocks(levelCounts?: ContentIndex['levelCounts'], { held = false }: { held?: boolean } = {}) {
+export function useLocks(levelCounts?: ContentIndex['levelCounts'], { held = false, paths }: { held?: boolean; paths?: ContentIndex['learningPaths'] } = {}) {
   const entitlement = useEntitlement({ held });
-  const index = useMemo(() => clientContentIndex(levelCounts ?? {}), [levelCounts]);
+  const index = useMemo(() => clientContentIndex(levelCounts ?? {}, paths), [levelCounts, paths]);
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   const { tier, signedIn } = entitlement;
   const lockOf = useCallback((content: GatedContent): LockState => {

@@ -7,6 +7,8 @@ import { DELIVERY_PHASES } from '../../../../shared/learning-path-phases';
 import type { EvidenceState, LearningPathManifest } from '../../../../shared/learning-paths';
 import type { PathProgressResponse } from '../../../../shared/learning-path-api';
 import { pathsEn as copy } from '../../i18n/translations.paths';
+import { useT } from '../../i18n/LanguageContext';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { activityHref } from '../../lib/learningPaths';
 import ResultShareActions from '../ResultShareActions';
 import ErrorRetry from '../ErrorRetry';
@@ -14,14 +16,16 @@ import { StateBadge } from './ActivityViews';
 
 const STATES: readonly EvidenceState[] = ['not_started', 'in_progress', 'verified_pass', 'self_reviewed', 'needs_revision'];
 
-export function FdeHub({ manifest, progress, pending, error, retry, reachable }: {
+export function FdeHub({ manifest, progress, pending, error, retry, reachable, activityLock = () => false }: {
   manifest: LearningPathManifest;
   progress?: PathProgressResponse;
   pending: boolean;
   error: boolean;
   retry: () => void;
   reachable: boolean;
+  activityLock?: (activityId: string, state: EvidenceState) => boolean;
 }) {
+  const t = useT();
   const modules = manifest.modules.filter(module => !module.optional && !module.shelf);
   const recorded = new Map(progress?.modules.flatMap(module => module.activities.map(activity => [activity.activityId, activity.state] as const)) ?? []);
   const completed = new Set(progress?.modules.filter(module => module.completed && modules.some(required => required.id === module.moduleId)).map(module => module.moduleId));
@@ -63,7 +67,12 @@ export function FdeHub({ manifest, progress, pending, error, retry, reachable }:
             <summary>{copy['paths.hub.activities'].replace('{count}', String(activities.length))}</summary>
             <ul className="lp-list">
               {activities.map(({ module, activity }) => <li key={activity.id}>
-                {reachable ? <Link to={activityHref('fde', module.id, activity.id)}>{activity.title}</Link> : <span>{activity.title}</span>}
+                {reachable ? <Link to={activityHref('fde', module.id, activity.id)} onClick={event => {
+                  if (!activityLock(activity.id, recorded.get(activity.id) ?? 'not_started')) return;
+                  event.preventDefault();
+                  openUpgradeSheet({ kind: 'learning-path-activity', ref: `fde:${activity.id}` });
+                }}>{activity.title}</Link> : <span>{activity.title}</span>}
+                {activityLock(activity.id, recorded.get(activity.id) ?? 'not_started') && <> <span className="ss-premium-label">{t('premium.badge')}</span></>}
                 {' · '}<StateBadge state={recorded.get(activity.id) ?? 'not_started'} />
               </li>)}
             </ul>

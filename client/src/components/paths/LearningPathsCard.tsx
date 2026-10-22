@@ -128,8 +128,8 @@ export default function LearningPathsCard() {
         baseTrack?: PathPickerResult['track'],
       ) => {
         // The plan decides before the catalog does: a path the plan does not
-        // open is refused even while the catalog is loading or unavailable,
-        // so a free account never saves it as its specialization. A choice
+        // open is refused even while the catalog is loading or unavailable.
+        // Enrollment is free under the current contract. A choice
         // the account already held is not asked about again.
         if (wants && !wasChosen && barred(pathId)) {
           refused.push(pathId);
