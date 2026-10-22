@@ -558,6 +558,9 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     const row = await withTimeout(
       supabase.from('practice_sessions').select('*').eq('session_id', body.sessionId).eq('user_id', userId).maybeSingle(),
     );
+    // A failed read is not "no run": answering null would tell the browser
+    // the run it just moved does not exist.
+    if (row.error) return jsonError(res, 500, 'db_error', 'Could not load your session');
     res.setHeader('Cache-Control', 'private, no-store');
     const answer: PracticeSessionResponse = { session: row.data ? toSession(row.data) : null };
     return res.json(answer);

@@ -5759,6 +5759,19 @@ async function main() {
         assert.equal(res.statusCode, 200, JSON.stringify(res.body));
       }
       assert.deepEqual(moves, [3, 40, 0], 'a place is sent within what a run can hold');
+      // The run is read back after the move. A read that fails is an error,
+      // not a run that does not exist.
+      const unreadable = {
+        rpc: advanceDb.rpc,
+        from: () => {
+          const chain = { select: () => chain, eq: () => chain, maybeSingle: () => Promise.resolve({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }) };
+          return chain;
+        },
+      };
+      const req = { method: 'PUT', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.82' }, query: {}, body: { sessionId: 'practice-session-0001', position: 1, user_id: learner } };
+      const res = mockResponse();
+      await handlePracticeSession(req as never, res as never, unreadable as never);
+      assert.equal(res.statusCode, 500, `a run that could not be read back is not answered as no run: ${JSON.stringify(res.body)}`);
     }
 
     // The task page agrees: it opens the tier-3 task the run holds.
