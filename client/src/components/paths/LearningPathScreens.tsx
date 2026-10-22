@@ -874,6 +874,26 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     [open, enrollment, retry, queryClient, userId, pathId, briefChanged, t],
   );
 
+  // Focus follows what changed. The workspace opens below the activity list,
+  // and the control the learner used often disappears (a check's Submit, the
+  // Close button), so without this a keyboard or screen-reader user is left
+  // on a link far above the change, or on nothing. Opening another activity
+  // moves focus to its heading, closing it to the list, and a verdict to the
+  // result; a passed code exercise's banner takes focus itself.
+  const activityHeading = useRef<HTMLHeadingElement>(null);
+  const listHeading = useRef<HTMLHeadingElement>(null);
+  const resultHeading = useRef<HTMLHeadingElement>(null);
+  const focusedActivity = useRef(activityId);
+  useEffect(() => {
+    if (focusedActivity.current === activityId) return;
+    focusedActivity.current = activityId;
+    (activityId ? activityHeading.current : listHeading.current)?.focus();
+  }, [activityId]);
+  const codePassed = Boolean(open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed');
+  useEffect(() => {
+    if (result && !codePassed) resultHeading.current?.focus();
+  }, [result, codePassed]);
+
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
   if (catalog.isError || !entry || !module) {
     return (
@@ -897,6 +917,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       title: dimension.title,
       levels: dimension.levels as unknown as Record<string, string>,
     }));
+  const shown = activity ?? open?.activity;
 
   return (
     <div className="lp-page">
@@ -955,7 +976,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       )}
 
       <section className="lp-section">
-        <h2>{t('paths.activities')}</h2>
+        <h2 ref={listHeading} tabIndex={-1}>{t('paths.activities')}</h2>
         <ul className="lp-activities">
           {module.activities.map((one) => (
             <ActivityRow
@@ -972,11 +993,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       </section>
 
       {activityId && enrollment && (
-        <section className="lp-workspace" aria-live="polite">
+        // No live region here: it would read the whole activity (a lesson, the
+        // editor) aloud on every change. Errors are alerts, the draft status
+        // is its own live region, and focus carries the rest.
+        <section className="lp-workspace">
           <div className="lp-head">
             <div className="lp-head__text">
-              <h2>{activity ? activity.title : ''}</h2>
-              {activity && <p className="lp-lead">{activity.summary}</p>}
+              {/* An activity linked from another module (an old link, or one
+                  that moved between versions) still gets its own name. */}
+              <h2 ref={activityHeading} tabIndex={-1}>{shown?.title ?? ''}</h2>
+              {shown && <p className="lp-lead">{shown.summary}</p>}
             </div>
             <div className="lp-head__actions">
               <Button variant="ghost" onClick={() => {
@@ -1037,13 +1063,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed' && <CodingCompletion
+          {open?.code && result && codePassed && <CodingCompletion
             xp={result.xpAwarded} complexity={result.complexity} backHref={moduleHref(pathId,module.id)}
             nextHref={result.nextActivityId && result.nextActivityId !== open.activity.id ? (() => {
               const nextModule = entry.manifest.modules.find(one => one.activities.some(activity => activity.id === result.nextActivityId));
               return nextModule ? activityHref(pathId,nextModule.id,result.nextActivityId!) : undefined;
             })() : undefined} />}
-          {open?.code && !(result?.state === 'verified_pass' && result.code?.outcome === 'passed') && (
+          {open?.code && !codePassed && (
             <CodeActivity
               key={open.activity.id}
               code={open.code}
@@ -1072,10 +1098,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {result && !(open?.code && result.state === 'verified_pass' && result.code?.outcome === 'passed') && (
+          {result && !codePassed && (
             <section className="lp-card lp-section">
               <div className="lp-completion__line">
-                <h2>{t('paths.result')}</h2>
+                <h2 ref={resultHeading} tabIndex={-1}>{t('paths.result')}</h2>
                 <StateBadge state={result.state} />
                 {result.score !== null && (
                   <span className="lp-module__meta">

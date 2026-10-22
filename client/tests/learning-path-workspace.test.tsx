@@ -331,6 +331,23 @@ describe('a submission that lands after the learner moved on', () => {
   });
 });
 
+describe('focus', () => {
+  it('moves to the result after grading, to the next activity\'s heading, and back to the list on Close', async () => {
+    await mount(C);
+    await waitFor(() => expect(screen.getByText(/Which one\?/)).toBeInTheDocument());
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Left' })); });
+    await press('Submit');
+    // The check's Submit is gone; focus lands on the verdict, not on nothing.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Result' })));
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: /Activity B/ })); });
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2, name: 'Activity B' }));
+    await press('Close');
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Activities in this module' }));
+    // No live region reads the whole activity aloud.
+    expect(document.querySelector('.lp-workspace[aria-live]')).toBeNull();
+  });
+});
+
 describe('the draft autosave', () => {
   it('sends one save at a time with the revision the last one returned, so typing during a save is not a conflict', async () => {
     calls.draftDelay = 1500;
