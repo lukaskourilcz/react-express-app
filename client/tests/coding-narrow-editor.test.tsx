@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { submitCoding } from '../src/coding/api';
-import { warmRunner } from '../src/coding/runner/run-tests';
+import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/Editor', () => ({
@@ -15,6 +15,7 @@ vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefi
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   warmRunner: vi.fn(() => () => {}),
+  runCodeTests: vi.fn(() => new Promise(() => {})),
 }));
 
 // A Learn-level task with no puzzle: below 1024 CSS px it opened on "waiting
@@ -119,6 +120,22 @@ it('offers the editor beside a puzzle, and an earlier choice of the editor opens
   mountPuzzle();
   expect(screen.getByLabelText('Test editor')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
+});
+
+// Ctrl+Shift+Enter on a puzzle submitted the code under it, which the
+// learner could not see, as a failed attempt; Ctrl+Enter ran it.
+it('lets no shortcut run or submit the hidden code while a puzzle or the wait stands in for the editor', () => {
+  vi.mocked(submitCoding).mockClear();
+  mountPuzzle();
+  const check = screen.getByRole('button', { name: /Check the order/ });
+  fireEvent.keyDown(check, { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(check, { key: 'Enter', metaKey: true });
+  cleanup();
+  mount();
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true });
+  expect(submitCoding).not.toHaveBeenCalled();
+  expect(runCodeTests).not.toHaveBeenCalled();
 });
 
 // CODE-11: an accepted order is never recorded, for anyone, so a signed-in

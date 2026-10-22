@@ -587,8 +587,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const busy = phase !== 'idle';
   const submitDisabled = taskChanged || mode === 'landing' || busy || !session || !online || Boolean(solution);
 
-  // The shortcut does what the button would: nothing, while Submit is off.
+  // The shortcut does what the button would: nothing, while Submit is off,
+  // and nothing while a puzzle or the wait for a bigger screen stands in for
+  // the editor. There is no Run or Submit then, and the code under them is
+  // hidden: Ctrl+Shift+Enter on a puzzle sent it as a failed attempt.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!editorShown) return;
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       if (event.shiftKey) { if (!submitDisabled) void submit(); }
