@@ -207,11 +207,12 @@ describe('firstSelectable', () => {
 
 describe('path evidence in section progress', () => {
   it('counts recorded loop evidence and leaves optional and interview work out', () => {
+    const activity = (id: string) => ({ id, kind: 'lesson' as const, purpose: 'exercise' as const, verification: 'self_reviewed' as const, title: id, summary: id, competencies: [], estimatedMinutes: 1 });
     const modules = [
-      { activities: [{ id: 'lesson' }, { id: 'check' }, { id: 'code' }] },
-      { optional: true, activities: [{ id: 'bridge' }] },
-      { optional: true, shelf: 'interview-prep' as const, activities: [{ id: 'interview' }] },
-    ] as Parameters<typeof pathSteps>[0];
+      { activities: [activity('lesson'), activity('check'), activity('code')] },
+      { optional: true, activities: [activity('bridge')] },
+      { optional: true, shelf: 'interview-prep' as const, activities: [activity('interview')] },
+    ] satisfies Parameters<typeof pathSteps>[0];
     const progress = { modules: [{ activities: [
       { activityId: 'lesson', state: 'self_reviewed' },
       { activityId: 'check', state: 'verified_pass' },
