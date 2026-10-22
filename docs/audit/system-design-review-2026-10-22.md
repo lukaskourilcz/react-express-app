@@ -22,7 +22,7 @@ This is the repo's own bar from `.claude/skills/coding-task-authoring/SKILL.md`,
 - Seven quality dimensions, each needing at least 3/5: topicRelevance, learningValue, technicalCorrectness, wording, answerOptions, hint and explanation.
 - Five relevance markers that must total at least 4/10.
 - Correctness must be verified, and the key must be the only right answer.
-- Longest-answer clues count as defects. The question bank revised "all 64 eligible answer-length candidates" (#391), and NEEDED.md:23 still tracks that clue class.
+- Longest-answer clues count as defects. The question bank revised "all 64 eligible answer-length candidates" (#391), and NEEDED.md tracked that clue class when this review was written.
 
 ## Verdict rules
 
