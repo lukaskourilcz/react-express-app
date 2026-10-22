@@ -68,8 +68,7 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   ctx.fillStyle = dark ? '#101c24' : '#ffffff';
   ctx.strokeStyle = dark ? '#30404b' : '#dce7e0';
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(64, 54, 1072, 522, 44);
+  roundedRect(ctx, 64, 54, 1072, 522, 44);
   ctx.fill();
   ctx.stroke();
 
@@ -133,6 +132,23 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   return new File([blob], `${slug(input.brand)}-${slug(input.fileSuffix) || 'result'}.png`, {
     type: 'image/png',
   });
+}
+
+/** `roundRect` arrived in Safari 16 and Firefox 112. The build targets older
+ * browsers, where calling it threw and every share card failed, so the corners
+ * are drawn with arcs when it is missing. */
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+    return;
+  }
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
 }
 
 /** A label followed by figures: only the label shortens, so the figures always
