@@ -50,7 +50,7 @@ it('renders authored case-bank links in row headings without interpreting HTML c
 
 it('stops a running lesson example when the lesson goes away', () => {
   const view = render(<LanguageProvider><LessonView lesson={{ id: 'loops', title: 'Loops', sources: [], sections: [
-    { kind: 'example', caption: 'Count down', code: 'while (true) {}', note: 'Nothing here is graded.' },
+    { kind: 'example', language: 'javascript', caption: 'Count down', code: 'while (true) {}', note: 'Nothing here is graded.' },
   ] }} /></LanguageProvider>);
   fireEvent.click(screen.getByRole('button', { name: 'Run it' }));
   expect(runner.signals).toHaveLength(1);
@@ -61,7 +61,7 @@ it('stops a running lesson example when the lesson goes away', () => {
 
 it('opens the next lesson with its own example code, not the edits from the last one', () => {
   const lesson = (id: string, code: string) => ({ id, title: id, sources: [], sections: [
-    { kind: 'example' as const, caption: 'Try it', code, note: 'Nothing here is graded.' },
+    { kind: 'example' as const, language: 'javascript', caption: 'Try it', code, note: 'Nothing here is graded.' },
   ] });
   const view = render(<LanguageProvider><LessonView lesson={lesson('first', 'first()')} /></LanguageProvider>);
   fireEvent.change(screen.getByLabelText('Try it'), { target: { value: 'edited()' } });
