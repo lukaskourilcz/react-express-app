@@ -9,7 +9,7 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { GUIDE_LOCALES, PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
+import { PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en, type TranslationKey } from './src/i18n/translations';
@@ -235,21 +235,20 @@ function productMetadata(env: Record<string, string>): Plugin {
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, 'index.html'), html);
       };
-      for (const topic of topics) for (const locale of GUIDE_LOCALES) {
-        const topicTitle = `${topic.title[locale]} · ${product.brand}`;
-        const description = topic.description[locale];
-        const url = origin + topicPath(topic.slug, locale);
-        const schema = JSON.stringify(topicSchema(topicTitle, description, url, locale)).replace(/</g, '\\u003c');
-        const links = `<link rel="canonical" href="${url}" />` + GUIDE_LOCALES.map(guideLocale => `<link rel="alternate" hreflang="${guideLocale}" href="${origin}${topicPath(topic.slug, guideLocale)}" />`).join('');
-        const article = renderToStaticMarkup(createElement(TopicArticle, { topic, locale, brand: product.brand, related: topics }));
+      for (const topic of topics) {
+        const topicTitle = `${topic.title} · ${product.brand}`;
+        const description = topic.description;
+        const url = origin + topicPath(topic.slug);
+        const schema = JSON.stringify(topicSchema(topicTitle, description, url)).replace(/</g, '\\u003c');
+        const links = `<link rel="canonical" href="${url}" />`;
+        const article = renderToStaticMarkup(createElement(TopicArticle, { topic, brand: product.brand, related: topics }));
         const html = indexHtml
-          .replace('<html lang="en">', `<html lang="${locale}" data-public-locale="${locale}">`)
           .replace(/<title>[^<]*<\/title>/, `<title>${escape(topicTitle)}</title>`)
           .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(description) + end)
           .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(topicTitle) + end)
           .replace('</head>', `${links}<meta property="og:url" content="${url}" /><script id="public-schema" type="application/ld+json">${schema}</script></head>`)
           .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${article}</main></div>`);
-        const topicDir = path.join(outDir, topicPath(topic.slug, locale));
+        const topicDir = path.join(outDir, topicPath(topic.slug));
         await mkdir(topicDir, { recursive: true });
         await writeFile(path.join(topicDir, 'index.html'), html);
         urls.push(url);
@@ -351,7 +350,7 @@ function productMetadata(env: Record<string, string>): Plugin {
       }
       this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${sectionPages.length} Coding section pages and the hidden system design page, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
 
-      const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
+      const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug)}">${escape(topic.title)}</a></li>`).join('')}</ul></main>`;
       await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /><meta property="og:url" content="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));
       await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);
       await writeFile(path.join(outDir, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /sandbox/\nDisallow: /dev\nSitemap: ${origin}/sitemap.xml\n`);

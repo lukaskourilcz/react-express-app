@@ -2794,9 +2794,6 @@ function englishOnlyContracts() {
     'shared/coding-locale.ts': 'the Czech koruna currency name',
     'shared/coding-utc-time.ts': 'the Czechia Time zone label',
     'shared/launch-offer.ts': 'the Czech price indication law',
-    // removed by D3 (#486): the public /cs/ guides and their checks.
-    'scripts/check-public.mjs': 'the /cs/ guide checks',
-    'tests/browser/public.spec.ts': 'the /cs/ guide checks',
   };
   const SKIPPED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', 'test-results', 'playwright-report', '.vercel']);
   const walk = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
