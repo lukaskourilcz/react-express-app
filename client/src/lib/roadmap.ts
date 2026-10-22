@@ -2,7 +2,7 @@
 // playable questions from the API, track per-level and per-checkpoint progress
 // in localStorage, and (when signed in) sync that progress to the user's account.
 
-import { apiFetch } from './api';
+import { ApiError, apiFetch } from './api';
 import type { LearnLessonResponse } from '../../../shared/learning-path-api';
 import { accountEpoch } from './accountData';
 import { staleProfileStats } from './queryClient';
@@ -138,10 +138,18 @@ export function submitRoadmapAnswer(
 }
 
 export async function completeRoadmapAttempt(sessionId: string): Promise<RoadmapCompletionResult> {
+  const epoch = accountEpoch();
   const result = await apiFetch<RoadmapCompletionResult>('/api/quiz/roadmap?resource=complete', {
     method: 'POST',
     body: JSON.stringify({ sessionId }),
   });
+  // The account changed while the completion was out (a sign-out, or another
+  // account's sign-in): the record it carries belongs to the account that
+  // left, so nothing is written here. The level says the sign-in changed, as
+  // it does when the server refuses a request sent after the change.
+  if (accountEpoch() !== epoch) {
+    throw new ApiError('Your sign-in changed during this level.', 409, 'session_owner_mismatch');
+  }
   if (result.progress) writeProgress(result.progress);
   // A finished level or part test is a streak day, passed or not.
   if (result.applied) staleProfileStats();
