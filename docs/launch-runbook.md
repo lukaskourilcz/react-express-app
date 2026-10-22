@@ -186,8 +186,9 @@ access tokens, emails, answer tokens, or submitted answer text in logs.
 ## Learning-path rollback
 
 Disabling the feature is the supported rollback: unset
-`LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED`, and the paths go
-back to preview-only while every other surface is untouched. Migration 026 is
+`LEARNING_PATH_FDE_ENABLED`, and the FDE path goes back to preview-only while
+every other surface is untouched. (`LEARNING_PATH_DSA_ENABLED` belonged to the
+DSA path that #496 retired and is no longer read.) Migration 026 is
 additive and holds no other feature's data, so it stays applied.
 
 Do **not** drop the `learning_path_*` tables as a rollback step. They hold

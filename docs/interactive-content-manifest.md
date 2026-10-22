@@ -119,7 +119,9 @@ worker the Run button uses — never in the page, never on the server. On a narr
 screen the editor is not offered; the snippet stays readable and runnable, which
 is the same policy a coding task follows.
 
-**Source:** `kind: 'example'` sections in `lib/learning-paths/content/dsa/`.
+**Source:** `kind: 'example'` sections in `lib/learn-lessons/dsa/`. These are
+the original DSA readings, which Learn serves on the DSA Foundations levels;
+the standalone DSA path they were written for retired in #496.
 
 | Lesson | What the learner can change |
 | --- | --- |
@@ -128,7 +130,7 @@ is the same policy a coding task follows.
 | D04 — stacks | A stack driven far enough to reach the empty case, and what `pop` should answer there |
 | D07 — search | Binary search with its comparisons counted; unsort the list and watch the answer stop being trustworthy |
 
-**Gaps.** DSA lessons only, and four of the eighteen. The FDE lessons have none:
+**Gaps.** DSA readings only, and four of the eighteen originals. The FDE lessons have none:
 their material is architectural rather than executable, and a runnable snippet
 would have to be invented to fill a quota rather than because it explains
 something. JavaScript, TypeScript and React have no lessons of this kind at all

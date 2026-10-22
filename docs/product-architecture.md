@@ -567,10 +567,10 @@ ordinary graded track with the same
 XP and one-award-per-task ledger. Those tasks carry `algorithms` as their
 topic, so none of them can be drawn into a Learn level's quota, and their
 `level` is an ordering key rather than a Learn level. The track also holds
-the 29 DSA Foundations tasks of #493, the DSA path's exercises, whose topic is
+the 29 DSA Foundations tasks of #493, the exercises of the DSA path that E5
+(#496) retired, whose topic is
 `dsa`: their level is a DSA Learn level, and `levelCodingTasks` seals them
-into DSA levels 3 to 9, 12 and 13 (levels 1, 2, 10, 11 and 14 wait for E3,
-#494). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
+into DSA levels 1 to 14 (level 15, the foundation review, has none). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
 tracks and for a `dsa` task, which the row and the workbench show as
 "DSA · Level n"; the row, the workbench and the GitHub commit message read it
 before naming one.
@@ -721,17 +721,23 @@ A level may name `lessonId` from `lib/learn-lessons/levels.ts`. The public, addr
 
 ## Learning paths
 
-Two optional paths sit on top of the existing Learn levels and the Coding
-section. Neither replaces them, and neither changes product or subject scope.
+One optional path sits on top of the existing Learn levels and the Coding
+section. It replaces neither, and it changes no product or subject scope.
 
 - **Forward Deployed Engineer** is a *role specialization*: the learner picks
   Fullstack, Frontend or Backend first, then optionally adds FDE on top. It is
   the only role, and it occupies the single `specialization` slot of the
   account preference.
-- **DSA Foundations** is a *skill path*: entered directly at
-  `/roadmap/paths/dsa-foundations`, with no base track, no role and no XP rank
-  required. It can run alongside a career path, and the two enrollments are
-  independent.
+- **DSA Foundations** was a *skill path* until E5 (#496, 22 October 2026)
+  retired it. Its material lives on in Learn (fifteen levels in the Software
+  Engineer section, the eighteen original readings under their `dsa-v1-*`
+  ids) and in Coding (the 29 `alg-dsa-*` tasks with their graders).
+  `/roadmap/paths/dsa-foundations` and every module address under it answer a
+  308 to `/learn/software-engineer?topic=dsa` (`vercel.json`; the client
+  redirects the same way). `LEARNING_PATH_IDS` is `['fde']`, the `skill_path`
+  kind, `SkillPathId` and the profile's `skillPaths` are gone, and a stored
+  `skillPaths` field is dropped on the next save. Migration 026's tables stay;
+  no rows were deleted.
 
 `shared/learning-paths.ts` owns the vocabulary — `LearningPathId`,
 `LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
@@ -856,9 +862,9 @@ Endpoints are new `resource=`/`op=` branches on existing handlers
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
 `api/user/[op].ts`), so the twelve-handler budget is unchanged. Storage is
 `supabase/supabase-schema-026.sql` (additive, idempotent). Availability is per
-path — `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` — so either
-can launch or pause without the other, and a path opens only when its switch
-is on, its content validates and the migration is installed.
+path — `LEARNING_PATH_FDE_ENABLED` for FDE, the one published path — and a
+path opens only when its switch is on, its content validates and the migration
+is installed.
 
 A code exercise or a written piece autosaves one draft per activity, up to
 `PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
@@ -1792,10 +1798,11 @@ the name nor the photo shared with friends. Existing public-photo consent is
 kept; the old visibility flag can no longer hide a leaderboard name.
 
 Verified native-path code now records acceptance and the shared coding award
-in one transaction (migration 065). A reused task keeps its ordinary task ID,
-and so does a DSA exercise E2 turned into a coding task
-(`lib/learning-paths/dsa-coding-tasks.ts`; the queue, whose path contract
-differs, keeps its own); any other path exercise has a stable scoped ID. This prevents paying the
+in one transaction (migration 065). A reused task keeps its ordinary task ID;
+any other path exercise has a stable scoped ID
+(`lib/learning-paths/coding-task-id.ts`). Until E5 (#496) retired the DSA
+path, its exercises recorded under the `alg-dsa-*` Coding tasks E2 turned them
+into; those tasks and their records stay. This prevents paying the
 same task again just because it was reached on another screen. Type-only,
 unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
 The accepted path response stores the actual award and the same complexity
