@@ -1,6 +1,6 @@
 {
  "schema": "devshark-content-ledger/v1",
- "auditedOn": "2026-10-17",
+ "auditedOn": "2026-10-22",
  "scope": {
   "categories": [
    "ai",
@@ -27,19 +27,19 @@
   {
    "id": "question-bank",
    "description": "lib/webdev-bank.ts: quiz-data.ts questions + fix-the-test",
-   "items": 2487,
+   "items": 2607,
    "countable": true
   },
   {
    "id": "coding-catalog",
    "description": "lib/coding/catalog.ts",
-   "items": 770,
+   "items": 814,
    "countable": true
   },
   {
    "id": "learning-paths",
    "description": "lib/learning-paths (FDE, DSA Foundations), gated by env switches",
-   "items": 2,
+   "items": 1,
    "countable": true
   },
   {
@@ -56,15 +56,15 @@
   }
  ],
  "counts": {
-  "active": 2168,
-  "eligibleQuestions": 2014,
+  "active": 2288,
+  "eligibleQuestions": 2134,
   "retiredSection": 319,
   "unreferenced": 312,
   "legacyCore": 795,
-  "codingTasks": 799,
-  "activeCodingTasks": 754,
+  "codingTasks": 814,
+  "activeCodingTasks": 769,
   "hiddenCodingTasks": 45,
-  "pathMaterials": 263
+  "pathMaterials": 356
  },
  "items": [
   {
