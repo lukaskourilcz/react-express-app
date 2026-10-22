@@ -49,14 +49,16 @@ Stages four and five extend each existing project:
 
 ## FullStack
 
-Team task planner, Stockroom manager and Workshop booking each use eight stages:
+Team task planner, Stockroom manager and Workshop booking each have eight
+milestones, with a checkpoint before milestones 2, 5, 6 and 8, so twelve stages
+in all (`fullstack` in `shared/evolving.ts`). The milestones cover
 JavaScript input validation; TypeScript models and immutable transitions;
 typed GET/POST API; version-checked PATCH/DELETE; React fetch/loading/retry;
 creation form; domain action with conflict recovery; filtered pagination/deletion.
 Hours logged, stock sold and seats booked all use server-side non-negative
 quantity validation and optimistic concurrency.
 
-The category is separate from the grader track. Stage 1 uses JavaScript,
+The category is separate from the grader track. Milestone 1 uses JavaScript,
 2–4 use the TypeScript runtime/compiler grader, and 5–8 use the TSX-capable
 React behavioral grader. The latter transpiles types; it does not claim a full
 React TypeScript compiler check. Links resolve the actual stage track.
@@ -71,7 +73,7 @@ the learner's code and stage completion are saved to their account.
 
 The first React stage appends an empty React scaffold to the preceding typed
 API draft; it does not replace the API with a reference solution. Existing
-stage drafts always take priority. Legacy stage IDs 1–3 remain unchanged.
+stage drafts always take priority.
 
 ## The debugging paths
 
@@ -122,7 +124,7 @@ both pass it.
 
 ### The retired café-orders project
 
-The debugging path of 2026-09-18 (`js-evolving-debug`, ten stages around one
+The older debugging project (`js-evolving-debug`, ten stages around one
 café-orders program) is marked `unlisted` in `shared/evolving.ts`: no list
 shows it, and nothing else changes. Its ten stages stay in the catalogue and
 the browser index, open from an old link, unlock in order, grade on the
@@ -139,9 +141,7 @@ run again. `shared/evolving.ts` marks them `short`; level ids are
 `<path id>-1` to `<path id>-5`. They are listed on their section's own page,
 between the section header and its challenge list (the FullStack one leads
 the FullStack screen), not on the Coding home, and the UI counts them in
-levels ("Level 2 of 5") rather than stages. They replace the Custom
-category of 2026-09-24, whose two ten-step paths were split into the first,
-second, fourth and fifth JavaScript paths below. Each level has a hint, method steps, visible and
+levels ("Level 2 of 5") rather than stages. Each level has a hint, method steps, visible and
 hidden checks, references, and reference, junior and senior solutions that
 `npm run test:coding` proves. Sources: `lib/coding/tasks/paths-*.ts` and
 `lib/coding/solutions/paths-*.ts`.
@@ -183,8 +183,8 @@ in `shared/coding-catalog.ts`):
 | Twelve-stage FullStack app milestone | 1–4 | 5–9 | 10–12 |
 
 A checkpoint reads its tier instead, like a standalone task, so every
-checkpoint is Easy: it is the same five-minute step wherever it sits (owner
-decision, 9 Oct 2026). A ten-stage project's list therefore reads Easy 1–3,
+checkpoint is Easy: it is the same five-minute step wherever it sits. A
+ten-stage project's list therefore reads Easy 1–3,
 Medium 4, Easy 5, Medium 6, Easy 7, Hard 8, Easy 9, Hard 10; the list groups
 consecutive stages with one label, so the order stays the project's order.
 

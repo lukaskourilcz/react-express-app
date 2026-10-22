@@ -1,80 +1,35 @@
-# Question sources - mining the open-source learning repos
+# Question sources
 
-devShark is a dev-knowledge quiz, so the best raw material for new questions is
-the same set of open-source study repos learners already trust. These are
-**content sources**, not code dependencies - use them to draft questions in
-`/dev → Question bank`, then edit for tone, difficulty weighting, and our category
-taxonomy.
+Learn questions are original. Open study repositories are good raw material for ideas: use them to find concepts worth asking about, then write the question, options and explanation yourself.
 
-> Licensing: each repo has its own license (mostly CC-BY-SA / MIT / CC0). You're
-> writing **original questions inspired by** the material, not copying prose
-> verbatim. When a definition is lifted closely, attribute the source in the
-> question's explanation and check the repo's license first.
+Each repository has its own license (mostly CC-BY-SA, MIT or CC0). Write original questions inspired by the material and never copy prose. When a definition follows a source closely, check the license first and name the source in the explanation.
 
-## The four repos
+## Repositories worth mining
 
-| Repo | Best for these categories | How to mine it |
+| Repository | Best for | How to use it |
 | --- | --- | --- |
-| [donnemartin/system-design-primer](https://github.com/donnemartin/system-design-primer) | System design, backend, databases | Scalability, caching, sharding, CAP theorem - turn each concept box into a "which trade-off applies?" multiple-choice. Great for `advanced` / `zero-to-hero` difficulty. |
-| [codecrafters-io/build-your-own-x](https://github.com/codecrafters-io/build-your-own-x) | Fundamentals across the stack | The tutorials expose *how things work under the hood* (git, a database, a browser). Mine the "why" - e.g. "what does a database WAL guarantee?" |
-| [jwasham/coding-interview-university](https://github.com/jwasham/coding-interview-university) | Algorithms, data structures, CS fundamentals | Its topic checklist maps almost 1:1 to quiz categories. Each bullet (big-O, trees, hashing) is a question cluster; vary difficulty from `basics` to `advanced`. |
-| [sindresorhus/awesome](https://github.com/sindresorhus/awesome) | Discovering *new* categories | The meta-list points to per-topic "awesome-x" lists. Use it to spot under-covered areas (e.g. a specific framework) worth a new category before writing questions. |
+| [donnemartin/system-design-primer](https://github.com/donnemartin/system-design-primer) | System design, databases | Turn a concept (caching, sharding, CAP) into a "which trade-off applies here?" scenario. |
+| [codecrafters-io/build-your-own-x](https://github.com/codecrafters-io/build-your-own-x) | How tools work underneath | Ask the "why": what a database's write-ahead log guarantees, what git stores for a commit. |
+| [jwasham/coding-interview-university](https://github.com/jwasham/coding-interview-university) | DSA and algorithms | Its topic checklist maps onto the DSA and Algorithms levels; each bullet is a question cluster. |
+| [sindresorhus/awesome](https://github.com/sindresorhus/awesome) | Gaps in coverage | Its per-topic lists show areas a topic does not cover yet. |
 
 ## Workflow
 
-1. Pick a repo + a narrow topic (e.g. "caching strategies" from system-design-primer).
-2. Draft 5–10 questions in `/dev → Question bank`, each with 4 options + an
-   explanation. Prefer *conceptual* questions (why/when/trade-off) over trivia;
-   they age better and are harder to Google mid-quiz.
-3. Set the `difficulty` weight and `category` to match our taxonomy
-   (`client/src/lib/categories.ts`).
-4. Add a short source note in the explanation when you paraphrase closely.
-5. Record a review for each new id in `docs/audit/devshark-content-ledger.json`
-   and run `npm run build:curation-registry`. Every roadmap category is in the
-   curation gate's scope, so a question without a record is withheld from
-   learners.
-6. Use `/dev → Learner flags` to see which questions learners flag as
-   unclear/outdated and refine.
+1. Pick a narrow concept and the Learn level whose objective it serves (`LEVEL_TITLES` in `lib/roadmap.ts`).
+2. Write the seed in that topic's `lib/roadmap-questions-<topic>.ts`, following `.claude/skills/learn-question-authoring/SKILL.md`: four options, one key, an explanation that says why each wrong option fails, and a hint. Prefer why, when and trade-off questions over trivia. A seed's position sets its level and difficulty; nothing is set by hand.
+3. Name the source in the explanation when you paraphrase closely.
+4. Record a review for the new id in `docs/audit/devshark-content-ledger.json` and run `npm run build:curation-registry`. Every Learn category is in the curation scope, so a question without a passing record for its exact content is withheld from learners ([curation claims](curation-claims.md)).
+5. Read `/dev` → Learner flags to see which questions learners report, and fix them the same way.
 
-## Why not auto-import?
+A question drafted in `/dev` → Question bank is stored as an override and stays withheld until the ledger holds a review of its exact wording, so the seed files are the place to author.
 
-These repos are prose and checklists, not a question bank - quality comes from a
-human turning a concept into a well-formed MCQ with a good distractor set.
-Auto-scraping would produce low-quality trivia and risk license/attribution
-issues. Treat this as a curated, human-in-the-loop pipeline.
+Scraping these repositories into questions is not an option: they are prose and checklists, and a good multiple-choice question needs a person or reviewed model to turn a concept into a scenario with a plausible distractor set.
 
-### DSA Foundations E3, 22 October 2026
+## Provenance of the DSA banks
 
-The Learn bank combines the path's 52 original checks (including code context),
-62 corrected existing seeds and six original synthesis questions. The origin
-mapping, previous ledger rows and 42 replaced foundation seeds are retained
-in `docs/audit/wip/history/`. The latter are an unserved historical archive
-with their original errors, not current learning material.
-Every current item has its own exact-hash ledger review and second-reading
-notes. Both passes were performed in the same Codex model session; these
-records claim neither an independent reviewer nor execution of question snippets.
+The DSA (`lib/roadmap-questions-dsa.ts`) and DSA Advanced (`lib/roadmap-questions-dsa-advanced.ts`) banks are 120 questions each. Every item has its own exact-hash model review in the ledger; the records claim no independent reviewer and no execution of question snippets.
 
-The closing readings use Princeton Algorithms' [analysis and cost models](https://algs4.cs.princeton.edu/14analysis/)
-and [binary search trees](https://algs4.cs.princeton.edu/32bst/), the
-[ECMAScript Map access requirements](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-map-objects)
-and [MDN's sort contract](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort).
-The explanations distinguish these models from engine guarantees. The readings
-are original summaries, not copied source passages.
+- **DSA** combines the original checks of the retired DSA path, corrected existing seeds and original synthesis questions. The seeds it replaced, the earlier ledger rows and the origin mapping are kept unserved in `docs/audit/wip/history/` as a record with their original errors. The closing readings draw on Princeton Algorithms' [analysis and cost models](https://algs4.cs.princeton.edu/14analysis/) and [binary search trees](https://algs4.cs.princeton.edu/32bst/), the [ECMAScript Map requirements](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-map-objects) and [MDN's sort contract](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort). The explanations separate these cost models from engine guarantees.
+- **DSA Advanced** follows its fifteen-level order. Sixteen questions are reworded moves of the heap and graph concepts kept in `lib/roadmap-questions-dsa-advanced-holding.json`; the other 104 are original. Further reading checked at authoring: MIT 6.006 (Spring 2020) lectures 8 to 10, 13, 15 to 16, 18 and 20; Stanford CS106B lecture 21 on tries; Waterloo CS341 greedy notes; MDN's Number bitwise and collection references. The eight Advanced lessons carry their exact source URLs and dates.
 
-
-### DSA Advanced (E4, 22 October 2026)
-
-The new bank has 120 questions in the approved 15-level order. Sixteen are
-freshly worded/reviewed moves of the heap/graph concepts preserved in
-`lib/roadmap-questions-dsa-advanced-holding.json`; 104 are original. The old
-source remains intact and the id map lives in the E4 provenance history.
-No question or task copies a university exercise, solution or employer prompt.
-
-Further reading checked at authoring: MIT 6.006 Spring 2020 lectures 8–10, 13,
-15–16, 18 and 20; Stanford CS106B Lecture 21 on tries; Waterloo CS341 Winter 2026
-greedy notes; MDN’s Number bitwise and collection references. The Princeton
-union-find claim was verified in its official indexed text; direct automated
-fetches returned 403, so no full-page fetch is claimed. The eight lesson objects
-carry exact source URLs and dates. Reviews are item-specific model self-reviews
-with `independent:false`, not independent certification. New task checks use
-original bounded fixtures in the production sandbox.
+No question or task copies a university exercise, a solution or an employer prompt.

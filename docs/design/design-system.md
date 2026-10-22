@@ -2,6 +2,18 @@
 
 The runtime source of truth is `client/src/styles/astryx-theme.css`, layered over Astryx. `DESIGN_RULES.md` is the behavioral contract.
 
+## Apple layer
+
+`client/src/main.tsx` sets `data-design="apple"` on `<html>` before the first paint. No code removes or changes it, so every page renders with the layer. Its rules sit under `:root[data-design='apple']`:
+
+- Tokens (`client/src/styles/astryx-theme.css`): the system font stack for body and headings, neutral text and surface colours through `light-dark()`, larger radii (`--radius-page` 2rem, `--radius-container` 1.5rem, `--radius-element` .85rem, `--radius-inner` .65rem), larger display and title sizes, a 100ms feedback duration and two-layer shadows. Dark mode keeps the Deep End blue-green background.
+- Chrome (`client/src/styles/app-shell.css`): a floating, rounded, translucent header with backdrop blur; pill-shaped nav links at least 44px tall, with an accent ring on the active link; a translucent drawer panel with a rounded outer edge; translucent dialogs over a darker backdrop.
+- Surfaces and controls: panels and raised cards take a 1px border in place of the 2px paper edge, buttons become pills, inputs and selects take .85rem corners, and radio cards sit on the muted background. Buttons, nav links, radio cards and strip tiles scale to 97% while pressed.
+- Home: wider hero spacing, a two-column hero from 1024px, tighter heading tracking and a three-column stat row.
+- User preferences: reduced motion drops the press scale, reduced transparency swaps the blurred materials for solid surfaces, and `prefers-contrast: more` gives the header, drawer, dialogs, panels and radio cards a solid surface with a text-coloured border.
+
+The accent, status colours and brand geometry still come from their own sources. The production CSS purge keeps `data-design` selectors, and the build fails if the `:root[data-design='apple']` token block goes missing (`client/vite.config.ts`).
+
 ## Semantic layers
 
 - Canvas: body, elevated, surface, muted.
@@ -41,7 +53,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 - Panels/cards: `--radius-container`.
 - Controls: `--radius-element`.
 - Inner tiles: `--radius-inner`.
-- Pills only for tags, compact filters, and genuinely compact binary/segmented controls.
+- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`, `.ss-link-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
 - Default content hierarchy is canvas → one panel → rows. Avoid panel-inside-card-inside-card.
 
 ## Shared component patterns
@@ -76,7 +88,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 
 ## Content rules
 
-- All reusable UI copy uses translation keys in `translations.ts`.
+- All reusable UI copy uses translation keys in `client/src/i18n/translations.ts`, or in the chunk files beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.privacy.ts` and the rest) that only their routes load.
 - devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 - Public facts come from registries/content, not repeated literals.
 - Curated explanations are authoritative. devShark ships no AI feature.

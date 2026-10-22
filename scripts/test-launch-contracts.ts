@@ -528,8 +528,8 @@ async function auditGateContracts() {
  *
  * shared/tiers.ts is the one contract for what each tier opens, the server
  * refuses locked content with 402, and Premium changes which content a
- * learner may start and nothing else. Each assertion below is one of the
- * handoff's section 2.5 rules. */
+ * learner may start and nothing else. Each assertion below checks one of those
+ * rules. */
 async function tierContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
@@ -1005,7 +1005,7 @@ async function tierContracts() {
   }
 }
 
-/** Billing (#221, handoff section 3). The behaviour itself is proven by
+/** Billing (#221). The behaviour itself is proven by
  * `npm run test:billing`; these are the structural rules around it. */
 function billingContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
@@ -1049,7 +1049,7 @@ function billingContracts() {
   }
 }
 
-/** Public copy, /premium and the legal pages (#222, handoff section 4). */
+/** Public copy, /premium and the legal pages (#222). */
 function publicCopyContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   // devShark is freemium: no shipped English string may still promise that
@@ -1226,7 +1226,7 @@ async function retiredSupportContracts() {
   }
 }
 
-/** Coins (#227, handoff section 7). Replays credit nothing, only
+/** Coins (#227). Replays credit nothing, only
  * service-role routines credit, Premium doubles at credit time, and the
  * four streak-protection bounds still hold. The behaviour against a real
  * database is proven by the migration 041 proof (docs/release-acceptance.md). */
@@ -1237,7 +1237,7 @@ function coinsContracts() {
     return statSync(path).isDirectory() ? listFiles(path) : [path];
   });
 
-  // 1. The rates are the handoff's, and the social grant pays nothing.
+  // 1. The default rates, and the social grant pays nothing.
   assert.deepEqual(DEFAULT_COIN_SETTINGS, {
     xpRate: 0.1,
     premiumMultiplier: 2,
@@ -1421,7 +1421,7 @@ function coinsContracts() {
   assert.match(read('shared/rewards.ts'), /No money buys a\s+\*\s+protection/);
 }
 
-/** Invitations (#228, handoff section 7.2). 100 coins to each side, once,
+/** Invitations (#228). 100 coins to each side, once,
  * after the friend's first Learn level; self-referral and a second completion
  * credit nothing; the cap holds; the grant routine writes only ledger tables;
  * the inviter never learns who a friend is. The behaviour against a real
@@ -1573,7 +1573,7 @@ async function referralContracts() {
   assert.match(read('client/src/components/Shop.tsx'), /reference === 'referral:friend' \? t\('rewards\.ledger\.referralFriend'\)/);
 }
 
-/** Merchandise through Spreadshop (#229, handoff section 8). */
+/** Merchandise through Spreadshop (#229). */
 async function merchContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {

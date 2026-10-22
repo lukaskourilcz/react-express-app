@@ -23,7 +23,7 @@ You are the implementation specialist for the Deep End v2 design system. Make fo
 
 - Extend Astryx components and the current CSS/token layer. Do not add MUI, Tailwind, CSS-in-JS infrastructure, another icon family, or a parallel design system.
 - Use semantic `--ss-*`, `--color-*`, and `--brand-*` tokens for shared meaning. Keep genuinely art-directed one-offs local.
-- Reuse `.ss-panel`, `.ss-raised`, `.ss-lift`, `.ss-kicker`, `SharkFin`, `SwimmingFin`, `Waterline`, `CategoryGlyph`, `RadioCards`, `AppToast`, and `BrandedConfirmDialog` where appropriate.
+- Reuse `.ss-panel`, `.ss-raised`, `.ss-lift`, `.ss-kicker`, `SharkFin`, `SwimmingFin`, `Waterline`, `CategoryGlyph`, `RadioCardGroup` and `RadioCard` (`ui/RadioCards.tsx`), `AppToast`, and `BrandedConfirmDialog` where appropriate.
 - Preserve the fin baseline, varied roadmap waves, and no-lift fin-school rules in `DESIGN_RULES.md`.
 - Add user-visible strings to `client/src/i18n/translations.ts` and use `TranslationKey`; never hard-code a literal into a screen. devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 - Implement loading, empty, error, offline, auth/permission, success, destructive, long-content, and narrow-layout states that are relevant to the target.

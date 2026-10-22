@@ -6,7 +6,7 @@
 // anything costs or what anything earns, and nothing on it can credit a coin:
 // it asks, and the server decides and records.
 //
-// Sections, in the order of the second handoff (section 7.4): the wallet with
+// Sections, in order: the wallet with
 // its last 25 ledger lines, "How to earn" with live progress, "Invite a
 // friend" (#228), merchandise, the crown and streak protection, orders and
 // claims, and "Find devShark elsewhere". Redeeming merchandise is Premium

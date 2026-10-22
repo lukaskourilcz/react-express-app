@@ -84,9 +84,9 @@ covers every possible incorrect solution or a platform penetration-test claim.
 
 ## Verification
 
-`npm run test:react-engine` checks the 183 active React tasks and all available
-reference, junior and senior solutions (501 on 14 October 2026), visible and
-hidden cases together. `npm run test:coding` additionally checks untouched
+`npm run test:react-engine` checks the 183 issued React tasks and every
+reference, junior and senior solution they carry, visible and hidden cases
+together. CI does not run it. `npm run test:coding` additionally checks untouched
 starters, wrong/static variants, time budgets and the rest of the catalogue.
 
 `npm run test:react-authority` checks the private Promise kernel and attacks on

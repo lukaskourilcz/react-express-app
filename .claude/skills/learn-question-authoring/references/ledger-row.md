@@ -9,7 +9,6 @@
 | `id` | gate | The served id. Two rows with one id throw in `registryFromLedger`. |
 | `kind` | gate | `question` or `coding-task` (`LedgerItem`). |
 | `contentHash` | gate | `contentHash(q)` for a question, `taskHash(task, solution)` for a task (`lib/curation.ts`). Read it from `npm run audit:devshark-inventory -- --out <dir>`: `items[].contentHash` for questions, `codingTasks[].contentHash` for tasks. A hash for other content resolves to `superseded` (`eligibilityFrom` in `shared/curation.ts`). |
-| `cs` | gate | `null` for new English content. `registryFromLedger` reads `cs?.hash ?? null`. |
 | `revision` | gate | `1` for a new item; previous plus one for a rewrite. |
 | `quality` | gate | The seven `QUALITY_DIMENSION_KEYS`, integers 1 to 5 (`shared/curation.ts`). |
 | `qualityScore` | gate | The minimum of the seven (`qualityFloor`). Must pass `QUALITY_MIN = 3`. |
@@ -19,7 +18,7 @@
 | `retireReason` | gate | `null` unless the decision is `retire` or `quarantine`. |
 | `reviewedAt` | gate | ISO date of the review. |
 | `verification.verdict` | launch | A row with `revision > 1` and a serving decision needs `accept` or `amend` (`scripts/test-launch-contracts.ts`, "Content this audit rewrote is served only after a second reader checked the rewrite"). |
-| `previousHash` | record | Question rows: the hash of the version before the rewrite, present only at `revision` 2 or more (no `revision: 1` question row carries it). Coding rows: the 725 rows of the coding wave all carry `previousHash` and `previousHashSchema`, the 705 at `revision: 1` too, because the wave recorded the hash of the version it started from; the 29 DSA Foundations rows of #493 are new tasks and carry neither. `previousHashSchema` names the hash schema of that version: `task-hash:v2` on 715 rows, `task-hash:v1` on ten `revision: 2` rows such as `js-easy3-digits-only`. A new coding task has no earlier version, so its row omits both; an edited task records its old hash with `previousHashSchema: "task-hash:v2"`. |
+| `previousHash` | record | Question rows: the hash of the version before the rewrite, present only at `revision` 2 or more (no `revision: 1` question row carries it). Coding rows: the rows of the 17 October coding wave carry `previousHash` and `previousHashSchema` even at `revision: 1`, because the wave recorded the hash of the version it started from; the DSA rows (`alg-dsa-*`) are new tasks and carry neither. `previousHashSchema` names the hash schema of that version: `task-hash:v2` on most rows, `task-hash:v1` on ten `revision: 2` rows such as `js-easy3-digits-only`. A new coding task has no earlier version, so its row omits both; an edited task records its old hash with `previousHashSchema: "task-hash:v2"`. |
 | `reviewer.kind` | record | What the review was: `human`, `model`, `automated` or `execution` (`REVIEW_EVENT_KINDS`). A model review is recorded as a model review, never as a person (`docs/curation-claims.md`, "Four kinds of checking"). |
 
 A row whose `qualityScore` or `relevanceScore` disagrees with its dimensions or markers stops `npm run build:curation-registry`: `registryFromLedger` throws `<id>: scores do not add up to their totals`. At runtime, `eligibilityFrom` in `shared/curation.ts` applies the same `registryEntryConsistent` check and resolves such an entry to `invalid-record`, a second line of defence for a registry edited by hand.
@@ -54,7 +53,6 @@ Serialize the ledger with `JSON.stringify(ledger, null, 1)` plus a trailing newl
   "defects": [],
   "rationale": "Why the item is worth asking at this level and why its key is the only right answer.",
   "evidence": ["https://developer.mozilla.org/... or run: the command whose output you checked"],
-  "cs": null,
   "verification": { "pass": "second-reading", "verdict": "accept", "problems": [], "notes": "What the second reading checked." },
   "reviewer": { "kind": "model", "passes": ["item-review", "second-reading"], "run": "<tool and session>, <date>" },
   "reviewedAt": "<YYYY-MM-DD>"
@@ -63,7 +61,7 @@ Serialize the ledger with `JSON.stringify(ledger, null, 1)` plus a trailing newl
 
 ## Coding-task row
 
-Same gate fields, plus the grader evidence the coding wave recorded (`graderChecks`) and the hash schema in force (`task-hash:v2`, the tag inside `taskHash`). Most coding rows record `graderChecks` as `{ cases, notes }`; 20 rows add `boundaries`, `mutation` and `complexity`, and the template below uses that fuller shape. The template is for a new task, so it carries no `previousHash` or `previousHashSchema`; for an edit, keep the existing row's fields and set both (see the field table).
+Same gate fields, plus the grader evidence the coding wave recorded (`graderChecks`) and the hash schema in force (`task-hash:v2`, the tag inside `taskHash`). Most coding rows record `graderChecks` as `{ cases, notes }`; some add `boundaries`, `mutation` and `complexity`, and the template below uses that fuller shape. The template is for a new task, so it carries no `previousHash` or `previousHashSchema`; for an edit, keep the existing row's fields and set both (see the field table).
 
 ```json
 {
@@ -97,7 +95,6 @@ Same gate fields, plus the grader evidence the coding wave recorded (`graderChec
     "mutation": "Whether the task forbids changing its input, and which check proves it.",
     "complexity": "The authored Target sentence, or why there is none."
   },
-  "cs": null,
   "verification": { "pass": "second-reading", "verdict": "accept", "problems": [], "notes": "What the second reading checked." },
   "reviewer": { "kind": "model", "passes": ["individual-item-review", "executable-recheck"], "run": "<tool and session>, <date>" },
   "reviewedAt": "<YYYY-MM-DD>"

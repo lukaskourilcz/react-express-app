@@ -1,15 +1,16 @@
 # devShark — monetization
 
-devShark has been freemium since 25 September 2026: every account learns HTML, CSS, JavaScript and half of React, and Premium opens the rest. The subscription is the decision; the other rows are what could sit beside it. Fee figures come from `SECOND-HANDOFF-25-9-2026.md` (section 1, read 2026-09-25).
+devShark is freemium. Every account gets HTML, CSS, JavaScript, React levels 1 to 12 and the opening stages of the coding projects; Premium opens the rest. `shared/tiers.ts` holds the split and the prices. Stripe checkout is built but switched off (`BILLING_ENABLED=false`), so devShark earns nothing today. Whether and when to take payments is the owner's decision (#221); [STRIPE_INTEGRATION_TODO.md](STRIPE_INTEGRATION_TODO.md) lists what selling needs.
 
 | Option | Likelihood of income | Possible earnings | Pros | Cons |
 |---|---|---|---|---|
-| **Premium subscription (the decision)**: 3.99 EUR a month or 39.99 EUR a year, VAT included, through Stripe Checkout with Managed Payments | Medium | €0–800/mo; the owner keeps about 2.72–2.80 EUR of each 3.99 charge, so 800 a month needs roughly 290 monthly subscribers | Recurring; Stripe (as Link) is the merchant of record and collects and remits VAT, handles disputes and sends receipts; the annual plan cuts the fee share by more than half | Fixed fees take 7–11 % of a 3.99 charge; Stripe's eligibility review may decline a sole trader (Paddle, the runner-up, leaves about 2.66); plain Stripe with Stripe Tax costs about 9.5–11.5 % and makes the owner the taxable person |
-| **Merchandise through Spreadshop** | Low | The margin set above Spreadshop's base prices, paid monthly (SEPA, EUR, minimum 10) | No stock or checkout to run; sprd.net AG is the seller of record for cash sales | Coin redemptions cost the owner the base price plus shipping (a mug is 13.49 plus shipping, more than several months of one subscriber's net); a retention reward, not a margin line |
-| **Voluntary support** | None: retired on 25 September 2026 (#222) | — | — | Premium replaced it; `/support` redirects to `/premium` |
-| **Ads** | Low | $0–100/mo | Passive | Risky for a student audience, and the plan table promises no ads on either tier |
-| **School / classroom licenses** | Low | project-based | Larger deals | Long sales cycle; support |
+| **Premium subscription** (built, not selling): 4.99 EUR a month or 59.88 EUR a year before VAT, through Stripe Checkout with Managed Payments | Medium | €0–800/mo | Recurring; Stripe acts as merchant of record, so it collects and remits VAT, handles disputes and sends receipts; the annual plan pays Stripe's fixed per-charge fee once a year | Stripe takes per-charge fees plus the Managed Payments fee; sales wait on the owner's Stripe identity verification |
+| **Launch offer** (inside the subscription) | Depends on Premium | 2.25 EUR a month or 26.95 EUR a year before VAT, for the life of each subscription started by 30 November 2026 | Lowers the first barrier (`shared/launch-offer.ts`, 55 % forever coupon) | Each launch subscriber pays less than half the regular price for as long as they stay; it applies only if sales open before the window ends |
+| **Premium vouchers** | None directly | — | The owner opens Premium for a learner without billing (`/dev` → Vouchers, migration 045) | Gives Premium away |
+| **Merchandise through Spreadshop** (paused) | Low | The margin above Spreadshop's base prices on cash sales | No stock or checkout to run; sprd.net AG is the seller of record | Paused behind `MERCH_ENABLED` until the owner turns it back on; coin redemptions cost the owner the base price plus shipping |
+| **Ads** | Low | $0–100/mo | Passive | Risky for a learner audience; the plan table promises no ads on either tier |
+| **School / classroom licences** | Low | Project-based | Larger deals | Long sales cycle; support load |
 
-**Launch price (4 Oct – 2 Nov 2026):** subscriptions started in that window pay 55 % less for their whole lifetime, 1.80 EUR a month or 18.00 EUR a year (`shared/launch-offer.ts`, a forever Stripe coupon). Each launch subscriber brings in less than half of a regular one for as long as they stay, and Stripe's fixed fee takes a larger share of a 1.80 charge than of a 3.99 one; the annual plan softens both.
+Voluntary support ended when Premium arrived: `/support` redirects to `/premium`.
 
-**Recommendation:** sell Premium monthly and annually (the annual plan pays the fixed fee once a year), keep merchandise a capped retention reward, and run no ads.
+**Recommendation:** sell Premium monthly and yearly once the owner opens sales, keep merchandise a capped reward, and run no ads.

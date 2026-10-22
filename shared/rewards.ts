@@ -283,7 +283,7 @@ export const tokensForVerifiedXp = (xp: number): number =>
 /* ── coins: what earns them ────────────────────────────────────────────── */
 
 /**
- * The earning rules (SECOND-HANDOFF-25-9-2026.md, section 7.2). These are the
+ * The earning rules (docs/product-architecture.md, "Coins"). These are the
  * defaults; `lib/settings-store.ts` mirrors them as `coins` in the game
  * settings, so the owner can tune a rate in `/dev` without a deploy. Every
  * credit is a ledger entry written by a service-role routine of migration 041

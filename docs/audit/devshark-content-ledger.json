@@ -38,7 +38,7 @@
   },
   {
    "id": "learning-paths",
-   "description": "lib/learning-paths (FDE, DSA Foundations), gated by env switches",
+   "description": "lib/learning-paths (FDE), gated by LEARNING_PATH_FDE_ENABLED",
    "items": 1,
    "countable": true
   },

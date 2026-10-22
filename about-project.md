@@ -1,104 +1,55 @@
 # devShark
 
-An English developer-learning product from one React/Vite client and twelve
-serverless handlers. devShark is freemium: every account gets HTML, CSS and
-JavaScript, React levels 1 to 12, the opening stages of every coding project
-(stages 1, 2 and 3 of a ten-stage project) and a starter set of coding
-challenges, and
-Premium (4.99 EUR a month or 59.88 EUR a year, before VAT) opens the rest.
-`shared/tiers.ts` holds that split. The optional launch offer is derived from `shared/launch-offer.ts` and appears only while its window, billing setup and configured coupon permit it. The server owns answers, grading, scores,
-XP and what each account may open. Until 25 September 2026 this summary said
-all learning was free. StudyShark, which shared this code, moved to its own
-repository (`lukaskourilcz/studyshark`) on 2026-09-24.
+An English developer-learning product (subject `webdev`) at https://devshark.app, built from one React/Vite client and twelve serverless handlers. devShark is freemium: every account gets HTML, CSS and JavaScript, React levels 1 to 12, DSA Foundations levels 1 to 5, the opening stages of every coding project (stages 1 to 3 of a ten-stage project) and a starter set of coding challenges. Premium (4.99 EUR a month or 59.88 EUR a year, before VAT) opens the rest. `shared/tiers.ts` holds that split, and `shared/launch-offer.ts` holds the launch offer, which shows only while its window, the billing setup and the coupon allow it. Stripe checkout is built but switched off; Premium opens today through vouchers. The server owns answers, grading, scores, XP and what each account may open. devShark ships no AI feature and makes no certification or hiring claims.
 
-Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` and the review registries. `npm run content:snapshot` prints the current authored, served, issued and free inventory. System design tasks remain hidden pending review.
+StudyShark, which once shared this code, lives in its own repository (`lukaskourilcz/studyshark`); nothing here builds or promotes it.
+
+Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` and the review registries. `npm run content:snapshot` prints the authored, served, issued and free inventory. The system design coding tasks stay hidden until the owner decides to publish them.
 
 ## Learning features
 
-- Guided Learn paths with short levels, checkpoints, prerequisites, and **spaced
-  mastery** — a level is "cleared" on its first pass and "mastered" only after
-  three correct passes on three separate days.
-- An auto-composed **"Today"** queue that folds carried-over work, due-for-review
-  levels, and new material into one daily plan.
-- Solo quizzes; a daily challenge; the survival Biggest Shark Challenge; live
-  multiplayer and classroom rooms; and leaderboards.
-- A public **question of the day** at `/daily`: one question a day from a
-  track that rotates by date, answered and checked on the server without an
-  account, and recorded nowhere. Each day has its own page (`/daily/<date>`)
-  and share image.
-- Share moments: the invite link after a first passed Learn level and after a
-  Challenge run, a result card from the Challenge and the typing racer, and a
-  link-preview image per coding task (title, track, difficulty and the free
-  count from `shared/tiers.ts`).
+- **Learn**, in three sections (`shared/learn-sections.ts`): Web Developer, Software Engineer and Forward Deployed Engineer. Guided levels with checkpoints, prerequisites and **spaced mastery**: a level is "cleared" on its first pass and "mastered" only after three correct passes on three separate days. DSA Foundations and DSA Advanced are Learn topics of Software Engineer; the old DSA path addresses redirect there.
+- An auto-composed **Today** queue that folds carried-over work, due-for-review levels and new material into one daily plan.
+- Solo quizzes, a daily challenge, the survival Biggest Shark Challenge, live multiplayer and classroom rooms, and leaderboards that rank the last 30 days by default.
+- A public **question of the day** at `/daily`: one question a day from a track that rotates by date, checked on the server without an account and recorded nowhere. Each day has its own page (`/daily/<date>`) and share image.
+- Share moments: the invite link after a first passed Learn level and after a Challenge run, a result card from the Challenge and the typing racer, and a link-preview image per coding task.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
-- Retention layer: **forgiving streaks** (two free protections a month, spent
-  on a missed day or in advance as a 48-hour shield) and a read-only **study
-  advisor**.
-- A devShark **typing racer** and flashcards.
-- One optional devShark **learning path**: the **Forward Deployed Engineer**
-  role specialization, which sits on top of the Fullstack/Frontend/Backend
-  track a learner already chose. It grades through the existing server
-  sandbox and keeps verified checks visibly apart from self-reviewed writing.
-  Verified code shares the canonical task and XP ledger with Coding, so a
-  reused task cannot earn another first-pass award. It claims no
-  certification. DSA Foundations, once a separate skill path, is a fifteen-level
-  Learn topic of the Software Engineer section with its readings and Coding
-  tasks; its old path addresses redirect there.
-- A devShark **Coding** section across JavaScript, TypeScript, React
-  and Algorithms (system design is hidden), labelled Easy, Medium or Hard, graded on the
-  server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
-  React), with authored hint ladders that end in
-  documentation, coding tasks inside the Learn levels, and an optional **GitHub
-  garden** that commits every passed task to the learner's own repository.
-  Every graded task also carries a junior and a senior solution that open after
-  a verified pass; fourteen evolving projects and fifteen short paths hold the
-  multi-stage work, three of them debugging paths built on `console.log` and
-  the habit of tracing before fixing; and a signed-in learner can shape a
-  **challenge run** (track, count, order) and plan it for a date and time.
-- **Premium and coins**: Premium opens every Learn topic, every coding task and,
-  once its switch is on, the FDE path. Coins, earned from verified learning, buy the crown
-  and streak protections for every account, and merchandise for Premium once
-  it returns next quarter (paused behind `MERCH_ENABLED`); an
-  invite link pays both friends. Leaderboards rank the last 30 days by default.
+- **Forgiving streaks** (two free protections a month, spent on a missed day or in advance as a 48-hour shield) and a read-only **study advisor**.
+- A **typing racer** and Shark Cards, the questions a learner saved to review.
+- The **Forward Deployed Engineer** learning path, a role specialization on top of the learner's Fullstack, Frontend or Backend track: fourteen modules, a staged capstone and an interview-prep shelf. It grades through the existing server sandbox, keeps verified checks apart from self-reviewed writing, and shares the task and XP ledger with Coding, so a reused task cannot earn a second first-pass award. Production keeps it off until the owner sets `LEARNING_PATH_FDE_ENABLED=true`.
+- **Coding** across JavaScript, TypeScript, React and Algorithms, labelled Easy, Medium or Hard and graded on the server (QuickJS sandbox, the TypeScript compiler, an isolated Vercel Sandbox for React). Hint ladders are authored and end in documentation. Every graded task carries a junior and a senior solution that open after a verified pass. Thirteen evolving projects and fifteen short paths hold the multi-stage work, three of them debugging paths built on `console.log` and tracing before fixing. Coding tasks also sit inside Learn levels, a signed-in learner can plan a **challenge run** (track, count, order) for a date and time, and the optional **GitHub garden** commits every passed task to the learner's own repository.
+- **Premium and coins**: Premium opens every Learn topic, every coding task and the FDE path once it is on. Coins, earned from verified learning, buy the crown and streak protections for every account. Merchandise is paused behind `MERCH_ENABLED`. An invite link pays both friends coins.
 
 ## Tech stack
 
-- **React** — the learning client's interface.
-- **React Router** — the client's routes.
-- **TanStack Query** — caches the client's server data.
-- **Vite** — builds and serves the client; at build time it also writes the public page heads and draws the share images with **Satori** and **resvg** (dev-only packages).
-- **TypeScript** — the client, the twelve API handlers and the shared code; its compiler also runs the type tests of TypeScript challenges.
-- **Vercel** — hosts the client and the twelve serverless API functions, and deploys from `main`.
-- **Astryx** — the design system (`@astryxdesign/core` 0.1.6); the product's CSS tokens live in `client/src/styles/astryx-theme.css`.
-- **QuickJS** — a WebAssembly sandbox that runs submitted JavaScript and TypeScript on the server.
-- **Vercel Sandbox** — an isolated VM, restored from a snapshot with no network, that runs React challenges in the self-hosted React harness.
-- **CodeMirror** — the code editor in the browser.
-- **Vitest** — the client's unit tests.
-- **Playwright** — the responsive and browser checks in CI.
-- **Supabase** — Postgres database, auth, and RLS; server-authoritative scores and grading.
-- **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
-- **Stripe** — sells Premium through Checkout, Billing and the Customer Portal, all through the server-side `stripe` package with no Stripe script in the browser; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
-- **Spreadshop (sprd.net AG)** — prints, sells and ships devShark merchandise; the app links to the shop, the owner orders coin redemptions there, and the server reads its monthly promotion when `SPREADSHOP_API_KEY` is set.
-- **Resend** — sends the cancellation page's single-use confirmation link and its receipt when `RESEND_API_KEY` is set; without it only someone signed in with the subscription's address can cancel there.
-- **Upstash Redis** — rate limiting on API endpoints.
-- **Sentry** — client and server error monitoring.
-- **PostHog** — product analytics.
+- **React** 19 with **React Router** 7: the client's interface and routes.
+- **TanStack Query**: caches the client's server data.
+- **Vite** 6: builds and serves the client; at build time it also writes the public page heads and draws the share images with **Satori** and **resvg** (dev-only packages).
+- **TypeScript**: the client, the twelve API handlers and the shared code; its compiler also runs the type tests of TypeScript challenges.
+- **Node.js 24**: the supported runtime, used by CI.
+- **Vercel**: hosts the client and the twelve serverless functions (region `arn1`) and deploys from `main`.
+- **Astryx** (`@astryxdesign/core` 0.1.6): the design system; the product's CSS tokens live in `client/src/styles/astryx-theme.css`.
+- **QuickJS**: a WebAssembly sandbox that runs submitted JavaScript and TypeScript on the server.
+- **Vercel Sandbox**: an isolated VM, restored from a snapshot with no network, that runs React challenges in the self-hosted React harness.
+- **CodeMirror**: the code editor in the browser.
+- **Vitest**: the client's unit tests.
+- **Playwright**: the responsive and browser checks in CI.
+- **Supabase** (project in `eu-north-1`): Postgres, Auth, Row Level Security, RPCs and Realtime; scores and grading stay on the server. Preview deployments share the production project.
+- **GitHub App (the garden)**: optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
+- **Stripe** (built, switched off with `BILLING_ENABLED=false`): Checkout with Managed Payments, Billing and the Customer Portal. The server uses the `stripe` package; the checkout page loads Stripe.js from Stripe and mounts Stripe's payment iframe, so card data never reaches devShark. Stripe (as Link) is the seller of record. A payment changes which content an account may start, never grading or scores.
+- **Spreadshop (sprd.net AG)**: prints and ships merchandise. Paused behind `MERCH_ENABLED`; the server reads the shop's monthly promotion when `SPREADSHOP_API_KEY` is set.
+- **Resend**: optional; sends the cancellation page's confirmation link when `RESEND_API_KEY` is set. Without it, cancellation there needs sign-in.
+- **Upstash Redis**: rate limiting on the API, with an in-memory fallback for local and preview use.
+- **Sentry**: client and server error monitoring.
+- **PostHog**: product analytics, loaded only after analytics consent.
 
 ## Third-party libraries
 
-- `react-syntax-highlighter`, `devicon` — code and technology visuals (devShark).
-- `quickjs-emscripten`, `typescript`, `@codemirror/*`, `sucrase`, `prettier` — coding grading, type checks, editor, React harness, formatting (devShark).
-- `qrcode`, `motion` — sharing and restrained animation.
-- `stripe` — server-side Checkout, portal, webhook signature checks and subscription sync.
+- `react-syntax-highlighter`, `devicon`: code and technology visuals.
+- `quickjs-emscripten`, `typescript`, `@codemirror/*`, `sucrase`, `prettier`: grading, type checks, the editor, the React harness and formatting.
+- `qrcode`, `motion`: sharing and restrained animation.
+- `stripe`: server-side Checkout, the portal, webhook signature checks and subscription sync.
 
 ## Marketing
 
-devShark's marketing is produced outside this repository by **marketingShark**, a project inside
-BoardlessAI (`lukaskourilcz/quorum`). It reads the question bank read-only as a pinned snapshot
-and publishes one question a day, with its answer, as a carousel. No code here changes, and
-nothing posts without a person approving it. See the README for what it does and does not
-touch.
-
-Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.
-
-DSA Foundations and DSA Advanced each contain fifteen Learn levels in Software Engineer. Advanced uses the first five Foundations levels as its prerequisite and requires Premium for graded levels and part tests.
+No marketing runs from this repository and nothing here posts to social media. The read-only marketing-source export (`lib/marketing/source.ts`) stays inactive because `DEVSHARK_MARKETING_EXPORT_SECRET` is not set in any environment. Shipped growth features are the UTM capture on the first pageview, `/daily`, the share images and referral links.

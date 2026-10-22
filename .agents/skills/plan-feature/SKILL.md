@@ -1,6 +1,6 @@
 ---
 name: plan-feature
-description: Plan a new quiz-app feature end-to-end (Supabase migration → a resource=/op= branch in an existing Vercel handler → React/Astryx client) consistent with existing patterns. Use when the user asks to "add X", "design X", or "plan X" where X is a feature like leaderboard, daily challenge, achievements, share-results, categories, etc.
+description: Plan a new devShark feature end-to-end (Supabase migration → a resource=/op= branch in an existing Vercel handler → React/Astryx client) consistent with existing patterns. Use when the user asks to "add X", "design X", or "plan X" where X is a feature like leaderboard, daily challenge, achievements, share-results, categories, etc.
 ---
 
 # Plan a feature
@@ -14,7 +14,7 @@ description: Plan a new quiz-app feature end-to-end (Supabase migration → a re
 3. **Review the returned plan.** Sanity check:
    - Does it match existing patterns (compare to user-stats flow: `supabase/supabase-schema.sql` → `api/user/[op].ts` (`op=stats`) → `client/src/components/Profile.tsx`)?
    - Does it add a `resource=`/`op=` branch to an existing handler instead of a thirteenth file under `api/`?
-   - Does every new table have RLS on, owner-scoped SELECT only and service-role-only writes, as in migrations 026-044?
+   - Does every new table have RLS on, owner-scoped SELECT only and service-role-only writes? `supabase/tests/010-schema-security.test.sql` and `158-rls-own-rows-only.test.sql` enforce it, and `.claude/skills/supabase-migration/SKILL.md` gives the file shape.
    - Migration order safe?
 
 4. **Present the plan to the user** with one explicit recommendation: ship as-is, ship behind a flag, or split into phases. Ask them to confirm before any code is written.

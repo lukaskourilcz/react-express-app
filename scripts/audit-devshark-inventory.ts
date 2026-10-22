@@ -194,7 +194,7 @@ function main() {
     sources: [
       { id: 'question-bank', description: 'lib/webdev-bank.ts: quiz-data.ts questions + fix-the-test', items: questions.length + fixTheTestQuestions.length, countable: true },
       { id: 'coding-catalog', description: 'lib/coding/catalog.ts', items: CODING_TASKS.length, countable: true },
-      { id: 'learning-paths', description: 'lib/learning-paths (FDE, DSA Foundations), gated by env switches', items: LEARNING_PATHS.length, countable: true },
+      { id: 'learning-paths', description: 'lib/learning-paths (FDE), gated by LEARNING_PATH_FDE_ENABLED', items: LEARNING_PATHS.length, countable: true },
       { id: 'question_edits', description: 'Supabase override table (admin edits, custom questions, hides). Not readable from the repository.', items: null, countable: false },
       { id: 'legacy-core', description: 'lib/quiz-data.ts coreQuestions outside code-snippets: module-private, exported nowhere', items: legacyCore, countable: true },
     ],

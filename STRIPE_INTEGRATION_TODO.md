@@ -1,86 +1,55 @@
-# Stripe integration status — 12 October 2026
+# Stripe billing: what selling Premium needs
 
-The owner selected Stripe Managed Payments as merchant of record. Production resources and Vercel settings are prepared. **Sales remain disabled (`BILLING_ENABLED=false`), at the owner's request, until account identity verification can be completed.** This file is the single source of truth for the remaining Stripe setup.
+Premium billing (#221) is built and configured but not selling: Production runs with `BILLING_ENABLED=false`. Whether and when to take payments is the owner's decision. This file is the single place that lists the configured Stripe resources and the gates before sales open. Until then, Premium opens only through vouchers (`/dev` → Vouchers, migration 045) and manual grants (the admin `op=entitlements`).
 
-## Values to Replace
+Credentials live in Vercel, never in this repository. [client/.env.example](client/.env.example) shows the variable names for local work, and the header of [lib/billing/config.ts](lib/billing/config.ts) explains each one.
 
-There are no placeholder prices, payment modes or credentials in the production implementation. Credentials are stored in Vercel, never in this repository. The illustrative values in [client/.env.example](client/.env.example) are only for local configuration.
-
-| Field | Current value | Action before enabling sales |
-|---|---|---|
-| `BILLING_ENABLED` | `false` | Set to `true` only after the remaining gates below pass; redeploy. |
-| `RESEND_API_KEY`, `RESEND_FROM` | Unconfigured, deferred by owner | Cancellation requires sign-in for this release. Resend is optional future work, not a sales activation gate. |
-
-## Prepared production resources
+## Configured Stripe resources
 
 Account `acct_1UKkgmLHhj5o2i3U`; Product `prod_VQcECN8jl8SIFW`, tax code `txcd_20060058` (self-study web-based training).
 
-| Resource | Configured value |
+| Resource | Value |
 |---|---|
-| Monthly Price | `price_1UPl0CLHhj5o2i3U1gzQpP7l` — EUR 4.99/month, tax exclusive |
-| Annual Price | `price_1UPlhYLHhj5o2i3Ua2DWxpmZ` — EUR 59.88/year, tax exclusive |
-| Coupon | `launch55-2026nov30` — 55%, forever, restricted to this Product, `redeem_by=1796079599` |
-| Offer window | Through 30 November 2026 23:59:59 Prague; EUR 2.25/month or EUR 26.95/year before VAT |
-| Webhook | `we_1UPlhxLHhj5o2i3UaVjZ52R1` — `https://devshark.app/api/user/billing-webhook`, API `2026-08-26.dahlia` |
-| Customer Portal | `bpc_1UPlj0LHhj5o2i3UNZptHbTj` — default, monthly/yearly switch, card update, invoice history, cancellation at period end |
-| Managed Payments | Dashboard “Ready to use”; enabled per Checkout Session, not account-wide by default |
+| Monthly Price | `price_1UPl0CLHhj5o2i3U1gzQpP7l`: EUR 4.99 a month, tax exclusive |
+| Annual Price | `price_1UPlhYLHhj5o2i3Ua2DWxpmZ`: EUR 59.88 a year, tax exclusive |
+| Launch coupon | `launch55-2026nov30`: 55 % off, forever, restricted to this Product, `redeem_by=1796079599` (30 November 2026 23:59:59 Prague). Checkout applies it only inside the window in `shared/launch-offer.ts`: EUR 2.25 a month or EUR 26.95 a year before VAT |
+| Webhook | `we_1UPlhxLHhj5o2i3UaVjZ52R1`: `https://devshark.app/api/user/billing-webhook`, API version `2026-08-26.dahlia`, the nine event types below |
+| Customer Portal | `bpc_1UPlj0LHhj5o2i3UNZptHbTj`: monthly/yearly switch, card update, invoice history, cancellation at period end |
+| Failed payments | The subscription cancels after all retries fail; failed-card and card-expiry emails are on |
+| Managed Payments | "Ready to use" in the Dashboard; the server turns it on per Checkout Session. Stripe sends receipts, invoices and refund emails from Link |
 
-Vercel Production has the restricted live server key, webhook signing secret, matching **public** `pk_live_` key, both Price IDs, coupon, `STRIPE_MANAGED_PAYMENTS=true`, `PUBLIC_ORIGIN=https://devshark.app` and `BILLING_ENABLED=false`. No test secrets were placed in Production. No real payments were made.
+Vercel Production holds the restricted live server key, the webhook signing secret, the matching `pk_live_` publishable key, both Price IDs, the coupon, `STRIPE_MANAGED_PAYMENTS=true`, `PUBLIC_ORIGIN=https://devshark.app` and `BILLING_ENABLED=false`. Production holds no test keys. No real payment has been made.
 
-## Configured Parameters
+The webhook subscribes to nine events: `checkout.session.completed`; `customer.subscription.created`, `.updated` and `.deleted`; `invoice.paid` and `invoice.payment_failed`; `charge.refunded`; `charge.dispute.created`; `radar.early_fraud_warning.created`. Keep that set.
 
-Files: [handlers.ts](lib/billing/handlers.ts), [stripe.ts](lib/billing/stripe.ts), [Stripe.js loader](client/src/lib/stripeCheckoutForm.ts), [checkout page](client/src/components/PremiumBillingPages.tsx).
+## How checkout works
 
-| Parameter | Value |
-|---|---|
-| `mode` | `subscription` |
-| `ui_mode` | `embedded_page` for Managed Payments; optional plain-Stripe branch uses `form` |
-| `managed_payments.enabled` | `true` for the selected seller model |
-| `line_items` | Server selects configured monthly/yearly Price; quantity 1 |
-| `return_url` | `/premium/success?session_id={CHECKOUT_SESSION_ID}` on `PUBLIC_ORIGIN` |
-| `integration_identifier` | `custom_embedded_web_0001` |
-| `billing_address_collection` | `auto` |
-| `phone_number_collection.enabled` | `false` |
-| `submit_type`, `locale` | `auto` |
-| `automatic_tax`, `payment_method_collection`, `customer_update` | Omitted for Managed Payments, which controls tax/address handling |
-| Consent | Required devShark checkbox before POST; server-versioned waiver and timestamp in session metadata |
-| API header | `2026-09-30.endive; custom_checkout_payment_form_preview=v1`, verified in Checkout Studio |
-| Stripe.js | Managed: direct `https://js.stripe.com/endive/stripe.js`, `createEmbeddedCheckoutPage({fetchClientSecret})`; plain form: direct `https://js.stripe.com/dahlia/stripe.js`, beta `custom_checkout_payment_form_1` |
-| Form appearance (plain branch) | Stripe theme; auto labels; spaced inputs; Roboto 16px; spacing 4px; radius 4px; background `#ffffff`, danger `#df1b41`, primary `#0570de`, success `#00c853`, text `#30313d` |
-| Form layout/confirmation (plain branch) | `expanded`; `loadActions()`; confirm event → `actions.confirm({formConfirmEvent})` |
+Code: [lib/billing/handlers.ts](lib/billing/handlers.ts), [lib/billing/stripe.ts](lib/billing/stripe.ts), [lib/billing/sync.ts](lib/billing/sync.ts), [lib/billing/cancel.ts](lib/billing/cancel.ts), [client/src/lib/stripeCheckoutForm.ts](client/src/lib/stripeCheckoutForm.ts), [client/src/components/PremiumBillingPages.tsx](client/src/components/PremiumBillingPages.tsx). Every route is an `op` of `api/user/[op].ts`, so the handler count stays at twelve.
 
-**Compatibility:** Stripe's actual API rejected `ui_mode: form` with Managed Payments: only `hosted_page` and `embedded_page` are supported. The selected embedded mode keeps payment on devShark and card fields inside Stripe. Do not switch to plain Stripe to bypass this restriction; that changes the merchant/tax responsibility selected by the owner.
+1. A signed-in free learner picks a plan on `/premium/checkout`. The page states the price before VAT, renewal and cancellation terms, and asks for the withdrawal-waiver consent.
+2. The server checks identity, consent, the current entitlement and any open session, then creates a subscription Checkout Session: `ui_mode: embedded_page`, `managed_payments.enabled: true`, the configured Price, `return_url` `/premium/success?session_id={CHECKOUT_SESSION_ID}`, `billing_address_collection: auto`, `submit_type` and `locale` `auto`, no phone number. The consent version and timestamp go into the session metadata. The server pins API version `2026-09-30.endive; custom_checkout_payment_form_preview=v1`.
+3. Stripe.js (`https://js.stripe.com/endive/stripe.js`, `createEmbeddedCheckoutPage`) loads after consent and mounts Stripe's payment iframe. Card data never reaches devShark.
+4. Only the signed webhook or the account-owned success-page lookup changes an entitlement, through the service-role routines of migration 039. The browser cannot grant Premium.
+5. Subscribers manage billing in the Customer Portal or on `/premium/cancel`. Cancellation there requires sign-in: without `RESEND_API_KEY` and `RESEND_FROM` the page cannot email a confirmation link (owner decision, 12 October 2026).
 
-## Structure and flow
+Managed Payments accepts only `hosted_page` and `embedded_page`; Stripe rejected `ui_mode: form` with it. Do not switch to plain Stripe to get around that: plain Stripe makes the owner the seller of record and the taxable person. The plain-Stripe branch (`STRIPE_MANAGED_PAYMENTS=false`, `ui_mode: form`, `dahlia` Stripe.js) stays in the code but is not the chosen setup.
 
-Only [stripeCheckoutForm.ts](client/src/lib/stripeCheckoutForm.ts) is a new implementation module. Existing billing handlers, components and shared pricing registries are extended; the twelve physical API handlers remain.
+## Gates before sales open
 
-1. Signed-in free learner chooses a plan and opens `/premium/checkout`.
-2. The page states the price before VAT, renewal/cancellation terms and required consent.
-3. Server validates identity, consent, entitlement and duplicate/open sessions, then creates a real subscription session. JSON includes `client_secret`, session ID, expiry and UI mode; no caching.
-4. Stripe.js loads after consent and mounts Stripe's payment iframe. Errors, expiry and unmount clean up the instance; retries require renewed consent. Card data never reaches devShark.
-5. Signed webhook or the account-owned success lookup verifies payment and updates entitlements through existing service-role routines. The browser cannot grant Premium.
-6. Existing subscribers use the Portal or cancellation page. Premium changes content access only, never grading or XP.
+- [ ] Owner: complete Stripe's identity verification for the account and confirm payments and payouts are no longer paused.
+- [ ] Confirm Managed Payments stays approved, then test tax by billing location, the monthly/yearly switch and the retained launch discount in the Portal.
+- [ ] Have a lawyer check the Terms, the checkout consent text and the order-button wording (§ 1826a of the Czech Civil Code, § 312k BGB), and confirm the trader details in `TRADER` (`client/product-catalog.ts`).
+- [ ] Run an isolated sandbox purchase with real webhook delivery, a failed renewal through grace to cancellation, and a refund. Preview deployments share the production database, so never run test-card sales there against real learner accounts.
+- [ ] Set `BILLING_ENABLED=true` in Production and redeploy. With a dedicated account, verify EUR prices before VAT, the coupon inside its window, sign-up → payment → Premium, and cancellation. Record the results in [docs/release-acceptance.md](docs/release-acceptance.md).
 
-## Setup and remaining activation gates
+## Sandbox testing
 
-- [ ] Owner: complete Stripe's **Verify Lukas Kouril's identity** task and confirm payments/payouts are no longer paused. API-key security verification is already complete; it is a separate task.
-- [ ] Confirm Managed Payments remains eligible/approved and test supported subscription/Portal behavior, including tax added by billing location, monthly/yearly switching and retained lifetime discount.
-- [x] Dashboard configuration: cancel the subscription after all retries fail; the first failed renewal remains overdue and active status requires the latest invoice to be settled. Failed-card-payment and card-expiry notification emails are enabled and saved. Actual failure/delivery behavior still belongs to the isolated sandbox test below.
-- [x] Managed Payments receipt configuration: Stripe always sends payment receipts, invoices, refund and credit-note emails from Link, independently of the general receipt switches. Confirm actual delivery during the isolated transaction test. See [official Managed Payments behavior](https://docs.stripe.com/payments/managed-payments/how-it-works).
-- [x] Owner decision on 12 October: cancellation stays available after sign-in only. Logged-out confirmation emails and Resend provisioning are deferred; `cancelByEmail=false` remains intentional.
-- [ ] Complete the existing trader/legal and hosting readiness gates referenced in [NEEDED.md](NEEDED.md); do not invent legal identity details.
-- [ ] Complete an isolated sandbox purchase, actual webhook delivery, failed renewal/grace/cancellation and refund. Preview currently shares production data: do **not** enable test-card sales against real learner accounts.
-- [ ] After all gates: enable sales in Production and redeploy. Verify EUR, prices before VAT, automatic 55% coupon until the window ends, signup → payment → Premium, and cancellation with a dedicated authorized account.
+Use the sandbox account `acct_1UKjRALFC1za5WgX` with matching `pk_test_` and `sk_test_`/`rk_test_` keys and isolated data. Cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` declines, `4000 0025 0000 3155` asks for authentication. Never use test cards in live mode.
 
-Dependencies: official `stripe` package already installed (22.6.2); Stripe.js loads directly from Stripe, without another client package. Public configuration may use `VITE_`; server/signing secrets must never use that prefix or appear in client builds, source, logs or chat.
+The sandbox has shown an embedded Managed Payments Checkout with EUR 4.99, a EUR 2.74 discount, EUR 0.47 Czech VAT and EUR 2.72 due. Nobody has confirmed a purchase. `npm run test:billing` runs the real handlers against a fake Stripe API and covers signed fulfilment, duplicates, consent and ownership; it proves no external payment.
 
-For price updates, create immutable Prices under this Product and update environment IDs. Keep any previously subscribed Price IDs in `STRIPE_PRICE_PREMIUM_LEGACY`; do not reprice existing subscriptions or remove their discounts. Keep the existing nine webhook event types: Checkout completed; subscription created/updated/deleted; invoice paid/payment failed; charge refunded/dispute created; early fraud warning created.
+## Changing prices
 
-## Test modes and evidence
+Create new Prices under the same Product and update the environment IDs. List every earlier Price that live subscriptions still bill in `STRIPE_PRICE_PREMIUM_LEGACY`. Never reprice existing subscriptions or remove their discounts.
 
-Use sandbox account `acct_1UKjRALFC1za5WgX`, matching `pk_test_`/`sk_test_` or `rk_test_`, and an isolated data fixture. Success card `4242 4242 4242 4242`, any future expiry/CVC; decline `4000 0000 0000 0002`; authentication `4000 0025 0000 3155`. Never use test cards in live mode.
-
-Actual sandbox API verified Managed Payments `embedded_page`, exclusive EUR 4.99 monthly price, 55% forever coupon and total EUR 2.25 before billing-location tax. Contract tests separately verify signed fulfillment, duplicates, consent and ownership; this is not proof of a completed external payment. An initial older SDK call failed to mount; the current Endive `createEmbeddedCheckoutPage` API was then verified in Chrome and headless Chromium. Actual Checkout displayed EUR 4.99, a EUR 2.74 discount, EUR 0.47 CZ VAT and EUR 2.72 due. No purchase was confirmed; complete the sandbox purchase/webhook gate before enabling sales. See [release acceptance](docs/release-acceptance.md) for final check outcomes and checks that could not run.
-
-Resources: [Stripe support](https://support.stripe.com), [Stripe MCP](https://docs.stripe.com/mcp), [Managed Payments integration](https://docs.stripe.com/payments/managed-payments/update-checkout), [Checkout form](https://docs.stripe.com/checkout/form/quickstart).
+Secrets never take the `VITE_` prefix and never appear in client builds, source, logs or chat. The server uses the `stripe` package (22.x); the browser loads Stripe.js straight from Stripe.

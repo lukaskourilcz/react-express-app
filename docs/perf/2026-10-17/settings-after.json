@@ -1,7 +1,0 @@
-{
-  "concurrentCallers": 8,
-  "providerReads": 1,
-  "expectedReads": 1,
-  "staleReadCannotOverwriteSave": true,
-  "outageShared": true
-}

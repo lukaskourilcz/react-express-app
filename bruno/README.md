@@ -1,9 +1,9 @@
 # devShark API - Bruno collection
 
-A [Bruno](https://usebruno.com) collection for the 12 Vercel serverless
-functions under `api/`. Bruno is a free, offline, Git-friendly API client - the
-requests live here as plain-text `.bru` files so they version alongside the
-code and diff in review.
+A [Bruno](https://usebruno.com) collection of requests against the twelve
+Vercel functions under `api/`. Bruno is a free, offline API client; the
+requests are plain-text `.bru` files, so they version with the code and diff
+in review.
 
 ## Usage
 
@@ -28,9 +28,8 @@ npx @usebruno/cli run bruno --env Local
   auth-gated endpoint (`flashcards`, `user/*`, `roadmap?resource=progress`,
   `play/*`) is hit **without** a Bearer token and asserts `res.status: eq 401`;
   `admin/*` answers 403 `forbidden` (`requireAdmin` in `lib/admin-auth.ts`),
-  and its request asserts that. This turns "this endpoint must reject
-  unauthenticated callers" from a hope into a runnable check - run it in CI or
-  before a deploy to catch an accidentally-unguarded route.
+  and its request asserts that. Run the folder before a deploy to catch a
+  route that lost its guard. CI does not run this collection.
 
 To exercise the authenticated *happy path*, set a `token` var in your
 environment (a Supabase access token) and add `auth: bearer` to a copy of the

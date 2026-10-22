@@ -8,10 +8,16 @@ defines system typography, rounded materials, quiet elevation and translucent
 chrome. These rules replace the paper stock and textured-dialog treatments
 below. Preserve the Deep End blue-green background in dark mode. Brand geometry,
 accent, content and access rules still follow the existing sources.
+`client/src/main.tsx` sets the attribute before the first paint, and
+[the design system](docs/design/design-system.md#apple-layer) lists what the
+layer styles. Keep the pill shape to buttons, the header nav links, tags,
+compact filters such as the topic pills, small inline toggles and compact
+segmented controls; cards, panels, inputs, radio cards, drawer links and
+dialogs use the radius tokens.
 
 These rules govern every visual change in this codebase. They come from the
-`Deep End v2` design handoff (the `.dc.html` references + README). Read them
-before touching any component, style file, or brand mark. The design tokens
+`Deep End v2` design. Read them before touching any component, style file, or
+brand mark. The design tokens
 themselves live in `client/src/styles/astryx-theme.css` (the `--ss-*` custom
 properties) — this file is the *behavioural* contract that sits on top of them.
 
@@ -63,12 +69,6 @@ bottom edge: emergence starts below it, and dives travel diagonally downward.
 
 ## 4. The wave-variation rule
 
-App scrollbars keep a stable gutter and a transparent track. Shared delegated
-activity handling reveals only the active scroll container's themed thumb,
-then hides it after 1.1 seconds idle. WebKit thumbs are 4px; Firefox uses its
-native thin width. Scrolling and keyboard navigation also reveal the thumb;
-forced-colors mode keeps it visible. Do not add per-component scrollbar rules.
-
 `generateWaterline()` assigns progress waves a stable randomized wavelength,
 amplitude, direction, speed and phase. Coding track decoration opts into zero,
 one or two fins with varied sizes and separated positions. These decorative
@@ -78,8 +78,8 @@ progress. Quiz and typing progress keep their fin at the progress endpoint.
 Every wavy connector gets **its own** amplitude, phase and wavelength — no two
 waves in a path are the same tile. A roadmap path, a set of level connectors, a
 row of ticks: vary `amp` / `dir` / `wavelength` per segment so the path reads as
-living water, not a repeated stamp. (See the `pathLevels` wave generation in
-`Home.tsx` for the reference implementation.)
+living water, not a repeated stamp. (See `pathWave` in `landing/LandingKit.tsx`, used by
+`Home.tsx`, for the reference implementation.)
 
 ### 4a. The waterline bank
 
@@ -238,3 +238,12 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   reveal a fin. Feedback must remain understandable without animation.
 - Test narrow widths, both themes, keyboard focus, disabled
   controls, slow responses, failure/retry and reduced motion.
+
+## 9. Scrollbars
+
+App scrollbars keep a stable gutter and a transparent track. Shared delegated
+activity handling (`lib/scrollbarActivity.ts`) reveals only the active scroll
+container's themed thumb, then hides it after 1.1 seconds idle. WebKit thumbs
+are 4px; Firefox uses its native thin width. Scrolling and keyboard navigation
+also reveal the thumb; forced-colors mode keeps it visible. Do not add
+per-component scrollbar rules.

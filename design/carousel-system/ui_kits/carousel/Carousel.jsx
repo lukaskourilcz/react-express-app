@@ -73,11 +73,11 @@ const Free = ({ wave, theme = 'light', kicker = 'Free, for every account' }) => 
 const Price = ({ wave, theme = 'dark' }) => (
   <Slide theme={theme} label="price">
     <Kicker wave={wave}>Premium · launch price</Kicker>
-    <BigNumber value="€1.80" unit="a month" />
+    <BigNumber value="€2.25" unit="a month" />
     <Panel style={{ padding: '48px 20px 20px' }}>
-      <Body strong muted style={{ padding: '0 28px', lineHeight: 1.3 }}>or €18 a year, VAT included</Body>
-      <Body size="42px" style={{ margin: '32px 0 0', padding: '0 28px' }}>Everything in devShark. 55% below the regular price of €3.99 a month, which applies from 3 November 2026. Kept for the lifetime of your subscription. Cancel anytime.</Body>
-      <TintRow>Offer ends 2 Nov 2026</TintRow>
+      <Body strong muted style={{ padding: '0 28px', lineHeight: 1.3 }}>or €26.95 a year, before VAT</Body>
+      <Body size="42px" style={{ margin: '32px 0 0', padding: '0 28px' }}>Everything in devShark. 55% below the regular price of €4.99 a month, which applies to subscriptions started from 1 December 2026. Kept for the lifetime of your subscription. Cancel anytime.</Body>
+      <TintRow>Offer ends 30 Nov 2026</TintRow>
     </Panel>
   </Slide>
 );
@@ -104,11 +104,11 @@ const Discount = ({ wave }) => (
 const PriceShort = ({ wave }) => (
   <Slide theme="light" bigFin="small" label="2 · price">
     <Kicker wave={wave}>The price</Kicker>
-    <BigNumber value="€1.80" unit="a month" />
+    <BigNumber value="€2.25" unit="a month" />
     <Panel fill={false} style={{ padding: '40px 20px 20px', gap: 28 }}>
-      <Body strong muted style={{ padding: '0 28px', lineHeight: 1.3 }}>or €18 a year, VAT included</Body>
-      <Body size="42px" style={{ padding: '0 28px' }}>The regular price of €3.99 a month applies from 3 November 2026. Cancel anytime.</Body>
-      <TintRow>Offer ends 2 Nov 2026</TintRow>
+      <Body strong muted style={{ padding: '0 28px', lineHeight: 1.3 }}>or €26.95 a year, before VAT</Body>
+      <Body size="42px" style={{ padding: '0 28px' }}>The regular price of €4.99 a month applies to subscriptions started from 1 December 2026. Cancel anytime.</Body>
+      <TintRow>Offer ends 30 Nov 2026</TintRow>
     </Panel>
   </Slide>
 );

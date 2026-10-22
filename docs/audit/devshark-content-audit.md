@@ -1,12 +1,30 @@
 # devShark content audit — the question bank
 
-> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+## Current state (22 October 2026)
+
+This file is an append-style record of the content review. Each dated entry keeps the evidence of its day; later entries add to it and leave earlier ones as they were. devShark has shipped English only since 21 October 2026, so the Czech passes that earlier entries describe no longer ship.
+
+The ledger, `docs/audit/devshark-content-ledger.json`, holds one row per reviewed item, and `scripts/build-curation-registry.ts` generates the registry the server reads from it:
+
+- 2,288 question records: 1,979 rewritten, 155 retained, 152 retired and 2 quarantined. Q001 to Q013 revised all 64 eligible answer-length candidates (last commits `292b11fd` and `dff171a3`, merged in PR #473 on 17 October).
+- 769 coding-task records, one per issued task: 725 rewritten in batches B001 to B139 (finished 17 October) and 44 retained, the 29 DSA Foundations and 15 DSA Advanced tasks added on 21 and 22 October.
+- The 45 hidden system-design tasks have no ledger rows. `docs/audit/system-design-review-2026-10-22.md` reviews them, and PR #558 fixed the 29 it marked needs-fix. The track stays hidden until the owner decides (#391).
+
+The FDE path reviews live outside the ledger: 356 records in `docs/audit/wip/native/*.jsonl` (38 lessons, 121 activities, 197 check questions) and the 18 original DSA reading records in `docs/audit/wip/native/learn/`. CI runs `audit:native-reviews`, which fails when a record no longer matches the content hash it reviewed.
+
+A model performed every review and recorded its evidence; no record is an independent human review.
+
+Open, owner only: the content decisions under #391, including whether to publish the system-design track, and the production-data decisions under #236 (the July `question_edits` hides and the unfiltered bank snapshot).
+
+A "pending" or "remains open" line in the entries below records the state on its date. Every issue and PR those entries name as open is now closed or merged, apart from #190, #236 and #391.
 
 ## Current individual source checkpoint — B139 and Q013, 17 October 2026 UTC
 
 All 725 issued coding tasks, 263 native records and 2,168 question records have current individual model reviews. Q001–Q013 revise all 64 eligible answer-length candidates, ending with commits `292b11fd` and `dff171a3`. The final batch contains the four remaining questions rather than adding an artificial fifth identity. The 1,820-item effective-bank copy sweep passes with zero artifacts; the original diagnostic now flags zero eligible/effective items. Its 41 already-withheld candidates remain withheld. This is a finite reading aid, not proof that all answer cues have been eliminated.
 
 The #472 release checkpoint below now deploys all 725 coding/263 native reviews and the first 40 focused question revisions. PR #472 freezes ten final coding reviews, one existing Comments viewer revision and Q001–Q008 (40 question revisions) at `9d7e877ba449931dd3b0d2ca71bb02a8a3a2eba8`. The other 24 question revisions are committed on `codex/bank-residual-q009-onward`. All 485 deletion overrides remain preserved; availability stays 2,014 statically eligible and 1,820 effective. Future-review gating, engineering #458/#461/#463/#466, guarded releases and UI #435/#444 remain. This is same-session model/finite execution evidence; owner decisions, draft #365 and dedicated acceptance in #190 remain open.
+
+*22 October 2026:* PR #473 merged `codex/bank-residual-q009-onward` on 17 October as `bb37191a`; #435, #444, #458, #461, #463 and #466 are closed, and PR #365 merged on 21 October with the export switched off.
 
 ## Release checkpoint — 17 October 2026 UTC, PR #472
 
@@ -17,6 +35,8 @@ Exact READY production dpl_Dgxd1rrjq86aa6hSNvf57m366ZUa matches the merge SHA/pr
 Production now contains all 725 issued coding reviews, 263 native records, the Comments viewer revision and the first 40 focused question revisions. The required planning notes for all five briefs are shipped, completing #470. Another 24 question revisions, the completed coding future-review gate and engineering #458/#461/#463/#466 are frozen in #473 at add4bb1aabaa598677f473353eadb7d39577495d. Its exact READY preview dpl_DPvNZDFAbka15gLN1KK9BR21DAJ3 passes both whole helpers with eleven general checks/eight old public Submits and eleven guest locks; required run 39004064701 and production acceptance remain pending. All 64 eligible question revisions are individually complete in source, with zero remaining eligible length flags and a clean 1,820-item copy sweep. Preserve all 485 deletion overrides, 154 content-withheld questions and 45 hidden system-design tasks.
 
 This is a dated release checkpoint. Later exact production evidence is maintained in the linked PR/issue updates rather than inferred from staged source. Profile #435 and startup-guide #444 follow separately; owner/draft #365 and #190 holds remain.
+
+*22 October 2026:* PR #473 merged on 17 October as `bb37191a`, so production carries all 64 question revisions. #435 and #444 are closed, and PR #365 merged on 21 October.
 
 ## 15 October continuation — five coding items b043
 
@@ -2436,6 +2456,7 @@ health and correct/wrong React/JavaScript grading checks. None of those runs
 supplies missing item-level scores.
 The coding editorial wave remains open; the old count of 249 below describes
 the September wave only.
+*17 October 2026:* the coding wave finished with all 725 issued tasks reviewed (B139).
 
 The native FDE/DSA catalogues are now inventoried by exact English content:
 24 modules, 38 lessons, 112 activities and 113 individual check questions —
@@ -2513,6 +2534,7 @@ Unique's slower valid alternative still passes correctness; its average O(n)
 goal states the membership-cost assumption and is not a universal engine claim.
 These execution results approve no other task. Ten of the 725 issued coding
 tasks now have current model records; the wider audit remains open.
+*17 October 2026:* the coding wave finished with all 725 issued tasks reviewed (B139).
 
 ### Native wave 1 — DSA growth and space, 14 October 2026
 
@@ -2848,7 +2870,8 @@ style — re-running the executable checks, and accepted, amended or rejected
 it; a rejected rewrite becomes a quarantine, so nothing reaches a learner on
 one reading. Pairs flagged as similar across batches were decided once by a
 third pass (`docs/audit/wip/DUPLICATES-BRIEF.md`). Finally a localisation
-pass wrote the Czech for every rewritten field (`docs/audit/wip/CS-BRIEF.md`),
+pass wrote the Czech for every rewritten field (`docs/audit/wip/CS-BRIEF.md`,
+removed on 21 October 2026 with the second language and kept in Git history),
 keeping the served Czech verbatim where the first reviewer had verified it
 and only the hint changed; a mechanical parity check confirms four options,
 unchanged code and identifiers, and nothing left in English.

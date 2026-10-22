@@ -1,6 +1,29 @@
 # Release acceptance matrix
 
-> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+## Current state (22 October 2026)
+
+This file is an append-style evidence ledger. Each dated entry records what someone checked that day, and later entries leave earlier ones as they were. The entries from 15 October back to 8 September sit at the top; from "2026-09-11 — eight free-tool recommendations" on, the file runs oldest to newest, so the newest entry is at the end.
+
+Released:
+
+- `main` is at `1f5a3b11`, the merge of PR #559 (B14, #510). Vercel deploys `main` to https://devshark.app.
+- Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
+- Learn has three sections: Web Developer, Software Engineer and Forward Deployed Engineer. DSA lives in Learn as the topics `dsa` and `dsa-advanced`. The standalone DSA path is retired, and `/roadmap/paths/dsa-foundations/*` answers 308 to `/learn/software-engineer?topic=dsa`.
+- The FDE path is built and merged (epics A to E are closed) but switched off: Production does not set `LEARNING_PATH_FDE_ENABLED`. No Vercel environment sets an FDE or marketing-export variable, so the OwnDashboard marketing export stays inactive too.
+- devShark has shipped English only since 21 October 2026. Entries before that date describe a second language (Czech) that no longer exists.
+- Merchandise stays paused behind `MERCH_ENABLED`, and Stripe billing (#221) is not live.
+- Content review totals live in the "Current state" section of `docs/audit/devshark-content-audit.md`.
+
+Open, all owner items (`NEEDED.md` carries them):
+
+- Set `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production and redeploy. The entry "B14 FDE release verification — 22 October 2026" is the evidence.
+- Approve new Terms wording: `legal.terms.plans.premium` still promises "the FDE and DSA learning paths".
+- #190: confirm that GitHub Actions failure e-mails reach you, and add an external uptime monitor for `/api/health`. The scheduled health workflow ran 6 of 96 times in 24 hours.
+- #391: the remaining owner decisions, including whether to publish the reviewed system-design track. #236: production-data decisions. #221: Stripe billing.
+- Optional: escalate vercel/vercel#16109, the source of the DEP0169 warning (#477, closed).
+- Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet.
+
+Of the issues these entries name, only #190, #221, #236 and #391 are still open. A "remains open" or "pending" line about any other issue or PR records the state on that entry's date. On 22 October 2026 the owner dropped Cloudflare Turnstile (#202), the workbench handoff with the unmerged `claude/elegant-cori-h9cdgb` work (#208; the branch survives as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`), the StudyShark promo video and the October marketing plan (#239). Entries that mention them describe past work, not plans.
 
 ## 15 October — local structuredClone own-key correction (#403)
 
@@ -518,9 +541,9 @@ were repaired. Server React execution now uses disposable isolated VMs.
 | Hostile submission verdict integrity | QuickJS regression PASS; React OPEN — #191; VM isolation alone does not resolve this |
 
 The mobile workbench still requires a larger screen for editing, as before.
-See the [hardening follow-up](./launch-hardening-2026-09-16.md) and [full audit](./launch-audit-2026-09-15.md)
-for exact scope, live-account changes, preview evidence and outstanding gates,
-and [operations](./react-grading-operations.md) for snapshot maintenance.
+The hardening follow-up (`docs/launch-hardening-2026-09-16.md`) and the full audit (`docs/launch-audit-2026-09-15.md`),
+both deleted on 22 October 2026 and kept in Git history, recorded the exact scope, live-account changes, preview evidence and outstanding gates.
+[Operations](./react-grading-operations.md) covers snapshot maintenance.
 
 ## Keyboard shortcut keycaps — 2026-09-15
 
@@ -848,6 +871,8 @@ accounts; cash checkout in this app stays off.
 **Learning-path features are behind their own switches.**
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.
+
+*22 October 2026:* the DSA path is retired and no application code reads `LEARNING_PATH_DSA_ENABLED`. `LEARNING_PATH_FDE_ENABLED` stays unset in Production until the owner switches FDE on.
 
 **The item-level content audit has run over the whole question bank.** All
 2,128 served devShark questions have been read twice, rewritten or retired,
@@ -1472,6 +1497,7 @@ What changed: five fixes from the audit report (#231), the markdown sweep (#234)
 - Every segmented control shows the track through an unselected segment in both themes; the rule lives in Astryx's `astryx-base` layer.
 - Stale Markdown is corrected or deleted, `NEEDED.md` carries valid markers on every task, and the exports, scripts and the one file that nothing imports are gone.
 - Not ported: the Classroom rate-limit fix `fa884b7` from `claude/elegant-cori-h9cdgb`. `git cherry-pick -n fa884b7` conflicts in `lib/rate-limit.ts` (D2 already added an `identity` argument with another key scheme) and in `scripts/test-launch-contracts.ts`. `NEEDED.md` carries it as an agent task.
+  *22 October 2026:* the fix landed by hand on 26 September ("Classroom rate limits (ported from `fa884b7`)" below). The owner dropped the branch's other work (#208, closed not planned) and archived it as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`.
 
 Local evidence, all executed on the final tree:
 
@@ -1604,7 +1630,7 @@ Local evidence, on `2abfd35` (the commit after it adds this section only):
 
 | Check | Result |
 | --- | --- |
-| The #230 acceptance grep over every Markdown file | three lines: the dated history lines in `docs/design/brand-system.md` and `docs/design/design-thesis.md`, and line 389 of `SECOND-HANDOFF-25-9-2026.md`, the dated handoff that orders this sweep and names the old heading |
+| The #230 acceptance grep over every Markdown file | three lines: the dated history lines in `docs/design/brand-system.md` and `docs/design/design-thesis.md`, and line 389 of `SECOND-HANDOFF-25-9-2026.md` (deleted on 22 October 2026, kept in Git history), the dated handoff that orders this sweep and names the old heading |
 | `npm run typecheck:api` | exit 0 |
 | `npm run test:launch` | exit 0; with a planted `navigate('/support')` in `Quiz.tsx` exit 1, and with `questionCount` back at 2487 exit 1 |
 | `npm run build`, `npm run check:bundle` | exit 0; 218,282 of 243,000 gzip bytes |
@@ -2772,6 +2798,8 @@ checking passed (238 probes, zero issues or unprobed routes). Both production de
 audits reported zero vulnerabilities. `git diff --check` passed. Meta OAuth and professional
 account conversion remain pending; these checks do not establish a live publishing connection.
 
+*22 October 2026:* the owner closed the October marketing plan (#239) as not planned, so Meta OAuth and the account conversion are no longer planned. This repository posts nothing to social networks.
+
 ## 2026-09-27 — one state read in flight per match client (COALESCE)
 
 A Classroom answer broadcasts `match_updated` on a channel with `broadcast.self = true`, and each client read `/api/play/state` once per broadcast. With 30 learners on one address that came to about 930 reads per question against a bucket of 600 a minute (NEEDED.md). The server bucket stays as it is. Each client now keeps at most one read in flight and follows a burst with one trailing read.
@@ -3010,6 +3038,8 @@ The full gate failed once on `public.spec.ts`: axe read the Czech guide's "Procv
 
 Three commits from `claude/elegant-cori-h9cdgb`, ported by hand to main at `035d853`: `9abf34a`, `1751a2c` and `d0e78e1`. SubjectPicker, `Sharkira.css`, `/sprint`, the Czech key and the other subjects' accents are gone from main or out of scope, so they stay out.
 
+*22 October 2026:* the owner dropped the branch's remaining work (streak extras, weekly leagues, sprint mode, Lichess puzzles, the package merch cap; #208, closed not planned). The branch survives only as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`; nobody replays its migrations 038 to 042.
+
 ### Contrast
 
 `client/src/lib/contrast.ts` derives `--brand-accent-on-soft`: the accent's hue, with lightness stepped until the text clears 4.5:1 on its own 12% tint over the worst surface of the mode. `ColorModeContext` writes it and `reset.css` carries the same values for the first paint. `--brand-accent` keeps its hex.
@@ -3076,7 +3106,7 @@ Not run: Storybook (no story changed), `check:responsive`, the dependency audits
 
 ## DESIGN-AUDIT-2026-09-27
 
-Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in the round-one design brief (`design-audit/CLAUDE_CODE_PROMPT.md`, removed on 2026-09-28 and kept in Git history), one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` lists every ID with its commit and any deviation.
+Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in the round-one design brief (`design-audit/CLAUDE_CODE_PROMPT.md`, removed on 2026-09-28 and kept in Git history), one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` (deleted on 22 October 2026, kept in Git history) listed every ID with its commit and any deviation.
 
 | Check on the final `audit/p2` | Result |
 | --- | --- |
@@ -3110,7 +3140,9 @@ Issue #239, commits `6b2f416` to `ac30c86`, PR #268 (fast-forwarded into `main`)
 | GitHub Actions `verify` on PR #268 | pass (run 36360052124) |
 | Preview deployment `dpl_HQkTK2LdszCLqNZrzi3Z78HQaDa7` | `/daily/<date>` and `/coding/<track>/<id>` serve their own heads and PNGs; an unwritten date or task id falls through to the app (200); a real answer check against the preview API graded and explained at 390 and 1280 px |
 
-Not checked here: link previews inside Threads and Instagram, and the PostHog person properties; both are owner items in `NEEDED.md` ("Marketing launch").
+Not checked here: link previews inside Threads and Instagram, and the PostHog person properties; both were owner items in `NEEDED.md` ("Marketing launch") until the owner dropped the marketing plan on 22 October 2026.
+
+*22 October 2026:* the owner closed #239 as not planned. The shipped features stay (UTM on the first pageview, `/daily`, the OG images, `/changelog`, referral sharing); the remaining launch items, these two checks included, are dropped.
 
 
 ## Homepage launch announcement — 28 September 2026
@@ -3215,7 +3247,7 @@ on the associated pull request.
 
 Owner-selected Managed Payments uses supported `embedded_page`: Stripe's actual API refused `form` for this merchant model. The optional plain branch implements Checkout Form SDK with the supplied appearance. Required consent is collected before session creation; server metadata preserves the waiver/version/timestamp and existing signed fulfillment records it. No schema or grading changes; twelve API handlers remain.
 
-Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../../STRIPE_INTEGRATION_TODO.md).
+Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../STRIPE_INTEGRATION_TODO.md).
 
 Premium membership disables Start free with an explanatory tooltip and colors the header diamond gold. Duplicate page kickers are replaced by green semantic main headings and the existing varied wave. Native select arrows are inset by 1rem. React success omits the complexity/first-pass/repeat-XP prose while retaining actual server XP, navigation and genuine exceptional states. Coding toolbar controls show icons and accessible tooltips below 1220px.
 
@@ -4432,7 +4464,7 @@ PR #428 passed required run38790894296 at exact head bf88c1e0e59cb628075924c229f
 
 ## #422 runtime implementation — 15October2026
 
-Pinned shared wasm fixes the37 constructed Node24/worker sort cases and compiled React guest regression. Separate-source local rebuild is byte-identical; types, launch, full grading/Learn, build, native bindings, unused/security and zero-vulnerability dependency audits pass. Full coding run had one9352ms React negative-budget failure; its focused unchanged-task rerun passes. Required Linux rebuild/full CI and exact preview/production acceptance are pending. See [bounded runtime evidence](audit/quickjs-sort-2026-10-15.md); #422 stays open.
+Pinned shared wasm fixes the37 constructed Node24/worker sort cases and compiled React guest regression. Separate-source local rebuild is byte-identical; types, launch, full grading/Learn, build, native bindings, unused/security and zero-vulnerability dependency audits pass. Full coding run had one9352ms React negative-budget failure; its focused unchanged-task rerun passes. Required Linux rebuild/full CI and exact preview/production acceptance are pending. The bounded runtime evidence was in `docs/audit/quickjs-sort-2026-10-15.md` (deleted on 22 October 2026, kept in Git history); #422 stays open.
 
 ## B074 five-item audit — 15October2026
 
@@ -5736,7 +5768,9 @@ Issue #364: the authenticated, read-only `GET /api/quiz/questions?resource=marke
 
 PR #365 is merged at 1bf6cd56b06f2bb7e8dfbbb14d57ab7028bff368. Frozen head 58133cf1 passed required run 39618238380: verify 41m16s, SQL 36s. READY production dpl_8FBFfVNS5cpx2ZixJ8Q96ubEnRGU matches the merge SHA. Read-only guest checks against devshark.app after the deploy: `/`, `/quiz` and `/learn` answer 200; `/api/health` answers 200 with database, service role and rate limiter OK; the export answers 503 `marketing_not_configured` with and without a bearer, because `DEVSHARK_MARKETING_EXPORT_SECRET` is not set.
 
-The export is not switched on. Its server secret, the n8n credential and an authenticated production check stay with the owner (NEEDED.md, "Configure OwnDashboard marketing source integration after PR review"). No export, publication, account or database write happened in production. The verify job took 41 minutes because the `package.json` change triggered the QuickJS rebuild; the job's limit is 45.
+The export is not switched on. Its server secret, the n8n credential and an authenticated production check stayed with the owner (NEEDED.md, "Configure OwnDashboard marketing source integration after PR review", removed when the owner dropped the marketing plan on 22 October 2026). No export, publication, account or database write happened in production. The verify job took 41 minutes because the `package.json` change triggered the QuickJS rebuild; the job's limit is 45.
+
+*22 October 2026:* the owner dropped the marketing plan (#239, closed not planned), and the preview-only `DEVSHARK_MARKETING_EXPORT_SECRET` was removed. No environment sets the secret, so the export stays inactive and the setup item is gone.
 
 ## Learn section registry and plan membership — 21 October 2026
 
@@ -5765,6 +5799,8 @@ Issue #493: the DSA path's 30 code exercises become 29 coding tasks (the binary 
 Local evidence, Node 24.22.0, at the branch head: `test:coding` passed in full (799 tasks, 754 issued, 480 Easy, 179 Medium, 95 Hard; 528 tasks reject a constant answer; 163 known answers keep their verdict). The first full run stopped at a 20-second timeout in `react-easy3-fetch-a-page`, a task this change does not touch, at load average 26 from parallel work; that task passed alone and the rerun passed in full. The ledger generator regraded 225 cases of the 29 new hashes in the production QuickJS grader. `test:launch`, `test:coding-auth`, `test:grading-integrity` (with the new DSA level 3 parent-attempt test), `test:paths`, `test:path-authority`, `audit:native-reviews` (263/263), `test:harness` (206 assertions in Playwright Chromium), the three typechecks, `check:unused`, `check:security`, `build`, `check:public` (754 share pages) and `check:bundle` passed. The initial download measured 240,779 gzip bytes against the unchanged 241,651 budget: building the free set on first use took the id list out of `main`. `check:responsive` passed 56 light probes and 15 dark ones, the Algorithms list and a DSA task route included, on a preview at port 4473.
 
 Not run: `ci:parity` (it needs port 4173, which other work held), the 18 browser specs, Storybook and `test:sql` (no migration). The workbench brief's "DSA · Level n" was not seen in a browser, because the preview serves no task API; the list row was, at 360 px light and 1280 px dark. The reviews are same-session model reviews, not an independent reading. The issue stays open until a checked merge.
+
+*22 October 2026:* PR #530 merged this work and #493 is closed; see "DSA coding tasks and FDE artifacts".
 
 Review fixes, same day. A DSA task on a held level (1, 2, 10, 11, 14) no longer names that level: `DSA_LEVELS_AWAITING_E3` moved to `shared/coding-catalog.ts`, where `hasLearnLevel` reads it, so the linear search stopped reading "DSA · Level 10" (Sorting Algorithms). Each criterion-tagged known wrong answer must now fail a check tagged with its criterion, not just fail somewhere; all 103 do. A visible DSA check carries a short `shown` form for the Results row, so the longest row is 319 characters instead of 2,618. The halving senior board halves with `Math.floor` instead of a 32-bit shift, and the prompt bounds n at `Number.MAX_SAFE_INTEGER`; `Math.floor(Math.log2(n))` is now a known wrong answer (49 for 2^49 - 1). The max-gap senior board reduces once instead of spreading into `Math.max`, which QuickJS refuses past 65,534 arguments. The queue prompt names its three counted operations correctly. 22 ledger rows took new hashes and a regrade of 177 cases.
 
@@ -5861,6 +5897,8 @@ Final head b08c280661776ae62803a68a78b50facdd7002a5 composes with B2 and passes 
 
 This establishes the observed guest flow, not authenticated production grading, physical-device acceptance, or independent-human review of the whole catalogue. E4 and E5 remain separate open work.
 
+*22 October 2026:* E4 (#495) and E5 (#496) merged later that day; see "DSA Advanced and minimal Learn topic cards" and "Standalone DSA path retired".
+
 ## B12 free FDE taster release — 22 October 2026
 
 Issue #508 allows free enrollment, the diagnostic and first required FDE module, with server checks at both start and submit. Later work requires Premium; stored verified/self-reviewed work can reopen after entitlement lapses. Client hub, overview, resume and picker mirror the server rule. Reward amounts, owner isolation and the twelve physical handlers remain unchanged.
@@ -5868,6 +5906,8 @@ Issue #508 allows free enrollment, the diagnostic and first required FDE module,
 Fast parity passed 28 checks with 25 skipped at eea6ae42. Final head 9dc6743dae93363bab8b9ba06b1b278c5fc67c7a includes actual B2/E3 main, passes ten selected checks and 24 browser tests. One earlier browser invocation used the wrong base-URL variable; the corrected TEST_BASE_URL invocation supplies the quoted 24 passing tests. PR #551 merged at 920ac1f43984307947d11b501cd2c1f70d6ef211. Required run 39730505010 passed verify (2s aggregate after dependent jobs) and SQL (34s). READY production dpl_HMA8Td1EmucESFsZAwzKC2UnaBRe matches that merge. Read-only guest browser acceptance at 390px confirms the canonical FDE outline is 200, with five delivery phases, 13 competencies, no overflow, page errors or API writes. Evidence: /private/tmp/codex-b12-production-smoke.log.
 
 The production FDE switch remains disabled pending B14. Authenticated production taster submission and completion are not claimed; no production learning data, migration or feature flag changed during acceptance.
+
+*22 October 2026:* B14 (#510) merged in PR #559. The FDE switch now waits only on the owner.
 
 
 ## B13 public FDE positioning release — 22 October 2026
@@ -5880,6 +5920,8 @@ READY production dpl_7qigZgX2t7RY4yPTqRdKggxwSibx matches that exact merge. Read
 
 A deployment-scoped 15-minute runtime scan found two stderr entries categorized as errors, both Node 24 DEP0169 url.parse deprecation warnings on /api/quiz/roadmap. The targeted runtime-error query returned that same warning group; no other group was returned. The accepted guest requests were 200. This is not a claim of warning-free logs or authenticated production completion. The warning is recorded for follow-up; FDE stays disabled until B14.
 
+*22 October 2026:* #477 is closed. The DEP0169 warning comes from Vercel's Node launcher (upstream vercel/vercel#16109), not from devShark code. B14 merged in PR #559; FDE stays off until the owner sets the Production variable.
+
 ## DSA Advanced and minimal Learn topic cards — 22 October 2026
 
 Issue #495 (PR #556, merge 4206cc16): DSA Advanced joins Software Engineer as an opt-in Premium topic, with 15 levels, 120 questions and 15 new plus 9 placed coding tasks. Required run passed after one spec fix (1327b1af): the topic-card helper matched by prefix and found both DSA cards. Owner request (PR #557, merge 132633be): Learn topic cards show the logo, the topic name and the levels line only; the "Also in …" line and its accessible-name suffix are gone, and section membership is unchanged. Main had moved after #557's CI, so the merged tree was rechecked locally before merging: types, client, launch, build, bundle, and learning-release plus learn-sections (32/32).
@@ -5891,6 +5933,8 @@ A read-only guest check on devshark.app after the deploy, in headless Chromium a
 Issue #496 (PR #555, merge c1d1c1dd67b6d07e99b972508caaa7e3322104e1): the DSA Foundations learning path is retired; FDE is the only path. Its exercises remain the Coding tasks E2 created: all 769 coding-index ids are identical before and after the merge, and the graders and solutions are unchanged apart from a file rename. The eighteen original `dsa-v1-*` readings are still served by Learn and stay bound to their eighteen archived lesson reviews by content hash (`audit:native-reviews` reports 18/33 Learn lessons); the other 111 path records moved verbatim to `history/`, none rescored or rebound. Stored `dsa-foundations` enrollments are left out of the enrollment list and Today; their progress and activity routes answer 404. `/roadmap/paths/dsa-foundations` and everything under it answer a permanent 308 to `/learn/software-engineer?topic=dsa`. Every authority script kept or gained assertions (path-authority 17→21, handler contracts 63→71, lesson contract 42→47). Head 0cebac71 passed required run 39758404194 (coding 21m49s, browser 14m10s) with main already merged into it.
 
 Open owner items: the Terms of use still name "the FDE and DSA learning paths"; remove `LEARNING_PATH_DSA_ENABLED` from Vercel if any environment still sets it.
+
+*22 October 2026:* no Vercel environment sets `LEARNING_PATH_DSA_ENABLED`, and no application code reads it. The Terms wording is still open.
 
 ## Migration 066 in production — 22 October 2026
 
@@ -5953,5 +5997,7 @@ Issue #510 verifies the FDE release on the merged head of epics A to E (main 1b7
 **Preview deployment, guest only.** `dpl_7kMw6eye5C7WppeumxmNCj67zMuX` (b287b937, the final application code; an earlier pass on `dpl_FTUYvF1WbFsKCJeRgASiN2apL7aa` at ec1c1da8 gave the same results) runs with a branch-scoped Preview `LEARNING_PATH_FDE_ENABLED=true` and shares the production database, so it was checked read-only and signed out, at 390 and 1280: `/api/health` 200 healthy; the catalog reports FDE `available`; the FDE section, the hub, M01 and its first activity answer 200 with their h1, show the sign-in prompts ("Sign in to record graded work", "Signing in is what makes results stick"), no horizontal overflow, no page errors and no API write. The only outbound POSTs were Sentry pageload transactions (10 % sampling), not errors.
 
 PR #559 is open and not merged; the owner merges it. Frozen head c6667b01 passes required run 39815358042: coding 24m16s (the slowest gate), browser 13m52s with all 20 browser runs, tests 4m19s, static 2m46s, SQL 38s, verify green. The commit after c6667b01 adds only this entry. There is no production deployment of this work yet; production `dpl_BuNpmNWHMWfv4JLxQ2mchLqLBVp2` (B11's merge, READY) still serves FDE off.
+
+*22 October 2026:* PR #559 merged as `1f5a3b11` and #510 is closed. The branch-scoped Preview `LEARNING_PATH_FDE_ENABLED` was removed, so no Vercel environment sets it; production serves FDE off until the owner switches it on.
 
 Non-claims: no authenticated run against production or the preview, no production enrollment, submission or Premium check; the walk-through's accounts were dedicated local accounts and its database a local one. No physical devices or assistive technology were used; field data (real learners' use, completion and error rates) is unknown until the switch is on. The production switch is not set by this work.

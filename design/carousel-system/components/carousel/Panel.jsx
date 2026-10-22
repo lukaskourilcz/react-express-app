@@ -25,7 +25,7 @@ export function Body({ size = 'var(--type-body)', strong = false, muted = false,
   return <p style={{ margin: 0, font: `${strong ? 'var(--weight-body-strong)' : 'var(--weight-body)'} ${size}/var(--leading-body) var(--font-body)`, color: muted ? 'var(--panel-text-2)' : 'inherit', textWrap: 'pretty', ...style }}>{children}</p>;
 }
 
-/** A tinted single line at the foot of a panel: “Offer ends 2 Nov 2026”. */
+/** A tinted single line at the foot of a panel: “Offer ends 30 Nov 2026”. */
 export function TintRow({ children }) {
   return <div style={{ marginTop: 'auto', padding: '22px 28px', background: 'var(--panel-tint)', borderRadius: 'var(--radius-row)', font: 'var(--weight-body-strong) var(--type-footer)/1 var(--font-body)' }}>{children}</div>;
 }

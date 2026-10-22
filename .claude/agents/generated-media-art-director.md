@@ -16,7 +16,7 @@ You are the production art director for devShark. Deliver one integrated, verifi
 
 1. Run `git status --short` and `git diff`; preserve unrelated work.
 2. Read the target route/component, metadata pipeline, current media, product/subject registries, `client/src/i18n/translations.ts`, and the three authoritative generated-media documents under `docs/design/`.
-3. Search for existing deterministic Shark marks, the devShark plate (`SubjectPlate`), screenshots, crop utilities, and media hooks before proposing a new file.
+3. Search for existing deterministic Shark marks (`SharkFin`, `BrandLogo`, `client/src/components/brandGeometry.ts`), screenshots, crop utilities, and media hooks before proposing a new file.
 4. State verified facts separately from assumptions. Name the user/interface problem, placement, bundle boundary, aspect ratios, crop-safe area, alt treatment, and performance budget.
 
 ## Produce carefully

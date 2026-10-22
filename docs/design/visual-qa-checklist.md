@@ -10,18 +10,21 @@
 
 ## Representative routes and states
 
-- devShark landing and career roadmap.
-- Topic landing.
+- devShark landing, Today and the career roadmap.
+- Topic guide, the question of the day (`/daily`) and `/big-o`.
 - Quiz setup, active text/code question, submit error, results and two-column review.
-- Learn overview, locked/current/completed level, lesson feedback, skill check, missing structure.
+- Learn sections (Web Developer, Software Engineer, Forward Deployed Engineer), locked/current/completed level, level lesson and figure, lesson feedback, skill check, missing structure.
+- Coding home, a track page, the workbench (editor, results, hints, solution), the narrow-screen puzzle or waiting state, a project's stage list and the FullStack screen.
+- The FDE path hub and an activity (lesson, check, code, artifact), with the switch on and off.
+- Collection: saved questions and saved coding challenges.
 - Challenge intro, active timer, timeout, verified result, unavailable board.
 - Play signed out, host/join, room ticket/QR, lobby, live, reconnect/stale, results.
 - Profile no-progress/populated/delete failure.
 - Leaderboard skeleton/empty/error/populated.
 - Flashcards signed out/empty/reveal/remove error.
-- Rewards (`/shop`) signed out/loading/error; coins and ledger; free account's Premium merchandise lock; redemption form; crown and streak protection owned/unaffordable/at cap.
+- Rewards (`/shop`) signed out/loading/error; coins and ledger; crown and streak protection owned/unaffordable/at cap. Merchandise is off (`MERCH_ENABLED`), so no merchandise state shows.
 - Premium locks: a Learn node, a coding row and a later stage read "Premium" in text and open the upgrade sheet.
-- `/premium` billing off/signed out/free/paying/settings error; `/premium/success` checking/done/pending/expired; `/premium/cancel` both steps; privacy; terms; classroom; 404.
+- `/premium` billing off/signed out/free/paying/settings error and the voucher form; `/premium/success` checking/done/pending/expired; `/premium/cancel` both steps; privacy; terms; classroom; 404.
 - `/dev` denied, list, question editor, quality, report, logs, settings, destructive action.
 
 ## Per-screen checks
@@ -39,6 +42,7 @@
 
 ## Automated contract
 
+- `npm run ci:parity` (the CI `verify` job; `--fast` skips the browser specs)
 - `npm run typecheck:api`
 - `npm run test:launch`
 - `npm run build`

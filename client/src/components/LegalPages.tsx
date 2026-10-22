@@ -1,8 +1,7 @@
-// The Terms of use and the privacy policy (#222, section 4.3 of the second
-// handoff). Both read their words from the legal.* keys, the price and the free
-// plan from shared/tiers.ts, the trader from TRADER in client/product-catalog.ts
-// and the seller of record from the public billing settings, so no fact lives
-// in two places.
+// The Terms of use and the privacy policy (#222). Both read their words from
+// the legal.* keys, the price and the free plan from shared/tiers.ts, the
+// trader from TRADER in client/product-catalog.ts and the seller of record
+// from the public billing settings, so no fact lives in two places.
 //
 // The trader fields render only when the owner has set them; until then the
 // page says they are missing rather than guessing. The owner's lawyer reviews

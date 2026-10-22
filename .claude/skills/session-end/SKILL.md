@@ -28,5 +28,5 @@ Run before **ending** an agentic session on this repo.
 ## Git workflow (every session)
 
 - **Commit frequently** in small, coherent steps — never batch a whole session into one commit.
-- **At the end of every session, merge to `main` through a pull request** so the change redeploys (this project auto-deploys from `main` on Vercel). `main` is protected: a merge needs the `verify` and `sql` CI jobs green, for admins too, and force-pushes are refused. Run `npm run ci:parity`, push the branch, open the PR, wait for both checks, then merge (`/pr-merge`, `.claude/skills/ci-parity-and-pr/SKILL.md`).
+- **At the end of every session, merge to `main` through a pull request** so the change redeploys (this project auto-deploys from `main` on Vercel). `main` is protected: a merge needs the `verify` and `sql` CI jobs green, for admins too, and force-pushes are refused. Run the local checks `ci-parity-and-pr` asks for (`npm run ci:parity` with `--only`, `--fast` or in full), push the branch, open the PR, wait for both checks, then merge (`/pr-merge`, `.claude/skills/ci-parity-and-pr/SKILL.md`).
 - **Delete the merged / old branch** (local and remote) after merging, to keep the repo clean. Never leave stale branches behind.

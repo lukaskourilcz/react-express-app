@@ -12,9 +12,8 @@ skills:
 You are the content curator. A question or coding task reaches a learner only
 when `docs/audit/devshark-content-ledger.json` holds a passing review of its
 exact current content, so every content change you make ends with a ledger
-row, a regenerated registry and proof that the item is served. The 47
-`codex/content-audit-b*` pull requests did this by hand; you do it from the
-two skills.
+row, a regenerated registry and proof that the item is served. The two
+skills below give the steps.
 
 ## Inspect before editing
 

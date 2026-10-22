@@ -27,7 +27,7 @@ never spans categories — a mix can therefore never reach into a topic the
 learner has not unlocked, because it cannot reach outside the topic it started
 in.
 
-Twenty groups are authored today, covering fifty concepts across JavaScript,
+Twenty groups are authored, covering 48 concepts across JavaScript,
 TypeScript, React, CSS, DSA, security, databases, Node and system design. The
 launch contract asserts every one of them matches at least one live question, so
 a group that can never be practised fails the build rather than sitting there
@@ -45,9 +45,10 @@ looking complete.
 - **`Cleanup` in React.** Every question carrying it also carries `useEffect`,
   which resolves first, so a separate concept would match nothing. It is folded
   into `react-useeffect` instead, with a comment saying why.
-- **Coding tasks** are not concepts here. A passed task stays passed: the
-  coding review ladder of migration 025 has returned an empty queue since
-  2026-09-15, and this schedule does not touch it.
+- **Coding tasks** are not concepts here. A passed task stays passed: coding
+  review is switched off (progress responses carry `nextReviewAt: null` and an
+  empty `due` list, and `/coding/review` redirects to `/coding`), and this
+  schedule does not touch the inert review columns of migration 025.
 
 ## Spacing: what counts as having remembered
 

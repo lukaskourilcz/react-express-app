@@ -1,8 +1,6 @@
 # Generated media opportunity audit
 
-Audit date: 22 July 2026. Updated 24 September 2026 for devShark alone.
-
-The 12 October 2026 comparison below selects the owner's existing Higgsfield account for the requested OG refresh. Pricing, free tiers, licenses, privacy terms, and model availability must be researched again before future generations.
+Which media may be generated, and how a provider is chosen. The comparison of 12 October 2026 below chose the owner's existing Higgsfield account for the share image. Pricing, free tiers, licenses, privacy terms and model availability change, so research them again before any new generation.
 
 Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials, or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, the SVG devShark plate, factual diagrams, and authentic interface captures regardless of provider; never use a fake placeholder.
 
@@ -29,13 +27,11 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 | Candidate | Classification | Decision |
 |---|---|---|
 | Fin/waterline logo, favicon, PWA icons | High-value, but deterministic | Refine existing SVG primitives; do not ship a raw raster-generated logo. |
-| devShark OG / launch art | High-value | Technical editorial environment without code text; overlay authentic code/text. |
+| devShark share image | High-value; done (October 2026) | Technical editorial environment without code text; overlay the exact logo and English text. |
 | devShark plate (`SubjectPlate`) | High-value | Keep the deterministic lightweight SVG plate; evaluate generated texture variants only when they add clear value. |
-| Social square/portrait/landscape campaigns | High-value for launch | Produce from the selected devShark direction; compose real screenshots and real English text deterministically. |
 | Small shared onboarding/empty-state illustration | Potentially useful | Use one reusable family only where it improves emotion or orientation. |
 | Subtle landing background loop | Potentially useful | Reject by default; require a static poster, reduced-motion fallback, and measured LCP. |
 | Topic-page covers | Potentially useful | Use sparingly for priority editorial topics, never as factual diagrams. |
-| Classroom campaign video | Potentially useful | Marketing-only, authentic UI, and never part of the core bundle. |
 | Texture / paper grain | Unnecessary | Existing deterministic SVG grain is tiny, theme-safe, and sufficient. |
 | Functional icons / technology glyphs | Inappropriate | Keep deterministic SVG and the current icon language. |
 | Factual diagrams, equations, code | Harmful | Generate from verified data or deterministic code only. |
@@ -45,8 +41,6 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 ## Acceptance gate
 
 An asset is accepted only when it solves a named placement problem, has at least three meaningfully different reviewed directions, contains no text, artifacts, external logos, or factual claims, supports required crops and themes, stays outside core route bundles, has an optimized static fallback, and is recorded in `generated-media-manifest.md`.
-
-The October OG refresh below replaces the old V9 share image with the current approved navbar lockup on an accepted generated background.
 
 ## OG refresh — 12 October 2026
 
