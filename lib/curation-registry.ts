@@ -4,7 +4,7 @@
 
 import type { RegistryEntry } from '../shared/curation';
 
-export const REGISTRY_AUDITED_ON = "2026-10-17";
+export const REGISTRY_AUDITED_ON = "2026-10-22";
 
 /** The devShark categories the audit has covered. The gate governs these and
  * only these; a category not yet audited is served as before, with no claim. */

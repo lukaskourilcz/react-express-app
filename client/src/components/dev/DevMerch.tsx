@@ -51,10 +51,10 @@ import { Section, captionStyle } from './DevSettings';
 const SETTINGS_KEY = ['admin', 'settings'] as const;
 const fulfilmentKey = (view: FulfilmentView) => ['admin', 'fulfilment', view] as const;
 
-/** Spreadshop's EU base prices in September 2026, shown
- * as a hint beside the field. A hint, not a value: the owner enters the price
- * the shop actually shows. */
-const HANDOFF_BASE_PRICE: Partial<Record<MerchSku, string>> = {
+/** Spreadshop's EU base prices as quoted in September 2026, shown as a hint
+ * beside the field. A hint, not a value: the owner enters the price the shop
+ * actually shows. */
+const QUOTED_BASE_PRICE: Partial<Record<MerchSku, string>> = {
   't-shirt': '17.49 (premium 20.99)',
   hoodie: '29.99 (premium 31.99)',
   mug: '13.49',
@@ -302,7 +302,7 @@ function QuoteCard({ sku, draft, onChange }: { sku: MerchSku; draft: QuoteDraft;
       </div>
       {draft.priced && (
         <div style={rowStyle}>
-          {field('base', 'Base price', 160, HANDOFF_BASE_PRICE[sku] ? `Handoff, Sept 2026: ${HANDOFF_BASE_PRICE[sku]}` : undefined)}
+          {field('base', 'Base price', 160, QUOTED_BASE_PRICE[sku] ? `Quoted Sept 2026: ${QUOTED_BASE_PRICE[sku]}` : undefined)}
           {field('shipping', 'Shipping')}
           {field('print', 'Print')}
           {field('packaging', 'Packaging')}
