@@ -13,7 +13,7 @@ export function Headline({ size = 'default', as = 'h1', style, children }) {
   return <Tag style={{ margin: 'var(--gap-kicker-headline) 0 0', fontFamily: 'var(--font-display)', fontWeight: 'var(--weight-display)', textWrap: size === 'hero' ? 'balance' : 'pretty', ...SIZES[size], ...style }}>{children}</Tag>;
 }
 
-/** A very large number with its unit on the baseline: €1.80 a month, 55% off. */
+/** A very large number with its unit on the baseline: €2.25 a month, 55% off. */
 export function BigNumber({ value, unit, style }) {
   return (
     <h1 style={{ margin: 'var(--gap-kicker-headline) 0 0', display: 'flex', alignItems: 'baseline', gap: 20, flexWrap: 'wrap', fontFamily: 'var(--font-display)', fontWeight: 'var(--weight-display)', fontSize: 'var(--type-number-unit)', lineHeight: 1, letterSpacing: 'var(--tracking-display)', ...style }}>
