@@ -132,6 +132,9 @@ import './DeepEndScreens.css';
 // `lazyShellPart` inside its own boundary: when its code does not load, the
 // level stays on screen with "Could not load this task." and a Try again that
 // asks again, or reloads when the same failure comes straight back.
+// Keep path screens and their styles outside the normal topic chunk.
+const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
+
 const CodingWorkbench = lazyShellPart(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -918,6 +921,14 @@ function Roadmap() {
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
         />
+
+        {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
+          <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
+            <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+              <PathShelf pathIds={LEARN_SECTIONS.find((one) => one.id === section)!.paths} />
+            </Suspense>
+          </ShellPartBoundary>
+        )}
 
         <SectionRail
           sectionName={sectionName}
