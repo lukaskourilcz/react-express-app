@@ -872,7 +872,7 @@ accounts; cash checkout in this app stays off.
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.
 
-*22 October 2026:* the DSA path is retired and no code reads `LEARNING_PATH_DSA_ENABLED`. `LEARNING_PATH_FDE_ENABLED` stays unset in Production until the owner switches FDE on.
+*22 October 2026:* the DSA path is retired and no application code reads `LEARNING_PATH_DSA_ENABLED`. `LEARNING_PATH_FDE_ENABLED` stays unset in Production until the owner switches FDE on.
 
 **The item-level content audit has run over the whole question bank.** All
 2,128 served devShark questions have been read twice, rewritten or retired,
@@ -5934,7 +5934,7 @@ Issue #496 (PR #555, merge c1d1c1dd67b6d07e99b972508caaa7e3322104e1): the DSA Fo
 
 Open owner items: the Terms of use still name "the FDE and DSA learning paths"; remove `LEARNING_PATH_DSA_ENABLED` from Vercel if any environment still sets it.
 
-*22 October 2026:* no Vercel environment sets `LEARNING_PATH_DSA_ENABLED`, and no code reads it. The Terms wording is still open.
+*22 October 2026:* no Vercel environment sets `LEARNING_PATH_DSA_ENABLED`, and no application code reads it. The Terms wording is still open.
 
 ## Migration 066 in production — 22 October 2026
 
