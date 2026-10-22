@@ -66,7 +66,7 @@ Sign-in uses Google OAuth and email with a password. Google OAuth must allow `ht
 
 Do not restore removed browser write policies during a rollback: they are the controls that keep scores and answer keys server-authored.
 
-After deployment, `public.purge_expired_learning_data()` needs a schedule (Supabase Cron or another owner-controlled job).
+Production runs `public.purge_expired_learning_data()` once a day through pg_cron. A new environment needs the same schedule.
 
 ## Preflight
 
