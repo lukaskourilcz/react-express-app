@@ -1,5 +1,6 @@
 // What the workbench says after Run and Submit, checked against the coding
 // audit of 8 October 2026 (C3, C4, C5). Each case names its finding.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { ApiError } from '../src/lib/api';
 import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { declared } from './css';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -473,4 +475,17 @@ it('keeps the stale draft when loading the latest brief fails', async () => {
   expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   expect(submitCoding).toHaveBeenCalledTimes(1);
+});
+
+// A long token in a brief, a hint or an error note (a member chain, a
+// minified line) pushed the page sideways at 360 px and 200 % text.
+it('lets long code tokens in the brief, the hints and the notes wrap', () => {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  const rules = [...style.sheet!.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  for (const selector of ['.cd-prompt', '.cd-prompt code', '.cd-inline-code', '.cd-hint', '.cd-note']) {
+    expect(declared(rules, selector, 'overflow-wrap'), selector).toBe('anywhere');
+  }
+  style.remove();
 });

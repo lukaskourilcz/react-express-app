@@ -306,8 +306,12 @@
 .cd-pane__head h1 { font-size: 1.5em; }
 .cd-pane__head { display: flex; flex-direction: column; gap: 6px; }
 .cd-pane__meta { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 0.85rem; color: var(--color-text-secondary); }
-.cd-prompt { margin: 0; line-height: 1.6; max-width: 70ch; }
+/* Briefs, hints and notes carry code and error messages with long tokens
+   (a member chain, a URL, a minified line) that would push the page sideways
+   at 360 px and 200 % text; they break anywhere instead. */
+.cd-prompt { margin: 0; line-height: 1.6; max-width: 70ch; overflow-wrap: anywhere; }
 .cd-prompt code, .cd-inline-code {
+  overflow-wrap: anywhere;
   font-family: var(--cd-mono);
   font-size: 0.92em;
   padding: 1px 5px;
@@ -362,7 +366,7 @@
 }
 .cd-shortcuts { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
 
-.cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; }
+.cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
 .cd-note--warn { background: var(--ss-warning-soft); }
 .cd-note--error { background: var(--ss-error-soft); }
 
@@ -438,6 +442,7 @@
   background: var(--color-background-muted);
   font-size: 0.92rem;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 .cd-hint__label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-secondary); margin-bottom: 4px; }
 .cd-hint pre { margin: 6px 0 0; font-family: var(--cd-mono); font-size: 0.82rem; white-space: pre-wrap; overflow-wrap: anywhere; }
