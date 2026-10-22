@@ -1462,9 +1462,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET' && req.query.resource === 'eligibility') {
     if (!(await limitRead(req, res))) return;
     try {
-      const learner = await learnerContext(req, res);
+      // The served set is the same for everyone, so it loads while the
+      // learner's plan and record are read rather than after them.
+      const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById()]);
       if (learner === undefined) return;
-      const byId = await getEffectiveQuestionsById();
       const exists = (id: string) => byId.has(id);
       const structure = liveRoadmapStructure(exists);
       const levelCount = (topic: string) => (structure as Record<string, { levels: unknown[] } | undefined>)[topic]?.levels.length ?? 0;
@@ -1574,9 +1575,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await limitRead(req, res))) return;
   // One read of the learner's plan and verified record, shared by the three
   // step branches below. A guest has neither, and takes the preview path.
-  const learner = await learnerContext(req, res);
+  // The served question set does not depend on who asks, so it loads at the
+  // same time instead of waiting for the record.
+  const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById(subject)]);
   if (learner === undefined) return;
-  const byId = await getEffectiveQuestionsById(subject);
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
   const availability = liveAvailability(live);
