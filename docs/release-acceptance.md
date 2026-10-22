@@ -5795,13 +5795,13 @@ PR #533 is merged at `5d61ab0d6d3e8afd209464964782dacb56d6de08`. Required checks
 
 ## Data plumbing, tools and evaluation — 22 October 2026
 
-B6, PR #535, merged at `0f11f701e6611c8c11878ff127163adce8d92020` after required run `39691896523` passed. Clean integration tree `8413812d` passed the five content/type parity steps in 1.57 minutes (Node 24.22.1, `artifacts/codex-pr535-merged`). Production `dpl_23pcYM9tNeJHiSGZhSAyQU6sRxKD` is READY at that SHA. B7, PR #534, merged at `b5c184bec6e250c3c9bd8b4a9d13bd649a06be18` after fresh required checks on integrated head `537d00f0`; five local content/type parity steps passed in 1.41 minutes (`artifacts/codex-b7-updated-main`). Production `dpl_EbG3W8FsiiJT9kH6FmUTpYAZcNca` is READY at that merge SHA.
+B6, PR #535, merged at `0f11f701e6611c8c11878ff127163adce8d92020` after required run `39691896523` passed. Clean integration tree `8413812d` passed the five content/type parity steps in 1.57 minutes (Node 24.22.1, `artifacts/codex-pr535-merged`). Production `dpl_23pcYM9tNeJHiSGZhSAyQU6sRxKD` is READY at that SHA. B7, PR #534, merged at `b5c184bec6e250c3c9bd8b4a9d13bd649a06be18` after required run `39708140950` passed on integrated head `537d00f0`; five local content/type parity steps passed in 1.41 minutes (`artifacts/codex-b7-updated-main`). Production `dpl_EbG3W8FsiiJT9kH6FmUTpYAZcNca` is READY at that merge SHA.
 
 Both publications retain the FDE production switch as off. No authenticated module completion, live model call or external vendor integration is claimed. The checked examples and tool traces are fixtures.
 
 ## Path authoring workflow — 22 October 2026
 
-C4, PR #540, merged at `2bb4855cd40b6ae7023e92f1c33f8cd84462ed76` with required checks green. Head `cc2521f5` passed five selected parity steps in 1.69 minutes (`artifacts/codex-c4-final`, Node 24.22.1) and skill validation. The temporary authored test module was removed after its real content tests passed. An independent read-forward review corrected overstated validator guarantees, teaching guidance and stale examples. This is a workflow-only change; no runtime or schema rollout is claimed.
+C4, PR #540, merged at `2bb4855cd40b6ae7023e92f1c33f8cd84462ed76` with required run `39708320451` green. Head `cc2521f5` passed five selected parity steps in 1.69 minutes (`artifacts/codex-c4-final`, Node 24.22.1) and skill validation. The temporary authored test module was removed after its real content tests passed. An independent read-forward review corrected overstated validator guarantees, teaching guidance and stale examples. This is a workflow-only change; no runtime or schema rollout is claimed.
 
 ## English-only public pages — 22 October 2026
 
@@ -5811,7 +5811,7 @@ Preview `dpl_EEUs8wK71c8TYQKW1C6J1sjL2LRQ` and production `dpl_DLH4CcS4HfNdWM1Vc
 
 ## Reading before Learn questions — 22 October 2026
 
-E1, PR #541, merged at `02875113300fc66ec5e64b8ba17e36c398b168a1` with required checks green on head `67fe15ef`. Seven selected parity steps passed in 4.15 minutes (`artifacts/codex-e1-targeted`, Node 24.22.1), along with nine focused client checks and two browser cases across seven widths, both themes and axe. Production `dpl_G4rsbALqgQRuVzCLrsSfeKfMCryj` is READY at the merge SHA.
+E1, PR #541, merged at `02875113300fc66ec5e64b8ba17e36c398b168a1` with required run `39709836239` green on head `67fe15ef`. Seven selected parity steps passed in 4.15 minutes (`artifacts/codex-e1-targeted`, Node 24.22.1), along with nine focused client checks and two browser cases across seven widths, both themes and axe. Production `dpl_G4rsbALqgQRuVzCLrsSfeKfMCryj` is READY at the merge SHA.
 
 On devshark.app at 390px, a guest opened `/learn/big-o`, chose Complexity Basics and saw “Counting work, not seconds”, with no page errors and no non-GET roadmap requests. The lesson endpoint returned 200, its explicit lesson/hash projection, public max-age 300 and a hash ETag. Two initial smoke attempts omitted the lesson-button click; the corrected navigation passed. Reading records no attempt or progress. No signed-in level completion was performed in production.
 

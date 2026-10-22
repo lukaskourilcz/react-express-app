@@ -40,6 +40,12 @@ describe('the FDE competency hub', () => {
     expect(within(states).getByText('Self-reviewed').parentElement).toHaveTextContent('1');
     expect(screen.queryByRole('button', { name: 'Download card' })).toBeNull();
   });
+  it('keeps an optional shelf completion out of required-module progress', () => {
+    const data = progress([]);
+    data.modules.push({ moduleId: 'optional-interview', completed: true, completedAt: null, activities: [] });
+    mount({ progress: data });
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+  });
   it('does not replace an evidence read failure with a fresh board', () => {
     const retry = vi.fn(); mount({ error: true, retry });
     expect(screen.queryByText('Not started')).toBeNull();

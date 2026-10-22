@@ -24,7 +24,7 @@ export function FdeHub({ manifest, progress, pending, error, retry, reachable }:
 }) {
   const modules = manifest.modules.filter(module => !module.optional && !module.shelf);
   const recorded = new Map(progress?.modules.flatMap(module => module.activities.map(activity => [activity.activityId, activity.state] as const)) ?? []);
-  const completed = new Set(progress?.modules.filter(module => module.completed).map(module => module.moduleId));
+  const completed = new Set(progress?.modules.filter(module => module.completed && modules.some(required => required.id === module.moduleId)).map(module => module.moduleId));
   const nextModule = progress?.nextActivityId ? modules.find(module => module.activities.some(activity => activity.id === progress.nextActivityId)) : undefined;
   const evidence = manifest.competencies.map(competency => {
     const activities = modules.flatMap(module => module.activities.filter(activity => activity.competencies.includes(competency.id)).map(activity => ({ module, activity })));
