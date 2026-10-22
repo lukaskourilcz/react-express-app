@@ -108,12 +108,22 @@ let storageInstalled: boolean | null = null;
 export const markStorageMissing = () => { storageInstalled = false; };
 export const markStorageInstalled = () => { storageInstalled = true; };
 
+/** Whether a path's content validates, worked out once per path. The content
+ * is fixed for the life of a deployment, and `availabilityFor` otherwise runs
+ * the whole validator on every settings, catalog, enrollment, start and
+ * submit request. Only the switch and the storage state can change, so those
+ * are still read each time, in the order `availabilityFor` checks them. */
+const contentVerdict = new WeakMap<MergedPath, PathAvailability>();
+
 function availability(path: MergedPath): PathAvailability {
-  return availabilityFor({
-    path,
-    enabled: pathEnabledInEnv(path.id),
-    storageInstalled: storageInstalled !== false,
-  });
+  if (!pathEnabledInEnv(path.id)) return 'disabled';
+  let verdict = contentVerdict.get(path);
+  if (verdict === undefined) {
+    verdict = availabilityFor({ path, enabled: true, storageInstalled: true });
+    contentVerdict.set(path, verdict);
+  }
+  if (verdict !== 'available') return verdict;
+  return storageInstalled === false ? 'storage_missing' : 'available';
 }
 
 /** The capability `api/settings.ts` publishes. The client reads it to decide
