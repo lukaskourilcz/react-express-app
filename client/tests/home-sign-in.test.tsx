@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,6 +7,8 @@ import Home from '../src/components/Home';
 import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
 import { http, HttpResponse } from 'msw';
+
+beforeEach(() => server.use(http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'learning-path-catalog' ? HttpResponse.json({ paths: [] }) : undefined)));
 
 const auth = vi.hoisted(() => ({
   value: { user: null, isAuthenticated: false, isLoading: false },
