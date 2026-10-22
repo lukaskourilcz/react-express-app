@@ -352,10 +352,13 @@ export function CodeActivity({
   // starter over their draft, so it asks first, as the coding workbench does.
   const [confirmingReset, setConfirmingReset] = useState(false);
   const resetButton = useRef<HTMLButtonElement>(null);
+  // The confirmed Reset leaves with its question, so focus goes back to the
+  // Reset that asked rather than to the page.
   const reset = () => {
     setConfirmingReset(false);
     setSource(code.starter);
     queueDraft(code.starter);
+    resetButton.current?.focus();
   };
   // Keeping the code, by the button or by Escape, hands focus back to Reset.
   const keepCode = () => {

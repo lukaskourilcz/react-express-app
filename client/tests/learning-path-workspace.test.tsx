@@ -493,6 +493,8 @@ describe('the draft autosave', () => {
     await press('Reset to the starter');
     await press('Reset');
     expect(editor().value).toBe(`STARTER_FOR_${A}`);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reset to the starter' })).toHaveFocus();
     await wait(1000);
     expect(calls.drafts.map((one) => one.code)).toEqual(['my work', `STARTER_FOR_${A}`]);
   }, 15_000);
