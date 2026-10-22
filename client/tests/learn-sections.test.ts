@@ -120,11 +120,11 @@ describe('railEntries', () => {
     expect(withPendingJoin(frontend, NO_PENDING)).toBe(frontend);
   });
 
-  it('names the other sections of a shared topic', () => {
-    const entries = railEntries('software-engineer', ctx(null, 'software-engineer', []));
-    expect(entries.find((entry) => entry.topic === 'git')?.alsoIn).toEqual(['web-developer']);
-    expect(entries.find((entry) => entry.topic === 'databases')?.alsoIn).toEqual(['web-developer', 'forward-deployed-engineer']);
-    expect(entries.find((entry) => entry.topic === 'dsa')?.alsoIn).toEqual([]);
+  it('keeps a shared topic in every section that lists it', () => {
+    const se = railEntries('software-engineer', ctx(null, 'software-engineer', [])).map((entry) => entry.topic);
+    const web = railEntries('web-developer', ctx(null, 'web-developer', [])).map((entry) => entry.topic);
+    expect(se).toEqual(expect.arrayContaining(['git', 'databases', 'dsa']));
+    expect(web).toEqual(expect.arrayContaining(['git', 'databases']));
   });
 
   it('marks a topic Premium from its first level, never a dimmed one', () => {

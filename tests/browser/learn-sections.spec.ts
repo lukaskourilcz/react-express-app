@@ -194,8 +194,11 @@ test.describe('A Frontend learner and Software Engineer', () => {
     }
     const join = page.getByRole('button', { name: 'Add Software Engineer to your plan' });
     await expect(join).toHaveCount(1);
-    await expect(topicCard(page, 'Git')).toContainText('Also in Web Developer');
-    await expect(topicCard(page, 'Databases')).toContainText('Also in Web Developer and Forward Deployed Engineer');
+    // A card shows the logo, the topic name and its levels; no "Also in" line.
+    for (const name of ['Git', 'Databases', 'General']) {
+      await expect(topicCard(page, name)).not.toContainText('Also in');
+      await expect(topicCard(page, name)).not.toHaveAccessibleName(/also in/i);
+    }
 
     await join.focus();
     await page.keyboard.press('Enter');

@@ -153,7 +153,7 @@ describe('joining Software Engineer', () => {
     answer({ javascript: { levels: Object.fromEntries(levels(5).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} } });
     await mountAt('/learn/software-engineer');
     expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
-    expect(screen.getByRole('radio', { name: /^Git, Premium, also in Web Developer$/ })).not.toBeDisabled();
+    expect(screen.getByRole('radio', { name: /^Git, Premium$/ })).not.toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Software Engineer to your plan' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
