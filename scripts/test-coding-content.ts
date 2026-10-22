@@ -627,12 +627,16 @@ async function main() {
       for (const criterion of source.critical) {
         if (!covered.has(criterion)) fail(`${id}: no known wrong answer breaks the critical criterion ${criterion} of ${source.from}`);
       }
-      // A criterion a check names must be one the source declared, so a
-      // renamed tag cannot leave a criterion without its checks.
+      // Every critical criterion has at least one visible or hidden check
+      // tagged with it, and every tag a check carries is one of the recorded
+      // critical criteria, so a renamed tag fails in either direction.
       const authored = DSA_FOUNDATIONS_TASKS.find((one) => one.id === id);
       const tagged = new Set([...(authored?.tests ?? []), ...(solutionFor(id)?.hiddenTests ?? [])].map((test) => test.criterion ?? 'core'));
       for (const criterion of source.critical) {
         if (!tagged.has(criterion)) fail(`${id}: no visible or hidden check is tagged with the critical criterion ${criterion}`);
+      }
+      for (const criterion of tagged) {
+        if (!source.critical.includes(criterion)) fail(`${id}: a check is tagged ${criterion}, which is not a recorded critical criterion of ${source.from}`);
       }
     }
   }
