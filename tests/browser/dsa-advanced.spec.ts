@@ -38,7 +38,9 @@ for(const theme of ['light','dark'] as const){
     await page.setViewportSize({width:390,height:900});await page.screenshot({path:info.outputPath(`advanced-reading-${theme}.png`),fullPage:true});
     expect((await new AxeBuilder({page}).include('.lp-page').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
     premium=false;await page.goto('/learn/software-engineer?topic=dsa-advanced');
-    const locked=page.getByRole('button',{name:'Level 1: Heaps and priority queues, Premium',exact:true});await expect(locked).toBeVisible();await locked.click();
+    const locked=page.getByRole('button',{name:'Level 1: Heaps and priority queues, Premium',exact:true});await expect(locked).toBeVisible();
+    // Premium nodes stay in the tab order and open the upgrade sheet.
+    await locked.focus();await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog')).toBeVisible();expect(attempts).toBe(0);expect(writes).toEqual([]);expect(errors).toEqual([]);
   });
 }
