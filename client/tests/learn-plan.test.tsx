@@ -315,7 +315,7 @@ describe('Premium on Today', () => {
     await mountAt('/today', <Today />);
     expect(await screen.findByText('Premium opens your next level')).toBeInTheDocument();
     expect(screen.queryByText('Nothing is due today. A new plan is ready tomorrow.')).toBeNull();
-    expect(screen.getByText(/Next on your path is TypeScript · Level 1, which Premium opens/)).toBeInTheDocument();
+    expect(screen.getByText(/Next on your path is Git · Level 1, which Premium opens/)).toBeInTheDocument();
     let request: ReturnType<typeof useUpgradeRequest> = null;
     function Probe() { request = useUpgradeRequest(); return null; }
     render(<Probe />);

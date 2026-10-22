@@ -10,7 +10,10 @@
     "outDir": "./node_modules/.tmp/tsc-node",
     "rootDir": "..",
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "jsx": "react-jsx"
   },
   "include": [
@@ -28,6 +31,13 @@
     "src/lib/changelog.ts",
     "src/og/ogImages.ts",
     "src/i18n/translations.ts",
-    "../shared/**/*.ts"
+    "../shared/**/*.ts",
+    "src/components/learn/SectionPreviewStatic.tsx",
+    "src/i18n/translations.learn.ts",
+    "../lib/learning-paths/content/fde.ts",
+    "../lib/learning-paths/content/fde/**/*.ts",
+    "../lib/learning-paths/types.ts",
+    "../lib/learn-lessons/types.ts",
+    "../lib/coding/types.ts"
   ]
 }
