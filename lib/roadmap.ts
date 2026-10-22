@@ -121,9 +121,9 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Grid & Responsive Layout', 'Positioning & Stacking', 'Maintainable, Accessible Styling',
   ],
   dsa: [
-    'Complexity Basics', 'Big-O Notation', 'Arrays', 'Strings', 'Hash Tables',
-    'Stacks', 'Queues', 'Linked Lists', 'Recursion', 'Sorting Algorithms',
-    'Searching Algorithms', 'Trees', 'Binary Search Trees', 'Heaps & Priority Queues', 'Graphs',
+    'Complexity Basics', 'Big O and Growth', 'Arrays', 'Strings', 'Hash Maps and Sets',
+    'Stacks', 'Queues', 'Singly Linked Lists', 'Recursion Foundations', 'Linear and Binary Search',
+    'Basic Sorting', 'Trees', 'Binary Search Trees', 'Complexity in Practice', 'Foundation Review',
   ],
   algorithms: [
     'Ratios & Proportions', 'Modular Arithmetic', 'Combinatorics', 'Probability', 'Prime Numbers & Divisibility',

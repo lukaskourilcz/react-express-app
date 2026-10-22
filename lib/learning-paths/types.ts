@@ -1,3 +1,4 @@
+import type { DeliveryPhase } from '../../shared/learning-path-phases';
 /** Authored learning-path shapes. The authored English source is the only
  * copy; `mergePath` normalizes it into the shape the API projects from.
  *
@@ -140,6 +141,7 @@ export interface ActivitySource {
 }
 
 export interface ModuleSource {
+  deliveryPhase?: DeliveryPhase;
   id: string;
   title: string;
   outcomes: string[];
@@ -384,6 +386,7 @@ export function mergeActivity(activity: ActivitySource): MergedActivity {
 }
 
 export interface MergedModule {
+  deliveryPhase?: DeliveryPhase;
   id: string;
   title: string;
   outcomes: string[];
@@ -410,6 +413,7 @@ export function mergeModule(module: ModuleSource): MergedModule {
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
     ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),
+    ...(module.deliveryPhase !== undefined ? { deliveryPhase: module.deliveryPhase } : {}),
   };
 }
 

@@ -45,27 +45,17 @@ export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typ
 export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
 
-/** DSA levels that issue no coding task until E3 (#494) re-sequences the DSA
- * topic to the path's modules. Levels 10, 11 and 14 still read Sorting
- * Algorithms, Searching Algorithms and Heaps & Priority Queues, which their
- * tasks do not match, and levels 1 and 2 are the public Big O introduction,
- * which E3 reworks with its lesson (owner decision, 21 October 2026).
- * `levelCodingTasks` (`lib/coding/active.ts`) seals nothing on them and
- * `hasLearnLevel` names none of them. E3 deletes this set. */
-export const DSA_LEVELS_AWAITING_E3: ReadonlySet<number> = new Set([1, 2, 10, 11, 14]);
-
 /** Tracks whose `level` is a Learn level, and so worth naming to the learner.
  * System design carries no level at all. An `algorithms` task with topic
  * `algorithms` carries one only to order its challenges, and calling it
  * "Level 6" would claim a place in a curriculum the challenge is not part of.
  * The DSA Foundations tasks sit on the algorithms track with topic `dsa`
  * (and, from E4, `dsa-advanced`): their level is a DSA Learn level, so it is
- * named, except on a level that does not issue it yet
- * (`DSA_LEVELS_AWAITING_E3`). */
+ * named with that level. */
 const LEARN_LEVEL_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
 export const hasLearnLevel = (task: { track: CodingTrack; level: number; topic?: CodingTask['topic'] }): boolean =>
   task.level > 0 && (LEARN_LEVEL_TRACKS.includes(task.track)
-    || (task.topic === 'dsa' && !DSA_LEVELS_AWAITING_E3.has(task.level))
+    || task.topic === 'dsa'
     || task.topic === 'dsa-advanced');
 
 /** The Learn topics whose levels seal coding tasks into a level attempt

@@ -5,6 +5,12 @@
 // to t(key, vars).
 
 export const en = {
+  'title.learnWebDeveloper': 'Web Developer · devShark',
+  'title.learnSoftwareEngineer': 'Software Engineer · devShark',
+  'title.learnFde': 'Forward Deployed Engineer · devShark',
+  'publicSection.webDeveloper': 'Explore web development topics, guided Learn levels and coding practice across the frontend and backend.',
+  'publicSection.softwareEngineer': 'Explore algorithms, data structures, databases, testing, security and delivery topics in the Software Engineer section.',
+  'publicSection.fde': 'Explore the Forward Deployed Engineer path: customer discovery, integration, evaluation, security, deployment and handoff.',
   'designPreview.label': 'Compare interface designs',
   'designPreview.local': 'Local preview',
   'designPreview.original': 'Original',
@@ -970,7 +976,7 @@ export const en = {
   'category.nextjs': 'Next.js',
   'category.nodejs': 'Node.js',
   'category.git': 'Git',
-  'category.dsa': 'DSA',
+  'category.dsa': 'DSA Foundations',
   'category.algorithms': 'Algorithms',
   'category.abbreviations': 'Abbreviations',
   'category.general': 'General',
@@ -995,7 +1001,7 @@ export const en = {
   'topicDetail.nodejs': 'Modules, async, HTTP, Express, streams.',
   'topicDetail.general': 'How the web works: HTTP, caching, auth.',
   'topicDetail.databases': 'SQL, schema design, indexing, transactions.',
-  'topicDetail.dsa': 'Complexity, arrays, trees, graphs, sorting.',
+  'topicDetail.dsa': 'Growth, arrays, maps, lists, search, sorting and trees.',
   'topicDetail.algorithms': 'Problem-solving: recursion, combinatorics, math.',
   'topicDetail.testing': 'Unit, integration, and end-to-end testing.',
   'topicDetail.system-design': 'Caching, queues, sharding, trade-offs.',
@@ -1254,7 +1260,7 @@ export const en = {
   'premium.sheet.include2': 'React from level {level}, with its later part tests',
   'premium.sheet.include3': 'Every coding challenge, including each new one',
   'premium.sheet.include4': 'Every stage of the evolving projects and short paths',
-  'premium.sheet.include5': 'The FDE and DSA learning paths as they open',
+  'premium.sheet.include5': 'Learning paths: the diagnostic and first module are free; Premium opens the rest as each path opens',
   'premium.sheet.include6': 'Coins you can redeem for devShark merchandise, once redemption opens',
   'premium.sheet.price': '{symbol}{monthly} a month or {symbol}{annual} a year, before VAT. Cancel any time.',
   // The launch offer (shared/launch-offer.ts). Shown only while it is on:
@@ -2318,10 +2324,10 @@ export const en = {
   'bigO.simplify': 'Keep the part that grows fastest: two full scans are still O(n), and n² + n becomes O(n²). Usually we compare the worst case. Big O does not tell you the exact speed of a small input.',
   'bigO.practiceTitle': 'Try it yourself',
   'bigO.pathTitle': 'Big O introduction',
-  'bigO.pathLead': 'Two short lessons: Complexity Basics and Big-O Notation. Both are free and open to beginners, with no Skill Check required.',
+  'bigO.pathLead': 'Two short lessons: Complexity Basics, then Big O and Growth. Both are free and open to beginners, with no Skill Check required.',
   'bigO.practiceLink': 'Open the free Big O learning path',
   'bigO.firstLesson': '1. Complexity Basics',
-  'bigO.secondLesson': '2. Big-O Notation',
+  'bigO.secondLesson': '2. Big O and Growth',
   'bigO.backToGuide': 'Back to the Big O guide',
 } as const;
 

@@ -25,7 +25,7 @@ const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
   }] : []), {
     id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
-  }, ...(id === 'fde' && state.shelf ? [{
+  }, ...(state.secondModule ? [{ id: `${id}-m02`, title: 'Module two', outcomes: [], competencies: [], dependsOn: [], lessons: [], activities: [lesson(`${id}-m02-l1-read`, `${id} second lesson`)], requires: [], estimatedMinutes: 10 }] : []), ...(id === 'fde' && state.shelf ? [{
     id: 'fde-ip01', title: 'Learning round', optional: true, shelf: 'interview-prep', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson('fde-ip01-l1', 'Interview lesson')], requires: [], estimatedMinutes: 10,
   }] : [])],
@@ -38,6 +38,9 @@ const state = vi.hoisted(() => ({
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
   progressLoaded: true,
   shelf: false,
+  secondModule: false,
+  nextSecond: false,
+  passedActivity: null as string | null,
   diagnosticResults: [] as { competencyId: string; state: 'demonstrated' | 'gap' | 'not_assessed'; score: number | null; assessedItems: number }[],
   metadata: {} as Record<string, unknown>,
   catalogFailed: false,
@@ -67,10 +70,10 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
-    enrollment: null, modules: [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
+    enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
     // FDE's modules require three written pieces; DSA has none.
     artifacts: pathId === 'fde' ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
-    dueActivityIds: [], nextActivityId: `${pathId}-m01-l1-read`,
+    dueActivityIds: [], nextActivityId: `${pathId}-m0${state.nextSecond ? 2 : 1}-l1-read`,
   });
   return {
     ...actual,
@@ -125,6 +128,9 @@ beforeEach(() => {
   state.enrollments = [];
   state.progressLoaded = true;
   state.shelf = false;
+  state.secondModule = false;
+  state.nextSecond = false;
+  state.passedActivity = null;
   state.diagnosticResults = [];
   state.metadata = {};
   state.catalogFailed = false;
@@ -184,14 +190,21 @@ describe('the path page', () => {
     expect(within(report).queryByRole('link', { name: 'Open the diagnostic' })).toBeNull();
   });
 
-  it('on the free plan, Start carries the Premium mark and asks for Premium instead of enrolling', async () => {
+  it('on the free plan, Start enrolls in the taster without an upgrade', async () => {
     state.tier = 'free';
     await overview('fde');
     const actions = document.querySelector('.lp-head__actions') as HTMLElement;
-    expect(within(actions).getByText('Premium')).toBeInTheDocument();
+    expect(within(actions).queryByText('Premium')).toBeNull();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start this path' })); });
-    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
-    expect(state.changes).toHaveLength(0);
+    expect(state.sheet).not.toHaveBeenCalled();
+    expect(state.changes).toHaveLength(1);
+  });
+
+  it('marks the second module Premium after lapse', async () => {
+    state.tier = 'free'; state.enrollments = [enrolled('fde')]; state.secondModule = true; state.nextSecond = true;
+    await overview('fde');
+    fireEvent.click(screen.getByRole('button', { name: 'Continue where you left off' }));
+    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-m02-l1-read' });
   });
 
   it('starting the role specialization records the base track it sits above', async () => {
@@ -230,13 +243,12 @@ describe('the path page', () => {
     expect(screen.queryByText(/are required to complete the path/)).toBeNull();
   });
 
-  it('once Premium lapses, Continue asks for Premium and the activities are no longer links', async () => {
+  it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('dsa-foundations')];
     await overview('dsa-foundations');
-    expect(screen.queryByRole('link', { name: /dsa-foundations first lesson/ })).toBeNull();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue where you left off' })); });
-    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'dsa-foundations' });
+    expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
+    expect(state.sheet).not.toHaveBeenCalled();
   });
 });
 
@@ -275,25 +287,26 @@ describe('the interview-prep shelf', () => {
     expect(screen.queryByRole('region', { name: 'Interview prep' })).toBeNull();
   });
 
-  it('once Premium lapses, the shelf modules are no longer links', async () => {
+  it('after Premium lapses, the shelf is browsable and an unpassed activity asks for Premium', async () => {
     state.shelf = true;
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];
     await overview('fde');
     const shelf = screen.getByRole('region', { name: 'Interview prep' });
     expect(within(shelf).getByText('Learning round')).toBeInTheDocument();
-    expect(within(shelf).queryByRole('link')).toBeNull();
+    fireEvent.click(within(shelf).getByRole('link', { name: /Interview lesson/ }));
+    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-ip01-l1' });
   });
 });
 
 describe('the Learn path shelf', () => {
-  it('marks an open path Premium for a free account', async () => {
+  it('opens path enrollment on the free tier', async () => {
     state.tier = 'free';
     await mount('/r', '/r', async () => {
       const { default: PathShelf } = await import('../src/components/paths/PathShelf');
       return <PathShelf pathIds={['fde']} />;
     });
-    expect(screen.getAllByText('Premium')).toHaveLength(1);
+    expect(screen.queryByText('Premium')).toBeNull();
   });
 });
 
@@ -312,13 +325,13 @@ describe('Today', () => {
     expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
   });
 
-  it('offers nothing once Premium lapses', async () => {
+  it('offers the free next step after Premium lapses', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('dsa-foundations')];
     await today();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
-    expect(screen.queryByRole('heading', { name: 'Learning paths' })).toBeNull();
-    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Learning paths' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
   });
 
   it('offers nothing for a switched-off path', async () => {
@@ -396,18 +409,18 @@ describe('the Profile picker', () => {
     const group = screen.getByRole('radiogroup', { name: 'Specialization' });
     expect(within(group).getByRole('radio', { name: 'Continue without a specialization' })).toHaveAttribute('aria-checked', 'true');
     const fde = within(group).getByRole('radio', { name: 'Forward Deployed Engineer' });
-    expect(within(fde).getByText('Premium')).toBeInTheDocument();
+    expect(within(fde).queryByText('Premium')).toBeNull();
     expect(within(fde).getByText(/^devShark’s flagship section/)).toBeInTheDocument();
     // The requirement is the manifest's, word for word.
     expect(within(fde).getByText('Before you start: You ship code in one track and have integrated HTTP, a database or an API.')).toBeInTheDocument();
     // The name is the label alone, so the Premium mark, the flagship line and
     // the requirement reach a screen reader as the description.
-    expect(fde).toHaveAccessibleDescription(/^Premium devShark’s flagship section.*Before you start: You ship code/);
+    expect(fde).toHaveAccessibleDescription(/^devShark’s flagship section.*Before you start: You ship code/);
     expect(within(group).getByRole('radio', { name: 'Continue without a specialization' }))
       .toHaveAccessibleDescription(/^Current Stay with the foundations/);
   });
 
-  it('while the catalog is unavailable, a free account still cannot save FDE and is asked for Premium once', async () => {
+  it('while the catalog is unavailable, a free account can save its FDE preference without inventing an enrollment', async () => {
     state.tier = 'free';
     state.catalogFailed = true;
     signedInWith(profile);
@@ -415,7 +428,7 @@ describe('the Profile picker', () => {
     await openPicker();
     await press('Continue');
     const fde = screen.getByRole('radio', { name: 'Forward Deployed Engineer' });
-    expect(fde).toHaveAccessibleDescription(/^Premium /);
+    expect(fde).toHaveAccessibleDescription(/^devShark’s flagship section/);
     // No catalog, no requirement: the card shows nothing rather than a copy.
     expect(within(fde).queryByText(/^Before you start:/)).toBeNull();
     await act(async () => { fireEvent.click(fde); });
@@ -423,10 +436,8 @@ describe('the Profile picker', () => {
     await press('Save');
     await waitFor(() => expect(state.saves).toHaveLength(1));
     expect(state.changes).toEqual([]);
-    expect(savedAnswers()[1].specialization).toBeNull();
-    expect(state.sheet).toHaveBeenCalledTimes(1);
-    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
-    expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
+    expect(savedAnswers()[1].specialization).toBe('fde');
+    expect(state.sheet).not.toHaveBeenCalled();
   });
 
   it('an account save that fails promises only what the device keeps', async () => {
@@ -524,28 +535,25 @@ describe('the Profile picker', () => {
     expect(screen.getByRole('radio', { name: 'Forward Deployed Engineer' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('on the free plan, choosing FDE shows the Premium mark, enrols nothing, saves no role and asks for Premium once', async () => {
+  it('on the free plan, choosing FDE enrolls in its taster and saves both chosen sections', async () => {
     state.tier = 'free';
     signedInWith(profile);
     await card();
     await openPicker();
     await press('Continue');
     const fde = screen.getByRole('radio', { name: 'Forward Deployed Engineer' });
-    expect(within(fde).getByText('Premium')).toBeInTheDocument();
+    expect(within(fde).queryByText('Premium')).toBeNull();
     await act(async () => { fireEvent.click(fde); });
     await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Software Engineer' })); });
     await press('Continue');
     await press('Save');
     await waitFor(() => expect(state.saves).toHaveLength(1));
-    expect(state.changes).toEqual([]);
+    expect(state.changes).toHaveLength(1);
+    expect(state.changes[0]).toMatchObject({ pathId: 'fde', action: 'enroll' });
     const [, preference, answers] = savedAnswers();
-    expect(preference.specialization).toBeNull();
-    // The free section still saves; only the specialization is held back.
+    expect(preference.specialization).toBe('fde');
     expect(answers.sections).toEqual(['software-engineer']);
-    expect(state.sheet).toHaveBeenCalledTimes(1);
-    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
-    expect(screen.getByText(/^Saved: \w+ \+ Software Engineer\. Forward Deployed Engineer needs Premium, so it is not on your plan yet\.$/)).toBeInTheDocument();
-    expect(screen.getByText('Sections: Web Developer')).toBeInTheDocument();
+    expect(state.sheet).not.toHaveBeenCalled();
   });
 
   // Owner decision 10: merchandise is paused until next quarter, so a finished
