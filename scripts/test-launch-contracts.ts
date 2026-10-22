@@ -69,6 +69,7 @@ import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH }
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
 import { learnLessonContracts } from './learn-lesson-contract';
+import { dsaAdvancedContracts } from './dsa-advanced-contracts';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -319,7 +320,7 @@ async function auditGateContracts() {
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
   assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
   const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
-  assert.equal(reviewedCoding.length, 754, 'all currently issued coding identities are included in the completed wave');
+  assert.equal(reviewedCoding.length, 769, 'all currently issued coding identities are included in the completed wave');
   for (const task of reviewedCoding) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
     assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
@@ -3770,14 +3771,14 @@ async function main() {
   assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
   // Each DSA task names its matching Learn level after the E3 re-sequence.
   for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
-    assert.equal(hasLearnLevel(row), row.topic === 'dsa', `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' || row.topic === 'dsa-advanced', `${row.id}: only a Foundations or Advanced Learn task names its curriculum level`);
   }
   for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
     const row = CODING_INDEX.find((one) => one.id === id);
     assert.ok(row && hasLearnLevel(row), `${id}: names its aligned Foundations level`);
   }
   assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
-  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
+  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa' && row.topic !== 'dsa-advanced').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
   const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
@@ -4851,15 +4852,16 @@ async function main() {
   // in the FDE bridge, so every learner who did not take the specialisation was
   // refused it as "not in your plan".
   {
-    const withTrack = (baseTrack: string) => ({
-      schemaVersion: 2, baseTrack, specialization: null,
+    const withTrack = (baseTrack: string, sections: readonly string[] = []) => ({
+      schemaVersion: 2, baseTrack, specialization: null, sections,
       goals: ['job'], experience: 'some', studyTime: 15,
     } as unknown as Parameters<typeof isTopicInPlan>[0]);
     const tracks = Object.keys(WEBDEV_PLAN_STAGES);
     const stranded = [...SUBJECT_SCOPE_CATALOG.webdev.topics].filter(
-      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)),
+      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)
+        || OPT_IN_SECTIONS.some((section) => isTopicInPlan(withTrack(track, [section.id]), 'webdev', topic))),
     );
-    assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
+    assert.deepEqual(stranded, [], `every deployable topic needs a base track or joined section that plans it: ${stranded.join(', ')}`);
   }
 
   // TypeScript is a late topic, deliberately. It used to sit one stage after a
@@ -4926,7 +4928,7 @@ async function main() {
     assert.deepEqual(section('web-developer').topics,
       ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general']);
     assert.deepEqual(section('software-engineer').topics,
-      ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
+      ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
     assert.deepEqual(section('forward-deployed-engineer').topics,
       ['ai', 'nodejs', 'databases', 'general', 'devops', 'security']);
     assert.deepEqual(LEARN_SECTIONS.map((one) => [one.id, one.membership, [...one.paths]]), [
@@ -4972,8 +4974,8 @@ async function main() {
     // The acceptance order: the section's topics in section order (those the
     // track already plans keep their stage position), then Node.js, the
     // prerequisite of System Design, DevOps & Cloud and Databases.
-    assert.deepEqual(withSection.slice(base.length), ['algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
-    for (const topic of ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
+    assert.deepEqual(withSection.slice(base.length), ['dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'nodejs']);
+    for (const topic of ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general', 'nodejs']) {
       assert.ok(withSection.includes(topic), `a Frontend learner in Software Engineer plans ${topic}`);
     }
     for (const topic of withSection) {
@@ -4982,6 +4984,8 @@ async function main() {
       }
     }
     // The server's plan check (`stepRefusal` → 403 not_in_plan) reads the same rule.
+    assert.equal(isTopicInPlan(joined, 'webdev', 'dsa-advanced'), true);
+    assert.equal(isTopicInPlan(frontend, 'webdev', 'dsa-advanced'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'system-design'), true);
     assert.equal(isTopicInPlan(frontend, 'webdev', 'system-design'), false);
     assert.equal(isTopicInPlan(joined, 'webdev', 'cool-stuff'), false);
@@ -5866,6 +5870,7 @@ async function main() {
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
   await learnLessonContracts();
+  await dsaAdvancedContracts();
   consentContracts();
   classroomRevealContracts();
   monthlyXpContracts();

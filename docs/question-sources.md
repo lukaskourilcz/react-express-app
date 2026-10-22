@@ -60,3 +60,21 @@ and [binary search trees](https://algs4.cs.princeton.edu/32bst/), the
 and [MDN's sort contract](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort).
 The explanations distinguish these models from engine guarantees. The readings
 are original summaries, not copied source passages.
+
+
+### DSA Advanced (E4, 22 October 2026)
+
+The new bank has 120 questions in the approved 15-level order. Sixteen are
+freshly worded/reviewed moves of the heap/graph concepts preserved in
+`lib/roadmap-questions-dsa-advanced-holding.json`; 104 are original. The old
+source remains intact and the id map lives in the E4 provenance history.
+No question or task copies a university exercise, solution or employer prompt.
+
+Further reading checked at authoring: MIT 6.006 Spring 2020 lectures 8–10, 13,
+15–16, 18 and 20; Stanford CS106B Lecture 21 on tries; Waterloo CS341 Winter 2026
+greedy notes; MDN’s Number bitwise and collection references. The Princeton
+union-find claim was verified in its official indexed text; direct automated
+fetches returned 403, so no full-page fetch is claimed. The eight lesson objects
+carry exact source URLs and dates. Reviews are item-specific model self-reviews
+with `independent:false`, not independent certification. New task checks use
+original bounded fixtures in the production sandbox.

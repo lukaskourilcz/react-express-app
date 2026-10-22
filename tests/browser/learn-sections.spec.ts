@@ -92,7 +92,8 @@ async function stand(page: Page, account: Account, {
 const switcherItem = (page: Page, name: string) =>
   page.getByRole('radiogroup', { name: 'Learn sections' }).getByRole('radio', { name: new RegExp(`^${name}`) });
 const topicCard = (page: Page, name: string) =>
-  page.getByRole('radiogroup', { name: 'Choose a topic' }).getByRole('radio', { name: new RegExp(`^${name.replace(/[&]/g, '\\$&')}`) });
+  // The whole label: "DSA Foundations" must not also match "DSA Advanced".
+  page.getByRole('radiogroup', { name: 'Choose a topic' }).getByRole('radio', { name: new RegExp(`^${name.replace(/[&]/g, '\\$&')}(?:$|,| —)`) });
 
 test.describe('Learn section routes', () => {
   test('resolve /learn, deep links, unknown sections and this device’s last section', async ({ page }) => {
@@ -104,7 +105,7 @@ test.describe('Learn section routes', () => {
 
     await page.goto('/learn?topic=dsa');
     await expect(page).toHaveURL(/\/learn\/software-engineer\?topic=dsa$/);
-    await expect(topicCard(page, 'DSA')).toHaveAttribute('aria-checked', 'true');
+    await expect(topicCard(page, 'DSA Foundations')).toHaveAttribute('aria-checked', 'true');
 
     await page.goto('/learn?topic=react&part=1');
     await expect(page).toHaveURL(/\/learn\/web-developer\?topic=react&part=1$/);
@@ -189,7 +190,7 @@ test.describe('A Frontend learner and Software Engineer', () => {
       await expect(topicCard(page, name)).toBeDisabled();
       await expect(topicCard(page, name)).toHaveAccessibleName(/not in your plan/);
     }
-    for (const name of ['Git', 'General', 'DSA']) {
+    for (const name of ['Git', 'General', 'DSA Foundations']) {
       await expect(topicCard(page, name)).not.toHaveAccessibleName(/not in your plan/);
     }
     const join = page.getByRole('button', { name: 'Add Software Engineer to your plan' });
@@ -209,7 +210,7 @@ test.describe('A Frontend learner and Software Engineer', () => {
     await expect(page.getByText(/Software Engineer is in your plan\./)).toBeFocused();
     expect(state.puts.at(-1)).toMatchObject({ baseTrack: 'frontend', specialization: null, sections: ['software-engineer'] });
     await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toHaveCount(0);
-    for (const name of ['Algorithms', 'Security', 'DSA']) await expect(topicCard(page, name)).toBeEnabled();
+    for (const name of ['Algorithms', 'Security', 'DSA Foundations']) await expect(topicCard(page, name)).toBeEnabled();
     for (const name of ['System Design', 'DevOps & Cloud', 'Databases']) await expect(topicCard(page, name)).toHaveAccessibleName(/Locked/);
 
     await switcherItem(page, 'Web Developer').click();

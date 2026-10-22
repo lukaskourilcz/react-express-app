@@ -100,3 +100,5 @@ nothing posts without a person approving it. See the README for what it does and
 touch.
 
 Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.
+
+DSA Foundations and DSA Advanced each contain fifteen Learn levels in Software Engineer. Advanced uses the first five Foundations levels as its prerequisite and requires Premium for graded levels and part tests.

@@ -9,11 +9,12 @@
 import { createHash } from 'node:crypto';
 import type { LessonBody } from '../../shared/learning-path-api';
 import { DSA_LESSONS } from './dsa';
+import { DSA_ADVANCED_LESSONS } from './dsa-advanced';
 import { mergeLessonSection, type LessonSource } from './types';
 
 export type { LessonSource } from './types';
 
-const LESSONS: readonly LessonSource[] = DSA_LESSONS;
+const LESSONS: readonly LessonSource[] = [...DSA_LESSONS, ...DSA_ADVANCED_LESSONS];
 
 export const LEARN_LESSONS: ReadonlyMap<string, LessonSource> = new Map(LESSONS.map((lesson) => [lesson.id, lesson]));
 

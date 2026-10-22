@@ -183,7 +183,7 @@ describe('the plan table', () => {
     expect(rows.join(' ')).not.toMatch(/AI|[Ll]anguage|[Tt]ranslat/);
     expect(screen.getByText(/No ads on either plan\./)).toBeInTheDocument();
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
-    expect(within(table).getByText('All 16')).toBeInTheDocument();
+    expect(within(table).getByText('All 17')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
   });
 

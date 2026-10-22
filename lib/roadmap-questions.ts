@@ -17,6 +17,7 @@ import { gitSeeds } from './roadmap-questions-git';
 import { htmlCoreSeeds } from './roadmap-questions-html-core';
 import { cssCoreSeeds } from './roadmap-questions-css-core';
 import { dsaSeeds } from './roadmap-questions-dsa';
+import { dsaAdvancedSeeds } from './roadmap-questions-dsa-advanced';
 import { algorithmsSeeds } from './roadmap-questions-algorithms';
 import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
 import { generalSeeds } from './roadmap-questions-general';
@@ -57,6 +58,7 @@ export const roadmapGitQuestions = buildRoadmap('rm-git', 'git', gitSeeds);
 export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlCoreSeeds);
 export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssCoreSeeds);
 export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
+export const roadmapDsaAdvancedQuestions = buildRoadmap('rm-dsaa', 'dsa-advanced', dsaAdvancedSeeds);
 export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);
 export const roadmapAbbreviationsQuestions = buildRoadmap('rm-abbr', 'abbreviations', abbreviationsSeeds);
 // General runs fifteen levels of how-the-web-works plus the four Testing
