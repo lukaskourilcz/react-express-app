@@ -56,8 +56,10 @@ import {
   useEnrollments,
   usePathCatalog,
   usePathProgress,
+  withChangedEnrollments,
 } from '../../lib/learningPaths';
 import type {
+  EnrollmentListResponse,
   PathCatalogEntry,
   PathDraft,
   PathProgressResponse,
@@ -218,6 +220,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
   const [enrolling, setEnrolling] = useState(false);
+  // Set before the first await, so a second click on Start or Pause before the
+  // button re-renders as disabled sends nothing.
+  const enrollingNow = useRef(false);
   const [enrollError, setEnrollError] = useState<string | null>(null);
   // Premium opens the paths. Starting or resuming one the plan does not open
   // asks for Premium instead, and the button carries the Premium mark.
@@ -232,11 +237,12 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
   const enrol = useCallback(
     async (action: 'enroll' | 'pause' | 'resume') => {
-      if (!entry) return;
+      if (!entry || enrollingNow.current) return;
+      enrollingNow.current = true;
       setEnrolling(true);
       setEnrollError(null);
       try {
-        await changeEnrollment({
+        const changed = await changeEnrollment({
           pathId,
           curriculumVersion: entry.manifest.version,
           action,
@@ -246,10 +252,13 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         if (action === 'enroll') {
           capturePathEvent('learning_path_enrolled', { pathId, curriculumVersion: entry.manifest.version });
         }
-        await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(userId) });
+        const key = learningPathKeys.enrollments(userId);
+        queryClient.setQueryData<EnrollmentListResponse>(key, (list) => withChangedEnrollments(list, changed));
+        void queryClient.invalidateQueries({ queryKey: key });
       } catch (error) {
         setEnrollError(friendlyError(error));
       } finally {
+        enrollingNow.current = false;
         setEnrolling(false);
       }
     },

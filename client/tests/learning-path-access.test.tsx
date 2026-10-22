@@ -251,6 +251,13 @@ describe('the path page', () => {
     expect(screen.queryByText(/are required to complete the path/)).toBeNull();
   });
 
+  it('a double click on Start sends one enrollment', async () => {
+    await overview('fde');
+    const start = screen.getByRole('button', { name: 'Start this path' });
+    await act(async () => { fireEvent.click(start); fireEvent.click(start); });
+    await waitFor(() => expect(state.changes).toHaveLength(1));
+  });
+
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];

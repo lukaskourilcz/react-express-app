@@ -97,6 +97,18 @@ export function changeEnrollment(input: EnrollmentCreateRequest): Promise<Enroll
   });
 }
 
+/** The cached enrollment list with the rows a change returned put in place,
+ * so a screen shows the new status at once instead of after a refetch. With
+ * nothing cached yet it stays empty, and the refetch fills it. */
+export function withChangedEnrollments(
+  list: EnrollmentListResponse | undefined,
+  changed: EnrollmentListResponse,
+): EnrollmentListResponse | undefined {
+  if (!list) return list;
+  const ids = new Set(changed.enrollments.map((one) => one.enrollmentId));
+  return { enrollments: [...list.enrollments.filter((one) => !ids.has(one.enrollmentId)), ...changed.enrollments] };
+}
+
 /** An account's enrollments, as one set of options the hook and a page's
  * first-data prefetch share. */
 export const enrollmentsQuery = (userId: string | undefined) => queryOptions({
