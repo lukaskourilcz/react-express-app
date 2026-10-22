@@ -2870,7 +2870,8 @@ style — re-running the executable checks, and accepted, amended or rejected
 it; a rejected rewrite becomes a quarantine, so nothing reaches a learner on
 one reading. Pairs flagged as similar across batches were decided once by a
 third pass (`docs/audit/wip/DUPLICATES-BRIEF.md`). Finally a localisation
-pass wrote the Czech for every rewritten field (`docs/audit/wip/CS-BRIEF.md`),
+pass wrote the Czech for every rewritten field (`docs/audit/wip/CS-BRIEF.md`,
+removed on 21 October 2026 with the second language and kept in Git history),
 keeping the served Czech verbatim where the first reviewer had verified it
 and only the hint changed; a mechanical parity check confirms four options,
 unchanged code and identifiers, and nothing left in English.
