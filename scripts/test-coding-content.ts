@@ -42,7 +42,7 @@ import { complexityGuidance } from '../shared/coding-complexity';
 import { REACT_VARIANTS } from './coding-react-variants';
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
-import { DSA_LEVELS_AWAITING_E3, formatOf } from '../shared/coding-catalog';
+import { formatOf } from '../shared/coding-catalog';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder, type AuthoredPuzzle } from '../lib/coding/puzzles';
@@ -575,15 +575,14 @@ async function main() {
     }
   }
   // DSA Foundations (#493): every level but the foundation review (15) has
-  // tasks, and a level issues them only once its title matches them; the Big O
-  // introduction (1-2) and the levels E3 re-sequences (10, 11, 14) wait.
+  // aligned coding tasks; the closing foundation review assesses questions only.
   for (let level = 1; level <= 15; level++) {
     const tasks = tasksForLevel('dsa', level);
     if (level < 15 && tasks.length === 0 && !ALLOW_GAPS) fail(`dsa level ${level} has no coding task`);
     if (level === 15 && tasks.length > 0) fail('dsa level 15, the foundation review, has no coding task');
     const chosen = levelCodingTasks('dsa', level);
-    const held = DSA_LEVELS_AWAITING_E3.has(level) || level === 15;
-    if (held && chosen.length > 0) fail(`dsa level ${level} issues a coding task before E3`);
+    const held = level === 15;
+    if (held && chosen.length > 0) fail(`dsa level ${level} issues a coding task on the review-only level`);
     if (!held && chosen.length === 0 && !ALLOW_GAPS) fail(`dsa level ${level} issues no coding task`);
     if (chosen.some((t) => t.verify === 'checklist' || formatOf(t) === 'debug')) fail(`dsa level ${level} would gate on a checklist or repair task`);
   }

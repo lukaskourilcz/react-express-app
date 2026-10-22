@@ -140,7 +140,7 @@ describe('the section switcher', () => {
     });
     await mountAt('/learn?topic=dsa&level=1');
     expect(await screen.findByText('Nothing here is open yet')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^DSA — Locked/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /^DSA Foundations — Locked/ })).toBeDisabled();
     expect(screen.queryByText('Which option is first?')).toBeNull();
     expect(levelRequests).toEqual([]);
     server.events.removeAllListeners('request:start');
