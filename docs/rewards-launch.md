@@ -1,18 +1,28 @@
-# Rewards launch: what the code does, and what only you can do
+# Rewards: what the code does, and what only the owner can do
 
-The Rewards screen (`/shop`) offers five physical objects and one drawing for
-coins. The drawing is finished. The objects come from Spreadshop (sprd.net AG),
-which prints, sells and ships them from the devShark shop on its EU platform
-(#229). Coins are the product's name for the tokens of migration 028: the UI
-says coins, the tables, ops and code keep `token`.
+The Rewards screen (`/shop`) shows the learner's coins and their ledger, and
+sells the crown (a drawing) and streak protection for coins. Coins are the
+product's name for the tokens of migration 028: the UI says coins, and the
+tables, ops and code keep `token`.
 
-This document is the honest split: everything the repository can decide is
-decided and shipped; everything that needs a real quote, a real Spreadshop
-order or a real person to send a parcel is listed here as work only the owner
-can do.
-Until those are done the shop reports each item as **not on sale yet** and
-refuses to create an order for it through any route — the UI, a crafted request,
-or an admin call. There is no placeholder price anywhere in the product.
+**Merchandise is paused.** `MERCH_ENABLED` in `shared/rewards.ts` is `false`
+(owner decision, 1 October 2026). While it is off, nothing shows or sells
+merchandise: not the shop's merchandise section, coin redemption, the package a
+finished learning path earns, the Premium list, the marketing copy or the
+Terms. The server answers every merchandise order and path-package claim with
+404 `merch_unavailable`, whatever the shop settings say. The tables, routines
+and the `/dev` → Merchandise screen stay in place, and account deletion still
+erases any order. Turning merchandise back on means setting that constant to
+`true` and restoring the copy and the Terms that were taken out with it.
+
+The five merchandise items (`MERCH_SKUS`: sticker set, mug, t-shirt, hoodie,
+cap) come from Spreadshop (sprd.net AG), which prints, sells and ships them
+from the devShark shop on its EU platform (#229). The sections below split the
+work: what the repository already does, and what needs a real quote, a real
+Spreadshop order or a person to send a parcel, which only the owner can do.
+Until an item is priced, the shop reports it as **not on sale yet** and refuses
+to create an order for it through any route: the UI, a crafted request or an
+admin call. No placeholder price exists anywhere in the product.
 
 ## The rule that outranks the rest
 
@@ -107,7 +117,7 @@ still balance without keeping someone who asked to be forgotten. Spreadshop
 keeps its own copy of a sample order's address under its own privacy policy,
 which `/privacy` names.
 
-## What only you can do
+## What only the owner can do when merchandise returns
 
 ### 1. Open the shop and link it
 
@@ -208,9 +218,11 @@ the Rewards screen, request an API key at partner.spreadshirt.net/apiKey and set
 browser never talks to Spreadshop. The note says that coins never buy a
 discount.
 
-## The order in which to switch things on
+## The order in which to switch merchandise on
 
-1. Apply migration 043. Link the shop and add the mockups (section 1).
+1. Set `MERCH_ENABLED` to `true`, restore the merchandise copy and Terms, and
+   deploy. Link the shop and add the mockups (section 1). Production already
+   has migration 043 and every later one.
 2. Enter the quote and coin price for one item only. Confirm it shows its coin
    price and the margin reads as you expect.
 3. Set its cap. Confirm it becomes redeemable.
