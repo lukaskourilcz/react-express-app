@@ -34,12 +34,9 @@ const USER = '/api/user/[op]';
 
 export const learningPathKeys = {
   catalog: () => ['learning-path', 'catalog'] as const,
-  preference: (userId: string | undefined) => ['learning-path', 'preference', userId ?? 'anon'] as const,
   enrollments: (userId: string | undefined) => ['learning-path', 'enrollments', userId ?? 'anon'] as const,
   progress: (userId: string | undefined, enrollmentId: string | undefined, version: number | undefined) =>
     ['learning-path', 'progress', userId ?? 'anon', enrollmentId ?? '', version ?? 0] as const,
-  draft: (enrollmentId: string | undefined, activityId: string | undefined) =>
-    ['learning-path', 'draft', enrollmentId ?? '', activityId ?? ''] as const,
 };
 
 /* ── catalog ───────────────────────────────────────────────────────────── */
@@ -72,10 +69,6 @@ export const entryFor = (
 export const isOpen = (availability: PathAvailability | undefined): boolean => availability === 'available';
 
 /* ── preference ────────────────────────────────────────────────────────── */
-
-export function fetchLearningPreference(signal?: AbortSignal): Promise<LearningPreferenceResponse> {
-  return apiFetch<LearningPreferenceResponse>(`${USER}?op=learning-preference`, { signal });
-}
 
 export function saveLearningPreference(input: LearningPreferenceRequest): Promise<LearningPreferenceResponse> {
   return apiFetch<LearningPreferenceResponse>(`${USER}?op=learning-preference`, {
