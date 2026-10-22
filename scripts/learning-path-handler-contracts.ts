@@ -353,6 +353,43 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a draft that cannot be read is logged, and the activity opens ─ */
+    {
+      const id = `DRAFTERR${stamp}`.padEnd(20, 'a');
+      const row = { ...enrollmentRow('active'), enrollment_id: id };
+      const requestId = `req-draft-read-${stamp}`;
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const lines: string[] = [];
+      const log = console.log;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        console.log = (line: unknown) => { lines.push(String(line)); };
+        const req = request('POST', `draft-read-${stamp}`, { user_id: learner, enrollmentId: id, activityId: codeActivity.id }, { headers: { 'x-request-id': requestId } });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: row },
+            rowErrors: { learning_path_drafts: { code: '57014', message: 'canceling statement due to statement timeout' } },
+            lists: { learning_path_progress: [] },
+            rpc: (name) => name === 'open_learning_path_attempt'
+              ? { data: { ok: true, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } }
+              : {},
+          }));
+        });
+        if (res.statusCode !== 200) fail(`a failed draft read must still open the activity, got ${res.statusCode} ${code(res)}`);
+        else if ((res.body as StartActivityResponse).draft !== null) fail('a failed draft read must open without a draft');
+        const logged = lines.map((line) => { try { return JSON.parse(line) as Record<string, unknown>; } catch { return null; } })
+          .find((entry) => entry?.kind === 'draft_read_failed');
+        if (!logged) fail('a failed draft read must be logged');
+        else if (logged.request_id !== requestId || logged.code !== '57014') fail(`the draft read failure must carry the request id and error code, got ${JSON.stringify(logged)}`);
+      } finally {
+        console.log = log;
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── a stored enrollment of the retired DSA path ─────────────────── */
     // E5 (#496) deletes no data, so a learning_path_enrollments row with
     // path_id 'dsa-foundations' may still exist beside an FDE one. The list

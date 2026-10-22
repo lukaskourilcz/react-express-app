@@ -716,10 +716,13 @@ async function buildActivityPayload(
 ): Promise<ActivityPayload> {
   let draft: PathDraft | null = null;
   if (activity.kind === 'code' || activity.kind === 'artifact') {
-    const { data } = await withTimeout(
+    const { data, error } = await withTimeout(
       supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
         .eq('enrollment_id', enrollmentId).eq('activity_id', activity.id).maybeSingle(),
     );
+    // The activity still opens, from its starter; the log line (with the
+    // request id) is how a draft that seems lost gets traced.
+    if (error) logEvent({ kind: 'draft_read_failed', activityKind: activity.kind, code: (error as { code?: string }).code ?? null });
     if (data) {
       draft = {
         activityId: activity.id,
