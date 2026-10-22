@@ -1,21 +1,21 @@
 # devShark carousel design system
 
-devShark (devshark.app) is a learning platform for web developers: guided lessons, quizzes, server-graded coding tasks, a daily question, streaks and leaderboards. It has been freemium since 25 September 2026; Premium launches at €1.80 a month / €18 a year (regular €3.99 from 3 November 2026). devShark ships no AI feature and its copy makes no AI claims.
+devShark (devshark.app) is a learning platform for web developers: guided lessons, quizzes, server-graded coding tasks, a daily question, streaks and leaderboards. It is freemium: Premium costs €4.99 a month or €59.88 a year before VAT, and the launch offer takes 55 % off (€2.25 / €26.95) for subscriptions started by 30 November 2026. Stripe checkout is not live yet, so check the current price and offer before you publish a price. devShark ships no AI feature and its copy makes no AI claims.
 
 This system covers **social carousels for Instagram and Threads** (1080 × 1350) in the “Deep End v2” identity of the product: ocean ink, tactile paper, editorial type, one disciplined accent, the waterline mark, restrained fins.
 
 ## Sources
-- Product repository: github.com/lukaskourilcz/react-express-app (main). Tokens from `client/src/styles/astryx-theme.css`; brand rules from `docs/brand/brand-guidelines.md` (V9 kit) and `docs/marketing/social-skill.md`; behavioural rules from `DESIGN_RULES.md`; code theme from `client/src/components/CodeBlock.tsx` (Prism One Dark); tech logos from `client/src/components/ui/techIcons.tsx` (devicon).
+- Product repository: github.com/lukaskourilcz/react-express-app (main). Tokens from `client/src/styles/astryx-theme.css`; brand rules from `docs/brand/brand-guidelines.md` (V9 kit); behavioural rules from `DESIGN_RULES.md`; code theme from `client/src/components/CodeBlock.tsx` (Prism One Dark); tech logos from `client/src/components/ui/techIcons.tsx` (devicon).
 - Brand marks: the V9 kit (`client/public/brand/v9/recommended/`) — copied into `assets/`.
-- The finished design: `Direction B - Mixed colours.dc.html` (two carousels: Premium launch offer, full run). Earlier explorations: `Direction A - Editorial paper`, `Direction B - Panel`, `Direction C - Waterline`.
+- The finished design: `Direction B - Mixed colours.dc.html` (two carousels: the Premium launch offer and a full run). Its slides, `ui_kits/carousel/Carousel.jsx`, `components/carousel/carousel.card.html` and the footer in `components/carousel/Panel.jsx` still show the superseded prices (€1.80 a month, €18 a year, regular €3.99) and a 2 November end date. Update them before you reuse a slide.
 
 ## Content fundamentals
 - **Voice**: a well-set magazine page, not a startup ad. Plain, matter-of-fact sentences. No hype, no exclamation marks, no emoji, no AI claims.
 - **One idea per slide**, never more than ~25 words. Headlines are short declaratives with full stops: “Learn. Quiz. Code.” “Start with the foundations.”
 - **Kickers** are two-to-four-word labels, uppercase in type but written normally: “How it works”, “Premium · launch price”. The middle dot separates two labels.
 - **The name** is always “devShark” (lowercase d, capital S), even inside uppercase labels. It appears on the cover and the closing slide only; slides in between teach, they don’t sell.
-- **Prices** are introductory launch prices, never sales: no “was/now”, no strikethrough without the words “regular price”. Dates are written “3 November 2026” in body copy and “2 Nov 2026” in a footer.
-- **Numbers** lead: 770, 16, 55%, €1.80 — set very large and left to speak.
+- **Prices** are introductory launch prices, never sales: no “was/now”, no strikethrough without the words “regular price”. Dates are written in full in body copy (“30 November 2026”) and short in a footer (“30 Nov 2026”).
+- **Numbers** lead: a count, a percentage or a price, set very large and left to speak.
 - Second person is implied, rarely written; “you” appears only where it clarifies (“tell you exactly what failed”).
 
 ## Visual foundations
@@ -42,7 +42,6 @@ This system covers **social carousels for Instagram and Threads** (1080 × 1350)
 - `ui_kits/carousel/` — `index.html` renders both carousels from `Carousel.jsx`; `new-post.html` is the starting point for a new post.
 - `assets/` — V9 marks and devicon logos.
 - `SKILL.md` — agent skill for Claude Code.
-- `design_handoff_instagram_carousel_kit/` — developer handoff with the Claude Code prompt.
 
 ### Intentional additions
 - `Statement`, `BigNumber`, `TintRow`, `TestsPassed` — carousel-only type/panel pieces with no product counterpart; they exist so the slides compose without inline numbers.
