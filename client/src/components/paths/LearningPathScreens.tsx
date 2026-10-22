@@ -42,11 +42,8 @@ import {
   activityHref,
   changeEnrollment,
   entryFor,
-  forgetLocalDraft,
   isOpen,
-  keepDraftLocally,
   learningPathKeys,
-  localDraftOver,
   moduleHref,
   newIdempotencyKey,
   pathHref,
@@ -56,8 +53,8 @@ import {
   useEnrollments,
   usePathCatalog,
   usePathProgress,
-  withChangedEnrollments,
 } from '../../lib/learningPaths';
+import { forgetLocalDraft, keepDraftLocally, localDraftOver, withChangedEnrollments } from '../../lib/learningPathWorkspace';
 import type {
   EnrollmentListResponse,
   PathCatalogEntry,
