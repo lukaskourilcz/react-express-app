@@ -20,6 +20,10 @@ import { FDE_M11_SOLUTIONS } from './fde-m11';
 import { FDE_M12_SOLUTIONS } from './fde-m12';
 import { FDE_M13_SOLUTIONS } from './fde-m13';
 import { FDE_M14_SOLUTIONS } from './fde-m14';
+import { FDE_IP02_SOLUTIONS } from './fde-ip02';
+import { FDE_IP01_SOLUTIONS } from './fde-ip01';
+import { FDE_IP04_SOLUTIONS } from './fde-ip04';
+import { FDE_IP03_SOLUTIONS } from './fde-ip03';
 import { FDE_C01_SOLUTIONS } from './fde-c01';
 
 const ALL: Record<string, PathCodeSolution> = {
@@ -40,6 +44,10 @@ const ALL: Record<string, PathCodeSolution> = {
   ...FDE_M13_SOLUTIONS,
   ...FDE_M14_SOLUTIONS,
   ...FDE_C01_SOLUTIONS,
+  ...FDE_IP01_SOLUTIONS,
+  ...FDE_IP02_SOLUTIONS,
+  ...FDE_IP03_SOLUTIONS,
+  ...FDE_IP04_SOLUTIONS,
 };
 
 export const solutionFor = (activityId: string): PathCodeSolution | undefined => ALL[activityId];

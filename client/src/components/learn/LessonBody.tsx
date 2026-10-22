@@ -7,7 +7,7 @@
 // carry a word as well as a border. Autoplay is opt-in and never starts under
 // a reduced-motion preference.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { runCodeTests } from '../../coding/runner/run-tests';
 import { TermsBar } from '../ui/Terms';
 import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
@@ -15,16 +15,68 @@ import { useT } from '../../i18n/LanguageContext';
 import type { LessonBody as LessonBodyDto, LessonSection, TraceSpec } from '../../../../shared/learning-path-api';
 import { Button } from '@astryxdesign/core/Button';
 
-/** Inline `code` spans, matching how the coding workbench renders a prompt. */
+function allowedLessonHref(href: string): boolean {
+  try {
+    const url = new URL(href, 'https://devshark.invalid');
+    if (href.startsWith('https://')) return url.protocol === 'https:';
+    const path = href.split(/[?#]/, 1)[0];
+    // Learn routes use literal lowercase slug segments. Refuse normalization,
+    // encoded path separators and dot segments instead of changing the route.
+    return url.origin === 'https://devshark.invalid' && path === url.pathname
+      && /^\/learn\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*\/?$/.test(path);
+  } catch { return false; }
+}
+
+/** Authored lesson links use HTTPS or a Learn address; HTML remains plain text. */
+function lessonLinks(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /\[([^\]\n]{1,160})\]\((https:\/\/[^\s)]+|\/learn\/[a-z0-9/?=&%#.-]+)\)/g;
+  let from = 0;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index!;
+    nodes.push(text.slice(from, index));
+    const external = match[2].startsWith('https://');
+    nodes.push(match[1].trim() && allowedLessonHref(match[2]) ? <span className="ss-text-links" key={index}><a href={match[2]} {...(external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}>{match[1]}</a></span> : match[0]);
+    from = index + match[0].length;
+  }
+  nodes.push(text.slice(from));
+  return nodes;
+}
+
+/** Match whole backtick runs so link examples stay literal in every text cell. */
+function InlineText({ text }: { text: string }) {
+  const nodes: ReactNode[] = [];
+  let from = 0;
+  while (from < text.length) {
+    const open = text.indexOf('`', from);
+    if (open < 0) break;
+    let start = open;
+    while (text[start] === '`') start += 1;
+    const width = start - open;
+    let close = start;
+    let end = start;
+    while ((close = text.indexOf('`', end)) >= 0) {
+      end = close;
+      while (text[end] === '`') end += 1;
+      if (end - close === width) break;
+    }
+    if (close < 0) break;
+    nodes.push(<span key={`text-${from}`}>{lessonLinks(text.slice(from, open))}</span>);
+    nodes.push(<code key={`code-${open}`}>{text.slice(start, close)}</code>);
+    from = end;
+  }
+  nodes.push(<span key={`text-${from}`}>{lessonLinks(text.slice(from))}</span>);
+  return <>{nodes}</>;
+}
+
+/** Inline code and bounded authored links; text inside code is never parsed. */
 export function RichText({ text }: { text: string }) {
   const paragraphs = text.split('\n\n');
   return (
     <>
       {paragraphs.map((paragraph, index) => (
         <p key={index}>
-          {paragraph.split('`').map((part, partIndex) =>
-            partIndex % 2 === 1 ? <code key={partIndex}>{part}</code> : <span key={partIndex}>{part}</span>,
-          )}
+          <InlineText text={paragraph} />
         </p>
       ))}
     </>
@@ -181,10 +233,10 @@ function Section({ section }: { section: LessonSection }) {
                       {cells.map((cell, cellIndex) =>
                         cellIndex === 0 ? (
                           <th key={cellIndex} scope="row">
-                            {cell}
+                            <InlineText text={cell} />
                           </th>
                         ) : (
-                          <td key={cellIndex}>{cell}</td>
+                          <td key={cellIndex}><InlineText text={cell} /></td>
                         ),
                       )}
                     </tr>
