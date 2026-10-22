@@ -1139,7 +1139,20 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
-  const attemptResult = await ensureAttempt(session, userId);
+  // The attempt row, the served question set and the graded answers are
+  // independent reads, so they run together once the session's owner is
+  // confirmed. The answers are used only after the attempt is shown to be
+  // this session's, and only when none of its questions was retired.
+  const [attemptResult, served, answers] = await Promise.all([
+    ensureAttempt(session, userId),
+    getEffectiveQuestionsById(session.subject),
+    withTimeout(
+      supabase
+        .from('roadmap_attempt_answers')
+        .select('question_id,is_correct')
+        .eq('attempt_id', session.attemptId!),
+    ),
+  ]);
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
       return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
@@ -1156,7 +1169,6 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // is closed without a verdict instead: nothing is written to the learner's
   // progress, no pass is granted on a flawed item and no fail is recorded for
   // one. The client offers the level again with its current questions.
-  const served = await getEffectiveQuestionsById(session.subject);
   const retired = session.questions.filter((q) => !served.has(q.questionId)).map((q) => q.questionId);
   if (retired.length > 0) {
     if (!attempt.completed_at) {
@@ -1179,12 +1191,6 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       invalidated: { reason: 'content_retired', questionIds: retired },
     });
   }
-  const answers = await withTimeout(
-    supabase
-      .from('roadmap_attempt_answers')
-      .select('question_id,is_correct')
-      .eq('attempt_id', session.attemptId!),
-  );
   if (answers.error) return jsonError(res, 500, 'db_error', 'Could not grade the learning attempt');
   const graded = answers.data ?? [];
   const correctAnswers = graded.filter((answer) => answer.is_correct === true).length;
