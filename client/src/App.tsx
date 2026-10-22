@@ -79,7 +79,8 @@ const loadCollection = routeChunk(exact('/collection'), () => import('./componen
 const loadTyping = routeChunk(exact('/typing'), () => import('./components/TypingRacer'));
 const loadCoding = routeChunk(under('/coding'), () => import('./components/coding/CodingSection'));
 const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('./components/coding/GithubSettingsPage'));
-const loadPaths = routeChunk(under(FDE_PATH, '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
+// Only the FDE path's own pages: /roadmap/paths/* now only redirects to Learn.
+const loadPaths = routeChunk(under(FDE_PATH), () => import('./components/paths/LearningPathScreens'));
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/checkout', '/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
 const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));

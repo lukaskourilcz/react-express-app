@@ -10,6 +10,12 @@ import { firstDraw, headings } from './firstDraw';
 import { RouteErrorBoundary } from '../src/components/RouteErrorBoundary';
 import { server } from './mocks/server';
 
+const pathScreens = vi.hoisted(() => ({ loaded: false }));
+vi.mock('../src/components/paths/LearningPathScreens', () => {
+  pathScreens.loaded = true;
+  return { FdeOverview: () => null, FdeModule: () => null };
+});
+
 // The two halves of a navigation that draws once: the next page's code starts
 // loading on intent, and a page can hold its first render for its data.
 
@@ -36,6 +42,17 @@ describe('route chunks', () => {
     await expect(loader()).resolves.toHaveProperty('default');
     expect(load).toHaveBeenCalledTimes(2);
   });
+});
+
+describe('the app\'s route chunks', () => {
+  it('loads the path screens for the FDE path\'s pages, not for the old /roadmap/paths redirects', async () => {
+    await import('../src/App');
+    pathScreens.loaded = false;
+    await preloadPath('/roadmap/paths/dsa-foundations');
+    expect(pathScreens.loaded).toBe(false);
+    await preloadPath('/learn/forward-deployed-engineer/path/m03');
+    expect(pathScreens.loaded).toBe(true);
+  }, 60_000);
 });
 
 describe('route box key', () => {
