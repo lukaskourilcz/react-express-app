@@ -1,6 +1,29 @@
 # Release acceptance matrix
 
-> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+## Current state (22 October 2026)
+
+This file is an append-style evidence ledger. Each dated entry records what someone checked that day, and later entries leave earlier ones as they were. The entries from 15 October back to 8 September sit at the top; from "2026-09-11 — eight free-tool recommendations" on, the file runs oldest to newest, so the newest entry is at the end.
+
+Released:
+
+- `main` is at `1f5a3b11`, the merge of PR #559 (B14, #510). Vercel deploys `main` to https://devshark.app.
+- Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
+- Learn has three sections: Web Developer, Software Engineer and Forward Deployed Engineer. DSA lives in Learn as the topics `dsa` and `dsa-advanced`. The standalone DSA path is retired, and `/roadmap/paths/dsa-foundations/*` answers 308 to `/learn/software-engineer?topic=dsa`.
+- The FDE path is built and merged (epics A to E are closed) but switched off: Production does not set `LEARNING_PATH_FDE_ENABLED`. No Vercel environment sets an FDE or marketing-export variable, so the OwnDashboard marketing export stays inactive too.
+- devShark has shipped English only since 21 October 2026. Entries before that date describe a second language (Czech) that no longer exists.
+- Merchandise stays paused behind `MERCH_ENABLED`, and Stripe billing (#221) is not live.
+- Content review totals live in the "Current state" section of `docs/audit/devshark-content-audit.md`.
+
+Open, all owner items (`NEEDED.md` carries them):
+
+- Set `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production and redeploy. The entry "B14 FDE release verification — 22 October 2026" is the evidence.
+- Approve new Terms wording: `legal.terms.plans.premium` still promises "the FDE and DSA learning paths".
+- #190: confirm that GitHub Actions failure e-mails reach you, and add an external uptime monitor for `/api/health`. The scheduled health workflow ran 6 of 96 times in 24 hours.
+- #391: the remaining owner decisions, including whether to publish the reviewed system-design track. #236: production-data decisions. #221: Stripe billing.
+- Optional: escalate vercel/vercel#16109, the source of the DEP0169 warning (#477, closed).
+- Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet.
+
+Of the issues these entries name, only #190, #221, #236 and #391 are still open. A "remains open" or "pending" line about any other issue or PR records the state on that entry's date. On 22 October 2026 the owner dropped Cloudflare Turnstile (#202), the workbench handoff with the unmerged `claude/elegant-cori-h9cdgb` work (#208; the branch survives as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`), the StudyShark promo video and the October marketing plan (#239). Entries that mention them describe past work, not plans.
 
 ## 15 October — local structuredClone own-key correction (#403)
 
