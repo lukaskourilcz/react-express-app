@@ -1320,6 +1320,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       if (/roadmap_prerequisite_not_met/i.test(completed.error.message ?? '')) {
         return jsonError(res, 409, 'prerequisite_not_met', 'Complete the preceding learning steps first');
       }
+      // The routine refuses an attempt that ran past its two hours (the
+      // owner was checked above), which the learner fixes by starting the
+      // level again, as the attempt-status check tells them.
+      if (/invalid_roadmap_attempt/i.test(completed.error.message ?? '')) {
+        return jsonError(res, 409, 'invalid_session', 'This learning attempt expired. Start the lesson again.');
+      }
       return jsonError(res, 500, 'db_error', 'Could not save learning progress');
     }
     const outcome = completed.data as { applied?: unknown; repeatXp?: unknown; firstPass?: unknown } | boolean | null;

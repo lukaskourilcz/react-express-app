@@ -118,7 +118,9 @@ function recordAnswer(args: Row): { status: number; body: unknown } {
  * handler relies on, including the mastery fields it writes on a level. */
 function completeAttempt(args: Row): { status: number; body: unknown } {
   const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === args.p_attempt_id);
-  if (!attempt || attempt.user_id !== args.p_user_id) return { status: 400, body: { code: 'P0001', message: 'invalid_roadmap_attempt' } };
+  if (!attempt || attempt.user_id !== args.p_user_id || (typeof attempt.expires_at === 'string' && Date.parse(attempt.expires_at) < Date.now())) {
+    return { status: 400, body: { code: 'P0001', message: 'invalid_roadmap_attempt' } };
+  }
   if (attempt.completed_at) return { status: 200, body: false };
   const answers = tables.roadmap_attempt_answers.filter((row) => row.attempt_id === attempt.attempt_id);
   if (answers.length !== attempt.total_questions) return { status: 400, body: { code: 'P0001', message: 'incomplete_roadmap_attempt' } };
@@ -690,6 +692,23 @@ async function main() {
     assert.equal(bigODone.statusCode,200,JSON.stringify(bigODone.body));
     assert.equal(bigODone.body.passed,true,'a free beginner completes Big O without DSA level one or placement');
     console.log('PASS learn: Big O level two can be completed directly without placement or an earlier DSA level');
+
+    // ── An attempt past its two hours answers 409, not 500 ──────────────────
+    // The completion routine raises invalid_roadmap_attempt for an attempt
+    // that ran out; the learner restarts the level, so the answer says so in
+    // the code the client already reads as expired.
+    {
+      const level = await call('GET', { topic: 'html', level: '1' }, OTHER.token);
+      assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+      assert.ok((await answerAll(level.body.sessionId, OTHER.token)).every((status) => status === 200));
+      const attemptId = tokens.decodeSessionEnvelope(level.body.sessionId)!.attemptId;
+      const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === attemptId)!;
+      attempt.expires_at = new Date(Date.now() - 60_000).toISOString();
+      const expired = await call('POST', { resource: 'complete' }, OTHER.token, { sessionId: level.body.sessionId });
+      assert.equal(expired.statusCode, 409, `an expired attempt is refused as expired (${JSON.stringify(expired.body)})`);
+      assert.equal(expired.body?.error?.code, 'invalid_session');
+    }
+    console.log('PASS learn: a completion of an expired attempt answers 409 invalid_session');
   } finally {
     server.close();
   }
