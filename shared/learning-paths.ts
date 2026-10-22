@@ -1,3 +1,4 @@
+import type { DeliveryPhase } from './learning-path-phases';
 /** The learning-path domain: one bounded vocabulary for devShark's optional
  * Forward Deployed Engineer role specialization and its standalone DSA
  * Foundations skill path.
@@ -177,6 +178,8 @@ export const isOffLoopModule = ({ optional, shelf }: { optional?: boolean; shelf
   optional === true || shelf !== undefined;
 
 export interface ModuleSummary {
+  /** FDE delivery-loop phase; placement, shelves and the capstone sit apart. */
+  deliveryPhase?: DeliveryPhase;
   id: string;
   title: string;
   /** What the learner can do after the module, in their words. */
