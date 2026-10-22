@@ -872,6 +872,8 @@ accounts; cash checkout in this app stays off.
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.
 
+*22 October 2026:* the DSA path is retired and no code reads `LEARNING_PATH_DSA_ENABLED`. `LEARNING_PATH_FDE_ENABLED` stays unset in Production until the owner switches FDE on.
+
 **The item-level content audit has run over the whole question bank.** All
 2,128 served devShark questions have been read twice, rewritten or retired,
 translated from the final English, and recorded in the ledger. All sixteen
