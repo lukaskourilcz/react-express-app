@@ -744,8 +744,8 @@ a level or the skill check stays open while the address changes.
 In a section the learner has not joined, the topics the plan lacks show
 dimmed beside one action. Software Engineer saves the union of the saved
 `sections` and its own id. Forward Deployed Engineer enrols in the FDE path
-first when the path is open, then saves the `fde` specialization, so a free
-account gets the upgrade sheet only where Premium applies. A visitor is asked
+first when the path is open, then saves the `fde` specialization, the order
+the Profile card uses. A visitor is asked
 to sign in, and an account with no saved plan gets a link to the plan card at
 `/profile#learning-plan`. The section's progress figure (`sectionProgress`)
 counts levels passed over levels available across the topics the learner can
@@ -756,7 +756,9 @@ joined topics and their prerequisites join the total.
 Today keeps unfinished → review → new priority, orders within those buckets by
 `planTopics(profile)`, and exposes one `startHereId`; joining a section adds
 work after the track and does not replace the next action. Career groups its
-topics under the three section headings and links into Learn.
+topics under the three section headings and links into Learn. The Skill Check
+(placement) returns its review after the server accepts each round, in the
+shuffled order the learner saw.
 
 ### DSA in Learn
 
