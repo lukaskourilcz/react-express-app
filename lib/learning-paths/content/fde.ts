@@ -18,6 +18,7 @@ import type { PathSource } from '../types';
 import { FDE_DIAGNOSTIC } from './fde/diagnostic';
 import { FDE_BRIDGES } from './fde/bridges';
 import { FDE_M01 } from './fde/m01';
+import { FDE_M02_CASES } from './fde/m02-cases';
 import { FDE_M02 } from './fde/m02';
 import { FDE_M03 } from './fde/m03';
 import { FDE_M04 } from './fde/m04';
@@ -74,6 +75,7 @@ export const FDE_PATH: PathSource = {
     FDE_DIAGNOSTIC,
     FDE_BRIDGES,
     { ...FDE_M01, deliveryPhase: 'discover-scope' },
+    { ...FDE_M02_CASES, deliveryPhase: 'discover-scope' },
     { ...FDE_M02, deliveryPhase: 'integrate' },
     { ...FDE_M03, deliveryPhase: 'integrate' },
     { ...FDE_M05_DATA, deliveryPhase: 'integrate' },

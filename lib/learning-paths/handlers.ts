@@ -811,7 +811,10 @@ export function recordedState(prior: EvidenceState | undefined, next: EvidenceSt
  * `accept_learning_path_result` takes: each required activity with every
  * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
  * applies). An off-loop module (optional or on a shelf) sends none and never
- * completes. */
+ * completes.
+ *
+ * Quota modules send these AND requirements alongside their separate quota;
+ * migration 066 evaluates both from the states written under its lock. */
 export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
   if (isOffLoopModule(module)) return [];
   return module.requires.map((requirement) => ({
@@ -945,7 +948,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     case 'lesson': {
       if (body.acknowledged !== true) return jsonError(res, 400, 'bad_request', 'acknowledged must be true');
       state = 'self_reviewed';
-      feedback = ['Marked as read. Reading is recorded for your own overview; it is not a verified check and never gates a module.'];
+      feedback = [module.requires.some((one) => one.activityId === activity.id)
+        ? 'Marked as read. This module requires its lesson acknowledgements as self-reviewed evidence, alongside its verified case passes.'
+        : 'Marked as read. Reading is recorded for your own overview; it is not a verified check and does not gate this module.'];
       break;
     }
     case 'check': {
@@ -1099,14 +1104,24 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
     : language;
-  let accepted = activity.kind === 'code'
-    ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', {
-      p_accept: { ...acceptParams, p_module_requires: moduleRequirements(module) },
-      p_task_id: canonicalTaskId, p_track: codeTrack, p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
-      p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+  const packet = { ...acceptParams, p_module_requires: moduleRequirements(module) };
+  const codingParams = activity.kind === 'code' ? {
+    p_task_id: canonicalTaskId, p_track: codeTrack,
+    p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
+    p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+  } : {};
+  let accepted = module.requiresAtLeast
+    ? await withTimeout(supabase.rpc('accept_learning_path_quota_result', {
+      p_accept: packet,
+      p_module_quota: { ...module.requiresAtLeast, states: SATISFYING_STATES[module.requiresAtLeast.state] },
+      ...codingParams,
     }))
-    : await withTimeout(supabase.rpc('accept_learning_path_result', { ...acceptParams, p_module_requires: moduleRequirements(module) }));
-  if (activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
+    : activity.kind === 'code'
+      ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', { p_accept: packet, ...codingParams }))
+      : await withTimeout(supabase.rpc('accept_learning_path_result', packet));
+  // An older AND-only routine cannot preserve an any-N quota. Refuse with
+  // migration_required rather than silently accepting incomplete progress.
+  if (!module.requiresAtLeast && activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
     accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
   }
   if (accepted.error) {

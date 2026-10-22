@@ -542,6 +542,53 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── any-N completion requires the atomic quota routine ─────────── */
+    {
+      const fde = LEARNING_PATHS.find(path => path.id === 'fde')!;
+      const module = fde.modules.find(one => one.requiresAtLeast)!;
+      const check = module.activities.find(one => one.kind === 'check')!;
+      const key = check.questions!.map(one => one.correct);
+      const id = `QUOTAENROLL${stamp}`.padEnd(20, 'a');
+      const token = encodeLearningPathSession({ attemptId: `QUOTAATTEMPT${stamp}`.padEnd(20, 'a'),
+        enrollmentId: id, userId: learner, pathId: 'fde', activityId: check.id,
+        activityKind: 'check', purpose: check.purpose, curriculumVersion: fde.version,
+        rubricVersion: fde.rubric.version, answerKey: key }).token;
+      const before = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        for (const installed of [true, false]) {
+          const calls: { name: string; params: Record<string, unknown> }[] = [];
+          const req = request('POST', `quota-${stamp}-${installed}`, { user_id: learner,
+            session: token, idempotencyKey: 'KEYquota0123456789abcd', answers: key });
+          const res = response();
+          await withRequestContext(req, res as never, async () => {
+            await requestMemo(`tier:${learner}`, async () => 'premium');
+            await handleActivitySubmit(req, res as never, fakeSupabase({
+              rows: { learning_path_enrollments: { ...enrollmentRow('active'), enrollment_id: id, path_id: 'fde', curriculum_version: fde.version } },
+              rpc: (name, params) => {
+                calls.push({ name, params });
+                return installed ? { data: { ok: true, replayed: false } }
+                  : { error: { code: 'PGRST202', message: 'Could not find the function public.accept_learning_path_quota_result in the schema cache' } };
+              },
+            }));
+          });
+          const packet = calls[0]?.params.p_accept as Record<string, unknown> | undefined;
+          const quota = calls[0]?.params.p_module_quota as { count: number; of: string[]; states: string[] } | undefined;
+          if (calls.length !== 1 || calls[0]?.name !== 'accept_learning_path_quota_result'
+              || JSON.stringify(packet?.p_module_requires) !== JSON.stringify(moduleRequirements(module))
+              || quota?.count !== 9 || quota.of.length !== 12 || JSON.stringify(quota.states) !== '["verified_pass"]') {
+            fail(`quota submit sent the wrong completion packet: ${JSON.stringify(calls)}`);
+          }
+          if (installed ? res.statusCode !== 200 : res.statusCode !== 503 || code(res) !== 'migration_required') {
+            fail(`quota routine installed=${installed}: ${res.statusCode} ${code(res)}`);
+          }
+        }
+      } finally {
+        if (before === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = before;
+      }
+    }
+
     /* ── a preference save that cannot read the saved answers ─────────── */
     {
       const writes: unknown[] = [];

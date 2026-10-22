@@ -878,7 +878,14 @@ holds, so a passed exercise reopens with what the learner wrote;
 submitted written piece against any weaker later attempt, which is still stored
 as evidence. It accepts one result per enrollment at a time and decides module
 completion from the module's requirements, which the submit handler sends, so
-two submits finishing a module together still complete it. The merchandise
+two submits finishing a module together still complete it. Quota modules such as decomposition cases use
+`accept_learning_path_quota_result` (migration 066): all plain requirements
+and any nine of twelve verified case passes are counted from recorded states
+under the same enrollment lock. A precomputed completion flag cannot bypass
+either condition. Coding quota activities retain the atomic coding award;
+replays never award twice. A missing quota routine refuses the submission with
+503 `migration_required` rather than falling back to AND-only completion.
+The merchandise
 package needs every module completed within the one enrollment of the
 curriculum version the deployment publishes (`path_is_complete`, 054). Its
 claim checks the address the way a shop order does (`validateAddress`): a

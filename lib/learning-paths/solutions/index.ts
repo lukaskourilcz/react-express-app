@@ -7,6 +7,7 @@ import type { PathCodeSolution } from '../types';
 import { FDE_DIAGNOSTIC_SOLUTIONS } from './fde-diagnostic';
 import { FDE_BRIDGES_SOLUTIONS } from './fde-bridges';
 import { FDE_M01_SOLUTIONS } from './fde-m01';
+import { FDE_M02_CASES_SOLUTIONS } from './fde-m02-cases';
 import { FDE_M02_SOLUTIONS } from './fde-m02';
 import { FDE_M03_SOLUTIONS } from './fde-m03';
 import { FDE_M04_SOLUTIONS } from './fde-m04';
@@ -24,6 +25,7 @@ const ALL: Record<string, PathCodeSolution> = {
   ...FDE_DIAGNOSTIC_SOLUTIONS,
   ...FDE_BRIDGES_SOLUTIONS,
   ...FDE_M01_SOLUTIONS,
+  ...FDE_M02_CASES_SOLUTIONS,
   ...FDE_M02_SOLUTIONS,
   ...FDE_M03_SOLUTIONS,
   ...FDE_M04_SOLUTIONS,

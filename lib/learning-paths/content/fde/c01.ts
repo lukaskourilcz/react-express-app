@@ -389,6 +389,7 @@ export const FDE_C01: ModuleSource = {
   ],
   competencies: ['discovery', 'integration', 'boundaries', 'ai-architecture', 'retrieval', 'evaluation', 'ai-security', 'operations', 'handoff'],
   dependsOn: [
+    'fde-v1-m02-cases',
     'fde-v1-m01',
     'fde-v1-m02',
     'fde-v1-m03',
