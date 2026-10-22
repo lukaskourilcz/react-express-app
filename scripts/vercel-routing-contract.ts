@@ -142,6 +142,14 @@ export function vercelRoutingContracts(): void {
     if (redirects.includes(route)) continue;
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs before the filesystem check and must only add headers`);
   }
+  // Public Learn previews must reach their own HTML before the SPA fallback.
+  for (const id of ['web-developer', 'software-engineer', 'forward-deployed-engineer']) {
+    const source = `/learn/${id}`;
+    const rewrite = (config.rewrites ?? []).find(one => one.source === source);
+    assert.equal(rewrite?.destination, `${source}/index.html`, `${source} serves its public preview`);
+    const fallback = (config.rewrites ?? []).findIndex(one => one.destination === '/index.html');
+    assert.ok((config.rewrites ?? []).indexOf(rewrite!) < fallback, `${source} precedes the SPA fallback`);
+  }
   for (const route of redirects) {
     assert.equal(route.status, 308, `${route.src} is a permanent redirect`);
     assert.ok(route.dest === undefined && route.continue === undefined, `${route.src} answers with a redirect and ends the request`);

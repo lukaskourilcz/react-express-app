@@ -274,7 +274,7 @@ run, a coding challenge's first pass or repeat XP, a Learn step's repeat XP
 from 060) and `complete_verified_roadmap_attempt` (a Learn level
 or part test passed for the first time, at `learn_step_xp`, the numbers of
 `shared/progression.ts`; learning XP is derived from progress and is not in
-`user_xp`). Learning paths award no XP. Guest XP merged at sign-in
+`user_xp`). Verified code inside learning paths shares the canonical task and XP ledger with Coding; lessons, checks and self-reviewed artifacts award no XP. Guest XP merged at sign-in
 (`merge_user_xp`) does not count, because nothing verified it, and nothing
 from before 056 was copied in: a month counts from the moment 056 was
 applied. A launch contract fails if a routine starts adding to `user_xp`
@@ -742,6 +742,17 @@ label in `leveling.ts` is a different concept with a similar name, and neither
 registries; it never joins them.
 
 ### Learn sections and the plan
+
+`/learn/web-developer`, `/learn/software-engineer` and
+`/learn/forward-deployed-engineer` each have a public title, description,
+canonical and static preview. The preview lists the registry’s topics; FDE’s
+inventory is calculated with `pathInventory` from the same manifest as the
+API. It describes authored work without claiming that a disabled path is open.
+Home’s topic chooser links directly into the first section that owns a topic.
+Today keeps unfinished → review → new priority, orders within those buckets
+by `planTopics(profile)`, and exposes one `startHereId`; joining a section
+adds work after the track rather than replacing the next action.
+
 
 `shared/learn-sections.ts` groups the Learn topics and paths into three
 sections: Web Developer, Software Engineer and Forward Deployed Engineer
@@ -1822,3 +1833,10 @@ available only when the server returns `guidedComplete`, contains the exact
 “FDE guided path completed” label plus manifest competency labels and recorded
 counts, and includes no identity or artifact text. It uses the existing
 1200×630 canvas share-card renderer in light and dark.
+
+The FDE path’s canonical overview and module addresses are
+`/learn/forward-deployed-engineer/path` and its module suffix. Old
+`/roadmap/specializations/fde` links permanently redirect while preserving the
+module and the client’s query/fragment. Career groups its topics under the
+three section headings and links into Learn; the FDE path shelf lives inside
+its section.
