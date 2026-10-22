@@ -366,315 +366,323 @@ a healing poll, or every 4 s while Realtime is down.
 
 ## Coding section
 
-The `/coding` section, the coding phase inside Learn levels, and the GitHub
-garden are additive. The server owns grading: JavaScript and
-TypeScript submissions run in a QuickJS WebAssembly sandbox on a worker thread
-of `api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline, which
-the host enforces by stopping the thread 1.5 s past it, and virtual timers;
-hidden checks run in a fresh program in a per-submission shuffled order, and
-a hidden run's error comes back only when it is a fixed message (a timeout, a
-stack overflow, a call that never settled), never as text the program wrote;
-checks that count how code touches its input use a `Proxy` and helpers taken
-before the learner's code runs (`__probe`, `shared/coding-evaluate.ts`), so
-replacing the global `Proxy` changes no count; TypeScript type tests run
-through the real compiler, each in its own file, on a worker thread of their
-own (`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check, which
-the learner sees as a timeout whose message names the type check, not a loop;
-Submit sends the code at once, and the browser's own run (its type check has
-8 s once the compiler is loaded) is a preview the server's run replaces; and
-system-design answers are graded against a key sealed in the coding session.
-New coding sessions also seal the exact authored/task-grader version (including
-hidden checks, puzzle material and efficiency guidance). Submit refuses stale or
-legacy unversioned sessions before grading or writing progress/XP. Reading the
-latest brief renews a linked session under the same validated Learn parent and
-attempt id; the editor keeps its draft. The version stays inside the encrypted
-token, and is not a public digest of answer material. Runtime-only grading or
-reward changes must bump the attempt tag in `lib/coding/session.ts`. The current v2 tag also invalidates
-older advisory rules for unresolved string construction. Input-dependent templates
-and string additions with unresolved output work return no complexity label and
-keep the base reward; fixed literals and ordinary scalar/field reads remain
-analyzable.
+The `/coding` section, the coding phase inside Learn levels and the GitHub
+garden share one server-owned grader.
 
-The same thread transpiles the TypeScript, so code nested too deeply for the
-compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
-how long a run may wait for a thread, and their queues hold a class of 32
-submitting at once twice over, so a burst of correct submits is graded and the
-length only bounds memory. Grader limits are per task (owner decision of 9
-October 2026). One caller (an account, or an address for a guest) has at most
-two submits grading at once on one coding task or learning-path activity, and
-three across all of them, one fewer than an instance's four QuickJS threads
+### Catalogue
+
+The section lists four tracks: `javascript`, `typescript`, `react` and
+`algorithms`. The first three are also Learn topics. `algorithms` holds sixty
+interview problems in plain JavaScript and two short paths, all graded and
+paid like any other task, plus the 29 DSA Foundations tasks (`alg-dsa-*`,
+topic `dsa`) and the 15 DSA Advanced tasks (`alg-dsaa-*`). `levelCodingTasks`
+seals a `dsa` task into its DSA Learn level (levels 1 to 14; level 15, the
+review, has none), and `hasLearnLevel` names a level for the JavaScript,
+TypeScript and React tracks and for a `dsa` task, which the row, the
+workbench and the GitHub commit message show as "DSA · Level n". The other
+algorithms tasks carry `algorithms` as their topic and never join a Learn
+level's quota; their `level` is an ordering key.
+
+`shared/coding-index.ts` lists 769 issued tasks: 480 Easy, 189 Medium and 100
+Hard; by track, 316 JavaScript, 156 TypeScript, 183 React and 114 Algorithms.
+144 of them are free ("Tiers and billing"). The full catalogue holds 814: the
+other 45 are the system-design track, which stays hidden pending an owner
+decision (#391; the review and fixes are in
+`docs/audit/system-design-review-2026-10-22.md`). `lib/coding/active.ts`
+issues no task of a track missing from `CODING_SECTION_TRACKS`, so no
+system-design task is in a list, a search, a Challenge run, a skip
+suggestion, a Learn level, the browser index or a share page; the task
+resource answers 404 for one, Submit and the reveal refuse a sealed session
+for one, and a star saved on one is not listed. In the browser
+`/coding/system-design` and its task addresses are the Coding not-found page.
+The tasks, their sealed-key graders and the `DesignRunner` stay in the
+repository, and `npm run test:coding` keeps proving them.
+
+Tiers open in order (`tierUnlocked`): 1 and 2 at once; 3 after every task of
+tiers 1 and 2 of that track, and JavaScript's 3 also after the ten JavaScript
+Learn levels; 4 after 80 % of tier 3; 5 (React only) after 80 % of tier 4. The
+task page, a practice run, a skip's suggestion and the browser all ask that
+one rule. `algorithms` and system design are unladdered: an interview
+candidate needs the exact problem they came for. Each task also carries Easy,
+Medium or Hard (`difficultyOf`), projected from its tier, or for a project
+milestone or path level from its position; a checkpoint reads its tier like a
+standalone task, so every checkpoint is Easy. The label gates and pays
+nothing (see `docs/interactive-content-manifest.md`).
+
+### Grading
+
+The server owns grading. JavaScript and TypeScript submissions run in a
+QuickJS WebAssembly sandbox on a worker thread of `api/quiz/roadmap.ts`
+(`resource=coding-submit`) with a 2.5 s deadline, which the host enforces by
+stopping the thread 1.5 s past it, and virtual timers. Hidden checks run in a
+fresh program in a per-submission shuffled order, and a hidden run's error
+comes back only as a fixed message (a timeout, a stack overflow, a call that
+never settled), never as text the program wrote. Checks that count how code
+touches its input use a `Proxy` and helpers taken before the learner's code
+runs (`__probe`, `shared/coding-evaluate.ts`), so replacing the global `Proxy`
+changes no count. TypeScript type tests run through the real compiler, each
+in its own file, on a worker thread of their own
+(`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check; the
+learner sees a timeout whose message names the type check. Submit sends the
+code at once, and the browser's own run (its type check has 8 s once the
+compiler is loaded) is a preview the server's run replaces. The same thread
+transpiles the TypeScript, so code nested too deeply for the compiler is an
+`error` verdict, not an HTTP 500. System-design answers are graded against a
+key sealed in the coding session.
+
+A coding session seals the exact task and grader version (hidden checks,
+puzzle material and efficiency guidance). Submit refuses a stale or
+unversioned session before grading or writing progress or XP. Reading the
+latest brief renews a linked session under the same Learn parent and attempt
+id, and the editor keeps its draft. The version stays inside the encrypted
+token. A runtime-only grading or reward change must bump the attempt tag in
+`lib/coding/session.ts`.
+
+**Capacity and rate limits.** Both thread pools bound how long a run waits
+for a thread, and their queues hold a class of 32 submitting at once twice
+over. One caller (an account, or an address for a guest) has at most two
+submits grading at once on one task or learning-path activity, and three
+across all of them, one fewer than an instance's four QuickJS threads
 (`GRADING_PER_TASK`, `GRADING_PER_CALLER` in `lib/coding/grader-capacity.ts`,
-`enterInFlight` in `lib/rate-limit.ts`); a submit still grading on one task
-never refuses another task's. A Submit the grader cannot take is answered
-`grader_busy` with a Retry-After, 429 for the caller's own limit and 503 for
-full threads, and is recorded nowhere. The Submit rate limits are per task in
-the same way (`enforcePerItemRateLimit`): 30 in ten minutes for one caller on
-one task (`codingSubmit`; a learning-path activity, `learningPathSubmit`),
-beneath a ceiling of 120 in ten minutes across every task
-(`codingSubmitCeiling`, `learningPathSubmitCeiling`), a Submit every five
-seconds, which bounds what one account or guest address spends on graders
-and React sandboxes. The address backstop holds a class of 32 at the per-task
-rate (960 in ten minutes). A spent task answers 429 `rate_limited`, which the
-workbench reads as "Too many requests. Wait a moment and try again."; one
-token comes back every 20 seconds, and another task is open at once. A thread that will not start is tried again after a pause that grows
-from one second to thirty; on a deployment no run ever falls back to the
-request thread.
-Learning-path code activities use the same QuickJS sandbox, type-check thread
-and hidden-check program as coding tasks.
-Run and Submit give learner code the same realm (owner decisions, 9 October
-2026). Local time is UTC, with no summer time, whatever the server's or the
-learner's own zone (the afternoon's decision, which replaced the morning's
-Europe/Prague): the local getters read what the UTC getters read,
-`getTimezoneOffset()` is 0 all year, `toString` ends in "GMT+0000
+`enterInFlight` in `lib/rate-limit.ts`). A Submit the grader cannot take is
+answered `grader_busy` with a Retry-After, 429 for the caller's own limit and
+503 for full threads, and is recorded nowhere. Submit is limited per task
+(`enforcePerItemRateLimit`): 30 in ten minutes for one caller on one task
+(`codingSubmit`; for a learning-path activity, `learningPathSubmit`), beneath
+120 in ten minutes across every task (`codingSubmitCeiling`,
+`learningPathSubmitCeiling`). The address backstop holds a class of 32 at the
+per-task rate (960 in ten minutes). A spent task answers 429 `rate_limited`
+("Too many requests. Wait a moment and try again."); one token comes back
+every 20 seconds, and another task stays open. A thread that will not start
+is tried again after a pause that grows from one second to thirty; on a
+deployment no run falls back to the request thread. Learning-path code
+activities use the same sandbox, type-check thread and hidden-check program.
+
+**One realm for Run and Submit.** Local time is UTC, with no summer time,
+whatever the server's or the learner's zone: the local getters read what the
+UTC getters read, `getTimezoneOffset()` is 0, `toString` ends in "GMT+0000
 (Coordinated Universal Time)", and `toLocale*String` formats in UTC unless the
 code names a zone. One prelude (`shared/coding-utc-time.ts`) rewrites `Date`'s
-local constructor forms, `Date.parse` of local strings, the local getters and
-setters, `getTimezoneOffset`, `toString` and the `toLocale*String` methods in
-QuickJS, in the Run worker, in the React frame and in the React guest's page
-realm (the guest also runs with `TZ=UTC`, for the dates jsdom makes); the
-server process itself stays in UTC. Where `Intl` exists (the two React
-runners) a named zone formats as `Intl` does; where it does not (QuickJS, and
-Run, which hides `Intl` to match), a named UTC or Europe/Prague zone formats
-as before and any other is refused with a message. No task's check depends on
-the zone: `test:coding` runs every board of a task that uses calendar dates in
-four other zones. `toLocaleString`, `localeCompare` and their kin print and
-sort as an en-US browser does, from one shared implementation
-(`shared/coding-locale.ts`). The grader adds `URL`, `URLSearchParams`,
-`TextEncoder`, `TextDecoder`, `atob` and `btoa`
-(`lib/coding/sandbox-web-apis.ts`); `URL` is parsed by the host's WHATWG
-parser through a function that takes and returns strings only. Just before
+local forms in QuickJS, in the Run worker, in the React frame and in the
+React guest's page realm (the guest also runs with `TZ=UTC`). Where `Intl`
+exists (the two React runners) a named zone formats as `Intl` does; where it
+does not (QuickJS, and Run, which hides `Intl` to match), a named UTC or
+Europe/Prague zone formats and any other is refused with a message. No task's
+check depends on the zone: `test:coding` runs every board of a task that uses
+calendar dates in four other zones. `toLocaleString`, `localeCompare` and
+their kin print and sort as an en-US browser does (`shared/coding-locale.ts`).
+The grader adds `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `atob`
+and `btoa` (`lib/coding/sandbox-web-apis.ts`); the host's WHATWG parser reads
+`URL` through a function that takes and returns strings only. Just before
 learner code runs, the Run worker removes every global and built-in member
-the grader lacks (`shared/coding-checker-globals.ts`, `Intl`, `crypto`,
+the grader lacks (`shared/coding-checker-globals.ts`: `Intl`, `crypto`,
 `fetch` and some two hundred more), and using one reads "`Intl` isn't
 available in the checker. Submit runs without it." React tasks keep the full
-browser and Node built-ins, in both of their runners.
-Complexity inspection withholds estimates for statically visible returned
-closures, callable aliases, methods/accessors and callable containers: factory
-construction is not a substitute for later invocation work. Such reports keep
-the authored target and base reward but have null time/unknown assessment, so
-the completion banner renders no complexity row. Dynamic value flow still
-needs manual review; this bounded check is not a general lifetime/type analysis.
-Eager callback analysis and supported above-target reductions remain separate.
-Task-specific built-in restrictions live in `shared/coding-task-runtime.ts`.
-The server derives them from the canonical task ID, and reused Learn code
-carries the same policy. Clone Promise.all replaces the original native
-`Promise.all` with a non-replaceable throwing function before learner
-initialization; aliases cannot capture the native implementation first.
-The disposable Run worker mirrors this rule. Its controller collects outcomes
-outside the learner's scope, without handing that native helper to learner
-code. Other tasks retain their own fresh, unrestricted realm.
-A failed or partly right system-design submission returns, per step, only
-whether it was right and the learner's own answer (`gradeDesign`): the correct
-options, orders and ranges, the explanations (which name the right option) and
-the reference answer travel only with a pass, so a failed attempt cannot be
-read for the key and replayed under the next shuffle.
-React submissions use `lib/coding/react-isolated.ts`: a fresh Vercel Sandbox
-microVM with network denied, no application credentials, a 256 MB Node heap,
-and an externally enforced command deadline. The dependency-only snapshot is
-selected by `REACT_RUNNER_SNAPSHOT_ID`; the current grader bundle is uploaded
-on each run. `lib/coding/react-runner.ts` is trusted test/guest code only and
-must never evaluate learner code inside an API process. Both Coding and
-learning-path React submissions use this boundary. A React challenge can keep
-hidden test cases beside its solution; Submit runs them after the visible suite
-and returns only their count. A case during which a form submits without
-`preventDefault()` fails, on Submit and on the Run button alike, because in the
-preview that submission reloads the frame. The ten React capstones at tier 5 that used to be
-checklist tasks, passing any code, are graded by suites like the rest since
-29 September 2026. The grader still accepts a `verify: 'checklist'` task, but
-its pass is only the learner's word: it is recorded as unverified, with no XP
-and so no coins, no link to a Learn level attempt, and no junior and senior
-solutions. Such an old pass, or a React pass the browser reported between 3
-and 29 September, no longer blocks the task's XP (migration 058, owner
-decision of 9 October 2026): the first verified pass pays it and its coins,
-once per account and task, and the old pass stays on record. An account
-already paid for the task, under `coding:<account>:<task>` or the
-`coding:<task>` id of 025-038, is not paid again, and a reveal recorded
-before that pass still forfeits it. Like any pass, the old one still opens
-the approaches and the solution. See
+browser and Node built-ins in both runners. Task-specific built-in
+restrictions live in `shared/coding-task-runtime.ts`; the server derives them
+from the canonical task id, and Learn reuses the same policy. Clone
+Promise.all, for one, replaces the native `Promise.all` with a
+non-replaceable throwing function before learner code initializes, in the
+grader and in the Run worker.
+
+**Complexity.** A pass pays 25 XP (`CODING_TASK_XP`), or 15
+(`CODING_ABOVE_TARGET_XP`) when the analysis reliably identifies a solution
+above the task's authored time-complexity target. Unknown complexity pays the
+base and shows no complexity row. The analysis withholds an estimate for
+returned closures, callable aliases, methods and accessors, callable
+containers, input-dependent templates and string additions whose output work
+it cannot resolve. Dynamic value flow still needs manual review; the check is
+bounded, not a general type analysis.
+
+**System design** returns, for a failed or partly right submission, only
+whether each step was right and the learner's own answer (`gradeDesign`). The
+correct options, orders and ranges, the explanations and the reference answer
+travel only with a pass.
+
+**React** submissions use `lib/coding/react-isolated.ts`: a fresh Vercel
+Sandbox microVM with network denied, no application credentials, a 256 MB
+Node heap and an externally enforced command deadline.
+`REACT_RUNNER_SNAPSHOT_ID` selects the dependency-only snapshot; each run
+uploads the current grader bundle. `lib/coding/react-runner.ts` is trusted
+test and guest code only and must never evaluate learner code inside an API
+process. Coding and learning-path React submissions both use this boundary.
+A React task can keep hidden cases beside its solution; Submit runs them after
+the visible suite and returns only their count. A case during which a form
+submits without `preventDefault()` fails, on Submit and on Run, because in the
+preview that submission reloads the frame. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
-self-hosted `client/sandbox/` iframe stays for the preview and for the Run
-button's immediate feedback, but the verdict of record is the server's.
-Reference solutions never leave the server:
-`resource=coding-reveal` returns one only after a pass or after the authored
-hint ladder is exhausted, and a reveal ends the current Learn level attempt.
-Inside the level the workbench stays on screen with the solution open, and the
-learner finishes the level when they are done reading.
-A reveal before the task's first pass also costs that task its XP and coins:
-from migration 048 the first pass after a recorded reveal pays nothing, and the
-verdict says so with `xpForfeited`. From migration 058 the routine reports it
-itself, which also covers a first verified pass after an old unverified one;
-without 058 the API sets it only when no XP was paid and the progress row
-showed a reveal before the pass, so a database without 048, which still pays,
-never reads as a forfeit. The workbench says this in the reveal
-confirmation for a signed-in learner who has not passed the task, and shows
-"Passed +0 XP" on such a pass; after a
-recorded pass the solution opens without the warning, since it costs nothing.
-The junior and senior readings shown beside each other after a pass are
-stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
-boards carry code alone; the content contract executes the stripped text and
-asserts none of it still holds a comment. The contract also holds statements
-to their promises: when a statement promises a new array, a version of the
-reference that writes its result into the array it was given and returns
-that array must fail a check; and when a TypeScript milestone's functions
-take parameters typed as anything but `unknown`, its type tests must fail the
-reference with every parameter typed `any`, so the signature the statement
-gives is the one graded.
+self-hosted `client/sandbox/` iframe serves the preview and the Run button's
+immediate feedback; the server's verdict is the record.
 
-The section lists four tracks. Three of them — `javascript`, `typescript` and
-`react` — are also Learn topics. The fourth, `algorithms`, is sixty
-interview problems in plain JavaScript, twenty of them the Easy warm-ups of
-#226 and fifteen its first Medium and Hard wave, plus two short paths: an
-ordinary graded track with the same
-XP and one-award-per-task ledger. Those tasks carry `algorithms` as their
-topic, so none of them can be drawn into a Learn level's quota, and their
-`level` is an ordering key rather than a Learn level. The track also holds
-the 29 DSA Foundations tasks of #493, the exercises of the DSA path that E5
-(#496) retired, whose topic is
-`dsa`: their level is a DSA Learn level, and `levelCodingTasks` seals them
-into DSA levels 1 to 14 (level 15, the foundation review, has none). `hasLearnLevel` names a level for the JavaScript, TypeScript and React
-tracks and for a `dsa` task, which the row and the workbench show as
-"DSA · Level n"; the row, the workbench and the GitHub commit message read it
-before naming one.
-System design is hidden until its tasks have been reviewed again (owner
-decision, 9 Oct 2026; `NEEDED.md`). `lib/coding/active.ts` issues no task of a
-track missing from `CODING_SECTION_TRACKS`, so none of its 45 tasks is in a
-list, a search, a challenge run, a skip suggestion, a Learn level, the browser
-index or a share page; the task resource answers 404 for one, Submit and the
-reveal refuse a sealed session for one, and a star saved on one is not listed.
-In the browser `/coding/system-design` and its old task addresses are the
-Coding not-found page. The tasks, their sealed-key graders and the
-`DesignRunner` stay in the repository, and `npm run test:coding` keeps proving
-them, for that review; records already earned against them stay in the
-database.
+Every issued task is `verify: 'tests'`. A `verify: 'checklist'` pass would be
+recorded as unverified, with no XP, no coins, no link to a Learn level attempt
+and no junior or senior solutions; an old unverified pass does not block the
+first verified pass's XP.
 
-Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
-three coding tasks sealed into the level session; for an account, completion
-requires a verified, unrevealed passed verdict for each. The parent attempt is
-created before the intro is served, with its sealed coding-task list. `Build it`
-links open a new tab with the coding session in the URL fragment; that tab
-removes the fragment and submits the session in the request body. The server
-checks the owner, task binding, expiry and open attempt on access, Submit and
-reveal. A read-only attempt-status request checks completion when Learn regains
-focus. Missing unrevealed coding passes leave the attempt open, recording no
-failure, XP or streak; a reveal still ends it. Migration 062 enforces the same
-rule under the parent row lock, before dependent coding writes.
-A guest's coding passes are never stored,
-so a guest's level passes on its questions: the completion answers
-`codingUnverified: true`, records nothing, and the browser keeps the pass on
-that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
-`lib/coding/catalog.ts`) never join that quota, and neither do its Medium and
-Hard waves (`MEDIUM_HARD_BAND`), so adding them leaves every level's coding
-tasks as they were. Coding completion is permanent: the API ignores legacy review
-dates, returns an empty due queue, and never selects passed tasks for scheduled
-coding review. The browser shows no coding review either: no "Due for review"
-filter on a track, no coding card on Today, and `/coding/review` redirects to
-`/coding`. Question/concept review is unchanged. A task's code is kept on
-the device about a second after the learner stops typing (nothing is written
-while they type; leaving the page writes what is waiting), and on Run and
-Submit; code over 20 kB is kept there too. Signed in, Run and Submit also save
-it as the account draft (`?op=coding-draft`, 20 kB at most), never typing
-(owner decision 5, 9 Oct 2026). A task in the section and a Learn level's
-coding step follow the same rules (`client/src/coding/drafts.ts`). The device
-copy records the account draft's `updated_at` it builds on (the task response
-carries `draftUpdatedAt`): the time the screen opened, or one a save from this
-tab returned; typing never moves it. When the copies differ the page says
-which one is open, and a device copy that did not open is set aside and
-offered back ("Open the code from this device") until the learner takes it or
-the account confirms a save. A save sends that time as `base`, and
-`save_coding_draft_v2` (migration 059) writes only while the account draft
-still has it, so an open tab can no longer overwrite a draft saved since on
-another device: the server answers 409 `draft_conflict` with the stored time
-(never its code), and the page asks whether to save this code over it or open
-the other draft, keeping this device's code either way (owner decision 10).
-An evolving stage's Submit writes the stage draft through the same routine,
-forced, and returns its time, so the next save is not a false conflict. A
-sign-out the learner chooses (Log out, here or in another tab, or deleting the
-account) forgets the drafts with the rest of the account's data. A session that
-ends on its own (a refused refresh: expired, revoked, the password changed
-elsewhere) keeps the drafts under the account's id and out of sight, says "You
-were signed out — sign in to keep your code" (and, on the task, that its code
-is kept), and gives them back when the same account signs in and opens a
-coding task; a guest's copy written meanwhile is set aside beside them.
-Another account signing in deletes them unread (`client/src/lib/accountData.ts`,
-owner decision 4). A guest's drafts behave as before.
-Tiers
-open in order (`tierUnlocked`): 1 and 2 at once, 3 after every task of tiers
-1 and 2 of that track, and JavaScript's 3 also after the ten JavaScript Learn
-levels, which open no other track's (owner decision of 9 October 2026); 4
-after 80 % of tier 3 and 5 after 80 % of tier 4. The task page, a practice
-run, a skip's suggestion and the browser all ask that one rule, except in the
-unladdered tracks — system design (hidden today) is drilled rather than
-climbed, and `algorithms` is interview preparation a
-learner arrives at with a date in the diary, where a locked tier would withhold
-the very challenge they came for. Each challenge also carries Easy, Medium or
-Hard (`difficultyOf`), projected from its tier, or for a project milestone or
-path level from its position; a checkpoint reads its tier like a standalone
-task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
-gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
-769 tasks in `shared/coding-index.ts`, 480 are Easy, 189 Medium and 100 Hard; by
-track, 316 JavaScript, 156 TypeScript, 183 React and 114 Algorithms. The 45
-hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` on a task's first verified pass, and
-again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
-verified pass after the learner reset the task to its starter (the
-workbench's Reset calls `?resource=coding-reset`, which records it with
-`record_coding_reset`), at least 60 minutes after the task last paid its XP
-or a reveal forfeited it, with no reveal since the reset (a reveal after a
-pass is recorded by `record_coding_repeat_reveal`). Any verified pass closes
-the reset, so each payment takes a reset of its own and two Submits after one
-reset pay once. A repeat is XP only, under its own award id
-(`coding:<account>:<task>:r<n>`), into the balance and the month's ledger: no
-coins and no first-pass flag. The verdict's `repeatXp` says when the XP opens
-again and why a pass paid nothing; the workbench says it under the verdict.
-From 9 October (afternoon) a toast says it too (`submitCoding`): a pass that
-paid XP shows "+N XP earned", or "+N XP again" for a repeat, and a verified
-pass the rule paid nothing says what earns the XP again, a reset and a pass
-from the time the hour is up, on the learner's own clock.
-Guests earn no XP, so a guest's Reset stays in the browser. A Learn step
-pays its XP again too, an hour after it last paid (see "XP again for a
-replayed Learn step"). And
-the five coding badges join the shared badge sync for `webdev`. All storage is
-in `supabase/supabase-schema-025.sql`, whose track constraints and routines
-`supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
-hint rung is a documentation link from `shared/coding-docs.ts`. The skeleton
-rung before it is written for its task: `npm run test:coding` fills in the
-skeletons listed in `scripts/fixtures/skeleton-fills.ts` and requires the
-filling to keep every skeleton line and pass every visible and hidden check.
-A skeleton left unfilled must fail them: the same command runs each
-JavaScript and TypeScript skeleton as it is, and pastes each React skeleton
-into its starter.
+### Solutions, reveals and XP
+
+Reference solutions never leave the server. `resource=coding-reveal` returns
+one only after a pass or after the authored hint ladder is exhausted, and a
+reveal ends the current Learn level attempt; inside the level the workbench
+stays on screen with the solution open. A reveal before the task's first pass
+costs the task its XP and coins: the next pass reports `xpForfeited`, the
+reveal confirmation warns a signed-in learner who has not passed, and the
+pass shows "Passed +0 XP". After a pass the solution opens without the
+warning.
+
+After a pass the learner sees junior and senior readings side by side,
+stripped of their authoring comments in `lib/coding/solutions/index.ts`; the
+content contract executes the stripped text and asserts it holds no comment.
+The contract also holds statements to their promises: when a statement
+promises a new array, a version of the reference that mutates and returns
+its input must fail a check; and when a TypeScript milestone's parameters
+are typed as anything but `unknown`, its type tests must fail the reference
+with every parameter typed `any`.
+
+XP follows `CODING_TASK_XP` on a task's first verified pass, once per account
+and task, with its coins. It pays again ("repeat XP") on a verified pass after
+the learner reset the task to its starter (Reset calls
+`?resource=coding-reset`, recorded by `record_coding_reset`), at least 60
+minutes after the task last paid or a reveal forfeited it, with no reveal
+since the reset (`record_coding_repeat_reveal`). Any verified pass closes the
+reset, so each payment takes a reset of its own. A repeat is XP only, under
+its own award id (`coding:<account>:<task>:r<n>`), into the balance and the
+month's ledger: no coins. The verdict's `repeatXp` says when the XP opens
+again and why a pass paid nothing; the workbench says it under the verdict,
+and a toast says "+N XP earned", "+N XP again" or what earns the XP again.
+Guests earn no XP, so a guest's Reset stays in the browser. The five coding
+badges join the shared badge sync. Storage starts in
+`supabase/supabase-schema-025.sql`; `record_coding_verdict` keeps the
+type-only, unverified, reveal, cooldown and repeat rules.
+
+devShark ships no AI feature: the last hint rung is a documentation link from
+`shared/coding-docs.ts`. The skeleton rung before it is written for its task:
+`npm run test:coding` fills the skeletons listed in
+`scripts/fixtures/skeleton-fills.ts` and requires the filling to keep every
+skeleton line and pass every check, and it requires each unfilled skeleton to
+fail them.
+
+### Coding inside Learn levels
+
+Learn levels of the `javascript`, `typescript`, `react` and `dsa` topics carry
+one to three coding tasks sealed into the level session; for an account,
+completion requires a verified, unrevealed pass of each. Learn creates the
+parent attempt, with its sealed task list, before it serves the intro or a
+coding link. A `Build it` link opens a new tab with the coding session in the
+URL fragment; that tab removes the fragment and submits the session in the
+request body. The server checks the owner, task binding, expiry and open
+attempt on access, Submit and reveal. A read-only attempt-status request
+checks completion when Learn regains focus. Missing coding passes leave the
+attempt open, recording no failure, XP or streak; a reveal still ends it.
+`supabase/supabase-schema-062.sql` enforces the same rule under the parent
+row lock. A coding task issued inside a Learn level follows that level's
+access tier.
+
+A guest's coding passes are never stored, so a guest's level passes on its
+questions: the completion answers `codingUnverified: true`, records nothing,
+and the browser keeps the pass on that device and says coding tasks are
+checked and saved after sign-in. The Easy, Medium and Hard bands of the
+standalone catalogue (`EASY_BAND`, `MEDIUM_HARD_BAND` in
+`lib/coding/catalog.ts`) never join a level's quota, except the band tasks
+mapped into DSA Advanced levels.
+
+Coding completion is permanent: the API returns an empty due queue and never
+schedules a passed task for review. The browser shows no coding review: no
+"Due for review" filter, no coding card on Today, and `/coding/review`
+redirects to `/coding`. Question and concept review is separate.
+
+### Drafts
+
+A task's code is kept on the device about a second after the learner stops
+typing (leaving the page writes what is waiting), and on Run and Submit;
+code over 20 kB is kept there too. Signed in, Run and Submit also save it as
+the account draft (`?op=coding-draft`, 20 kB at most), never typing. A task in
+the section and a Learn level's coding step follow the same rules
+(`client/src/coding/drafts.ts`). The device copy records the account draft's
+`updated_at` it builds on (the task response carries `draftUpdatedAt`). When
+the copies differ the page says which one is open, and a device copy that did
+not open is set aside and offered back ("Open the code from this device")
+until the learner takes it or the account confirms a save. A save sends that
+time as `base`, and `save_coding_draft_v2` writes only while the account draft
+still has it: otherwise the server answers 409 `draft_conflict` with the
+stored time (never its code), and the page asks whether to save this code
+over it or open the other draft, keeping this device's code either way. An
+evolving stage's Submit writes the stage draft through the same routine,
+forced, and returns its time.
+
+A sign-out the learner chooses (Log out, here or in another tab, or deleting
+the account) forgets the drafts with the rest of the account's data. A
+session that ends on its own (an expired or revoked refresh, a password
+changed elsewhere) keeps the drafts under the account's id and out of sight,
+says "You were signed out — sign in to keep your code", and gives them back
+when the same account signs in and opens a coding task. Another account
+signing in deletes them unread (`client/src/lib/accountData.ts`).
+
+### Evolving projects and short paths
+
+`shared/evolving.ts` holds fourteen projects with 146 stages and fifteen
+short paths with 75 levels. A single-track project has ten stages and a
+full-stack project twelve. `-start` checkpoints separate setup, data loading
+and form wiring from the behaviour after them, each with a hint ladder of its
+own (`lib/coding/tasks/evolving-checkpoint-hints.ts`). Requirements and tests
+are cumulative, and each stage lists its own checks first so Results opens on
+what the brief just asked for. A passed milestone also covers the checkpoint
+before it, without an extra XP receipt. The registry controls routes, unlocks
+and progress.
+
+Ten projects are on the Coding home and the three full-stack apps on the
+FullStack screen. The ten-stage debugging project is `unlisted`: no list shows
+it, and its task ids still open, grade and keep their drafts and passes.
+Twelve short paths sit on their section's page (five JavaScript, two each for
+TypeScript, React and Algorithms, and a link shortener that leads the
+FullStack screen). The three debugging paths (Log it right, Trace the state,
+Edges and inputs) are on the Coding home; each starts from code that runs and
+is wrong.
+
+Every graded task carries a reference, a junior and a senior solution on the
+server; the last two reach the browser only with a verified pass. A stage's
+solutions hold only what that stage asks for: the content contract grades
+them against the next stage and its checkpoint (the reference alone for React
+stages) and fails when one passes. A checkpoint carries its own reference,
+the previous stage's code plus the checkpoint's one step, and no junior or
+senior board; the contract fails when that reference passes the milestone it
+leads to. The three checkpoints whose honest reference already does the
+milestone's work are listed in `SAME_AS_MILESTONE`
+(`scripts/test-coding-content.ts`), and the contract lets one be free only
+when its milestone is.
+
+### GitHub garden
 
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
-`lib/github-handlers.ts`): the learner installs the app on one repository they
-own, and every passed task is committed there as one file per task in one
-folder per track (`gardenPathFor`). Connecting binds the installation to its
-owner. The app requests user authorization during installation, so GitHub
-returns the learner to the callback URL `/settings/github` with a one-time
-`code` beside `installation_id` and the sealed `state`. `github-connect-finish`
-checks the state (the devShark account that started), exchanges the code for a
-user access token, and accepts the installation only when it appears in that
-user's `GET /user/installations` (every page) and its account is the same
-GitHub user (`GET /user`), which also refuses a collaborator who can see the
-owner's installation. The user token is used for those two reads and dropped.
-A missing code, a refused code, an organisation installation or an
+`lib/github-handlers.ts`): the learner installs the app on one repository
+they own, and every passed task is committed there as one file per task in
+one folder per track (`gardenPathFor`). The app requests user authorization
+during installation, so GitHub returns the learner to `/settings/github` with
+a one-time `code` beside `installation_id` and the sealed `state`.
+`github-connect-finish` checks the state (the devShark account that started),
+exchanges the code for a user access token, and accepts the installation only
+when it appears in that user's `GET /user/installations` (every page) and its
+account is the same GitHub user (`GET /user`), which refuses a collaborator
+who can see the owner's installation. The user token serves those two reads
+and is dropped. A missing or refused code, an organisation installation or an
 installation that is not the user's own saves nothing, and the callback page
 asks the learner to install and authorize again. GitHub's code works once, so
-the callback offers Retry (the same code) only after a failure that never
-reached the check: no connection, 429 or 503. After any other failure it
-offers Connect again, which starts a new connection (`github-connect-start`).
+the callback offers Retry only after a failure that never reached the check
+(no connection, 429 or 503); after any other failure it offers Connect again
+(`github-connect-start`).
+
 Connect and sync are limited per learner (`githubConnect`, `githubSync`, keyed
 `user:<id>`) behind a class-sized address backstop (`githubConnectAddress`,
 `githubSyncAddress`). A unique index on `github_connections.installation_id`
-(migration 050) keeps one installation to one devShark account; a second
-account gets 409
-`installation_taken`. No user token is stored; installation
-tokens are minted from the app key on demand, failed commits queue for a later
-sync, and disconnecting deletes the connection and the queue. The feature stays
+keeps one installation to one devShark account; a second account gets 409
+`installation_taken`. No user token is stored; the server mints installation
+tokens from the app key on demand, queues failed commits for a later sync,
+and deletes the connection and the queue on disconnect. The feature stays
 hidden, and `github-connection` answers `available: false`, until
 `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
 `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` all exist on the
-deployment (`isGithubAppConfigured`); until then the profile shows no garden
-card at all. `npm run test:garden` runs the connect step against a stand-in
-GitHub.
+deployment (`isGithubAppConfigured`); until then the Profile shows no garden
+card. `npm run test:garden` runs the connect step against a stand-in GitHub.
 
 ## Lessons on Learn levels
 
