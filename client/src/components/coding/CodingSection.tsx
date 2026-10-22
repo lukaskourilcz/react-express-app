@@ -1,7 +1,7 @@
 // The Coding section: home, one track and one task. The review queue is
 // retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -168,7 +168,10 @@ function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId
   );
 }
 
-function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
+/** One row of a track's list. A track lists up to three hundred of them, and
+ * every key typed in its search box draws the list again: a row whose task
+ * and state did not change is not drawn again. */
+const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   task: CodingTaskSummary;
   status: Status;
   /** 'locked' and 'preview' show the "Premium" badge. 'unknown' (the plan is
@@ -207,7 +210,7 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
       {save}
     </li>
   );
-}
+});
 
 /** On the free plan: which stages of a project, or levels of a short path,
  * come with it. The numbers are the index's projected flags, so they are
@@ -444,9 +447,12 @@ export function CodingTrackScreen() {
   const bookmarks = useBookmarks(isAuthenticated);
   const savedIds = useMemo(() => new Set(bookmarks.data?.saved ?? []), [bookmarks.data]);
   const save = useSaveChallenge();
+  // `mutate` keeps its identity while the mutation's result object does not,
+  // so the rows' callback stays the same and the rows can skip a redraw.
+  const saveChallenge = save.mutate;
   const onSave = useCallback((taskId: string, next: boolean) => {
-    save.mutate({ op: 'save', taskId, saved: next });
-  }, [save]);
+    saveChallenge({ op: 'save', taskId, saved: next });
+  }, [saveChallenge]);
 
   const tasks = useMemo(() => SECTION_INDEX.filter((task) => task.track === track), [track]);
   const needle = query.trim().toLowerCase();
