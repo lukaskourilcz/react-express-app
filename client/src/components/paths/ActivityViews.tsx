@@ -5,11 +5,13 @@
 // components — and none of them decides anything. Each collects a submission, hands it to the server, and renders
 // the verdict the server sent back.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Editor } from '../../coding/Editor';
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
 import { beforeAccountChange } from '../../lib/accountData';
+import { lazyShellPart } from '../../lib/routeRecovery';
+import ErrorRetry from '../ErrorRetry';
+import { ShellPartBoundary } from '../ShellPartBoundary';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { LessonView, RichText } from '../learn/LessonBody';
 import type {
@@ -275,6 +277,11 @@ export function CheckActivity({
 
 /* ── code exercise ─────────────────────────────────────────────────────── */
 
+// The editor (CodeMirror) loads when a code exercise opens, not with the
+// path overview and module pages, which never show it. Its own boundary keeps
+// the activity standing when its code does not load.
+const Editor = lazyShellPart(() => import('../../coding/Editor').then((m) => ({ default: m.Editor })));
+
 const DRAFT_DEBOUNCE_MS = 900;
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict' | 'offline';
 
@@ -428,17 +435,21 @@ export function CodeActivity({
           <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
-        <Editor
-          value={source}
-          onChange={(next) => {
-            setSource(next);
-            queueDraft(next);
-          }}
-          track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
-          ariaLabel={t('paths.code.editorLabel')}
-          readOnly={busy}
-          minHeight={320}
-        />
+        <Suspense fallback={<div className="cd-note" role="status" style={{ minHeight: 320 }}>{t('common.loading')}</div>}>
+          <ShellPartBoundary fallback={(retry, retrying) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={retrying} />}>
+            <Editor
+              value={source}
+              onChange={(next) => {
+                setSource(next);
+                queueDraft(next);
+              }}
+              track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
+              ariaLabel={t('paths.code.editorLabel')}
+              readOnly={busy}
+              minHeight={320}
+            />
+          </ShellPartBoundary>
+        </Suspense>
 
         {code.tests && code.tests.length > 0 && (
           <section className="lp-section lp-card lp-card--muted">
