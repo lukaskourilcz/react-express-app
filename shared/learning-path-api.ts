@@ -156,6 +156,14 @@ export interface LessonBody {
   sources: { label: string; url: string; reviewedOn: string }[];
 }
 
+/** GET /api/quiz/roadmap?resource=lesson&id=: the lesson a Learn level opens
+ * with (#492). `hash` is the sha256 of `lesson`; the answer's ETag carries it,
+ * so a repeat read revalidates to a 304. */
+export interface LearnLessonResponse {
+  lesson: LessonBody;
+  hash: string;
+}
+
 export type LessonSection =
   | { kind: 'prose'; body: string }
   | { kind: 'code'; language: string; code: string; caption: string }

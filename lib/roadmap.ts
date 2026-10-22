@@ -16,6 +16,7 @@
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
 import { restoredQuestionIds } from './roadmap-questions-restored';
 import { PARTS_PER_TOPIC, partRanges, type StepAvailability } from '../shared/progression';
+import { levelLessonId } from './learn-lessons/levels';
 
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
@@ -194,6 +195,10 @@ export interface RoadmapLevelMeta {
   /** Too few served questions to open. Kept on the map with its number so
    * progress records keep their meaning; never a prerequisite. */
   unavailable?: true;
+  /** The lesson the level opens with, before its questions (#492). Reading it
+   * is free, never gates the level and records nothing; served by
+   * `?resource=lesson&id=` (lib/learn-lessons). */
+  lessonId?: string;
 }
 
 export interface RoadmapCheckpointMeta {
@@ -239,6 +244,12 @@ export function checkpointQuestionIds(topic: RoadmapTopic, checkpoint: number): 
   return ids;
 }
 
+/** The `lessonId` field of a level's metadata, or nothing. */
+function lessonField(topic: RoadmapTopic, level: number): { lessonId?: string } {
+  const lessonId = levelLessonId(topic, level);
+  return lessonId ? { lessonId } : {};
+}
+
 /** Level metadata for one topic (titles, difficulty, count) — the path to render. */
 export function topicLevels(topic: RoadmapTopic): RoadmapLevelMeta[] {
   return LEVEL_TITLES[topic].map((title, i) => ({
@@ -246,6 +257,7 @@ export function topicLevels(topic: RoadmapTopic): RoadmapLevelMeta[] {
     title,
     difficulty: difficultyForLevel(i + 1),
     questionCount: levelQuestionIds(topic, i + 1).length,
+    ...lessonField(topic, i + 1),
   }));
 }
 
@@ -332,6 +344,7 @@ export function buildLiveTopic(topic: RoadmapTopic, exists: (id: string) => bool
       difficulty: difficultyForLevel(l),
       questionCount: available ? served.length : 0,
       ...(available ? {} : { unavailable: true }),
+      ...lessonField(topic, l),
     });
   }
 
