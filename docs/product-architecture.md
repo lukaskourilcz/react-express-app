@@ -687,230 +687,301 @@ card. `npm run test:garden` runs the connect step against a stand-in GitHub.
 
 ## Lessons on Learn levels
 
-A level may name `lessonId` from `lib/learn-lessons/levels.ts`. The public, address-rate-limited `resource=lesson&id=` read on the roadmap handler returns an explicit lesson projection with a content-hash ETag and public cache headers. `lib/learn-lessons/types.ts` owns the lesson shape shared with paths. The shared `components/learn/LessonBody.tsx` renders prose, code, tables, traces, examples and callouts. Learn opens this reading before creating an attempt; Start the questions opens the ordinary level. Reading is optional, records nothing and stays separate from grading and rewards. A failed lesson read still permits questions. `/learn/big-o` uses the first two DSA lessons through this same read.
+A level may name `lessonId` from `lib/learn-lessons/levels.ts`. The public,
+address-rate-limited `resource=lesson&id=` read on the roadmap handler returns
+an explicit lesson projection with a content-hash ETag and public cache
+headers. `lib/learn-lessons/types.ts` owns the lesson shape shared with
+paths, and `components/learn/LessonBody.tsx` renders prose, code, tables,
+traces, examples and callouts. It turns safe Markdown links in prose and
+table cells into anchors only for HTTPS and canonical internal Learn routes;
+anything else stays visible text, and inline code stays text. Learn opens the
+reading before creating an attempt; "Start the questions" opens the ordinary
+level. Reading is optional, records nothing and stays apart from grading and
+rewards. A failed lesson read still permits the questions.
 
-## Learning paths
+## Learn sections
 
-One optional path sits on top of the existing Learn levels and the Coding
-section. It replaces neither, and it changes no product or subject scope.
+`shared/learn-sections.ts` groups the Learn topics and the FDE path into three
+sections (`LEARN_SECTION_IDS`, `LEARN_SECTIONS`):
 
-- **Forward Deployed Engineer** is a *role specialization*: the learner picks
-  Fullstack, Frontend or Backend first, then optionally adds FDE on top. It is
-  the only role, and it occupies the single `specialization` slot of the
-  account preference.
-- **DSA Foundations** was a *skill path* until E5 (#496, 22 October 2026)
-  retired it. Its material lives on in Learn (fifteen levels in the Software
-  Engineer section, the eighteen original readings under their `dsa-v1-*`
-  ids) and in Coding (the 29 `alg-dsa-*` tasks with their graders).
-  `/roadmap/paths/dsa-foundations` and every module address under it answer a
-  308 to `/learn/software-engineer?topic=dsa` (`vercel.json`; the client
-  redirects the same way). `LEARNING_PATH_IDS` is `['fde']`, the `skill_path`
-  kind, `SkillPathId` and the profile's `skillPaths` are gone, and a stored
-  `skillPaths` field is dropped on the next save. Migration 026's tables stay;
-  no rows were deleted.
+| Section | Topics | Path | Membership |
+| --- | --- | --- | --- |
+| Web Developer | HTML, CSS, JavaScript, TypeScript, React, Next.js, Node.js, Databases, Git, General | | every base track |
+| Software Engineer | DSA, DSA Advanced, Algorithms, System Design, DevOps, Security, Databases, Git, General | | explicit opt-in |
+| Forward Deployed Engineer | AI & LLMs, Node.js, Databases, General, DevOps, Security | `fde` | the `fde` specialization |
 
-### Shipped state (B14, 22 October 2026)
-
-Epics A to E are merged; B14 (#510) verified the release. What production
-serves once the owner sets `LEARNING_PATH_FDE_ENABLED=true` (until then the
-path is previewable and reports `disabled`):
-
-- **One path, FDE.** Its guided loop is fourteen teaching modules, M01
-  Customer discovery to M14 Codify the pattern, in five delivery phases, then
-  the staged capstone C01 (the support operations workbench, eight stages:
-  four graded code stages and four self-reviewed written pieces). Guided
-  completion needs every loop module and every capstone stage; it records
-  "FDE guided path completed" and unlocks the downloadable evidence card.
-  Activity ids keep the slugs they were authored under (#550), so M03's items
-  start `fde-v1-m02-` and M02's `fde-v1-m02-cases-`. The path header counts
-  15 modules, 28 lessons, 120 checks, 15 coding exercises, 10 written artifacts
-  and 40–60 hours (`pathInventory`, the same manifest the API sends).
-- **Off the loop.** The diagnostic ("Where you already are", twelve scenario
-  questions and two debugging exercises) reports per competency and never
-  gates; the optional bridges (backend mapping, operator state, an incident
-  case, and Python reading: two lessons and three checks) are
-  recommendations. The
-  interview-practice shelf IP01–IP04 (`shelf: 'interview-prep'`, #554) holds
-  two code rounds, twelve design cases and five reflections; it never supplies
-  the next action or counts toward completion.
-- **Any nine of twelve.** M02 Decomposition cases completes with both lessons
-  and any nine of its twelve four-question cases at `verified_pass`
-  (`requiresAtLeast`, #545). Migration 066 adds
-  `accept_learning_path_quota_result`, which counts the quota under the
-  enrollment lock; without it a quota submit answers 503
-  `migration_required`. It is applied in production (22 October 2026).
-- **Taster.** A free account enrolls, takes the diagnostic and works through
-  M01; the server checks the tier at both start and submit and answers any
-  later activity with 402 `premium_required` (#551). Stored passes reopen
-  after Premium lapses.
-- **Positioning.** Home and Premium introduce the path from the fetched
-  manifest (#553); `shared/tiers.ts` remains the only statement of what
-  Premium opens.
-- **DSA as Learn topics.** DSA Foundations (fifteen levels, the first five
-  free) and DSA Advanced (fifteen levels, Premium, opt-in) are Learn topics of
-  the Software Engineer section (#494, #556); the standalone DSA path is gone
-  (#555).
-
-`shared/learning-paths.ts` owns the vocabulary — `LearningPathId`,
-`LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
-completion arithmetic. It stays deliberately apart from the existing
-registries: `Track` keeps its three values, the cosmetic `Specialization`
-label in `leveling.ts` is a different concept with a similar name, and neither
-`CodingTrack` nor `RoadmapTopic` gains a member. A path *references* those
-registries; it never joins them.
-
-### Learn sections and the plan
-
-`/learn/web-developer`, `/learn/software-engineer` and
-`/learn/forward-deployed-engineer` each have a public title, description,
-canonical and static preview. The preview lists the registry’s topics; FDE’s
-inventory is calculated with `pathInventory` from the same manifest as the
-API. It describes authored work without claiming that a disabled path is open.
-Home’s topic chooser links directly into the first section that owns a topic.
-Today keeps unfinished → review → new priority, orders within those buckets
-by `planTopics(profile)`, and exposes one `startHereId`; joining a section
-adds work after the track rather than replacing the next action.
-
-`shared/learn-sections.ts` groups the Learn topics and paths into three
-sections: Web Developer, Software Engineer and Forward Deployed Engineer
-(`LEARN_SECTION_IDS`, `LEARN_SECTIONS`; the membership matrix of
-[the Learn sections plan](learn-sections-fde-flagship-plan.md), section 5.1).
 A shared topic keeps one id, one set of levels and one progress record in
-every section that lists it. Web Developer comes with every base track,
-Forward Deployed Engineer with the `fde` specialization, and Software Engineer
-only from an explicit opt-in saved as `sections` on the learner profile
-(`PUT ?op=learning-preference` accepts it; a save without it keeps the saved
-list). `planTopics` appends each joined opt-in section's topics, in section
-order, after the track stages and bridges, then the prerequisites those topics
-need, so `403 not_in_plan` and Today follow without a handler change. A
-profile without `sections` plans what it planned before. A section never
-changes a tier. `validateProgressionGraph` fails when a section lists a topic
-the catalogue does not hold or has retired, when a live topic sits in no
+every section that lists it. Software Engineer joins the plan only from an
+opt-in saved as `sections` on the learner profile (`PUT
+?op=learning-preference` accepts it; a save without it keeps the saved list).
+`planTopics` appends each joined opt-in section's topics, in section order,
+after the track stages and bridges, then the prerequisites those topics need,
+so `403 not_in_plan` and Today follow without a handler change. A section
+never changes a tier. `validateProgressionGraph` fails when a section lists a
+topic the catalogue does not hold or has retired, when a live topic sits in no
 section, or when a section shelves an unknown path.
+`shared/learn-section-ids.ts` carries the ids, the section shape and the
+opt-in list that the first download needs; the full registry reaches the
+browser only in a lazy chunk.
+
+**Pages.** `/learn/web-developer`, `/learn/software-engineer` and
+`/learn/forward-deployed-engineer` each have a public title, description,
+canonical and static preview. The preview lists the registry's topics; the
+FDE preview's inventory comes from `pathInventory` over the same manifest the
+API sends, and it never claims a disabled path is open. Home's topic chooser
+links into the first section that owns a topic.
 
 The Learn page shows the sections under one route, `/learn/:section`
 (`client/src/components/learn/`). An address without a known section resolves
-in this order: the first section that lists `?topic`, the section last opened
-on this device (`devquiz:roadmap:section`), then Web Developer; the page
-replaces the address with the section's own and keeps the query. A section
-address whose `?topic` only another section lists moves to that section.
-Each section also remembers its last topic (`devquiz:roadmap:section-topic`).
-The sections share one route box (`routeBoxKey`), so a switch keeps the page
-mounted, and a level or the skill check stays open while the address changes.
-In a section the learner has not joined, the topics the plan lacks show dimmed
-beside one action: Software Engineer saves the union of the saved `sections`
-and its own id (the server replaces the list with what a save sends); Forward
-Deployed Engineer enrols in the FDE path first when the path is open, then
-saves the `fde` specialization, the order the Profile card uses, so a free
-account gets the upgrade sheet and nothing is saved. A visitor is asked to
-sign in, and an account with no saved plan gets a link to the plan card at
-`/profile#learning-plan`. The section's progress figure counts its Learn
-topics only (A3 adds the FDE path), and any passed level shows as at least 1%.
-Joining a section can lower the figures, since the joined topics and their
-prerequisites join the total. `shared/learn-section-ids.ts` carries the ids, the section shape and
-the opt-in list that the first download needs for planning; the full registry
-in `shared/learn-sections.ts` reaches the browser only in a lazy chunk.
+to the first section that lists `?topic`, then the section last opened on
+this device (`devquiz:roadmap:section`), then Web Developer; the page replaces
+the address with the section's own and keeps the query. A section address
+whose `?topic` only another section lists moves to that section. Each section
+remembers its last topic (`devquiz:roadmap:section-topic`). The sections
+share one route box (`routeBoxKey`), so a switch keeps the page mounted, and
+a level or the skill check stays open while the address changes.
+
+In a section the learner has not joined, the topics the plan lacks show
+dimmed beside one action. Software Engineer saves the union of the saved
+`sections` and its own id. Forward Deployed Engineer enrols in the FDE path
+first when the path is open, then saves the `fde` specialization, so a free
+account gets the upgrade sheet only where Premium applies. A visitor is asked
+to sign in, and an account with no saved plan gets a link to the plan card at
+`/profile#learning-plan`. The section's progress figure (`sectionProgress`)
+counts levels passed over levels available across the topics the learner can
+work toward, plus the path's steps when the path is open; any passed level
+shows as at least 1%. Joining a section can lower the figure, since the
+joined topics and their prerequisites join the total.
+
+Today keeps unfinished → review → new priority, orders within those buckets by
+`planTopics(profile)`, and exposes one `startHereId`; joining a section adds
+work after the track and does not replace the next action. Career groups its
+topics under the three section headings and links into Learn.
+
+### DSA in Learn
+
+DSA lives in Learn as two topics of the Software Engineer section. The
+standalone DSA learning path is retired: `/roadmap/paths/dsa-foundations` and
+every module address under it answer a 308 to
+`/learn/software-engineer?topic=dsa` (`vercel.json`; the client redirects the
+same way). Migration 026's path tables and their old rows stay.
+
+- **DSA Foundations** (`dsa`, prerequisite JavaScript) has fifteen levels of
+  eight reviewed questions. Every level opens with reading: the original
+  readings live in `lib/learn-lessons/dsa/`, paired where they belong
+  together, and two synthesis readings close the topic. Levels 1 to 14 seal
+  their aligned `alg-dsa-*` coding tasks; level 15 is the review. Levels 1–5
+  and their part test are free; levels 6–15 and the later part tests are
+  Premium. `docs/audit/wip/history/review-2026-10-22-e3-origins.json` records
+  where each question came from.
+- **`/learn/big-o` and `/big-o`.** The public `/big-o` guide explains input
+  size and common growth rates and links to `/learn/big-o`, which opens DSA
+  levels 1 and 2 without placement or a track prerequisite
+  (`isBigOIntroduction` in `shared/tiers.ts`) through the same lesson read.
+  Level 3 onward follows ordinary progression.
+- **DSA Advanced** (`dsa-advanced`, opt-in through Software Engineer) has
+  fifteen levels of eight reviewed questions and needs the first five
+  Foundations levels. Its levels and part tests are Premium. Eight lessons in
+  `lib/learn-lessons/dsa-advanced/` serve the levels in pairs, with a closing
+  synthesis reading. Its levels seal the fifteen `alg-dsaa-*` tasks and nine
+  Medium and Hard band tasks mapped to matching levels. Lesson reading stays
+  public; starting a graded attempt enforces the tier. Every new or renewed
+  item review recorded for it is a model self-review
+  (`independent: false`), and the automated checks prove the authored bounded
+  cases, not every program's complexity.
+
+## Learning paths
+
+One optional path sits on top of the Learn levels and the Coding section and
+replaces neither. **Forward Deployed Engineer** is a *role specialization*:
+the learner picks Fullstack, Frontend or Backend first, then adds FDE on top.
+It is the only path (`LEARNING_PATH_IDS` is `['fde']`) and occupies the single
+`specialization` slot of the account preference. `docs/fde-curriculum.md` is
+its module table.
+
+**Availability.** `LEARNING_PATH_FDE_ENABLED=true` switches the path on; a
+path opens only when its switch is on, its content validates and migration
+026 is installed. Production does not set the variable today, so the path is
+previewable and reports `disabled`. Switching it on is an owner item in
+`NEEDED.md`.
+
+### What the path holds
+
+- **The guided loop.** Fourteen teaching modules, M01 Customer discovery to
+  M14 Codify the pattern, in five delivery phases, then the staged capstone
+  C01 (the support operations workbench: four graded code stages and four
+  self-reviewed written pieces). The capstone's `dependsOn` names M01–M14
+  explicitly, and `scripts/learning-path-schema-contracts.ts` fails when that
+  list omits or reorders a teaching module or names a shelf module. Activity
+  ids keep the slugs they were authored under, so M03's items start
+  `fde-v1-m02-` and M02's `fde-v1-m02-cases-`. The path header counts 15
+  modules, 28 lessons, 120 checks, 15 coding exercises, 10 written artifacts
+  and 40–60 hours (`pathInventory`, from the manifest the API sends).
+- **Off the loop.** The diagnostic ("Where you already are", twelve scenario
+  questions and two debugging exercises) reports per competency and never
+  gates. The optional bridges (backend mapping, operator state, an incident
+  case, and Python reading) are recommendations. The interview-practice shelf
+  IP01–IP04 (`shelf: 'interview-prep'`) holds two code rounds of three
+  exercises each, with 300–500-line fixtures, server-only references and
+  hidden assertions; twelve design cases graded as objective checks; five
+  self-reviewed reflections; and eight lessons with primary references. The
+  shelf never supplies the next action, counts toward completion, or changes
+  the competency and phase counts or the path's time estimate.
+- **Any nine of twelve.** M02 Decomposition cases completes with both lessons
+  and any nine of its twelve four-question cases at `verified_pass`
+  (`requiresAtLeast`).
+
+`shared/learning-paths.ts` owns the vocabulary: `LearningPathId`,
+`LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
+completion arithmetic. It stays apart from the other registries: `Track` keeps
+its three values, the cosmetic `Specialization` label in `leveling.ts` is a
+different concept with a similar name, and neither `CodingTrack` nor
+`RoadmapTopic` gains a member. A path *references* those registries and never
+joins them.
+
+### Access
+
+Enrolment and resumption are free. The `learning-path-activity` rule in
+`shared/tiers.ts` reads the manifest: every activity of the diagnostic module
+and of the first required module (M01) is free, and the rest is Premium.
+Optional and shelf modules never become the first required module, and an
+unknown path or activity fails closed. The server checks the tier at start
+and at submit, after verifying the caller owns the enrolment, and answers a
+locked activity with 402 `premium_required`. A lapsed account reopens its
+recorded verified passes and self-reviewed work; draft reads and saves keep
+their access. The client marks each locked activity and the server's next
+action and opens the usual upgrade sheet. The picker can save a free FDE
+preference when the catalogue is unavailable, which never invents an
+enrolment.
+
+Home, the landing and Premium introduce the path from the fetched manifest
+through `pathInventory`; a failed or pending catalogue read shows no
+invented inventory, and the section stays a preview while the path is
+disabled. The shared Premium inclusion list names FDE and states the free
+diagnostic and first-module boundary; `shared/tiers.ts` remains the only
+statement of what Premium opens.
+
+### Hub and evidence
+
+The FDE overview lives at `/learn/forward-deployed-engineer/path`, with module
+addresses under it. Old `/roadmap/specializations/fde` links redirect
+permanently and keep the module, query and fragment. The overview shows a
+competency board and the five delivery phases. Phase membership is manifest
+metadata (`deliveryPhase`) carried through the source, merge and public
+projection, and a validator rejects unknown phases and missing phases on
+required loop modules. The capstone and the shelves sit apart from the phase
+list.
+
+The board groups the recorded activity states by competency. It never turns
+reading, self-review and machine verification into a competency score, and it
+keeps diagnostic percentages in their own section. A failed progress read
+shows an error instead of a fresh board. Continue follows `nextActivityId`.
+The completion card is available only when the server returns
+`guidedComplete`: it carries the exact "FDE guided path completed" label, the
+manifest's competency labels and recorded counts, and no identity or
+artifact text, on the 1200×630 canvas share-card renderer in light and dark.
+
+A signed-in overview can export the latest server-saved artifact drafts
+through the caller-owned `learning-path-draft` GET, as JSON (with revision and
+state) or Markdown (saved text rendered literally). At most two reads run at
+once; a failed read produces no partial file, and leaving the page or a
+change of account or enrolment cancels pending reads. The export says saved
+drafts may differ from the last submission and claims no independent review.
+
+### Contract and grading
 
 `shared/learning-path-api.ts` is the wire contract. Authored content, answer
 keys, hidden assertions and reference solutions live under
 `lib/learning-paths/` and reach the browser only as projections that strip
 them. `lib/learning-paths/catalog.ts` never imports the solutions, and the
-launch contracts forbid `client/` from importing `lib/learning-paths` at all.
+launch contracts forbid `client/` from importing `lib/learning-paths`.
 
-Grading reuses what already exists: the QuickJS sandbox, the TypeScript
-checker and the same 2.5-second deadline. What the adapter adds is the
-path-shaped contract — an attempt bound to an enrollment (so a task reached
-through a path is authorized by that enrollment rather than the ordinary
-coding tier ladder), assertions grouped into named criteria (so a
-security-critical failure cannot be averaged away), and evidence recorded in
-`learning_path_*` only. A path pass writes no tier unlock. Verified coding activities use the shared
-canonical coding reward (migration 065): a reused ordinary task cannot earn a
-second first-pass reward. Until E5 (#496) retired the DSA path, a DSA exercise
-that had become a coding task (#493) recorded under that task's id, so a path
-pass and a Coding pass shared one record; those `alg-dsa-*` records stay.
-Non-coding activities keep their existing reward rules.
-Native code sessions bind exact activity/grader material and rubric version.
-A stale unaccepted session is refused before grading or evidence/XP writes;
-loading its latest brief keeps the editor source. Automatic retries send their previous
-seal when starting a replacement attempt; changed, legacy or expired code
-attempts require latest-brief review before another Submit. This metadata flag
-never changes the server's ownership/version checks or reward authority. An already accepted matching
-network retry returns the stored response read-only, without grading or paying
-again. Runtime-only native grading changes must bump the attempt tag in
+Endpoints are `resource=`/`op=` branches on existing handlers
+(`learning-path-catalog`, `-start` and `-submit` on `api/quiz/roadmap.ts`;
+`learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` and
+`-reward` on `api/user/[op].ts`). Storage starts in
+`supabase/supabase-schema-026.sql`.
+
+Grading reuses the QuickJS sandbox, the TypeScript checker and the 2.5-second
+deadline. The path adapter adds an attempt bound to an enrolment (so the
+enrolment authorizes a task reached through the path, not the coding tier
+ladder), assertions grouped into named criteria (so a security-critical
+failure cannot be averaged away), and evidence recorded in `learning_path_*`
+only. A path pass writes no tier unlock. A verified code activity records its
+acceptance and the shared coding award in one transaction
+(`supabase/supabase-schema-065.sql`): a reused ordinary task keeps its task id
+and cannot earn a second first-pass reward, and any other path exercise has a
+stable scoped id (`lib/learning-paths/coding-task-id.ts`). The accepted
+response stores the actual award and the complexity analysis that chose it,
+so a retry replays it without paying again. Non-coding activities keep their
+own reward rules.
+
+A code session binds the exact activity, grader material and rubric version.
+A stale unaccepted session is refused before grading or any evidence or XP
+write; loading the latest brief keeps the editor source. An automatic retry
+sends its previous seal when it starts a replacement attempt; a changed,
+legacy or expired code attempt needs a latest-brief review before another
+Submit. An accepted network retry returns the stored response read-only. A
+runtime-only grading change must bump the attempt tag in
 `lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
-check (`purpose: 'project'` on a check; none is published since E5 (#496)
-retired the DSA final, and the FDE capstone's project stages are code and
-written pieces) deals the same questions again on a retry, only reshuffled, so after a failed attempt it returns only which
-questions were wrong; the correct options and the explanations come back once
-it is passed. A diagnostic or exercise check returns them after every attempt.
-A domain-gated check needs its threshold overall and a minimum in every domain:
-the same threshold for a domain of five or more questions, half for a smaller
-one.
+check (`purpose: 'project'`; none is published) deals the same questions again
+on a retry, reshuffled, so after a failed attempt it returns only which
+questions were wrong. A diagnostic or exercise check returns the correct
+options and explanations after every attempt. A domain-gated check needs its
+threshold overall and a minimum in every domain: the same threshold for a
+domain of five or more questions, half for a smaller one.
 
-Three optional content fields shape the FDE flagship (#497). A check's
-`scenario` is a shared case the learner reads once above its ordered
-questions; the check needs three questions or more, and the scenario ships in
-the public manifest, so it must never quote an answer or an explanation. A
-code activity's `fixtureNote` sits above the editor and says the fixture is
-deliberately unfamiliar and what "done" means. A module's `shelf:
-'interview-prep'` lists it apart from the loop and must come with `optional:
-true`. Both strings reach the workspace in the start response's activity
-summary, and no payload repeats them. The validator refuses a misplaced field
+Three optional content fields shape the path. A check's `scenario` is a shared
+case the learner reads once above its ordered questions; the check needs three
+questions or more, and the scenario ships in the public manifest, so it must
+never quote an answer or an explanation. A code activity's `fixtureNote` sits
+above the editor and says the fixture is unfamiliar on purpose and what "done"
+means. A module's `shelf: 'interview-prep'` lists it apart from the loop and
+must come with `optional: true`. The validator refuses a misplaced field
 (`misplaced_scenario`, `misplaced_fixture_note`), a short scenario check
 (`scenario_too_few_questions`), an empty one (`missing_copy`), an unknown or
 non-optional shelf (`unknown_shelf`, `shelf_not_optional`) and a loop module
 that depends on a shelf module (`loop_depends_on_shelf`). It warns when a
 scenario passes 2,000 characters (`long_scenario`) or a shelf module comes
-ahead of a loop module (`shelf_before_loop`). Off-loop modules, optional or
-shelved, never gate completion, never supply the next action and never count
-toward the module total the reward compares: `isOffLoopModule` in
-`shared/learning-paths.ts` decides that for the shared arithmetic and the
-handlers. `pathInventory` also leaves a shelf module's checks, code and
-artifacts out of the counts the path header shows; the shelf lists its own.
+ahead of a loop module (`shelf_before_loop`). `isOffLoopModule` in
+`shared/learning-paths.ts` decides which modules never gate completion, supply
+the next action or count toward the module total; `pathInventory` also leaves
+a shelf module's work out of the header counts.
 
-Endpoints are new `resource=`/`op=` branches on existing handlers
-(`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
-`learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
-`api/user/[op].ts`), so the twelve-handler budget is unchanged. Storage is
-`supabase/supabase-schema-026.sql` (additive, idempotent). Availability is per
-path — `LEARNING_PATH_FDE_ENABLED` for FDE, the one published path — and a
-path opens only when its switch is on, its content validates and the migration
-is installed.
+### Drafts, acceptance and completion
 
 A code exercise or a written piece autosaves one draft per activity, up to
-`PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
+`PATH_LIMITS.draftsPerEnrollment` (60) per enrolment, which `npm run
 test:paths` keeps at or above every path's code exercises plus artifacts. A
 pass keeps its draft, the only copy of the learner's passed code the server
-holds, so a passed exercise reopens with what the learner wrote;
-`purge_expired_learning_data` removes drafts idle for 90 days.
-`accept_learning_path_result` (migration 054) keeps a verified pass and a
-submitted written piece against any weaker later attempt, which is still stored
-as evidence. It accepts one result per enrollment at a time and decides module
-completion from the module's requirements, which the submit handler sends, so
-two submits finishing a module together still complete it. Quota modules such as decomposition cases use
-`accept_learning_path_quota_result` (migration 066): all plain requirements
-and any nine of twelve verified case passes are counted from recorded states
-under the same enrollment lock. A precomputed completion flag cannot bypass
-either condition. Coding quota activities retain the atomic coding award;
-replays never award twice. A missing quota routine refuses the submission with
-503 `migration_required` rather than falling back to AND-only completion.
-The merchandise
-package needs every module completed within the one enrollment of the
-curriculum version the deployment publishes (`path_is_complete`, 054). Its
-claim checks the address the way a shop order does (`validateAddress`): a
-field longer than 120 characters is refused rather than cut to fit, and the
-country must be an assigned ISO 3166-1 alpha-2 code.
+holds. `purge_expired_learning_data` removes drafts idle for 90 days.
 
-Completion language is deliberately narrow. The server says "FDE guided path
-completed" only after every required module is complete, and the FDE modules
-require three written pieces the learner reviews against the rubric themselves
-(`self_reviewed`, never counted as verified). So the path, and the merchandise
-it earns, needs all three. The overview shows them on their own line, "Written
-pieces you review yourself", with a note that all of them are required to
-complete the path. There is no certification, no rank and no claim about
-employment.
+`accept_learning_path_result` (migration 054) keeps a verified pass and a
+submitted written piece against any weaker later attempt, which is still
+stored as evidence. It accepts one result per enrolment at a time and decides
+module completion from the module's requirements, so two submits finishing a
+module together still complete it. A quota module such as M02 uses
+`accept_learning_path_quota_result` (migration 066), which counts all plain
+requirements and the nine-of-twelve quota from recorded states under the same
+enrolment lock; a precomputed completion flag cannot bypass either condition.
+A coding quota activity keeps the atomic coding award, and a replay never
+pays twice. Without the quota routine the submit answers 503
+`migration_required`.
+
+Completion language is narrow. The server says "FDE guided path completed"
+only after every required loop module and every capstone stage is complete.
+The ten written pieces in M01, M13, M14 and the capstone are reviewed by the
+learner against the rubric (`self_reviewed`, never counted as verified), and
+the path needs all of them. The overview lists them on their own line,
+"Written pieces you review yourself". There is no certification, no rank and
+no claim about employment.
+
+Finishing the path would also earn the merchandise package
+(`path_is_complete`, every module completed within the one enrolment of the
+published curriculum version). Merchandise is paused ("Coins"), so
+`learning-path-reward` answers 404 `merch_unavailable` today.
 
 ## Practice, scheduling and what the product claims about it
 
