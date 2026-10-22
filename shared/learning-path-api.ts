@@ -91,8 +91,8 @@ export interface PathEnrollment {
   pathId: LearningPathId;
   curriculumVersion: number;
   status: EnrollmentStatus;
-  /** The base track at enrollment time, for recommendations only. Null for a
-   * skill path entered without any career selection. */
+  /** The base track at enrollment time, for recommendations only. Null when
+   * none was chosen, as on enrollments of the retired DSA skill path. */
   baseTrackAtEnrollment: BaseTrack | null;
   startedAt: string;
   updatedAt: string;
@@ -106,7 +106,7 @@ export interface EnrollmentListResponse {
 export interface EnrollmentCreateRequest {
   pathId: LearningPathId;
   curriculumVersion: number;
-  /** Only meaningful for a role specialization; ignored for a skill path. */
+  /** The base track the role specialization sits above. */
   baseTrack?: BaseTrack;
   /** `pause` and `resume` keep the enrollment and all its evidence. */
   action?: 'enroll' | 'pause' | 'resume';

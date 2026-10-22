@@ -456,7 +456,7 @@ export const SPECIALIZATION_BRIDGE_TOPICS: Record<string, readonly string[]> = {
 };
 
 /** Ordered topics of a learner's plan: the base track's stages, then whatever
- * the chosen specialization and skill paths add, then the topics of each
+ * the chosen specialization adds, then the topics of each
  * opt-in Learn section the learner joined (in section order), then every
  * prerequisite those section topics need that the plan does not hold yet.
  * First-seen order, without repeats.

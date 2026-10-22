@@ -365,7 +365,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     // track toggle, which sends no profile answers — keeps the rest.
     const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     // Without the saved answers a partial save would write empty goals,
-    // experience, study time and skill paths over them, so nothing is written.
+    // experience and study time over them, so nothing is written.
     if (existingRead.error) {
       return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
     }
@@ -453,8 +453,8 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     }
     // Enrollment is free; activity starts and submissions enforce the taster boundary.
     if (action !== 'pause' && await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
-    // A skill path records no career context; a role specialization records the
-    // base track it sat above, for recommendations only.
+    // A role specialization records the base track it sat above, for
+    // recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
 
     const saved = await withTimeout(supabase.rpc('upsert_learning_path_enrollment', {

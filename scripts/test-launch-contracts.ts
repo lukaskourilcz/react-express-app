@@ -3751,7 +3751,7 @@ async function main() {
       }
     }
   }
-  // DSA Foundations (#493): the DSA path's exercises fill the DSA Learn
+  // DSA Foundations (#493): the retired DSA path's exercises fill the DSA Learn
   // levels through the same parent-attempt flow. Level 3 seals its one task;
   // every Foundations level now aligns with its task. The Coding section
   // lists all 29 under Algorithms, and only

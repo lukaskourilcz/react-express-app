@@ -91,8 +91,8 @@ const MEDIUM_HARD_BAND: CodingTaskSource[][] = [
 /** Ids of the Medium and Hard waves; `tasksForLevel` in `./active` skips them. */
 export const MEDIUM_HARD_BAND_TASK_IDS: ReadonlySet<string> = new Set(MEDIUM_HARD_BAND.flat().map((task) => task.id));
 
-/** The DSA Foundations tasks (#493): the DSA path's code exercises as coding
- * tasks on the algorithms track with topic `dsa`, levelled to the DSA Learn
+/** The DSA Foundations tasks (#493): the code exercises of the DSA path that
+ * E5 (#496) retired, kept as coding tasks on the algorithms track with topic `dsa`, levelled to the DSA Learn
  * topic. Listed in `sources` before the bands, so a tier-1 task here sorts
  * ahead of a band task of the same level and tier. */
 export const DSA_FOUNDATIONS_TASK_IDS: ReadonlySet<string> = new Set(DSA_FOUNDATIONS_TASKS.map((task) => task.id));
