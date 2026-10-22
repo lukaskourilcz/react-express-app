@@ -175,9 +175,16 @@ export function vercelRoutingContracts(): void {
     ['/roadmap/specializations/fde/fde-v1-m03', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
     ['/roadmap/specializations/fde/fde-v1-m03/', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
     ['/roadmap/specializations/fde/fde-v1-m03/extra', '/learn/forward-deployed-engineer/path/fde-v1-m03'],
+    // E5 (#496) retired the DSA Foundations path. Its overview and every
+    // module answer 308 to the DSA topic of the Software Engineer section,
+    // where its readings and Coding tasks now live.
+    ['/roadmap/paths/dsa-foundations', '/learn/software-engineer?topic=dsa'],
+    ['/roadmap/paths/dsa-foundations/', '/learn/software-engineer?topic=dsa'],
+    ['/roadmap/paths/dsa-foundations/dsa-v1-d04', '/learn/software-engineer?topic=dsa'],
+    ['/roadmap/paths/dsa-foundations/dsa-v1-d04/extra', '/learn/software-engineer?topic=dsa'],
   ];
   for (const [from, to] of MOVED) assert.equal(redirectOf(from), to, `${from} answers 308 to ${to}`);
-  for (const path of ['/learn/forward-deployed-engineer/path', '/learn/forward-deployed-engineer/path/fde-v1-m03', '/roadmap', '/roadmap/paths/dsa-foundations', '/roadmap/specializations', '/roadmap/specializations/fdex']) {
+  for (const path of ['/learn/forward-deployed-engineer/path', '/learn/forward-deployed-engineer/path/fde-v1-m03', '/roadmap', '/roadmap/paths', '/roadmap/paths/dsa-foundationsx', '/learn/software-engineer', '/roadmap/specializations', '/roadmap/specializations/fdex']) {
     assert.equal(redirectOf(path), null, `${path} is not redirected`);
   }
   assert.ok(phaseHeaders('/roadmap/specializations/fde/fde-v1-m03', 'main', phases)['content-security-policy'], 'the 308 carries the app’s security headers');
