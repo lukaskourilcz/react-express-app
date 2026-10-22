@@ -1029,136 +1029,78 @@ carrying its content in words rather than a caption. See
 
 ## Tiers and billing
 
-The owner made devShark freemium on 2026-09-25 (`SECOND-HANDOFF-25-9-2026.md`,
-sections 0, 2 and 3). Every registered account gets the free tier. Premium
-costs 4.99 EUR a month or 59.88 EUR a year before VAT (owner decision,
-12 October 2026). Applicable VAT is added at Checkout. Redeeming coins for
-merchandise is a Premium benefit that is paused until next quarter
-(`MERCH_ENABLED`, see below). Premium changes which content a learner
-may start. Grading, explanations, XP amounts, scores, streaks, ranks,
-leaderboards and matchmaking work the same on both tiers.
+devShark is freemium. Every registered account gets the free tier. Premium
+costs 4.99 EUR a month or 59.88 EUR a year before VAT (`PREMIUM_PRICE` in
+`shared/tiers.ts`); Checkout adds applicable VAT. Premium changes which
+content a learner may start. Grading, explanations, XP amounts, scores,
+streaks, ranks, leaderboards and matchmaking work the same on both tiers.
 
-Status on 2026-09-25: the tiers (issue #220, step D1), billing (issue #221,
-step D2) and the public copy, `/premium` and the legal pages (issue #222, step
-D3) are built. Billing stays off until the owner's Stripe account, Prices
-and environment exist (`NEEDED.md`); until then Premium opens through a manual
-grant or a voucher (below). Migrations 039 to 045 reached production on
-2026-09-26. Migration 046 drops four erasure routines that nothing calls any
-more; it goes to production after the deploy that stopped calling them
-("Account erasure" below).
+Billing is built and off: Stripe sales wait for the owner's Stripe account,
+Prices and environment (#221, `NEEDED.md`). Until then Premium opens through
+a manual grant or a voucher.
 
-**Launch price (4 October to 30 November 2026).** The owner decided on
-2026-09-28 that every subscription started between Sun 4 Oct 2026 00:00 and
-Mon 30 Nov 2026 23:59:59, Prague time, pays 55 % less for its whole lifetime:
-2.25 EUR a month or 26.95 EUR a year before VAT. `shared/launch-offer.ts`
-holds the window, the percentage and the prices derived from `PREMIUM_PRICE`
-(rounded the way Stripe rounds a percentage coupon). The offer is on only
-inside the window, with `BILLING_ENABLED` and a complete Stripe setup, and
-with the coupon id in `STRIPE_COUPON_LAUNCH`. The homepage announces the future
-launch before 4 October in a compact, right-aligned note directly below the plan
-comparison card, with the October title, prices and lifetime terms. During the window,
-that banner requires the same server confirmation as the purchase surfaces; it
-disappears when checkout cannot apply the coupon or the offer has expired.
-
-- Checkout (`checkoutSessionParams`) adds `discounts: [{ coupon }]` and
-  drops `allow_promotion_codes`, because Stripe takes one or the other. The
-  coupon is `duration: forever`, so it becomes a discount on the subscription
-  and applies to every renewal and after a portal switch between the monthly
-  and yearly Price; cancelling ends it with the subscription. Managed
-  Payments does not list `discounts` among the Checkout parameters it
-  refuses (Stripe's "Update your Checkout integration" page, read
-  2026-09-28), so the same session works on both tax paths. A discounted
-  session expires when the offer does (at least 31 minutes after it opens,
-  Stripe's minimum being 30), and the coupon's `redeem_by` (1796079599) is
-  the limit Stripe enforces; Stripe's documentation does not say whether a
-  session opened before `redeem_by` and paid after it keeps the discount.
-- The browser shows the offer when `/api/settings` says `billing.launchOffer`
-  and its own clock is inside the window (`client/src/lib/launchOffer.ts`),
-  so a cached answer or a wrong device clock cannot show it early or late.
-  `/premium`, the plan table, the upgrade sheet, the expired-checkout line
-  and the Terms print the launch price beside the regular price struck
-  through, and a note that names the regular price and the day it applies
-  from (1 Dec 2026), "kept for the lifetime of your subscription · cancel
-  anytime" and "Offer ends 30 Nov 2026". Screen readers hear one sentence per
-  price. No countdown and no scarcity copy.
-- Framing: an introductory launch price, not a reduction. Premium was never
-  sold before the offer, so the pages cite no "lowest price in the last 30
-  days"; the launch contracts refuse such a line. The wording awaits a legal
-  check (`NEEDED.md`).
-- Built at deploy time and therefore unchanged: the static HTML of `/premium`
-  that a visitor without JavaScript reads, the JSON-LD offers in
-  `client/src/lib/publicMetadata.ts` and the share images.
-  They state the regular price.
-- `LAUNCH_OFFER_TEST_NOW` replaces the clock for the coupon decision on a
-  test-mode deployment only (an `sk_test_` or `rk_test_` key), so the owner can try the
-  Checkout before 4 October.
+### The free tier
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
-  and JavaScript in full, React levels 1 to 12 of 25, and DSA Foundations levels 1–5 and their first part test
-  (`FREE_LEARN_LEVELS`). The DSA introduction is open without placement or a
-  track prerequisite at `/learn/big-o`, linked by the public `/big-o` guide;
-  this placement exception applies only to levels 1–2; levels 3–5 follow ordinary progression. Also free are
-  the opening stages of every evolving project and short path
-  (`FREE_EVOLVING_STAGES`, `freeStageCount`), and a starter set of standalone
-  coding challenges listed once in `FREE_CODING_TASK_IDS`. The opening stages
-  are stage one, which in a project with checkpoints is the checkpoint and the
-  first milestone, and the checkpoint after it that opens the next milestone.
-  In the stage numbers a learner sees, that is stages 1, 2 and 3 of a ten-stage
-  project, 1 and 2 of a twelve-stage FullStack app and level 1 of a short
-  path. The owner opened the whole first stage on 9 Oct 2026 (audit C2-13;
-  until then only stage 1) together with the last checkpoint of each of the
-  fourteen projects with checkpoints. Stages open in order and the stages
-  before those checkpoints were Premium, so no free account could reach one;
-  that afternoon the owner moved the fourteen to the checkpoint after stage
-  one. The free stages are now always the head of the list, and the launch
-  contracts walk every project as a free account to prove each one opens
-  after free passes only. `npm run build:coding-index` projects all of it
-  into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
-  catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
-  contracts; 144 of 769 today: JavaScript 68, TypeScript 32, React 30,
-  Algorithms 14). Every free task reads Easy except two debugging paths whose
-  authored level 1 is Medium. Re-pick the list, not the task files,
-  when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
-  Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
-  friends and the token shop stay open: no quiz category is gated, so nothing
-  in this module names one.
-  `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
+  and JavaScript in full (`FREE_LEARN_TOPICS`), React levels 1 to 12 of 25,
+  and DSA Foundations levels 1 to 5 with their part test
+  (`FREE_LEARN_LEVELS`; a part test is Premium when any level of its part
+  is). The FDE path's diagnostic and first required module are free ("Learning
+  paths"). Also free are the opening stages of every evolving project and
+  short path (`FREE_EVOLVING_STAGES`, `freeStageCount`: stage one, which in a
+  project with checkpoints is the checkpoint and the first milestone, plus
+  the checkpoint that opens the next milestone; stages 1, 2 and 3 of a
+  ten-stage project, 1 and 2 of a twelve-stage full-stack app, and level 1 of
+  a short path) and a starter set of standalone coding challenges listed once
+  in `FREE_CODING_TASK_IDS`. `npm run build:coding-index` projects all of it
+  into `shared/coding-index.ts` as `free: true`: 144 of the 769 issued tasks
+  (JavaScript 68, TypeScript 32, React 30, Algorithms 14), held between 16 and
+  22 % by the launch contracts (`FREE_CODING_SHARE`). Every free task reads
+  Easy except two debugging paths whose authored level 1 is Medium. Re-pick
+  the list, not the task files, when the catalogue grows; the launch
+  contracts walk every project as a free account to prove each free stage
+  opens after free passes only.
+- Quizzes, the daily challenge, the Biggest Shark Challenge, multiplayer,
+  flashcards, the typing racer, leaderboards, streaks, friends and the coin
+  shop stay open: no quiz category is gated, so nothing in this module names
+  one.
+- `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
   data. The module imports nothing from `lib/`, so the browser draws its locks
-  and the server refuses with the same function. A signed-out visitor holds
-  the free tier, unsaved: the landing sample question ("Try one, no signup")
-  runs in the browser, the opening stages of every project and path are free, and every
+  and the server refuses with the same function, and unknown content is
+  Premium. A signed-out visitor holds the free tier, unsaved: the landing
+  sample question ("Try one, no signup") runs in the browser, and every
   Premium level, part test, challenge and stage is refused to a guest with the
-  same 402 as to a free account. Before the review of 2026-09-26 a request
-  without a token skipped every gate, so signing out opened all of Premium
-  except saving.
+  same 402 as to a free account.
+
+### Enforcement
+
 - **`lib/access.ts`** resolves the tier once per request (`resolveTier`, one
   `is_premium` call, only when the content is Premium), and `assertOpen`
   throws `PremiumRequiredError` for locked content; `refuseLocked` is the
   handler form. A tier the database cannot read answers 503
-  `entitlement_unavailable` rather than a guess. The call sites
-  are existing branches: the Learn level, part-test and checkpoint seals and
-  their answers, `coding-task`, `coding-submit`, `coding-reveal`, evolving
-  stage two and up, `learning-path-start` and `learning-path-submit` in
-  `api/quiz/roadmap.ts`, and `learning-path-enrollment` in `api/user/[op].ts`.
-  Premium gates starting new content. Drafts, bookmarks, skips and reviews of
-  cleared content stay open. New coding bookmarks and collection items require
-  the same plan and progression access as opening the task; old bookmarks remain
-  removable after access changes. A lapsed account keeps everything it passed, and
-  placement checks stay open. A coding task issued inside a Learn level
-  follows that level, and pausing a learning path is never refused.
+  `entitlement_unavailable`. The call sites are the Learn level, part-test and
+  checkpoint seals and their answers, `coding-task`, `coding-submit`,
+  `coding-reveal`, evolving stage two and up, `learning-path-start` and
+  `learning-path-submit` in `api/quiz/roadmap.ts`, and
+  `learning-path-enrollment` in `api/user/[op].ts`. Premium gates starting new
+  content. Drafts, bookmarks, skips and reviews of cleared content stay open;
+  a new coding bookmark or collection item needs the same access as opening
+  the task, and an old bookmark stays removable. A lapsed account keeps
+  everything it passed, and placement checks stay open. A coding task issued
+  inside a Learn level follows that level, and pausing a learning path is
+  never refused.
 - **The 402 contract.** `jsonPremiumRequired` in `lib/http.ts` (and
   `withRequestContext` for anything thrown) answers `PremiumRequiredError`
   with HTTP 402 in the standard error envelope:
   `{ error: { code: 'premium_required', message, kind, ref, requestId } }`.
-  The API client in `client/src/lib/api.ts` turns that one response into the
+  The API client in `client/src/lib/api.ts` turns that response into the
   upgrade sheet, so a stale client never shows a raw error. `op=entitlement`
   (GET, signed in) returns `{ tier, source, currentPeriodEnd,
   cancelAtPeriodEnd, inGrace, validUntil, billingAccount, subscriptionLive }`
   from `entitlement_summary`; the last two say whether the account has a
-  Stripe customer and a live subscription, whichever grant wins the plan line.
-  Since migration 053 a live subscription is one Stripe can still charge
-  (`active`, `trialing`, `past_due`, `unpaid` or `paused`), whether or not it
-  still opens Premium.
+  Stripe customer and a subscription Stripe can still charge (`active`,
+  `trialing`, `past_due`, `unpaid` or `paused`), whichever grant wins the plan
+  line.
 - **The browser** mirrors the server. `useEntitlement()`
   (`client/src/lib/entitlement.ts`) reads the plan; `useLocks()`
   (`client/src/lib/locks.ts`) draws locks from `contentTier` in four states:
@@ -1171,56 +1113,49 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   checkout. An unknown row carries no Premium mark, and the coding track page
   waits for the plan and says when it could not load. Today leaves barred
   levels out, and the Profile shows the plan line.
-- **The billing tables** in `supabase/supabase-schema-039.sql`:
+
+### Grants and vouchers
+
+- **The billing tables** (`supabase/supabase-schema-039.sql` and later):
   `billing_customers` (one Stripe customer per user), `entitlement_grants`
   (provider, manual and promo grants; the webhook never touches a manual or
-  promo row) and `billing_events` (provider event ids, so a repeated delivery
-  changes nothing). `is_premium(p_user)` is true for an active, unexpired
-  manual or promo grant, an `active` or `trialing` provider grant, or a
-  `past_due` one within seven days of the failed renewal (`past_due_since`,
-  set from the unpaid period's start and never moved forward: Stripe opens the
-  next period when it creates the renewal invoice, so counting from the period
-  end would keep Premium open through the whole unpaid period). RLS is on for
-  all of them, with an owner-scoped SELECT policy on every table but
-  `billing_events`, which has none. The routines (`is_premium`, `entitlement_summary`,
-  `link_billing_customer`, `upsert_provider_entitlement`,
-  `grant_manual_entitlement`, `revoke_manual_entitlement`,
-  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`
-  until migration 046 drops it, and from D2 `release_billing_event`, `billing_account`,
-  `billing_customer_owner` and `record_checkout_consent` for the fourth table,
-  `billing_checkout_consents`, and from the review of 2026-09-26
-  `claim_voluntary_refund` and the four routines of the fifth table,
-  `billing_cancel_requests`) are SECURITY DEFINER with an empty
-  `search_path`, executable by
-  `service_role` only, and none of them reads or writes XP, stats, streak or
-  progress tables. `billing_cancel_requests` has RLS on, no policy and no
-  browser grant: it holds the SHA-256 of each emailed link, the address typed
-  on the page, the action and the times, never a token or an account id, and
-  each new request purges rows a day past their expiry. A revoked provider grant stays revoked, and an account holds
-  at most one active manual grant. Migration 053 restates four of them:
-  `billing_account.providerLive` and `entitlement_summary.subscriptionLive`
-  mean a provider grant in `active`, `trialing`, `past_due`, `unpaid` or
-  `paused` (a subscription Stripe can still charge), `billing_account` also
-  lists those subscriptions (`liveSubscriptionIds`), and
-  `link_billing_customer` and `upsert_provider_entitlement` refuse an id with
-  no `auth.users` row (`unknown_account`) through the private
-  `billing_account_exists`. `supabase/tests/160` to `165` run these routines,
-  the grace window, `record_billing_event`, `claim_voluntary_refund` and
-  `revoke_premium_benefits` on a real Postgres. Admins test Premium with manual grants
-  through `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
+  promo row), `billing_events` (provider event ids, so a repeated delivery
+  changes nothing), `billing_checkout_consents` and `billing_cancel_requests`.
+  `is_premium(p_user)` is true for an active, unexpired manual or promo grant,
+  an `active` or `trialing` provider grant, or a `past_due` one within seven
+  days of the failed renewal (`past_due_since`, set from the unpaid period's
+  start and never moved forward). RLS is on for all of them, with an
+  owner-scoped SELECT policy on every table but `billing_events` and
+  `billing_cancel_requests`, which have none. The routines (`is_premium`,
+  `entitlement_summary`, `link_billing_customer`,
+  `upsert_provider_entitlement`, `grant_manual_entitlement`,
+  `revoke_manual_entitlement`, `record_billing_event`, `finish_billing_event`,
+  `release_billing_event`, `billing_account`, `billing_customer_owner`,
+  `record_checkout_consent`, `claim_voluntary_refund` and the cancel-request
+  routines) are SECURITY DEFINER with an empty `search_path`, executable by
+  `service_role` only, and none reads or writes XP, stats, streak or progress
+  tables. `billing_cancel_requests` holds the SHA-256 of each emailed link,
+  the address typed on the page, the action and the times, never a token or
+  an account id, and each new request purges rows a day past their expiry. A
+  revoked provider grant stays revoked, and an account holds at most one
+  active manual grant. `link_billing_customer` and
+  `upsert_provider_entitlement` refuse an id with no `auth.users` row
+  (`unknown_account`). `supabase/tests/160` to `165` run these routines on a
+  real Postgres. Admins test Premium with manual grants through
+  `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
   account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
   note }` or `{ action: 'revoke', userId, grantId?, note? }`).
 - **Premium vouchers (migration 045).** Premium has three sources, each a row
   of `entitlement_grants`: `provider` (a Stripe subscription), `manual` (an
-  admin's grant through `op=entitlements`) and `promo`, which a voucher opens.
-  While billing is off, a voucher is how Premium opens for a learner.
+  admin's grant) and `promo`, which a voucher opens. While billing is off, a
+  voucher is how a learner gets Premium.
   - *Creating.* The owner works in `/dev` → Vouchers (`op=vouchers` in
     `api/admin/[op].ts`, behind `requireAdmin`): a note, Premium for a number
     of days counted from the redemption or with no end, how many accounts may
     redeem it (one by default), an optional last day, and an optional custom
-    code of 6 to 32 letters and digits for a campaign. A generated code is
-    twelve characters of Crockford base32 from `crypto.randomBytes`, shown
-    once as `XXXX-XXXX-XXXX`; GET lists vouchers and POST `{ action: 'revoke',
+    code of 6 to 32 letters and digits. A generated code is twelve characters
+    of Crockford base32 from `crypto.randomBytes`, shown once as
+    `XXXX-XXXX-XXXX`; GET lists vouchers and POST `{ action: 'revoke',
     voucherId }` stops one.
   - *Storing.* `premium_vouchers` keeps the SHA-256 of the normalised code
     (upper case, no spaces or dashes, `shared/vouchers.ts`) and its first four
@@ -1230,174 +1165,190 @@ disappears when checkout cannot apply the coupon or the offer has expired.
     (`create_premium_voucher`, `list_premium_vouchers`,
     `revoke_premium_voucher`, `redeem_premium_voucher` and the private
     `premium_voucher_json`) are SECURITY DEFINER with an empty `search_path`
-    and `service_role`-only. No log line carries a code, its hash or its hint.
+    and `service_role` only. No log line carries a code, its hash or its hint.
   - *Redeeming.* A signed-in learner types the code on `/premium` (`op=voucher`
     POST in `api/user/[op].ts`). Five attempts an hour per account and ten
     per address count every try, a success included. An unknown, expired,
     used-up, revoked or malformed code gets one answer, 400
-    `voucher_invalid`; only 409 `voucher_already_redeemed` is told apart, and
-    before 045 is installed the answer is 503 `voucher_unavailable`.
+    `voucher_invalid`; only 409 `voucher_already_redeemed` is told apart.
     `redeem_premium_voucher` locks the voucher row, so the last use goes to
     one account, and writes a `promo` grant noted "Voucher <hint>" with
-    `valid_until` = now + the days, or none. `is_premium` and
-    `entitlement_summary` read it as they read every promo grant, and the
-    browser refetches the plan, so the locks open without a reload.
+    `valid_until` = now + the days, or none. The browser refetches the plan,
+    so the locks open without a reload.
   - *Limits.* A voucher's days start when it is redeemed; two vouchers do not
     add up, and the plan line shows the grant that lasts longest. Revoking a
     voucher stops new redemptions: Premium it already opened stays until its
-    end, and an admin ends one grant with `op=entitlements`. Like every other
-    grant, a voucher changes which content a learner may start and nothing
-    else.
+    end, and an admin ends one grant with `op=entitlements`.
   - *Screens.* While billing is off `/premium` leads with "Have a voucher?"
     (after "Your plan" for an account that holds Premium), the upgrade sheet
     offers "Redeem a voucher", and the Profile's plan line reads "Premium from
     a voucher, until …". With billing on, the voucher follows the plans.
-  - *Campaign links (#239).* `/premium?voucher=<code>` fills the field with
-    the code, lands on the section and takes the parameter out of the address
-    bar at once, so the code stays out of the history, copied links and
-    analytics. It redeems nothing by itself. A visitor who has to sign in
-    first keeps the code in the tab's session storage for the way back. A
-    campaign voucher's cap and last day are the ones 045 already stores
-    (`max_redemptions`, `redeemable_until`); no new migration.
-- **Stripe** Checkout, Billing and the Customer Portal take the payments, with
-  Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
-  with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is
-  `false`. The server alone talks to Stripe through the official `stripe`
-  package (Checkout Studio API version
-  `2026-09-30.endive; custom_checkout_payment_form_preview=v1`). Stripe.js
-  mounts a Stripe-hosted iframe on `/premium/checkout`; card details go directly
-  to Stripe. Managed Payments rejects `ui_mode: form`, so it uses the supported
-  `embedded_page` mode. The optional plain Stripe branch uses `form`. Consent
-  is required on devShark before creating a session; the server records its
-  version, timestamp and waiver text in session metadata. The CSP permits the
-  specific Stripe script, frame and connection origins. The code
-  lives in `lib/billing/` (`config.ts`, `stripe.ts`, `sync.ts`, `cancel.ts`,
-  `handlers.ts`), and the routes are `op=` branches of `api/user/[op].ts`, so
-  the handler count stays at twelve:
-  - `billing-checkout` POST `{ plan: 'monthly' | 'annual', consent: true }` (signed in, 10 a
-    minute per account): gets or creates the account's Stripe customer, sends
-    an account with a subscription that can still charge to the portal
-    instead (409 `already_premium`), whether the database or Stripe knows it
-    first, expires the customer's open devShark Checkout Sessions (a session
-    paid in that moment also answers 409), and creates a subscription
-    Checkout Session with `client_reference_id`,
-    `subscription_data.metadata` `product: 'devshark'` and `supabase_user_id`,
-    required terms consent whose text is the withdrawal waiver, the renewal and
-    cancellation sentence beside the order button, `submit_type: 'auto'`,
-    promotion codes and `locale: 'auto'`. GET `?session_id=` is the success
-    page's lookup: only the account's own completed session is applied, through
-    the same path as the webhook.
-  - `billing-portal` POST (signed in, 10 a minute): a Customer Portal session
-    that returns to `/profile`.
-  - `billing-webhook` POST: `Stripe-Signature` over the raw body (Vercel replays
-    the request bytes; the body string and the re-serialised body are
-    fallbacks), 400 when it does not verify, no rate limit. It records the
-    event first (`record_billing_event`: a processed duplicate answers 200 and
-    stops; a delivery that failed part-way is taken again once its 60-second
-    lease ends), then refetches the live subscription and upserts. An account
-    the server cannot resolve is recorded with its reason and answered 200;
-    anything else is handed back (`release_billing_event`) and answered 500 so
-    Stripe retries.
-  - `billing-cancel` POST, public: `{ email, action: 'cancel' | 'withdraw', step:
-    'request' | 'confirm' }`, then `{ step: 'review' | 'execute', token }` from
-    the emailed link. `request` only checks the form. `confirm` (five an hour
-    per address) acts at once for a signed-in account whose confirmed email is
-    that address; for anyone else it records the request
-    (`create_billing_cancel_request`, three links an hour per address) and
-    emails a single-use link, valid 60 minutes, to the typed address. That
-    answer makes no Stripe call and keeps a 900 ms floor, so it is the same
-    whether or not the address has a subscription; without Resend it asks for
-    the sign-in instead. The link opens `/premium/cancel#confirm=<token>`:
-    `review` reads what it asks for, and `execute` uses it
-    (`consume_billing_cancel_request`) and carries the request out with the
-    time it was first made, handing the link back if Stripe cannot be reached.
-    It acts on every live devShark subscription of the Stripe customers with
-    that email: cancel at period end, or a withdrawal. Within 14 days of the
-    account's first payment (the earliest paid invoice of every customer with
-    the address) and once per account (`claim_voluntary_refund`, plus a
-    `devshark_voluntary_refund` mark on the Stripe customer), a withdrawal
-    refunds every payment of the subscription, ends it at once and revokes the
-    grant; otherwise it cancels at period end. Resend emails the receipt to the
-    subscription's address.
-- **Event mapping.** `checkout.session.completed` links the customer and keeps
-  the consent (`billing_checkout_consents`, one row per session with the text
-  the buyer saw); subscription created, updated and deleted, `invoice.paid` and
-  `invoice.payment_failed` mirror the subscription, so `past_due` keeps Premium
-  for seven days from the failed renewal and the plan line reads "Payment
-  failed, update your card". Only a subscription that bills a devShark Premium
-  Price, or an earlier one listed in `STRIPE_PRICE_PREMIUM_LEGACY`, opens
-  Premium: one that devShark's checkout created and that now bills another
-  product is written `canceled`, and any other is recorded as
-  `not_devshark_price` (the Stripe account may sell other things). The
-  `product: 'devshark'` metadata decides first: another product's marker is
-  never devShark's, whatever it bills. A full
-  refund, a dispute, an early fraud warning (which first refunds the charge)
-  and a withdrawal cancel the subscription at Stripe and write the grant
-  `revoked` with the reason in its note; a partial refund only logs. The
-  first three are events of the whole Stripe account, so nothing is
-  cancelled or refunded unless the subscription bills a devShark Price or
-  carries devShark's checkout metadata and maps to an existing account; any
-  other is recorded as `not_devshark_price` or `unknown_user`. A subscription
-  with the devShark marker whose account Auth reports missing (a Checkout
-  paid after the account was deleted) is cancelled at once, without a final
-  invoice or proration, and logged as `orphaned_subscription_ended` for the
-  owner to refund by hand. An account that gets a second subscription that
-  can charge it is logged as `second_subscription`; nothing is refunded
-  automatically. Then
-  `revoke_premium_benefits` (migration 041) takes back what Premium paid out
-  while that grant existed: coin redemptions not yet sent are cancelled and
-  their coins returned, and the milestone coins and the doubled share of XP
-  credits are debited once, as far as the balance reaches. It does nothing
-  while another grant keeps the account Premium. Manual and promo grants are
-  separate rows the webhook never reaches.
-  `npm run test:billing` proves all of it with signed fixture events for the
-  nine types (`scripts/fixtures/billing/`).
-- **Browser.** `/premium/success` reads the plan and, when the webhook is late,
-  asks the server to apply the session, and after its last automatic check
-  says to press Check again; `/premium/cancel` is the public cancellation and
-  withdrawal page, linked from the footer whenever Stripe is connected. It
-  takes the token of an emailed link out of the address bar before it asks
-  anything, and states the real effect of a withdrawal before the last press. `PremiumCheckoutButton` is the only way into Checkout: with billing
-  off it reads "Premium opens soon" and shows no button, signed out it signs in
-  and comes back to the same page (`client/src/lib/authReturn.ts`), an account
-  with a live subscription gets "Manage billing" (under a longer complimentary
-  grant too), anyone else continues to Stripe. The Profile plan line offers
-  "Manage billing" to every account with a Stripe customer, on Free as well,
-  so the card, the plan and the invoices stay reachable. Deleting an account
-  ends its subscriptions at Stripe first, at once and without a refund, and
-  expires its open Checkout Sessions. It stops if Stripe cannot be reached.
-  The deletion card says so to a paying account and links the withdrawal.
-- **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
-  the two plans with "before VAT", the renewal, the waiver sentence and the
-  14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
-  the plan table and six questions; a subscriber sees the plan line instead of
-  a second checkout. The plan table (`landing/ComparisonTable.tsx`) compares
-  Free and Premium on the landing and on `/premium`. Premium sits next to
-  Leaderboard in the header's icon group and in the drawer, and `/support`
-  redirects to `/premium`. The Terms and the privacy policy (`LegalPages.tsx`)
-  read the trader from `TRADER` in `client/product-catalog.ts`, whose fields
-  render only when set, and the seller of record from `billing.seller`. The
-  build prerenders `/premium` and `/premium/cancel` into static HTML listed in
-  the sitemap (`PUBLIC_PAGES` in `client/src/lib/publicMetadata.ts`); `/premium`
-  carries `isAccessibleForFree: false` with both prices as offers, the topic
-  guides keep `true`, and `/premium/success` is `noindex`, as is any address
-  the not-found page answers, for as long as that page shows.
-- **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
-  `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
-  `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
-  no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus
-  `STRIPE_PRICE_PREMIUM_LEGACY` (optional, earlier Premium Prices still
-  billed) and `RESEND_API_KEY` with `RESEND_FROM`, which the cancel page needs
-  to email its link: without them only a signed-in owner of the address can
-  cancel there. Checkout sells Premium only with
-  `BILLING_ENABLED=true` and every value present; `/api/settings` tells the
-  browser `billing.enabled`, `billing.cancellable`, `billing.cancelByEmail`
-  and `billing.seller` (`link`
-  under Managed Payments, `trader` with plain Stripe, `null` until both the key
-  and `STRIPE_MANAGED_PAYMENTS` are set) and nothing else. The
-  portal, the webhook and the cancel page need only the key, so people who
-  already pay keep them after sales are switched off. With billing off the
-  locks still apply.
+  - *Campaign links.* `/premium?voucher=<code>` fills the field, lands on the
+    section and takes the parameter out of the address bar at once, so the
+    code stays out of the history, copied links and analytics. It redeems
+    nothing by itself. A visitor who has to sign in first keeps the code in
+    the tab's session storage for the way back. A campaign voucher's cap and
+    last day are `max_redemptions` and `redeemable_until`.
+
+### Stripe
+
+Stripe Checkout, Billing and the Customer Portal take the payments, with
+Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
+with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is
+`false`. Only the server talks to Stripe, through the official `stripe`
+package (API version `2026-09-30.endive;
+custom_checkout_payment_form_preview=v1`). Stripe.js mounts a Stripe-hosted
+iframe on `/premium/checkout`, so card details go straight to Stripe; Managed
+Payments uses `ui_mode: 'embedded_page'` and plain Stripe `form`. The buyer
+consents on devShark before a session exists, and the server records the
+consent's version, time and waiver text in session metadata. The CSP permits
+the specific Stripe script, frame and connection origins. The code lives in
+`lib/billing/` (`config.ts`, `stripe.ts`, `sync.ts`, `cancel.ts`,
+`handlers.ts`), and the routes are `op=` branches of `api/user/[op].ts`:
+
+- `billing-checkout` POST `{ plan: 'monthly' | 'annual', consent: true }`
+  (signed in, 10 a minute per account): gets or creates the account's Stripe
+  customer, sends an account with a subscription that can still charge to the
+  portal instead (409 `already_premium`), whether the database or Stripe knows
+  it first, expires the customer's open devShark Checkout Sessions, and
+  creates a subscription Checkout Session with `client_reference_id`,
+  `subscription_data.metadata` `product: 'devshark'` and `supabase_user_id`,
+  required terms consent whose text is the withdrawal waiver, the renewal and
+  cancellation sentence beside the order button, `submit_type: 'auto'`,
+  promotion codes and `locale: 'auto'`. GET `?session_id=` is the success
+  page's lookup: only the account's own completed session is applied, through
+  the same path as the webhook.
+- `billing-portal` POST (signed in, 10 a minute): a Customer Portal session
+  that returns to `/profile`.
+- `billing-webhook` POST: `Stripe-Signature` over the raw body, 400 when it
+  does not verify, no rate limit. It records the event first
+  (`record_billing_event`: a processed duplicate answers 200 and stops; a
+  delivery that failed part-way is taken again once its 60-second lease
+  ends), then refetches the live subscription and upserts. An account the
+  server cannot resolve is recorded with its reason and answered 200; any
+  other failure is handed back (`release_billing_event`) and answered 500 so
+  Stripe retries.
+- `billing-cancel` POST, public: `{ email, action: 'cancel' | 'withdraw',
+  step: 'request' | 'confirm' }`, then `{ step: 'review' | 'execute', token }`
+  from the emailed link. `request` only checks the form. `confirm` (five an
+  hour per address) acts at once for a signed-in account whose confirmed email
+  is that address; for anyone else it records the request
+  (`create_billing_cancel_request`, three links an hour per address) and
+  emails a single-use link, valid 60 minutes, to the typed address. That
+  answer makes no Stripe call and keeps a 900 ms floor, so it reads the same
+  whether or not the address has a subscription; without Resend it asks for
+  the sign-in instead. The link opens `/premium/cancel#confirm=<token>`:
+  `review` reads what it asks for, and `execute` uses it
+  (`consume_billing_cancel_request`) and carries the request out with the
+  time it was first made, handing the link back if Stripe cannot be reached.
+  It acts on every live devShark subscription of the Stripe customers with
+  that email: cancel at period end, or a withdrawal. Within 14 days of the
+  account's first payment and once per account (`claim_voluntary_refund`,
+  plus a `devshark_voluntary_refund` mark on the Stripe customer), a
+  withdrawal refunds every payment of the subscription, ends it at once and
+  revokes the grant; otherwise it cancels at period end. Resend emails the
+  receipt to the subscription's address.
+
+**Event mapping.** `checkout.session.completed` links the customer and keeps
+the consent (`billing_checkout_consents`, one row per session with the text
+the buyer saw); subscription created, updated and deleted, `invoice.paid` and
+`invoice.payment_failed` mirror the subscription, so `past_due` keeps Premium
+for seven days from the failed renewal and the plan line reads "Payment
+failed, update your card". Only a subscription that bills a devShark Premium
+Price, or an earlier one listed in `STRIPE_PRICE_PREMIUM_LEGACY`, opens
+Premium: one that devShark's checkout created and that now bills another
+product is written `canceled`, and any other is recorded as
+`not_devshark_price`. The `product: 'devshark'` metadata decides first. A full
+refund, a dispute, an early fraud warning (which first refunds the charge)
+and a withdrawal cancel the subscription at Stripe and write the grant
+`revoked` with the reason in its note; a partial refund only logs. Nothing is
+cancelled or refunded unless the subscription is devShark's and maps to an
+existing account; any other is recorded as `not_devshark_price` or
+`unknown_user`. A devShark subscription whose account no longer exists is
+cancelled at once, without a final invoice or proration, and logged as
+`orphaned_subscription_ended` for the owner to refund by hand. A second
+subscription that can charge an account is logged as `second_subscription`;
+nothing is refunded automatically. Then `revoke_premium_benefits` (migration
+041) takes back what Premium paid out while that grant existed: unsent coin
+redemptions are cancelled and their coins returned, and the milestone coins
+and the doubled share of XP credits are debited once, as far as the balance
+reaches. It does nothing while another grant keeps the account Premium.
+`npm run test:billing` proves all of it with signed fixture events
+(`scripts/fixtures/billing/`).
+
+**Browser.** `/premium/success` reads the plan and, when the webhook is late,
+asks the server to apply the session; after its last automatic check it says
+to press Check again. `/premium/cancel` is the public cancellation and
+withdrawal page, linked from the footer whenever Stripe is connected; it
+takes the token of an emailed link out of the address bar before it asks
+anything, and states the real effect of a withdrawal before the last press.
+`PremiumCheckoutButton` is the only way into Checkout: with billing off it
+reads "Premium opens soon" and shows no button; signed out it signs in and
+comes back to the same page (`client/src/lib/authReturn.ts`); an account with
+a live subscription gets "Manage billing"; anyone else continues to Stripe.
+The Profile plan line offers "Manage billing" to every account with a Stripe
+customer, on Free as well. Deleting an account ends its subscriptions at
+Stripe first, at once and without a refund, and expires its open Checkout
+Sessions; it stops if Stripe cannot be reached, and the deletion card says so
+to a paying account and links the withdrawal.
+
+**Public copy and legal pages.** `/premium` (`PremiumPage.tsx`) shows the two
+plans with "before VAT", the renewal, the waiver sentence and the 14-day
+refund "once per account" beside the buttons (`PremiumFacts.tsx`), what
+Premium opens, the plan table and six questions; a subscriber sees the plan
+line instead of a second checkout. The yearly plan prints its saving against
+twelve monthly payments only when there is one (`annualSaving` in
+`shared/launch-offer.ts`); at the regular prices there is none, so the line
+does not show. The plan table (`landing/ComparisonTable.tsx`) compares Free
+and Premium on the landing and on `/premium`. Premium sits next to Leaderboard
+in the header's icon group and in the drawer, and `/support` redirects to
+`/premium`. The Terms and the privacy policy (`LegalPages.tsx`) read the
+trader from `TRADER` in `client/product-catalog.ts`, whose fields render only
+when set, and the seller of record from `billing.seller`. The build
+prerenders `/premium` and `/premium/cancel` into static HTML listed in the
+sitemap (`PUBLIC_PAGES` in `client/src/lib/publicMetadata.ts`); `/premium`
+carries `isAccessibleForFree: false` with both prices as offers, the topic
+guides keep `true`, and `/premium/success` is `noindex`, as is any address the
+not-found page answers.
+
+**Launch offer.** `shared/launch-offer.ts` holds a launch price: 55 % off for
+the lifetime of every subscription started between 4 October 2026 00:00 and
+30 November 2026 23:59:59, Prague time (2.25 EUR a month or 26.95 EUR a year
+before VAT, rounded the way Stripe rounds a percentage coupon). The offer is
+on only inside the window, with `BILLING_ENABLED`, a complete Stripe setup and
+the coupon id in `STRIPE_COUPON_LAUNCH`; with billing off nothing about it
+renders. When on, Checkout (`checkoutSessionParams`) adds `discounts: [{
+coupon }]` and drops `allow_promotion_codes`; the coupon is `duration:
+forever` with `redeem_by` at the end of the window, and a discounted session
+expires when the offer does. The browser shows the offer only when
+`/api/settings` says `billing.launchOffer` and its own clock is inside the
+window (`client/src/lib/launchOffer.ts`). `/premium`, the plan table, the
+upgrade sheet, the expired-checkout line and the Terms then print the launch
+price beside the regular price struck through, with "kept for the lifetime of
+your subscription · cancel anytime" and "Offer ends 30 Nov 2026"; screen
+readers hear one sentence per price, and there is no countdown or scarcity
+copy. The pages frame it as an introductory price: Premium was never sold
+before, so no page cites a "lowest price in the last 30 days", and the launch
+contracts refuse such a line. The static `/premium`, the JSON-LD offers and
+the share images state the regular price. `LAUNCH_OFFER_TEST_NOW` replaces
+the clock for the coupon decision on a test-mode deployment only (an
+`sk_test_` or `rk_test_` key).
+
+**Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
+`STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
+no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus
+`STRIPE_PRICE_PREMIUM_LEGACY` (optional, earlier Premium Prices still billed),
+`STRIPE_COUPON_LAUNCH` (optional) and `RESEND_API_KEY` with `RESEND_FROM`,
+which the cancel page needs to email its link; without them only a signed-in
+owner of the address can cancel there. Checkout sells Premium only with
+`BILLING_ENABLED=true` and every value present. `/api/settings` tells the
+browser `billing.enabled`, `billing.cancellable`, `billing.cancelByEmail`,
+`billing.launchOffer` and `billing.seller` (`link` under Managed Payments,
+`trader` with plain Stripe, `null` until both the key and
+`STRIPE_MANAGED_PAYMENTS` are set). The portal, the webhook and the cancel
+page need only the key, so subscribers keep them after sales are switched
+off. With billing off the locks still apply.
 
 ## Coins
 
