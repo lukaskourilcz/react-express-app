@@ -1,14 +1,13 @@
 import { FdeHub } from './FdeHub';
-// The learning-path screens, shared by the FDE role specialization and the
-// DSA Foundations skill path:
+// The learning-path screens of the FDE role specialization, the one
+// published path since E5 (#496) retired DSA Foundations:
 //
 //   PathOverview   — outcomes, non-goals, the real inventory, the module
 //                    outline, bridges and one concrete next action.
 //   ModuleWorkspace — one module, and one activity open inside it.
 //
-// Both are path-neutral. `pathId` decides which manifest is fetched and which
-// route the links point at; nothing else differs, which is why DSA could ship
-// without waiting for the FDE hub.
+// Both stay path-neutral. `pathId` decides which manifest is fetched and
+// which route the links point at; nothing else differs.
 //
 // A guest sees the whole outline. Signing in is required to record graded
 // work, and the screen says so rather than hiding the material behind a wall.
@@ -290,7 +289,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       <header className="lp-head">
         <div className="lp-head__text">
           <p className="lp-kicker">
-            {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
+            {t('paths.kicker.role')}
           </p>
           <h1>{manifest.title}</h1>
           <p className="lp-lead">{manifest.summary}</p>

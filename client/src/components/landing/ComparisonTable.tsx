@@ -54,7 +54,7 @@ const YES: Cell = { mark: 'yes', key: 'landing.compare.yes' };
 const NO: Cell = { mark: 'no', key: 'landing.compare.no' };
 
 // Access first, then what both plans share, then coins once redemption opens.
-// The FDE and DSA paths and coins are Premium; the AI and bilingual rows of
+// The FDE path and coins are Premium; the AI and bilingual rows of
 // the old table are gone, because devShark ships neither.
 export const PLAN_ROWS: readonly PlanRow[] = [
   { labelKey: 'landing.compare.rowLessons', free: { mark: 'partial', key: 'landing.compare.othersLessons' }, premium: { mark: 'yes', key: 'landing.compare.premiumLessons' } },

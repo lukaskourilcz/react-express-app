@@ -21,7 +21,7 @@ const passed = (count: number) => ({
 });
 
 const frontend: LearnerProfile = {
-  schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
+  schemaVersion: 2, baseTrack: 'frontend', specialization: null,
   goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
 };
 const backend: LearnerProfile = { ...frontend, baseTrack: 'backend' };

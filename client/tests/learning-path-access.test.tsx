@@ -14,8 +14,8 @@ import { server } from './mocks/server';
 const lesson = (id: string, title: string) => ({
   id, kind: 'lesson', purpose: 'exercise', verification: 'self_reviewed', title: title, summary: title, competencies: [], estimatedMinutes: 5,
 });
-const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
-  id, kind: id === 'fde' ? 'role_specialization' : 'skill_path', version: 1, title: id === 'fde' ? 'Forward Deployed Engineer' : 'DSA Foundations',
+const pathManifest = (id: 'fde') => ({
+  id, kind: 'role_specialization', version: 1, title: 'Forward Deployed Engineer',
   summary: '', outcomes: [], nonGoals: [], entryRequirement: id === 'fde' ? 'You ship code in one track and have integrated HTTP, a database or an API.' : '', competencies: id === 'fde' ? [{ id: 'integration', title: 'Integration and data' }, { id: 'handoff', title: 'Adoption and handoff' }, { id: 'python-reading', title: 'Python comprehension' }] : [], bridges: [],
   rubric: { version: 1, dimensions: [] }, diagnosticActivityId: id === 'fde' && state.diagnosticResults.length ? 'fde-diagnostic-check' : null, estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01',
   completionLabel: 'done',
@@ -38,6 +38,7 @@ const state = vi.hoisted(() => ({
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
   progressLoaded: true,
   shelf: false,
+  noArtifacts: false,
   secondModule: false,
   nextSecond: false,
   passedActivity: null as string | null,
@@ -71,8 +72,9 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
     enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
-    // FDE's modules require three written pieces; DSA has none.
-    artifacts: pathId === 'fde' ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
+    // FDE's modules require three written pieces; `noArtifacts` stands in for
+    // a path with none.
+    artifacts: pathId === 'fde' && !state.noArtifacts ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
     dueActivityIds: [], nextActivityId: `${pathId}-m0${state.nextSecond ? 2 : 1}-l1-read`,
   });
   return {
@@ -80,8 +82,8 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
     usePathCatalog: () => (state.catalogFailed ? { isLoading: false, isError: true, refetch: () => {}, data: undefined } : {
       isLoading: false, isError: false, refetch: () => {},
       data: {
-        paths: (['fde', 'dsa-foundations'] as const).map((id) => ({
-          manifest: pathManifest(id), availability: state.availability, inventory: { ...inventory, artifacts: id === 'fde' ? 3 : 0 },
+        paths: (['fde'] as const).map((id) => ({
+          manifest: pathManifest(id), availability: state.availability, inventory: { ...inventory, artifacts: state.noArtifacts ? 0 : 3 },
         })),
         versions: {},
       },
@@ -105,7 +107,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   };
 });
 
-const enrolled = (pathId: 'fde' | 'dsa-foundations', status = 'active') => ({ enrollmentId: `ENROLL-${pathId}-0000000000`, pathId, curriculumVersion: 1, status });
+const enrolled = (pathId: 'fde', status = 'active') => ({ enrollmentId: `ENROLL-${pathId}-0000000000`, pathId, curriculumVersion: 1, status });
 
 beforeAll(async () => {
   const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
@@ -128,6 +130,7 @@ beforeEach(() => {
   state.enrollments = [];
   state.progressLoaded = true;
   state.shelf = false;
+  state.noArtifacts = false;
   state.secondModule = false;
   state.nextSecond = false;
   state.passedActivity = null;
@@ -156,7 +159,7 @@ async function mount(path: string, route: string, element: () => Promise<ReactEl
     );
   });
 }
-const overview = (pathId: 'fde' | 'dsa-foundations') => mount('/p', '/p', async () => {
+const overview = (pathId: 'fde') => mount('/p', '/p', async () => {
   const { PathOverview } = await import('../src/components/paths/LearningPathScreens');
   return <PathOverview pathId={pathId} />;
 });
@@ -218,10 +221,10 @@ describe('the path page', () => {
 
   it('a switched-off path offers no Continue and no activity links, but can still be paused', async () => {
     state.availability = 'disabled';
-    state.enrollments = [enrolled('dsa-foundations')];
-    await overview('dsa-foundations');
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
     expect(screen.queryByRole('button', { name: 'Continue where you left off' })).toBeNull();
-    expect(screen.queryByRole('link', { name: /dsa-foundations first lesson/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
   });
 
@@ -236,8 +239,9 @@ describe('the path page', () => {
   });
 
   it('shows no written-piece line on a path without any', async () => {
-    state.enrollments = [enrolled('dsa-foundations')];
-    await overview('dsa-foundations');
+    state.noArtifacts = true;
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
     await screen.findByRole('heading', { name: 'Where you are' });
     expect(screen.queryByText('Written pieces you review yourself')).toBeNull();
     expect(screen.queryByText(/are required to complete the path/)).toBeNull();
@@ -245,9 +249,9 @@ describe('the path page', () => {
 
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
-    state.enrollments = [enrolled('dsa-foundations')];
-    await overview('dsa-foundations');
-    expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
     expect(state.sheet).not.toHaveBeenCalled();
   });
 });
@@ -316,27 +320,26 @@ describe('Today', () => {
     return <PathResumeSection />;
   });
 
-  it('offers the next step of each running path under a heading that fits a role and a skill path', async () => {
-    state.enrollments = [enrolled('fde'), enrolled('dsa-foundations')];
+  it('offers the next step of the running path under the Learning paths heading', async () => {
+    state.enrollments = [enrolled('fde')];
     await today();
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Learning paths' })).toBeInTheDocument());
     expect(screen.queryByText('Skill path')).toBeNull();
     expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
   });
 
   it('offers the free next step after Premium lapses', async () => {
     state.tier = 'free';
-    state.enrollments = [enrolled('dsa-foundations')];
+    state.enrollments = [enrolled('fde')];
     await today();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.getByRole('heading', { name: 'Learning paths' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dsa-foundations first lesson/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
   });
 
   it('offers nothing for a switched-off path', async () => {
     state.availability = 'disabled';
-    state.enrollments = [enrolled('dsa-foundations')];
+    state.enrollments = [enrolled('fde')];
     await today();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.queryByRole('heading')).toBeNull();
@@ -345,7 +348,7 @@ describe('Today', () => {
 
   it('draws no empty heading while progress loads', async () => {
     state.progressLoaded = false;
-    state.enrollments = [enrolled('dsa-foundations')];
+    state.enrollments = [enrolled('fde')];
     await today();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.queryByRole('heading')).toBeNull();
@@ -354,7 +357,9 @@ describe('Today', () => {
 
 describe('the Profile picker', () => {
   const profile = {
-    schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
+    // A record saved before E5 (#496) may still list skill paths; the picker
+    // never sends the retired field back.
+    schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: ['retired-skill-path'],
     goals: ['level-up'], experience: 'some', studyTime: '30-60', updatedAt: '2026-09-01T00:00:00Z',
   };
   const signedInWith = (saved: Record<string, unknown>) => {
@@ -379,16 +384,16 @@ describe('the Profile picker', () => {
   const savedAnswers = () => state.saves[0] as [unknown, { specialization: unknown }, Record<string, unknown>];
 
   it('keeps the paths a learner started on their own pages when the picker is saved', async () => {
-    // The account said "no specialization" and no skill path, then the learner
-    // started both from the path pages.
+    // The account said "no specialization", then the learner started FDE from
+    // its path page.
     signedInWith(profile);
-    state.enrollments = [enrolled('fde'), enrolled('dsa-foundations')];
+    state.enrollments = [enrolled('fde')];
     await card();
     await walkToSave();
     await press('Save');
     await waitFor(() => expect(state.saves).toHaveLength(1));
-    // The picker asks nothing about DSA Foundations, so it neither pauses the
-    // enrollment nor sends skill paths, which the server then keeps.
+    // Choosing FDE keeps the running enrollment, and no skill paths are sent:
+    // E5 (#496) retired them.
     expect(state.changes).toEqual([]);
     const [, preference, answers] = savedAnswers();
     expect(preference.specialization).toBe('fde');
@@ -564,10 +569,10 @@ describe('the Profile picker', () => {
       asked += 1;
       return HttpResponse.json({ eligible: true, claimed: false, orderId: null });
     }));
-    state.enrollments = [enrolled('dsa-foundations')];
+    state.enrollments = [enrolled('fde')];
     await card();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
-    expect(screen.getByText('DSA Foundations')).toBeInTheDocument();
+    expect(screen.getAllByText('Forward Deployed Engineer').length).toBeGreaterThan(0);
     expect(screen.queryByText('Your package is ready to claim')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Claim the package' })).toBeNull();
     expect(document.body.textContent).not.toMatch(/package|t-shirt|merch/i);

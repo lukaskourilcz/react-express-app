@@ -8,27 +8,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 
-const A = 'dsa-v1-d01-linear-accumulator';
-const B = 'dsa-v1-d01-halving-counter';
-const C = 'dsa-v1-d01-checks';
+const A = 'fde-v1-m01-linear-accumulator';
+const B = 'fde-v1-m01-halving-counter';
+const C = 'fde-v1-m01-checks';
 const ENROLLMENT = 'ENROLL0000000000aaaa';
 const summary = (id: string, title: string, kind = 'code') => ({
   id, kind, purpose: 'exercise', verification: 'machine_verified', title: title, summary: `${title} summary`,
   competencies: [], estimatedMinutes: 5, ...(kind === 'code' ? { language: 'javascript' } : {}),
 });
 const manifest = {
-  id: 'dsa-foundations', kind: 'skill_path', version: 1, title: 'DSA', summary: '', outcomes: [], nonGoals: [],
+  id: 'fde', kind: 'role_specialization', version: 1, title: 'FDE', summary: '', outcomes: [], nonGoals: [],
   entryRequirement: '', competencies: [], bridges: [], rubric: { version: 1, dimensions: [] }, diagnosticActivityId: null,
   estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01', completionLabel: 'done',
   modules: [{
-    id: 'dsa-v1-d01', title: 'D01', outcomes: [], competencies: [], dependsOn: [], lessons: [],
+    id: 'fde-v1-m01', title: 'M01', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [summary(C, 'The check', 'check'), summary(A, 'Activity A'), summary(B, 'Activity B')],
     requires: [{ activityId: C, state: 'verified_pass' }, { activityId: A, state: 'verified_pass' }, { activityId: B, state: 'verified_pass' }],
     estimatedMinutes: 10,
   }, {
     // An optional module: the server never completes it.
-    id: 'dsa-v1-x01', title: 'Placement', outcomes: [], competencies: [], dependsOn: [], lessons: [], optional: true,
-    activities: [summary('dsa-v1-x01-check', 'Placement check', 'check')], requires: [], estimatedMinutes: 5,
+    id: 'fde-v1-x01', title: 'Placement', outcomes: [], competencies: [], dependsOn: [], lessons: [], optional: true,
+    activities: [summary('fde-v1-x01-check', 'Placement check', 'check')], requires: [], estimatedMinutes: 5,
   }],
 };
 
@@ -62,7 +62,7 @@ vi.mock('../src/coding/Editor', () => ({
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const catalog = { isLoading: false, isError: false, data: { paths: [{ manifest, availability: 'available', inventory: {} }], versions: {} }, refetch: () => {} };
-  const enrollments = { data: { enrollments: [{ enrollmentId: ENROLLMENT, pathId: 'dsa-foundations', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '', updatedAt: '' }] } };
+  const enrollments = { data: { enrollments: [{ enrollmentId: ENROLLMENT, pathId: 'fde', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '', updatedAt: '' }] } };
   const progress = { data: undefined };
   return {
     ...actual,
@@ -139,15 +139,15 @@ beforeEach(() => {
   Object.defineProperty(window.navigator, 'onLine', { value: true, configurable: true });
 });
 
-async function mount(activityId: string | null, moduleId = 'dsa-v1-d01') {
+async function mount(activityId: string | null, moduleId = 'fde-v1-m01') {
   // Imported here, after the fixtures above exist: the mocked module reads them.
-  const { DsaModule } = await import('../src/components/paths/LearningPathScreens');
+  const { FdeModule } = await import('../src/components/paths/LearningPathScreens');
   await act(async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={[`/roadmap/paths/dsa-foundations/${moduleId}${activityId ? `?activity=${activityId}` : ''}`]}>
+        <MemoryRouter initialEntries={[`/learn/forward-deployed-engineer/path/${moduleId}${activityId ? `?activity=${activityId}` : ''}`]}>
           <LanguageProvider>
-            <Routes><Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} /></Routes>
+            <Routes><Route path="/learn/forward-deployed-engineer/path/:moduleId" element={<FdeModule />} /></Routes>
           </LanguageProvider>
         </MemoryRouter>
       </QueryClientProvider>,
@@ -173,7 +173,7 @@ describe('one attempt takes one result', () => {
     await press('Submit');
     expect(await screen.findByRole('heading', { name: 'Passed +25 XP' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Next task' })).toHaveAttribute('href', expect.stringContaining(B));
-    expect(screen.getByRole('link', { name: 'Back to the list' })).toHaveAttribute('href','/roadmap/paths/dsa-foundations/dsa-v1-d01');
+    expect(screen.getByRole('link', { name: 'Back to the list' })).toHaveAttribute('href','/learn/forward-deployed-engineer/path/fde-v1-m01');
     expect(screen.queryByRole('textbox', { name: 'Your solution' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Results' })).toBeNull();
     expect(screen.queryByText('Complexity could not be determined')).toBeNull();
@@ -420,14 +420,14 @@ describe('the content shapes of #497', () => {
   });
 
   it('labels an optional module Optional in its header, and a loop module In progress', async () => {
-    await mount(null, 'dsa-v1-x01');
+    await mount(null, 'fde-v1-x01');
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Placement' })).toBeInTheDocument());
     expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Optional');
   });
 
   it('labels a loop module In progress until the server completes it', async () => {
     await mount(null);
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'D01' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'M01' })).toBeInTheDocument());
     expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('In progress');
   });
 });

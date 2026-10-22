@@ -269,7 +269,7 @@ export default function LearningPathsCard() {
             <li key={manifest.id}>
               <Link className="lp-activity" to={pathHref(manifest.id)}>
                 <span className="lp-activity__kind">
-                  {manifest.kind === 'role_specialization' ? t('paths.kicker.role') : t('paths.kicker.skill')}
+                  {t('paths.kicker.role')}
                 </span>
                 <span className="lp-activity__title">{manifest.title}</span>
                 <span className="lp-activity__minutes">

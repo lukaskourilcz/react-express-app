@@ -111,8 +111,7 @@ export function PathResumeSection() {
   });
   if (rows.length === 0) return null;
 
-  // FDE is a role and DSA Foundations a skill path, so the heading names
-  // neither.
+  // The heading names no path, so it holds whichever paths are published.
   return (
     <section className="today-section" aria-label={t('today.pathSection')}>
       <h2 className="today-section__title">{t('today.pathSection')}</h2>
