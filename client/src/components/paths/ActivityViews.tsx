@@ -455,6 +455,15 @@ export function CodeActivity({
 
 /* ── written artifact ──────────────────────────────────────────────────── */
 
+/** A field's length as the server measures it against `maxLength`
+ * (lib/learning-paths/grade.ts): the trimmed text, or a list's trimmed,
+ * non-empty lines joined by newlines. Counting the raw box instead flagged
+ * blank lines and trailing spaces the server never sees. */
+function artifactFieldLength(kind: PathArtifactPayload['fields'][number]['kind'], raw: string): number {
+  if (kind !== 'list') return raw.trim().length;
+  return raw.split('\n').map((one) => one.trim()).filter(Boolean).join('\n').length;
+}
+
 export function ArtifactActivity({
   artifact,
   rubric,
@@ -512,6 +521,18 @@ export function ArtifactActivity({
     if (timer.current !== null) window.clearTimeout(timer.current);
   }, []);
 
+  // A field over its cap fails the server's check and records the attempt as
+  // needing revision, so it is not sent: focus goes to the first such field,
+  // whose description carries the count that says why.
+  const submit = () => {
+    const over = artifact.fields.find((field) => artifactFieldLength(field.kind, values[field.id] ?? '') > field.maxLength);
+    if (over) {
+      document.getElementById(`lp-field-${over.id}`)?.focus();
+      return;
+    }
+    onSubmit(shaped(values));
+  };
+
   return (
     <div className="lp-split">
       <div className="lp-split__brief">
@@ -551,13 +572,15 @@ export function ArtifactActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <Button variant="primary" onClick={() => onSubmit(shaped(values))} isDisabled={busy} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+          <Button variant="primary" onClick={submit} isDisabled={busy} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <div className="lp-fields">
           {artifact.fields.map((field) => {
             const value = values[field.id] ?? '';
-            const over = value.length > field.maxLength;
+            const used = artifactFieldLength(field.kind, value);
+            const over = used > field.maxLength;
+            const describedBy = `lp-help-${field.id} lp-count-${field.id}`;
             const failed = result?.criteria.find((one) => one.id === `field:${field.id}` && !one.passed);
             return (
               <div key={field.id} className="lp-field">
@@ -571,7 +594,8 @@ export function ArtifactActivity({
                 {field.kind === 'long-text' || field.kind === 'list' ? (
                   <textarea
                     id={`lp-field-${field.id}`}
-                    aria-describedby={`lp-help-${field.id}`}
+                    aria-describedby={describedBy}
+                    aria-invalid={over || undefined}
                     value={value}
                     onChange={(event) => change(field.id, event.target.value)}
                     rows={field.kind === 'list' ? 6 : 10}
@@ -580,15 +604,16 @@ export function ArtifactActivity({
                 ) : (
                   <input
                     id={`lp-field-${field.id}`}
-                    aria-describedby={`lp-help-${field.id}`}
+                    aria-describedby={describedBy}
+                    aria-invalid={over || undefined}
                     type={field.kind === 'url' ? 'url' : 'text'}
                     value={value}
                     onChange={(event) => change(field.id, event.target.value)}
                     disabled={busy}
                   />
                 )}
-                <span className={`lp-field__count${over ? ' lp-field__count--over' : ''}`}>
-                  {t('paths.artifact.count', { used: value.length, max: field.maxLength })}
+                <span id={`lp-count-${field.id}`} className={`lp-field__count${over ? ' lp-field__count--over' : ''}`}>
+                  {t('paths.artifact.count', { used, max: field.maxLength })}
                 </span>
                 {failed?.detail && <p className="lp-field__help">{failed.detail}</p>}
               </div>

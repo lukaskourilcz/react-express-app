@@ -1,10 +1,10 @@
 // A learning-path check states the rule the server grades it by, and shows a
 // graded attempt the way the server returned it: a practice check with its
 // key and explanations, a failed project check with only what was wrong.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { CheckActivity } from '../src/components/paths/ActivityViews';
+import { ArtifactActivity, CheckActivity } from '../src/components/paths/ActivityViews';
 import type { CheckQuestionPayload, SubmitActivityResponse } from '../../shared/learning-path-api';
 
 const QUESTIONS: CheckQuestionPayload[] = [
@@ -157,5 +157,47 @@ describe('a check with a scenario', () => {
     const root = view.container.querySelector('.lp-check-view');
     expect(root).not.toBeNull();
     expect(view.container.querySelector('.lp-check')).toBeNull();
+  });
+});
+
+describe('a written artifact', () => {
+  const ARTIFACT = {
+    brief: 'Write the handoff.',
+    rubricDimensions: [],
+    fields: [
+      { id: 'risks', label: 'Risks', help: 'One per line.', kind: 'list' as const, required: true, maxLength: 12 },
+      { id: 'summary', label: 'Summary', help: 'Two sentences.', kind: 'long-text' as const, required: true, maxLength: 20 },
+    ],
+  };
+  function renderArtifact(onSubmit = vi.fn()) {
+    render(
+      <LanguageProvider>
+        <ArtifactActivity artifact={ARTIFACT} rubric={[]} draft={null} result={null} onSubmit={onSubmit} onDraft={() => {}} draftStatus="idle" busy={false} />
+      </LanguageProvider>,
+    );
+    return onSubmit;
+  }
+
+  it('counts a field the way the server caps it, ignoring blank lines and outer spaces', () => {
+    const onSubmit = renderArtifact();
+    fireEvent.change(screen.getByLabelText(/Risks/), { target: { value: '  scope \n\n\n  data  \n\n' } });
+    fireEvent.change(screen.getByLabelText(/Summary/), { target: { value: '   Ship it.   ' } });
+    expect(screen.getByText('10 / 12 characters')).toBeInTheDocument();
+    expect(screen.getByText('8 / 20 characters')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Risks/)).not.toHaveAttribute('aria-invalid');
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(onSubmit).toHaveBeenCalledWith({ risks: ['scope', 'data'], summary: '   Ship it.   ' });
+  });
+
+  it('does not send a field over its cap and takes the learner to it', () => {
+    const onSubmit = renderArtifact();
+    fireEvent.change(screen.getByLabelText(/Risks/), { target: { value: 'ok' } });
+    fireEvent.change(screen.getByLabelText(/Summary/), { target: { value: 'This summary is far too long.' } });
+    const summary = screen.getByLabelText(/Summary/);
+    expect(summary).toHaveAttribute('aria-invalid', 'true');
+    expect(summary).toHaveAccessibleDescription(/29 \/ 20 characters/);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(summary);
   });
 });
