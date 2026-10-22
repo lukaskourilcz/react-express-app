@@ -1822,3 +1822,9 @@ The FDE path’s canonical overview and module addresses are
 module and the client’s query/fragment. Career groups its topics under the
 three section headings and links into Learn; the FDE path shelf lives inside
 its section.
+
+### Capstone writing and export (B11)
+
+Two additional required self-reviewed artifacts capture the change-request executive update and five-minute handoff walkthrough script. The capstone dependency list derives from all required teaching modules, so the final M01–M14 curriculum cannot omit a module from that list. Shared guided completion still requires each artifact's self-reviewed state. The final B9/B3 integration remains a release prerequisite.
+
+Authenticated path overviews can export the latest server-saved artifact drafts through the existing caller-owned `learning-path-draft` GET. Two reads at most run concurrently. A failed read produces no partial file; unmount/account or enrollment changes cancel pending reads. JSON preserves revision/state metadata, and Markdown renders saved text literally. The export explains that saved drafts may differ from the last submission and does not claim independent review. No submission, XP event, new handler or migration is involved.

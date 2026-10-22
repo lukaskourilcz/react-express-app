@@ -27,6 +27,7 @@ import { CodingCompletion } from '../../coding/CodingCompletion';
 import { announceVerifiedQuestXp, syncXpWithServer } from '../../lib/xp';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
+import { PortfolioExport } from './PortfolioExport';
 import {
   ArtifactActivity,
   CheckActivity,
@@ -394,6 +395,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {/* The modules require these pieces, so completion waits for
                   them; say so rather than implying they sit apart from it. */}
               <p className="lp-completion__note">{t('paths.portfolioRequired', { total: progress.data.artifacts.total })}</p>
+              {enrollment && <PortfolioExport key={`${userId}:${enrollment.enrollmentId}`} manifest={manifest} enrollmentId={enrollment.enrollmentId} states={states} />}
             </>
           )}
           <p className="lp-completion__note">{t('paths.completionNote')}</p>

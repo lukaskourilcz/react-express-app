@@ -14,7 +14,7 @@
  * responses, retrieval results and tool traffic are synthetic fixtures, and
  * every module says so where a learner might otherwise assume a live system. */
 
-import type { PathSource } from '../types';
+import type { ModuleSource, PathSource } from '../types';
 import { FDE_DIAGNOSTIC } from './fde/diagnostic';
 import { FDE_BRIDGES } from './fde/bridges';
 import { FDE_M01 } from './fde/m01';
@@ -30,6 +30,22 @@ import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
 import { FDE_M11_DEPLOY } from './fde/m11-deploy';
 import { FDE_C01 } from './fde/c01';
+
+/** The capstone depends on every required teaching module in manifest order. */
+const FDE_LOOP_MODULES = [
+    FDE_M01,
+    FDE_M02,
+    FDE_M03,
+    FDE_M05_DATA,
+    FDE_M04,
+    FDE_M05,
+    FDE_M06,
+    FDE_M07,
+    FDE_M08,
+    FDE_M11_DEPLOY,
+    FDE_M09,
+    FDE_M10,
+] satisfies ModuleSource[];
 
 export const FDE_PATH: PathSource = {
   id: 'fde',
@@ -73,19 +89,8 @@ export const FDE_PATH: PathSource = {
   modules: [
     FDE_DIAGNOSTIC,
     FDE_BRIDGES,
-    FDE_M01,
-    FDE_M02,
-    FDE_M03,
-    FDE_M05_DATA,
-    FDE_M04,
-    FDE_M05,
-    FDE_M06,
-    FDE_M07,
-    FDE_M08,
-    FDE_M11_DEPLOY,
-    FDE_M09,
-    FDE_M10,
-    FDE_C01,
+    ...FDE_LOOP_MODULES,
+    { ...FDE_C01, dependsOn: FDE_LOOP_MODULES.map(module => module.id) },
   ],
   bridges: [
     {

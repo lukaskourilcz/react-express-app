@@ -1,0 +1,12 @@
+{
+  "kind": "b11-handoff-native-individual-review",
+  "reviewedIds": [
+    "fde-v1-c01-handoff"
+  ],
+  "uniqueCoverageAdded": 0,
+  "currentReviewFiles": [
+    "review-2026-10-15-n041.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b11-handoff-before.json",
+  "note": "One existing handoff record replaced in place after a full item reread and bounded copy correction. The exact original record is archived, previousHash points to its contentHash, and the current hash comes from the final merged catalogue. The completion claim now requires the entire required path; all six required field helps explicitly bound automated presence/length checking. Field ids/kinds/caps/flags and all other items are unchanged. Same-session separate model reading and rereading of its own correction only; no learner execution, human review or complete-catalogue claim."
+}

@@ -3,6 +3,11 @@
 // Follows translations.drafts.ts and translations.privacy.ts so route-only
 // words do not add to every visitor’s initial download.
 export const pathsEn = {
+  'paths.export.note': 'Export your latest writing saved online, including drafts. Saved text may differ from your last submission. Writing quality is self-reviewed.',
+  'paths.export.markdown': 'Export writing as Markdown',
+  'paths.export.json': 'Export writing as JSON',
+  'paths.export.busy': 'Preparing your saved writing…',
+  'paths.export.ready': 'Your export file is ready.',
   'paths.diagnosticTitle': 'Diagnostic overview',
   'paths.diagnosticNote': 'Your latest diagnostic attempt, area by area. These results do not unlock or complete any part of the path.',
   'paths.competency.demonstrated': 'Demonstrated in this check',

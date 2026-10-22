@@ -51,9 +51,11 @@ Fixtures include two tenants, duplicate tickets, missing customer IDs, outdated 
 2. **Build:** pass bounded adapter, authorization, retrieval, validation and operator-interaction tasks using the existing sandbox. These are linked components, not a claim that devShark deployed a whole service.
 3. **Evaluate:** compare a deterministic baseline with supplied model-result candidates on at least 30 synthetic cases including failures. Hold out a labeled evaluation slice. Define quality, abstention, cost and latency measures; explain how fixture results differ from live model behavior.
 4. **Change request:** the customer adds a restricted tenant and tightens latency requirements. Update the design and pass changed fixture checks without breaking earlier acceptance cases.
-5. **Incident and handoff:** explain a failed rollout from traces; submit rollback/runbook/UAT checklist, demo outline and one reusable product improvement.
+5. **Incident and handoff:** explain a failed rollout from traces; submit rollback/runbook/UAT checklist, demo outline and one reusable product improvement. A separate self-reviewed five-minute walkthrough script names what to show, in order, and states the fixture, timing and evidence limits.
 
-Portfolio outputs can be copied/exported as Markdown/JSON. Saving a repository URL is optional and does not grant a verified badge; v1 does not fetch or execute it. Optional local projects, Python practice and real-model experiments carry no additional XP, access or completion requirements.
+The change-request stage also requires a self-reviewed executive update: audience/decision, changed constraints, evidence and uncertainty, recommendation/alternative, and owner/next step/stop condition. Both new artifacts are required for guided completion. The capstone depends on every required teaching module assembled in the manifest, including M01–M14 once B9 and B3 are integrated.
+
+The path overview exports the learner’s latest writing saved online as Markdown or JSON, including the executive update and walkthrough. Each entry preserves its recorded state and saved revision; saved text may have changed after its last submission. Exporting neither starts an attempt nor changes completion. Unsaved local edits are not included. Markdown writes learner text as literal fenced text. Failed reads produce no partial file, and changing the account/enrollment cancels pending reads. The existing owner-checked draft GET serves these exports; no new API handler or schema is added. Saving a repository URL is optional and does not grant a verified badge; v1 does not fetch or execute it. Optional local projects, Python practice and real-model experiments carry no additional XP, access or completion requirements.
 
 ## Assessment design
 
