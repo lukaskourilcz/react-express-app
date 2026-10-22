@@ -623,7 +623,8 @@ async function main() {
       }
       // A criterion a check names must be one the source declared, so a
       // renamed tag cannot leave a criterion without its checks.
-      const tagged = new Set([...(task.tests ?? []), ...(solutionFor(id)?.hiddenTests ?? [])].map((test) => test.criterion ?? 'core'));
+      const authored = DSA_FOUNDATIONS_TASKS.find((one) => one.id === id);
+      const tagged = new Set([...(authored?.tests ?? []), ...(solutionFor(id)?.hiddenTests ?? [])].map((test) => test.criterion ?? 'core'));
       for (const criterion of source.critical) {
         if (!tagged.has(criterion)) fail(`${id}: no visible or hidden check is tagged with the critical criterion ${criterion}`);
       }
