@@ -1743,48 +1743,6 @@ handler routes no explanation or hint resource; the launch contracts assert
 both. Coding-challenge hints are authored content whose last rung before the
 reference solution is a documentation link (`shared/coding-docs.ts`).
 
-### Evolving projects (September 2026)
-
-The fourteen projects now contain 146 stages: ten focused stages per single-track
-project, twelve per full-stack project. New `-start` checkpoints separate setup,
-data loading and form wiring from subsequent behavior, each with a hint ladder
-of its own (`lib/coding/tasks/evolving-checkpoint-hints.ts`) rather than its
-milestone's. Earlier requirements and
-tests remain cumulative, and each stage lists its own checks first so Results
-opens on what the brief just asked for. Original task IDs retain their drafts and
-completion; a passed original milestone also covers its new prerequisite
-without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 814 tasks (769
-issued, with system design hidden), and every
-graded code task carries a reference, a junior and a senior solution on the
-server; the last two reach the browser only with a verified pass. A stage's
-solutions hold only what that stage asks for: the content contract grades the
-reference, junior and senior solutions of every stage against the next stage
-and its checkpoint (the reference alone for React stages, whose suites are
-slow) and fails when one passes, since a learner can read them after a pass
-and paste them into the next stage. A checkpoint carries its own reference,
-the previous stage's code plus the checkpoint's one step, and no junior or
-senior board; the contract fails when that reference passes the milestone the
-checkpoint leads to, since it opens on giving up there and for free after a
-pass. The three checkpoints whose honest reference already does the
-milestone's work are listed in `SAME_AS_MILESTONE` (`scripts/test-coding-content.ts`),
-and the contract lets one be on the free plan only when its milestone is, so
-a free account is never handed a pass of a Premium milestone.
-
-Since 2026-09-25 the registry also holds fifteen short paths of five levels
-each, marked `short`, with no checkpoints. Twelve are listed on the page of
-the section they belong to: five on JavaScript, two each on TypeScript, React
-and Algorithms, and a link shortener that leads the FullStack screen. They
-replace the one-day-old Custom category; its two ten-step paths became four
-of the JavaScript paths. The other three are the debugging paths (#225), on
-the Coding home: Log it right, Trace the state, and Edges and inputs, each
-five levels that start from code that runs and is wrong. They replace the
-ten-stage café-orders debugging project, which is marked `unlisted`: no list
-shows it, and its ten task IDs still open, grade and keep their drafts and
-passes, by the rule above. The longer projects stay where they were: ten on
-the Coding home and the three apps on the FullStack screen. So the registry
-counts fourteen projects with 146 stages and fifteen paths with 75 levels.
-
 ## Merchandise
 
 Merchandise is paused (owner decision, 1 October 2026). No package has
