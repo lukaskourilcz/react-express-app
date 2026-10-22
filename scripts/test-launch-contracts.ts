@@ -5511,9 +5511,10 @@ async function main() {
       const bootstrap = html.indexOf("devquiz:color-mode");
       assert.ok(bootstrap > 0, 'index.html must set the colour mode before first paint');
       assert.ok(
-        html.indexOf('root.lang = root.dataset.publicLocale') > 0,
-        'index.html must set the document language before first paint, so a prerendered guide is read in its own language',
+        html.includes("root.lang = 'en'"),
+        'index.html fixes English before first paint',
       );
+      assert.ok(!html.includes('devquiz.lang') && !html.includes('navigator.language'), 'obsolete preferences never change the document language');
       const firstBlocking = html.search(/<link[^>]+rel="stylesheet"/);
       if (firstBlocking >= 0) {
         assert.ok(
