@@ -1,104 +1,75 @@
-# Product and UX audit
+# Product routes, states and UX findings
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), 27 September 2026 for pages that draw once after a click (Strengths to preserve) and the `/learn` progress line (P1.8), and 21 October 2026 for English only.
+The route and state inventory design and QA work starts from, the standing rule for text on coloured fills, and the findings still open. Routes come from `client/src/App.tsx`; `docs/design/visual-qa-checklist.md` turns them into a QA matrix.
 
-## Executive summary
+## Route and state inventory
 
-- The repository already has a strong Deep End v2 foundation, centralized product and subject registries, a fixed one-screen shell, a central copy dictionary, lazy routes, and a server-authoritative assessment model. The overhaul should mature those systems, not replace them.
-- The largest interface debt is inconsistency inside otherwise good foundations: duplicated inline values, missing warning/info/on-accent tokens, unsupported token names, a few old checkbox-based choice controls, and dense screens that do not consistently use the same surface hierarchy.
-- Accessibility work is substantial and worth preserving, but lesson, skill-check, challenge, and path-picker choices still need the repository's own accessible radio-card primitive. Several fixed feedback colors fail in dark mode.
-- The client already handles many happy and unhappy paths. The most visible gaps are live-room connection feedback, a global offline signal, roadmap no-content handling, sign-in failure feedback, and a guest registration prompt that is not actually restricted to the landing route.
-- Performance is broadly healthy: routes, syntax highlighting, analytics, QR generation, and question banks are split or deferred. The main opportunities are avoiding full-tree timer rerenders, reducing initial Supabase/Motion work, and removing a profile request waterfall.
-- The API contract baseline passes and the physical Vercel handler count is exactly 12. This design project does not require a schema or handler change.
+| Route | Auth | Primary goal and action | Major states | Component | Keep / check |
+|---|---:|---|---|---|---|
+| `/` | No | Understand the product; choose a learning action | first visit, returning learner, auth failure, home sample | `Home` | Keep `LandingKit` and technical copy; check the hero at 360–1440px. |
+| `/today` | Optional | See what to do next | signed out, loading, nothing due, review cards, sections | `Today` | Signed-in sections load as their own chunks inside the route hold. |
+| `/quiz` | Optional | Configure, answer, submit, review | setup, loading, active, restored, empty, submit error, graded | `Quiz` | Keep signed sessions and stable answer geometry; test short phones, code, the review grid, expiry and retry. |
+| `/learn/:section?` | Optional | Pick a section and topic; complete levels and checkpoints | section preview, loading, no structure, locked, unavailable level, lesson, active level, grading, completion, failure, skill check | `Roadmap` | Three sections (`shared/learn-sections.ts`); verified grading; `RadioCards` keyboard behaviour. |
+| `/learn/forward-deployed-engineer/path` | Optional | Work through the FDE path | switch off (preview), outline, signed out, enrolled, activity, Premium lock, paused, completed | `paths/*` | Path on only with `LEARNING_PATH_FDE_ENABLED`; free diagnostic and first module. |
+| `/learn/big-o`, `/big-o` | No | Read the Big O introduction | reading | `BigOIntroduction`, `BigOPage` | Same lessons as DSA levels 1 and 2. |
+| `/challenge` | Optional | Understand the rules; complete a fair timed run | intro, board loading/error, buffering, active, timeout, verified result, share | `Challenge` | `RadioCardGroup` choices; board-unavailable shown apart from empty. |
+| `/typing` | Optional | Run a typing race | ready, racing, finished | `TypingRacer` | Shared fin/waterline racer; reduced motion. |
+| `/daily`, `/daily/:date` | No | Answer the question of the day | today, a past day, a future day, checked, share | `DailyQuestionPage` | Answer stays sealed until a check; nothing is recorded. |
+| `/play` | Sign-in to act | Host or join a free-for-all or classroom room | auth loading, signed out, create/join errors, room code | `Play` | Mode clarity and server scope; mobile form wrapping and touch targets. |
+| `/play/:code` | Yes | Participate, host, reconnect, finish | lobby, live, presenter, polling, stale (after three failed refreshes), expired room, result | `Play` | Realtime recovery and server timing; printable QR ticket; quiet timer announcements. |
+| `/leaderboard` | No | Compare fair results, last 30 days first | skeleton, empty, error, offline with the last board, empty window, own row pinned, topic filter | `Leaderboard` | Mobile cards and desktop table; rank as a number, no medal colours; long names. |
+| `/collection` | Yes | Revisit saved questions and coding challenges | signed out, loading, empty, error, populated | `Collection` | Replaces Cards in navigation; difficulty shown as text. |
+| `/cards` | Yes | Review the saved-question deck | auth loading, signed out, loading, empty, error, remove error, deck | `Flashcards` | Kept for old links; optimistic rollback; keyboard and touch reveal. |
+| `/shop` | Optional | See coins and their ledger; buy the crown or a streak protection | signed out, loading/sync, error, owned, unaffordable, at the protection cap | `Shop` | Coins change what a learner owns, never scoring. Merchandise is off (`MERCH_ENABLED`). |
+| `/roadmap` | Optional | Understand a practical developer path | empty progress, in progress, complete | `CareerRoadmap` | Developer-specific copy, distinct from `/learn`. `/roadmap/specializations/fde/*` redirects to the FDE path and `/roadmap/paths/dsa-foundations/*` to `/learn/software-engineer?topic=dsa`. |
+| `/coding` | Optional | Pick a track; see passed counts and the next challenge | loading (no title until progress arrives), signed out, empty progress, populated, error with retry | `CodingHome` | Tier locks explained in words; no AI affordance; strip and track cards at 360px. |
+| `/coding/:track` | Optional | Choose a task by difficulty and tier, or a short path | loading, locked tier, passed/revealed states, empty filter | `CodingTrackScreen` | Non-colour status glyphs; the difficulty filter. |
+| `/coding/fullstack` | Optional | Choose a FullStack app or path | loading, populated | `FullStackScreen` | Stage lists by difficulty. |
+| `/coding/:track/:taskId` | Optional | Write, run and submit; climb the hint ladder | loading, signed out, locked, running, verdict, hidden-test failure, reveal confirm, offline, draft restore, narrow-screen puzzle or waiting state | `CodingTaskScreen`, `CodingWorkbench`, `DesignRunner` | Server verdicts and sealed sessions; editor at 360px; focus moves to results after a run. |
+| `/coding/review` | — | Redirects to `/coding` | redirect | `CodingReviewScreen` | Coding review is off. |
+| `/settings/github` | Yes | Finish the GitHub App installation | working, sign-in needed, missing params, GitHub error, organisation request | `GithubSettingsPage` | Always a way back to the profile; never loop on a failed finish. |
+| `/profile` | Yes | Understand progress and next action; manage the account | auth loading, signed out, no progress, populated, sync error, delete confirm/failure, GitHub garden states | `Profile`, `GithubGardenCard` | Subject scope, privacy and deletion confirmation. |
+| `/premium` | Optional | Compare Free and Premium; start checkout or manage billing; redeem a voucher | billing off, signed out, free, paying, complimentary grant, voucher grant, settings error; voucher: sign-in check, form, refused code, already redeemed, too many attempts, offline, unavailable, expired session, redeemed | `PremiumPage`, `PremiumVoucher` | Price before VAT with "VAT added at checkout"; no urgency; renewal, waiver and cancel links beside the buttons. While billing is off the voucher leads. |
+| `/premium/checkout`, `/premium/success`, `/premium/cancel` | Checkout and success: yes; cancel: no | Buy, confirm, or cancel without signing in through an emailed link | checking, done, pending, expired, signed out; cancel: email step, check your email, link confirm, link expired or used, receipt, error | `PremiumCheckoutPage`, `PremiumSuccessPage`, `PremiumCancelPage` | Focus moves to each step heading; the link token leaves the address bar at once; never reveal whether an email has a subscription. |
+| `/support` | No | Redirects to `/premium` | redirect | `Navigate` | Kept for old links. |
+| `/auth/confirmed`, `/reset-password` | No | Confirm an email; set a new password | verifying, done, expired or used link, error | `AuthPages` | Verify only when the learner presses the button. |
+| `/privacy`, `/terms` | No | Read the policies | reading | `PrivacyPage`, `TermsPage` | Reading hierarchy; 400% reflow. |
+| `/classroom` | No | Understand hosting and joining | explanation, call to action | `ClassroomPage` | Authentic workflow, no fake screenshots. |
+| `/topics/:slug` | No | Read a guide and enter practice | valid guide, unknown slug | `TopicLandingPage` | Authored intro, no answer leakage, SEO output. |
+| `/dev` | Admin | Operate questions, triage, quality, learning paths, reports, logs, merchandise, vouchers and settings | auth checking, denied, loading, empty, error, unsaved, save/delete, voucher shown once | `DevPage` and `dev/*` | Dense, low-decoration control room; explicit status; never expose secrets or answer keys; a voucher code is listed by its first four characters. |
+| `*` | No | Recover from a bad URL | not found | `NotFoundPage` | One clear route home; route title and focus. |
 
-## Route and surface inventory
+## Text on coloured fills (finding P1.3)
 
-| Route | Auth | Subject | Primary goal and action | Major states | Current component | Main debt / reuse / QA |
-|---|---:|---:|---|---|---|---|
-| `/` | No | Yes | Understand the product; choose a learning action | first visit, returning learner, auth failure | `Home` | Preserve `LandingKit`; keep the copy technical; verify hero at 360–1440px. |
-| `/quiz` | Optional | Yes | Configure, answer, submit, review | setup, loading, active, restored, empty, submit error, graded | `Quiz` | Preserve signed sessions and stable answers; use shared radios/tokens; test short-height phones, code, review grid, expiry and retry. |
-| `/learn` | Optional | Yes | See what is next; complete levels/checkpoints | loading, no structure, locked, active lesson, grading, completion, failure, skill check | `Roadmap` | Preserve verified grading and varied waves; repair radio keyboard behavior and dark feedback tokens; add no-level state. |
-| `/challenge` | Optional | Yes | Understand rules; complete a fair timed run | intro, leaderboard loading/error, buffering, active, timeout, verified result | `Challenge` | Replace checkbox cards with radios; correct list semantics; show board-unavailable separately from empty. |
-| `/play` | Sign-in to act | Yes | Host or join a free-for-all/classroom room | auth loading, signed out, create/join errors, room code | `PlayLanding` | Preserve mode clarity and server scope; prevent auth flash; verify mobile form wrapping and touch targets. |
-| `/play/:code` | Yes | Room-owned | Participate, host, reconnect, finish | lobby, live, presenter, reconnect, polling fallback, expired/stale room, result | `PlayMatch` | Preserve Realtime recovery and server timing; expose stale/disconnected state; keep QR ticket printable; reduce timer announcements. |
-| `/leaderboard` | No | Yes | Compare fair results, with the last 30 days first | skeleton, empty, error, offline with the last board, no activity in the window, own row pinned, topic filter | `Leaderboard` | Preserve mobile cards/desktop table and scoped API; keep rank readable as a number without medal colours; verify long names. |
-| `/cards` | Yes | Yes | Review saved questions | auth loading, signed out, loading, empty, error, remove error, deck | `Flashcards` | Preserve optimistic rollback; show sign-in errors; keep reveal keyboard/touch friendly. |
-| `/shop` | Optional | Yes | Rewards: see coins and their ledger, buy the crown or a streak protection, redeem merchandise with Premium | signed out, loading/sync, error, owned, unaffordable, at the protection cap, a free account's merchandise lock, redemption form, orders | `Shop` | State that coins change what a learner owns and never scoring; the Premium lock reads as text and opens the upgrade sheet; test small screens and long item copy. |
-| `/roadmap` | Optional | `webdev` | Understand a practical developer path | empty progress, in progress, complete | `CareerRoadmap` | Use developer-specific copy; keep it distinct from `/learn`. |
-| `/coding` | Optional | `webdev` | Pick a track; see passed counts and, beside the heading, the next challenge with Continue | loading (no title until progress arrives), signed out, empty progress, populated, error with retry | `CodingHome` | Keep tier locks explained in words; no AI affordance; verify strip and track cards at 360px. |
-| `/coding/:track` | Optional | `webdev` | Choose a task by level and tier | loading, locked tier, passed/due/revealed states, empty track | `CodingTrackScreen` | Non-color status glyphs; keep the ladder reason visible; long titles. |
-| `/coding/:track/:taskId` | Optional | `webdev` | Write, run, and submit a solution; climb the hint ladder | loading, signed out, locked, running, verdict, hidden-test failure, reveal confirm, offline, draft restore | `CodingTaskScreen`, `CodingWorkbench`, `DesignRunner` | Preserve server verdicts and sealed sessions; keyboard shortcuts documented; editor at 360px; results tab focus after a run. |
-| `/coding/review` | Yes | `webdev` | Clear due reviews in order | loading, signed out, nothing due, populated | `CodingReviewScreen` | Explain the two-clean-passes rule; link back to tracks. |
-| `/settings/github` | Yes | `webdev` | Finish the GitHub App installation | working, sign-in needed, missing params, GitHub error, organisation request | `GithubSettingsPage` | Always offer a way back to the profile; never loop on a failed finish. |
-| `/profile` | Yes | Yes | Understand progress and next action; manage account | auth loading, signed out, no progress, populated, sync error, delete confirm/failure, GitHub garden states | `Profile`, `GithubGardenCard` | Add an `h1`; prioritize actionable progress; retain subject scope, privacy, and deletion confirmation. |
-| `/support` | No | No | Redirects to `/premium`; the voluntary-support page and its free pledge were retired on 25 September 2026 (#222) | redirect | `Navigate` in `App.tsx` | Keep the redirect for old links. |
-| `/premium` | Optional | No | Compare Free and Premium; start Checkout or manage billing; redeem a voucher | billing off, signed out, free, paying, complimentary grant, voucher grant, settings error; voucher: sign-in check, signed out, form, empty, refused code, already redeemed, too many attempts, offline, unavailable, expired session, redeemed with or without an end | `PremiumPage`, `PremiumVoucher` | Show "VAT included" beside every price; no urgency; keep the renewal, waiver and cancel links beside the buttons. While billing is off the voucher leads; one sentence for every refused code; move focus to the result. |
-| `/premium/success`, `/premium/cancel` | Success: yes; cancel: no | No | Confirm a purchase; cancel or withdraw without signing in, confirmed through a link emailed to the address | checking, done, pending, pending after the last automatic check, expired, signed out; cancel email step, email error, confirm, check your email, sign in instead (no email provider), link loading, link confirm, link expired or used, link error, receipt, error, unavailable | `PremiumSuccessPage`, `PremiumCancelPage` | Move focus to each step heading, and to the email field when the address changes; take the link's token out of the address bar at once; never reveal whether an email has a subscription before its mail was read. |
-| `/privacy` | No | No | Understand data practices | owner-review markers | `PrivacyPage` | Improve reading hierarchy without inventing legal review; retain explicit owner action where unresolved. |
-| `/terms` | No | No | Understand terms | owner-review markers | `TermsPage` | Same legal constraint; test 400% reflow and headings. |
-| `/classroom` | No | Yes | Understand hosting/joining and privacy | public explanation, CTA | `ClassroomPage` | Use authentic workflow, not fake screenshots; explain sign-in, scope, QR and privacy. |
-| `/topics/:slug` | No | Catalog-owned | Learn a topic and enter practice | valid topic, unknown slug | `TopicLandingPage` | Keep authored intro and no answer leakage; move conditional copy into dictionaries; verify SEO output. |
-| `/dev` | Admin | `webdev` | Operate questions, quality, reports, settings, logs, merchandise and Premium vouchers | auth checking, denied, loading, empty, error, unsaved, save/delete; vouchers: field errors, code in use, migration missing, the new code once, copy refused, revoke confirmation | `DevPage` and `dev/*` | High-density, low-decoration control room; devShark brand; explicit status/severity; never expose secrets or answer keys to normal users; a voucher code is shown once and listed by its first four characters. |
-| `*` | No | No | Recover from a bad URL | not found | `NotFoundPage` | Give one clear route home; verify route title and focus. |
+No text on a coloured fill uses a fixed white:
 
-## Highest-priority findings
+- On the accent, text uses `--brand-on-accent`, and Astryx's `--color-on-accent` follows it, so an Astryx primary button, checked box or selected radio in dark mode reads at 6.69:1.
+- Topic-coloured buttons take `textOnColor()` from `client/src/lib/categories.ts`, which picks white or the ocean ink `#0b141b` (falling back to black on a mid-tone neither reaches 4.5:1 on), and `hoverFilterOn()` darkens a fill under white text and lightens one under dark text, so no topic drops below 5.2:1 on hover.
+- The XP toast's fill is `--ss-success-strong`, with `--ss-on-success-strong` for its text. The `/dev` score badges use `textOnColor()`.
 
-### P0 — interaction and accessibility
+`tests/browser/on-accent.spec.ts` checks the chip, the stage dots, the HTML, CSS and JavaScript start buttons, the toast and the `/learn` topic rail in both themes with axe's `color-contrast` rule and a measured ratio. `client/tests/on-color-text.test.ts` covers every category colour and the token pairs. A locked topic's pill stays at `opacity: 0.6`; WCAG 1.4.3 exempts it as a disabled radio.
 
-1. Lesson and skill-check choices implement roving radio tab stops without Arrow/Home/End navigation (`Roadmap.tsx`). Reuse `ui/RadioCards.tsx`.
-2. Challenge and path-picker mutually exclusive choices use checkbox-emitting `SelectableCard`s inside radio-like flows. Migrate to `RadioCardGroup`/`RadioCard`.
-3. Challenge contains invalid list structures (`li` without a list, `div` directly inside `ol`). Correct the semantics.
-4. ~~`SplitText` ignores its requested semantic tag in the animated path.~~ Closed 2026-09-25: no screen rendered it, and #235 deleted it.
+## Open findings
 
-### P1 — product, resilience, and contrast
+- `LoadingScreen` and `ErrorRetry` still carry a small adapter for MUI-style `sx` spacing props.
+- `/dev` → Question bank colours its review states with fixed hex values (`DevQuestions.tsx`) instead of the semantic tokens.
+- Multiplayer state refresh grows roughly with the square of the room size. A fix needs a forward API and RPC design inside the existing handlers.
+- Not re-checked since the July 2026 audit: clipping of multiline answers in the active quiz on short viewports, bounded user-readable states for slow or failed sign-in, and the serial stats, progress and XP requests on Profile (any consolidation belongs in the existing user handler, not a thirteenth function).
 
-1. The registration nudge is mounted globally and can interrupt a focused route. Restrict it to the landing experience.
-2. Live-room refresh and distribution failures are swallowed. Preserve the last snapshot but show a disconnected/stale state with retry.
-3. ~~Bright dark-mode accents are paired with fixed white text. Add a theme-aware on-accent token and semantic warning/info colors.~~ Closed 2026-09-26. `--brand-on-accent`, `--ss-warning` and `--ss-info` exist, and Astryx's `--color-on-accent` follows `--brand-on-accent`, so an Astryx primary button, checked box or selected radio in dark mode reads at 6.69:1 instead of 2.77:1. No text on a coloured fill uses a fixed white any more:
-   - On the accent, `--brand-on-accent`: `Today.css` (the pack and empty-state calls to action, the "start here" chip), the stage dots in `RoadmapTree.tsx`, and a finished stage's node in `DeepEndScreens.css`, a rule no screen renders today.
-   - `Roadmap.css`'s accent buttons sit on the topic colour or the checkpoint gold, not the accent, so `--brand-on-accent` would not fit them. They take `textOnColor()` from `lib/categories.ts`, which picks white or the ocean ink `#0b141b`, falls back to black on a mid-tone neither reaches 4.5:1 on, and clears 4.5:1 on every fill: HTML orange 4.71:1 (white was 3.94:1), JavaScript yellow 13.74:1 (white was 1.35:1). On hover, `hoverFilterOn()` darkens a fill under white text and lightens one under dark text, so no topic drops below 5.2:1; the old uniform darkening took HTML orange's ink to 4.08:1.
-   - The XP toast's fill is `--ss-success-strong`, so its text is the new `--ss-on-success-strong`: white at 7.13:1 in light, the ink at 8.16:1 in dark, where white was 2.28:1. The `/dev` score badges use `textOnColor()`.
-   - `tests/browser/on-accent.spec.ts` renders the chip, the stage dots, the HTML, CSS and JavaScript start buttons and the toast's colours in both themes, and checks each with axe's `color-contrast` rule and a measured ratio: 12 of 12 pass, against 3 of 12 on the previous build. `client/tests/on-color-text.test.ts` covers every category colour and the token pairs.
-4. Hard-coded red, green, and gold feedback colors fail on dark or light surfaces. Route them through semantic tokens.
-5. The active quiz/question container can clip multiline answers on short viewports. Allow controlled internal scrolling.
-6. Fast-path auth loading and sign-in/sign-out errors can hang or disappear. Add bounded, user-readable states without exposing environment names.
-7. Multiplayer state refresh is approximately quadratic in room size. This is a documented scaling constraint; a safe fix requires a forward API/RPC design and is outside the visual-only migration.
-8. ~~On `/learn`'s topic rail, an unselected topic's progress line ("0/6") is 0.66rem text at `opacity: 0.72`, which blends to `#809098` on the light theme's white: axe measures 3.3:1, below 4.5:1. The dark theme passes. Found on 26 September 2026 while checking P1.3.~~ Closed 2026-09-27. The line drops the opacity and takes `--color-text-secondary` through `.rm-topic-progress` in `Roadmap.css`; no token changed. Measured in Chromium on the production build at 1280px, with the pill behind each line composited:
+## Strengths to keep
 
-   | Progress line | Light before | Light after | Dark before | Dark after |
-   |---|---:|---:|---:|---:|
-   | Idle topic on the surface | 3.30:1 | 6.13:1 | 4.73:1 | 7.92:1 |
-   | Selected JavaScript | 6.05:1 | 5.94:1 | 7.01:1 | 6.46:1 |
-   | Selected HTML | not measured | 5.24:1 | not measured | 7.13:1 |
-   | Selected CSS | not measured | 5.09:1 | not measured | 7.29:1 |
-
-   Axe's `color-contrast` rule found two violations on `/learn` in light (the HTML and CSS lines) and none after; dark had none before or after. `tests/browser/on-accent.spec.ts` now runs that rule on the rail with HTML and then CSS selected, in both themes. A locked topic's pill stays at `opacity: 0.6` (its "Locked" line reads 2.46:1 in light, up from 1.86:1). WCAG 1.4.3 exempts disabled controls, and the pill is a disabled radio.
-9. ~~A page whose code failed to load replaced the whole app, header, nav and footer included, with the root error screen, whose Try again could not help because React.lazy keeps the failure.~~ Closed 2026-09-26. `RouteErrorBoundary` draws the root screen's card inside the shell, and the nav leaves the failed page without a retry. Try again renders the page again and reloads the address when the browser kept the failed fetch; a newer build on the server reloads at most once a minute; offline, the panel waits for the connection. `tests/browser/route-errors.spec.ts` checks it in Chromium, and `docs/release-acceptance.md` (ERRBOUND) records the browser support.
-
-### P2 — consistency and performance
-
-- Undefined `--color-background-card`/`--radius-card` values cause card styling to be discarded.
-- `LoadingScreen` and `ErrorRetry` duplicate an old MUI-style spacing adapter.
-- The shell's always-loaded Motion and Supabase graphs are meaningful future performance targets, but changing auth boot order has enough risk to keep it outside the visual pass.
-- Profile loads stats, progress, and XP serially. Consolidation should use the existing user handler, not a thirteenth function.
-- The responsive script covers too few routes and widths and still uses a historical `devquiz` temp prefix.
-
-## Strengths to preserve
-
-- Central `client/product-catalog.ts`, `shared/subject-catalog.ts`, `client/src/lib/products.ts`, and `client/src/lib/subjects.ts` sources of truth.
-- Product identity resolved in `client/product-catalog.ts`, which refuses any product but devShark; a footer of legal links and appearance and sound controls.
-- Server-issued encrypted sessions, one-time grading claims, result receipts, answer proofs, atomic XP/streak/progression, product/subject validation, RLS, and service-role isolation.
-- Real content counts from `SUBJECT_SCOPE_CATALOG` (the questions a learner can be served, checked by `test:launch`) and an on-demand question bank.
+- Central sources of truth: `client/product-catalog.ts`, `shared/subject-catalog.ts`, `client/src/lib/products.ts` and `client/src/lib/subjects.ts`. Product identity refuses any product but devShark.
+- Server-issued encrypted sessions, one-time grading claims, result receipts, answer proofs, atomic XP, streak and progression writes, product and subject validation, RLS and service-role isolation.
+- Real content counts from `SUBJECT_SCOPE_CATALOG`, checked by `npm run test:launch`, and an on-demand question bank.
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
-- Astryx primitives, `SharkFin`, `LandingKit`, technology glyphs (`CategoryGlyph`), `RadioCards`, dialogs, toast system, and query helpers.
-- Existing loading/error/empty treatment in Quiz, Flashcards, Leaderboard, Profile and much of `/dev`.
-- A click draws the next page once. The route boundary sits outside the keyed route box, links preload their page on intent (`lib/routePreload.ts`), and Coding, Today, Learn, Roadmap, Rewards, Premium, Leaderboard and the Challenge hold their first render for the reads that decide it (`lib/routeData.ts`, at most 1.2s). Today's signed-in sections and the roadmap's optional paths keep chunks of their own and load inside that hold as `lazyPart`s. See the GLITCH and HOLDS sections of `docs/release-acceptance.md`.
-- Lazy routes, lazy Prism Light languages, optional analytics and Sentry, and build-time CSS purging.
-- Realtime polling fallback and server-side match timing.
+- Astryx primitives, `SharkFin`, `LandingKit`, `CategoryGlyph`, `RadioCards`, dialogs, toasts and query helpers.
+- A click draws the next page once. The route boundary sits outside the keyed route box, links preload their page on intent (`lib/routePreload.ts`), and Coding, Today, Learn, Roadmap, Rewards, Premium, Leaderboard and the Challenge hold their first render for the reads that decide it (`lib/routeData.ts`, at most 1.2s).
+- A page whose code fails to load shows `RouteErrorBoundary` inside the shell; Try again re-renders or reloads, and offline it waits for the connection (`tests/browser/route-errors.spec.ts`).
+- Lazy routes, lazy Prism languages, consent-gated analytics, optional Sentry and build-time CSS purging.
+- The Realtime polling fallback and server-side match timing.
 
-## Deliberately rejected rewrites
+## Rejected rewrites
 
-- No new UI library, state manager, icon library, localization mechanism, product registry, subject registry, footer list, runtime image API, Express server, native app, database migration, or Vercel handler.
-- No mechanical rename of `react-express-quiz-app`, legacy storage keys, migrations, or compatibility values.
-- No generated factual diagrams, equations, code, product UI, testimonials, metrics, or people.
-
+- No new UI library, state manager, icon library, localization mechanism, product or subject registry, footer list, runtime image API, Express server, native app or extra Vercel handler.
+- No mechanical rename of `react-express-quiz-app`, legacy storage keys, migrations or compatibility values.
+- No generated factual diagrams, equations, code, product UI, testimonials, metrics or people.
