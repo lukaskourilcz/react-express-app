@@ -1495,6 +1495,7 @@ What changed: five fixes from the audit report (#231), the markdown sweep (#234)
 - Every segmented control shows the track through an unselected segment in both themes; the rule lives in Astryx's `astryx-base` layer.
 - Stale Markdown is corrected or deleted, `NEEDED.md` carries valid markers on every task, and the exports, scripts and the one file that nothing imports are gone.
 - Not ported: the Classroom rate-limit fix `fa884b7` from `claude/elegant-cori-h9cdgb`. `git cherry-pick -n fa884b7` conflicts in `lib/rate-limit.ts` (D2 already added an `identity` argument with another key scheme) and in `scripts/test-launch-contracts.ts`. `NEEDED.md` carries it as an agent task.
+  *22 October 2026:* the fix landed by hand on 26 September ("Classroom rate limits (ported from `fa884b7`)" below). The owner dropped the branch's other work (#208, closed not planned) and archived it as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`.
 
 Local evidence, all executed on the final tree:
 
@@ -3032,6 +3033,8 @@ The full gate failed once on `public.spec.ts`: axe read the Czech guide's "Procv
 ## 2026-09-27 — accent text on its tint, a reachable levels strip, whole-route axe (PORT)
 
 Three commits from `claude/elegant-cori-h9cdgb`, ported by hand to main at `035d853`: `9abf34a`, `1751a2c` and `d0e78e1`. SubjectPicker, `Sharkira.css`, `/sprint`, the Czech key and the other subjects' accents are gone from main or out of scope, so they stay out.
+
+*22 October 2026:* the owner dropped the branch's remaining work (streak extras, weekly leagues, sprint mode, Lichess puzzles, the package merch cap; #208, closed not planned). The branch survives only as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`; nobody replays its migrations 038 to 042.
 
 ### Contrast
 
