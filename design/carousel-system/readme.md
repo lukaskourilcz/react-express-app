@@ -7,7 +7,7 @@ This system covers **social carousels for Instagram and Threads** (1080 × 1350)
 ## Sources
 - Product repository: github.com/lukaskourilcz/react-express-app (main). Tokens from `client/src/styles/astryx-theme.css`; brand rules from `docs/brand/brand-guidelines.md` (V9 kit); behavioural rules from `DESIGN_RULES.md`; code theme from `client/src/components/CodeBlock.tsx` (Prism One Dark); tech logos from `client/src/components/ui/techIcons.tsx` (devicon).
 - Brand marks: the V9 kit (`client/public/brand/v9/recommended/`) — copied into `assets/`.
-- The finished design: `Direction B - Mixed colours.dc.html` (two carousels: the Premium launch offer and a full run). Its slides, `ui_kits/carousel/Carousel.jsx`, `components/carousel/carousel.card.html` and the footer in `components/carousel/Panel.jsx` still show the superseded prices (€1.80 a month, €18 a year, regular €3.99) and a 2 November end date. Update them before you reuse a slide.
+- The finished design: `Direction B - Mixed colours.dc.html` (two carousels: the Premium launch offer and a full run). When the prices or the offer end date change, take the new values from `PREMIUM_PRICE` in `shared/tiers.ts` and from `shared/launch-offer.ts` in the product repository.
 
 ## Content fundamentals
 - **Voice**: a well-set magazine page, not a startup ad. Plain, matter-of-fact sentences. No hype, no exclamation marks, no emoji, no AI claims.
