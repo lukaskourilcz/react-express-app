@@ -416,32 +416,23 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
 
   // Paths granted to a named account (see lib/topic-grants.ts) are resolved
   // here rather than stored, so they stay server-owned and survive a progress
-  // reset. Everything else in `extra` still comes from the row.
-  const grantExtra = async (extra: ReturnType<typeof sanitizeExtra>) => {
-    const { ownerEmail } = await getGameSettings();
-    return { ...extra, unlocked: withGrantedTopics(extra.unlocked, email, ownerEmail) };
-  };
+  // reset. Everything else in `extra` still comes from the row. The owner
+  // address the grants are keyed on is read alongside the row, not after it.
+  const [{ ownerEmail }, current] = await Promise.all([
+    getGameSettings(),
+    withTimeout(supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', userId).maybeSingle()),
+  ]);
+  if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
+  const stored = sanitizeExtra(current.data?.extra);
+  const extra = { ...stored, unlocked: withGrantedTopics(stored.unlocked, email, ownerEmail) };
 
   if (req.method === 'GET') {
-    const { data, error } = await withTimeout(
-      supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', userId).maybeSingle(),
-    );
-    if (error) return jsonError(res, 500, 'db_error', 'Could not load progress');
-    return res.json({
-      data: (data?.data as ProgressBlob) ?? {},
-      extra: await grantExtra(sanitizeExtra(data?.extra)),
-    });
+    return res.json({ data: (current.data?.data as ProgressBlob) ?? {}, extra });
   }
 
   // Learning progress and all stored extras are authoritative. The client may
   // request a sync, but it cannot write entitlements or currency snapshots.
-  const current = await withTimeout(
-    supabase.from(PROGRESS_TABLE).select('data,extra').eq('user_id', userId).maybeSingle(),
-  );
-  if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
-  const authoritative = sanitize(current.data?.data);
-  const authoritativeExtra = await grantExtra(sanitizeExtra(current.data?.extra));
-  return res.json({ ok: true, data: authoritative, extra: authoritativeExtra });
+  return res.json({ ok: true, data: sanitize(current.data?.data), extra });
 }
 
 async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
