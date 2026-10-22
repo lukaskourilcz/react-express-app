@@ -447,7 +447,7 @@ test.describe('FDE routes and Career sections', () => {
     for (const old of ['/roadmap/paths/dsa-foundations', '/roadmap/paths/dsa-foundations/dsa-v1-d04?activity=dsa-v1-d04-l1-read']) {
       await page.goto(old);
       await expect(page).toHaveURL(/\/learn\/software-engineer\?topic=dsa$/);
-      await expect(topicCard(page, 'DSA')).toHaveAttribute('aria-checked', 'true');
+      await expect(topicCard(page, 'DSA Foundations')).toHaveAttribute('aria-checked', 'true');
     }
   });
 
