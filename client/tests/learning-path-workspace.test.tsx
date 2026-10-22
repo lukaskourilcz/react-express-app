@@ -449,6 +449,32 @@ describe('the draft autosave', () => {
     expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
   });
 
+  it('asks before Reset replaces the learner\'s code, and saves nothing over the draft until they confirm', async () => {
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await type('my work');
+    await wait(1000);
+    expect(calls.drafts.map((one) => one.code)).toEqual(['my work']);
+    await press('Reset to the starter');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Replace your code with the starter?');
+    expect(screen.getByRole('button', { name: 'Keep my code' })).toHaveFocus();
+    await press('Keep my code');
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reset to the starter' })).toHaveFocus();
+    expect(editor().value).toBe('my work');
+    await press('Reset to the starter');
+    await act(async () => { fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' }); });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(editor().value).toBe('my work');
+    await wait(1000);
+    expect(calls.drafts.map((one) => one.code)).toEqual(['my work']);
+    await press('Reset to the starter');
+    await press('Reset');
+    expect(editor().value).toBe(`STARTER_FOR_${A}`);
+    await wait(1000);
+    expect(calls.drafts.map((one) => one.code)).toEqual(['my work', `STARTER_FOR_${A}`]);
+  }, 15_000);
+
   it('opens with the copy kept on this device when the server has nothing newer, and saves it', async () => {
     localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 0, content: { code: 'kept from last time' } }));
     await mount(A);

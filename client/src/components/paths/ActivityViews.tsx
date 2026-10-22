@@ -5,7 +5,7 @@
 // components — and none of them decides anything. Each collects a submission, hands it to the server, and renders
 // the verdict the server sent back.
 
-import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
 import { beforeAccountChange } from '../../lib/accountData';
@@ -283,6 +283,7 @@ export function CheckActivity({
 const Editor = lazyShellPart(() => import('../../coding/Editor').then((m) => ({ default: m.Editor })));
 
 const DRAFT_DEBOUNCE_MS = 900;
+const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict' | 'offline';
 
 /**
@@ -347,6 +348,26 @@ export function CodeActivity({
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
   const queueDraft = useDraftQueue(onDraft);
+  // Reset replaces the learner's code, and the autosave then writes the
+  // starter over their draft, so it asks first, as the coding workbench does.
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const resetButton = useRef<HTMLButtonElement>(null);
+  const reset = () => {
+    setConfirmingReset(false);
+    setSource(code.starter);
+    queueDraft(code.starter);
+  };
+  // Keeping the code, by the button or by Escape, hands focus back to Reset.
+  const keepCode = () => {
+    setConfirmingReset(false);
+    resetButton.current?.focus();
+  };
+  const onConfirmKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    keepCode();
+  };
   // A revealed rung takes focus, so a screen reader reads it and the last
   // press, whose button then disappears, does not drop focus to the page.
   const ladderList = useRef<HTMLOListElement>(null);
@@ -428,12 +449,18 @@ export function CodeActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <Button variant="ghost" onClick={() => {
-              setSource(code.starter);
-              queueDraft(code.starter);
-            }} isDisabled={busy} label={t('paths.code.reset')} />
+          <Button variant="ghost" ref={resetButton} onClick={() => (source === code.starter ? reset() : setConfirmingReset(true))} isDisabled={busy} label={t('paths.code.reset')} />
           <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
+        {confirmingReset && (
+          <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('paths.code.reset')} onKeyDown={onConfirmKeyDown}>
+            <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+            <div className="cd-actions">
+              <Button variant="primary" onClick={reset} label={t('coding.reset')} />
+              <Button variant="secondary" onClick={keepCode} ref={focusOnMount} label={t('coding.resetCancel')} />
+            </div>
+          </div>
+        )}
 
         <Suspense fallback={<div className="cd-note" role="status" style={{ minHeight: 320 }}>{t('common.loading')}</div>}>
           <ShellPartBoundary fallback={(retry, retrying) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={retrying} />}>
