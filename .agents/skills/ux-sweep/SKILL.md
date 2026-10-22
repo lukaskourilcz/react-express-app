@@ -10,7 +10,7 @@ description: Run a focused UX + accessibility + frontend-performance sweep on th
 1. **Spawn three agents in parallel:**
 
    - `ux-reviewer` — "Audit all components in `client/src/components/`. Cover loading/empty/error states, widths 360–1440, interaction states, microcopy, Astryx/Deep End consistency (DESIGN_RULES.md)."
-   - `accessibility-auditor` — "Audit WCAG 2.1 AA across all components and routes. Special attention: icon-only `AxIconButton`s in `client/src/App.tsx` (menu, leaderboard, Premium and shop) need accessible names; quiz answer choices need fieldset/legend; route-change focus management."
+   - `accessibility-auditor` — "Audit WCAG 2.2 AA across all components and routes. Confirm these still hold: the icon-only `AxIconButton`s in `client/src/App.tsx` (menu, leaderboard, Premium and shop) keep their `label`, quiz answer choices keep their fieldset and legend, and focus moves on route change."
    - `performance-optimizer` — "Audit frontend perf. Special attention: confirm Prism Light stays lazy, route chunks stay split, and `npm run check:bundle` stays within budget."
 
 2. **Merge into one report:**
