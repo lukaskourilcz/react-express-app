@@ -36,6 +36,8 @@ Production now contains all 725 issued coding reviews, 263 native records, the C
 
 This is a dated release checkpoint. Later exact production evidence is maintained in the linked PR/issue updates rather than inferred from staged source. Profile #435 and startup-guide #444 follow separately; owner/draft #365 and #190 holds remain.
 
+*22 October 2026:* PR #473 merged on 17 October as `bb37191a`, so production carries all 64 question revisions. #435 and #444 are closed, and PR #365 merged on 21 October.
+
 ## 15 October continuation — five coding items b043
 
 Read fulfillment mapping, fallback recovery, Promise.all totals, timer firing
@@ -2454,6 +2456,7 @@ health and correct/wrong React/JavaScript grading checks. None of those runs
 supplies missing item-level scores.
 The coding editorial wave remains open; the old count of 249 below describes
 the September wave only.
+*17 October 2026:* the coding wave finished with all 725 issued tasks reviewed (B139).
 
 The native FDE/DSA catalogues are now inventoried by exact English content:
 24 modules, 38 lessons, 112 activities and 113 individual check questions —
@@ -2531,6 +2534,7 @@ Unique's slower valid alternative still passes correctness; its average O(n)
 goal states the membership-cost assumption and is not a universal engine claim.
 These execution results approve no other task. Ten of the 725 issued coding
 tasks now have current model records; the wider audit remains open.
+*17 October 2026:* the coding wave finished with all 725 issued tasks reviewed (B139).
 
 ### Native wave 1 — DSA growth and space, 14 October 2026
 
