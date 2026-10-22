@@ -31,13 +31,15 @@ for (const theme of ['light', 'dark'] as const) {
       } });
       return route.fulfill({ status: 503, json: { error: { code: 'fixture', message: 'Local test fixture' } } });
     });
-    await page.goto('/roadmap/specializations/fde');
+    await page.goto('/learn/forward-deployed-engineer/path');
     const board = page.getByRole('region', { name: 'Competency evidence' });
     await expect(board).toBeVisible();
     await expect(board.locator('h3')).toHaveCount(manifest.competencies.length);
     await expect(board).not.toContainText('Verified pass');
     await expect(page.locator('[aria-current="step"]')).toContainText('Discover and scope');
     await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(1);
+    // The shell's delayed route focus finishes before keyboard interaction.
+    await expect(page.locator('#main-content')).toBeFocused();
     const summary = board.locator('summary').first();
     await summary.focus(); await page.keyboard.press('Enter');
     await expect(summary.locator('..')).toHaveAttribute('open', '');
