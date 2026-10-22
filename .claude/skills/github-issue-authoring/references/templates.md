@@ -109,20 +109,20 @@ When an issue reopens because newer requirements superseded what shipped, add a 
 
 ## Closeout record for a batch of issues
 
-Read from `docs/design/audit-2026-09-27-closeout.md` and `docs/design/review-2026-09-28-closeout.md`. Use it when one brief produced many issues.
+Use it when one brief produced many issues, and post it as a comment on the epic or tracking issue. The September design-audit closeouts used this shape.
 
 ```markdown
-# <Batch name> closeout (<date>)
+## <Batch name> closeout (<date>)
 
 <What closed, how many change ids, their issue range and labels, and the merge PRs in order.>
 
-## Changes
+### Changes
 
 | ID | Issue | Commit | Deviation from the brief |
 |---|---|---|---|
 | <id> <name> | #<n> | `<sha>` | <None. or what differs and why> |
 
-## Validation (<branch or commit>, <date>)
+### Validation (<branch or commit>, <date>)
 
 | Check | Result |
 |---|---|
