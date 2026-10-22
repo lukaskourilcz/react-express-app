@@ -3,8 +3,8 @@
 Interim artifacts of the devShark content audit (#176). The question audit
 finished and merged on 2026-09-11; `docs/audit/devshark-content-audit.md` is
 the report and `docs/audit/devshark-content-ledger.json` the record. Nothing
-here is quoted by the product. Nobody has audited the coding catalogue yet, and
-the tools and briefs here stay for that pass.
+here is quoted by the product. The coding catalogue was audited too, and #176
+closed on 2026-10-17. The tools and briefs stay for future reviews.
 
 - `REVIEWER-BRIEF.md`, `CODING-BRIEF.md` — the rubric and the output schema
   the item-level reviewers apply (the issue's rubric, verbatim in substance)
@@ -39,7 +39,8 @@ ledger, CSS, JavaScript and TypeScript are enforced as complete categories,
 and 84 items are retired and 1 quarantined across five topics. Every one of
 the 2,128 served questions has a first-pass review; eleven topics are waiting
 on their second reading before their rewrites can be applied.
-`docs/audit/HANDOFF-176-w2.md` says exactly how to continue.
+The handoff for the next steps (`docs/audit/HANDOFF-176-w2.md`) was deleted
+on 2026-10-22 once #176 had closed; Git history keeps it.
 
 Directories added since the first snapshot:
 
