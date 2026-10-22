@@ -116,7 +116,7 @@ Every count the product shows comes from `pathInventory(publicManifest(path))` (
 | Minimum lessons, module checks, code exercises per path | `TARGETS` in `scripts/test-learning-paths.ts` (FDE: 20, 40, 10) | `test:paths` fails below the target. Raise the target when the curriculum commits to more; never lower it to make a removal pass. |
 | Code exercises plus artifacts against the draft cap | `PATH_LIMITS.draftsPerEnrollment` | `test:paths` |
 | Interactive lesson examples | section 4 of `docs/interactive-content-manifest.md` (the `example` sections table and its "Gaps" paragraph: four of the eighteen original DSA readings, FDE none) | The document says every count in it is test-enforced, but no script counts `example` sections today (`grep -rn "'example'" scripts` finds none). Adding or removing an `example` section in an FDE lesson means editing that table and the gap paragraph by hand in the same commit. |
-| The module table and the inventory sentence | `docs/fde-curriculum.md`, "Modules and deliverables" | Read-back. Edit the module's row when its lessons, practical or dependencies change. |
+| The module table and the inventory sentence | `docs/fde-curriculum.md`, "Modules and deliverables" (the table) and "Inventory and numbering" (the sentence) | Read-back. Edit the module's row when its lessons, practical or dependencies change, and the sentence when the counts change. |
 | The counts the path header and Profile show | `pathInventory` | `scripts/learning-path-schema-contracts.ts` keeps shelf and optional modules out of them |
 
 `npm run content:snapshot` prints the live counts (`.claude/skills/shark-learning-content-map/SKILL.md`); quote it, not memory. `test:paths` prints the same line at the end (`fde v1: <n> modules, <n> lessons, …`).
