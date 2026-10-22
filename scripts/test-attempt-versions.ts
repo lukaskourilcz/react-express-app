@@ -5,7 +5,7 @@ import { codingTaskById } from '../lib/coding/active';
 import { codingAttemptVersion, createCodingSession } from '../lib/coding/session';
 import { decodeCodingSession, decodeLearningPathSession, encodeCodingSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { handleActivityStart, handleActivitySubmit } from '../lib/learning-paths/handlers';
-import { activityIn, pathById } from '../lib/learning-paths/catalog';
+import { pathById } from '../lib/learning-paths/catalog';
 import { createLearningPathSession, pathCodeAttemptVersion } from '../lib/learning-paths/session';
 import { requestHash } from '../lib/learning-paths/grade';
 import { requestMemo, withRequestContext } from '../lib/http';
@@ -86,9 +86,12 @@ await handleCodingTask({ ...request(linked), query: { id: task.id } } as never, 
 assert.equal(errorCode(closed), 'invalid_session', 'refresh cannot reopen an accepted parent');
 console.log('PASS attempt versions: coding ownership, legacy/stale refusal before grading/writes, encrypted version and linked-parent refresh');
 
-process.env.LEARNING_PATH_DSA_ENABLED = 'true';
-const path = pathById('dsa-foundations')!;
-const activity = activityIn(path, 'dsa-v1-d01-count-pairs')?.activity ?? path.modules.flatMap(module => module.activities).find(one => one.kind === 'code')!;
+// The FDE path, the only one published since E5 (#496): an authored
+// JavaScript exercise binds its exact code version into the attempt.
+process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+const path = pathById('fde')!;
+const activity = path.modules.flatMap(module => module.activities).find(one => one.kind === 'code' && !one.reuseTaskId && one.code?.language === 'javascript')!;
+assert.ok(activity, 'the FDE path publishes an authored JavaScript exercise');
 const nativeInput = { attemptId: 'native-version-0123456789', enrollmentId: 'native-enroll-0123456789', userId: account, pathId: path.id, activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose, curriculumVersion: path.version, rubricVersion: path.rubric.version };
 assert.equal(decodeLearningPathSession(createLearningPathSession(nativeInput).token)?.version, pathCodeAttemptVersion(activity, path.rubric.version));
 let accepted: Record<string, unknown> | null = null;
