@@ -50,10 +50,13 @@ export function useWorkbench(needed: boolean, attempt: number) {
 
 /** Fetch the workbench's code when the browser has nothing else to do, so a
  * task opened from a list finds it ready. It is the same download the section
- * used to make up front, off the path of the first paint. */
+ * used to make up front, off the path of the first paint. A visitor who asked
+ * the browser to save data gets it when they open a task instead, as the
+ * runner waits for their first Run (warmRunner in runner/run-tests.ts). */
 export function useWarmWorkbench() {
   useEffect(() => {
     if (workbenchView) return;
+    if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return;
     const warm = () => { loadWorkbench().catch(() => undefined); };
     // Safari has no requestIdleCallback; a short timer stands in for it.
     const host = window as Pick<Window, 'cancelIdleCallback'> & { requestIdleCallback?: Window['requestIdleCallback'] };
