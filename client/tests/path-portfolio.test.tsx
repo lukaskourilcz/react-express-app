@@ -26,6 +26,8 @@ describe('saved portfolio writing', () => {
     const md = portfolioMarkdown(manifest, entries);
     for (const id of ids) expect(md).toContain(id);
     expect(md).toContain('Saved revision: 3');
+    expect(md).toContain('Recorded state: self_reviewed');
+    expect(portfolioMarkdown(manifest, entries, state => (state === 'self_reviewed' ? 'Self-reviewed' : state))).toContain('Recorded state: Self-reviewed');
     expect(md).toContain('````text\nKeep tenant isolation.\n```\n<img');
     const maliciousKey = 'decision\n\n![image](https://example.invalid)';
     const withUntrustedKey = [{ ...entries[0], saved: { ...saved(ids[0]).draft, content: { artifact: { [maliciousKey]: 'Saved writing' } } } }];

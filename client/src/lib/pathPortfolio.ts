@@ -9,7 +9,7 @@ export interface PortfolioEntry {
   recordedState: EvidenceState;
   saved: PathDraft | null;
 }
-export const PORTFOLIO_NOTE = 'Latest writing saved online. Saved text may differ from the last submission. Writing quality is self-reviewed; this export is not an independent assessment.';
+export const PORTFOLIO_NOTE = 'The latest saved version of each written piece, drafts included. Saved text may differ from the last submission. The writing is self-reviewed, and this export is not an independent assessment.';
 
 export function portfolioDocument(manifest: LearningPathManifest, entries: PortfolioEntry[]) {
   return { format: 'devshark-path-writing-v1', path: manifest.id, curriculumVersion: manifest.version,
@@ -26,15 +26,17 @@ function literal(value: string): string {
 function fieldLabel(id: string): string {
   return id.replace(/-/g, ' ').replace(/[\r\n]/g, ' ').replace(/[\\`*_{}\[\]<>#+.!|]/g, '\\$&');
 }
-export function portfolioMarkdown(manifest: LearningPathManifest, entries: PortfolioEntry[]): string {
+/** Markdown is read by people, so states use their display labels; JSON keeps the raw value. */
+export function portfolioMarkdown(manifest: LearningPathManifest, entries: PortfolioEntry[],
+  stateLabel: (state: EvidenceState) => string = state => state): string {
   return [`# ${manifest.title} — saved writing`, '', PORTFOLIO_NOTE, '', `Curriculum version: ${manifest.version}`, '',
     ...entries.flatMap(entry => [
       `## ${entry.title}`, '', `Module: ${entry.module}`, `Activity: ${entry.activityId}`,
-      `Recorded state: ${entry.recordedState}`, `Saved revision: ${entry.saved?.revision ?? 'none'}`,
+      `Recorded state: ${stateLabel(entry.recordedState)}`, `Saved revision: ${entry.saved?.revision ?? 'none'}`,
       `Saved at: ${entry.saved?.updatedAt ?? 'not saved'}`, '',
       ...(entry.saved?.content.artifact ? Object.entries(entry.saved.content.artifact).flatMap(([id, value]) => [
         `### ${fieldLabel(id)}`, '', literal(Array.isArray(value) ? value.join('\n') : value), '',
-      ]) : ['No writing saved online for this activity.', '']),
+      ]) : ['No saved writing for this activity.', '']),
     ]),
   ].join('\n');
 }

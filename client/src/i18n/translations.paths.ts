@@ -3,7 +3,7 @@
 // Follows translations.drafts.ts and translations.privacy.ts so route-only
 // words do not add to every visitor’s initial download.
 export const pathsEn = {
-  'paths.export.note': 'Export your latest writing saved online, including drafts. Saved text may differ from your last submission. Writing quality is self-reviewed.',
+  'paths.export.note': 'Download the latest saved version of each written piece, drafts included. It can differ from what you last submitted, and edits you have not saved are left out.',
   'paths.export.markdown': 'Export writing as Markdown',
   'paths.export.json': 'Export writing as JSON',
   'paths.export.busy': 'Preparing your saved writing…',
