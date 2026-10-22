@@ -621,8 +621,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // and nothing while a puzzle or the wait for a bigger screen stands in for
   // the editor. There is no Run or Submit then, and the code under them is
   // hidden: Ctrl+Shift+Enter on a puzzle sent it as a failed attempt.
+  // They are the editor's keys, too: the skip note, the report dialog and the
+  // confirmations sit inside the workbench, and Ctrl+Enter there (the "send"
+  // of many forms) ran the code and Ctrl+Shift+Enter submitted it.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!editorShown) return;
+    if (event.target instanceof Element && event.target.closest('form, dialog, [role="dialog"], [role="alertdialog"]')) return;
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       if (event.shiftKey) { if (!submitDisabled) void submit(); }

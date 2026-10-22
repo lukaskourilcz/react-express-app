@@ -290,6 +290,35 @@ it('ends a splitter drag the browser cancels', () => {
   localStorage.removeItem('devshark:coding:layout:v1');
 });
 
+// The shortcuts belong to the editor. Ctrl+Enter, which many forms take for
+// "send", in the report dialog or the skip note ran the code, and
+// Ctrl+Shift+Enter submitted it.
+it('leaves Ctrl+Enter in the report dialog and the skip note to them', async () => {
+  // jsdom has no modal dialogs.
+  const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+  proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ verdict: 'failed', progress: progress('in_progress'), xpAwarded: 0, firstPass: false }));
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+  const note = screen.getByLabelText(/Anything you want to add/);
+  fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true });
+  fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.click(screen.getByRole('button', { name: 'Report a problem with this task' }));
+  const detail = await screen.findByRole('textbox', { name: /Additional details/ });
+  fireEvent.keyDown(detail, { key: 'Enter', metaKey: true });
+  fireEvent.keyDown(detail, { key: 'Enter', metaKey: true, shiftKey: true });
+  await act(async () => {});
+  expect(runCodeTests).not.toHaveBeenCalled();
+  expect(submitCoding).not.toHaveBeenCalled();
+  // From the editor they still run and submit.
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true });
+  await waitFor(() => expect(runCodeTests).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('aria-disabled'));
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  await waitFor(() => expect(submitCoding).toHaveBeenCalledTimes(1));
+});
+
 it('closes the Reset confirmation on Escape, keeps the code and gives focus back to Reset', () => {
   mount();
   fireEvent.change(editor(), { target: { value: 'const double = () => [];' } });
