@@ -13,7 +13,7 @@
  * promising a delivery nobody can make yet.
  */
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { apiFetch, friendlyError } from '../../lib/api';
 import { Button } from '@astryxdesign/core/Button';
@@ -37,17 +37,36 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
     shirt: 'M', name: '', line1: '', line2: '', city: '', postal: '', country: '',
   });
 
+  // Only the newest read may answer: one for another path, or one a later
+  // read overtook, lands on nothing.
+  const latestRead = useRef(0);
+  // Set before the first await, so a second press before the button turns
+  // disabled sends no second claim.
+  const sending = useRef(false);
+  // The path this screen claimed the package for. The read after a claim
+  // confirms it; when that read fails, the claim still happened.
+  const claimedHere = useRef<string | null>(null);
+
   const load = useCallback(async () => {
+    const read = ++latestRead.current;
     try {
-      setState(await apiFetch<RewardState>(`/api/user/learning-path-reward?pathId=${encodeURIComponent(pathId)}`));
+      const next = await apiFetch<RewardState>(`/api/user/learning-path-reward?pathId=${encodeURIComponent(pathId)}`);
+      if (read === latestRead.current) setState(next);
     } catch {
       // Not finished, not signed in, or the migration is not applied. All three
-      // mean the same thing here: show nothing.
-      setState(null);
+      // mean the same thing here: show nothing, unless this screen has just
+      // claimed the package, which a failed read does not take back.
+      if (read !== latestRead.current) return;
+      setState((before) => (claimedHere.current === pathId && before?.claimed ? before : null));
     }
   }, [pathId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    // A read still on its way when the path changes or the card goes answers
+    // nothing.
+    return () => { latestRead.current += 1; };
+  }, [load]);
 
   if (!state || (!state.eligible && !state.claimed)) return null;
 
@@ -61,6 +80,8 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
   }
 
   const submit = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -68,13 +89,17 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
         method: 'POST',
         body: JSON.stringify({ pathId, ...form }),
       });
-      setOpen(false);
-      await load();
     } catch (err) {
       setError(friendlyError(err));
+      return;
     } finally {
+      sending.current = false;
       setBusy(false);
     }
+    claimedHere.current = pathId;
+    setOpen(false);
+    setState((before) => ({ eligible: true, claimed: true, orderId: before?.orderId ?? null }));
+    await load();
   };
 
   const field = (key: keyof typeof form, labelKey: string, max: number, required = true) => (

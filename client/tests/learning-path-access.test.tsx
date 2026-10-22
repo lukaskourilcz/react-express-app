@@ -677,3 +677,65 @@ describe('the Profile picker', () => {
     expect(asked).toBe(0);
   });
 });
+
+// The claim form itself, dormant while merchandise is paused but kept working
+// for when it returns.
+describe('the package claim', () => {
+  const claimCard = async (pathId = 'fde') => {
+    const { LanguageProvider } = await import('../src/i18n/LanguageContext');
+    const { PathRewardClaim } = await import('../src/components/paths/PathRewardClaim');
+    const tree = (id: string) => <LanguageProvider><PathRewardClaim pathId={id} /></LanguageProvider>;
+    let view!: ReturnType<typeof render>;
+    await act(async () => { view = render(tree(pathId)); });
+    return { switchTo: (id: string) => act(async () => { view.rerender(tree(id)); }) };
+  };
+  const openForm = async () => {
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Claim the package' })); });
+  };
+  const claimForm = () => screen.getByRole('button', { name: 'Claim it' }).closest('form') as HTMLFormElement;
+
+  it('sends one claim for a double press, and keeps the confirmation when the read after it fails', async () => {
+    let reads = 0;
+    const claims: unknown[] = [];
+    let answer!: () => void;
+    server.use(
+      http.get('*/api/user/learning-path-reward', () => {
+        reads += 1;
+        return reads === 1 ? HttpResponse.json({ eligible: true, claimed: false, orderId: null }) : HttpResponse.json({ error: { code: 'db_error' } }, { status: 500 });
+      }),
+      http.post('*/api/user/learning-path-reward', async ({ request }) => {
+        claims.push(await request.json());
+        await new Promise<void>((resolve) => { answer = resolve; });
+        return HttpResponse.json({ claimed: true, orderId: 'order-1' });
+      }),
+    );
+    await claimCard();
+    await openForm();
+    await act(async () => {
+      fireEvent.submit(claimForm());
+      fireEvent.submit(claimForm());
+    });
+    await waitFor(() => expect(claims).toHaveLength(1));
+    await act(async () => { answer(); });
+    await waitFor(() => expect(reads).toBe(2));
+    expect(await screen.findByText('Package claimed. You will hear from us when it ships.')).toBeInTheDocument();
+    expect(claims).toHaveLength(1);
+  });
+
+  it('lets a slow read for the path before answer nothing for the path shown now', async () => {
+    let releaseFirst!: () => void;
+    server.use(http.get('*/api/user/learning-path-reward', async ({ request }) => {
+      const pathId = new URL(request.url).searchParams.get('pathId');
+      if (pathId === 'fde') {
+        await new Promise<void>((resolve) => { releaseFirst = resolve; });
+        return HttpResponse.json({ eligible: true, claimed: true, orderId: 'order-1' });
+      }
+      return HttpResponse.json({ eligible: false, claimed: false, orderId: null });
+    }));
+    const { switchTo } = await claimCard('fde');
+    await waitFor(() => expect(releaseFirst).toBeTypeOf('function'));
+    await switchTo('other');
+    await act(async () => { releaseFirst(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(screen.queryByText('Package claimed. You will hear from us when it ships.')).toBeNull();
+  });
+});
