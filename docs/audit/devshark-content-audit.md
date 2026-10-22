@@ -1,12 +1,30 @@
 # devShark content audit — the question bank
 
-> devShark is English only: the second language described below was removed on 21 October 2026 (owner decision).
+## Current state (22 October 2026)
+
+This file is an append-style record of the content review. Each dated entry keeps the evidence of its day; later entries add to it and leave earlier ones as they were. devShark has shipped English only since 21 October 2026, so the Czech passes that earlier entries describe no longer ship.
+
+The ledger, `docs/audit/devshark-content-ledger.json`, holds one row per reviewed item, and `scripts/build-curation-registry.ts` generates the registry the server reads from it:
+
+- 2,288 question records: 1,979 rewritten, 155 retained, 152 retired and 2 quarantined. Q001 to Q013 revised all 64 eligible answer-length candidates (last commits `292b11fd` and `dff171a3`, merged in PR #473 on 17 October).
+- 769 coding-task records, one per issued task: 725 rewritten in batches B001 to B139 (finished 17 October) and 44 retained, the 29 DSA Foundations and 15 DSA Advanced tasks added on 21 and 22 October.
+- The 45 hidden system-design tasks have no ledger rows. `docs/audit/system-design-review-2026-10-22.md` reviews them, and PR #558 fixed the 29 it marked needs-fix. The track stays hidden until the owner decides (#391).
+
+The FDE path reviews live outside the ledger: 356 records in `docs/audit/wip/native/*.jsonl` (38 lessons, 121 activities, 197 check questions) and the 18 original DSA reading records in `docs/audit/wip/native/learn/`. CI runs `audit:native-reviews`, which fails when a record no longer matches the content hash it reviewed.
+
+A model performed every review and recorded its evidence; no record is an independent human review.
+
+Open, owner only: the content decisions under #391, including whether to publish the system-design track, and the production-data decisions under #236 (the July `question_edits` hides and the unfiltered bank snapshot).
+
+A "pending" or "remains open" line in the entries below records the state on its date. Every issue and PR those entries name as open is now closed or merged, apart from #190, #236 and #391.
 
 ## Current individual source checkpoint — B139 and Q013, 17 October 2026 UTC
 
 All 725 issued coding tasks, 263 native records and 2,168 question records have current individual model reviews. Q001–Q013 revise all 64 eligible answer-length candidates, ending with commits `292b11fd` and `dff171a3`. The final batch contains the four remaining questions rather than adding an artificial fifth identity. The 1,820-item effective-bank copy sweep passes with zero artifacts; the original diagnostic now flags zero eligible/effective items. Its 41 already-withheld candidates remain withheld. This is a finite reading aid, not proof that all answer cues have been eliminated.
 
 The #472 release checkpoint below now deploys all 725 coding/263 native reviews and the first 40 focused question revisions. PR #472 freezes ten final coding reviews, one existing Comments viewer revision and Q001–Q008 (40 question revisions) at `9d7e877ba449931dd3b0d2ca71bb02a8a3a2eba8`. The other 24 question revisions are committed on `codex/bank-residual-q009-onward`. All 485 deletion overrides remain preserved; availability stays 2,014 statically eligible and 1,820 effective. Future-review gating, engineering #458/#461/#463/#466, guarded releases and UI #435/#444 remain. This is same-session model/finite execution evidence; owner decisions, draft #365 and dedicated acceptance in #190 remain open.
+
+*22 October 2026:* PR #473 merged `codex/bank-residual-q009-onward` on 17 October as `bb37191a`; #435, #444, #458, #461, #463 and #466 are closed, and PR #365 merged on 21 October with the export switched off.
 
 ## Release checkpoint — 17 October 2026 UTC, PR #472
 
