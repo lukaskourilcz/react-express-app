@@ -6001,3 +6001,43 @@ PR #559 is open and not merged; the owner merges it. Frozen head c6667b01 passes
 *22 October 2026:* PR #559 merged as `1f5a3b11` and #510 is closed. The branch-scoped Preview `LEARNING_PATH_FDE_ENABLED` was removed, so no Vercel environment sets it; production serves FDE off until the owner switches it on.
 
 Non-claims: no authenticated run against production or the preview, no production enrollment, submission or Premium check; the walk-through's accounts were dedicated local accounts and its database a local one. No physical devices or assistive technology were used; field data (real learners' use, completion and error rates) is unknown until the switch is on. The production switch is not set by this work.
+
+## FDE code review — 23 October 2026
+
+The owner asked for a code review of the FDE path before launch: find bad practices and fix them, with no e2e or browser tests. Branch `claude/fde-code-review` from `main` `cdb33a4b`. It changes no API under `api/` (twelve handlers), no SQL migration, no reviewed content, no tier gate and no XP amount. The production flag stays off.
+
+**Method.** Four reviewers covered disjoint areas: server handlers, server core, client screens and client parts. Each reviewer committed one fix at a time, and a skeptic re-read each commit, keeping, repairing or reverting it with new commits. A second round fixed the real issues the first round had left open. The method is now the skill `.claude/skills/section-code-audit/SKILL.md`.
+
+**Fixed (server)**
+- **Raced writes:** a second enrol or a raced first draft save answered 500 and now returns the existing row or 409 `draft_conflict`.
+- **Out-of-range draft saves:** they now answer 400 or 413 instead of 500.
+- **Parallel reads:** start, progress and draft reads run in parallel after the ownership check.
+- **Content validation:** the verdict is cached per path, so the validator no longer runs on every request.
+- **Artifact input:** list entries that are not strings are dropped.
+- **Validator:** it now refuses fractional answer indexes, NaN or non-finite thresholds and weights, empty traces and blank example captions.
+- **Shelf modules:** they no longer count in the artifact tally.
+- **Failed draft reads:** they are logged with the request id, and the response says `draftUnavailable` so the browser keeps its copy.
+
+**Fixed (client)**
+- **Drafts:**
+  - The last keystrokes are flushed on unmount and routed to the activity they belong to.
+  - Path drafts survive an involuntary sign-out for the same account only, and nothing is written or sent after the account changes.
+  - Stored drafts are shape-checked before use.
+- **Requests:** late results no longer change the next activity; Start, Pause, Claim and Submit are guarded against double submits; superseded start requests are aborted.
+- **States:**
+  - An expired check says so instead of re-dealing.
+  - Start and "not started" wait for the enrollment list.
+  - A paused path lists its activities without links.
+  - Reset asks before wiping code.
+- **Speed and bundle:** the code editor loads lazily, which removes CodeMirror (about 173 kB gzip) from the path screens; helpers used only by the workspace moved out of the main chunk; lesson views and rich text are memoised; the portfolio export reads in two lanes; the route preload matches only FDE routes.
+- **Share card:** works without `roundRect` (Safari before 16, Firefox before 112), frees its canvas after export and keeps the download link alive until the click.
+- **Accessibility:** no page-wide `aria-live`; focus moves to the opened activity and to each revealed hint; long code tokens wrap at 360 px and 200 % text.
+
+**Checks** (local, Node 24, `npm run ci:parity -- --only …` at `575f8af5`)
+- **Passed:** typecheck:api, typecheck:scripts, typecheck:tooling, check:unused, check:security, test:paths, test:path-authority, test:launch, test:client (110 files, 1,107 tests), build and check:bundle (initial load 238,362 gzip bytes, against 238,454 on `main` and a budget of 241,651).
+- **After the later draft fix:** typecheck:api, test:paths, the client typecheck, check:unused and `learning-path-workspace.test.tsx` (33 tests) passed again.
+- **Not run:** browser, responsive and SQL; CI covers them.
+
+**Left open**
+- **Code retries:** a network retry of a code submit with the same idempotency key re-runs the grader before the replay is detected. It costs grader time, not correctness.
+- **Read rate limits:** the progress and preference GETs have no per-caller read limit, like most user GETs. Adding one is a rate-limit policy decision (NEEDED.md).
