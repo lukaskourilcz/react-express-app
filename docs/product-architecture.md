@@ -1643,17 +1643,30 @@ seeds a row in every such table.
 
 ## Deployment
 
-One Vercel project builds this repository for `https://devshark.app`. Set
-`VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_ID=devshark` and
-`PRODUCT_SUBJECT=webdev`, or leave them unset: both resolve to devShark. Any
-other value fails the build in `resolveCatalogProductId`, which is what keeps a
-project still configured for StudyShark from deploying this code. The
-deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`,
-`GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_ID` and
-`GITHUB_APP_CLIENT_SECRET` for the GitHub garden, which needs all five.
+One Vercel project, `react-express-app`, builds this repository for
+`https://devshark.app` and runs its functions in `arn1` (`vercel.json`).
+Production reads the Supabase project `rvlybcjdpafwyeuojvhl` (eu-north-1),
+migrated through `supabase/supabase-schema-066.sql`; preview deployments share
+that project. Node 24 is the supported runtime, and CI runs on it
+(`.github/workflows/quality.yml`; `npm run ci:parity` repeats the `verify`
+job locally).
 
-The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
-promotes no other product.
+Set `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_ID=devshark`
+and `PRODUCT_SUBJECT=webdev`, or leave them unset: both resolve to devShark.
+Any other value fails the build in `resolveCatalogProductId`. Optional
+switches and integrations:
+
+- `LEARNING_PATH_FDE_ENABLED=true` opens the FDE path; Production does not set
+  it today ("Learning paths").
+- The Stripe variables of "Tiers and billing"; billing is off.
+- `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
+  `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` for the GitHub garden,
+  which needs all five.
+- `DEVSHARK_MARKETING_EXPORT_SECRET` for the marketing source export; no
+  environment sets it.
+
+The footer carries the legal links, devShark's own social profiles, and the
+appearance and sound controls, and promotes no other product.
 
 ## Compatibility and rollback
 
