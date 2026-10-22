@@ -398,6 +398,36 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── two enrolls at once ──────────────────────────────────────────── */
+    // A double click or a second tab: both requests find no row and both
+    // insert, so the later one meets the (user, path, version) unique key. It
+    // is answered with the enrollment the first one created, not a 500.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const racer = `user-enroll-race-${stamp}`;
+      const row = { ...enrollmentRow('active'), user_id: racer };
+      const calls: string[] = [];
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const res = response();
+        await handleEnrollment(request('POST', `enroll-race-${stamp}`, { user_id: racer, action: 'enroll', pathId: 'fde', curriculumVersion: fde.version }), res as never,
+          fakeSupabase({ rpc: (name) => {
+            calls.push(name);
+            return calls.length === 1
+              ? { error: { code: '23505', message: 'duplicate key value violates unique constraint "learning_path_enrollments_user_id_path_id_curriculum_version_key"' } }
+              : { data: { found: true, created: false, enrollment: row } };
+          } }));
+        const listed = (res.body as { enrollments?: { enrollmentId: string }[] } | undefined)?.enrollments;
+        if (res.statusCode !== 200 || listed?.[0]?.enrollmentId !== enrollmentId || calls.length !== 2) {
+          fail(`an enroll that lost the race to the unique key answers ${res.statusCode} ${code(res)} after ${calls.length} calls, not 200 with the existing enrollment`);
+        }
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── every off-loop decision goes through one helper ──────────────── */
     // A shelf module is off the loop even if its optional flag slipped. The
     // validator refuses that, but completion, the next action and the reward's

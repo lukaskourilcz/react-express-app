@@ -470,7 +470,7 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     // recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
 
-    const saved = await withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
+    const upsert = () => withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
       p_user_id: userId,
       p_enrollment_id: newId(),
       p_path_id: path.id,
@@ -478,6 +478,12 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
       p_base_track: baseTrack,
       p_action: action,
     }));
+    let saved = await upsert();
+    // Two enrolls at once (a double click, a second tab) both find no row and
+    // both insert; the later one meets the (user, path, version) unique key.
+    // The earlier one's row is the enrollment, so the call is made once more
+    // and finds it, instead of answering 500 to a learner who is enrolled.
+    if (saved.error?.code === '23505') saved = await upsert();
     if (saved.error) {
       if (migrationMissing(res, saved.error)) return;
       return jsonError(res, 500, 'db_error', 'Could not record the enrollment');
