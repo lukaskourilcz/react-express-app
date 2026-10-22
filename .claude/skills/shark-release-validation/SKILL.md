@@ -8,7 +8,7 @@ description: Run the devShark release contract after implementation. Use before 
 1. Inspect branch, status, unstaged/staged diffs, and recent commit style. Separate pre-existing work.
 2. Confirm exactly 12 `api/**/*.ts` handlers and no native app.
 3. Search for public DevQuiz copy, references or links to another product, duplicate registries/URLs/counts/colors, user-visible strings that bypass `translations.ts`, unsafe client answers/scores/XP, paid learning advantages, heavy global media, and motion without reduced-motion handling.
-4. Run the `verify` CI job locally with `npm run ci:parity`; the skill's "When to run which" rule decides between `--fast` and the full job. It runs the 53 steps of `.github/workflows/quality.yml` in order with the CI environment; `.claude/skills/ci-parity-and-pr/SKILL.md` lists them. The six commands below are a quick inner loop, not the release contract: PR #401 passed them and still failed `check:bundle` in CI.
+4. Run the `verify` CI job locally with `npm run ci:parity`; the skill's "When to run which" rule decides between `--fast` and the full job. It runs the 55 steps of `.github/workflows/quality.yml` in order with the CI environment; `.claude/skills/ci-parity-and-pr/SKILL.md` lists them. The six commands below are a quick inner loop, not the release contract: PR #401 passed them and still failed `check:bundle` in CI.
 
    ```sh
    npm run typecheck:api
