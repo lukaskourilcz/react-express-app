@@ -1,0 +1,24 @@
+{
+  "kind": "b4-native-individual-reviews",
+  "reviewedIds": [
+    "fde-v1-m01-l1",
+    "fde-v1-m01-l2",
+    "fde-v1-m01-l2-read",
+    "fde-v1-m01-scope-brief",
+    "fde-v1-m01-exec-update",
+    "fde-v1-m10-l2",
+    "fde-v1-m10-l2-read",
+    "fde-v1-m10-runbook",
+    "fde-v1-m10-workshop-outline",
+    "fde-v1-m10-pushback-email"
+  ],
+  "uniqueCoverageAdded": 4,
+  "currentReviewFiles": [
+    "review-2026-10-15-n021.jsonl",
+    "review-2026-10-15-n031.jsonl",
+    "review-2026-10-15-n040.jsonl",
+    "review-2026-10-22-b4.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b4-before.json",
+  "note": "Six records replaced in place after the #500 B4 M01/M10 content changes (previousHash = old contentHash) and four new artifact records. One wording defect fixed in fde-v1-m01-l2 before review. Same-session model review by a reviewer separate from the author; no automatic editorial scoring."
+}

@@ -60,8 +60,8 @@
   "retiredSection": 319,
   "unreferenced": 312,
   "legacyCore": 795,
-  "codingTasks": 770,
-  "activeCodingTasks": 725,
+  "codingTasks": 799,
+  "activeCodingTasks": 754,
   "hiddenCodingTasks": 45,
   "pathMaterials": 263
  },
@@ -342070,6 +342070,4418 @@
     "notes": "Read and separately rechecked the full English prompt,hint,approach,starter,skeleton,public/hidden suites and all three published programs. Also read the complete existing filled Todo example and both exact canonical markup QA edits where applicable; compare final program/suite bytes with the native captures. Final English material and execution reread; same-session self-review only.",
     "pass": "second-reading"
    }
+  },
+  {
+   "id": "alg-dsa-sum-of-evens",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 1,
+   "objective": "Sum the even integers of an array, zero and negatives included, in one pass of at most n reads.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "bce3a25898776777",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Single-pass accumulation is current everyday JavaScript.",
+    "practicalUtility": "Summing a filtered subset is routine data work.",
+    "transferable": "Reading each element once carries to every linear scan.",
+    "audienceFit": "Fits the first DSA level: one loop and one condition.",
+    "riskOutcome": "A negative-odd or double-read slip gives a wrong total or extra cost."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d01 accumulator exercise, ported with its read budget as a visible and hidden check. Hidden checks catch a hard-coded total, a mutated input and a second read. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d01-linear-accumulator) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "wrong: reading each even slot twice",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "wrong: testing % 2 !== 1, which admits negative odd numbers",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "wrong: sorting the caller's array first",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-sum-of-evens",
+      "contentHash": "bce3a25898776777",
+      "label": "alternative: copying the input, then summing the copy",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 8
+     }
+    ],
+    "boundaries": "Empty input, no even values, negative evens, zero, a 10-element read budget.",
+    "mutation": "The input is read-only; a hidden check returns it beside the total.",
+    "complexity": "Authored target: O(n) time, where n is the number of input elements. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-halving-steps",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 2,
+   "objective": "Count floor halvings from n down to 1.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "5bdddc7cf89eac58",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Logarithmic halving is how binary search and balanced trees are explained today.",
+    "practicalUtility": "Counting halvings is a building block rather than a product task.",
+    "transferable": "The shape recurs in binary search, heaps and divide and conquer.",
+    "audienceFit": "Fits the Big O introduction level.",
+    "riskOutcome": "Ceil versus floor gives an off-by-one count."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d01 halving counter. The prompt bounds n at Number.MAX_SAFE_INTEGER, and visible and hidden checks run past 32 bits up to that bound, so a ceil, a counter starting at 1, a 32-bit shift, Math.floor(Math.log2(n)) (49 for 2^49 - 1) and a lookup of the visible answers fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (4 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d01-halving-counter) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: halving with Math.ceil",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: a counter that starts at 1",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: halving with a 32-bit shift",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-halving-steps",
+      "contentHash": "5bdddc7cf89eac58",
+      "label": "wrong: the floor of the base-2 logarithm, which rounds up just below a large power of two",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 10
+     }
+    ],
+    "boundaries": "n = 1 (zero steps), 2, odd values, powers of two and their neighbours, 1000000, 2^31, 2^40, 2^49 - 1, Number.MAX_SAFE_INTEGER.",
+    "mutation": "Numeric input; nothing to mutate.",
+    "complexity": "Authored target: O(log n) time, where n is the starting numeric value. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-max-gap",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 2,
+   "objective": "Return max minus min of an array in one pass, within 2n reads.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "a3a3709259c406a4",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Replacing a pairwise scan by one pass is current interview and production practice.",
+    "practicalUtility": "Range of a series is common in metrics code.",
+    "transferable": "Teaches reducing O(n²) pair work to O(n).",
+    "audienceFit": "Fits level 2 after the halving counter.",
+    "riskOutcome": "A pairwise scan stays correct but costs quadratically."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d01 pair-versus-pass exercise. The read budget rejects every pairwise scan, including the path authority attacks (a declared Proxy, a replaced global Proxy, a replaced RegExp test), which are known wrong answers here. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 12/12 expected verdicts (7 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d01-pair-versus-pass) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: comparing every pair",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: seeding the smallest and largest with 0",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: spreading the array into Math.max and Math.min, which overflows the call stack on long input",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: sorting the caller's array",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: every pair behind a declared Proxy that hands the array back",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: every pair behind a replaced global Proxy",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "wrong: every pair behind a replaced RegExp test",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-max-gap",
+      "contentHash": "a3a3709259c406a4",
+      "label": "alternative: an independent min and max loop",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "Empty, single, all-equal, all-negative input, 9 and 12 element budgets, 200,000 values under a read cap of 2n.",
+    "mutation": "A hidden check returns the input beside the gap; sorting in place fails it.",
+    "complexity": "Authored target: O(n) time, where n is the input length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-reverse-in-place",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 3,
+   "objective": "Reverse the caller's array in place, return the same array, within n indexed writes.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "97e1e8219a5dbacb",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "In-place mutation versus copying is a live JavaScript design choice.",
+    "practicalUtility": "Reversing a buffer in place is common systems work.",
+    "transferable": "The ends-inward swap reappears in two-pointer problems.",
+    "audienceFit": "Fits the arrays level.",
+    "riskOutcome": "Returning a copy leaves the caller's array unchanged, a silent bug."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d02 reverse-in-place exercise. A write counter counts assignments, definitions and deletions on the caller's array; a copy, delete-and-replace and repeated definitions (the path authority attacks) fail, and one definition per index or Reflect after Object.defineProperty was replaced still pass. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 11/11 expected verdicts (5 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d02-reverse-in-place) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "wrong: returning a reversed copy only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "wrong: returning the array unchanged",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "wrong: deleting each index before writing it",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "wrong: defining every index three times",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "wrong: defining every index three times through Reflect",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "alternative: one property definition per index",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-in-place",
+      "contentHash": "97e1e8219a5dbacb",
+      "label": "alternative: Reflect definitions after Object.defineProperty was replaced",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     }
+    ],
+    "boundaries": "Empty, single, even and odd lengths, strings, 7 and 8 element budgets.",
+    "mutation": "Mutation is required: checks read the caller's array and identity of the return.",
+    "complexity": "Authored target: O(n) time and O(1) extra space, where n is the input length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-dedupe-sorted",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 3,
+   "objective": "Compact the distinct values of a sorted array into its prefix and return their count, within n writes.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "db1bd7d6f49afc11",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Read and write pointers are the standard in-place compaction.",
+    "practicalUtility": "Deduplicating sorted data is routine in pipelines.",
+    "transferable": "The two-pointer pattern carries to filtering and partitioning.",
+    "audienceFit": "Fits the arrays level after reverse.",
+    "riskOutcome": "A copy never written back leaves the caller with duplicates."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d02 dedupe exercise. Checks read the caller's prefix and the write count; a count-only answer, the length and a reversed prefix fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d02-dedupe-sorted) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "wrong: counting the distinct values without writing them",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "wrong: returning the length",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-dedupe-sorted",
+      "contentHash": "db1bd7d6f49afc11",
+      "label": "wrong: writing the distinct values in reverse",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     }
+    ],
+    "boundaries": "Empty, single, one long run, no duplicates, negatives and zero, 6 and 10 element budgets.",
+    "mutation": "Mutation of the caller's prefix is the contract; the tail is unchecked by design.",
+    "complexity": "Authored target: O(n) time and O(1) extra space, where n is the original array length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-palindrome",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 4,
+   "objective": "Decide whether an ASCII string reads the same both ways, case-sensitively.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "0a705e81e0cecad9",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "String scanning from both ends is current practice.",
+    "practicalUtility": "Palindrome checks are a drill more than a product feature.",
+    "transferable": "The two-index walk transfers to every ends-inward problem.",
+    "audienceFit": "Fits the strings level.",
+    "riskOutcome": "Case folding or an outer-pair-only check gives a wrong verdict."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d02 palindrome exercise. Hidden checks pin case sensitivity, digits, even and odd lengths and a mismatch deep inside a long string, so case folding and comparing only the outer pair fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d02-palindrome-two-pointer) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "wrong: calling the empty string not a palindrome",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "wrong: folding case",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-palindrome",
+      "contentHash": "0a705e81e0cecad9",
+      "label": "wrong: comparing the outer pair only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "Empty, one and two characters, case, digits, 17-character strings.",
+    "mutation": "Strings are immutable.",
+    "complexity": "Authored target: O(n) time and O(1) extra space, where n is the number of ASCII characters. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-frequency-map",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 5,
+   "objective": "Count occurrences into a Map keyed by SameValueZero, in first-appearance order.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "e63ea5f524f30581",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Map-based counting is the current idiom.",
+    "practicalUtility": "Frequency counts are everyday analytics code.",
+    "transferable": "Keyed counting underlies grouping and indexing.",
+    "audienceFit": "Fits the hash maps level.",
+    "riskOutcome": "A plain object merges 1 and \"1\" and reorders integer keys."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d03 frequency map. Hidden checks cover objects and symbols by identity, NaN, signed zero, mixed types and first-appearance order, so a plain object, counting each value once and draining the input fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Keyed_collections",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d03-frequency-map) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "wrong: counting every value once",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "wrong: counting into a plain object, which merges 1 and \"1\" and sorts integer keys",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-frequency-map",
+      "contentHash": "e63ea5f524f30581",
+      "label": "wrong: emptying the caller's array with shift",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 11
+     }
+    ],
+    "boundaries": "Empty input, NaN, -0 and 0, objects, symbols, undefined and null, integer-like keys.",
+    "mutation": "A hidden check returns the input beside the entries.",
+    "complexity": "Authored target: O(n) time, where n is the number of input entries, assuming bounded key hashing and comparison and average constant Map operations. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-first-unique",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 5,
+   "objective": "Return the earliest value that appears exactly once, under SameValueZero, or null.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8ae5ce7f1cae6b24",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Two-pass counting is the current idiom.",
+    "practicalUtility": "Finding the first unique event or item is practical.",
+    "transferable": "Count-then-scan transfers to many keyed problems.",
+    "audienceFit": "Fits the hash maps level.",
+    "riskOutcome": "indexOf never finds NaN, so a NaN entry is misread."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d03 first-unique exercise. Hidden checks cover object identity, symbols, undefined, NaN, signed zero and mixed types; returning the first value, an indexOf comparison and draining the input fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Keyed_collections",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d03-first-unique) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "wrong: returning the first value",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "wrong: comparing indexOf with lastIndexOf, which never finds NaN",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-first-unique",
+      "contentHash": "8ae5ce7f1cae6b24",
+      "label": "wrong: draining the caller's array with shift",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 13
+     }
+    ],
+    "boundaries": "Empty, all repeating, last-only unique, 0 versus \"0\", NaN, undefined.",
+    "mutation": "A hidden check returns the input beside the result.",
+    "complexity": "Authored target: O(n) time, where n is the number of input entries, assuming bounded key costs and average constant Map operations. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-set-intersection",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 5,
+   "objective": "Return the values both arrays share, once each, in left order, under SameValueZero.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "573d69f5f9731bb9",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Set membership is the current idiom for intersections.",
+    "practicalUtility": "Intersecting id lists is everyday code.",
+    "transferable": "Build-once, probe-many carries to joins and lookups.",
+    "audienceFit": "Fits the hash maps level.",
+    "riskOutcome": "Duplicates or the wrong order corrupt downstream results."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d03 intersection exercise. Hidden checks cover NaN, identity, falsy values, signed zero, input preservation and a fresh array per call; keeping duplicates, right-hand order, indexOf and one shared empty array fail. The O(n + m) target has no single-n estimate, so the base reward stays.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Keyed_collections",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (4 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d03-set-intersection) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "wrong: keeping the duplicates of left",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "wrong: following the order of right",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "wrong: testing membership with indexOf, which never finds NaN",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-set-intersection",
+      "contentHash": "573d69f5f9731bb9",
+      "label": "wrong: handing every empty input the same array",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     }
+    ],
+    "boundaries": "Empty sides, no overlap, duplicates on both sides, NaN, -0, mixed types.",
+    "mutation": "Hidden checks return both inputs and compare result identity.",
+    "complexity": "Authored target: O(n + m) time, where n and m are the lengths of `left` and `right`, assuming bounded key costs and average constant Set operations. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-stack",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 6,
+   "objective": "Build a private stack with push, pop, peek and size, with null on underflow.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "098b2837652a7b9d",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Closures over private state are current JavaScript.",
+    "practicalUtility": "Stacks back undo, parsing and traversal.",
+    "transferable": "The underflow contract transfers to every container API.",
+    "audienceFit": "Fits the stacks level.",
+    "riskOutcome": "undefined instead of null, or shared storage, breaks callers."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [
+    "The path prompt had no complexity target; this task authors \"Target: O(1) time per operation\"."
+   ],
+   "rationale": "The d04 stack exercise. Hidden checks cover identity, falsy values, NaN, symbols, null as a value and two independent stacks; popping an empty array, a removing peek, a negative size and a module-level array fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (4 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d04-stack-api) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "wrong: popping an empty array, which gives undefined",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "wrong: a peek that removes the top",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "wrong: a size counter that goes below 0",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-stack",
+      "contentHash": "098b2837652a7b9d",
+      "label": "wrong: one array shared by every stack",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     }
+    ],
+    "boundaries": "Empty pop and peek, popping past empty, null pushed, falsy values, two instances.",
+    "mutation": "Values come back by identity; storage is private per instance.",
+    "complexity": "Authored target: O(1) time per operation, where an operation is one call to push, pop, peek or size. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-balanced-brackets",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 6,
+   "objective": "Decide whether three bracket kinds nest correctly.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8fe9f7870fbc8cb2",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Stack-based matching is current.",
+    "practicalUtility": "Bracket matching appears in parsers and editors.",
+    "transferable": "Matching the most recent opener transfers to every nesting problem.",
+    "audienceFit": "Fits the stacks level.",
+    "riskOutcome": "Counting characters calls \")(\" and \"([)]\" balanced."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d04 brackets exercise. Hidden checks cover deep nesting, repetition and one missing closer; counting per kind, ignoring leftover openers and accepting any closer fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d04-balanced-brackets) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "wrong: counting each kind instead of matching order",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "wrong: ignoring openers still waiting at the end",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-balanced-brackets",
+      "contentHash": "8fe9f7870fbc8cb2",
+      "label": "wrong: accepting a closer of any kind",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "Empty, lone opener, lone closer, wrong kind, overlap, 20-deep nesting.",
+    "mutation": "Strings are immutable.",
+    "complexity": "Authored target: O(n) time and O(n) extra space, where n is `text. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-queue",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 7,
+   "objective": "Build a FIFO queue over a supplied buffer with a head index, within six buffer operations per value.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "321653d18dbfaaba",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Head-index queues are how JavaScript avoids shift costs.",
+    "practicalUtility": "Queues back schedulers and breadth-first work.",
+    "transferable": "Amortised constant-time reasoning carries widely.",
+    "audienceFit": "Fits the queues level at Medium.",
+    "riskOutcome": "shift-based queues degrade to quadratic time on long runs."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [
+    "The path signature read a harness global (newQueueBuffer); the task passes the factory as createQueue(newBuffer), a deliberate signature change.",
+    "The path prompt had no complexity target; this task authors \"Target: O(1) time per operation, amortized\"."
+   ],
+   "rationale": "The d04 head-index queue. A counted buffer has push, length and index access only and counts every read, write, definition and deletion; shift, a slide, a private array, a shared buffer and repeated definitions (the path authority attacks) fail, while defining the next index directly passes. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 14/14 expected verdicts (8 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d04-head-index-queue) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: dequeuing with shift",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: sliding the waiting values down on every dequeue",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: ignoring newBuffer and keeping a private array",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: one buffer shared by every queue",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: undefined instead of null from an empty queue",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: defining the new slot ten times",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: defining the new slot ten times through Reflect",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "wrong: deleting and redefining the new slot ten times",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "alternative: appending by defining the next index",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-queue",
+      "contentHash": "321653d18dbfaaba",
+      "label": "alternative: Reflect definitions after Object.defineProperty was replaced",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     }
+    ],
+    "boundaries": "Empty dequeue, drain and refill, null as a value, falsy values, two queues, 32, 48 and 64-value traces.",
+    "mutation": "Values come back by identity; each queue owns its buffer.",
+    "complexity": "Authored target: O(1) time per operation, amortized over a sequence of calls, where an operation is one call to enqueue, dequeue or size. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-prepend-and-find",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 8,
+   "objective": "Prepend one node and find the first node holding a value with ===.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "f5ef81292743c950",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Plain object nodes are current JavaScript.",
+    "practicalUtility": "Linked structures appear in LRU caches and editors.",
+    "transferable": "Walking with a cursor variable carries to every list task.",
+    "audienceFit": "Fits the linked lists level.",
+    "riskOutcome": "Loose equality or copying the head breaks identity."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d05 prepend-and-find exercise. Hidden checks cover NaN, signed zero, objects, symbols, falsy values and unchanged nodes through a probe-based snapshot; ==, rewriting the head in place and appending at the tail fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d05-prepend-and-find) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "wrong: find comparing with ==",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "wrong: prepend rewriting the old head in place",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-prepend-and-find",
+      "contentHash": "f5ef81292743c950",
+      "label": "wrong: prepend appending at the tail",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     }
+    ],
+    "boundaries": "Empty list, one node, duplicates, absent values, NaN, -0, \"2\" versus 2.",
+    "mutation": "A snapshot proves values, links and key counts are unchanged.",
+    "complexity": "Authored target: O(n) time for find, with O(1) prepend and O(1) extra space, where n is the number of nodes. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-delete-first-match",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 8,
+   "objective": "Unlink the first node holding a value and return the resulting head.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "72459fdca91f1ffc",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Predecessor rewiring is the standard list edit.",
+    "practicalUtility": "Removing one entry from a chain is common.",
+    "transferable": "Head-as-special-case reasoning transfers widely.",
+    "audienceFit": "Fits the linked lists level.",
+    "riskOutcome": "Returning the old head or deleting every match corrupts the list."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d05 delete-first exercise. Hidden checks cover signed zero, NaN, object identity, the removed node left intact and surviving node identity; deleting every match, keeping the old head and rebuilding from values fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d05-delete-first-match) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "wrong: deleting every match",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "wrong: returning the old head when the head matches",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-delete-first-match",
+      "contentHash": "72459fdca91f1ffc",
+      "label": "wrong: rebuilding the list from its values",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     }
+    ],
+    "boundaries": "Empty list, head, middle, tail, only node, absent value, repeated values.",
+    "mutation": "Only the predecessor link changes; a snapshot checks the rest.",
+    "complexity": "Authored target: O(n) time and O(1) extra space, where n is the node count. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-reverse-list",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 8,
+   "objective": "Reverse a singly linked list by rewiring the original nodes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "b53db536e13148c2",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Pointer reversal remains a standard exercise.",
+    "practicalUtility": "Rewiring in place matters where nodes carry identity.",
+    "transferable": "Three-reference walks carry to many list edits.",
+    "audienceFit": "Fits the linked lists level at Medium.",
+    "riskOutcome": "A fresh list looks right and breaks identity."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d05 reverse-list exercise. A node-identity check compares the returned nodes with the nodes handed in; building new nodes and returning the old head fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 6/6 expected verdicts (2 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d05-reverse-list) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "wrong: building new nodes",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     },
+     {
+      "id": "alg-dsa-reverse-list",
+      "contentHash": "b53db536e13148c2",
+      "label": "wrong: returning the old head",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 8
+     }
+    ],
+    "boundaries": "Empty, one, two, six and eight nodes, falsy and object values, double reversal.",
+    "mutation": "Only next links change; a snapshot checks values and keys.",
+    "complexity": "Authored target: O(n) time and O(1) extra space, where n is the node count. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-factorial",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 9,
+   "objective": "Return n! exactly for whole n from 0 to 20.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "5b9f90b129bfd561",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Number precision limits are current JavaScript knowledge.",
+    "practicalUtility": "Factorial is a teaching drill.",
+    "transferable": "Separating work from result growth transfers to all cost reasoning.",
+    "audienceFit": "Fits the recursion level as its gentlest task.",
+    "riskOutcome": "0! as 0 or an n - 1 product gives wrong answers."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d06 bounded factorial. Hidden checks cover every n from 0 to 20 and the result type, so 0! as 0, a product stopping at n - 1 and a table of the visible answers fail. Recursive and iterative forms both pass.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Glossary/Recursion",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 6/6 expected verdicts (2 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d06-bounded-factorial) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "wrong: factorial(0) as 0",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-factorial",
+      "contentHash": "5b9f90b129bfd561",
+      "label": "wrong: a product that stops at n - 1",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "0, 1, 2, 13 (past 2^32), 18 (last safe), 19 and 20 (exact past safe).",
+    "mutation": "Numeric input; nothing to mutate.",
+    "complexity": "Authored target: O(n) time, where n is the numeric input and one multiplication counts as one step. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-recursive-list-sum",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 9,
+   "objective": "Sum a linked list recursively with the empty list as the only base case, nodes + 1 calls.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "f6b6a96579ef0204",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Recursion over structure is current teaching practice.",
+    "practicalUtility": "Recursive sums are a drill rather than production code.",
+    "transferable": "One base case and a shrinking input carry to every recursion.",
+    "audienceFit": "Fits the recursion level.",
+    "riskOutcome": "A second base case or a loop hides a misunderstanding."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d06 recursive sum. The call counter swaps the sumList binding for a wrapper while the check runs and restores it; a loop, a second base case, the old harness's shadow counter and a const binding fail, and mutating nodes fails a hidden check. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Glossary/Recursion",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 10/10 expected verdicts (5 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d06-recursive-list-sum) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "wrong: zeroing each node as it adds it",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "wrong: a loop",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "wrong: a second base case at the last node",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "wrong: a loop that sets the old harness counter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "wrong: a const binding the counter cannot swap",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 11
+     },
+     {
+      "id": "alg-dsa-recursive-list-sum",
+      "contentHash": "f6b6a96579ef0204",
+      "label": "alternative: a one-line recursive declaration",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 11
+     }
+    ],
+    "boundaries": "Empty, one node, negatives, zeros, fractions, 100 nodes, frozen nodes, 2 and 11 call counts.",
+    "mutation": "Hidden checks compare values, links and descriptors after the call.",
+    "complexity": "Authored target: O(n) time and O(n) extra space for the waiting calls, where n is the number of list nodes. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-iterative-countdown",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 9,
+   "objective": "Build [n, ..., 0] with a loop in one call, for n up to 10000.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "39ff71f91436a0f4",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Stack limits in JavaScript engines are current knowledge.",
+    "practicalUtility": "Choosing a loop over deep recursion is practical.",
+    "transferable": "The stack-depth trade-off carries to every recursive design.",
+    "audienceFit": "Fits the recursion level.",
+    "riskOutcome": "Deep recursion throws on large inputs."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d06 iterative countdown. The call counter expects exactly one call through countdownSteps; recursion, stopping before 0 and one shared array fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d06-iterative-countdown) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "wrong: recursion through countdownSteps",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "wrong: stopping before 0",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-iterative-countdown",
+      "contentHash": "39ff71f91436a0f4",
+      "label": "wrong: one array shared by every call",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "n = 0, 1, 2, 7, 200, 10000; fresh arrays across calls.",
+    "mutation": "Each call returns a fresh array.",
+    "complexity": "Authored target: O(n) time, where n is the starting number. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-linear-search",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 10,
+   "objective": "Return the first index strictly equal to a target, stopping at the match.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "642ab943cea12b5d",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Strict equality semantics are current JavaScript.",
+    "practicalUtility": "Linear lookup is everyday code.",
+    "transferable": "Early exit transfers to every scan.",
+    "audienceFit": "Fits the search level.",
+    "riskOutcome": "Loose equality matches 0 to false."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d07 linear search. Read budgets catch a scan past the match, including behind a declared Proxy or a replaced RegExp test; == fails a hidden check; indexOf passes. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 9/9 expected verdicts (4 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d07-linear-search) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "wrong: scanning past the first match",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "wrong: comparing with ==",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "wrong: scanning past the match behind a declared Proxy",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "wrong: scanning past the match behind a replaced RegExp test",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 15
+     },
+     {
+      "id": "alg-dsa-linear-search",
+      "contentHash": "642ab943cea12b5d",
+      "label": "alternative: indexOf",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 15
+     }
+    ],
+    "boundaries": "Empty, absent, first, last, duplicates, NaN, -0, undefined, objects by reference, 10000 elements, frozen input.",
+    "mutation": "Hidden checks compare descriptors and the array after the call.",
+    "complexity": "Authored target: O(n) time in the worst case and O(1) extra space, where n is the input length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-first-occurrence",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 10,
+   "objective": "Return where a run of equal values starts in a sorted array, in at most 20 reads of 64.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "50ce71176c98af6b",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Lower-bound search is current library practice.",
+    "practicalUtility": "Finding range starts in sorted data is common.",
+    "transferable": "Interval invariants carry to every binary search.",
+    "audienceFit": "Fits the search level at Medium.",
+    "riskOutcome": "Returning any match or walking left breaks the result or the cost."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d07 first-occurrence exercise. Read budgets on 64-element runs catch a linear scan and a walk-left; returning any match and 0 for an empty array fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 8/8 expected verdicts (4 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d07-first-occurrence) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "wrong: a linear scan",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "wrong: finding any match, then walking left",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "wrong: returning any match in the run",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     },
+     {
+      "id": "alg-dsa-first-occurrence",
+      "contentHash": "50ce71176c98af6b",
+      "label": "wrong: 0 for an empty array",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 14
+     }
+    ],
+    "boundaries": "Empty, single, absent, all equal, run at start and end, fractions, -0, 10000 elements, frozen input.",
+    "mutation": "Hidden checks compare descriptors and the array after the call.",
+    "complexity": "Authored target: O(log n) time and O(1) extra space, where n is the array length. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-selection-sort",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 11,
+   "objective": "Selection sort in place through compare, with exactly n(n-1)/2 comparisons.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "e89d1dfc9dde37df",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Comparator-driven sorting is current JavaScript.",
+    "practicalUtility": "Hand-written selection sort is a teaching drill.",
+    "transferable": "Counting comparisons transfers to all algorithm analysis.",
+    "audienceFit": "Fits the sorting level.",
+    "riskOutcome": "A copy or a built-in sort misses the method being taught."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d08 selection sort. Comparison counts on 8, 9 and 128 elements catch insertion sort and the built-in sort; returning a sorted copy fails. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d08-selection-sort) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "wrong: insertion sort",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "wrong: the built-in sort",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-selection-sort",
+      "contentHash": "e89d1dfc9dde37df",
+      "label": "wrong: sorting a copy and returning it",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     }
+    ],
+    "boundaries": "Empty, single, negatives, duplicates, descending and string comparators, 128 elements.",
+    "mutation": "Sorting in place is required; hidden checks compare identity and descriptors.",
+    "complexity": "Authored target: O(n²) time and O(1) extra space, where n is `values. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-insertion-sort",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 11,
+   "objective": "Stable insertion sort in place, 7 comparisons on sorted and 28 on reversed input of 8.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "45dc7dc9590e5380",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Comparator-driven sorting is current JavaScript.",
+    "practicalUtility": "Insertion sort is used for small runs inside library sorts.",
+    "transferable": "Stability and early exit carry to every sort.",
+    "audienceFit": "Fits the sorting level.",
+    "riskOutcome": "Walking past equal elements breaks stability."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d08 insertion sort. Counts on sorted and reversed 6, 8 and 128 elements catch selection sort and the built-in sort; walking past equal elements fails the stability check. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d08-insertion-sort) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "wrong: selection sort",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "wrong: walking past equal elements",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-insertion-sort",
+      "contentHash": "45dc7dc9590e5380",
+      "label": "wrong: the built-in sort",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     }
+    ],
+    "boundaries": "Empty, single, negatives, duplicates, tagged records, 128 elements both ways.",
+    "mutation": "Sorting in place is required; hidden checks compare identity and descriptors.",
+    "complexity": "Authored target: O(n²) time in the worst case and O(1) extra space, where n is `values. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-merge-sort",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 11,
+   "objective": "Stable merge sort into a fresh array, 12 to 24 comparisons on 8 and exactly 12 when sorted.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "10a3a58e73294c8f",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Merge sort is the stable O(n log n) reference.",
+    "practicalUtility": "Stable sorting of records is practical.",
+    "transferable": "Divide and conquer transfers widely.",
+    "audienceFit": "Fits the sorting level at Medium.",
+    "riskOutcome": "Taking the right element on a tie breaks stability."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d08 merge sort. Comparison windows and exact counts on sorted input catch insertion sort on a copy; a right-biased tie and sorting in place fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Glossary/Recursion",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d08-merge-sort) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "wrong: taking the right element on a tie",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "wrong: sorting the caller's array in place",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-merge-sort",
+      "contentHash": "10a3a58e73294c8f",
+      "label": "wrong: insertion sort on a copy",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     }
+    ],
+    "boundaries": "Empty, single, odd length, duplicates, frozen input, 16 and 128 sorted elements, tagged records.",
+    "mutation": "The input must stay unchanged; hidden checks compare it and its descriptors.",
+    "complexity": "Authored target: O(n log n) time and O(n) extra space, where n is `values. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-tree-size-height",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 12,
+   "objective": "Count the nodes of a binary tree and measure its height in edges, with -1 for empty.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "f97c4e5f90cf7839",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Recursive tree measures are current teaching practice.",
+    "practicalUtility": "Tree sizes and depths appear in UI trees and indexes.",
+    "transferable": "Combining child answers transfers to every tree recursion.",
+    "audienceFit": "Fits the trees level.",
+    "riskOutcome": "An off-by-one height misjudges balance."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d09 height-and-size exercise. Hidden checks cover lopsided trees, 128-node frozen chains, fractions and an unchanged tree; height 0 or null for an empty tree and a left-spine size fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Glossary/Recursion",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d09-height-and-size) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "wrong: an empty tree of height 0",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "wrong: an empty tree of height null",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-tree-size-height",
+      "contentHash": "f97c4e5f90cf7839",
+      "label": "wrong: a size that follows the left spine only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "Empty, single, chains both ways, lopsided, 15-node balanced, 128-node frozen chain.",
+    "mutation": "A descriptor snapshot proves the tree is unchanged.",
+    "complexity": "Authored target: O(n) time per function, where n is the number of nodes. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-tree-traversals",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 12,
+   "objective": "Return inorder, preorder, postorder and level-order values of a binary tree.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "a2f66e22dfb0024a",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Tree walks are current interview and UI practice.",
+    "practicalUtility": "Traversal orders decide how trees serialise and render.",
+    "transferable": "Depth-first and breadth-first carry to graphs.",
+    "audienceFit": "Fits the trees level at Medium.",
+    "riskOutcome": "A swapped order or a shared array gives wrong output."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d09 traversals. Hidden checks cover a 15-node tree in all four orders, frozen 128-node chains, fresh arrays per call and an unchanged tree; swapped orders, level order with pop and one shared array fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Glossary/Recursion",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d09-traversals) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "wrong: preorder and inorder swapped",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "wrong: level order taken with pop",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 10
+     },
+     {
+      "id": "alg-dsa-tree-traversals",
+      "contentHash": "a2f66e22dfb0024a",
+      "label": "wrong: one output array shared by every call",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 10
+     }
+    ],
+    "boundaries": "Empty, single, chains both ways, one-child nodes, 15-node balanced, 128-node frozen chain.",
+    "mutation": "A descriptor snapshot proves the tree is unchanged; results are fresh arrays.",
+    "complexity": "Authored target: O(n) time per traversal, where n is the number of nodes. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-bst-search-insert",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 13,
+   "objective": "Insert into a BST with duplicates to the right and search along one path, at most h + 1 nodes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "4a32f722ebccdb8c",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "BST search and insert are current foundations.",
+    "practicalUtility": "Ordered lookups back indexes and range queries.",
+    "transferable": "Following one path transfers to every search tree.",
+    "audienceFit": "Fits the BST level at Medium.",
+    "riskOutcome": "A full traversal is correct but defeats the structure."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d09 BST exercise. A visit counter over a balanced 15-node tree catches a whole-tree search; equal values sent left and an insert that replaces the root fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d09-bst-search-insert) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "wrong: searching the whole tree",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "wrong: equal values sent left",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-bst-search-insert",
+      "contentHash": "4a32f722ebccdb8c",
+      "label": "wrong: an insert that makes the new value the root",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     }
+    ],
+    "boundaries": "Empty, duplicates, absent values, fractions, 128 ascending inserts, 15-node balanced tree.",
+    "mutation": "Insert attaches one leaf; hidden checks compare every other descriptor.",
+    "complexity": "Authored target: O(n) time in the worst case for a tree with no balancing, where n is its node count; more precisely O(h + 1) for a tree of height h. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-repair-level-order",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 14,
+   "objective": "Repair a level-order traversal that pops, pushes null children and seeds null.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "1533a1188423dcea",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 5,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 5
+   },
+   "qualityScore": 5,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Repairing broken code is current practice.",
+    "practicalUtility": "Fixing a traversal bug is everyday maintenance.",
+    "transferable": "Queue-versus-stack order transfers to graph search.",
+    "audienceFit": "Fits level 14 as a repair task outside the quota.",
+    "riskOutcome": "Each defect throws or gives a depth-first order."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [
+    "The path activity was a project exercise; the task is a debug-format repair task and never gates a level."
+   ],
+   "rationale": "The d10 repair. The starter fails its own checks; three repairs that each fix two of the three defects fail, and the reference, a shift-based junior and a for-loop senior pass.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d10-repair-traversal) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "wrong: the queue and the null guard fixed, the empty tree not",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "wrong: the queue and the empty tree fixed, null children still pushed",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     },
+     {
+      "id": "alg-dsa-repair-level-order",
+      "contentHash": "1533a1188423dcea",
+      "label": "wrong: the null guard and the empty tree fixed, still read with pop",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 9
+     }
+    ],
+    "boundaries": "Empty, single, missing children, left chain, right-only child, 15 nodes, frozen 128-node chain.",
+    "mutation": "A probe-based snapshot proves the tree is unchanged.",
+    "complexity": "Authored target: O(n) time, where n is the node count. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-record-index",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 14,
+   "objective": "Wrap sorted records in a lookup that binary-searches them, building nothing up front.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "f891c46700daa8a2",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Closures over sorted arrays are current JavaScript.",
+    "practicalUtility": "Indexed lookups over sorted data are common.",
+    "transferable": "Build-cost versus query-cost reasoning carries widely.",
+    "audienceFit": "Fits the complexity-in-practice level at Medium.",
+    "riskOutcome": "A linear lookup or a Map copy breaks the stated costs."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d10 record index. Separate build and per-lookup read budgets catch a linear lookup and a Map built up front; returning the name fails. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d10-record-index) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "wrong: a linear lookup",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "wrong: a Map built from every record up front",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     },
+     {
+      "id": "alg-dsa-record-index",
+      "contentHash": "f891c46700daa8a2",
+      "label": "wrong: returning the name instead of the record",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 13
+     }
+    ],
+    "boundaries": "Empty, single, below, between and above ids, fractions, 64 and 1024 frozen records, two indexes.",
+    "mutation": "Records stay unchanged; a hidden check compares descriptors.",
+    "complexity": "Authored target: O(log n) time per lookup, where n is `records. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
+  },
+  {
+   "id": "alg-dsa-frequency-index",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "algorithms",
+   "topic": "dsa",
+   "level": 14,
+   "objective": "Answer count queries from one counting pass, within 200 reads for 40 queries over 50 values.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "40eb68b5600e6b17",
+   "hashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 5,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Map-based preprocessing is current practice.",
+    "practicalUtility": "Counting once and answering many queries is common.",
+    "transferable": "Preprocess-then-query transfers widely.",
+    "audienceFit": "Fits the complexity-in-practice level at Medium.",
+    "riskOutcome": "A scan per query costs quadratically."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "The d10 frequency index. The read budget catches a scan per query; a plain object and undefined for absent values fail. The counter is a self-contained check built from __probe (dsa-probes.ts), so a replaced global cannot change its count; it is bounded evidence on these inputs, not a proof about arbitrary code. Learn does not issue this level until E3.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Keyed_collections",
+    "run: npm run test:coding with CODING_ONLY='^alg-dsa-' on Node 24, 21 October 2026; reference, junior and senior pass the visible and hidden checks in the production QuickJS grader and the Run realm; the starter fails; constant answers fail.",
+    "run: production QuickJS grader on this exact hash: 7/7 expected verdicts (3 known wrong answers fail).",
+    "source: lib/learning-paths/content/dsa (dsa-v1-d10-frequency-index) and its path solution, ported with harness calls rewritten through lib/coding/tasks/dsa-probes.ts."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "wrong: scanning values once per query",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "wrong: counting into a plain object, which merges 1 and \"1\"",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     },
+     {
+      "id": "alg-dsa-frequency-index",
+      "contentHash": "40eb68b5600e6b17",
+      "label": "wrong: undefined for a value that never appears",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 12
+     }
+    ],
+    "boundaries": "Empty values, empty queries, repeated queries, NaN, -0, objects, functions, symbols, __proto__ keys, 1000 frozen values.",
+    "mutation": "Hidden checks compare inputs and descriptors after the call.",
+    "complexity": "Authored target: O(n) time, where n is `values. The references read within target or unknown in the structural estimate; an unknown estimate keeps the base reward.",
+    "notes": "Finite grader evidence on these inputs, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "accept",
+    "problems": [],
+    "notes": "Reread the final prompt, starter, skeleton, hints, method steps, visible and hidden checks and all three boards against the source path exercise; regraded every case on the final hash. Review fixes before first release (21 October 2026): visible checks gained a short Results-row form, checks gained criterion tags, and every case was regraded on the new hash."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck"
+    ],
+    "run": "Claude Code session, E2 #493, 21 October 2026; same-session second reading, no independent or human reader"
+   },
+   "reviewedAt": "2026-10-21"
   }
  ]
 }
