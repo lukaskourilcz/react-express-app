@@ -19,7 +19,7 @@ the code disagree, the code wins and you report the stale line.
 
 ## Inspect before editing
 
-1. Run `git status --short` and `git diff` so existing work is preserved. Other agents edit other modules in parallel: touch only the files your module needs, plus the shared registration lines (`lib/learning-paths/content/fde.ts`, `lib/learning-paths/solutions/index.ts`, `KNOWN_WRONG_PATH` and `TARGETS` in `scripts/test-learning-paths.ts`).
+1. Run `git status --short` and `git diff` so existing work is preserved. Other agents edit other modules in parallel: touch the module and solution files, their shared registration lines (`lib/learning-paths/content/fde.ts`, `lib/learning-paths/solutions/index.ts`, `KNOWN_WRONG_PATH` and `TARGETS` in `scripts/test-learning-paths.ts`), and the necessary capstone dependencies, curriculum/inventory documents and individual audit records. Coordinate shared-file edits with the caller.
 2. Read the issue, then sections 6.2, 6.3, 6.6, 7 and 10 of `docs/learn-sections-fde-flagship-plan.md`. Section 10's decisions win over the issue's text; say where they differ.
 3. Read the module you change (or the loop module before a new one), its solution file and its records: `grep -l '"module": "<module id>"' docs/audit/wip/native/*.jsonl`.
 4. Read `.claude/skills/learn-question-authoring/references/premium-gating.md` before anything that changes manifest order or what a free account reaches. Put no tier flag in a module file.
