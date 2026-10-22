@@ -69,8 +69,11 @@ function InlineText({ text }: { text: string }) {
   return <>{nodes}</>;
 }
 
-/** Inline code and bounded authored links; text inside code is never parsed. */
-export function RichText({ text }: { text: string }) {
+/** Inline code and bounded authored links; text inside code is never parsed.
+ * Memoised on the text: a code or artifact brief sits beside the editor, which
+ * re-renders on every keystroke, and re-parsing an unchanged brief each time
+ * was wasted work. */
+export const RichText = memo(function RichText({ text }: { text: string }) {
   const paragraphs = text.split('\n\n');
   return (
     <>
@@ -81,7 +84,7 @@ export function RichText({ text }: { text: string }) {
       ))}
     </>
   );
-}
+});
 
 const STEP_MS = 1400;
 
