@@ -28,7 +28,9 @@ let visits = 0;
 async function renderMap(width: number) {
   mapWidth = width;
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width: mapWidth, height: 0, top: 0, left: 0, right: mapWidth, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect);
-  server.use(http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'progress'
+  server.use(http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'learning-path-catalog'
+      ? HttpResponse.json({ versions: {}, paths: [] })
+      : new URL(request.url).searchParams.get('resource') === 'progress'
     ? HttpResponse.json({ data: {}, extra: { unlocked: [] } })
     : HttpResponse.json({ topics: ['javascript'], structure: { javascript: { levels: Array.from({ length: 10 }, (_, i) => level(i + 1)), checkpoints: [] } } })));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
