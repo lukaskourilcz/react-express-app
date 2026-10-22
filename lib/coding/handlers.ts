@@ -138,6 +138,14 @@ function sessionFrom(raw: unknown): CodingSession | null {
   return decodeCodingSession(raw);
 }
 
+/** The Learn level attempt a coding session belongs to expired or was
+ * completed. The coding routines check the attempt again under its row lock
+ * and raise `invalid_roadmap_attempt` when it ended after the check below. */
+const learnAttemptEnded = (res: VercelResponse) =>
+  jsonError(res, 409, 'invalid_session', 'This learning attempt expired or ended. Start the lesson again.');
+const raisedEndedLearnAttempt = (error: { message?: string } | null | undefined): boolean =>
+  /\binvalid_roadmap_attempt\b/.test(error?.message ?? '');
+
 async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: VercelResponse, session: CodingSession, userId: string | null): Promise<boolean> {
   if (!session.roadmapAttemptId) return false;
   if (session.userId !== userId) { jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.'); return true; }
@@ -147,7 +155,7 @@ async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: Verc
   const attempt = row.data;
   if (!attempt || (attempt.user_id ?? null) !== userId || attempt.completed_at || Date.parse(attempt.expires_at) <= Date.now()
     || !Array.isArray(attempt.coding_task_ids) || !attempt.coding_task_ids.includes(session.taskId)) {
-    jsonError(res, 409, 'invalid_session', 'This learning attempt expired or ended. Start the lesson again.'); return true;
+    learnAttemptEnded(res); return true;
   }
   return false;
 }
@@ -572,6 +580,13 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   if (saved.error) {
     if (isRpcMissing(saved.error)) {
       jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+      return null;
+    }
+    // The level attempt ended between the link check and this write (the
+    // level was completed in another tab, or it expired): nothing was
+    // recorded, and the learner reopens the lesson, as for any ended link.
+    if (raisedEndedLearnAttempt(saved.error)) {
+      learnAttemptEnded(res);
       return null;
     }
     jsonError(res, 500, 'db_error', 'Could not record the verdict');

@@ -58,6 +58,25 @@ async function main() {
 
   console.log('Coding account-bound submit and reveal authorization passed: guests and other signed-in accounts are refused, the owner is not.');
 
+  // The level attempt ends after the link check (completed in another tab, or
+  // expired): the routine re-checks it under its lock and raises. That is the
+  // ended link the learner reopens, 409 invalid_session, not a 500.
+  const endedLink = {
+    from: () => {
+      const chain = {
+        select: () => chain, eq: () => chain, in: () => chain,
+        maybeSingle: async () => ({ data: { user_id: 'account-a', completed_at: null, expires_at: new Date(Date.now() + 600_000).toISOString(), coding_task_ids: ['js-double-numbers'] }, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+      };
+      return chain;
+    },
+    rpc: async () => ({ data: null, error: { code: 'P0001', message: 'invalid_roadmap_attempt' } }),
+  };
+  const endedSubmit = response();
+  await handleCodingSubmit({ ...request(linkedA, 'account-a'), headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.71' } } as never, endedSubmit as never, endedLink as never);
+  assert.deepEqual([endedSubmit.statusCode, errorCode(endedSubmit.body)], [409, 'invalid_session'], `a verdict for an attempt that ended mid-submit is an ended link (${JSON.stringify(endedSubmit.body)})`);
+  console.log('Coding Learn link ended mid-submit passed: 409 invalid_session, not 500.');
+
   // #493: a Learn-linked DSA session is gated as the DSA level it belongs to.
   // DSA level 6 is Premium, so a guest and a free account are refused with
   // the shared 402 before anything is graded; DSA level 1 is free, so a
