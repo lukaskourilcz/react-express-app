@@ -209,7 +209,7 @@ function productMetadata(env: Record<string, string>): Plugin {
       // the same public HTML that production serves.
       server.middlewares.use((req, _res, next) => {
         const [pathname, search] = (req.url || '').split('?');
-        if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
+        if (/^\/topics\/[a-z0-9-]+\/?$/.test(pathname) || PUBLIC_PAGES.some(page => page.path === pathname.replace(/\/$/, ''))) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
         } else if (pathname === HIDDEN_CODING_PATH || pathname.startsWith(`${HIDDEN_CODING_PATH}/`)) {
           // vercel.json: the hidden track and everything under it.
