@@ -118,6 +118,9 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
 
   const frame = frames[Math.min(index, frames.length - 1)];
   const roleWord = (role: string) => t(`paths.trace.role.${role}` as never);
+  // Nothing validates that a trace has a frame; one without would otherwise
+  // throw and take the whole lesson down with it.
+  if (!frame) return null;
 
   return (
     <figure className="lp-figure lp-trace" aria-labelledby={labelId}>

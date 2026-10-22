@@ -68,3 +68,12 @@ it('opens the next lesson with its own example code, not the edits from the last
   view.rerender(<LanguageProvider><LessonView lesson={lesson('second', 'second()')} /></LanguageProvider>);
   expect(screen.getByLabelText('Try it')).toHaveValue('second()');
 });
+
+it('keeps the lesson readable when a trace arrives without frames', () => {
+  render(<LanguageProvider><LessonView lesson={{ id: 'empty-trace', title: 'Empty trace', sources: [], sections: [
+    { kind: 'prose', body: 'The text around it still reads.' },
+    { kind: 'trace', caption: 'A trace', trace: { shape: 'array', frames: [] } },
+  ] }} /></LanguageProvider>);
+  expect(screen.getByText('The text around it still reads.')).toBeInTheDocument();
+  expect(screen.queryByText('A trace')).toBeNull();
+});
