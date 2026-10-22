@@ -55,6 +55,18 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
     { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
   ],
+  'fde-v1-m03-webhook-receiver': [
+    { label: 'no signature check', replace: ["  if (!signed) return refuse('bad_signature');\n", ''], criterion: 'signature' },
+    { label: 'signatures compared with === instead of ctx.safeEqual', replace: ['ctx.safeEqual(entry, expected)', 'entry === expected'], criterion: 'signature' },
+    { label: '=== beside one unused ctx.safeEqual call', replace: ["const signed = header.split(' ').some((entry) => ctx.safeEqual(entry, expected));", "ctx.safeEqual('a', 'a');\n  const signed = header.split(' ').some((entry) => entry === expected);"], criterion: 'signature' },
+    { label: 'no replay store', replace: ["  if (!ctx.claim(connectionId + ':' + webhookId)) return refuse('replayed');\n", ''], criterion: 'replay' },
+    { label: 'a replay key not scoped by connection', replace: ["ctx.claim(connectionId + ':' + webhookId)", 'ctx.claim(String(webhookId))'], criterion: 'replay' },
+    { label: 'no timestamp tolerance', replace: ["Math.abs(nowMs / 1000 - Number(timestamp)) > TOLERANCE_SECONDS", 'false'], criterion: 'replay' },
+    { label: 'the tenant taken from the payload (tenant leak)', replace: ['const tenantId: string = connection.tenantId;', 'const tenantId: string = event.tenantId;'], criterion: 'tenant-isolation' },
+    { label: 'an expired grant accepted', replace: ["  if (!(Date.parse(grant.expiresAt) > nowMs)) return refuse('grant_expired');\n", ''], criterion: 'permission-freshness' },
+    { label: 'an unparseable expiry read as never expiring (fails open)', replace: ['if (!(Date.parse(grant.expiresAt) > nowMs))', 'if (Date.parse(grant.expiresAt) <= nowMs)'], criterion: 'permission-freshness' },
+    { label: 'grant refusals not audited', replace: ["return refuse('grant_expired')", "return { ok: false, reason: 'grant_expired' }"], criterion: 'core' },
+  ],
   'fde-v1-m06-tool-dispatcher': [
     { label: 'a dispatcher that runs an approval tool without waiting for approval', replace: ['    if (tool.approval) {', '    if (false) {'], criterion: 'approval-held' },
     { label: 'a rejection that leaves the call approvable', replace: ['    const entry = take(callId);\n    if (!entry) return { ok: false, reason: \'unknown_call\' };\n    return settle(entry.store, entry.key, { ok: false, reason: \'rejected\', callId });', "    if (!Object.prototype.hasOwnProperty.call(waiting, callId)) return { ok: false, reason: 'unknown_call' };\n    return { ok: false, reason: 'rejected', callId };"], criterion: 'approval-held' },
@@ -73,6 +85,29 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
   ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
+  ],
+  // The M11 release gate (#504): each gate taken out alone must fail its own
+  // critical criterion. The first is the issue's acceptance case: a gate that
+  // rolls out on a failed migration check.
+  'fde-v1-m11-deploy-release-gate': [
+    { label: 'a rollout over a failed migration', replace: ["if (migration.status !== 'applied') reasons", "if (migration.status === 'pending') reasons"], criterion: 'migration-gate' },
+    { label: 'a missing migration report read as no migrations', replace: ["if (!Array.isArray(migrations)) return ['migration:no-report'];", 'if (!Array.isArray(migrations)) return [];'], criterion: 'migration-gate' },
+    { label: 'a blank restore point accepted for an irreversible migration', replace: ['migration.reversible !== true && !hasRestorePoint', 'migration.reversible !== true && restorePoint === null'], criterion: 'migration-gate' },
+    { label: 'an empty probe list read as healthy', replace: ["if (!Array.isArray(probes) || probes.length === 0) return ['health:no-probes'];", "if (!Array.isArray(probes)) return ['health:no-probes'];"], criterion: 'health-gate' },
+    { label: 'only not_ready counted as unhealthy', replace: [".filter((probe) => probe.status !== 'ready')", ".filter((probe) => probe.status === 'not_ready')"], criterion: 'health-gate' },
+    { label: 'a required key nobody reported passing', replace: ['if (probe === undefined) reasons.push(`config:${key}:missing`);\n    else if', 'if (probe === undefined) continue;\n    if'], criterion: 'config-gate' },
+    { label: 'an empty configuration report read as no report', replace: ["if (!Array.isArray(probes)) return ['config:no-report'];", "if (!Array.isArray(probes) || probes.length === 0) return ['config:no-report'];"], criterion: 'config-gate' },
+    { label: 'a configuration state compared without its case', replace: ["else if (probe.state !== 'ok')", "else if (probe.state.toLowerCase() !== 'ok')"], criterion: 'config-gate' },
+    { label: 'a configuration value written into the reason', replace: ['`config:${key}:${probe.state}`', '`config:${key}:${probe.state}:${probe.value}`'], criterion: 'config-gate' },
+    { label: 'a rollout left out of the log', replace: ['  log.record({', "  if (decision === 'hold') log.record({"], criterion: 'records-why' },
+    { label: 'reasons recorded in discovery order', replace: ['[...new Set(found)].sort()', '[...new Set(found)]'], criterion: 'records-why' },
+  ],
+  // M10 (file m08) injection and excessive-agency repair: the security gates
+  // each fail their own critical criterion when taken out.
+  'fde-v1-m08-untrusted-content': [
+    { label: 'the proposal’s tenant sent to the tool', replace: ['    tenantId: session.tenantId,\n    actor:', '    tenantId: request.tenantId,\n    actor:'], criterion: 'no-cross-tenant' },
+    { label: 'the recipient compared without normalising', replace: ["one.email.trim().toLowerCase() === wanted", 'one.email === request.recipient'], criterion: 'allowlisted-recipient' },
+    { label: 'another tenant’s article accepted as evidence', replace: ['    doc.tenantId === session.tenantId &&\n', ''], criterion: 'no-cross-tenant' },
   ],
   // B6 (#502): the two flaws the issue names, plus two that break the
   // order-free merge, one that sorts by locale collation and one that writes

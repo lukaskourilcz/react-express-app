@@ -81,6 +81,7 @@ const KINDS: Record<GatedKind, true> = {
   'coding-task': true,
   'evolving-stage': true,
   'learning-path': true,
+  'learning-path-activity': true,
   'merch-redemption': true,
 };
 const isGatedKind = (value: unknown): value is GatedKind => typeof value === 'string' && Object.prototype.hasOwnProperty.call(KINDS, value);

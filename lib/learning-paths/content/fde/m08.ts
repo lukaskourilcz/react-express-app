@@ -5,11 +5,14 @@
  * an instruction somebody wrote into a document, a ticket or a tool response,
  * hoping your handler reads it as a command rather than as text.
  *
- * Two lessons, one four-question check, one graded repair. The first lesson
- * is about where untrusted content enters and why a delimiter is not a
- * boundary. The second is about how much one wrong call can destroy, and
- * about writing the adversarial case as a test rather than as a paragraph in
- * a design document.
+ * Two lessons, two checks, one graded repair. The first lesson is about where
+ * untrusted content enters and why a delimiter is not a boundary. The second
+ * is about how much one wrong call can destroy, about writing the adversarial
+ * case as a test rather than as a paragraph in a design document, about the
+ * sandbox a code-running tool needs, and about the compliance vocabulary
+ * (SOC 2, HIPAA, FedRAMP) a customer's security review uses. The second check
+ * (#504) grades that vocabulary as questions a review asks of a deployment,
+ * never as legal advice, together with the sandbox and runtime-safety cases.
  *
  * One claim is repeated on purpose, in both lessons and in the exercise: prompt defenses can help, while execution authority must be enforced outside
  * the model. The fixture checks a bounded policy, not complete export safety.
@@ -105,10 +108,12 @@ export const FDE_M08: ModuleSource = {
     'Bound a tool by what one call can touch and by how the damage comes back, and answer the blast radius question before the tool is registered.',
     'Write the adversarial case as a test whose assertion sits on the tool log, rather than as a warning in a design document.',
     'Say what a passing security check proves and what it leaves open, and keep that claim apart from your own review of the same work.',
+    'Run model-generated code only inside a sandbox with no network, no credentials and hard limits, and say what each sandbox control leaves open.',
+    'Answer a security review in its own vocabulary: what a SOC 2 report, the HIPAA Security Rule and FedRAMP each ask of a deployment, and who decides whether one applies.',
   ],
   competencies: ['ai-security'],
   dependsOn: ['fde-v1-m05', 'fde-v1-m06'],
-  estimatedMinutes: 115,
+  estimatedMinutes: 145,
   lessons: [
     {
       id: 'fde-v1-m08-l1',
@@ -255,10 +260,10 @@ export const FDE_M08: ModuleSource = {
     },
     {
       id: 'fde-v1-m08-l2',
-      title: 'Excessive agency and adversarial tests',
+      title: 'Excessive agency, sandboxes and the security review',
       summary:
-        'Least privilege per tool, the blast radius question you answer before registering one, and how to turn an attack you thought of into an assertion on the tool log.',
-      estimatedMinutes: 25,
+        'Least privilege per tool, the blast radius question you answer before registering one, an attack turned into an assertion on the tool log, the sandbox a code-running tool needs, and the compliance terms a customer’s security review uses.',
+      estimatedMinutes: 40,
       sources: [
         {
           label: 'OWASP Top 10 for Large Language Model Applications',
@@ -269,6 +274,51 @@ export const FDE_M08: ModuleSource = {
           label: 'Model Context Protocol — specification',
           url: 'https://modelcontextprotocol.io/specification',
           reviewedOn: '2026-09-08',
+        },
+        {
+          label: 'OWASP Top 10 for LLM Applications 2025',
+          url: 'https://genai.owasp.org/llm-top-10/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'OWASP LLM06:2025 Excessive Agency',
+          url: 'https://genai.owasp.org/llmrisk/llm062025-excessive-agency/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'OWASP LLM05:2025 Improper Output Handling',
+          url: 'https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Docker docs: Docker Engine security',
+          url: 'https://docs.docker.com/engine/security/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'AICPA & CIMA: System and Organization Controls (SOC) suite of services',
+          url: 'https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: '45 CFR § 164.306, Security standards: General rules (Cornell LII)',
+          url: 'https://www.law.cornell.edu/cfr/text/45/164.306',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: '45 CFR § 164.312, Technical safeguards (Cornell LII)',
+          url: 'https://www.law.cornell.edu/cfr/text/45/164.312',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'GSA: FedRAMP',
+          url: 'https://www.gsa.gov/technology/government-it-initiatives/fedramp',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Sierra: Forward Deployed Infrastructure Engineer (job posting)',
+          url: 'https://jobs.ashbyhq.com/sierra/d9c0aa93-e35d-4752-9cef-4c39dcad5365',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
@@ -408,6 +458,93 @@ export const FDE_M08: ModuleSource = {
           body:
             'Define and enforce the allowed operations, current data/recipient scope, exact consent, per-call and cumulative limits and recovery behavior. Test these controls with chosen counterexamples and observe real failures. A bounded allow-list reduces some risks, but an allowed action can still be unwanted, disclose data or create a misleading answer; do not treat one checklist or fixture suite as complete model-system safety.',
         },
+        {
+          kind: 'prose',
+          body:
+            'One tool needs its own rules: the one that runs code. An analyst asks the assistant to summarize a CSV export, the model writes a script, and somebody wants to run it. OWASP’s 2025 list names the failure under LLM05, Improper Output Handling: model output passed into a system shell, `exec` or `eval` can end in remote code execution. Under LLM06, Excessive Agency, OWASP advises you to avoid open-ended extensions such as “run a shell command” and to give the model tools that each do one thing.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'When the workflow needs generated code to run, treat the script as untrusted input and give it a sandbox: a separate container or process with no network, no credentials, read-only input files and one scratch directory, running as a non-root user under limits on CPU, memory and wall-clock time. Stop it at the deadline and cap how much output you keep. Then validate what it printed, because its output is model-influenced text too.',
+        },
+        {
+          kind: 'table',
+          caption: 'Five sandbox controls for a code-running tool, what each bounds, and what each leaves open. The isolation and mount facts come from Docker’s Engine security page.',
+          headers: ['Control', 'What it bounds', 'What it leaves open'],
+          rows: [
+            [
+              'A separate container with its own namespaces',
+              'A process in one container cannot see or affect processes in another container or on the host',
+              'Default capabilities and mounts can leave isolation incomplete, alone or together with a kernel vulnerability',
+            ],
+            [
+              'Control-group limits on memory and CPU',
+              'A runaway loop or allocation stops at its share instead of starving the host',
+              'Control groups limit resources; they do not stop one container from reaching another’s data',
+            ],
+            [
+              'A non-root user and dropped capabilities',
+              'A process that escalates to root inside the container has far less it can damage',
+              'Whatever the mounted files and the granted network still allow',
+            ],
+            [
+              'No network and no credentials',
+              'The script cannot call out, and cannot act as anyone',
+              'The data you passed in: whatever the script reads, it can print',
+            ],
+            [
+              'A host directory mounted into the sandbox',
+              'Nothing: it removes a bound instead of adding one',
+              'A container that mounts the host’s `/` can alter the host filesystem without restriction',
+            ],
+          ],
+        },
+        {
+          kind: 'callout',
+          tone: 'warning',
+          body:
+            'A wall-clock deadline is a runtime-safety control. It stops a script that never ends. It does nothing about a script that finishes in two seconds after printing data it should not have read. Decide what the sandbox may read, not only how long it may run.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Before a customer lets the workbench near its data, its security team sends you a review, written in compliance vocabulary. Sierra’s Forward Deployed Infrastructure Engineer posting asks for experience “navigating security reviews, compliance requirements, and change management processes” in customer-owned cloud environments. You need to know what each term asks of your deployment, so you can answer with evidence instead of adjectives.',
+        },
+        {
+          kind: 'table',
+          caption: 'Three terms a security review uses, what each one is, and what the reviewer will ask of your deployment.',
+          headers: ['Term', 'What it is', 'What the reviewer asks of your deployment'],
+          rows: [
+            [
+              'SOC 2',
+              'An AICPA reporting framework: a CPA examines a service organization’s controls relevant to security, availability, processing integrity, confidentiality or privacy, and reports on them',
+              'Your company’s current report, which systems and categories its scope covers, and whether the workbench sits inside that scope',
+            ],
+            [
+              'HIPAA Security Rule',
+              '45 CFR Part 164, Subpart C: covered entities and business associates must ensure the confidentiality, integrity and availability of the electronic protected health information they create, receive, maintain or transmit',
+              'Access control, audit controls that record and examine activity, integrity, person or entity authentication, and transmission security (§ 164.312) wherever that information travels',
+            ],
+            [
+              'FedRAMP',
+              'A US government-wide program, run within GSA, that gives agencies a standardized approach to security and risk assessment of cloud offerings',
+              'Whether each cloud service the deployment runs on holds a FedRAMP authorization the agency can build on',
+            ],
+          ],
+        },
+        {
+          kind: 'callout',
+          tone: 'warning',
+          body:
+            'Treat these as checks on what each framework asks of a deployment, not as legal advice. Whether HIPAA applies to a customer, or which authorization an agency needs, is for the customer’s compliance and legal owners to decide. You bring the evidence: what the workbench stores, where its data travels, who can read it and what the logs record. Never write “compliant” or “certified” on a slide about a system whose scope nobody assessed.',
+        },
+        {
+          kind: 'callout',
+          tone: 'note',
+          body:
+            'The scripts, reviews, customers and tickets in this section are fictional fixtures. Nothing here assesses a real organization’s compliance, and nothing runs a real sandbox: the questions grade how you read the cases.',
+        },
       ],
     },
   ],
@@ -428,10 +565,10 @@ export const FDE_M08: ModuleSource = {
       kind: 'lesson',
       purpose: 'exercise',
       verification: 'self_reviewed',
-      title: 'Read: excessive agency and adversarial tests',
-      summary: 'Enforced per-call and cumulative limits, explicit recovery policy and bounded adversarial evidence.',
+      title: 'Read: excessive agency, sandboxes and the security review',
+      summary: 'Enforced per-call and cumulative limits, explicit recovery policy, bounded adversarial evidence, sandboxed execution, and the SOC 2, HIPAA and FedRAMP vocabulary.',
       competencies: ['ai-security'],
-      estimatedMinutes: 25,
+      estimatedMinutes: 40,
       lessonId: 'fde-v1-m08-l2',
     },
     {
@@ -495,6 +632,109 @@ export const FDE_M08: ModuleSource = {
           ],
           correct: 3,
           explanation: "The enforced limit bounds one call, while recoverable state and a working restore procedure support reversal within the permitted window. Approval, current authorization and audit records remain necessary parts of this design. Approval can reduce mistakes; it does not by itself specify a batch limit or restore lost data. Repeated calls need separate cumulative controls, and a restore window does not guarantee recovery after expiry or override retention obligations.",
+          competencies: ['ai-security'],
+        },
+      ],
+    },
+    {
+      id: 'fde-v1-m08-review-checks',
+      kind: 'check',
+      purpose: 'exercise',
+      verification: 'machine_verified',
+      title: 'Sandboxes and the security review',
+      summary: 'Six questions on where generated code may run and on what SOC 2, the HIPAA Security Rule and FedRAMP each ask of a deployment.',
+      competencies: ['ai-security'],
+      estimatedMinutes: 15,
+      passThreshold: 0.8,
+      questions: [
+        {
+          id: 'fde-v1-m08-q5',
+          prompt:
+            'A support lead asks the assistant to total refunds by region from a CSV export. The model writes a 40-line script, and the lead wants it run on the export right away. Which way of running it fits the risk?',
+          options: [
+            'Run it inside the workbench API process with `eval`, wrapped in try/catch so an exception cannot crash the server.',
+            'Scan it first with a filter that rejects scripts mentioning `fs`, `child_process` or `fetch`, then run it on the API server.',
+            'Run it in a separate container with no network or credentials, the export mounted read-only, a non-root user and CPU, memory and time limits.',
+            'Paste it into the support lead’s own laptop terminal, since the export already sits in that person’s downloads folder.',
+          ],
+          correct: 2,
+          explanation:
+            'A sandbox with no network, no credentials, read-only input, a non-root user and resource and time limits bounds what an untrusted script can reach and how long it can run, and you still validate its output. `eval` in the API process hands the script every permission and secret that process holds; try/catch only catches exceptions. A keyword filter misses code that builds the same calls another way, and the script still runs with the server’s authority. The lead’s laptop has their credentials, their network and their other files, so the script would run with all of them.',
+          competencies: ['ai-security'],
+        },
+        {
+          id: 'fde-v1-m08-q6',
+          prompt:
+            'A teammate configures the code sandbox with memory and CPU limits through control groups, and mounts the host’s root directory read-write so scripts can find shared libraries. What does that configuration leave open?',
+          options: [
+            'Nothing serious: control groups also isolate each container’s files from the host, so the mount only exposes libraries.',
+            'A script can exhaust the host’s memory, because limits set through control groups stop applying once a host path is mounted.',
+            'A script can change any file on the host through the mount; control groups limit resource use and do not isolate data.',
+            'A script can open network connections, because a read-write mount gives the container the host’s network interfaces.',
+          ],
+          correct: 2,
+          explanation:
+            'Docker’s Engine security page says control groups handle resource accounting and limiting and play no role in stopping one container from reaching another’s data, and that a container mounting the host’s `/` can alter the host filesystem without restriction. The memory limit still holds with the mount in place, so exhaustion is not the gap. A filesystem mount does not attach network interfaces; network access is a separate setting. Remove the mount and copy the libraries into the sandbox image instead.',
+          competencies: ['ai-security'],
+        },
+        {
+          id: 'fde-v1-m08-q7',
+          prompt:
+            'A retailer’s security reviewer asks for your company’s SOC 2 report before the workbench goes live in their account. What does that report give them?',
+          options: [
+            'A CPA’s report on your company’s controls for the categories and systems in its stated scope, which they compare with the workbench.',
+            'A government certification that the workbench meets a national security standard for any customer that deploys it.',
+            'Proof that the deployment inside the retailer’s own cloud account is configured securely, since the report covers every customer environment.',
+            'A penetration test of the retailer’s network, run by the auditor while preparing the report on your company.',
+          ],
+          correct: 0,
+          explanation:
+            'A SOC 2 report comes from a CPA’s examination of a service organization’s controls relevant to security, availability, processing integrity, confidentiality or privacy, for the systems its scope names. The reviewer checks whether the workbench sits inside that scope. It is an assurance report a CPA issues under the AICPA’s SOC framework, not a government certification. It describes your company’s controls, not the configuration inside the retailer’s account, which the retailer and you still have to review. It does not test the customer’s network.',
+          competencies: ['ai-security'],
+        },
+        {
+          id: 'fde-v1-m08-q8',
+          prompt:
+            'A hospital network wants the workbench to triage patient billing questions, so tickets will contain electronic protected health information. Which question belongs in your answer to their security review?',
+          options: [
+            'Which federal agency authorized the workbench’s cloud services, since the hospital may use only government-authorized clouds.',
+            'Which events the workbench records when someone opens a ticket with patient data, and how that data is protected in transit.',
+            'Whether the hospital will accept a vendor statement that the workbench is certified for health data, in place of a review.',
+            'Whether ticket text stops counting as protected health information once a support agent has replied to the patient.',
+          ],
+          correct: 1,
+          explanation:
+            'The HIPAA Security Rule lists audit controls that record and examine activity in systems containing electronic protected health information, and transmission security, among its technical safeguards (§ 164.312), so the reviewer needs both answers. Agency authorization is the FedRAMP question for federal agencies, not a requirement the HIPAA Security Rule sets for a hospital. A vendor statement replaces the evidence the review exists to collect. A reply does not change what the ticket contains, so the safeguards still apply to it.',
+          competencies: ['ai-security'],
+        },
+        {
+          id: 'fde-v1-m08-q9',
+          prompt:
+            'A federal agency wants to pilot the workbench. Its reviewer mentions FedRAMP. What should you establish first?',
+          options: [
+            'Whether your company has a SOC 2 report, since an agency accepts it in place of a FedRAMP review.',
+            'Whether the agency has signed a business associate agreement, since FedRAMP builds on HIPAA’s contract rules.',
+            'Whether your company can self-declare FedRAMP compliance in its contract, since the program trusts vendor statements.',
+            'Whether the cloud services the deployment runs on hold a FedRAMP authorization the agency can reuse for this pilot.',
+          ],
+          correct: 3,
+          explanation:
+            'GSA describes FedRAMP as a government-wide program giving agencies a standardized approach to security and risk assessment of cloud offerings, and its office keeps a repository of authorizations so agencies can reuse security packages. So you find out what the deployment depends on and which authorizations already exist for the agency to reuse. A SOC 2 report is a different framework with a different audience. A business associate agreement is a HIPAA concept. A program built on a standardized assessment does not rest on a vendor’s own declaration.',
+          competencies: ['ai-security'],
+        },
+        {
+          id: 'fde-v1-m08-q10',
+          prompt:
+            'Before the hospital pilot, sales asks you to approve a slide reading “The workbench is HIPAA certified.” No assessment of the workbench has happened. What do you send back?',
+          options: [
+            'Approve it, since the workbench encrypts traffic and that is the safeguard the rule cares about most.',
+            'Replace it with the specific safeguards the workbench implements, and leave whether HIPAA applies to the hospital’s compliance owners.',
+            'Change it to “HIPAA compliant”, which describes the product’s design rather than claiming an outside assessment.',
+            'Approve it for the hospital only, and remove it before the slide goes to any other customer.',
+          ],
+          correct: 1,
+          explanation:
+            'You can state facts you can show: access control, audit logging, authentication, transmission security and where data is stored. Whether and how the HIPAA Security Rule applies to the hospital is a determination for its compliance and legal owners. Encryption in transit is one of several technical safeguards, not the whole rule. “Compliant” still claims an outcome nobody assessed. A false claim made to one customer is still a false claim.',
           competencies: ['ai-security'],
         },
       ],
@@ -717,6 +957,7 @@ const runAction = (session, proposal, documents, tools) => {
   ],
   requires: [
     { activityId: 'fde-v1-m08-checks', state: 'verified_pass' },
+    { activityId: 'fde-v1-m08-review-checks', state: 'verified_pass' },
     { activityId: 'fde-v1-m08-untrusted-content', state: 'verified_pass' },
   ],
 };

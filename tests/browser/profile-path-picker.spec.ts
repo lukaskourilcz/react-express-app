@@ -4,8 +4,8 @@
 // option cards and toggles clear 44px everywhere and the dialog's buttons do
 // on touch (app-shell.css raises Astryx buttons for coarse pointers only),
 // nothing scrolls sideways, and leaving Software Engineer saves an empty
-// section list with the profile. The account is on the free plan, so the FDE
-// card carries the Premium mark and a screen reader hears it.
+// section list with the profile. Path enrollment is free; individual
+// activities carry the Premium boundary beyond the taster.
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fakeSession, fakeUser, localAuth, sessionKey } from './fake-session';
@@ -107,9 +107,9 @@ for (const [theme, width, touch] of [['light', 360, true], ['dark', 1280, false]
     const fde = dialog.getByRole('radio', { name: 'Forward Deployed Engineer' });
     await expect(se).toHaveAccessibleDescription(/Free to join\./);
     // The entry requirement is the manifest's own text, the one the path page
-    // shows, and a screen reader hears it with the Premium mark.
+    // shows, and a screen reader hears it with the flagship description.
     await expect(dialog.getByText(`Before you start: ${fdePath.entryRequirement}`, { exact: true })).toBeVisible();
-    await expect(fde).toHaveAccessibleDescription(new RegExp(`^Premium devShark’s flagship section.*Before you start: ${fdePath.entryRequirement.slice(0, 40)}`));
+    await expect(fde).toHaveAccessibleDescription(new RegExp(`^devShark’s flagship section.*Before you start: ${fdePath.entryRequirement.slice(0, 40)}`));
     await expectTarget(se, 'the Software Engineer toggle');
     await expectTarget(none, 'no specialization');
     await expectTarget(fde, 'Forward Deployed Engineer');

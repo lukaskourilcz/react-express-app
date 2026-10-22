@@ -62,6 +62,20 @@
       "continue": true
     },
     {
+      "src": "^/roadmap/specializations/fde/?$",
+      "headers": {
+        "Location": "/learn/forward-deployed-engineer/path"
+      },
+      "status": 308
+    },
+    {
+      "src": "^/roadmap/specializations/fde/([^/]+)(?:/.*)?$",
+      "headers": {
+        "Location": "/learn/forward-deployed-engineer/path/$1"
+      },
+      "status": 308
+    },
+    {
       "src": "^/cs/topics(?:/.*)?$",
       "dest": "/index.html",
       "status": 404,
@@ -151,6 +165,18 @@
     {
       "source": "/robots.txt",
       "destination": "/robots.txt"
+    },
+    {
+      "source": "/learn/web-developer",
+      "destination": "/learn/web-developer/index.html"
+    },
+    {
+      "source": "/learn/software-engineer",
+      "destination": "/learn/software-engineer/index.html"
+    },
+    {
+      "source": "/learn/forward-deployed-engineer",
+      "destination": "/learn/forward-deployed-engineer/index.html"
     },
     {
       "source": "/((?!api/|assets/|ingest/|sandbox/|topics/).*)",

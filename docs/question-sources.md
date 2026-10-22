@@ -42,3 +42,21 @@ These repos are prose and checklists, not a question bank - quality comes from a
 human turning a concept into a well-formed MCQ with a good distractor set.
 Auto-scraping would produce low-quality trivia and risk license/attribution
 issues. Treat this as a curated, human-in-the-loop pipeline.
+
+### DSA Foundations E3, 22 October 2026
+
+The Learn bank combines the path's 52 original checks (including code context),
+62 corrected existing seeds and six original synthesis questions. The origin
+mapping, previous ledger rows and 42 replaced foundation seeds are retained
+in `docs/audit/wip/history/`. The latter are an unserved historical archive
+with their original errors, not current learning material.
+Every current item has its own exact-hash ledger review and second-reading
+notes. Both passes were performed in the same Codex model session; these
+records claim neither an independent reviewer nor execution of question snippets.
+
+The closing readings use Princeton Algorithms' [analysis and cost models](https://algs4.cs.princeton.edu/14analysis/)
+and [binary search trees](https://algs4.cs.princeton.edu/32bst/), the
+[ECMAScript Map access requirements](https://tc39.es/ecma262/multipage/keyed-collections.html#sec-map-objects)
+and [MDN's sort contract](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort).
+The explanations distinguish these models from engine guarantees. The readings
+are original summaries, not copied source passages.

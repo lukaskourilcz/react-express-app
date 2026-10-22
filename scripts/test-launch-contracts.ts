@@ -176,6 +176,7 @@ import {
   parseLearningPreference,
   pathGuidedComplete,
   pathInventory,
+  isOffLoopModule,
 } from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
@@ -198,7 +199,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpoint } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, DSA_LEVELS_AWAITING_E3, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -653,18 +654,31 @@ async function tierContracts() {
     for (let part = 1; part <= 3; part++) assert.equal(contentTier({ kind: 'learn-part-test', topic, part }, index), 'free');
   }
   assert.equal(FREE_LEARN_LEVELS.react, 12);
-  assert.equal(FREE_LEARN_LEVELS.dsa, 2);
+  assert.equal(FREE_LEARN_LEVELS.dsa, 5);
   assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 1 }, index), 'free');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 2 }, index), 'free');
-  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 3 }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 5 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 6 }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learn-part-test', topic: 'dsa', part: 1 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-part-test', topic: 'dsa', part: 2 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 12 }, index), 'free');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 13 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 1 }, index), 'free', "React's first part is open");
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 2 }, index), 'premium', "React's second part ends above level 12");
   assert.equal(contentTier({ kind: 'learn-level', topic: 'typescript', level: 1 }, index), 'premium');
-  assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'free');
   assert.equal(contentTier({ kind: 'coding-task', taskId: 'js-no-such-task' }, index), 'premium', 'unknown content can only lock');
   assert.equal(isOpenTo('premium', { kind: 'learning-path', pathId: 'dsa-foundations' }, index), true);
+  for (const path of LEARNING_PATHS) {
+    const tasterIndex = { ...index, learningPaths: [publicManifest(path)] };
+    const first = path.modules.find(module => !isOffLoopModule(module))!;
+    const diagnostic = path.modules.find(module => module.activities.some(activity => activity.id === path.diagnosticActivityId));
+    for (const module of path.modules) for (const activity of module.activities) {
+      assert.equal(contentTier({ kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, tasterIndex), module === first || module === diagnostic ? 'free' : 'premium', `${activity.id}: the taster follows the manifest`);
+    }
+    assert.equal(contentTier({ kind: 'learning-path-activity', pathId: path.id, activityId: 'unknown-activity' }, tasterIndex), 'premium');
+  }
+
   assert.equal(isOpenTo('free', { kind: 'learn-level', topic: 'html', level: 3 }, index), true);
 
   // 4. The entitlement routines read no learning, score or streak table, and
@@ -3738,24 +3752,28 @@ async function main() {
   }
   // DSA Foundations (#493): the DSA path's exercises fill the DSA Learn
   // levels through the same parent-attempt flow. Level 3 seals its one task;
-  // the Big O introduction (1-2) and the levels E3 re-sequences (10, 11, 14)
-  // seal none yet. The Coding section lists all 29 under Algorithms, and only
+  // every Foundations level now aligns with its task. The Coding section
+  // lists all 29 under Algorithms, and only
   // they name a Learn level there.
+  const foundationsById = await getEffectiveQuestionsById('webdev');
+  for (const level of buildLiveTopic('dsa', id => foundationsById.has(id)).levels) {
+    assert.equal(level.questionCount, 8, `Foundations level ${level.level} serves exactly eight reviewed questions`);
+  }
   assert.deepEqual(levelCodingTasks('dsa', 3).map((task) => task.id), ['alg-dsa-reverse-in-place'], 'DSA level 3 seals the reverse-in-place task');
   assert.deepEqual(levelCodingTasks('dsa', 9).map((task) => task.id), ['alg-dsa-factorial', 'alg-dsa-recursive-list-sum'], 'DSA level 9 seals factorial and the recursive sum');
-  for (const level of [1, 2, 10, 11, 14, 15]) assert.deepEqual(levelCodingTasks('dsa', level), [], `DSA level ${level} seals no coding task before E3`);
+  for (const level of [1, 2, 10, 11, 14]) assert.ok(levelCodingTasks('dsa', level).length > 0, `DSA level ${level} seals its aligned coding tasks`);
+  assert.deepEqual(levelCodingTasks('dsa', 15), [], 'the closing Foundations review has no coding task');
   assert.deepEqual(levelCodingTasks('algorithms', 1), [], 'the algorithms topic is never sealed into a Learn level');
   const dsaRows = CODING_INDEX.filter((row) => row.topic === 'dsa');
   assert.equal(dsaRows.length, 29, 'the index lists the 29 DSA Foundations tasks');
   assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
-  // A DSA task names its Learn level only once that level issues it: levels
-  // 10, 11 and 14 still carry titles their tasks do not match until E3.
+  // Each DSA task names its matching Learn level after the E3 re-sequence.
   for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
-    assert.equal(hasLearnLevel(row), row.topic === 'dsa' && !DSA_LEVELS_AWAITING_E3.has(row.level), `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa', `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
   }
   for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
     const row = CODING_INDEX.find((one) => one.id === id);
-    assert.ok(row && !hasLearnLevel(row), `${id}: sits on a DSA level that does not issue it yet, so it names no level`);
+    assert.ok(row && hasLearnLevel(row), `${id}: names its aligned Foundations level`);
   }
   assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
   assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
@@ -5629,10 +5647,10 @@ async function main() {
     const outside = codingTaskById('js-count-multiples');
     assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
     assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
-    // #493: a DSA task its level issues comes back; one on a level held back
-    // for E3, and an Algorithms task no Learn level issues, do not.
+    // A DSA task its level issues comes back; an Algorithms task with no
+    // Learn level stays optional.
     assert.equal(skipPostpones('alg-dsa-reverse-in-place'), true, 'a DSA task DSA level 3 issues comes back');
-    assert.equal(skipPostpones('alg-dsa-linear-search'), false, 'DSA level 10 issues nothing until E3');
+    assert.equal(skipPostpones('alg-dsa-linear-search'), true, 'DSA level 10 now issues linear search');
     assert.equal(skipPostpones('alg-easy2-count-jewels'), false, 'an Algorithms task is optional');
 
     // C1-8: ten cleared JavaScript Learn levels open tier 3 on the task page

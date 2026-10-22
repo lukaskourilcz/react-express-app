@@ -274,7 +274,7 @@ run, a coding challenge's first pass or repeat XP, a Learn step's repeat XP
 from 060) and `complete_verified_roadmap_attempt` (a Learn level
 or part test passed for the first time, at `learn_step_xp`, the numbers of
 `shared/progression.ts`; learning XP is derived from progress and is not in
-`user_xp`). Learning paths award no XP. Guest XP merged at sign-in
+`user_xp`). Verified code inside learning paths shares the canonical task and XP ledger with Coding; lessons, checks and self-reviewed artifacts award no XP. Guest XP merged at sign-in
 (`merge_user_xp`) does not count, because nothing verified it, and nothing
 from before 056 was copied in: a month counts from the moment 056 was
 applied. A launch contract fails if a routine starts adding to `user_xp`
@@ -743,6 +743,17 @@ registries; it never joins them.
 
 ### Learn sections and the plan
 
+`/learn/web-developer`, `/learn/software-engineer` and
+`/learn/forward-deployed-engineer` each have a public title, description,
+canonical and static preview. The preview lists the registry’s topics; FDE’s
+inventory is calculated with `pathInventory` from the same manifest as the
+API. It describes authored work without claiming that a disabled path is open.
+Home’s topic chooser links directly into the first section that owns a topic.
+Today keeps unfinished → review → new priority, orders within those buckets
+by `planTopics(profile)`, and exposes one `startHereId`; joining a section
+adds work after the track rather than replacing the next action.
+
+
 `shared/learn-sections.ts` groups the Learn topics and paths into three
 sections: Web Developer, Software Engineer and Forward Deployed Engineer
 (`LEARN_SECTION_IDS`, `LEARN_SECTIONS`; the membership matrix of
@@ -993,10 +1004,10 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   Checkout before 4 October.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
-  and JavaScript in full, React levels 1 to 12 of 25, and DSA levels 1 and 2
+  and JavaScript in full, React levels 1 to 12 of 25, and DSA Foundations levels 1–5 and their first part test
   (`FREE_LEARN_LEVELS`). The DSA introduction is open without placement or a
   track prerequisite at `/learn/big-o`, linked by the public `/big-o` guide;
-  this exception opens no other DSA content. Also free are
+  this placement exception applies only to levels 1–2; levels 3–5 follow ordinary progression. Also free are
   the opening stages of every evolving project and short path
   (`FREE_EVOLVING_STAGES`, `freeStageCount`), and a starter set of standalone
   coding challenges listed once in `FREE_CODING_TASK_IDS`. The opening stages
@@ -1755,7 +1766,7 @@ solution above its applicable authored time-complexity target). Unknown
 complexity is omitted, with no penalty. Cooldowns, reveals, unverified tasks
 and guest rules still determine the actual award. `/big-o` explains input
 size and common growth rates and links to DSA levels 1–2, available free
-without Skill Check. Later DSA access is unchanged.
+without Skill Check. The E3 Foundations update below opens the first part under ordinary progression.
 
 Learn creates a parent attempt before exposing a coding link. The new tab
 takes its sealed session from a fragment and removes it from the address;
@@ -1811,3 +1822,71 @@ usage, approvals and publication; this operation reads no learner records and
 adds no model calls or publishing credentials. See
 [marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
 limits and setup.
+
+### Learning-path taster access (B12)
+
+Enrollment and resumption are free. `learning-path-activity` in the pure shared
+tier contract reads the supplied manifest: every activity in its diagnostic
+module and first required module is free; the remainder is Premium. Optional
+and shelf modules never become the first required module. Unknown paths or
+activities fail closed. The server index uses the authored manifests; path
+screens supply their fetched public manifests to the same client rule.
+
+Both start and submit enforce this activity boundary after verifying the
+caller-owned enrollment. A lapsed account may reopen recorded verified passes
+and self-reviewed work. Draft reads and saves retain their existing access.
+The client marks individual locked activities and the server's next action,
+with the usual upgrade sheet on activation. The picker can save a free FDE
+preference even when its catalogue is unavailable; that never invents an
+enrollment. The Premium page and sheet state that the diagnostic and first
+module are free. The production FDE switch remains an owner release item.
+
+## DSA Foundations in Learn — 22 October 2026 (E3)
+
+DSA Foundations has fifteen levels in the approved section 12.2 order, eight
+reviewed questions per level. The original path's 52 objective checks supply
+52 of these questions with their code context intact; 62 corrected existing
+questions and six original synthesis questions complete the bank.
+`docs/audit/wip/history/review-2026-10-22-e3-origins.json` records that mapping.
+The four restored Strings questions remain in source with retired ledger rows.
+Heaps and graph questions are preserved in the unserved E4 holding file.
+
+All fifteen levels open with reading. The eighteen original readings now live
+in `lib/learn-lessons/dsa/` and remain shared with the legacy path until E5;
+five paired readings group intact lessons, and two synthesis readings close
+the topic. Every level except the closing review seals its aligned coding
+tasks. Coding reached through a free Learn level uses that level's access
+tier; standalone Coding keeps its own free set. Levels 1–5 and their first
+part test are free, while levels 6–15 and later part tests require Premium.
+Only the first two levels bypass placement. No schema migration is required.
+
+The DSA-only positional re-sequence is explicitly approved by plan section
+12.2; it is an exception to permanent seed ordering, not a general migration
+rule. Existing `rm-dsa-N` identifiers remain. The plan records that production
+has no DSA learners. E4 adds the advanced topic and E5 retires the old path;
+this change does neither.
+
+### FDE hub evidence (B2)
+
+The FDE overview adds a competency board and the five delivery phases. Phase
+membership is manifest metadata (`deliveryPhase`), carried through the source,
+merge and public projection; module counts come from those modules. The
+capstone and optional shelves sit apart from the phase list. A validator
+rejects unknown phases and missing phases on required FDE loop modules.
+
+The board groups the recorded activity states by competency. It never turns
+reading, self-review and machine verification into a competency score, and
+keeps diagnostic percentages in their own section. A failed progress read
+shows an error instead of a fresh board. The existing Continue button follows
+`nextActivityId`; the phase list only marks its phase. Completion artwork is
+available only when the server returns `guidedComplete`, contains the exact
+“FDE guided path completed” label plus manifest competency labels and recorded
+counts, and includes no identity or artifact text. It uses the existing
+1200×630 canvas share-card renderer in light and dark.
+
+The FDE path’s canonical overview and module addresses are
+`/learn/forward-deployed-engineer/path` and its module suffix. Old
+`/roadmap/specializations/fde` links permanently redirect while preserving the
+module and the client’s query/fragment. Career groups its topics under the
+three section headings and links into Learn; the FDE path shelf lives inside
+its section.

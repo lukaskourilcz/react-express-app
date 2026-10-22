@@ -5,17 +5,13 @@ serverless handlers. devShark is freemium: every account gets HTML, CSS and
 JavaScript, React levels 1 to 12, the opening stages of every coding project
 (stages 1, 2 and 3 of a ten-stage project) and a starter set of coding
 challenges, and
-Premium (3.99 EUR a month or 39.99 EUR a year, VAT included) opens the rest.
-`shared/tiers.ts` holds that split. Subscriptions started between 4 October
-and 2 November 2026 keep a launch price of 1.80 EUR a month or 18.00 EUR a
-year for their lifetime (`shared/launch-offer.ts`). The server owns answers, grading, scores,
+Premium (4.99 EUR a month or 59.88 EUR a year, before VAT) opens the rest.
+`shared/tiers.ts` holds that split. The optional launch offer is derived from `shared/launch-offer.ts` and appears only while its window, billing setup and configured coupon permit it. The server owns answers, grading, scores,
 XP and what each account may open. Until 25 September 2026 this summary said
 all learning was free. StudyShark, which shared this code, moved to its own
 repository (`lukaskourilcz/studyshark`) on 2026-09-24.
 
-Content: 2,447 authored questions, 1,974 of them served, and 799 coding tasks,
-754 of them issued (the 45 system design tasks are hidden until they are
-reviewed again) and 144 of those on the free tier.
+Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` and the review registries. `npm run content:snapshot` prints the current authored, served, issued and free inventory. System design tasks remain hidden pending review.
 
 ## Learning features
 
@@ -44,9 +40,9 @@ reviewed again) and 144 of those on the free tier.
   track a learner already chose, and **DSA Foundations**, a focused skill path
   entered directly with no track, role or XP rank required. Both grade through
   the existing server sandbox, keep verified checks visibly apart from
-  self-reviewed writing, and award no XP — so a task reused from the coding
-  catalogue is never rewarded twice. Neither claims a certification.
-- A devShark **Coding** section: 754 tasks across JavaScript, TypeScript, React
+  self-reviewed writing. Verified code shares the canonical task and XP
+  ledger with Coding, so a reused task cannot earn another first-pass award. Neither claims a certification.
+- A devShark **Coding** section across JavaScript, TypeScript, React
   and Algorithms (system design is hidden), labelled Easy, Medium or Hard, graded on the
   server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
   React), with authored hint ladders that end in
@@ -100,3 +96,5 @@ BoardlessAI (`lukaskourilcz/quorum`). It reads the question bank read-only as a 
 and publishes one question a day, with its answer, as a carousel. No code here changes, and
 nothing posts without a person approving it. See the README for what it does and does not
 touch.
+
+Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.

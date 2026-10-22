@@ -1,0 +1,4 @@
+interface:
+  display_name: "Learning Path Module Authoring"
+  short_description: "Author a path module with solutions and review"
+  default_prompt: "Use $learning-path-module-authoring to author this module, review each item and validate the complete path."

@@ -15,7 +15,7 @@ The commands come from `.github/workflows/quality.yml`, where the gates run as f
 
 | # | Step id | Command | Notes |
 |---|---|---|---|
-| 1 | `install` | `npm ci && npm ci --prefix client` | Runs locally when `node_modules` or `client/node_modules` is missing, or with `--install`. |
+| 1 | `install` | `npm ci --no-audit && npm ci --no-audit --prefix client` | Runs locally when `node_modules` or `client/node_modules` is missing, or with `--install`. Install-time advisory reports are redundant; the explicit production audit steps remain required. |
 | 2 | `check:quickjs-build` | `npm run check:quickjs-build` | CI skips it when `lib/coding/vendor`, `lib/coding/quickjs-variant.ts`, `scripts/rebuild-quickjs-sort.mjs`, `package.json`, `package-lock.json` and `client/package-lock.json` match the PR base; the script compares the working tree with `git merge-base HEAD origin/main` the same way. Any `package.json` edit, a new npm script included, triggers it. The rebuild needs Python 3.10+ (`SHARK_PYTHON`) to install the pinned emsdk, or an emsdk in `SHARK_EMSDK_DIR`; without either the step is reported as not run, and CI's result is the evidence. |
 | 3-5 | `typecheck:api`, `typecheck:scripts`, `typecheck:tooling` | `npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client` | `typecheck:tooling` lives in `client/package.json`. |
 | 6 | `audit:native-reviews` | `npm run audit:native-reviews` | |

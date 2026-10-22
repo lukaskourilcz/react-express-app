@@ -1,0 +1,400 @@
+[
+  {
+    "file": "docs/audit/wip/native/review-2026-10-15-n033.jsonl",
+    "line": 1,
+    "replacedBy": "docs/audit/wip/native/review-2026-10-15-n033.jsonl (same line, revised record)",
+    "review": {
+      "id": "fde-v1-m03-l1",
+      "kind": "native-lesson",
+      "path": "fde",
+      "module": "fde-v1-m03",
+      "locale": "en",
+      "source": "lib/learning-paths/content/fde/m03.ts",
+      "contentHash": "eff5172d0d65c75a",
+      "previousHash": "4fa8562b1081f50f",
+      "gradingHash": null,
+      "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+      "objective": "Resolve current caller/tenant authority and enforce this workbench's scoped-fetch policy without overstating other architectures or leak evidence.",
+      "intendedLevel": "intermediate",
+      "quality": {
+        "topicRelevance": 5,
+        "learningValue": 5,
+        "technicalCorrectness": 5,
+        "wording": 5,
+        "answerOptions": null,
+        "hint": null,
+        "explanation": null
+      },
+      "qualityScore": 5,
+      "notApplicable": {
+        "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+        "hint": "This record has no separate pre-answer hint.",
+        "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+      },
+      "relevance": {
+        "presentDay": 2,
+        "practicalUtility": 2,
+        "transferable": 2,
+        "audienceFit": 2,
+        "riskOutcome": 2
+      },
+      "relevanceScore": 10,
+      "relevanceRationale": {
+        "presentDay": "Tenant isolation remains current.",
+        "practicalUtility": "Confused-deputy bugs expose unauthorized data.",
+        "transferable": "Authentication, service access and caller permission differ.",
+        "audienceFit": "Explicit workbench policy resolves ignored selector behavior.",
+        "riskOutcome": "Fixes invalid snippets and unsupported guaranteed-leak/security claims."
+      },
+      "gates": {
+        "quality": true,
+        "relevance": true
+      },
+      "decision": "rewrite",
+      "correctnessBlocker": null,
+      "rationale": "Read all thirteen sections including identity table and seven trace frames. Current request authority replaces sign-in-forever framing. Service roles need not read all tenants; authorized selectors can be valid in another design. Give unsafe/scoped read functions distinct names and broad/scoped arrays distinct names: both original code blocks failed syntax. Broad fetching violates this stated policy but does not prove every error reporter leaked rows. A scoped method name is not enforcement; defense in depth is not an unconditional guarantee.401/403/404 and uniform public refusal follow the actual disclosure policy, with internal reasons and other side channels considered.",
+      "evidence": [
+        "https://httpwg.org/specs/rfc9110.html",
+        "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+        "repo: lib/learning-paths/content/fde/m03.ts l1",
+        "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ],
+      "reviewedAt": "2026-10-15",
+      "reviewer": {
+        "kind": "model",
+        "independent": false,
+        "run": "Codex session 2026-10-15; sequential five-item native batch n033"
+      },
+      "verification": {
+        "verdict": "accept",
+        "reader": "same model/session, separate final English reading",
+        "notes": "Final full English reading checks all identities, tenant trace, grant premise and snippets. Old duplicates fail SyntaxError; revised snippets compile and a trusted stub illustrates proposed OTHER versus server OWN. This is not actual authentication, RLS, database-role or leak testing. No universal MCP argument/host behavior is asserted. No independent/human approval or full-catalogue acceptance is claimed.",
+        "evidence": [
+          "https://httpwg.org/specs/rfc9110.html",
+          "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+          "repo: lib/learning-paths/content/fde/m03.ts l1",
+          "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+          "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+        ]
+      }
+    }
+  },
+  {
+    "file": "docs/audit/wip/native/review-2026-10-15-n033.jsonl",
+    "line": 2,
+    "replacedBy": "docs/audit/wip/native/review-2026-10-15-n033.jsonl (same line, revised record)",
+    "review": {
+      "id": "fde-v1-m03-l2",
+      "kind": "native-lesson",
+      "path": "fde",
+      "module": "fde-v1-m03",
+      "locale": "en",
+      "source": "lib/learning-paths/content/fde/m03.ts",
+      "contentHash": "f6ca6a89de796213",
+      "previousHash": "a5e3d8075129fdb6",
+      "gradingHash": null,
+      "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+      "objective": "Inventory real data copies, bound cleanup/audit evidence and define point-of-use grant semantics without promising unverified deletion or reconstruction.",
+      "intendedLevel": "intermediate",
+      "quality": {
+        "topicRelevance": 5,
+        "learningValue": 5,
+        "technicalCorrectness": 5,
+        "wording": 5,
+        "answerOptions": null,
+        "hint": null,
+        "explanation": null
+      },
+      "qualityScore": 5,
+      "notApplicable": {
+        "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+        "hint": "This record has no separate pre-answer hint.",
+        "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+      },
+      "relevance": {
+        "presentDay": 2,
+        "practicalUtility": 2,
+        "transferable": 2,
+        "audienceFit": 2,
+        "riskOutcome": 2
+      },
+      "relevanceScore": 10,
+      "relevanceRationale": {
+        "presentDay": "Lifecycle and grant freshness remain current.",
+        "practicalUtility": "Untracked copies and stale authority undermine controls.",
+        "transferable": "Deletion, retention, attribution and reconstruction differ.",
+        "audienceFit": "Concrete audit JSON and explicit20-row batches make limits inspectable.",
+        "riskOutcome": "Fixes unscoped cleanup and universal backup/cache/copy-count claims."
+      },
+      "gates": {
+        "quality": true,
+        "relevance": true
+      },
+      "decision": "rewrite",
+      "correctnessBlocker": null,
+      "rationale": "Read all fourteen sections, three tables and six export frames. Seven categories are not an inevitable exact copy count; ids also need lifecycle/access rules. Logs/exports/backups have system-specific capabilities and owners. Soft/hard deletion scope is explicit. Replace unscoped index removal and fragile sequential completion claim with an illustrative same-DB cleanup job plus scoped worker steps and explicit durable-retry/completion limits. No all-copy deletion or live implementation is claimed. Policy/grant version references alone cannot reconstruct historical decisions. Expiry needs trusted context/clock; revocation may use current authoritative checks rather than always waiting for TTL. Per-batch continuation is this policy; row41 resume needs a valid checkpoint/snapshot contract. Correct16:58\u219217:01 interval wording.",
+      "evidence": [
+        "https://www.nist.gov/itl/ai-risk-management-framework/nist-ai-rmf-playbook",
+        "https://opentelemetry.io/docs/concepts/signals/traces/",
+        "repo: lib/learning-paths/content/fde/m03.ts l2",
+        "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ],
+      "reviewedAt": "2026-10-15",
+      "reviewer": {
+        "kind": "model",
+        "independent": false,
+        "run": "Codex session 2026-10-15; sequential five-item native batch n033"
+      },
+      "verification": {
+        "verdict": "accept",
+        "reader": "same model/session, separate final English reading",
+        "notes": "Final full reading verifies audit JSON actor/tenant/targets/version,40of60 exported count and threshold instants. Async deletion sketch compiles only; no actual data removal, backup access, restore, retention compliance, transaction or historical reconstruction was executed. Policies/applicable requirements remain context-dependent rather than universal legal claims. No independent/human approval or full-catalogue acceptance is claimed.",
+        "evidence": [
+          "https://www.nist.gov/itl/ai-risk-management-framework/nist-ai-rmf-playbook",
+          "https://opentelemetry.io/docs/concepts/signals/traces/",
+          "repo: lib/learning-paths/content/fde/m03.ts l2",
+          "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+          "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+        ]
+      }
+    }
+  },
+  {
+    "file": "docs/audit/wip/native/review-2026-10-15-n033.jsonl",
+    "line": 4,
+    "replacedBy": "docs/audit/wip/native/review-2026-10-15-n033.jsonl (same line, revised record)",
+    "review": {
+      "id": "fde-v1-m03-l2-read",
+      "kind": "native-activity",
+      "path": "fde",
+      "module": "fde-v1-m03",
+      "locale": "en",
+      "source": "lib/learning-paths/content/fde/m03.ts",
+      "contentHash": "053ac78e5e51d56f",
+      "previousHash": "383e53d895de0dc9",
+      "gradingHash": null,
+      "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+      "objective": "Open reviewed lifecycle/audit/grant reading with explicit cleanup and evidence limits.",
+      "intendedLevel": "intermediate",
+      "quality": {
+        "topicRelevance": 5,
+        "learningValue": 4,
+        "technicalCorrectness": 5,
+        "wording": 5,
+        "answerOptions": null,
+        "hint": null,
+        "explanation": null
+      },
+      "qualityScore": 4,
+      "notApplicable": {
+        "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+        "hint": "This record has no separate pre-answer hint.",
+        "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+      },
+      "relevance": {
+        "presentDay": 2,
+        "practicalUtility": 2,
+        "transferable": 2,
+        "audienceFit": 2,
+        "riskOutcome": 2
+      },
+      "relevanceScore": 10,
+      "relevanceRationale": {
+        "presentDay": "Lifecycle literacy remains relevant.",
+        "practicalUtility": "The reading points to the actual reviewed lesson.",
+        "transferable": "Self-reported reading does not verify deletion or recovery.",
+        "audienceFit": "The summary matches the revised limits.",
+        "riskOutcome": "No blanket audit-reconstruction or retention guarantee is made."
+      },
+      "gates": {
+        "quality": true,
+        "relevance": true
+      },
+      "decision": "rewrite",
+      "correctnessBlocker": null,
+      "rationale": "Read linked lesson fully and verify lessonId. Summary names actual copy inventory, scoped cleanup/recovery, bounded audit evidence and explicit freshness policy. Preserve self-review, estimate, title and boundaries competency.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m03.ts l2-read and l2",
+        "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ],
+      "reviewedAt": "2026-10-15",
+      "reviewer": {
+        "kind": "model",
+        "independent": false,
+        "run": "Codex session 2026-10-15; sequential five-item native batch n033"
+      },
+      "verification": {
+        "verdict": "accept",
+        "reader": "same model/session, separate final English reading",
+        "notes": "Final reading confirms fde-v1-m03-l2 and its reviewed material. No actual restore/deletion or owner-progress fixture was created. The action records reading rather than machine validation of a learner's retention design. No independent/human approval or full-catalogue acceptance is claimed.",
+        "evidence": [
+          "repo: lib/learning-paths/content/fde/m03.ts l2-read and l2",
+          "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+          "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+        ]
+      }
+    }
+  },
+  {
+    "file": "docs/audit/wip/native/review-2026-10-15-n033.jsonl",
+    "line": 5,
+    "replacedBy": "none: item retired; its replacement fde-v1-m03-webhook-receiver is reviewed in docs/audit/wip/native/review-2026-10-22-b5.jsonl",
+    "review": {
+      "id": "fde-v1-m03-tenant-tool-wrapper",
+      "kind": "native-activity",
+      "path": "fde",
+      "module": "fde-v1-m03",
+      "locale": "en",
+      "source": "lib/learning-paths/content/fde/m03.ts; lib/learning-paths/solutions/fde-m03.ts",
+      "contentHash": "299668dcf2e22afe",
+      "previousHash": "2cc1eb1ce64cfef8",
+      "gradingHash": "04bbc4845f59d344",
+      "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+      "objective": "Enforce exact tool/tenant/grant precedence before every fixture read, ignore proposed tenant access and preserve input/output contracts.",
+      "intendedLevel": "intermediate",
+      "quality": {
+        "topicRelevance": 5,
+        "learningValue": 5,
+        "technicalCorrectness": 5,
+        "wording": 5,
+        "answerOptions": null,
+        "hint": 5,
+        "explanation": null
+      },
+      "qualityScore": 5,
+      "notApplicable": {
+        "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+        "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+      },
+      "relevance": {
+        "presentDay": 2,
+        "practicalUtility": 2,
+        "transferable": 2,
+        "audienceFit": 2,
+        "riskOutcome": 2
+      },
+      "relevanceScore": 10,
+      "relevanceRationale": {
+        "presentDay": "Server authority checks remain relevant.",
+        "practicalUtility": "Refused requests must not fetch protected rows.",
+        "transferable": "Trusted current context differs from proposed arguments.",
+        "audienceFit": "Bounded synchronous fixtures make ordering and clock comparisons explicit.",
+        "riskOutcome": "Adds probes for two violations that passed the original suite."
+      },
+      "gates": {
+        "quality": true,
+        "relevance": true
+      },
+      "decision": "rewrite",
+      "correctnessBlocker": null,
+      "rationale": "Read full prompt/starter/skeleton, hints, approach, contract, harness, critical criteria and visible/hidden calls. State fresh trusted context and fixed authorization instant, valid timestamps,100grant/1000returned-row domain, bounded strings and nonmutation. The ignored tenantId may be an accessor, so reading/enumerating it can be observed. Add expiry/refusal zero-read tests, exact revocation precedence, unread accessor, frozen context and maximum projection tests. Baseline expired-read and harmless proposed-tenant read mutants passed; both now fail. Reference/loop alternative pass, starter and three wrongs fail. Applicable On(grants+returnedrows) excludes store internals; valid solutions keep25XP without false penalty.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m03.ts tenant-tool-wrapper",
+        "repo: lib/learning-paths/solutions/fde-m03.ts",
+        "repo: docs/audit/wip/tools/native-2026-10-15-n033-candidates.json",
+        "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ],
+      "reviewedAt": "2026-10-15",
+      "reviewer": {
+        "kind": "model",
+        "independent": false,
+        "run": "Codex session 2026-10-15; sequential five-item native batch n033"
+      },
+      "verification": {
+        "verdict": "accept",
+        "reader": "same model/session, separate final English reading",
+        "notes": "Final English/code reading confirms unknown-tool precedence, missing args, scope+tenant match, revoked-before-expired rules at exact instants, no refused reads, one allowed scoped query, original store order and exact four-field projection. Six real sandbox verdicts pass, including frozen data and boundary counts. No actual token/session verifier, RLS, network, owner progress or production database was exercised. No independent/human approval or full-catalogue acceptance is claimed.",
+        "evidence": [
+          "repo: lib/learning-paths/content/fde/m03.ts tenant-tool-wrapper",
+          "repo: lib/learning-paths/solutions/fde-m03.ts",
+          "repo: docs/audit/wip/tools/native-2026-10-15-n033-candidates.json",
+          "run: check-native-2026-10-15-n033.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+          "run: native-n033-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+        ]
+      }
+    }
+  },
+  {
+    "file": "docs/audit/wip/native/review-2026-10-15-n023.jsonl",
+    "line": 5,
+    "replacedBy": "docs/audit/wip/native/review-2026-10-15-n023.jsonl (same line, revised record)",
+    "review": {
+      "id": "fde-v1-m03-checks",
+      "kind": "native-activity",
+      "path": "fde",
+      "module": "fde-v1-m03",
+      "locale": "en",
+      "source": "lib/learning-paths/content/fde/m03.ts",
+      "contentHash": "ab0124ef466eb79b",
+      "previousHash": "59f706884b7ec691",
+      "gradingHash": null,
+      "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+      "objective": "Apply four explicit tenant, storage, grant and audit policies with exercise feedback.",
+      "intendedLevel": "intermediate",
+      "quality": {
+        "topicRelevance": 5,
+        "learningValue": 5,
+        "technicalCorrectness": 5,
+        "wording": 5,
+        "answerOptions": null,
+        "hint": null,
+        "explanation": null
+      },
+      "qualityScore": 5,
+      "notApplicable": {
+        "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+        "hint": "This record has no separate pre-answer hint.",
+        "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+      },
+      "relevance": {
+        "presentDay": 2,
+        "practicalUtility": 2,
+        "transferable": 2,
+        "audienceFit": 2,
+        "riskOutcome": 2
+      },
+      "relevanceScore": 10,
+      "relevanceRationale": {
+        "presentDay": "The four boundary distinctions remain current.",
+        "practicalUtility": "Explicit authority and audit contracts guide secure implementation.",
+        "transferable": "Evidence limits transfer across tenant architectures.",
+        "audienceFit": "Four bounded questions fit the module.",
+        "riskOutcome": "Summary now distinguishes risk/correlation from proven leak/reconstruction."
+      },
+      "gates": {
+        "quality": true,
+        "relevance": true
+      },
+      "decision": "rewrite",
+      "correctnessBlocker": null,
+      "rationale": "All four child items have individual reviews here. Replace summary claims of an already leaked post-filter result and a fully reconstructable audit entry with fixed-active-tenant authority, scoped access, per-batch grants and useful correlation under explicit policies. Keep exercise purpose, boundaries competency, machine verification and 0.8 threshold.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m03.ts checks",
+        "repo: lib/learning-paths/grade.ts gradeCheck",
+        "run: check-native-2026-10-15-n023.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n023-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ],
+      "reviewedAt": "2026-10-15",
+      "reviewer": {
+        "kind": "model",
+        "independent": false,
+        "run": "Codex session 2026-10-15; sequential five-item native batch n023"
+      },
+      "verification": {
+        "verdict": "accept",
+        "reader": "same model/session, separate final English reading",
+        "notes": "Reread the whole parent and all four corrected items. The mixed source key [0,1,2,0] is retained; all correct pass and every single miss fails with explanations available. The proof binds exact records but does not create independent/human or live authorization acceptance. No independent/human approval or full-catalogue acceptance is claimed.",
+        "evidence": [
+          "repo: lib/learning-paths/content/fde/m03.ts checks",
+          "repo: lib/learning-paths/grade.ts gradeCheck",
+          "run: check-native-2026-10-15-n023.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+          "run: native-n023-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+        ]
+      }
+    }
+  }
+]

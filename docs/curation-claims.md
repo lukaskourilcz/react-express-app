@@ -15,10 +15,7 @@ present-day applicability, practical utility, transferable understanding,
 audience and level fit, and risk or outcome value. Below **4/10** the item
 leaves.
 
-Quality is scored out of five, one point each: the answer is right, the
-question asks one clear thing, the wrong options are plausibly wrong, the hint
-helps without answering, and the explanation says why. Below **3/5** the item
-leaves.
+Each of seven quality dimensions is scored from one to five: topic relevance, learning value, technical correctness, wording, answer options, hint and explanation. The final quality score is the minimum dimension, never an average or a count of passed criteria (`qualityFloor` in `shared/curation.ts`). Below **3/5** the item leaves.
 
 `shared/curation.ts` owns both, and `passesBothGates` is the only way to ask
 whether an item passes. There is deliberately no helper that takes one score.

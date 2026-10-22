@@ -73,6 +73,8 @@ export interface TodayResult {
 }
 
 export interface BuildTodayOptions {
+  /** Saved plan order from planTopics; out-of-plan review topics follow it. */
+  topicOrder?: readonly string[];
   /** UTC day key ('YYYY-MM-DD'); defaults to today. Injectable for tests. */
   today?: string;
   /**
@@ -161,7 +163,9 @@ export function buildToday(
 ): TodayResult {
   const today = opts.today ?? masteryDayKey();
   const extra = opts.extraUnlocks ?? [];
-  const topics = topicsForSubject(subject);
+  const liveTopics = topicsForSubject(subject);
+  const topics = [...new Set([...(opts.topicOrder ?? []), ...liveTopics])]
+    .filter((topic): topic is RoadmapTopic => liveTopics.includes(topic as RoadmapTopic));
 
   const unfinished: TodayItem[] = [];
   const review: TodayItem[] = [];
@@ -203,7 +207,7 @@ export function buildToday(
     }
   }
 
-  // Stable order: by subject topic order, then level ascending, within each bucket.
+  // Stable order: by saved plan order (subject order without a plan), then level ascending, within each bucket.
   const order = new Map(topics.map((t, i) => [t, i] as const));
   const cmp = (a: TodayItem, b: TodayItem): number =>
     (order.get(a.topic)! - order.get(b.topic)!) || (a.level - b.level);

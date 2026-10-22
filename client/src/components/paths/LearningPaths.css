@@ -635,3 +635,34 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* The plan card is the target of the Learn page's "Choose your plan"
    (/profile#learning-plan): room under the fixed header when it scrolls in. */
 .lp-plan-anchor { scroll-margin-top: 6rem; }
+
+/* The loop and board use text and recorded counts, with no animated score. */
+.lp-loop { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0; list-style: none; }
+.lp-loop > li { display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--ss-card-line); padding-top: 12px; min-width: 0; }
+.lp-loop > li[aria-current='step'] { border-color: var(--brand-accent); }
+.lp-loop span { color: var(--color-text-secondary); font-size: 0.875rem; }
+.lp-evidence { list-style: none; margin: 0; padding: 0; }
+.lp-evidence > li { border-top: 1px solid var(--ss-card-line); padding: 18px 0; }
+.lp-evidence p { color: var(--color-text-secondary); line-height: 1.6; }
+.lp-evidence__states { display: flex; flex-wrap: wrap; gap: 12px; padding: 0; list-style: none; }
+.lp-evidence__states li { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.lp-evidence summary { cursor: pointer; min-height: 44px; line-height: 44px; text-decoration: underline; text-underline-offset: 3px; }
+.lp-evidence details a { display: inline-flex; align-items: center; min-height: 44px; }
+.lp-evidence summary:focus-visible, .lp-evidence a:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 4px; }
+@media (max-width: 767px) { .lp-loop { grid-template-columns: 1fr; } }
+
+/* ── a Learn section's paths shelf (PathShelf.tsx, #489) ───────────────── */
+
+.rm-path-shelf { margin: 0 0 18px; }
+.rm-path-shelf__title { margin: 0; color: var(--color-text-primary); }
+/* The card's title is the shelf's link into the path: a 44px target, and it
+   wraps at 360px with 200 % text instead of overflowing. */
+.rm-path-shelf .lp-module__title a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text-accent);
+  text-underline-offset: 3px;
+}
+.rm-path-shelf__error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rm-path-shelf__error p { margin: 0; color: var(--color-text-secondary); }

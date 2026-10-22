@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
 // Learning paths on Today: one resume item per active enrollment.
 //
 // One item per path, never a list of everything outstanding — the server
@@ -43,17 +45,19 @@ interface ResumeRow {
   moduleId: string;
   activityId: string;
   activityTitle: string;
+  locked: boolean;
 }
 
 function PathRow({ row }: { row: ResumeRow }) {
   const { t } = useLanguage();
   return (
     <li className="today-item">
-      <Link className="today-item__link" to={activityHref(row.enrollment.pathId as LearningPathId, row.moduleId, row.activityId)}>
+      <Link className="today-item__link" to={activityHref(row.enrollment.pathId as LearningPathId, row.moduleId, row.activityId)} onClick={event => { if (row.locked) { event.preventDefault(); openUpgradeSheet({ kind: 'learning-path-activity', ref: `${row.enrollment.pathId}:${row.activityId}` }); } }}>
         <span className="today-item__body">
           <span className="today-item__title">{row.activityTitle}</span>
           <span className="today-item__reason">
             {row.pathTitle} · {t('today.pathReason')}
+            {row.locked && <> · <span className="ss-premium-label">{t('premium.badge')}</span></>}
           </span>
         </span>
         <span className="today-item__action">
@@ -76,7 +80,8 @@ export function PathResumeSection() {
   const { user, isAuthenticated } = useAuth();
   const userId = isAuthenticated ? user?.id : undefined;
   const catalog = usePathCatalog();
-  const { lockOf } = useLocks();
+  const manifests = useMemo(() => catalog.data?.paths.map(entry => entry.manifest) ?? [], [catalog.data]);
+  const { lockOf } = useLocks(undefined, { paths: manifests });
   const enrollments = useEnrollments(userId);
   const active = (enrollments.data?.enrollments ?? []).filter((one) => one.status === 'active');
   const progress = useQueries({
@@ -101,6 +106,7 @@ export function PathResumeSection() {
       moduleId: module.id,
       activityId: next,
       activityTitle: activity.title,
+      locked: !progress[index]?.data?.modules.some(module => module.activities.some(activity => activity.activityId === next && ['verified_pass', 'self_reviewed'].includes(activity.state))) && isBarred(lockOf({ kind: 'learning-path-activity', pathId: enrollment.pathId, activityId: next })),
     }];
   });
   if (rows.length === 0) return null;

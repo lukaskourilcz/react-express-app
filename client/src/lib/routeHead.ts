@@ -42,7 +42,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
 // A learning path's pages, its overview and every module, carry the path's
 // name: the manifest title, which the path picker labels in the same words.
 const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
-  ['/roadmap/specializations/fde', 'paths.picker.fdeLabel'],
+  ['/learn/forward-deployed-engineer/path', 'paths.picker.fdeLabel'],
   ['/roadmap/paths/dsa-foundations', 'paths.picker.dsaLabel'],
 ];
 
@@ -50,6 +50,8 @@ export function routeTitle(pathname: string, t: Translate): string {
   const publicTopic = topicFromPath(pathname);
   if (publicTopic) return `${publicTopic.topic.title} · ${CURRENT_PRODUCT.brand}`;
   if (pathname === '/') return CURRENT_PRODUCT.title;
+  const sectionPage = publicPage(pathname);
+  if (sectionPage) return t(sectionPage.titleKey);
   const titleKey = ROUTE_TITLE_KEYS[pathname];
   if (titleKey) return t(titleKey);
   // A Learn section (/learn/web-developer, …) carries the Learn title.

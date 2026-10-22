@@ -269,17 +269,19 @@ test.describe('Learn section states', () => {
     await context.setOffline(false);
   });
 
-  test('the open FDE path is Premium for a free account: the sheet opens and nothing is saved', async ({ page }) => {
+  test('a free account joins the FDE taster while other Premium topics stay gated', async ({ page }) => {
     await prepare(page);
     const state = await stand(page, 'frontend', { catalogEnabled: true });
     await page.goto('/learn/forward-deployed-engineer');
     const start = page.getByRole('button', { name: 'Start the FDE path' });
     await expect(start).toBeVisible();
-    await expect(page.locator('.rm-section-action .ss-premium-label')).toHaveText('Premium');
+    await expect(page.locator('.rm-section-action .ss-premium-label')).toHaveCount(0);
     await start.click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    expect(state.puts).toEqual([]);
-    expect(state.enrollmentPosts).toEqual([]);
+    await expect.poll(() => state.puts.length).toBe(1);
+    expect(state.enrollmentPosts).toHaveLength(1);
+    expect(state.enrollmentPosts[0]).toMatchObject({ pathId: 'fde', action: 'enroll' });
+    expect(state.puts[0]).toMatchObject({ specialization: 'fde' });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await page.goto('/learn/web-developer');
     await expect(topicCard(page, 'TypeScript').locator('.rm-topic-progress')).toContainText('Premium');
@@ -422,5 +424,31 @@ test.describe('Learn section targets on a touch screen', () => {
     expect(box.height).toBeGreaterThanOrEqual(44);
     expect(box.width).toBeGreaterThanOrEqual(44);
     await empty.close();
+  });
+});
+
+
+test.describe('FDE routes and Career sections', () => {
+  test('keeps the module, activity query and fragment on an old FDE link', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest');
+    await page.goto('/roadmap/specializations/fde/fde-v1-m01?activity=fde-v1-m01-l1-read#lesson');
+    await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer\/path\/fde-v1-m01\?activity=fde-v1-m01-l1-read#lesson$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('links each Career group into Learn and shows the FDE path on its section shelf', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest', { catalogEnabled: true });
+    await page.goto('/roadmap');
+    for (const [id, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
+      const heading = page.getByRole('heading', { name, exact: true });
+      await expect(heading.getByRole('link')).toHaveAttribute('href', `/learn/${id}`);
+    }
+    await expect(page.locator('.lp-module')).toHaveCount(0);
+    await page.getByRole('heading', { name: 'Forward Deployed Engineer', exact: true }).getByRole('link').click();
+    await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer$/);
+    const shelf = page.getByRole('region', { name: 'Learning paths' });
+    await expect(shelf.getByRole('link', { name: 'Forward Deployed Engineer' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path');
   });
 });

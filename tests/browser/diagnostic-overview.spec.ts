@@ -21,7 +21,7 @@ for(const theme of ['light','dark'] as const) test(`${theme}: diagnostic report 
     if(op==='learning-path-progress')return route.fulfill({json:{enrollment,modules:[],competencies,recommendedBridges:['fde-bridge-backend-data'],nextActivityId:null,guidedComplete:false,artifacts:{submitted:0,total:3},dueActivityIds:[]}});
     return route.fulfill({status:503,json:{error:{code:'offline',message:'Local test fixture'}}});
   });
-  await page.goto('/roadmap/specializations/fde');
+  await page.goto('/learn/forward-deployed-engineer/path');
   const report=page.getByRole('region',{name:'Diagnostic overview'});await expect(report).toBeVisible();
   await expect(report).toContainText('Worth practising');await expect(report).toContainText('33% · Items assessed: 3');
   await expect(report).toContainText('100% · Items assessed: 3');
@@ -34,7 +34,7 @@ for(const theme of ['light','dark'] as const) test(`${theme}: diagnostic report 
   }
   const link=report.getByRole('link',{name:'Open the diagnostic'});await link.focus();await expect(link).toBeFocused();
   await page.keyboard.press('Shift+Tab');await page.keyboard.press('Tab');await expect(link).toBeFocused();
-  await expect(link).toHaveAttribute('href','/roadmap/specializations/fde/fde-v1-diagnostic?activity=fde-v1-diagnostic-check');
+  await expect(link).toHaveAttribute('href','/learn/forward-deployed-engineer/path/fde-v1-diagnostic?activity=fde-v1-diagnostic-check');
   await page.setViewportSize({width:360,height:900});await page.addStyleTag({content:'html {font-size:200% !important;}'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   expect(await report.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);

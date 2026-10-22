@@ -214,11 +214,16 @@ export function localDraftOver(enrollmentId: string, activityId: string, server:
 
 /* ── routes ────────────────────────────────────────────────────────────── */
 
-/** Role specializations and skill paths get different entry routes so the
- * career flow and the focused paths stay visibly separate, even though they
- * share one workspace underneath. */
+/** The FDE path's pages live in its Learn section (#489, plan decision D4).
+ * Its old addresses under /roadmap/specializations/fde redirect here: App.tsx
+ * in the browser, vercel.json with a 308 for crawlers. App.tsx, routeHead.ts
+ * and vercel.json spell the same path; the route-head test holds them equal. */
+export const FDE_PATH_ROUTE = '/learn/forward-deployed-engineer/path';
+
+/** The role specialization lives in its section; the skill path keeps its
+ * route until epic E folds it into Learn. */
 export function pathHref(pathId: LearningPathId): string {
-  return pathId === 'fde' ? '/roadmap/specializations/fde' : '/roadmap/paths/dsa-foundations';
+  return pathId === 'fde' ? FDE_PATH_ROUTE : '/roadmap/paths/dsa-foundations';
 }
 
 export function moduleHref(pathId: LearningPathId, moduleId: string): string {

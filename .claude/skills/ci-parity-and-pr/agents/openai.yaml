@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI Parity and PR"
+  short_description: "Validate the changed area and merge a checked PR"
+  default_prompt: "Use $ci-parity-and-pr to run the relevant checks, prepare this pull request and record its release."

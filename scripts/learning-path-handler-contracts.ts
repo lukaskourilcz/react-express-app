@@ -1,3 +1,4 @@
+import { decodeLearningPathSession } from '../lib/quiz-tokens';
 // Handler contracts for the learning paths, run by `npm run test:paths`.
 //
 // The handlers are called directly with a stand-in for Supabase that answers
@@ -114,7 +115,7 @@ async function quietly<T>(run: () => Promise<T>): Promise<T> {
 export async function handlerContracts(fail: Fail): Promise<void> {
   const stamp = Date.now();
   const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations')!;
-  const codeActivity = dsa.modules.flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && !activity.reuseTaskId)!;
+  const codeActivity = dsa.modules.filter(module => !isOffLoopModule(module)).slice(1).flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && !activity.reuseTaskId)!;
   const learner = `user-paths-${stamp}`;
   const enrollmentId = `ENROLL${stamp}`.padEnd(20, 'a');
   const session = encodeLearningPathSession({
@@ -160,6 +161,70 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
       else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
+    }
+
+    /* ── free enrollment, diagnostic and first module; later activity gate ── */
+    {
+      const fde = LEARNING_PATHS.find(path => path.id === 'fde')!;
+      const required = fde.modules.filter(module => !isOffLoopModule(module));
+      const first = required[0];
+      const second = required[1].activities[0];
+      const freeUser = `free-taster-${stamp}`;
+      const row = { ...enrollmentRow('active'), user_id: freeUser, path_id: 'fde', curriculum_version: fde.version };
+      const recorded: Record<string, { state: string }> = {};
+      const lists = { learning_path_progress: [{ module_id: first.id, activity_states: recorded, completed_at: null }] };
+      let completedFirst = false;
+      let calls = 0;
+      const db = fakeSupabase({ rows: { learning_path_enrollments: row }, lists, rpc: (name, params) => {
+        calls += 1;
+        if (name === 'upsert_learning_path_enrollment') return { data: { found: true, created: true, enrollment: row } };
+        if (name === 'open_learning_path_attempt') return { data: { ok: true, expiresAt: new Date(Date.now() + 60_000).toISOString() } };
+        if (name === 'accept_learning_path_result') {
+          const result = params.p_result as SubmitActivityResponse;
+          recorded[result.activityId] = { state: result.state };
+          if (params.p_module_id === first.id && params.p_module_complete === true) completedFirst = true;
+          return { data: { ok: true, replayed: false, result } };
+        }
+        return {};
+      } });
+      const before = process.env.LEARNING_PATH_FDE_ENABLED;
+      process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+      try {
+        let res = response();
+        await handleEnrollment(request('POST', `taster-enroll-${stamp}`, { user_id: freeUser, action: 'enroll', pathId: 'fde', curriculumVersion: fde.version, baseTrack: 'fullstack' }), res as never, db);
+        if (res.statusCode !== 200) fail(`a free account cannot enroll: ${res.statusCode} ${code(res)}`);
+        const diagnostic = fde.modules.flatMap(module => module.activities).find(activity => activity.id === fde.diagnosticActivityId)!;
+        for (const activity of [diagnostic, ...first.activities]) {
+          res = response();
+          await handleActivityStart(request('POST', `taster-start-${stamp}-${activity.id}`, { user_id: freeUser, enrollmentId, activityId: activity.id }), res as never, db);
+          if (res.statusCode !== 200) { fail(`free taster cannot start ${activity.id}: ${res.statusCode} ${code(res)}`); continue; }
+          const opened = res.body as StartActivityResponse;
+          const sealed = decodeLearningPathSession(opened.session)!;
+          const artifact = Object.fromEntries((activity.artifact?.fields ?? []).map(field => [field.id, field.kind === 'list' ? ['Local fixture'] : field.kind === 'url' ? 'https://example.invalid/' : 'Local fixture']));
+          res = response();
+          await handleActivitySubmit(request('POST', `taster-submit-${stamp}-${activity.id}`, { user_id: freeUser, session: opened.session,
+            idempotencyKey: `TASTER${stamp}${calls}`.padEnd(24, 'a'), acknowledged: true, answers: sealed.answerKey, artifact }), res as never, db);
+          const result = res.body as SubmitActivityResponse;
+          if (res.statusCode !== 200 || !['verified_pass', 'self_reviewed'].includes(result.state)) fail(`free taster cannot finish ${activity.id}: ${res.statusCode} ${code(res)} ${result.state}`);
+        }
+        if (!completedFirst) fail('the free first module never sent satisfied completion requirements');
+        const beforeRefusal = calls;
+        res = response();
+        await handleActivityStart(request('POST', `taster-refuse-${stamp}`, { user_id: freeUser, enrollmentId, activityId: second.id }), res as never, db);
+        const error = (res.body as { error?: { kind?: string; ref?: string } })?.error;
+        if (res.statusCode !== 402 || code(res) !== 'premium_required' || error?.kind !== 'learning-path-activity' || error.ref !== `fde:${second.id}`) fail(`second module must answer activity-scoped 402, got ${res.statusCode} ${JSON.stringify(res.body)}`);
+        if (calls !== beforeRefusal) fail('a refused Premium start opened an attempt');
+        // This same account now represents a lapsed learner with stored passes.
+        for (const state of ['verified_pass', 'self_reviewed']) {
+          recorded[second.id] = { state };
+          res = response();
+          await handleActivityStart(request('POST', `taster-review-${stamp}-${state}`, { user_id: freeUser, enrollmentId, activityId: second.id }), res as never, db);
+          if (res.statusCode !== 200) fail(`a lapsed account cannot reopen ${state} work: ${res.statusCode} ${code(res)}`);
+        }
+      } finally {
+        if (before === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = before;
+      }
     }
 
     /* ── diagnostic recommendations use actual latest item evidence ───── */

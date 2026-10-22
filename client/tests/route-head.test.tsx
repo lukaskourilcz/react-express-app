@@ -35,11 +35,11 @@ describe('the tab title', () => {
   it.each([
     ['/quiz', 'Quiz · devShark'],
     ['/learn', 'Learn · devShark'],
-    ['/learn/software-engineer', 'Learn · devShark'],
+    ['/learn/software-engineer', 'Software Engineer · devShark'],
     ['/learn/big-o', 'Big O introduction'],
     ['/curation', 'Page not found · devShark'],
-    ['/roadmap/specializations/fde', 'Forward Deployed Engineer · devShark'],
-    ['/roadmap/specializations/fde/m03', 'Forward Deployed Engineer · devShark'],
+    ['/learn/forward-deployed-engineer/path', 'Forward Deployed Engineer · devShark'],
+    ['/learn/forward-deployed-engineer/path/m03', 'Forward Deployed Engineer · devShark'],
     ['/roadmap/paths/dsa-foundations', 'DSA Foundations · devShark'],
     ['/roadmap/paths/dsa-foundations/d04', 'DSA Foundations · devShark'],
     ['/play/ABCD', 'Live match · devShark'],
@@ -163,3 +163,15 @@ describe('a coding task’s share description', () => {
       .toBe(`${start} JavaScript coding challenge on devShark, graded on the server. 120 of 770 coding tasks are free.`);
   });
 });
+
+for (const [section, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
+  it(`${section} keeps the same public title, description and canonical on client navigation`, () => {
+    visit(`/learn/${section}`);
+    expect(document.title).toBe(`${name} · devShark`);
+    expect(canonical()).toBe(`https://devshark.app/learn/${section}`);
+    expect(meta('meta[name="description"]')).not.toBe('shell description');
+    expect(robots()).toEqual([]);
+    visit('/quiz');
+    expect(canonical()).toBeNull();
+  });
+}

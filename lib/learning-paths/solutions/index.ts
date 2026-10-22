@@ -28,6 +28,7 @@ import { FDE_M07_SOLUTIONS } from './fde-m07';
 import { FDE_M08_SOLUTIONS } from './fde-m08';
 import { FDE_M09_SOLUTIONS } from './fde-m09';
 import { FDE_M10_SOLUTIONS } from './fde-m10';
+import { FDE_M11_DEPLOY_SOLUTIONS } from './fde-m11-deploy';
 import { FDE_C01_SOLUTIONS } from './fde-c01';
 
 const ALL: Record<string, PathCodeSolution> = {
@@ -55,6 +56,7 @@ const ALL: Record<string, PathCodeSolution> = {
   ...FDE_M08_SOLUTIONS,
   ...FDE_M09_SOLUTIONS,
   ...FDE_M10_SOLUTIONS,
+  ...FDE_M11_DEPLOY_SOLUTIONS,
   ...FDE_C01_SOLUTIONS,
 };
 
