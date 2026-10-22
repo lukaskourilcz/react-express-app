@@ -1,9 +1,8 @@
 // The four activity views a learning-path workspace can show: a lesson, an
 // objective check, a code exercise and a written artifact.
 //
-// They are path-neutral on purpose — the FDE specialization and the DSA
-// Foundations skill path render the same components — and none of them decides
-// anything. Each collects a submission, hands it to the server, and renders
+// They are path-neutral on purpose — any published path renders the same
+// components — and none of them decides anything. Each collects a submission, hands it to the server, and renders
 // the verdict the server sent back.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';

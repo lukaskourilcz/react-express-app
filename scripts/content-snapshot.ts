@@ -22,7 +22,7 @@ import { CODING_SECTION_TRACKS, CODING_TRACKS } from '../shared/coding-catalog';
 import { evolvingStage } from '../shared/evolving';
 import { pathInventory, BASE_TRACKS } from '../shared/learning-paths';
 import { LEARN_SECTIONS, sectionsForTopic } from '../shared/learn-sections';
-import { SKILL_PATH_BRIDGE_TOPICS, SPECIALIZATION_BRIDGE_TOPICS, WEBDEV_PLAN_STAGES, partRanges } from '../shared/progression';
+import { SPECIALIZATION_BRIDGE_TOPICS, WEBDEV_PLAN_STAGES, partRanges } from '../shared/progression';
 import { SUBJECT_SCOPE_CATALOG, deliveryCategories } from '../shared/subject-catalog';
 import {
   FREE_CODING_SHARE,
@@ -153,7 +153,7 @@ async function main() {
       },
     },
     plans,
-    bridges: { specialization: SPECIALIZATION_BRIDGE_TOPICS, skillPath: SKILL_PATH_BRIDGE_TOPICS },
+    bridges: { specialization: SPECIALIZATION_BRIDGE_TOPICS },
     tiers: {
       freeLearnTopics: [...FREE_LEARN_TOPICS],
       freeLearnLevels: FREE_LEARN_LEVELS,
@@ -208,7 +208,6 @@ async function main() {
     out.push(`${pad(plan.track, 10)} ${plan.stages.map((stage) => stage.join(' ')).join(' → ')}  (${plan.stages.length} stages, ${plan.topics} topics)`);
   }
   for (const [id, list] of Object.entries(SPECIALIZATION_BRIDGE_TOPICS)) out.push(`bridge     ${id} (SPECIALIZATION_BRIDGE_TOPICS): ${list.join(' ')}`);
-  for (const [id, list] of Object.entries(SKILL_PATH_BRIDGE_TOPICS)) out.push(`bridge     ${id} (SKILL_PATH_BRIDGE_TOPICS): ${list.join(' ')}`);
   out.push('');
 
   out.push('Tiers (shared/tiers.ts contentTier over lib/access.ts serverContentIndex)');

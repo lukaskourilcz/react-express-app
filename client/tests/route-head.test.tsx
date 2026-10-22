@@ -40,8 +40,6 @@ describe('the tab title', () => {
     ['/curation', 'Page not found · devShark'],
     ['/learn/forward-deployed-engineer/path', 'Forward Deployed Engineer · devShark'],
     ['/learn/forward-deployed-engineer/path/m03', 'Forward Deployed Engineer · devShark'],
-    ['/roadmap/paths/dsa-foundations', 'DSA Foundations · devShark'],
-    ['/roadmap/paths/dsa-foundations/d04', 'DSA Foundations · devShark'],
     ['/play/ABCD', 'Live match · devShark'],
     ['/coding/javascript', 'Coding · devShark'],
     ['/daily', 'Question of the day · devShark'],

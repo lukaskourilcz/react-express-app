@@ -19,7 +19,7 @@ const passed = (count: number) => ({
 const PROGRESS = { javascript: passed(5), git: passed(1) };
 
 const profile = (extra: Record<string, unknown> = {}) => ({
-  schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [],
+  schemaVersion: 2, baseTrack: 'frontend', specialization: null,
   goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null, ...extra,
 });
 
@@ -439,6 +439,19 @@ test.describe('FDE routes and Career sections', () => {
     await page.goto('/roadmap/specializations/fde/fde-v1-m01?activity=fde-v1-m01-l1-read#lesson');
     await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer\/path\/fde-v1-m01\?activity=fde-v1-m01-l1-read#lesson$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  // E5 (#496) retired the standalone DSA path. Its overview and module links
+  // land on DSA Foundations in the Software Engineer section, where its
+  // readings and Coding tasks live; vercel.json answers crawlers with a 308.
+  test('lands an old DSA path link on DSA Foundations in Learn', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest');
+    for (const old of ['/roadmap/paths/dsa-foundations', '/roadmap/paths/dsa-foundations/dsa-v1-d04?activity=dsa-v1-d04-l1-read']) {
+      await page.goto(old);
+      await expect(page).toHaveURL(/\/learn\/software-engineer\?topic=dsa$/);
+      await expect(topicCard(page, 'DSA Foundations')).toHaveAttribute('aria-checked', 'true');
+    }
   });
 
   test('links each Career group into Learn and shows the FDE path on its section shelf', async ({ page }) => {

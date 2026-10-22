@@ -15,7 +15,7 @@ const settings = JSON.parse(readFileSync('tests/fixtures/api-settings.json', 'ut
 const fdePath = pathById('fde')!;
 const catalog = { versions: { fde: fdePath.version }, paths: [{ manifest: publicManifest(fdePath), availability: 'available', inventory: inventoryFor('fde') }] };
 const savedProfile = {
-  schemaVersion: 2, baseTrack: 'frontend', specialization: null, skillPaths: [], sections: ['software-engineer'],
+  schemaVersion: 2, baseTrack: 'frontend', specialization: null, sections: ['software-engineer'],
   goals: ['level-up'], experience: 'some', studyTime: '30-60', updatedAt: '2026-10-01T00:00:00Z',
 };
 const metadataFor = (profile: Record<string, unknown>) => ({

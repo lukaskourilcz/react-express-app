@@ -11,7 +11,7 @@
 // something the statement does not ask for. Each must keep passing.
 import { DSA_ADVANCED_WRONG } from './fixtures/dsa-advanced-known-answers';
 import { FULLSTACK_APPS } from '../lib/coding/tasks/fullstack';
-import { DSA_FOUNDATIONS_RIGHT, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-foundations-known-answers';
+import { DSA_FOUNDATIONS_RIGHT, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-known-answers';
 
 export interface KnownAnswer {
   id: string;

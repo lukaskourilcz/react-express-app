@@ -3,8 +3,9 @@
 // A level may name a lesson (lib/learn-lessons/levels.ts); the roadmap handler
 // serves its public projection to anyone, guests included, under the Learn
 // map's address limit, with the projection's sha256 as a strong ETag. The
-// DSA lessons are the path's own objects, so Learn and the path show the same
-// words. Run from scripts/test-launch-contracts.ts.
+// eighteen original DSA readings came from the DSA Foundations path; E5 (#496)
+// retired the path and Learn keeps them under their permanent ids, so every
+// link to a reading still opens it. Run from scripts/test-launch-contracts.ts.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -13,9 +14,9 @@ import roadmapHandler from '../api/quiz/roadmap';
 import { checkRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 import { handleLessonRead, LESSON_CACHE_CONTROL } from '../lib/learn-lessons/serve';
 import { LEARN_LESSONS, lessonProjection, publicLesson } from '../lib/learn-lessons';
+import { nativeContentHash } from '../lib/learning-paths/audit';
 import { LEVEL_LESSONS } from '../lib/learn-lessons/levels';
 import { buildLiveTopic, isRoadmapTopic, isValidLevel, topicLevels } from '../lib/roadmap';
-import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
 import { getEffectiveQuestionsById } from '../lib/questions-store';
 
 function mockResponse() {
@@ -81,18 +82,30 @@ export async function learnLessonContracts() {
   assert.equal(structure.dsa.levels[0].lessonId, 'dsa-v1-d01-l1');
   assert.equal(structure.dsa.levels[1].lessonId, 'dsa-v1-d01-l2');
 
-  // ── the same words as the path ──────────────────────────────────────────
-  const pathLessons = LEARNING_PATHS.flatMap((path) => path.modules.flatMap((module) => module.lessons));
-  for (const inPath of pathLessons.filter(one => one.id.startsWith('dsa-v1-') && LEARN_LESSONS.has(one.id))) {
-    const id = inPath.id;
-    const lesson = LEARN_LESSONS.get(id)!;
-    // What the path's lesson activity sends (lib/learning-paths/handlers.ts).
-    assert.deepEqual(lessonProjection(lesson), { id: inPath.id, title: inPath.title, sections: inPath.sections, sources: inPath.sources },
-      `${id}: Learn serves the path's text, unchanged`);
-    assert.deepEqual(Object.keys(lessonProjection(lesson)).sort(), ['id', 'sections', 'sources', 'title'], `${id}: the projection names its fields`);
+  // ── the original DSA readings keep their ids ────────────────────────────
+  // The retired path's eighteen lessons live on in Learn under the ids its
+  // readings were published with (dsa-v1-d01-l1 to dsa-v1-d09-l2).
+  const originalReadings = Array.from({ length: 9 }, (_, module) => [1, 2].map((part) => `dsa-v1-d0${module + 1}-l${part}`)).flat();
+  for (const id of originalReadings) {
+    const lesson = LEARN_LESSONS.get(id);
+    assert.ok(lesson, `${id}: the original DSA reading is still served`);
+    assert.equal(lessonProjection(lesson!).id, id, `${id}: the reading keeps its id`);
+    assert.deepEqual(Object.keys(lessonProjection(lesson!)).sort(), ['id', 'sections', 'sources', 'title'], `${id}: the projection names its fields`);
   }
-
-  assert.equal(pathLessons.filter(one => one.id.startsWith('dsa-v1-') && LEARN_LESSONS.has(one.id)).length, 18, 'all eighteen original DSA readings stay shared with the path');
+  assert.equal([...LEARN_LESSONS.keys()].filter((id) => id.startsWith('dsa-v1-')).length, 18, 'all eighteen original DSA readings stay in Learn');
+  // Each reading is still the text its native-lesson review read: the records
+  // in docs/audit/wip/native/learn bind it by content hash, so an edit to a
+  // reading fails here until it is reviewed again (audit:native-reviews too).
+  const reviewed = new Map(readFileSync(join(process.cwd(), 'docs/audit/wip/native/learn/review-dsa-readings.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((line) => JSON.parse(line) as { id: string; kind: string; contentHash: string })
+    .map((record) => [record.id, record]));
+  for (const id of originalReadings) {
+    const record = reviewed.get(id);
+    assert.ok(record, `${id}: the reading keeps its native-lesson review`);
+    assert.equal(record!.kind, 'native-lesson', `${id}: the review is a lesson review`);
+    assert.equal(nativeContentHash(LEARN_LESSONS.get(id)), record!.contentHash, `${id}: Learn serves exactly the reviewed reading`);
+  }
+  assert.equal(reviewed.size, originalReadings.length, 'one review per original reading');
 
   // ── a guest reads it, cached by its hash ────────────────────────────────
   const first = publicLesson('dsa-v1-d01-l1')!;
@@ -153,5 +166,5 @@ export async function learnLessonContracts() {
     Date.now = realNow;
   }
 
-  console.log('PASS learn lessons: level map, the path\'s text, guest read, ETag by content hash, refusals and the map\'s limit');
+  console.log('PASS learn lessons: level map, the original readings bound to their reviews, guest read, ETag by content hash, refusals and the map\'s limit');
 }

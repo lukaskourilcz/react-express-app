@@ -56,18 +56,18 @@ const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPerio
 // an account that holds it.
 const PREMIUM = { ...FREE, tier: 'premium' };
 const MANIFEST = {
-  id: 'dsa-foundations', kind: 'skill_path', version: 1,
-  title: 'DSA Foundations',
-  summary: 'Data structures and algorithms from the ground up.',
-  entryRequirement: 'No base track needed.',
+  id: 'fde', kind: 'role_specialization', version: 1,
+  title: 'Forward Deployed Engineer',
+  summary: 'Customer-facing engineering from scoping to handoff.',
+  entryRequirement: 'You ship code in one track.',
   estimatedHours: { min: 20, max: 30 },
-  modules: [{ id: 'dsa-v1-entry', title: 'Entry', activities: [{ id: 'dsa-v1-entry-check', title: 'Where you start' }] }],
+  modules: [{ id: 'fde-v1-entry', title: 'Entry', activities: [{ id: 'fde-v1-entry-check', title: 'Where you start' }] }],
 };
 const CATALOG = {
-  versions: { 'dsa-foundations': 1 },
+  versions: { fde: 1 },
   paths: [{ manifest: MANIFEST, availability: 'available', inventory: { modules: 1, lessons: 0, moduleChecks: 1, moduleCodeExercises: 0, finalCodeExercises: 0 } }],
 };
-const ENROLLMENT = { enrollmentId: 'enr-1', pathId: 'dsa-foundations', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-25T10:00:00Z' };
+const ENROLLMENT = { enrollmentId: 'enr-1', pathId: 'fde', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-25T10:00:00Z' };
 const RUN = { session: { sessionId: 'run-1', minutes: 20, topic: 'javascript', queue: ['js-digit-sum'], position: 0, status: 'active', estimatedMinutes: 20, order: 'sequential', count: 1, scheduledFor: null } };
 
 /** Every read the three pages make; returns the account reads it answered. */
@@ -93,7 +93,7 @@ function answer(plan: typeof FREE = FREE) {
       if (op === 'coding-progress') return HttpResponse.json({ tasks: {}, due: [], javascriptLevelsCleared: 0, passedByTrack: {} });
       if (op === 'learning-path-enrollment') return HttpResponse.json({ enrollments: [ENROLLMENT] });
       if (op === 'learning-path-progress') {
-        return HttpResponse.json({ enrollment: ENROLLMENT, modules: [], competencies: [], recommendedBridges: [], nextActivityId: 'dsa-v1-entry-check', guidedComplete: false, artifacts: { submitted: 0, total: 1 }, dueActivityIds: [] });
+        return HttpResponse.json({ enrollment: ENROLLMENT, modules: [], competencies: [], recommendedBridges: [], nextActivityId: 'fde-v1-entry-check', guidedComplete: false, artifacts: { submitted: 0, total: 1 }, dueActivityIds: [] });
       }
       return HttpResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 });
     }),
@@ -164,7 +164,8 @@ describe('/roadmap', () => {
     expect(names).toContain('Web Developer');
     expect(names).toContain('Software Engineer');
     expect(names).toContain('Forward Deployed Engineer');
-    expect(screen.queryByText('DSA Foundations')).toBeNull();
+    // No path card: the path's own summary never shows here.
+    expect(screen.queryByText(MANIFEST.summary)).toBeNull();
     for (const section of ['web-developer', 'software-engineer', 'forward-deployed-engineer']) {
       expect(document.querySelector(`a[href="/learn/${section}"]`)).not.toBeNull();
     }

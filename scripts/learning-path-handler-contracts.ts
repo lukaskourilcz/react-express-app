@@ -114,39 +114,43 @@ async function quietly<T>(run: () => Promise<T>): Promise<T> {
 
 export async function handlerContracts(fail: Fail): Promise<void> {
   const stamp = Date.now();
-  const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations')!;
-  const codeActivity = dsa.modules.filter(module => !isOffLoopModule(module)).slice(1).flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && !activity.reuseTaskId)!;
+  // The FDE path, the only published one since E5 (#496). The submit
+  // contracts take an authored JavaScript exercise past the first loop
+  // module, which the free taster does not open.
+  const path = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+  const codeActivity = path.modules.filter(module => !isOffLoopModule(module)).slice(1).flatMap((module) => module.activities)
+    .find((activity) => activity.kind === 'code' && !activity.reuseTaskId && activity.code?.language === 'javascript')!;
   const learner = `user-paths-${stamp}`;
   const enrollmentId = `ENROLL${stamp}`.padEnd(20, 'a');
   const session = encodeLearningPathSession({
     attemptId: `ATTEMPT${stamp}`.padEnd(20, 'a'),
     enrollmentId,
     userId: learner,
-    pathId: 'dsa-foundations',
+    pathId: 'fde',
     activityId: codeActivity.id,
     activityKind: codeActivity.kind,
     purpose: codeActivity.purpose,
-    curriculumVersion: dsa.version,
-    rubricVersion: dsa.rubric.version,
+    curriculumVersion: path.version,
+    rubricVersion: path.rubric.version,
   }).token;
   const submitBody = { user_id: learner, session, idempotencyKey: 'KEY0123456789abcdefghij', code: 'const x = 1;' };
   const enrollmentRow = (status: string) => ({
-    enrollment_id: enrollmentId, user_id: learner, path_id: 'dsa-foundations', curriculum_version: dsa.version,
+    enrollment_id: enrollmentId, user_id: learner, path_id: 'fde', curriculum_version: path.version,
     base_track_at_enrollment: null, status, started_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
   });
-  const switchBefore = process.env.LEARNING_PATH_DSA_ENABLED;
+  const switchBefore = process.env.LEARNING_PATH_FDE_ENABLED;
 
   await quietly(async () => {
     /* ── a submit re-checks the switch and the enrollment ─────────────── */
     try {
-      delete process.env.LEARNING_PATH_DSA_ENABLED;
+      delete process.env.LEARNING_PATH_FDE_ENABLED;
       let res = response();
       await handleActivitySubmit(request('POST', `submit-${stamp}`, submitBody), res as never, fakeSupabase({ rows: { learning_path_enrollments: enrollmentRow('active') } }));
       if (res.statusCode !== 503 || code(res) !== 'path_unavailable') {
         fail(`submit to a path whose switch is off answers ${res.statusCode} ${code(res)}, not 503 path_unavailable`);
       }
 
-      process.env.LEARNING_PATH_DSA_ENABLED = 'true';
+      process.env.LEARNING_PATH_FDE_ENABLED = 'true';
       res = response();
       await handleActivitySubmit(request('POST', `submit-${stamp}`, submitBody), res as never, fakeSupabase({ rows: { learning_path_enrollments: enrollmentRow('paused') } }));
       if (res.statusCode !== 409 || code(res) !== 'enrollment_paused') {
@@ -159,8 +163,8 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       await handleActivitySubmit(request('POST', `submit-${stamp}`, submitBody), res as never, fakeSupabase({ rows: { learning_path_enrollments: enrollmentRow('active') } }));
       if (res.statusCode !== 402) fail(`submit to an active enrollment answers ${res.statusCode} ${code(res)}, not the plan check's 402`);
     } finally {
-      if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
-      else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
+      if (switchBefore === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+      else process.env.LEARNING_PATH_FDE_ENABLED = switchBefore;
     }
 
     /* ── free enrollment, diagnostic and first module; later activity gate ── */
@@ -349,6 +353,51 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a stored enrollment of the retired DSA path ─────────────────── */
+    // E5 (#496) deletes no data, so a learning_path_enrollments row with
+    // path_id 'dsa-foundations' may still exist beside an FDE one. The list
+    // leaves it out instead of casting it to a LearningPathId, and progress
+    // or an activity start on it answers 404 without reaching any path data.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const retiredId = `RETIRED${stamp}`.padEnd(20, 'a');
+      const fdeId = `FDELIST${stamp}`.padEnd(20, 'a');
+      const retiredRow = { ...enrollmentRow('active'), enrollment_id: retiredId, path_id: 'dsa-foundations', curriculum_version: 1 };
+      const fdeRow = { ...enrollmentRow('active'), enrollment_id: fdeId, path_id: 'fde', curriculum_version: fde.version };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        let res = response();
+        await handleEnrollment(request('GET', `retired-list-${stamp}`, { user_id: learner }), res as never,
+          fakeSupabase({ lists: { learning_path_enrollments: [fdeRow, retiredRow] } }));
+        const listed = (res.body as { enrollments?: { enrollmentId: string; pathId: string }[] } | undefined)?.enrollments ?? [];
+        if (res.statusCode !== 200) fail(`listing enrollments beside a retired row answered ${res.statusCode} ${code(res)}`);
+        if (listed.some((one) => one.pathId === 'dsa-foundations' || one.enrollmentId === retiredId)) fail('a stored dsa-foundations enrollment reached the client');
+        if (listed.length !== 1 || listed[0]?.enrollmentId !== fdeId || listed[0]?.pathId !== 'fde') fail('the FDE enrollment beside a retired row was not listed');
+
+        const touched: string[] = [];
+        const retiredDb = fakeSupabase({ rows: { learning_path_enrollments: retiredRow }, lists: { learning_path_progress: [] },
+          onQuery: (table, op) => { if (op === 'select') touched.push(table); },
+          rpc: (name) => (fail(`a retired enrollment reached RPC ${name}`), {}) });
+        res = response();
+        await handlePathProgress(request('GET', `retired-progress-${stamp}`, { user_id: learner }, { query: { enrollmentId: retiredId } }), res as never, retiredDb);
+        if (res.statusCode !== 404 || code(res) !== 'not_found') fail(`progress on a retired enrollment answered ${res.statusCode} ${code(res)}`);
+
+        const activityId = 'dsa-v1-d01-linear-accumulator';
+        const req = request('POST', `retired-start-${stamp}`, { user_id: learner, enrollmentId: retiredId, activityId });
+        res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(req, res as never, retiredDb);
+        });
+        if (res.statusCode !== 404 || code(res) !== 'not_found') fail(`starting an activity on a retired enrollment answered ${res.statusCode} ${code(res)}`);
+        if (touched.some((table) => table !== 'learning_path_enrollments')) fail(`a retired enrollment read path data: ${touched.join(', ')}`);
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── every off-loop decision goes through one helper ──────────────── */
     // A shelf module is off the loop even if its optional flag slipped. The
     // validator refuses that, but completion, the next action and the reward's
@@ -367,16 +416,16 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     // activity holds up no other activity, and once one of the learner's
     // submits is answered the next is graded.
     try {
-      process.env.LEARNING_PATH_DSA_ENABLED = 'true';
+      process.env.LEARNING_PATH_FDE_ENABLED = 'true';
       const burster = `user-paths-burst-${stamp}`;
-      const otherCode = dsa.modules.flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && activity.id !== codeActivity.id)!;
+      const otherCode = path.modules.flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && activity.code?.language === 'javascript' && activity.id !== codeActivity.id)!;
       const bodyFor = (activity: typeof codeActivity) => ({
         ...submitBody,
         user_id: burster,
         session: encodeLearningPathSession({
-          attemptId: `BURST${stamp}`.padEnd(20, 'a'), enrollmentId, userId: burster, pathId: 'dsa-foundations',
+          attemptId: `BURST${stamp}`.padEnd(20, 'a'), enrollmentId, userId: burster, pathId: 'fde',
           activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose,
-          curriculumVersion: dsa.version, rubricVersion: dsa.rubric.version,
+          curriculumVersion: path.version, rubricVersion: path.rubric.version,
         }).token,
       });
       const written: string[] = [];
@@ -394,7 +443,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       };
       const graded = (res: Captured) => res.statusCode === 200 && Boolean((res.body as SubmitActivityResponse | undefined)?.code);
       const hold = (activityId: string) => enterInFlight(request('POST', `burst-${stamp}`, {}), 'grading',
-        { item: gradingItem.activity('dsa-foundations', activityId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${burster}`);
+        { item: gradingItem.activity('fde', activityId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${burster}`);
       const grading = Array.from({ length: GRADING_PER_TASK }, () => hold(codeActivity.id));
       let res = await submitAsPremium();
       if (res.statusCode !== 429 || code(res) !== 'grader_busy') fail(`a submit past the learner's grading limit on one activity answers ${res.statusCode} ${code(res)}, not 429 grader_busy`);
@@ -411,8 +460,8 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       grading[1]?.();
       for (const done of more) done?.();
     } finally {
-      if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
-      else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
+      if (switchBefore === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+      else process.env.LEARNING_PATH_FDE_ENABLED = switchBefore;
     }
 
     /* ── a resubmitted write-up, and the requirements a submit sends ──── */
@@ -507,9 +556,11 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       if (res.statusCode !== 503) fail(`a preference save whose read failed answers ${res.statusCode}, not 503`);
       if (writes.length !== 0) fail('a preference save whose read failed still wrote the account, over the saved answers');
 
-      // With the read answering, a partial save keeps the saved answers.
+      // With the read answering, a partial save keeps the saved answers. The
+      // stored record still carries the skill-path list that E5 (#496)
+      // retired; the save drops it rather than refuse the account.
       const saved = {
-        schemaVersion: 2, baseTrack: 'backend', specialization: null, skillPaths: ['dsa-foundations'],
+        schemaVersion: 2, baseTrack: 'backend', specialization: null, skillPaths: ['retired-skill-path'],
         goals: ['level-up'], experience: 'some', studyTime: '30-60', updatedAt: '2026-09-01T00:00:00Z',
       };
       res = response();
@@ -523,6 +574,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       if (res.statusCode !== 200 || JSON.stringify(profile?.goals) !== JSON.stringify(['level-up'])) {
         fail(`a partial preference save answered ${res.statusCode} and wrote goals ${JSON.stringify(profile?.goals)}, not the saved ones`);
       }
+      if (profile && 'skillPaths' in profile) fail('a preference save kept the retired skillPaths field');
 
       // Learn sections (#487): a save may carry the opt-in sections, a save
       // without them keeps the saved list, and an unknown section is refused
@@ -568,14 +620,14 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     /* ── the path reward ──────────────────────────────────────────────── */
     {
       const claims: Record<string, unknown>[] = [];
-      const claim = { user_id: learner, pathId: 'dsa-foundations', shirt: ' m ', name: ' Ann ', line1: 'x'.repeat(120), line2: 'y'.repeat(120), city: 'Brno', postal: '60200', country: 'cz' };
+      const claim = { user_id: learner, pathId: 'fde', shirt: ' m ', name: ' Ann ', line1: 'x'.repeat(120), line2: 'y'.repeat(120), city: 'Brno', postal: '60200', country: 'cz' };
 
       // Merchandise is paused until next quarter (owner decision 10). A
       // finished path's read and claim both answer 404 merch_unavailable, and
       // neither reaches the database, whatever the progress rows say.
       if (MERCH_ENABLED) fail('merchandise ships switched off until next quarter (MERCH_ENABLED)');
       for (const [method, body, extra] of [
-        ['GET', { user_id: learner }, { query: { pathId: 'dsa-foundations' } }],
+        ['GET', { user_id: learner }, { query: { pathId: 'fde' } }],
         ['POST', claim, {}],
       ] as const) {
         const touched: string[] = [];
@@ -591,7 +643,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       // A signed-out request is still asked to sign in first.
       {
         const anonymous = response();
-        await handlePathReward(request('POST', `reward-anon-${stamp}`, { pathId: 'dsa-foundations' }), anonymous as never, fakeSupabase({}));
+        await handlePathReward(request('POST', `reward-anon-${stamp}`, { pathId: 'fde' }), anonymous as never, fakeSupabase({}));
         if (anonymous.statusCode !== 401) fail(`a signed-out path-reward claim answers ${anonymous.statusCode}, not 401`);
       }
 
@@ -613,7 +665,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       // The claim is checked for the curriculum version this deployment
       // publishes, with the fields trimmed and the codes in capitals.
       const sent = claims[0] ?? {};
-      if (sent.p_curriculum_version !== dsa.version || sent.p_shirt !== 'M' || sent.p_name !== 'Ann' || sent.p_country !== 'CZ'
+      if (sent.p_curriculum_version !== path.version || sent.p_shirt !== 'M' || sent.p_name !== 'Ann' || sent.p_country !== 'CZ'
           || String(sent.p_line1).length !== 120) {
         fail(`a reward claim sends ${JSON.stringify({ ...sent, p_line1: String(sent.p_line1).length, p_line2: String(sent.p_line2).length })}`);
       }
@@ -649,7 +701,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       // made again without it.
       const tried: Record<string, unknown>[] = [];
       res = response();
-      await pathRewardOn(request('GET', `reward-${stamp}`, { user_id: learner }, { query: { pathId: 'dsa-foundations' } }), res as never, fakeSupabase({
+      await pathRewardOn(request('GET', `reward-${stamp}`, { user_id: learner }, { query: { pathId: 'fde' } }), res as never, fakeSupabase({
         rpc: (_name, params) => {
           tried.push(params);
           return 'p_curriculum_version' in params
@@ -657,7 +709,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
             : { data: true };
         },
       }));
-      if (res.statusCode !== 200 || (res.body as { eligible?: boolean }).eligible !== true || tried.length !== 2 || tried[0].p_curriculum_version !== dsa.version) {
+      if (res.statusCode !== 200 || (res.body as { eligible?: boolean }).eligible !== true || tried.length !== 2 || tried[0].p_curriculum_version !== path.version) {
         fail(`a reward read before migration 054 answers ${res.statusCode} ${JSON.stringify(res.body)} after ${tried.length} calls`);
       }
       // A field the table's CHECK refuses is the learner's address, not a 500.
@@ -675,11 +727,11 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     // one learner is still bounded, and the address backstop holds the class.
     // A submit's budget is per activity (owner decision 9), so its calls
     // carry a session for the activity.
-    const activities = dsa.modules.flatMap((module) => module.activities);
+    const activities = path.modules.flatMap((module) => module.activities);
     const sessionFor = (user: string, activity: (typeof activities)[number]) => encodeLearningPathSession({
-      attemptId: `RATE${stamp}`.padEnd(20, 'a'), enrollmentId, userId: user, pathId: 'dsa-foundations',
+      attemptId: `RATE${stamp}`.padEnd(20, 'a'), enrollmentId, userId: user, pathId: 'fde',
       activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose,
-      curriculumVersion: dsa.version, rubricVersion: dsa.rubric.version,
+      curriculumVersion: path.version, rubricVersion: path.rubric.version,
     }).token;
     const submitOn = async (user: string, address: string, activity = codeActivity) => {
       const res = response();

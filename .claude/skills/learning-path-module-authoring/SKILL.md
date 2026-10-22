@@ -115,7 +115,7 @@ Every count the product shows comes from `pathInventory(publicManifest(path))` (
 |---|---|---|
 | Minimum lessons, module checks, code exercises per path | `TARGETS` in `scripts/test-learning-paths.ts` (FDE: 20, 40, 10) | `test:paths` fails below the target. Raise the target when the curriculum commits to more; never lower it to make a removal pass. |
 | Code exercises plus artifacts against the draft cap | `PATH_LIMITS.draftsPerEnrollment` | `test:paths` |
-| Interactive lesson examples | section 4 of `docs/interactive-content-manifest.md` (the `example` sections table and its "Gaps" paragraph: DSA has four of eighteen lessons, FDE none) | The document says every count in it is test-enforced, but no script counts `example` sections today (`grep -rn "'example'" scripts` finds none). Adding or removing an `example` section in an FDE lesson means editing that table and the gap paragraph by hand in the same commit. |
+| Interactive lesson examples | section 4 of `docs/interactive-content-manifest.md` (the `example` sections table and its "Gaps" paragraph: four of the eighteen original DSA readings, FDE none) | The document says every count in it is test-enforced, but no script counts `example` sections today (`grep -rn "'example'" scripts` finds none). Adding or removing an `example` section in an FDE lesson means editing that table and the gap paragraph by hand in the same commit. |
 | The module table and the inventory sentence | `docs/fde-curriculum.md`, "Modules and deliverables" | Read-back. B4, B5, B6 and B8 each edit their row. |
 | The counts the path header and Profile show | `pathInventory` | `scripts/learning-path-schema-contracts.ts` keeps shelf and optional modules out of them |
 
@@ -123,7 +123,7 @@ Every count the product shows comes from `pathInventory(publicManifest(path))` (
 
 ## Native review records
 
-`scripts/audit-native-reviews.ts` (CI step `audit:native-reviews`) binds an individual review record to each lesson, activity and check question of both paths by exact hash. Records live one JSON object per line in `docs/audit/wip/native/review-<date>-<batch>.jsonl`.
+`scripts/audit-native-reviews.ts` (CI step `audit:native-reviews`) binds an individual review record to each lesson, activity and check question of the published path (FDE; the retired DSA path's records are archived under `history/`, #496) by exact hash. Records live one JSON object per line in `docs/audit/wip/native/review-<date>-<batch>.jsonl`.
 
 - **What a record binds.** `contentHash` is `nativeContentHash` of the merged item, and an activity with code or a `reuseTaskId` also carries `gradingHash` from `nativeGradingHash`, which covers the activity, its tests and its solution (`lib/learning-paths/audit.ts`). An activity's hash includes its questions, so editing one question's explanation stales the question's record and its check's record. Editing a hidden test or the reference stales the activity's `gradingHash`.
 - **What fails.** A record whose hash no longer matches fails CI ("Stale native content review" or "Stale native grading review"), as do a duplicate key, an unknown item, a wrong `kind`, a `qualityScore` that is not the minimum of the scored dimensions, a `relevanceScore` that is not the sum of the five markers, a null dimension without a `notApplicable` rationale, a reviewer kind other than `model` or `human`, and an empty `verification.notes`. An item with no record passes the script, which prints "N still require individual review"; the product rule is still that new items get records (B6 added twelve for its new module).
@@ -179,9 +179,9 @@ git diff --check
 | Command | What it proves |
 |---|---|
 | `test:paths` | No validator error in either path; inventory at or above `TARGETS`; draft cap; database requirements agree with `moduleComplete`; no answer, explanation, hidden assertion or reference in the public manifest; checks grade against the sealed key only; every reference passes visible and hidden assertions in the sandbox; every `KNOWN_WRONG_PATH` and `KNOWN_WRONG_REUSED` variant fails; no orphan solution; the B1 schema contracts and the handler contracts |
-| `test:path-authority` | The DSA probes still refuse forged counters and replaced globals (`scripts/test-path-authority.ts`); run it when a harness or grader changes |
+| `test:path-authority` | The probes still refuse forged counters and replaced globals, graded through `gradePathCodeWith` against the private fixtures in `scripts/fixtures/path-authority-fixtures.ts` (copied from the retired DSA path) and through `gradePathCode` on a published FDE exercise (`scripts/test-path-authority.ts`); run it when a harness or grader changes |
 | `audit:native-reviews` | Every record binds to its item's current hashes with well-formed scores |
-| `test:launch` | Both paths stay published, the manifest carries no key, harness, explanation or XP, and a check never passes without its sealed key |
+| `test:launch` | FDE stays the only published path, the retired DSA id names nothing, the manifest carries no key, harness, explanation or XP, and a check never passes without its sealed key |
 | `typecheck:api`, `typecheck:scripts` | The module, solution and test-script edits type-check |
 | `git diff --check` | No whitespace errors |
 

@@ -43,7 +43,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
 // name: the manifest title, which the path picker labels in the same words.
 const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
   ['/learn/forward-deployed-engineer/path', 'paths.picker.fdeLabel'],
-  ['/roadmap/paths/dsa-foundations', 'paths.picker.dsaLabel'],
 ];
 
 export function routeTitle(pathname: string, t: Translate): string {

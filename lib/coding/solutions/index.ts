@@ -11,7 +11,7 @@ import { TYPESCRIPT_LOOP_SOLUTIONS } from './typescript-loops';
 import { REACT_LOOP_SOLUTIONS } from './react-loops';
 import { JAVASCRIPT_DEBUG_SOLUTIONS } from './javascript-debug';
 import { ALGORITHM_SOLUTIONS } from './algorithms';
-import { DSA_FOUNDATIONS_SOLUTIONS } from './dsa-foundations';
+import { DSA_FOUNDATIONS_SOLUTIONS } from './dsa';
 import { DSA_ADVANCED_SOLUTIONS } from './dsa-advanced';
 import { EASY_JAVASCRIPT_A_SOLUTIONS } from './easy-javascript-a';
 import { EASY_JAVASCRIPT_B_SOLUTIONS } from './easy-javascript-b';

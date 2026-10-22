@@ -26,7 +26,6 @@ import type {
   PathCodeLanguage,
   PathInventory,
   RequiredProfileField,
-  SkillPathId,
   StudyTime,
   VerificationKind,
 } from './learning-paths';
@@ -77,7 +76,6 @@ export interface LearningPreferenceRequest {
   goals?: LearnerGoal[];
   experience?: ExperienceLevel;
   studyTime?: StudyTime;
-  skillPaths?: SkillPathId[];
   /** Opt-in Learn sections to keep on the profile; left out keeps the saved
    * list. Web Developer and Forward Deployed Engineer follow the base track
    * and the specialization and need no entry. */
@@ -93,8 +91,8 @@ export interface PathEnrollment {
   pathId: LearningPathId;
   curriculumVersion: number;
   status: EnrollmentStatus;
-  /** The base track at enrollment time, for recommendations only. Null for a
-   * skill path entered without any career selection. */
+  /** The base track at enrollment time, for recommendations only. Null when
+   * none was chosen, as on enrollments of the retired DSA skill path. */
   baseTrackAtEnrollment: BaseTrack | null;
   startedAt: string;
   updatedAt: string;
@@ -108,7 +106,7 @@ export interface EnrollmentListResponse {
 export interface EnrollmentCreateRequest {
   pathId: LearningPathId;
   curriculumVersion: number;
-  /** Only meaningful for a role specialization; ignored for a skill path. */
+  /** The base track the role specialization sits above. */
   baseTrack?: BaseTrack;
   /** `pause` and `resume` keep the enrollment and all its evidence. */
   action?: 'enroll' | 'pause' | 'resume';

@@ -6,7 +6,7 @@ import { publicLesson } from '../../lib/learn-lessons';
 import { localAuth, storeFakeSession, userWith } from './fake-session';
 
 const settings=JSON.parse(readFileSync('tests/fixtures/api-settings.json','utf8'));
-const profile={schemaVersion:2,baseTrack:'frontend',specialization:null,skillPaths:[],sections:['software-engineer'],goals:['level-up'],experience:'some',studyTime:'15-30',updatedAt:null};
+const profile={schemaVersion:2,baseTrack:'frontend',specialization:null,sections:['software-engineer'],goals:['level-up'],experience:'some',studyTime:'15-30',updatedAt:null};
 const passed={levels:Object.fromEntries(Array.from({length:5},(_,i)=>[String(i+1),{passed:true,bestPct:100}])),checkpoints:{1:{passed:true,bestPct:100}}};
 for(const theme of ['light','dark'] as const){
   test(`${theme}: Advanced belongs to Software Engineer, reads before an attempt and keeps the Premium boundary`,async({page},info)=>{

@@ -5852,3 +5852,30 @@ Production `dpl_MAKdNfuxNhYM9hwN8NojtFaomtTo` is READY at the merge SHA. A read-
 B2, PR #549, merged at `4daff81519e53acdc38d8b4cfe28472932a1f57a`; required run `39723762922` passed. Clean `e85bd096` passed all 28 fast checks in 25.09 minutes. Current-main/A5/B8 integration `065c3c06` passed six selected checks in 1.80 minutes; final documentation head `fb9d9b21` passed launch in 0.84 minutes. Two focused browser cases covered both themes, seven widths, 200% zoom, keyboard, axe, touch targets and real 1200×630 card downloads. Both downloaded images were visually inspected. The initial keyboard fixture raced route focus and was corrected to await it.
 
 Production `dpl_6SNo3ggTA56WbmrowpnzQ9Ldn9yy` is READY at the merge SHA. A 390px guest check on the canonical overview found all five phases and thirteen competency groups, with no overflow, page errors or API writes. Recording remains disabled by the owner switch. No authenticated production activity or completion card was created; completion artwork was checked against dedicated local fixtures.
+
+## E3 DSA Foundations Learn release — 22 October 2026
+
+Issue #494 rebuilds DSA Foundations into 15 Learn levels with 120 questions, registered readings before attempts, and Coding work on levels 1–14. Eighteen existing lesson documents retain their content and move into the shared Learn lesson registry. Displaced questions and review history are archived. The first five DSA levels stay free; grading and the twelve physical API handlers stay authoritative.
+
+Final head b08c280661776ae62803a68a78b50facdd7002a5 composes with B2 and passes ten selected local checks plus 60 browser tests. PR #548 merged at 64ecf4e96d0d6b578d682aa2c8b1fca5e5178e96. Required run 39727535817 passed verify (2s aggregate after its dependent jobs) and SQL (36s). READY production dpl_CeVMqRnEPrLJr1irHBhb6x5ADq9c matches that merge. A read-only guest browser check at 390px on devshark.app confirmed the Software Engineer DSA page is 200, all 15 levels appear from Complexity Basics through Foundation Review, and the first registered reading opens with no overflow, page errors or API writes. Evidence: /private/tmp/codex-e3-production-smoke.log on the implementation machine.
+
+This establishes the observed guest flow, not authenticated production grading, physical-device acceptance, or independent-human review of the whole catalogue. E4 and E5 remain separate open work.
+
+## B12 free FDE taster release — 22 October 2026
+
+Issue #508 allows free enrollment, the diagnostic and first required FDE module, with server checks at both start and submit. Later work requires Premium; stored verified/self-reviewed work can reopen after entitlement lapses. Client hub, overview, resume and picker mirror the server rule. Reward amounts, owner isolation and the twelve physical handlers remain unchanged.
+
+Fast parity passed 28 checks with 25 skipped at eea6ae42. Final head 9dc6743dae93363bab8b9ba06b1b278c5fc67c7a includes actual B2/E3 main, passes ten selected checks and 24 browser tests. One earlier browser invocation used the wrong base-URL variable; the corrected TEST_BASE_URL invocation supplies the quoted 24 passing tests. PR #551 merged at 920ac1f43984307947d11b501cd2c1f70d6ef211. Required run 39730505010 passed verify (2s aggregate after dependent jobs) and SQL (34s). READY production dpl_HMA8Td1EmucESFsZAwzKC2UnaBRe matches that merge. Read-only guest browser acceptance at 390px confirms the canonical FDE outline is 200, with five delivery phases, 13 competencies, no overflow, page errors or API writes. Evidence: /private/tmp/codex-b12-production-smoke.log.
+
+The production FDE switch remains disabled pending B14. Authenticated production taster submission and completion are not claimed; no production learning data, migration or feature flag changed during acceptance.
+
+
+## B13 public FDE positioning release — 22 October 2026
+
+Issue #509 introduces the FDE path on Home using the fetched public manifest for inventory and the existing shared Premium inclusion list for access copy. Loading/error states show no invented counts. The canonical CTA opens the existing FDE outline; no production flag, migration, entitlement or grading rule changes.
+
+Fast parity at 7c3e2a8f6598b52d4e7e65202058a5b919df0be7 passed 28 checks with 25 skipped in 26.49 minutes. Final B12-composed head 68d432a2088e61b571d893c1d21dbc725e1f84b1 passed eight selected checks in 2.62 minutes and four positioning/taster browser tests in 12.6 seconds. Initial static CI failed because the npm audit endpoint timed out; the failed-job rerun passed, with no advisory or test bypass. Required run 39733974575 passed verify (4s aggregate after dependent jobs) and SQL (51s). PR #553 merged at d3dc3a33a35c5fa505ab202656a0b59fe872687a.
+
+READY production dpl_7qigZgX2t7RY4yPTqRdKggxwSibx matches that exact merge. Read-only guest checks at 390px in light and dark themes passed: Home and Premium return 200, Home matches the fetched manifest (13 required modules, 24 lessons and 68 module/capstone questions), the CTA reaches the canonical FDE outline, Premium states the free diagnostic/first-module boundary, and no page errors, horizontal overflow or API writes occurred. The public catalogue still reports disabled. Evidence: /private/tmp/codex-b13-production-smoke.log.
+
+A deployment-scoped 15-minute runtime scan found two stderr entries categorized as errors, both Node 24 DEP0169 url.parse deprecation warnings on /api/quiz/roadmap. The targeted runtime-error query returned that same warning group; no other group was returned. The accepted guest requests were 200. This is not a claim of warning-free logs or authenticated production completion. The warning is recorded for follow-up; FDE stays disabled until B14.

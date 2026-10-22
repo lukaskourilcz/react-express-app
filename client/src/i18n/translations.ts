@@ -1430,8 +1430,8 @@ export const en = {
   'landing.compare.rowCoding': 'Coding challenges',
   'landing.compare.freeCoding': 'A starter set, plus the opening stages of every project',
   'landing.compare.premiumCoding': 'Every challenge, plus each new one',
-  'landing.compare.rowPaths': 'FDE and DSA learning paths',
-  'landing.compare.premiumPaths': 'Yes, as each one opens',
+  'landing.compare.rowPaths': 'The FDE learning path',
+  'landing.compare.premiumPaths': 'Yes, once it opens',
   'landing.compare.rowCoins': 'Coins for merchandise',
   'landing.compare.premiumCoins': 'Yes, once redemption opens',
   'premium.page.title': 'Everything in devShark for {symbol}{monthly} a month',
@@ -1909,13 +1909,12 @@ export const en = {
   'home.stripCodingTitle': 'Coding challenges',
   'home.stripCodingText': 'Loops, array methods, types and components with real tests.',
 
-  /* ── Learning paths (devShark: the FDE specialization and DSA Foundations) ── */
+  /* ── Learning paths (devShark: the FDE specialization) ── */
   'paths.loading': 'Loading the path',
   'paths.loadingActivity': 'Opening the activity',
   'paths.error.catalog': 'The learning paths could not be loaded.',
   'paths.error.module': 'That module could not be loaded.',
   'paths.kicker.role': 'Role',
-  'paths.kicker.skill': 'Skill path',
   'paths.guestPreview': 'You can read the whole outline. Sign in to record graded work.',
   'paths.signInToRecord': 'You can read everything here. Signing in is what makes results stick.',
   'paths.notEnrolled': 'Start this path to open its activities.',
@@ -2051,11 +2050,10 @@ export const en = {
   'paths.domain.sorting': 'Sorting',
   'paths.domain.trees': 'Trees',
   // The path picker and the Profile paths card read the rest of their copy from
-  // translations.picker.ts, which only the Profile chunk loads. These four stay
+  // translations.picker.ts, which only the Profile chunk loads. These three stay
   // here for the Career page and the route titles.
   'paths.picker.fdeLabel': 'Forward Deployed Engineer',
   'paths.picker.saving': 'Saving…',
-  'paths.picker.dsaLabel': 'DSA Foundations',
   'paths.picker.saveFailed': 'Your choice is saved on this device but not on your account yet. Try again.',
   'profile.pathSaved': 'Saved: {track}{role}',
   'today.pathSection': 'Learning paths',
