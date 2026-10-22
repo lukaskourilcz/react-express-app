@@ -7,7 +7,7 @@ allowed-tools: Read, Grep, Glob, Bash, Write
 Scaffold the issue `$ARGUMENTS` names, following `.claude/skills/github-issue-authoring/SKILL.md` and its `references/templates.md`. Write the body to a scratch file, never into the repository, and do not run `gh issue create` unless the request says to create it.
 
 1. Read the epic with `gh issue view <epic-number>`. Take its Specification link: that document and section hold the work-package table with ids, titles and blockers.
-2. Read that document section. Find the row for the work-package id (for example `A1` in `docs/learn-sections-fde-flagship-plan.md` section 9, or `C6` in `docs/agent-workflow-audit.md` section 6). With `epic` as the second argument, read the whole table instead and scaffold the epic.
+2. Read that document section. Find the row for the work-package id (for example `A1` in `docs/learn-sections-fde-flagship-plan.md` section 9). With `epic` as the second argument, read the whole table instead and scaffold the epic.
 3. Read the design sections the row points to, and the files it names. Confirm each path exists with `git ls-files` or mark it `(new)`. Mark generated files `(generated)`.
 4. Fill the template:
    - Child issue: title `[<Id>] <work package>`; the `Parent:` line; `## Scope`, `## Affected files`, `## Blocked by`, `## Acceptance`, `## Verification`.
