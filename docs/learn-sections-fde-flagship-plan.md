@@ -1,8 +1,10 @@
-# Learn sections and the FDE flagship: design proposal
+# Learn sections and the FDE flagship: design record
 
-Prepared 21 October 2026 against main `5b114d2`. Status: **approved by the owner on 21 October 2026** with the decisions recorded in section 10; the work packages in section 9 are the GitHub issues of epics A to E, and [the handoff prompt](handoff-opus-2026-10-21.md) starts the implementation. Nothing in this document changes application code.
+> **Implemented, 22 October 2026.** All five epics are closed: D #479, A #480, E #481, B #482 and C #483. B14 (#510) verified the release. The FDE path is built but off in production until the owner sets `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production. Code comments cite this record for the reasons behind the design; the section numbers stay stable for them.
+>
+> For the current state, read [the product architecture](product-architecture.md) ("Learning paths" and "Learn sections and the plan"), [the FDE curriculum](fde-curriculum.md), `shared/learn-sections.ts`, `shared/tiers.ts` and the B14 entry in [the release acceptance log](release-acceptance.md). Where the shipped code differs from a target or count below, the code and those documents are right.
 
-Companions: [FDE research of 8 September](fde-learning-path-research.md), [FDE curriculum v1](fde-curriculum.md), [shared path engineering plan](fde-implementation-plan.md), [learning-paths issue index](learning-paths-plan.md), [agent workflow audit](agent-workflow-audit.md).
+The owner approved this design on 21 October 2026 (decisions in section 10). It was prepared against main `5b114d2`.
 
 ## 1. Recommendation in one page
 
@@ -10,11 +12,11 @@ Split Learn into three **sections** that sit above what exists: **Web Developer*
 
 Make the FDE section the Premium flagship by rewriting the path around the delivery loop every employer describes (discover → scope → integrate → build with models → harden → ship → enable → codify), adding the four things competitors skip (decomposition cases, enterprise plumbing, deployment in the customer's cloud, interview drills on unfamiliar code), and giving the section a hub that shows competency evidence rather than a module list. Everything stays within the existing activity kinds (lesson, check, code, artifact), the existing graders (QuickJS, TypeScript checker, React runner) and the existing honesty rules (no certification, no hiring claim, no live model, no AI feature).
 
-The product ships English only, for good: epic D (section 13) removes the retained second-language content, the language switch and every note about a second language from the repository before the content work starts.
+The product ships English only, for good: epic D (section 13) removed the second-language content, the language switch and every note about a second language before the content work started.
 
-Estimated scope: five epics. A (sections), B (FDE flagship), C (agent workflow skills, in [the audit](agent-workflow-audit.md)), D (English only), E (DSA into Learn). Sequenced so D and the sections ship first with today's FDE v1 inside them, and the flagship content lands module by module behind the same switch.
+Estimated scope: five epics. A (sections), B (FDE flagship), C (agent workflow skills, agents and commands under `.claude/`), D (English only), E (DSA into Learn). Sequenced so D and the sections ship first with today's FDE v1 inside them, and the flagship content lands module by module behind the same switch.
 
-## 2. Starting state (verified 21 October 2026)
+## 2. Starting state on 21 October 2026, before implementation
 
 | Surface | What exists | Files |
 |---|---|---|
@@ -52,7 +54,7 @@ Interview loops are distinctive and consistent: a **decomposition or customer-sc
 
 Competing courses (AI Makerspace at 5,250 USD for ten live weeks, Interview Kickstart at 23 weeks, AgileFever at 2,200 USD, FDE Academy at eight months, Educative's two-hour text course) are long, live, Python-and-LangChain-centric and aimed at engineers with five years behind them. None offers short daily practice, a TypeScript-first route, interactive decomposition, learning and re-engineering drills with feedback, enterprise-integration realism, or anything low-cost for the 2–5-year engineer who is most of the market. That is devShark's opening.
 
-Primary sources: Palantir "Dev versus Delta"; Nabeel Qureshi "Reflections on Palantir"; YC Lightcone "The FDE Playbook" with Bob McGrew; Pragmatic Engineer, "What are Forward Deployed Engineers" (2025) and "The Pulse: FDE heats up again" (May 2026); PostHog "WTF is a forward deployed engineer"; Bloomberry "I analyzed 1,000 FDE jobs"; Colin Jarvis (OpenAI) at HumanX and on the Altimeter podcast; OpenAI "Deployment Company" (May 2026); the Anthropic, Blackstone, Hellman & Friedman and Goldman Sachs services-firm release (May 2026); Tobi Coker, Crunchbase (January 2025); TechCrunch (30 July 2026). Posting URLs are in the research transcript and will be copied into the content issues as `SourceReference` entries with their review date.
+Primary sources: Palantir "Dev versus Delta"; Nabeel Qureshi "Reflections on Palantir"; YC Lightcone "The FDE Playbook" with Bob McGrew; Pragmatic Engineer, "What are Forward Deployed Engineers" (2025) and "The Pulse: FDE heats up again" (May 2026); PostHog "WTF is a forward deployed engineer"; Bloomberry "I analyzed 1,000 FDE jobs"; Colin Jarvis (OpenAI) at HumanX and on the Altimeter podcast; OpenAI "Deployment Company" (May 2026); the Anthropic, Blackstone, Hellman & Friedman and Goldman Sachs services-firm release (May 2026); Tobi Coker, Crunchbase (January 2025); TechCrunch (30 July 2026). The FDE modules carry the posting and article URLs they use as `SourceReference` entries with a review date (`lib/learning-paths/content/fde/`).
 
 ## 4. How comparable platforms model tracks (research, 21 October 2026)
 
@@ -222,7 +224,7 @@ The FDE section view is the flagship surface. Deep End v2, no new primitives bey
 
 ### 6.6 Versioning
 
-Decided (D1, D7): there are no learners in production, so v1 is edited in place. The manifest keeps `version: 1`, `reviewedOn` moves to the authoring date, activity ids stay `fde-v1-…`, and the path goes to production with `LEARNING_PATH_FDE_ENABLED=true` once B14 passes. The versioning rules in `fde-implementation-plan.md` stay for the first curriculum change after launch.
+Decided (D1, D7): there are no learners in production, so v1 is edited in place. The manifest keeps `version: 1`, `reviewedOn` moves to the authoring date, activity ids stay `fde-v1-…`, and the path goes to production with `LEARNING_PATH_FDE_ENABLED=true` once B14 passes. The first curriculum change after launch publishes a new `version`: enrollments are unique per user, path and curriculum version (migration 026), so a learner moves to the new version only by choice and keeps the old completion.
 
 ## 7. Content quality contract
 
@@ -241,13 +243,13 @@ New and revised content follows what the existing path and the question bank alr
 2. **Sections, with today's FDE path inside them.** Epic A ships behind no new switch: it regroups what exists. The FDE section shows v1.
 3. **DSA into Learn.** Epic E turns the DSA path into the DSA Foundations and DSA Advanced topics once the Learn lesson mechanism (E1) exists; the standalone path and its routes go.
 4. **Flagship content module by module.** Epic B lands under `LEARNING_PATH_FDE_ENABLED`; each content issue is independently mergeable because the manifest's inventory and the validator decide what the product shows.
-5. **Switch on** after B14's verification, with the Premium copy and the landing promo in the same release. The owner sets the variable in Vercel (NEEDED.md).
+5. **Switch on.** B14 verified the release on 22 October 2026, with the Premium copy and the landing promo merged. The owner sets `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production (NEEDED.md).
 
 Rollback: sections are a client and `planTopics` change with no table; disabling FDE keeps additive tables and history as before.
 
 ## 9. Work packages (the GitHub issues)
 
-Each issue carries scope, affected files, blockers, an acceptance checklist and a verification plan in the format #130–#148 used. Dependencies block merges, not commits. Epic C's packages are in [the agent workflow audit](agent-workflow-audit.md).
+Each issue carries scope, affected files, blockers, an acceptance checklist and a verification plan in the format #130–#148 used. Dependencies block merges, not commits. Epic C (C1 #511 to C7 #517) added the CI-parity, migration, content-authoring, API, route and issue-writing skills with their agents and commands under `.claude/`.
 
 ### Epic D: English only
 
@@ -272,10 +274,10 @@ Each issue carries scope, affected files, blockers, an acceptance checklist and 
 | Id | Work package | Blocked by |
 |---|---|---|
 | E1 | Learn lessons: a level may carry a `lessonId`; the roadmap handler serves the authored lesson (the `LessonSource` shape from `lib/learning-paths`, moved to `lib/learn-lessons/`); `LessonBody` renders it in Learn before the level's questions; the Big O introduction becomes the first use | D2, A2 |
-| E2 | Coding tasks per DSA level: `CodingTask.topic` admits `dsa` and `dsa-advanced`; the 30 DSA path exercises become coding tasks under `lib/coding/tasks/dsa-foundations.ts` with solutions and hidden tests, levelled to the DSA Foundations topic; `tasksForLevel` serves them; the free-task share and the coding index are rebuilt | D2 |
+| E2 | Coding tasks per DSA level: `CodingTask.topic` admits `dsa` and `dsa-advanced`; the 30 DSA path exercises become coding tasks under `lib/coding/tasks/dsa.ts` with solutions and hidden tests, levelled to the DSA Foundations topic; `tasksForLevel` serves them; the free-task share and the coding index are rebuilt | D2 |
 | E3 | DSA Foundations topic: `dsa` keeps its id and takes the title "DSA Foundations"; levels re-sequenced to the path's modules (section 12), the path's 52 checks converted to level questions in `lib/roadmap-questions-dsa.ts` with curation rows, its 18 lessons attached through E1, levels 14–15 re-authored (complexity in practice, foundation review); `FREE_LEARN_LEVELS.dsa` to 5 | E1, E2 |
 | E4 | DSA Advanced topic: new `dsa-advanced` topic with 15 levels (section 12), its questions (the existing heaps, graphs, Dijkstra and topological-sort items moved in, the rest authored), its coding tasks (reused Algorithms medium and hard tasks plus new ones), prerequisite on the first part of DSA Foundations, Premium, category colour and glyph, landing copy | E3 |
-| E5 | Retire the DSA path: `LEARNING_PATH_IDS` to `['fde']`, `skill_path` kind and `skillPaths` removed, DSA screens and routes replaced by redirects to Learn, `PathDiscovery` and the picker without DSA, `docs/dsa-foundations-plan.md` and `docs/learning-paths-plan.md` marked superseded, inventory contracts updated | E3, E4 |
+| E5 | Retire the DSA path: `LEARNING_PATH_IDS` to `['fde']`, `skill_path` kind and `skillPaths` removed, DSA screens and routes replaced by redirects to Learn, `PathDiscovery` and the picker without DSA, the two standalone path plans retired, inventory contracts updated | E3, E4 |
 
 ### Epic B: FDE flagship
 
@@ -363,6 +365,4 @@ The `dsa-foundations` learning path, its enrollment and progress rows (none exis
 
 ## 13. English only
 
-The owner decided (D10) that devShark ships English only, for good. Epic D removes the second language rather than keeping it as unshipped work: 81 retained files (`translations.cs.ts`, `levelIntros.cs.ts`, `quiz-data.cs.ts`, the `roadmap-questions*.cs.ts` banks, nine coding task overlays, the 24 learning-path overlays, the audit's `wip/cs/` folder), the language switch and `Lang`'s second value, the `lang` parameter on the API and the client, the `Localized` pair in the learning-path types, the parity checks in the validators and launch contracts, the `/cs/topics/:slug` public guides with their sitemap entries, and every sentence about a second language in CLAUDE.md, AGENTS.md, the skills and the docs. The `t()` dictionary stays as the one source of English copy. D1 goes first so no later issue writes against a stale rule.
-
-Implementation inventory update (E4, 22 October 2026): DSA Foundations 15 levels and DSA Advanced 15 levels now belong to Software Engineer; the gated catalogue issues 2134 questions and 769 coding tasks, 144 of them free. The starting-state table above preserves the original planning snapshot.
+The owner decided (D10) that devShark ships English only, for good. Epic D removed the second language rather than keeping it as unshipped work: 81 retained files (`translations.cs.ts`, `levelIntros.cs.ts`, `quiz-data.cs.ts`, the `roadmap-questions*.cs.ts` banks, nine coding task overlays, the 24 learning-path overlays, the audit's `wip/cs/` folder), the language switch and `Lang`'s second value, the `lang` parameter on the API and the client, the `Localized` pair in the learning-path types, the parity checks in the validators and launch contracts, the `/cs/topics/:slug` public guides with their sitemap entries, and every sentence about a second language in CLAUDE.md, AGENTS.md, the skills and the docs. The `t()` dictionary stays as the one source of English copy. D1 goes first so no later issue writes against a stale rule.
