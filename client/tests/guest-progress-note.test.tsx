@@ -18,7 +18,9 @@ const level = (n: number) => ({ level: n, title: `Level ${n}`, difficulty: 1, qu
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 async function renderLearn() {
   server.use(
-    http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'progress'
+    http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'learning-path-catalog'
+      ? HttpResponse.json({ versions: {}, paths: [] })
+      : new URL(request.url).searchParams.get('resource') === 'progress'
       ? HttpResponse.json({ data: {}, extra: { unlocked: [] } })
       : HttpResponse.json({
         topics: ['html'],
