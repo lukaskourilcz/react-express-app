@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { publicLesson } from '../../lib/learn-lessons';
 
 // These tests exercise the built UI with local wire fixtures. They do not
 // establish server grading or leaderboard writes; SQL and preview smoke
@@ -167,5 +168,39 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     const findings = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
     expect(findings.violations.map(v => v.id)).toEqual([]);
     await page.screenshot({ path: info.outputPath(`big-o-${theme}-${width}-200.png`), fullPage: true });
+  });
+}
+
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`${theme}: Learn reading reflows and starts no attempt before the learner asks`, async ({ page }) => {
+    await prepare(page, theme);
+    let attempts = 0;
+    await page.route('**/api/**', route => {
+      const url = new URL(route.request().url());
+      if (url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'lesson') {
+        return route.fulfill({ json: publicLesson(url.searchParams.get('id')!) });
+      }
+      if (url.pathname === '/api/quiz/roadmap' && url.searchParams.get('level')) {
+        attempts++;
+        return route.fulfill({ json: { kind: 'level', topic: 'dsa', ref: 1, title: 'Complexity Basics', passPct: 75, sessionId: 'fixture-attempt', questions: [{ id: 'fixture-q', category: 'dsa', difficulty: 1, question: 'Which count grows with the input?', options: ['n', '1'], introduction: '', tags: [] }] } });
+      }
+      return route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } });
+    });
+    await page.goto('/learn/big-o');
+    await page.getByRole('button', { name: '1. Complexity Basics' }).click();
+    await expect(page.locator('.lp-lesson')).toBeVisible();
+    expect(attempts).toBe(0);
+    for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px`).toBe(true);
+    }
+    const findings = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(findings.violations.map(v => v.id)).toEqual([]);
+    const start = page.getByRole('button', { name: 'Start the questions' });
+    await start.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Which count grows with the input?')).toBeVisible();
+    expect(attempts).toBe(1);
   });
 }
