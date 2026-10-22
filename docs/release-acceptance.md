@@ -2796,6 +2796,8 @@ checking passed (238 probes, zero issues or unprobed routes). Both production de
 audits reported zero vulnerabilities. `git diff --check` passed. Meta OAuth and professional
 account conversion remain pending; these checks do not establish a live publishing connection.
 
+*22 October 2026:* the owner closed the October marketing plan (#239) as not planned, so Meta OAuth and the account conversion are no longer planned. This repository posts nothing to social networks.
+
 ## 2026-09-27 — one state read in flight per match client (COALESCE)
 
 A Classroom answer broadcasts `match_updated` on a channel with `broadcast.self = true`, and each client read `/api/play/state` once per broadcast. With 30 learners on one address that came to about 930 reads per question against a bucket of 600 a minute (NEEDED.md). The server bucket stays as it is. Each client now keeps at most one read in flight and follows a burst with one trailing read.
@@ -3137,6 +3139,8 @@ Issue #239, commits `6b2f416` to `ac30c86`, PR #268 (fast-forwarded into `main`)
 | Preview deployment `dpl_HQkTK2LdszCLqNZrzi3Z78HQaDa7` | `/daily/<date>` and `/coding/<track>/<id>` serve their own heads and PNGs; an unwritten date or task id falls through to the app (200); a real answer check against the preview API graded and explained at 390 and 1280 px |
 
 Not checked here: link previews inside Threads and Instagram, and the PostHog person properties; both are owner items in `NEEDED.md` ("Marketing launch").
+
+*22 October 2026:* the owner closed #239 as not planned. The shipped features stay (UTM on the first pageview, `/daily`, the OG images, `/changelog`, referral sharing); the remaining launch items, these two checks included, are dropped.
 
 
 ## Homepage launch announcement — 28 September 2026
@@ -5763,6 +5767,8 @@ Issue #364: the authenticated, read-only `GET /api/quiz/questions?resource=marke
 PR #365 is merged at 1bf6cd56b06f2bb7e8dfbbb14d57ab7028bff368. Frozen head 58133cf1 passed required run 39618238380: verify 41m16s, SQL 36s. READY production dpl_8FBFfVNS5cpx2ZixJ8Q96ubEnRGU matches the merge SHA. Read-only guest checks against devshark.app after the deploy: `/`, `/quiz` and `/learn` answer 200; `/api/health` answers 200 with database, service role and rate limiter OK; the export answers 503 `marketing_not_configured` with and without a bearer, because `DEVSHARK_MARKETING_EXPORT_SECRET` is not set.
 
 The export is not switched on. Its server secret, the n8n credential and an authenticated production check stay with the owner (NEEDED.md, "Configure OwnDashboard marketing source integration after PR review"). No export, publication, account or database write happened in production. The verify job took 41 minutes because the `package.json` change triggered the QuickJS rebuild; the job's limit is 45.
+
+*22 October 2026:* the owner dropped the marketing plan (#239, closed not planned), and the preview-only `DEVSHARK_MARKETING_EXPORT_SECRET` was removed. No environment sets the secret, so the export stays inactive and the setup item is gone.
 
 ## Learn section registry and plan membership — 21 October 2026
 
