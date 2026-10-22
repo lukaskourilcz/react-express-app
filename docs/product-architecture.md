@@ -1354,118 +1354,101 @@ off. With billing off the locks still apply.
 
 The server token ledger of migration 028 is the wallet; the UI calls it **Coins**
 and the code keeps its `token` identifiers (tables, ops, `shared/rewards.ts`).
-Do not rename the schema. The browser wallet that `client/src/lib/xp.ts` used to
-fill is retired: nothing awards or shows a `localStorage` balance, and the old
-numbers stay in the account blob unread (`docs/rewards-launch.md`).
-
-Status on 2026-09-25: built on the lane branch with migration 041
-(`supabase/supabase-schema-041.sql`), proven on a local Postgres, waiting for
-production (issue #227, step D8).
+Do not rename the schema. The browser keeps no coin balance of its own; old
+`localStorage` numbers stay in the account blob unread.
 
 - **Rules.** `shared/rewards.ts` holds the defaults (`DEFAULT_COIN_SETTINGS`)
   and the game settings mirror them as `coins`, clamped on read, so the owner
-  tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
-  10 % of verified XP; Premium doubles it at credit time; one account earns at
-  most 400 coins a day from XP, counted after the doubling. While 056 paid
-  every repeated question, this cap was what bounded the coins a replayed quiz
-  could earn; from 058 a question pays again only after an hour, and the cap
-  bounds the rest: 400 coins is 4,000 XP a day on the free plan
-  and 2,000 on Premium. The welcome grant is
-  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
-  "live" as the Profile counts it, a shield or a protection covering the gap
-  since the last learning day, `streak_live` from migration 052), a
-  Learn topic with every level passed (100), an evolving project (150) or short
-  path (50) with every stage passed, and the top three of a finished calendar
-  month: the learners with the most XP earned in it (UTC), on the ranking of
-  the "This month" board (300, 200, 100; migration 056). A tie shares the
-  place: everyone tied gets that place's coins and the next total takes the
-  place after the tied group (1, 1, 3), so nobody below third is paid. 041
-  ranked correct answers and broke ties by the earlier first active day.
-  Milestones sit
-  outside the daily cap. Opening a social profile pays nothing: the server
-  stopped issuing the click-through grant in design audit P0.3, and the
-  `social` ledger reason stays for the credits already made.
+  tunes them in `/dev` → Settings → Coins without a deploy. Every account
+  earns 10 % of verified XP; Premium doubles it at credit time; one account
+  earns at most 400 coins a day from XP, counted after the doubling (4,000 XP
+  a day on Free, 2,000 on Premium). The welcome grant is 200. Premium
+  milestones: a live streak of 7, 30 and 100 days (25, 100, 300; "live" as the
+  Profile counts it, `streak_live`), a Learn topic with every level passed
+  (100), an evolving project (150) or short path (50) with every stage passed,
+  and the top three of a finished calendar month on the "This month" board
+  (300, 200, 100). A tie shares the place: everyone tied gets that place's
+  coins and the next total takes the place after the tied group (1, 1, 3), so
+  nobody below third is paid. Milestones sit outside the daily cap. Opening a
+  social profile pays nothing; the `social` ledger reason stays for credits
+  already made.
 - **Credits.** Every credit is a ledger event with a deterministic id, written
   by a service-role routine, so a replay credits nothing:
   `credit_verified_xp_tokens` (`xp:<award id>`, with `token_xp_credits`
   recording each decision, a capped one included), `settle_coin_milestones`
   (`streak:<n>:<account>`, `topic:<id>:<account>`, `project:<id>:<account>`),
-  `settle_month_top3` (`month-top:<yyyy-mm>:<place>:<account>` from 056, so
-  learners sharing a place are each paid once; once per month in
-  `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
+  `settle_month_top3` (`month-top:<yyyy-mm>:<place>:<account>`, once per month
+  in `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
   `credit_social_visit` (`social:<platform>:<account>`). The routines read
   `is_premium()` themselves; none writes a learning, score or streak table.
   `settle_coin_milestones` asks `is_premium()` when it settles, so a new
-  subscriber's first wallet read pays milestones reached on the free plan
-  (an owner decision in `NEEDED.md`). When a subscription is refunded,
-  withdrawn or disputed, `revoke_premium_benefits` debits that grant's
-  milestone and doubled coins once (`revoke:<grant>`, reason `adjustment`) and
-  cancels its unsent redemptions; a milestone taken back stays in the ledger,
-  so it is never paid twice.
+  subscriber's first wallet read pays milestones reached on the free plan.
+  When a subscription is refunded, withdrawn or disputed,
+  `revoke_premium_benefits` debits that grant's milestone and doubled coins
+  once (`revoke:<grant>`, reason `adjustment`) and cancels its unsent
+  redemptions; a milestone taken back stays in the ledger, so it is never paid
+  twice.
 - **Where credits happen.** `lib/rewards/coins.ts` is the server side. A quiz
-  or daily result and a Biggest Shark Challenge run credit their XP award as
-  before; a Learn level or part test passed for the first time credits
-  `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
-  the part (`shared/progression.ts`); a coding challenge's first pass credits
-  `coding:<account>:<task>`, the same id its XP now uses. Repeat XP, a coding
-  task's after a reset (058) or a Learn step's after an hour (060), credits
-  no coins. A quiz's credit is
-  for the XP the routine awarded: the receipt's whole XP from migration 056
-  (048 to 055 could pay less), and nothing for a refused second daily. Everything that moves the streak (a verified quiz, a completed
-  Learn level or part test, an applied coding pass, an awarded Challenge run)
-  then settles the milestones, so a streak milestone reached on a Learn or
-  coding day pays at once.
-  The first wallet read (`op=wallet` GET) pays the welcome coins, settles the
-  month that just ended and the learner's milestones, and returns the rules and
-  progress for "How to earn". Before 041 is installed the XP credit falls back
-  to the old flat rate.
-- **Spending.** The crown (1,200) and streak protection (250) stay open to every
-  account. Shipped merchandise is Premium only: `op=orders` POST answers a free
-  account with 402 `premium_required` (`kind: 'merch-redemption'`) before it
-  asks for an address. `merch_stock` is a monthly cap on what the owner will
-  post, not a count of goods on a shelf.
+  or daily result and a Biggest Shark Challenge run credit the XP the routine
+  awarded, and nothing for a refused second daily. A Learn level or part test
+  passed for the first time credits `learn:<account>:<topic>:L<n>` (or `P<n>`)
+  at 50 × the level's difficulty or 300 × the part (`shared/progression.ts`); a
+  coding task's first pass credits `coding:<account>:<task>`, the same id its
+  XP uses. Repeat XP (a coding task after a reset, a Learn step after an hour)
+  credits no coins. Everything that moves the streak (a verified quiz, a
+  completed Learn level or part test, an applied coding pass, an awarded
+  Challenge run) then settles the milestones, so a streak milestone reached on
+  a Learn or coding day pays at once. The first wallet read (`op=wallet` GET)
+  pays the welcome coins, settles the month that just ended and the learner's
+  milestones, and returns the rules and progress for "How to earn".
+- **Spending.** The crown (1,200) and streak protection (250) are open to
+  every account. Redeeming coins for shipped merchandise is a Premium benefit
+  (`op=orders` POST answers a free account with 402 `premium_required`, `kind:
+  'merch-redemption'`), and merchandise is paused ("Merchandise").
+  `merch_stock` is a monthly cap on what the owner will post, not a count of
+  goods on a shelf.
 - **Screen.** `/shop` reads Coins in the navigation and in its title, with a
   coin as its header icon: the coins with the last 25 ledger lines, How to
   earn (five rows and one Premium note), the crown and streak protection,
-  Invite a friend, merchandise once redemption opens, and orders and claims. devShark's own social profiles are linked once, as
-  icons in the site footer; the links come from `SOCIAL_PROFILES` in
-  `client/product-catalog.ts` and show only once the owner records them.
-- **Invitations (step D8b, #228, migration 042).** The compliant substitute for
-  paying for follows: devShark's own server verifies the event it pays for.
-  Every account has an eight-letter code (`referral_codes`), and its invite link
-  is `/?ref=<code>`. `client/src/main.tsx` keeps the code in local storage and
-  takes it out of the address bar; after sign-in `ReferralBinder` offers it to
-  `op=referral` POST. `record_referral` binds it once (`referrals`, keyed by the
-  invited account), only while the account is at most 48 hours old by the
-  creation time Supabase Auth reported for the verified token, and refuses the
-  account's own code or a pair that already runs the other way. When the invited
-  friend has a passed Learn level, `credit_referral` pays both sides
-  `referralGrant` coins (100) once: the friend under `referral:<account>`, the
-  inviter under `referral:friend:<random key>`, so the inviter's ledger never
-  carries the friend's id. An inviter is paid for at most `referralCap` friends
-  (20), counted from the inviter's own ledger; past it the friend is still paid.
-  A first Learn pass and the wallet read settle it. The routine writes the
+  Invite a friend, and, once merchandise returns, merchandise and orders.
+  devShark's own social profiles are linked once, as icons in the site footer,
+  from `SOCIAL_PROFILES` in `client/product-catalog.ts`, and show only once
+  the owner records them.
+- **Invitations (migration 042).** devShark's own server verifies the event
+  it pays for. Every account has an eight-letter code (`referral_codes`), and
+  its invite link is `/?ref=<code>`. `client/src/main.tsx` keeps the code in
+  local storage and takes it out of the address bar; after sign-in
+  `ReferralBinder` offers it to `op=referral` POST. `record_referral` binds it
+  once (`referrals`, keyed by the invited account), only while the account is
+  at most 48 hours old by the creation time Supabase Auth reported for the
+  verified token, and refuses the account's own code or a pair that already
+  runs the other way. When the invited friend has a passed Learn level,
+  `credit_referral` pays both sides `referralGrant` coins (100) once: the
+  friend under `referral:<account>`, the inviter under
+  `referral:friend:<random key>`, so the inviter's ledger never carries the
+  friend's id. An inviter is paid for at most `referralCap` friends (20),
+  counted from the inviter's own ledger; past it the friend is still paid. A
+  first Learn pass and the wallet read settle it. The routine writes the
   ledger and the referral row and nothing else. `op=referral` GET returns the
-  code and counts only; `referrals` has no browser policy. "Invite a friend"
-  sits after How to earn on `/shop`. A grant of 0 in `/dev` turns invitations
-  off.
-- **Merchandise through Spreadshop (step D9, #229, migration 043).** Spreadshop
-  (sprd.net AG) prints, sells and ships devShark merchandise and has no order
-  API, so the app links out and embeds nothing: no Spreadshop script, iframe or
-  CSP entry. `MERCH_SHOP` in `client/product-catalog.ts` holds the shop's URL
-  and one URL per item, all null until the owner sets them; a tile shows "Buy
-  at the devShark shop" only for a set URL, and a mockup only when the build
-  finds `client/public/merch/<sku>.<ext>` (`vite.config.ts` lists them). Cash is
-  paid in the Spreadshop checkout and `cashCheckoutEnabled` stays off. A coin
-  redemption or a claimed learning-path package is a `merch_orders` row; the
-  owner orders it at base price from the shop preview and works the queue in
-  `/dev` → Merchandise, which also edits the quotes and the monthly caps
-  (`op=fulfilment`, `set_merch_stock`). 043 adds the hoodie (t-shirt sizes) to
-  both SKU checks and lets a claimed package, which 035 leaves awaiting payment
-  at zero, ship without touching `reserved`. `lib/rewards/spreadshop.ts` reads
-  Spreadshop's own monthly promotion on the server when `SPREADSHOP_API_KEY`
-  and `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
-  `merchPromo`; coins never buy a discount.
+  code and counts only; `referrals` has no browser policy. A grant of 0 in
+  `/dev` turns invitations off.
+- **Merchandise through Spreadshop (migration 043).** Spreadshop (sprd.net
+  AG) prints, sells and ships devShark merchandise and has no order API, so
+  the app links out and embeds nothing: no Spreadshop script, iframe or CSP
+  entry. `MERCH_SHOP` in `client/product-catalog.ts` holds the shop's URL and
+  one URL per item, all null until the owner sets them; a tile shows "Buy at
+  the devShark shop" only for a set URL, and a mockup only when the build
+  finds `client/public/merch/<sku>.<ext>` (`vite.config.ts` lists them). Cash
+  is paid in the Spreadshop checkout and `cashCheckoutEnabled` stays off. A
+  coin redemption or a claimed learning-path package is a `merch_orders` row;
+  the owner orders it at base price from the shop preview and works the queue
+  in `/dev` → Merchandise, which also edits the quotes and the monthly caps
+  (`op=fulfilment`, `set_merch_stock`). A claimed package ships without
+  touching `reserved`. `lib/rewards/spreadshop.ts` reads Spreadshop's own
+  monthly promotion on the server when `SPREADSHOP_API_KEY` and
+  `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
+  `merchPromo`; coins never buy a discount. All of this is behind
+  `MERCH_ENABLED`.
 
 ## Sign-in, caching and limits
 
