@@ -154,6 +154,14 @@ export function schemaContracts(fail: Fail): void {
     delete drill.code;
     drill.reuseTaskId = 'js-binary-search';
   }, [], ['misplaced_fixture_note', 'bad_reuse', 'missing_copy']);
+  expectErrors('fractional answer index', (s) => { activityOf(s, 'fde-v1-x01-case').questions![0].correct = 0.5; }, ['bad_answer']);
+  expectErrors('non-finite criterion weight', (s) => {
+    activityOf(s, 'fde-v1-x01-drill').code!.criteria = [{ id: 'core', label: 'Required behaviour', critical: true, weight: Number.NaN }];
+  }, ['bad_weight']);
+  expectErrors('diagnostic that is not a check', (s) => {
+    activityOf(s, 'fde-v1-ip01-read').purpose = 'diagnostic';
+    s.diagnosticActivityId = 'fde-v1-ip01-read';
+  }, ['diagnostic_not_check'], ['wrong_purpose', 'diagnostic_required']);
   expectErrors('loop module depends on a shelf module', (s) => { moduleOf(s, LOOP).dependsOn = [SHELF]; }, ['loop_depends_on_shelf']);
   expectErrors('shelf module depends on a loop module', (s) => { moduleOf(s, SHELF).dependsOn = [LOOP]; }, [], ['loop_depends_on_shelf']);
   {

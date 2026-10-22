@@ -231,7 +231,9 @@ function validateActivity(
         if (question.options.length < 3) {
           issues.push(error('too_few_options', qAt, 'a question needs at least three options so a guess is not a coin flip'));
         }
-        if (question.correct < 0 || question.correct >= question.options.length) {
+        // A fractional index can never equal a chosen option, so the question
+        // would be marked wrong for every learner.
+        if (!Number.isInteger(question.correct) || question.correct < 0 || question.correct >= question.options.length) {
           issues.push(error('bad_answer', qAt, 'correct must index an option'));
         }
         const texts = question.options.map((option) => option.trim().toLowerCase());
@@ -281,7 +283,11 @@ function validateActivity(
         issues.push(error('no_critical_criterion', at, 'at least one criterion must be critical, or a pass could be averaged out'));
       }
       for (const criterion of code.criteria) {
-        if (criterion.weight <= 0) issues.push(error('bad_weight', `${at}/${criterion.id}`, 'criterion weight must be positive'));
+        // NaN or Infinity passes a `<= 0` test and then poisons the weighted
+        // score and the pass share for every submission.
+        if (!Number.isFinite(criterion.weight) || criterion.weight <= 0) {
+          issues.push(error('bad_weight', `${at}/${criterion.id}`, 'criterion weight must be a positive finite number'));
+        }
       }
       for (const test of code.tests) {
         if (!criterionIds.has(test.criterion)) {
@@ -476,6 +482,11 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       issues.push(error('unknown_diagnostic', at, 'diagnosticActivityId does not name an activity'));
     } else if (diagnostic.purpose !== 'diagnostic') {
       issues.push(error('wrong_purpose', at, 'the diagnostic activity must carry purpose diagnostic'));
+    }
+    // The competency report is built from the diagnostic's questions; any
+    // other kind would report every competency as not assessed forever.
+    if (diagnostic && diagnostic.kind !== 'check') {
+      issues.push(error('diagnostic_not_check', at, 'the diagnostic activity must be an objective check'));
     }
   }
   for (const [id, activity] of allActivities) {
