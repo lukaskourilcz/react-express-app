@@ -1,3 +1,5 @@
+import { planTopics } from '../../shared/progression';
+import type { LearnerProfile } from '../../shared/learning-paths';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -102,6 +104,18 @@ describe('locks mirror the server', () => {
 });
 
 describe('the Today plan', () => {
+  it('keeps base-track work before a joined section and exposes one next action', () => {
+    const profile: LearnerProfile = { schemaVersion: 2, baseTrack: 'frontend', specialization: null,
+      skillPaths: [], sections: ['software-engineer'], goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null };
+    const topicOrder = planTopics(profile);
+    const unfinished = { levels: { 1: { passed: false, bestPct: 0 } }, checkpoints: {} };
+    const plan = buildToday({ javascript: unfinished, html: unfinished, dsa: unfinished }, 'webdev', {
+      topicOrder, inPlan: topic => topicOrder.includes(topic), extraUnlocks: ['dsa'],
+    });
+    expect(plan.all.unfinished.map(item => item.topic)).toEqual(['html', 'javascript', 'dsa']);
+    expect(plan.startHereId).toBe('html:1');
+    expect(plan.items.filter(item => item.id === plan.startHereId)).toHaveLength(1);
+  });
   it('stops offering a level Premium opens', () => {
     const open = buildToday({}, 'webdev');
     const first = open.all.new[0];

@@ -18,43 +18,18 @@ import type {
   SourceReference,
   VerificationKind,
 } from '../../shared/learning-paths';
-import type { LessonSection, TraceFrame, TraceSpec } from '../../shared/learning-path-api';
 import type { TaskRuntimePolicy } from '../../shared/coding-task-runtime';
+import { mergeLesson, type LessonSource, type MergedLesson } from '../learn-lessons/types';
 import type { SourceCallTest, SourceTypeTest } from '../coding/types';
 
 export type { SourceCallTest, SourceTypeTest };
 
 /* ── lessons ───────────────────────────────────────────────────────────── */
 
-export type LessonSectionSource =
-  | { kind: 'prose'; body: string }
-  | { kind: 'code'; language: string; code: string; caption: string }
-  | { kind: 'table'; caption: string; headers: string[]; rows: string[][] }
-  | { kind: 'trace'; caption: string; trace: TraceSource }
-  /** A snippet the learner may change and run. Exploration only: nothing about
-   * it is graded or recorded, which the note says in the learner's language. */
-  | { kind: 'example'; language: string; code: string; caption: string; note: string }
-  | { kind: 'callout'; tone: 'note' | 'warning'; body: string };
-
-export interface TraceSource {
-  shape: TraceSpec['shape'];
-  legend?: string[];
-  frames: {
-    cells: string[];
-    marks?: TraceFrame['marks'];
-    note: string;
-    counter?: { label: string; value: number };
-  }[];
-}
-
-export interface LessonSource {
-  id: string;
-  title: string;
-  summary: string;
-  estimatedMinutes: number;
-  sources: SourceReference[];
-  sections: LessonSectionSource[];
-}
+// The lesson shape lives in lib/learn-lessons/types.ts, because a Learn level
+// carries the same lessons (#492). Re-exported so path content keeps one import.
+export type { LessonSectionSource, LessonSource, MergedLesson, TraceSource } from '../learn-lessons/types';
+export { mergeLesson, mergeLessonSection } from '../learn-lessons/types';
 
 /* ── objective checks ─────────────────────────────────────────────────── */
 
@@ -237,69 +212,6 @@ export interface PathCodeSolution {
 }
 
 /* ── merge helpers ────────────────────────────────────────────────────── */
-
-export function mergeLessonSection(section: LessonSectionSource): LessonSection {
-  switch (section.kind) {
-    case 'prose':
-      return { kind: 'prose', body: section.body };
-    case 'callout':
-      return { kind: 'callout', tone: section.tone, body: section.body };
-    case 'code':
-      return { kind: 'code', language: section.language, code: section.code, caption: section.caption };
-    case 'example':
-      return {
-        kind: 'example',
-        language: section.language,
-        code: section.code,
-        caption: section.caption,
-        note: section.note,
-      };
-    case 'table':
-      return {
-        kind: 'table',
-        caption: section.caption,
-        headers: section.headers,
-        rows: section.rows,
-      };
-    case 'trace':
-      return {
-        kind: 'trace',
-        caption: section.caption,
-        trace: {
-          shape: section.trace.shape,
-          ...(section.trace.legend ? { legend: section.trace.legend } : {}),
-          frames: section.trace.frames.map((frame) => ({
-            cells: frame.cells,
-            ...(frame.marks ? { marks: frame.marks } : {}),
-            note: frame.note,
-            ...(frame.counter
-              ? { counter: { label: frame.counter.label, value: frame.counter.value } }
-              : {}),
-          })),
-        },
-      };
-  }
-}
-
-export interface MergedLesson {
-  id: string;
-  title: string;
-  summary: string;
-  estimatedMinutes: number;
-  sources: SourceReference[];
-  sections: LessonSection[];
-}
-
-export function mergeLesson(lesson: LessonSource): MergedLesson {
-  return {
-    id: lesson.id,
-    title: lesson.title,
-    summary: lesson.summary,
-    estimatedMinutes: lesson.estimatedMinutes,
-    sources: lesson.sources,
-    sections: lesson.sections.map(mergeLessonSection),
-  };
-}
 
 export interface MergedCheckQuestion {
   id: string;

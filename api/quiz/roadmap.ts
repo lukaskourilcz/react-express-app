@@ -52,6 +52,7 @@ import { claimOnce, enforceClassRateLimit, enforceRateLimit, limitRead, RATE_LIM
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
+import { isLearnCodingTopic } from '../../shared/coding-catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingApproaches, handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import {
@@ -98,6 +99,7 @@ import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
 import { isBigOIntroduction, type GatedContent } from '../../shared/tiers';
 import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
+import { handleLessonRead } from '../../lib/learn-lessons/serve';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -111,15 +113,14 @@ import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
 //   GET  /api/quiz/roadmap?resource=learning-path-catalog → published path manifests
 //   POST /api/quiz/roadmap?resource=learning-path-start   → open one path activity
 //   POST /api/quiz/roadmap?resource=learning-path-submit  → grade and record it
+//   GET  /api/quiz/roadmap?resource=lesson&id=     → the lesson a Learn level opens with
 const logEvent = createLogger('quiz/roadmap');
 
 /** The level map marks devShark code levels that end with coding tasks, so the
  * learner sees the extra work before opening the level. Counts only; the task
  * ids stay sealed in the level session. */
-const isCodeTopic = (topic: string): topic is 'javascript' | 'typescript' | 'react' =>
-  topic === 'javascript' || topic === 'typescript' || topic === 'react';
 function withCodingCounts(topic: string, live: RoadmapTopicStructure): RoadmapTopicStructure {
-  if (!isCodeTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
+  if (!isLearnCodingTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
   return {
     ...live,
     levels: live.levels.map((level) => {
@@ -177,8 +178,7 @@ async function playableResponse(input: {
   // devShark Learn levels of the code topics carry coding tasks. Their ids are
   // sealed into the session so completion can insist on every one passing;
   // each task gets its own coding session bound to this level attempt.
-  const codingTasks = input.kind === 'level' && subject === 'webdev' &&
-    (input.topic === 'javascript' || input.topic === 'typescript' || input.topic === 'react')
+  const codingTasks = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
     ? levelCodingTasks(input.topic, input.ref)
     : [];
   const sessionId = encodeSession(built.answerKey, {
@@ -1430,6 +1430,11 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'internal_error', 'Could not handle the learning-path request');
     }
   }
+
+  // The lesson a Learn level opens with (#492): public reading, guests
+  // included, the Learn map's address limit and an ETag of the content hash
+  // (lib/learn-lessons/serve.ts).
+  if (resource === 'lesson') return await handleLessonRead(req, res);
 
   if (req.method === 'POST' && req.query.resource === 'answer') {
     try {

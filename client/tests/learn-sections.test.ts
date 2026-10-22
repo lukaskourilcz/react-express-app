@@ -5,6 +5,7 @@ import {
   resolveSection,
   sectionGate,
   sectionProgress,
+  pathSteps,
   type RailContext,
 } from '../src/components/learn/sections';
 import { NO_PENDING, withPendingJoin } from '../src/lib/eligibility';
@@ -200,5 +201,28 @@ describe('firstSelectable', () => {
     expect(firstSelectable(entries, [null, 'git'])).toBe('git');
     expect(firstSelectable(entries, ['system-design'])).toBe('dsa');
     expect(firstSelectable(railEntries('software-engineer', ctx(null, 'software-engineer', [])), [])).toBeNull();
+  });
+});
+
+
+describe('path evidence in section progress', () => {
+  it('counts recorded loop evidence and leaves optional and interview work out', () => {
+    const activity = (id: string) => ({ id, kind: 'lesson' as const, purpose: 'exercise' as const, verification: 'self_reviewed' as const, title: id, summary: id, competencies: [], estimatedMinutes: 1 });
+    const modules = [
+      { activities: [activity('lesson'), activity('check'), activity('code')] },
+      { optional: true, activities: [activity('bridge')] },
+      { optional: true, shelf: 'interview-prep' as const, activities: [activity('interview')] },
+    ] satisfies Parameters<typeof pathSteps>[0];
+    const progress = { modules: [{ activities: [
+      { activityId: 'lesson', state: 'self_reviewed' },
+      { activityId: 'check', state: 'verified_pass' },
+      { activityId: 'code', state: 'needs_revision' },
+      { activityId: 'bridge', state: 'verified_pass' },
+      { activityId: 'interview', state: 'verified_pass' },
+    ] }] } as Parameters<typeof pathSteps>[1];
+    const steps = pathSteps(modules, progress);
+    expect(steps).toEqual({ passed: 2, total: 3 });
+    expect(sectionProgress([], {}, {}, steps)).toEqual({ passed: 2, total: 3, percent: 66 });
+    expect(pathSteps(modules, undefined)).toEqual({ passed: 0, total: 3 });
   });
 });

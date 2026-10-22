@@ -58,3 +58,10 @@ export function learnerSections(profile: { specialization: string | null; sectio
     return chosen.has(section.id);
   }).map((section) => section.id);
 }
+
+/** Canonical entry for a topic shared by multiple sections: the first owner
+ * in the registry, matching Learn's legacy-query resolution. */
+export function learnTopicHref(topic: string): string {
+  const section = sectionsForTopic(topic)[0] ?? 'web-developer';
+  return `/learn/${section}?topic=${encodeURIComponent(topic)}`;
+}

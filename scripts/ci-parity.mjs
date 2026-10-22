@@ -235,16 +235,16 @@ const BUILD_ENV = {
 const npmRun = (script, extra = '') => `npm run ${script}${extra ? ` ${extra}` : ''}`;
 const step = (id, command, more = {}) => ({ id, command, ci: [command], tier: 'fast', ...more });
 
-const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/cs/topics/${TOPIC},/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440`;
+const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440`;
 const RESPONSIVE_DARK = `-- --routes /,/topics/${TOPIC},/daily --widths 390,768,1280`;
 const BROWSER_SPECS = [
-  'public', 'guide-startup profile-leaderboard-preferences', 'evolving', 'coding-pages', 'coding-workbench',
+  'public', 'guide-startup profile-leaderboard-preferences profile-path-picker', 'evolving', 'coding-pages', 'coding-workbench',
   'coding-drafts', 'learning-release learn-sections', 'segmented', 'on-accent', 'navigation', 'lazy-auth', 'sign-in',
   'route-errors', 'first-load', 'home-sample', 'routes-axe', 'daily', 'launch-offer',
 ].map((names) => names.split(' ').map((name) => `tests/browser/${name}.spec.ts`).join(' '));
 
 const PLAN = [
-  step('install', 'npm ci && npm ci --prefix client', { ci: ['npm ci', 'npm ci --prefix client'], kind: 'install' }),
+  step('install', 'npm ci --no-audit && npm ci --no-audit --prefix client', { ci: ['npm ci --no-audit', 'npm ci --no-audit --prefix client'], kind: 'install' }),
   step('check:quickjs-build', npmRun('check:quickjs-build'), { kind: 'quickjs' }),
   step('typecheck:api', npmRun('typecheck:api')),
   step('typecheck:scripts', npmRun('typecheck:scripts')),

@@ -78,6 +78,7 @@ import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
+import { LearnLesson } from './learn/LearnLesson';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { NO_PENDING, useInPlan, useLearnerSections, type PendingJoin } from '../lib/eligibility';
@@ -99,6 +100,7 @@ import {
 import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
 import { LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
+import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useOnline } from './learn/useOnline';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
@@ -131,6 +133,9 @@ import './DeepEndScreens.css';
 // `lazyShellPart` inside its own boundary: when its code does not load, the
 // level stays on screen with "Could not load this task." and a Try again that
 // asks again, or reloads when the same failure comes straight back.
+// Keep path screens and their styles outside the normal topic chunk.
+const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
+
 const CodingWorkbench = lazyShellPart(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -437,6 +442,7 @@ function Roadmap() {
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
   const [loadingLesson, setLoadingLesson] = useState(false);
+  const [readingLessonId, setReadingLessonId] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const lessonAbortRef = useRef<AbortController | null>(null);
   const learningXpBeforeAttemptRef = useRef(0);
@@ -551,6 +557,7 @@ function Roadmap() {
   const enrollments = useEnrollments(fdeOnScreen && isAuthenticated ? user?.id : undefined);
   const fdeEntry = entryFor(pathCatalog.data, 'fde');
   const fdeBarred = isBarred(lockOf({ kind: 'learning-path', pathId: 'fde' }));
+  const fdePath = useFdePathSteps();
   const runJoin = async (id: LearnSectionId) => {
     if (!user || !profile || join?.status === 'saving') return;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
@@ -602,7 +609,17 @@ function Roadmap() {
     [t],
   );
 
-  const open = (a: Active) => {
+  const open = (a: Active, questions = false) => {
+    const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
+    setReadingLessonId(lessonId ?? null);
+    if (lessonId) {
+      lessonAbortRef.current?.abort();
+      setActive(a);
+      setPlayable(null);
+      setLoadingLesson(false);
+      setLessonError(null);
+      return;
+    }
     learningXpBeforeAttemptRef.current = computeLearningXp(getRoadmapProgress());
     lessonAbortRef.current?.abort();
     const controller = new AbortController();
@@ -804,6 +821,7 @@ function Roadmap() {
   // the moment the invite link is offered (#239).
   const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
+    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
       return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
@@ -828,6 +846,7 @@ function Roadmap() {
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
+        skipIntro={active.kind === 'level' && !!levels.find((level) => level.level === active.ref)?.lessonId}
         firstLevelPass={noLevelPassedYet}
         topicCompleted={active.kind === 'test' && active.ref === ranges.length && ranges.every(range => isPartTestPassed(progress, topic, range.part))}
         topicColor={topicColor}
@@ -844,11 +863,18 @@ function Roadmap() {
 
   /* ──── map view ─────────────────────────────────────────────────────── */
   const sectionName = learnText(`learn.section.${section}`);
-  const switcherItems = LEARN_SECTIONS.map(({ id }) => ({
-    id,
-    name: learnText(`learn.section.${id}`),
-    percent: loadingStructure || structureError ? null : sectionProgress(entriesBySection[id], progress, levelCounts).percent,
-  }));
+  // The FDE figure counts its path too (#489), and waits for the path's
+  // answers rather than showing one number and then another.
+  const switcherItems = LEARN_SECTIONS.map(({ id }) => {
+    const path = id === 'forward-deployed-engineer' ? fdePath : null;
+    return {
+      id,
+      name: learnText(`learn.section.${id}`),
+      percent: loadingStructure || structureError || path?.pending
+        ? null
+        : sectionProgress(entriesBySection[id], progress, levelCounts, path?.steps ?? null).percent,
+    };
+  });
   const gate = sectionHasOpen ? null : sectionGate(entries, progress, extraUnlocksSet, members);
   const skillCheckRow = (
     <div className="rm-skillcheck-row">
@@ -864,7 +890,7 @@ function Roadmap() {
   return (
     <div className="de-page" style={{ maxWidth: 1060 }}>
       <div className="rm-journey-heading">
-        <Kicker as="h1" className="ss-section-title">{t('roadmap.journeyTitle')}</Kicker>
+        <Kicker as="h1" className="ss-section-title">{!isAuthenticated && !authLoading ? sectionName : t('roadmap.journeyTitle')}</Kicker>
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>
@@ -909,6 +935,14 @@ function Roadmap() {
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
         />
+
+        {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
+          <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
+            <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+              <PathShelf pathIds={LEARN_SECTIONS.find((one) => one.id === section)!.paths} />
+            </Suspense>
+          </ShellPartBoundary>
+        )}
 
         <SectionRail
           sectionName={sectionName}
@@ -1482,12 +1516,14 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
 }
 
 function LessonRunner({
-  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
+  playable, firstLevelPass = false, topicCompleted = false, skipIntro = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
 }: {
   playable: RoadmapPlayable;
   /** No Learn level was passed before this one opened (#239). */
   firstLevelPass?: boolean;
   topicCompleted?: boolean;
+  /** Full lesson reading already preceded this attempt. */
+  skipIntro?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
   onReplay: () => void; t: TFn;
@@ -1512,7 +1548,7 @@ function LessonRunner({
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
   const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
-  const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
+  const [showIntro, setShowIntro] = useState<boolean>(() => !skipIntro && !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
   const [presented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
@@ -2593,10 +2629,11 @@ export function BigOIntroduction() {
   const { isAuthenticated, user } = useAuth();
   const [level, setLevel] = useState<1 | 2 | null>(null);
   const [generation, setGeneration] = useState(0);
+  const [reading, setReading] = useState(true);
   const before = useRef(0);
   const lesson = useQuery({
     queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
-    enabled: level !== null,
+    enabled: level !== null && !reading,
     queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
     staleTime: 0,
     gcTime: 0,
@@ -2605,12 +2642,14 @@ export function BigOIntroduction() {
   const open = (next: 1 | 2) => {
     before.current = computeLearningXp(getRoadmapProgress());
     setGeneration((value) => value + 1);
+    setReading(true);
     setLevel(next);
   };
   if (level !== null) {
+    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
     if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
-    return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data}
+    return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
       onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} t={t}
       onFinished={(pct, repeatXp) => {

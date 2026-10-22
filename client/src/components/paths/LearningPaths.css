@@ -159,10 +159,11 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-activity__summary { flex: 1 1 100%; margin: 0; font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.5; }
 .lp-activity__minutes { flex: 0 1 auto; min-width: 0; font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 
-/* The profile card can carry long translated goal names and the full FDE role
+/* The profile card can carry long goal names and every joined section's full
  * name. Keep both the current choice and saved answers inside the card at every
  * width instead of relying on the generic path inventory list. */
 .lp-profile-choice { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.lp-profile-choice__summary { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lp-profile-choice__value { min-width: 0; overflow-wrap: anywhere; }
 .lp-profile-choice .astryx-button { flex: none; }
 .lp-profile-inventory { display: grid; grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr); gap: 8px 16px; min-width: 0; margin: 2px 0; padding: 14px; border-radius: var(--radius-element); background: var(--color-background-muted); font-size: 0.9rem; }
@@ -326,7 +327,8 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 
 /* ── objective checks ──────────────────────────────────────────────────── */
 
-/* Not .lp-check, which is the profile picker's checkbox label below. */
+/* A check activity's container. It once shared .lp-check with the picker's
+   checkbox label and took its dimming; the label is now .lp-toggle. */
 .lp-check-view { display: flex; flex-direction: column; gap: 20px; }
 .lp-question { display: flex; flex-direction: column; gap: 12px; }
 .lp-question__prompt { margin: 0; font-weight: 600; line-height: 1.6; }
@@ -480,8 +482,11 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
  * figure caption so the table is self-describing when read out of context. */
 
 /* ── profile answers in the path picker ──────────────────────────────────
-   Checkboxes, not cards: goals are a multi-select and a skill path is an
-   opt-in, so neither is one-of-N. Targets clear 44px on touch. */
+   Checkboxes, not cards: goals are a multi-select and a section is an
+   opt-in, so neither is one-of-N. Targets clear 44px on touch. The rows are
+   .lp-toggle, apart from the check activity's .lp-check-view container:
+   sharing one name stacked each box over its text and drew the picker's
+   border round every check activity. */
 .lp-fieldset {
   border: 0;
   margin: 0;
@@ -499,7 +504,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   gap: 4px;
   margin-top: 8px;
 }
-.lp-check {
+.lp-toggle {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -510,30 +515,80 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   cursor: pointer;
   color: var(--color-text-primary);
 }
-.lp-check > span {
+.lp-toggle > span {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.lp-check input {
+.lp-toggle input {
   width: 20px;
   height: 20px;
   margin-top: 2px;
   accent-color: var(--brand-accent);
   flex: none;
 }
-.lp-check:hover { background: var(--color-background-muted); }
-.lp-check:has(input:checked) {
+.lp-toggle:hover { background: var(--color-background-muted); }
+.lp-toggle:has(input:checked) {
   border-color: var(--brand-accent);
   background: var(--brand-accent-soft);
 }
-.lp-check:has(input:focus-visible) {
+.lp-toggle:has(input:focus-visible) {
   outline: 2px solid var(--ss-focus);
   outline-offset: 2px;
 }
-.lp-check:has(input:disabled) {
+.lp-toggle:has(input:disabled) {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* The picker's Sections step: the Software Engineer opt-in above the
+   specialization's two exclusive cards. */
+.lp-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+}
+/* The Software Engineer check card (ui/RadioCards CheckCard): the shared
+   card, with a drawn box beside the text so it reads as a toggle, not as one
+   of the radio cards under it. */
+.lp-sections__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* Nothing else resets a heading's margins inside the cards, and the user
+   agent's would push the name below the box. */
+.lp-sections .ss-radio-card h4 { margin: 0; }
+.lp-sections__box {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+}
+.lp-sections__check[aria-checked='true'] .lp-sections__box {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+}
+.lp-sections__check[aria-checked='true'] .lp-sections__box::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  margin-top: -2px;
+  border: solid var(--brand-on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.lp-sections__blurb { display: flex; flex-direction: column; gap: 4px; }
+.lp-sections__legend {
+  font: 600 0.95rem var(--font-family-body);
+  color: var(--color-text-primary);
 }
 
 /* Interactive lesson examples. Exploration, not assessment: the note under
@@ -580,3 +635,19 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* The plan card is the target of the Learn page's "Choose your plan"
    (/profile#learning-plan): room under the fixed header when it scrolls in. */
 .lp-plan-anchor { scroll-margin-top: 6rem; }
+
+/* ── a Learn section's paths shelf (PathShelf.tsx, #489) ───────────────── */
+
+.rm-path-shelf { margin: 0 0 18px; }
+.rm-path-shelf__title { margin: 0; color: var(--color-text-primary); }
+/* The card's title is the shelf's link into the path: a 44px target, and it
+   wraps at 360px with 200 % text instead of overflowing. */
+.rm-path-shelf .lp-module__title a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text-accent);
+  text-underline-offset: 3px;
+}
+.rm-path-shelf__error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rm-path-shelf__error p { margin: 0; color: var(--color-text-secondary); }

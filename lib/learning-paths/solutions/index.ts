@@ -21,11 +21,13 @@ import { FDE_M02_SOLUTIONS } from './fde-m02';
 import { FDE_M03_SOLUTIONS } from './fde-m03';
 import { FDE_M04_SOLUTIONS } from './fde-m04';
 import { FDE_M05_SOLUTIONS } from './fde-m05';
+import { FDE_M05_DATA_SOLUTIONS } from './fde-m05-data';
 import { FDE_M06_SOLUTIONS } from './fde-m06';
 import { FDE_M07_SOLUTIONS } from './fde-m07';
 import { FDE_M08_SOLUTIONS } from './fde-m08';
 import { FDE_M09_SOLUTIONS } from './fde-m09';
 import { FDE_M10_SOLUTIONS } from './fde-m10';
+import { FDE_M11_DEPLOY_SOLUTIONS } from './fde-m11-deploy';
 import { FDE_C01_SOLUTIONS } from './fde-c01';
 
 const ALL: Record<string, PathCodeSolution> = {
@@ -46,11 +48,13 @@ const ALL: Record<string, PathCodeSolution> = {
   ...FDE_M03_SOLUTIONS,
   ...FDE_M04_SOLUTIONS,
   ...FDE_M05_SOLUTIONS,
+  ...FDE_M05_DATA_SOLUTIONS,
   ...FDE_M06_SOLUTIONS,
   ...FDE_M07_SOLUTIONS,
   ...FDE_M08_SOLUTIONS,
   ...FDE_M09_SOLUTIONS,
   ...FDE_M10_SOLUTIONS,
+  ...FDE_M11_DEPLOY_SOLUTIONS,
   ...FDE_C01_SOLUTIONS,
 };
 

@@ -1,6 +1,6 @@
 import { applyRouteHead, readShareHead } from './lib/routeHead';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Routes, Route, Link, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
@@ -56,7 +56,12 @@ const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathn
 const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
 const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
-const loadRoadmap = routeChunk(under('/learn'), () => import('./components/Roadmap'));
+// The FDE path's pages sit inside its Learn section (#489) but load the path
+// screens, not the Learn page. lib/learningPaths.ts names the same address.
+const FDE_PATH = '/learn/forward-deployed-engineer/path';
+const inLearn = under('/learn');
+const inFdePath = under(FDE_PATH);
+const loadRoadmap = routeChunk((pathname) => inLearn(pathname) && !inFdePath(pathname), () => import('./components/Roadmap'));
 const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
@@ -68,13 +73,13 @@ const loadChallenge = routeChunk(exact('/challenge'), () => import('./components
 const loadDev = routeChunk(under('/dev'), () => import('./components/dev/DevPage'));
 const loadLegal = routeChunk(exact('/privacy', '/terms'), () => import('./components/LegalPages'));
 const loadPublicInfo = routeChunk(exact('/classroom'), () => import('./components/PublicInfoPages'));
-const loadTopic = routeChunk(under('/topics', '/cs/topics'), () => import('./components/TopicLandingPage'));
+const loadTopic = routeChunk(under('/topics'), () => import('./components/TopicLandingPage'));
 const loadToday = routeChunk(exact('/today'), () => import('./components/Today'));
 const loadCollection = routeChunk(exact('/collection'), () => import('./components/Collection'));
 const loadTyping = routeChunk(exact('/typing'), () => import('./components/TypingRacer'));
 const loadCoding = routeChunk(under('/coding'), () => import('./components/coding/CodingSection'));
 const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('./components/coding/GithubSettingsPage'));
-const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
+const loadPaths = routeChunk(under(FDE_PATH, '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/checkout', '/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
 const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));
@@ -111,6 +116,17 @@ const FdeOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeOver
 const FdeModule = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeModule })));
 const DsaOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaOverview })));
 const DsaModule = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaModule })));
+
+/** The FDE path's old addresses, /roadmap/specializations/fde and
+ * /roadmap/specializations/fde/<module>, land on its section's with the
+ * module, the query (?activity=) and the hash kept. vercel.json answers a
+ * crawler with a 308 to the same place. */
+function OldFdePathRedirect() {
+  const { '*': rest = '' } = useParams();
+  const { search, hash } = useLocation();
+  const moduleId = rest.split('/')[0];
+  return <Navigate to={`${FDE_PATH}${moduleId ? `/${encodeURIComponent(moduleId)}` : ''}${search}${hash}`} replace />;
+}
 const NotFoundPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.NotFoundPage })));
 const PremiumPage = lazyPage(loadPremium);
 const DailyQuestionPage = lazyPage(loadDaily);
@@ -246,7 +262,7 @@ function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
 function App() {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
-  const startupGuidePath = useRef(/^(?:\/cs)?\/topics\//.test(location.pathname) ? location.pathname : null);
+  const startupGuidePath = useRef(/^\/topics\//.test(location.pathname) ? location.pathname : null);
   const navigate = useNavigate();
   const { t } = useLanguage();
   const config = useGameConfig();
@@ -802,11 +818,12 @@ function App() {
                   <Route path="/coding/:track" element={<CodingTrackScreen />} />
                   <Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} />
                   {/* Learning paths are devShark-only, like /coding and /roadmap.
-                      The role specialization and the standalone skill path get
-                      separate entry routes so the career flow and the focused
-                      paths stay visibly apart, though they share one workspace. */}
-                  <Route path="/roadmap/specializations/fde" element={<FdeOverview />} />
-                  <Route path="/roadmap/specializations/fde/:moduleId" element={<FdeModule />} />
+                      The FDE path lives in its Learn section (#489); its old
+                      addresses redirect. DSA Foundations keeps its own route
+                      until epic E folds it into Learn. One workspace serves both. */}
+                  <Route path={FDE_PATH} element={<FdeOverview />} />
+                  <Route path={`${FDE_PATH}/:moduleId`} element={<FdeModule />} />
+                  <Route path="/roadmap/specializations/fde/*" element={<OldFdePathRedirect />} />
                   <Route path="/roadmap/paths/dsa-foundations" element={<DsaOverview />} />
                   <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} />
                   <Route path="/profile" element={<Profile />} />
@@ -832,7 +849,6 @@ function App() {
                   <Route path="/daily/:date" element={<DailyQuestionPage />} />
                   <Route path="/classroom" element={<ClassroomPage />} />
                   <Route path="/topics/:slug" element={<TopicLandingPage />} />
-                  <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />
                   <Route path="/dev" element={<DevPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

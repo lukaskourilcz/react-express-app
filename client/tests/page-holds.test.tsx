@@ -27,7 +27,6 @@ beforeAll(() => Promise.all([
   import('../src/components/ConceptDueSection'),
   import('../src/components/coding/ChallengeRunSection'),
   import('../src/components/paths/PathResumeSection'),
-  import('../src/components/paths/PathDiscovery'),
 ]));
 
 // A page that holds its first render has to start inside an awaited act. Each
@@ -157,19 +156,25 @@ describe('/today', () => {
 });
 
 describe('/roadmap', () => {
-  it('draws the optional paths with the page', async () => {
+  it('draws all three Learn groups with the page and no path card', async () => {
     answer();
-    const drawn = firstDraw('h1', () => document.querySelector('section[aria-label="Modules"]')?.textContent ?? null);
+    const drawn = firstDraw('h1', () => headings());
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(drawn()).toContain('DSA Foundations');
+    const names = drawn();
+    expect(names).toContain('Web Developer');
+    expect(names).toContain('Software Engineer');
+    expect(names).toContain('Forward Deployed Engineer');
+    expect(screen.queryByText('DSA Foundations')).toBeNull();
+    for (const section of ['web-developer', 'software-engineer', 'forward-deployed-engineer']) {
+      expect(document.querySelector(`a[href="/learn/${section}"]`)).not.toBeNull();
+    }
   });
 
-  it('draws a signed-in learner’s enrolled path as one to continue', async () => {
+  it('reads the learner’s enrollment for section progress without drawing discovery cards', async () => {
     signIn();
     const accountReads = answer();
-    const drawn = firstDraw('h1', () => document.querySelector('section[aria-label="Modules"]')?.textContent ?? null);
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(drawn()).toContain('Continue');
     expect(accountReads).toContain('learning-path-enrollment');
+    expect(document.querySelector('section[aria-label="Modules"]')).toBeNull();
   });
 });

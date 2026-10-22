@@ -26,6 +26,7 @@ import { codingTaskById } from '../lib/coding/active';
 import { isOffLoopModule, moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
+import { DSA_PATH_CODING_TASKS, canonicalCodingTaskId } from '../lib/learning-paths/dsa-coding-tasks';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
 import { schemaContracts } from './learning-path-schema-contracts';
@@ -53,8 +54,70 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
     { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
   ],
+  'fde-v1-m03-webhook-receiver': [
+    { label: 'no signature check', replace: ["  if (!signed) return refuse('bad_signature');\n", ''], criterion: 'signature' },
+    { label: 'signatures compared with === instead of ctx.safeEqual', replace: ['ctx.safeEqual(entry, expected)', 'entry === expected'], criterion: 'signature' },
+    { label: '=== beside one unused ctx.safeEqual call', replace: ["const signed = header.split(' ').some((entry) => ctx.safeEqual(entry, expected));", "ctx.safeEqual('a', 'a');\n  const signed = header.split(' ').some((entry) => entry === expected);"], criterion: 'signature' },
+    { label: 'no replay store', replace: ["  if (!ctx.claim(connectionId + ':' + webhookId)) return refuse('replayed');\n", ''], criterion: 'replay' },
+    { label: 'a replay key not scoped by connection', replace: ["ctx.claim(connectionId + ':' + webhookId)", 'ctx.claim(String(webhookId))'], criterion: 'replay' },
+    { label: 'no timestamp tolerance', replace: ["Math.abs(nowMs / 1000 - Number(timestamp)) > TOLERANCE_SECONDS", 'false'], criterion: 'replay' },
+    { label: 'the tenant taken from the payload (tenant leak)', replace: ['const tenantId: string = connection.tenantId;', 'const tenantId: string = event.tenantId;'], criterion: 'tenant-isolation' },
+    { label: 'an expired grant accepted', replace: ["  if (!(Date.parse(grant.expiresAt) > nowMs)) return refuse('grant_expired');\n", ''], criterion: 'permission-freshness' },
+    { label: 'an unparseable expiry read as never expiring (fails open)', replace: ['if (!(Date.parse(grant.expiresAt) > nowMs))', 'if (Date.parse(grant.expiresAt) <= nowMs)'], criterion: 'permission-freshness' },
+    { label: 'grant refusals not audited', replace: ["return refuse('grant_expired')", "return { ok: false, reason: 'grant_expired' }"], criterion: 'core' },
+  ],
+  'fde-v1-m06-tool-dispatcher': [
+    { label: 'a dispatcher that runs an approval tool without waiting for approval', replace: ['    if (tool.approval) {', '    if (false) {'], criterion: 'approval-held' },
+    { label: 'a rejection that leaves the call approvable', replace: ['    const entry = take(callId);\n    if (!entry) return { ok: false, reason: \'unknown_call\' };\n    return settle(entry.store, entry.key, { ok: false, reason: \'rejected\', callId });', "    if (!Object.prototype.hasOwnProperty.call(waiting, callId)) return { ok: false, reason: 'unknown_call' };\n    return { ok: false, reason: 'rejected', callId };"], criterion: 'approval-held' },
+    { label: 'a sub-agent that keeps every scope it asks for', replace: ['const scopes = asked.filter(scope => held.indexOf(scope) !== -1);', 'const scopes = asked;'], criterion: 'scope-enforced' },
+    { label: 'a sub-agent with no call budget', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };\n", ''], criterion: 'subagent-budget' },
+    { label: 'a sub-agent budget that accepts Infinity, fractions and numeric strings', replace: ['spec && Number.isInteger(spec.maxCalls) && spec.maxCalls > 0 ? spec.maxCalls : 0', 'spec && spec.maxCalls > 0 ? spec.maxCalls : 0'], criterion: 'subagent-budget' },
+    { label: 'a sub-agent replay that skips the budget check', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };", "        if (used >= maxCalls && !(options && options.idempotencyKey !== undefined && options.idempotencyKey in keys)) return { ok: false, reason: 'budget_exhausted', maxCalls };"], criterion: 'subagent-budget' },
+    { label: 'a sub-agent approval settled into the parent key store', replace: ['waiting[callId] = { tool, name, args: { ...request }, key, store };', 'waiting[callId] = { tool, name, args: { ...request }, key, store: completed };'], criterion: 'approval-held' },
+  ],
+  'fde-v1-m07-evaluation-metrics': [
+    { label: 'a comparison that reads only the aggregate and hides the regressed slice', replace: ['.filter(entry => entry.candidateAccuracy < entry.baselineAccuracy);', '.filter(() => false);'], criterion: 'slice-aware' },
+    { label: 'accuracy computed over answered cases only', replace: ['accuracy: rate(counts.correct, counts.total),', 'accuracy: rate(counts.correct, counts.answered),'], criterion: 'abstention-separate' },
+    { label: 'cost divided by answered cases instead of every request', replace: ['costPerRequestCents: rate(cost, overall.total),', 'costPerRequestCents: rate(cost, overall.answered),'], criterion: 'cost-latency' },
+    { label: 'latencies sorted as text before the p95 is read', replace: ['latencies.sort((a, b) => a - b);', 'latencies.sort();'], criterion: 'cost-latency' },
+    { label: 'every wrong answer called a hallucination', replace: ['failures[classify(item, entry)] += 1;', 'failures.hallucination += 1;'], criterion: 'failure-taxonomy' },
+  ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
+  ],
+  // The M11 release gate (#504): each gate taken out alone must fail its own
+  // critical criterion. The first is the issue's acceptance case: a gate that
+  // rolls out on a failed migration check.
+  'fde-v1-m11-deploy-release-gate': [
+    { label: 'a rollout over a failed migration', replace: ["if (migration.status !== 'applied') reasons", "if (migration.status === 'pending') reasons"], criterion: 'migration-gate' },
+    { label: 'a missing migration report read as no migrations', replace: ["if (!Array.isArray(migrations)) return ['migration:no-report'];", 'if (!Array.isArray(migrations)) return [];'], criterion: 'migration-gate' },
+    { label: 'a blank restore point accepted for an irreversible migration', replace: ['migration.reversible !== true && !hasRestorePoint', 'migration.reversible !== true && restorePoint === null'], criterion: 'migration-gate' },
+    { label: 'an empty probe list read as healthy', replace: ["if (!Array.isArray(probes) || probes.length === 0) return ['health:no-probes'];", "if (!Array.isArray(probes)) return ['health:no-probes'];"], criterion: 'health-gate' },
+    { label: 'only not_ready counted as unhealthy', replace: [".filter((probe) => probe.status !== 'ready')", ".filter((probe) => probe.status === 'not_ready')"], criterion: 'health-gate' },
+    { label: 'a required key nobody reported passing', replace: ['if (probe === undefined) reasons.push(`config:${key}:missing`);\n    else if', 'if (probe === undefined) continue;\n    if'], criterion: 'config-gate' },
+    { label: 'an empty configuration report read as no report', replace: ["if (!Array.isArray(probes)) return ['config:no-report'];", "if (!Array.isArray(probes) || probes.length === 0) return ['config:no-report'];"], criterion: 'config-gate' },
+    { label: 'a configuration state compared without its case', replace: ["else if (probe.state !== 'ok')", "else if (probe.state.toLowerCase() !== 'ok')"], criterion: 'config-gate' },
+    { label: 'a configuration value written into the reason', replace: ['`config:${key}:${probe.state}`', '`config:${key}:${probe.state}:${probe.value}`'], criterion: 'config-gate' },
+    { label: 'a rollout left out of the log', replace: ['  log.record({', "  if (decision === 'hold') log.record({"], criterion: 'records-why' },
+    { label: 'reasons recorded in discovery order', replace: ['[...new Set(found)].sort()', '[...new Set(found)]'], criterion: 'records-why' },
+  ],
+  // M10 (file m08) injection and excessive-agency repair: the security gates
+  // each fail their own critical criterion when taken out.
+  'fde-v1-m08-untrusted-content': [
+    { label: 'the proposal’s tenant sent to the tool', replace: ['    tenantId: session.tenantId,\n    actor:', '    tenantId: request.tenantId,\n    actor:'], criterion: 'no-cross-tenant' },
+    { label: 'the recipient compared without normalising', replace: ["one.email.trim().toLowerCase() === wanted", 'one.email === request.recipient'], criterion: 'allowlisted-recipient' },
+    { label: 'another tenant’s article accepted as evidence', replace: ['    doc.tenantId === session.tenantId &&\n', ''], criterion: 'no-cross-tenant' },
+  ],
+  // B6 (#502): the two flaws the issue names, plus two that break the
+  // order-free merge, one that sorts by locale collation and one that writes
+  // into the caller's ledger.
+  'fde-v1-m05-data-reconcile': [
+    { label: 'the last row delivered always wins (non-idempotent replay)', replace: ['if (current === undefined || supersedes(result, current)) {', 'if (true) {'], criterion: 'replay' },
+    { label: 'an identical replay counted as a fresh write', replace: ['incoming.updatedAt > current.updatedAt', 'incoming.updatedAt >= current.updatedAt'], criterion: 'replay' },
+    { label: 'an equal timestamp decided by arrival order', replace: ['\n  || (incoming.updatedAt === current.updatedAt && SOURCE_RANK[incoming.source] > SOURCE_RANK[current.source])', ''], criterion: 'replay' },
+    { label: 'rejected rows dropped without a count', replace: ['report.rejected.push({ ref: row.ref, reason: result });', ''], criterion: 'accounted' },
+    { label: 'the ledger sorted by locale collation instead of UTF-16 code units', replace: ['(a.id < b.id ? -1 : a.id > b.id ? 1 : 0)', 'a.id.localeCompare(b.id)'], criterion: 'core' },
+    { label: 'the merged ledger written back into the ledger it was given', replace: ['  return { ledger: out, report };', '  (ledger as AccountRecord[]).splice(0, ledger.length, ...out);\n  return { ledger: out, report };'], criterion: 'atomic' },
   ],
 };
 
@@ -524,6 +587,34 @@ async function main() {
   }
   const catalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
+
+  /* ── one coding record per DSA exercise (#493) ─────────────────────── */
+  // A DSA path pass records under the Coding task the exercise became, so it
+  // and a Coding pass share one record and one award. The queue keeps its
+  // path id: its path contract (a harness-declared buffer) is not the task's.
+  {
+    const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations')!;
+    const code = dsa.modules.flatMap((module) => module.activities).filter((activity) => activity.kind === 'code');
+    const mapped = code.filter((activity) => !activity.reuseTaskId && activity.id !== 'dsa-v1-d04-head-index-queue');
+    assert.deepEqual(Object.keys(DSA_PATH_CODING_TASKS).sort(), mapped.map((activity) => activity.id).sort(), 'every DSA exercise but the reuse and the queue maps to a Coding task');
+    const targets = Object.values(DSA_PATH_CODING_TASKS);
+    assert.equal(new Set(targets).size, targets.length, 'each Coding task takes one exercise');
+    for (const id of targets) {
+      const task = codingTaskById(id);
+      assert.ok(task && task.topic === 'dsa' && task.track === 'algorithms', `${id} is an issued DSA Foundations task`);
+    }
+    for (const activity of code) {
+      const id = canonicalCodingTaskId(dsa.id, activity);
+      if (activity.reuseTaskId) assert.equal(id, activity.reuseTaskId, `${activity.id} keeps the task it reuses`);
+      else if (activity.id === 'dsa-v1-d04-head-index-queue') assert.match(id, /^path-code-[0-9a-f]{32}$/, 'the queue keeps its path id');
+      else assert.equal(id, DSA_PATH_CODING_TASKS[activity.id]);
+    }
+    assert.equal(canonicalCodingTaskId(dsa.id, { id: 'dsa-v1-d07-binary-search', reuseTaskId: 'js-binary-search' }), 'js-binary-search');
+    const fde = LEARNING_PATHS.find((path) => path.id === 'fde');
+    for (const activity of (fde?.modules ?? []).flatMap((module) => module.activities).filter((one) => one.kind === 'code' && !one.reuseTaskId)) {
+      assert.match(canonicalCodingTaskId(fde!.id, activity), /^path-code-[0-9a-f]{32}$/, `${activity.id}: an FDE exercise keeps its path id`);
+    }
+  }
 
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
   diagnosticCompetencyContracts();

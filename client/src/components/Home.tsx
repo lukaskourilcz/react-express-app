@@ -1,3 +1,4 @@
+import { learnTopicHref } from '../../../shared/learn-sections';
 import { captureActivation } from '../lib/analytics';
 // The landing page at "/" — the editorial "Deep End v2" redesign. Instead of a
 // generic hero + three feature cards, it opens with a product-forward pitch: an
@@ -210,7 +211,7 @@ export default function Home() {
             <FadeFinCta label={t('home.chooseTopic')} primary onClick={scrollToTopics} finLeft="-2px" finSize={58} accent={subject.accent} />
             <span className="ss-text-links" style={{ margin: 0 }}>
               {isAuthenticated ? (
-                <Link to={`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`}>{t('home.ctaLearn')}</Link>
+                <Link to={learnTopicHref(selected?.id ?? '')}>{t('home.ctaLearn')}</Link>
               ) : (
                 <button type="button" aria-haspopup="dialog" onClick={() => openSignIn()}>
                   {t('home.signIn')}
@@ -270,7 +271,7 @@ export default function Home() {
       </section>
 
       {/* ── Roadmap preview ── */}
-      {selected && <RoadmapPreview topic={selected} onStart={() => { captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, source: 'home', category: selected.id }); navigate(`/learn?topic=${encodeURIComponent(selected.id)}`); }} />}
+      {selected && <RoadmapPreview topic={selected} onStart={() => { captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, source: 'home', category: selected.id }); navigate(learnTopicHref(selected.id)); }} />}
 
       {/* ── Everything-else feature strip (no hover) ── */}
       <section aria-label={t('home.moreKicker')} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

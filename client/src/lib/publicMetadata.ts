@@ -1,17 +1,15 @@
 import { TOPIC_LANDINGS, type TopicLandingDefinition } from './topicCatalog';
 import { PREMIUM_PRICE } from '../../../shared/tiers';
 export const PUBLIC_ORIGIN = 'https://devshark.app';
-/** The languages a public topic guide is published in. The app itself is English only. */
-export type GuideLocale = 'en' | 'cs'; // removed by D3 (#486)
-export const GUIDE_LOCALES: readonly GuideLocale[] = ['en', 'cs']; // removed by D3 (#486)
-export function topicFromPath(pathname: string): { topic: TopicLandingDefinition; locale: GuideLocale } | null {
-  const match = /^(\/cs)?\/topics\/([a-z0-9-]+)\/?$/.exec(pathname);
+/** Resolve only the published English guide addresses. */
+export function topicFromPath(pathname: string): { topic: TopicLandingDefinition } | null {
+  const match = /^\/topics\/([a-z0-9-]+)\/?$/.exec(pathname);
   if (!match) return null;
-  const topic = TOPIC_LANDINGS.find(topic => topic.slug === match[2]);
-  return topic ? { topic, locale: match[1] ? 'cs' : 'en' } : null;
+  const topic = TOPIC_LANDINGS.find(topic => topic.slug === match[1]);
+  return topic ? { topic } : null;
 }
-export function topicSchema(title: string, description: string, url: string, locale: GuideLocale) {
-  return { '@context': 'https://schema.org', '@type': 'LearningResource', name: title, description, url, inLanguage: locale, learningResourceType: 'Quick guide', isAccessibleForFree: true };
+export function topicSchema(title: string, description: string, url: string) {
+  return { '@context': 'https://schema.org', '@type': 'LearningResource', name: title, description, url, inLanguage: 'en', learningResourceType: 'Quick guide', isAccessibleForFree: true };
 }
 
 /** App routes with their own static HTML, canonical URL and sitemap entry
@@ -19,6 +17,9 @@ export function topicSchema(title: string, description: string, url: string, loc
  * same canonical and description at runtime, and check:public reads them back
  * from the sitemap. Descriptions are translation keys, resolved by the caller. */
 export const PUBLIC_PAGES = [
+  { path: '/learn/web-developer', titleKey: 'title.learnWebDeveloper', descriptionKey: 'publicSection.webDeveloper', schema: null },
+  { path: '/learn/software-engineer', titleKey: 'title.learnSoftwareEngineer', descriptionKey: 'publicSection.softwareEngineer', schema: null },
+  { path: '/learn/forward-deployed-engineer', titleKey: 'title.learnFde', descriptionKey: 'publicSection.fde', schema: null },
   { path: '/premium', titleKey: 'title.premium', descriptionKey: 'premium.page.lead', schema: 'premium' },
   { path: '/premium/cancel', titleKey: 'title.premiumCancel', descriptionKey: 'billing.cancel.lead', schema: null },
   // #239: the public question of the day (its dated pages /daily/<date> have

@@ -57,7 +57,7 @@ lower-case label is removed from every URL PostHog receives
   participant names to analytics.
 - devShark has been freemium since 25 September 2026. The upgrade sheet opens
   only when a learner chooses something Premium or asks what Premium includes,
-  and `/premium` shows the price with VAT included and no countdown or
+  and `/premium` shows the price before VAT, with VAT added at checkout and no countdown or
   scarcity. Premium changes which content
   an account may start and never scores. The quiz prompt that asked for
   voluntary support went in #230, and `/support` redirects to `/premium`.

@@ -563,7 +563,8 @@ catalogue: 116 of 770 tasks, 15.1 % (`FREE_CODING_TASK_IDS` in
 `shared/tiers.ts`; 141 of the 725 issued tasks since the owner opened the
 whole first stage of the ten-stage projects and fourteen checkpoints and
 hid system design, 9 Oct 2026; the fourteen are the checkpoint after stage
-one of each project with checkpoints, which a free account can reach). Three full content runs on the merged branch passed,
+one of each project with checkpoints, which a free account can reach; 144 of
+754 since the 29 DSA Foundations tasks of #493, 21 Oct 2026). Three full content runs on the merged branch passed,
 including the autosave check above; the FIX step then moved that check and
 the others like it onto the hand-moved clock described above.
 
@@ -574,3 +575,5 @@ is ordering evidence; an example is exploration; a comparison is reading; a
 debugging task is an ordinary task graded by its tests exactly like any other.
 Progression comes from the graph in `shared/progression.ts` and from
 server-verified evidence, and nothing in this document touches either.
+
+Learn is organised into Web Developer, Software Engineer and Forward Deployed Engineer (`shared/learn-sections.ts`). The base track supplies Web Developer, Software Engineer is an opt-in section, and FDE follows the specialization. Topics shared by sections keep one progress record. Each `/learn/:section` route has a public preview; FDE’s path lives at `/learn/forward-deployed-engineer/path`. Inventory is derived from the manifest with `pathInventory`, and current content counts come from `npm run content:snapshot`.

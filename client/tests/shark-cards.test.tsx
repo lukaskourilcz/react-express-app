@@ -211,7 +211,9 @@ describe('a wrong Learn answer', () => {
       }),
       http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: {}, extra: { unlocked: [] } })),
       http.post('*/api/quiz/roadmap', () => HttpResponse.json({ selectedIndex: 0, correctAnswer: 1, isCorrect: false, explanation: 'The title element names the page.' })),
-      http.get('*/api/user/*', () => HttpResponse.json({ tier: 'premium', source: 'manual', currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null })),
+      http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'learning-path-enrollment'
+        ? HttpResponse.json({ enrollments: [] })
+        : HttpResponse.json({ tier: 'premium', source: 'manual', currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null })),
       http.all('*/api/*', () => HttpResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 })),
     );
     // Registered last, so the deck answers ahead of the catch-all above.

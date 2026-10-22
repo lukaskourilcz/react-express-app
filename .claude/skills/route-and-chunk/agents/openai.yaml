@@ -1,0 +1,4 @@
+interface:
+  display_name: "Route and Chunk"
+  short_description: "Move routes with lazy chunks, heads and checks"
+  default_prompt: "Use $route-and-chunk to add or move this route with its metadata, loading boundary and browser checks."

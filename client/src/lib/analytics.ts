@@ -23,7 +23,6 @@
 import type { PostHog } from 'posthog-js';
 import { readJSON, removeStored, writeJSON } from './storage';
 import { hasConsent, subscribeConsent } from './consent';
-import type { GuideLocale } from './publicMetadata';
 
 /* ── campaign attribution (#239) ───────────────────────────────────────── *
  * Social posts link to devShark with `utm_source`, `utm_medium` and
@@ -350,7 +349,7 @@ export function capturePathEvent(event: PathFunnelEvent, properties: PathFunnelP
 export type ActivationEvent = 'landing_sample_completed' | 'learning_cta_clicked';
 export type ActivationProperties =
   | { product: string; source: 'home'; category?: string }
-  | { product: string; source: 'topic_guide'; locale: GuideLocale; category?: string };
+  | { product: string; source: 'topic_guide'; locale: 'en'; category?: string };
 export function captureActivation(event: ActivationEvent, properties: ActivationProperties): void {
   const { product, source, category } = properties;
   const locale = properties.source === 'topic_guide' ? { locale: properties.locale } : {};

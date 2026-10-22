@@ -1,20 +1,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 const slug = 'javascript-closures';
-for (const locale of ['en', 'cs']) for (const theme of ['light', 'dark']) {
-  test(`${locale} ${theme}: guide, keyboard practice and accessible content`, async ({ page }, testInfo) => {
+for (const theme of ['light', 'dark']) {
+  test(`${theme}: guide, keyboard practice and accessible content`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme as 'light' | 'dark' });
-    await page.addInitScript(({ locale, theme }) => { localStorage.setItem('devquiz.lang', locale); localStorage.setItem('devquiz:color-mode', theme); }, { locale, theme });
-    await page.goto(`${locale === 'cs' ? '/cs' : ''}/topics/${slug}`);
+    await page.addInitScript((theme) => localStorage.setItem('devquiz:color-mode', theme), theme);
+    await page.goto(`/topics/${slug}`);
     // The build-time fallback has the same article markup. Wait for the live
     // route before focusing: React replaces fallback nodes during startup.
     // The separate JavaScript-disabled test covers the static disclosure.
     await expect(page.locator('.ss-public-fallback')).toHaveCount(0);
     const article = page.locator('article.ss-topic-article');
-    // The interface ships English only, but the Czech guides stay published,
-    // so the article names its own language instead of borrowing the page's.
-    await expect(article).toHaveAttribute('lang', locale);
+    await expect(article).toHaveAttribute('lang', 'en');
     await expect(article.locator('h1')).toBeVisible();
     await article.locator('summary').first().focus();
     await page.keyboard.press('Enter');
@@ -72,4 +70,30 @@ test('the sitemap lists the Coding pages, and system design is a noindex page', 
     expect(html).not.toContain('rel="canonical"');
     expect(html).toContain('That track does not exist.');
   }
+});
+
+
+test('retired guide addresses show the app not-found page without an English redirect', async ({ page }) => {
+  await page.goto('/cs/topics/javascript-closures');
+  await expect(page).toHaveURL(/\/cs\/topics\/javascript-closures$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('That page is out of the water.');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+});
+
+test('all three Learn sections have public previews without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const [id, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
+      await page.goto(`${process.env.TEST_BASE_URL || 'http://localhost:4173'}/learn/${id}`);
+      await expect(page).toHaveTitle(`${name} · devShark`);
+      await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://devshark.app/learn/${id}`);
+      expect(await page.locator('a[href*="?topic="]').count()).toBeGreaterThan(0);
+      for (const link of await page.locator('a[href*="?topic="]').all()) {
+        expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  } finally { await context.close(); }
 });

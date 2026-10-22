@@ -52,7 +52,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             client/package-lock.json
-      - run: npm ci && npm ci --prefix client
+      - run: npm ci --no-audit && npm ci --no-audit --prefix client
       - name: Rebuild modified QuickJS runtime from pinned sources
         env:
           QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -78,7 +78,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             client/package-lock.json
-      - run: npm ci && npm ci --prefix client
+      - run: npm ci --no-audit && npm ci --no-audit --prefix client
       - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
       - run: npm run audit:native-reviews
       - run: npm run check:unused && npm run check:security
@@ -107,7 +107,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             client/package-lock.json
-      - run: npm ci && npm ci --prefix client
+      - run: npm ci --no-audit && npm ci --no-audit --prefix client
       - run: npm run test:performance && npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:path-authority && npm run test:react-authority && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
   coding:
     runs-on: ubuntu-latest
@@ -121,7 +121,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             client/package-lock.json
-      - run: npm ci && npm ci --prefix client
+      - run: npm ci --no-audit && npm ci --no-audit --prefix client
       - run: npm run test:coding
   browser:
     runs-on: ubuntu-latest
@@ -135,7 +135,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             client/package-lock.json
-      - run: npm ci && npm ci --prefix client
+      - run: npm ci --no-audit && npm ci --no-audit --prefix client
       - run: |
           # The browser checks below run against this build, so it signs in the
           # way production does: with the placeholder Supabase project that
@@ -154,7 +154,7 @@ jobs:
           npm run preview --prefix client -- --host 0.0.0.0 --port 4173 > /tmp/preview.log 2>&1 &
           node scripts/wait-for-preview.mjs
           npm run test:browser -- tests/browser/public.spec.ts
-          npm run test:browser -- tests/browser/guide-startup.spec.ts tests/browser/profile-leaderboard-preferences.spec.ts
+          npm run test:browser -- tests/browser/guide-startup.spec.ts tests/browser/profile-leaderboard-preferences.spec.ts tests/browser/profile-path-picker.spec.ts
           npm run test:browser -- tests/browser/evolving.spec.ts
           npm run test:browser -- tests/browser/coding-pages.spec.ts
           npm run test:browser -- tests/browser/coding-workbench.spec.ts
@@ -173,7 +173,7 @@ jobs:
           npm run test:browser -- tests/browser/launch-offer.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures
-          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC,/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440
+          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440
           RESPONSIVE_THEME=dark npm run check:responsive -- --routes /,/topics/$TOPIC,/daily --widths 390,768,1280
           npm run test:harness
       - if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
