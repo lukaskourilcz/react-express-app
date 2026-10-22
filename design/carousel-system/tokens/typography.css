@@ -14,7 +14,7 @@
   --type-headline-short: 112px;   /* one- and two-line headlines */
   --type-headline-hero: 152px;    /* line 0.98, tracking -0.025em — the statement slides (Every day, closing) */
   --type-cover: 80px;             /* cover headline AND cover statement share this size and face */
-  --type-number: 184px;           /* line 0.9, tracking -0.03em — €1.80, 55% */
+  --type-number: 184px;           /* line 0.9, tracking -0.03em — €2.25, 55% */
   --type-number-unit: 72px;       /* "a month", "off" beside the number */
   --type-body: 44px;              /* Inter 400, line 1.35 */
   --type-body-lg: 46px;
