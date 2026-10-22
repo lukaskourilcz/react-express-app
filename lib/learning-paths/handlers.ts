@@ -55,8 +55,19 @@ import {
 import type { MergedActivity, MergedPath } from './types';
 import { activityDomainScores, diagnosticCompetencies, diagnosticEvidence } from './competencies';
 import {
+  isExperienceLevel,
+  isLearnerGoal,
   isLearningPathId,
   isBaseTrack,
+  isStudyTime,
+  LEARNER_PROFILE_META_KEY,
+  LEARNING_PREFERENCE_META_KEY,
+  LEGACY_TRACK_META_KEY,
+  MAX_LEARNER_GOALS,
+  missingProfileFields,
+  parseLearnerProfile,
+  parseLearningPreference,
+  profileFromPreference,
   isOffLoopModule,
   moduleComplete,
   nextActivityId as computeNextActivity,
@@ -91,6 +102,7 @@ import type {
   SubmitActivityResponse,
 } from '../../shared/learning-path-api';
 import { PATH_LIMITS } from '../../shared/learning-path-api';
+import { LEARN_SECTION_IDS, isLearnSectionId } from '../../shared/learn-section-ids';
 import { MAX_ADDRESS_FIELD, MERCH_ENABLED, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
@@ -323,10 +335,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     if (error) return jsonError(res, 500, 'db_error', 'Could not read the account preference');
     const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const {
-      parseLearningPreference, parseLearnerProfile, profileFromPreference, missingProfileFields,
-      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-    } = await import('../../shared/learning-paths');
     const legacy = metadata[LEGACY_TRACK_META_KEY];
     const preference = parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]);
     // An account that only ever saved a v1 preference reads back as the plan it
@@ -350,12 +358,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (specialization !== null && specialization !== 'fde') {
       return jsonError(res, 400, 'bad_request', 'specialization must be fde or null');
     }
-    const {
-      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime,
-      parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
-    } = await import('../../shared/learning-paths');
-
     // Validate every field the request actually carries. An answer the server
     // does not recognise is rejected rather than dropped: a learner who thinks
     // they answered should not silently be asked again.
@@ -371,7 +373,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
       return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
     }
-    const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
     if (body.sections !== undefined
         && (!Array.isArray(body.sections) || body.sections.length > LEARN_SECTION_IDS.length
           || !body.sections.every(isLearnSectionId))) {
