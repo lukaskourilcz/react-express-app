@@ -36,6 +36,7 @@ const calls = vi.hoisted(() => ({
   start: [] as string[],
   startSignals: [] as (AbortSignal | undefined)[],
   startDelay: 0,
+  startExpired: false,
   submit: [] as Record<string, unknown>[],
   drafts: [] as { expected: number; code: unknown; activityId: string }[],
   serverRevision: 0,
@@ -92,7 +93,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         attemptId: `attempt-${calls.start.length}`,
         ...(previousSession && calls.changedOnRenewal ? { needsBriefReview: true } : {}),
         session: `SESSION_${activityId}_${calls.start.length}`,
-        expiresAt: new Date(Date.now() + 3600e3).toISOString(),
+        expiresAt: new Date(Date.now() + (calls.startExpired ? -1000 : 3600e3)).toISOString(),
         activity: {
           ...summary(activityId, activityId, activityId === C ? 'check' : 'code'),
           ...(activityId === C && calls.scenario !== undefined ? { scenario: calls.scenario } : {}),
@@ -133,6 +134,7 @@ beforeEach(() => {
   calls.start.length = 0;
   calls.startSignals.length = 0;
   calls.startDelay = 0;
+  calls.startExpired = false;
   calls.submit.length = 0;
   calls.drafts.length = 0;
   calls.serverRevision = 0;
@@ -243,6 +245,23 @@ describe('one attempt takes one result', () => {
     await press('Submit');
     await waitFor(() => expect(calls.submit).toHaveLength(2));
     expect(calls.submit[1].session).not.toBe(calls.submit[0].session);
+  });
+
+  it('an expired check says so and keeps the answers until Try again', async () => {
+    calls.startExpired = true;
+    await mount(C);
+    await waitFor(() => expect(screen.getByText(/Which one\?/)).toBeInTheDocument());
+    await act(async () => { fireEvent.click(screen.getByRole('radio', { name: 'Left' })); });
+    await press('Submit');
+    expect(screen.getByRole('alert')).toHaveTextContent('This attempt expired. Try again to start a new one.');
+    expect(screen.getByRole('radio', { name: 'Left' })).toBeChecked();
+    expect(calls.start).toEqual([C]);
+    expect(calls.submit).toHaveLength(0);
+    calls.startExpired = false;
+    await press('Try again');
+    await waitFor(() => expect(calls.start).toEqual([C, C]));
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Left' })).not.toBeChecked());
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('a graded check offers Try again, which deals the check afresh', async () => {

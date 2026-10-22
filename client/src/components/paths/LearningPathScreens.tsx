@@ -798,8 +798,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       if (!open || !enrollment || !current || briefChanged || working.current) return;
       const expired = Date.parse(current.expiresAt) <= Date.now();
       // A check's answers index its own attempt's order, so a check whose
-      // attempt is used up is dealt again rather than resubmitted.
-      if (open.check && (current.usedUp || expired)) {
+      // attempt is used up is dealt again rather than resubmitted. An expired
+      // one says so and offers Try again: dealing it afresh at once would
+      // clear the learner's answers without a word.
+      if (open.check && expired && !current.usedUp) {
+        current.usedUp = true;
+        setAttemptUsedUp(true);
+        setError(t('error.pathAttemptExpired'));
+        return;
+      }
+      if (open.check && current.usedUp) {
         retry();
         return;
       }
