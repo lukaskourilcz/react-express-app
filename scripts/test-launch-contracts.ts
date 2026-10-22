@@ -5740,6 +5740,27 @@ async function main() {
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
 
+    // A run's place is a Postgres integer: a number past it failed the
+    // routine's call with a 500. The routine clamps the place to the queue,
+    // so the handler sends one the column can hold.
+    {
+      const moves: unknown[] = [];
+      const advanceDb = {
+        from: practiceDb().client.from,
+        rpc: (name: string, args: Record<string, unknown>) => {
+          if (name === 'advance_practice_session') moves.push(args.p_position);
+          return Promise.resolve({ data: null, error: null });
+        },
+      };
+      for (const position of [3, 1e12, -5]) {
+        const req = { method: 'PUT', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.82' }, query: {}, body: { sessionId: 'practice-session-0001', position, user_id: learner } };
+        const res = mockResponse();
+        await handlePracticeSession(req as never, res as never, advanceDb as never);
+        assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      }
+      assert.deepEqual(moves, [3, 40, 0], 'a place is sent within what a run can hold');
+    }
+
     // The task page agrees: it opens the tier-3 task the run holds.
     const taskPage = async (id: string, db: ReturnType<typeof practiceDb>) => {
       const req = { method: 'GET', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.81' }, query: { resource: 'coding-task', id, user_id: learner } };

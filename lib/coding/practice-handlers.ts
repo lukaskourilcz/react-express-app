@@ -320,6 +320,10 @@ export function skipPostpones(taskId: string): boolean {
 
 /* ── challenge runs (short practice sessions) ────────────────────────── */
 
+/** The longest queue a run holds (027's practice_sessions checks the queue
+ * length and the position against it). */
+const PRACTICE_QUEUE_MAX = 40;
+
 const estimatedMinutes = (ids: readonly string[]): number =>
   ids.reduce((total, id) => total + (SECTION_TASKS.find((task) => task.id === id)?.estimatedMinutes ?? 0), 0);
 
@@ -393,7 +397,7 @@ export function buildQueue(input: {
   }
   let budget = input.minutes;
   for (const task of ordered) {
-    if (queue.length >= 40) break;
+    if (queue.length >= PRACTICE_QUEUE_MAX) break;
     // Always offer at least one task, even when it is longer than the session:
     // an empty queue helps nobody, and the estimate is labelled as an estimate.
     if (queue.length > 0 && task.estimatedMinutes > budget) continue;
@@ -541,7 +545,9 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
       supabase.rpc('advance_practice_session', {
         p_session_id: body.sessionId,
         p_user_id: userId,
-        p_position: Number.isInteger(body.position) ? Number(body.position) : null,
+        // The routine clamps the place to the queue, but the parameter is a
+        // Postgres integer: a larger number failed the call with a 500.
+        p_position: Number.isInteger(body.position) ? Math.max(0, Math.min(PRACTICE_QUEUE_MAX, Number(body.position))) : null,
         p_status: body.status ?? null,
       }),
     );
