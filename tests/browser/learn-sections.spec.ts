@@ -424,3 +424,29 @@ test.describe('Learn section targets on a touch screen', () => {
     await empty.close();
   });
 });
+
+
+test.describe('FDE routes and Career sections', () => {
+  test('keeps the module, activity query and fragment on an old FDE link', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest');
+    await page.goto('/roadmap/specializations/fde/fde-v1-m01?activity=fde-v1-m01-l1-read#lesson');
+    await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer\/path\/fde-v1-m01\?activity=fde-v1-m01-l1-read#lesson$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('links each Career group into Learn and shows the FDE path on its section shelf', async ({ page }) => {
+    await prepare(page);
+    await stand(page, 'guest');
+    await page.goto('/roadmap');
+    for (const [id, name] of [['web-developer', 'Web Developer'], ['software-engineer', 'Software Engineer'], ['forward-deployed-engineer', 'Forward Deployed Engineer']]) {
+      const heading = page.getByRole('heading', { name, exact: true });
+      await expect(heading.getByRole('link')).toHaveAttribute('href', `/learn/${id}`);
+    }
+    await expect(page.locator('.lp-module')).toHaveCount(0);
+    await page.getByRole('heading', { name: 'Forward Deployed Engineer', exact: true }).getByRole('link').click();
+    await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer$/);
+    const shelf = page.getByRole('region', { name: 'Learning paths' });
+    await expect(shelf.getByRole('link', { name: 'Forward Deployed Engineer' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path');
+  });
+});

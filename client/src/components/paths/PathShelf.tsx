@@ -19,6 +19,7 @@ import { isBarred, useLocks } from '../../lib/locks';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
 import type { PathCatalogEntry, PathEnrollment } from '../../../../shared/learning-path-api';
 import type { LearningPathId } from '../../../../shared/learning-paths';
+import { Kicker } from '../landing/LandingKit';
 import './LearningPaths.css';
 
 /** One path: what it is, how much of it exists, and where the learner stands. */
@@ -121,7 +122,7 @@ export default function PathShelf({ pathIds }: { pathIds: readonly LearningPathI
 
   return (
     <section className="lp-section rm-path-shelf" aria-labelledby="learn-path-shelf-title">
-      <h2 id="learn-path-shelf-title" className="ss-kicker rm-path-shelf__title">{learnText('learn.paths.title')}</h2>
+      <Kicker as="h2" id="learn-path-shelf-title" className="rm-path-shelf__title">{learnText('learn.paths.title')}</Kicker>
       {body}
     </section>
   );
