@@ -1472,6 +1472,13 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     }));
     if (saved.error) {
       if (migrationMissing(res, saved.error)) return;
+      // Two first saves of one activity at once (a second tab or device) both
+      // find no row and both insert at revision 0; the later one meets the
+      // (enrollment, activity) key. The other save's copy is now the newer
+      // one, which is a conflict, not a server failure.
+      if (saved.error.code === '23505') {
+        return jsonError(res, 409, 'draft_conflict', 'A newer draft was saved elsewhere. Reload before saving again.');
+      }
       // Every other field the routine checks was checked above, so its raise
       // means the stored form outgrew its 64 kB (pg_column_size measures the
       // binary JSONB, which can exceed the text this handler measured).

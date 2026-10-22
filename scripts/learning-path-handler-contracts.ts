@@ -443,6 +443,12 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 3 }), res as never,
         fakeSupabase({ rpc: () => ({ error: { code: 'P0001', message: 'invalid_learning_path_draft' } }) }));
       if (res.statusCode !== 413 || code(res) !== 'too_large') fail(`a draft the routine refuses as oversized answers ${res.statusCode} ${code(res)}, not 413 too_large`);
+      // Two first saves at once: the later insert meets the (enrollment,
+      // activity) key. The other copy is newer, so it is a conflict, not a 500.
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 0 }), res as never,
+        fakeSupabase({ rpc: () => ({ error: { code: '23505', message: 'duplicate key value violates unique constraint "learning_path_drafts_pkey"' } }) }));
+      if (res.statusCode !== 409 || code(res) !== 'draft_conflict') fail(`a first draft save that lost the race to the key answers ${res.statusCode} ${code(res)}, not 409 draft_conflict`);
     }
 
     /* ── every off-loop decision goes through one helper ──────────────── */
