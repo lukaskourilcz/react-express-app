@@ -2008,28 +2008,3 @@ The landing introduces the FDE path with existing landing primitives and reads i
 Two additional required self-reviewed artifacts capture the change-request executive update and five-minute handoff walkthrough script. The capstone's `dependsOn` names the fourteen teaching modules M01–M14 explicitly, and a schema contract in `scripts/learning-path-schema-contracts.ts` fails when that list omits or reorders a required teaching module or names an optional shelf module. Shared guided completion still requires each artifact's self-reviewed state.
 
 Authenticated path overviews can export the latest server-saved artifact drafts through the existing caller-owned `learning-path-draft` GET. Two reads at most run concurrently. A failed read produces no partial file; unmount/account or enrollment changes cancel pending reads. JSON preserves revision/state metadata, and Markdown renders saved text literally. The export explains that saved drafts may differ from the last submission and does not claim independent review. No submission, XP event, new handler or migration is involved.
-
-## DSA Advanced in Learn — 22 October 2026 (E4)
-
-Software Engineer adds `dsa-advanced` after DSA Foundations: fifteen levels,
-eight reviewed questions each, with the first five Foundations levels as the
-existing prerequisite milestone. Advanced levels and part tests are Premium
-throughout. The eight new lessons serve all fifteen levels in pairs, with a
-closing synthesis reading. Lesson reading itself remains public and records
-nothing under E1; starting a graded Advanced attempt enforces its tier.
-
-Sixteen heap/graph source concepts move from E3’s preserved holding bank into
-new `rm-dsaa-N` identities; their provenance is archived and unsupported old
-measurement anecdotes are removed. 104 original questions complete the bank.
-The fifteen new Algorithms tasks add server-only reference/junior/senior
-solutions, visible and hidden checks and thirty intentionally flawed variants.
-Nine existing Medium/Hard tasks keep their ids and graders but join matching
-Advanced levels; fresh placement reviews archive their previous records. Those
-band tasks now participate in Advanced Learn quotas only. Other band quotas
-stay unchanged.
-
-All 144 new/renewed item reviews are model self-reviews, explicitly independent:
-false. Automated checks prove the authored bounded cases, not every program’s
-complexity. The issued inventory is recomputed from the gated registry: 769
-coding tasks (480 Easy, 189 Medium, 100 Hard), 144 free, and 2134 served questions.
-The FDE production flag remains separate from this Learn topic.
