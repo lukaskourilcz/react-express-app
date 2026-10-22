@@ -1297,7 +1297,6 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // it was the step's first pass, read under the progress lock it holds
     // while recording it; before 060 the record is read here, before the
     // completion writes the pass.
-    let passedBefore: boolean | null = null;
     const completion = {
       p_user_id: userId,
       p_attempt_id: session.attemptId,
@@ -1307,8 +1306,8 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // again, an hour after the step last paid (owner decision of 9 Oct
     // 2026), and says so. Before 060 the completion of 056 answers alone.
     let completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt_v2', completion));
+    const passedBefore = passed && isRpcMissing(completed.error) ? await stepPassed(userId, session) : null;
     if (isRpcMissing(completed.error)) {
-      passedBefore = passed ? await stepPassed(userId, session) : null;
       completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt', completion));
     }
     if (completed.error) {
