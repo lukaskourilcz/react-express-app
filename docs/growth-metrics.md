@@ -1,88 +1,41 @@
-# Privacy-conscious growth and content operations
+# What the product measures
 
-The launch grows through genuinely useful public learning pages and reliable
-product loops, not dark patterns. Analytics is optional and the app works fully
-without it.
+devShark sends product analytics to PostHog EU Cloud, and only after the visitor allows analytics in the cookie banner (`client/src/lib/consent.ts`). Before that the SDK is not downloaded and nothing is stored or sent; a withdrawal resets PostHog and removes its cookies and the stored campaign. Without `VITE_PUBLIC_POSTHOG_KEY` every call is a no-op. Requests go through the same-origin `/ingest` proxy.
 
-## Public topic pages
+`client/src/lib/posthogClient.ts` turns off autocapture, dead-click capture and session recording, honours Do Not Track, creates person profiles only for signed-in accounts, and leaves URL fragments out. Its `before_send` hook strips every URL and referrer property down to origin and path plus the campaign labels.
 
-The build emits metadata-specific HTML shells under `/topics/<slug>/` for
-devShark's five guides: closures, TypeScript narrowing, React Hooks, SQL joins,
-and Git rebase. Every page includes original teaching copy, one misconception,
-small public practice prompts, and a category-scoped quiz CTA. No private
-question bank or answer key is rendered in static HTML.
+## Events
 
-Review pages quarterly for accuracy, search usefulness, internal links, and
-stale terminology. Add a topic only when it has a clear learner need and enough
-original teaching value to stand alone.
+| Event | Sent from | Properties |
+| --- | --- | --- |
+| `$pageview` | the router (`capturePageview`) | the scrubbed URL; the first pageview of a page load also carries the campaign labels |
+| `quiz_started` | `Quiz.tsx` | `mode` (`standard`, `review`, `daily`); `question_count` on standard and review runs; `difficulty` and `category_count` on standard runs |
+| `quiz_submitted` | `Quiz.tsx` | `mode`, `percentage`, `correct`, `total` |
+| `classroom_or_match_joined` | `Play.tsx` | none |
+| `premium_page_viewed` | `PremiumPage.tsx` | `product` |
+| `share_initiated` | `client/src/lib/share.ts` | `kind`, `source`, `method` |
+| `landing_sample_completed`, `learning_cta_clicked` | `Home.tsx`, `TopicLandingPage.tsx` (`captureActivation`) | `product`, `source` (`home`, `topic_guide`), `category`; `locale` on guide events |
+| `learning_path_enrolled`, `learning_path_activity_started`, `learning_path_activity_verified`, `learning_path_returned` | `LearningPathScreens.tsx` (`capturePathEvent`) | `pathId`, `curriculumVersion`, `activityId`, `activityKind`, `state` |
 
-## The question of the day (#239)
+`captureActivation`, `capturePathEvent` and `captureShare` rebuild their payloads from an allow-list, so a caller cannot pass an extra field through. [Activation measurement](quality/activation.md) gives the funnel definition built from these events.
 
-`/daily` puts one devShark question up every day, from a track that rotates by
-date (`shared/daily-question.ts`). The server picks the question from that
-track, keeps its answer sealed until a learner checks one, and grades the
-check as a signed-out quiz: no receipt, XP, streak day, leaderboard entry or
-review record, whoever is signed in. Each day has its own page
-(`/daily/<date>`, prerendered for the last 120 days and the next 45) and its
-own share image with the track and the date, so a daily post links to a
-preview of its own. The static HTML names the day and the track and never
-holds the question or its answer.
+`share_initiated` carries a `kind` (`referral`, `challenge_result`, `learn_topic_result`, `daily_question`, `learning_path_result`), a `source` (`learn_level`, `learn_topic`, `challenge`, `daily`, `learning_path`) and a `method` (`share`, `copy`, `download`), never the link, a code, a score or a name.
 
-## Campaign links
+Analytics never receives an email, display name, access, session or answer token, room code, free text, question text or selected answer. PostHog identifies a signed-in account by its user id.
 
-Social links carry `utm_source` (`instagram`, `threads`, `linkedin`),
-`utm_medium` (`bio`, `story`, `post`, `reply`, `ad`) and a kebab-case
-`utm_campaign`. The first pageview of a page load keeps those three in its URL
-and as properties, and the browser's first campaign (kept 30 days) becomes the
-person's initial `utm_source`, `utm_medium` and `utm_campaign` when they sign
-in (`identify`'s set-once properties). Every other parameter (`ref`,
-`voucher`, `session_id`, anything else) and any value that is not a short
-lower-case label is removed from every URL PostHog receives
-(`client/src/lib/analytics.ts`).
+## Campaign labels
 
-## Product loops
+A link may carry `utm_source`, `utm_medium` and `utm_campaign` (`client/src/lib/analytics.ts`). A value is kept only when it is a short lower-case label (`^[a-z0-9][a-z0-9._-]{0,63}$`). The first pageview of a page load keeps the three in its URL and as properties. The browser's first campaign, kept 30 days, becomes the account's initial `utm_source`, `utm_medium` and `utm_campaign` when the visitor signs in (set-once properties on `identify`). Every other query parameter (`ref`, `voucher`, `session_id` and the rest) is removed from every URL PostHog receives.
 
-- Result sharing uses score/date/brand context only; never include question text,
-  selected answers, email, user id, or tokens. The Challenge card shows the
-  number correct, the typing racer card WPM and accuracy, both with the date
-  (`client/src/lib/shareCard.ts`); neither has a field for a name, an e-mail
-  or a room code.
-- The invite link is offered at a moment of success: after a learner's first
-  passed Learn level and after each Challenge run, with the platform share
-  sheet and a copy button (`ReferralMoment.tsx`). The mechanic and its coins
-  are unchanged (#228).
-- Every coding task has its own link-preview image (title, track, difficulty
-  and the free count computed from `shared/tiers.ts`), drawn at build time.
-- Multiplayer room links are explicit invitations. Do not publish room codes or
-  participant names to analytics.
-- devShark has been freemium since 25 September 2026. The upgrade sheet opens
-  only when a learner chooses something Premium or asks what Premium includes,
-  and `/premium` shows the price before VAT, with VAT added at checkout and no countdown or
-  scarcity. Premium changes which content
-  an account may start and never scores. The quiz prompt that asked for
-  voluntary support went in #230, and `/support` redirects to `/premium`.
+## Public pages and share surfaces
 
-## Minimal event taxonomy
+- **Topic guides.** The build emits metadata-specific HTML for five guides under `/topics/<slug>`: JavaScript closures, TypeScript narrowing, React Hooks, SQL joins and Git rebase (`client/src/lib/topicCatalog.ts`). Each has original teaching copy, one misconception, small practice prompts and a quiz call to action. No private question or answer key appears in the static HTML.
+- **Question of the day.** `/daily` shows one question a day from a track that rotates by date (`shared/daily-question.ts`). The server keeps the answer sealed until the learner checks one and grades it as a signed-out quiz: no receipt, XP, streak day, leaderboard entry or review record. Each day has its own page, `/daily/<date>`, prerendered for the last 120 days and the next 45, with its own share image naming the track and the date. The static HTML never holds the question or its answer.
+- **Coding task previews.** Every coding task page has a link-preview image with its title, track, difficulty and the free count from `shared/tiers.ts`, drawn at build time.
+- **Result cards.** A Challenge run, a finished Learn topic and a completed learning path offer Share and Download card (`ResultShareActions.tsx`). The card is drawn in the browser (`client/src/lib/shareCard.ts`) from the numbers on screen and the date; it has no field for a name, an email, a room code or a question.
+- **Invite link.** After a learner's first passed Learn level and after each Challenge run, `ReferralMoment.tsx` offers the invite link with the platform share sheet and a copy button. The invite reward is described in [rewards](rewards-launch.md).
+- **Room links.** Multiplayer room links are explicit invitations; room codes and participant names never reach analytics.
 
-Measure aggregate funnels with anonymous/session-scoped identifiers and short
-retention. The client sends `quiz_started`, `quiz_submitted`,
-`classroom_or_match_joined`, `share_initiated` and
-`premium_page_viewed`. `share_initiated` carries `kind` (`quiz_result`,
-`daily_result`, `referral`, `challenge_result`, `typing_result`,
-`daily_question`) and, from the #239 surfaces, `source` and `method`
-(`share`, `copy`, `download`), never the link, a code or a score. Add Learn lesson complete and topic-page CTA only if their
-payloads contain product, subject/category, and coarse result counts—not
-identity or question content.
+## Premium surfaces
 
-Never send email, display name, access/session/answer tokens, room codes, free
-text, question text, or selected answers. Disable session replay on auth, admin,
-profile/account deletion, quiz answering, and multiplayer-code surfaces unless a
-reviewed masking configuration proves those values cannot be captured.
-
-## Weekly review
-
-Review activation (first completed learning action), return rate, Learn/Quiz
-completion, multiplayer success/error rate, topic-page-to-practice conversion,
-Premium page visits against upgrades, and API reliability together. A conversion
-gain that increases errors, confusion, privacy risk, or pressure to pay is not a
-launch win.
+The upgrade sheet opens only when a learner chooses something Premium or asks what Premium includes. `/premium` shows the price before VAT and says VAT is added at checkout, with no countdown or scarcity. Checkout stays off until `BILLING_ENABLED=true`. `/support` redirects to `/premium`.
