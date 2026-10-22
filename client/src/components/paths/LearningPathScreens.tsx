@@ -385,7 +385,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <p className="lp-lead">{manifest.entryRequirement}</p>
       </section>
 
-      {pathId === 'fde' && <FdeHub manifest={manifest} progress={progress.data} reachable={reachable}
+      {pathId === 'fde' && <FdeHub manifest={manifest} progress={progress.data} reachable={reachable} activityLock={activityLock}
         pending={Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending))}
         error={Boolean(enrollments.error || progress.error)}
         retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
