@@ -2,7 +2,7 @@
 
 Use this only when the owner has authorised you to apply a named migration to production, and the connector's `apply_migration` (or a large `execute_sql`) fails on the size of the file while small calls still work. Then you split the file into small calls.
 
-Origin: the operator reported these steps; no other file in the repository records them. What the repository does record: `NEEDED.md`, item "Apply migrations 058 and 059 before deploying the draft-conflict code", says both were applied on 9 Oct 2026 and "production then matched a fresh build of the repository"; item "Apply migration 060 before deploying" says only that "Production inspection on 13 October confirmed 060 already installed". Neither item says how the files were applied.
+Origin: the operator reported these steps; no other file in the repository records them.
 
 Three parameters below come from the operator alone and are unverified in the repository. Treat them as starting values and confirm each against the connector before you rely on it:
 
