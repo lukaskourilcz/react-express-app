@@ -244,7 +244,7 @@ const BROWSER_SPECS = [
 ].map((names) => names.split(' ').map((name) => `tests/browser/${name}.spec.ts`).join(' '));
 
 const PLAN = [
-  step('install', 'npm ci && npm ci --prefix client', { ci: ['npm ci', 'npm ci --prefix client'], kind: 'install' }),
+  step('install', 'npm ci --no-audit && npm ci --no-audit --prefix client', { ci: ['npm ci --no-audit', 'npm ci --no-audit --prefix client'], kind: 'install' }),
   step('check:quickjs-build', npmRun('check:quickjs-build'), { kind: 'quickjs' }),
   step('typecheck:api', npmRun('typecheck:api')),
   step('typecheck:scripts', npmRun('typecheck:scripts')),

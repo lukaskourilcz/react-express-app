@@ -113,7 +113,7 @@ beforeAll(async () => {
   await Promise.all([
     import('../src/i18n/LanguageContext'),
     import('../src/components/paths/LearningPathScreens'),
-    import('../src/components/paths/PathDiscovery'),
+    import('../src/components/paths/PathShelf'),
     import('../src/components/paths/PathResumeSection'),
     import('../src/components/paths/LearningPathsCard'),
     import('../src/components/paths/PathRewardClaim'),
@@ -170,7 +170,7 @@ describe('the path page', () => {
     const unknown = within(report).getByText(/Not assessed/);
     expect(unknown).toHaveTextContent('Python comprehension');
     expect(unknown).not.toHaveTextContent('0%');
-    expect(within(report).getByRole('link', { name: 'Open the diagnostic' })).toHaveAttribute('href', '/roadmap/specializations/fde/fde-diagnostic?activity=fde-diagnostic-check');
+    expect(within(report).getByRole('link', { name: 'Open the diagnostic' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path/fde-diagnostic?activity=fde-diagnostic-check');
   });
 
   it('keeps old unassessed diagnostic results readable when access is paused, without an active start link', async () => {
@@ -286,14 +286,14 @@ describe('the interview-prep shelf', () => {
   });
 });
 
-describe('the roadmap', () => {
+describe('the Learn path shelf', () => {
   it('marks an open path Premium for a free account', async () => {
     state.tier = 'free';
     await mount('/r', '/r', async () => {
-      const { default: PathDiscovery } = await import('../src/components/paths/PathDiscovery');
-      return <PathDiscovery />;
+      const { default: PathShelf } = await import('../src/components/paths/PathShelf');
+      return <PathShelf pathIds={['fde']} />;
     });
-    expect(screen.getAllByText('Premium')).toHaveLength(2);
+    expect(screen.getAllByText('Premium')).toHaveLength(1);
   });
 });
 

@@ -635,3 +635,19 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* The plan card is the target of the Learn page's "Choose your plan"
    (/profile#learning-plan): room under the fixed header when it scrolls in. */
 .lp-plan-anchor { scroll-margin-top: 6rem; }
+
+/* ── a Learn section's paths shelf (PathShelf.tsx, #489) ───────────────── */
+
+.rm-path-shelf { margin: 0 0 18px; }
+.rm-path-shelf__title { margin: 0; color: var(--color-text-primary); }
+/* The card's title is the shelf's link into the path: a 44px target, and it
+   wraps at 360px with 200 % text instead of overflowing. */
+.rm-path-shelf .lp-module__title a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text-accent);
+  text-underline-offset: 3px;
+}
+.rm-path-shelf__error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rm-path-shelf__error p { margin: 0; color: var(--color-text-secondary); }

@@ -23,6 +23,7 @@ export const learnEn = {
   'learn.section.line.web-developer': 'The web stack from HTML to Next.js and Node.js, in the order your track sets.',
   'learn.section.line.software-engineer': 'Data structures, algorithms, system design, operations and security: the engineering that carries across stacks.',
   'learn.section.line.forward-deployed-engineer': 'AI & LLMs and the service, data and security topics the Forward Deployed Engineer path builds on.',
+  'learn.paths.title': 'Learning paths',
   'learn.switcher.label': 'Learn sections',
   'learn.switcher.item': '{name} · {percent}%',
   'learn.switcher.hint': 'Use the arrow keys to move between sections, then Enter or Space to open one.',
@@ -47,6 +48,9 @@ export const learnEn = {
   'learn.empty.action': 'Go to {prereq}',
   'learn.notJoined.title': '{name} is not in your plan',
   'learn.notJoined.body': 'Add it to open these topics as you pass what they build on.',
+
+  'career.section.topics': 'Topics',
+  'career.section.progress': '{passed} of {total} steps completed',
 
   // ── Adaptive placement (skill-check rounds) ───────────────────────────
   'placement.title': 'Placement',

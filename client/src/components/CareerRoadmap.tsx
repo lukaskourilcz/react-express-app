@@ -9,7 +9,7 @@
 // i18n preserved verbatim.
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -19,7 +19,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Divider } from '@astryxdesign/core/Divider';
-import { Button } from '@astryxdesign/core/Button';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { SegmentedControl } from '@astryxdesign/core/SegmentedControl';
 import { SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
@@ -29,15 +28,21 @@ import {
   useRoadmapProgress,
   passedLevelCount,
   syncProgressWithServer,
+  useExtraUnlocks,
 } from '../lib/roadmap';
 import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
-import { lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
+import { readOnce, settled, useFirstData } from '../lib/routeData';
 import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
-import { eligibilityKeys } from '../lib/eligibility';
-import { getCategoryHexColor } from '../lib/categories';
+import { eligibilityKeys, useInPlan, useLearnerSections } from '../lib/eligibility';
+import { useLocks } from '../lib/locks';
+import { LEARN_SECTIONS } from '../../../shared/learn-sections';
+import { railEntries, sectionProgress } from './learn/sections';
+import { useFdePathSteps } from './learn/useFdePathSteps';
+import { learnText } from '../i18n/translations.learn';
+import { categoryLabelKey, getCategoryHexColor } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
@@ -49,19 +54,12 @@ import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-// The optional paths, in a chunk of their own. Their code and what they read
-// load inside the page's first-data hold, so they draw with the page instead
-// of arriving below it a beat later.
-const PathDiscovery = lazyPart(() => import('./paths/PathDiscovery').then((m) => m.default));
-
-/** The structure, the optional paths' code and catalogue and, signed in, the
- * learner's enrollments, in the cache before the first render. */
+/** Cache the structure and FDE evidence reads before the Career groups draw. */
 function useRoadmapFirstData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   useFirstData(`roadmap ${user?.id ?? ''}`, () => settled([
     readOnce(queryClient, roadmapStructureQuery),
-    PathDiscovery.load(),
     readOnce(queryClient, pathCatalogQuery),
     user ? readOnce(queryClient, enrollmentsQuery(user.id)) : null,
   ]));
@@ -131,7 +129,6 @@ function pct(passed: number, total: number): number {
 export default function CareerRoadmap() {
   useRoadmapFirstData();
   const t = useT();
-  const navigate = useNavigate();
   const progress = useRoadmapProgress();
   const totalXp = useTotalXp();
   // Shared (cached, de-duped with /learn) roadmap structure for level counts.
@@ -176,7 +173,28 @@ export default function CareerRoadmap() {
   }, []);
 
   const levelsFor = (topic: RoadmapTopic): number => structure?.structure?.[topic]?.levels.length ?? 0;
-  const inTrack = (topic: RoadmapTopic): boolean => isTopicInTrack(track, topic);
+  const inPlan = useInPlan();
+  const { hasPlan, members } = useLearnerSections();
+  const extraUnlocks = useExtraUnlocks();
+  const levelCounts = Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length]));
+  const { lockOf } = useLocks(levelCounts);
+  const fde = useFdePathSteps();
+  const groups = LEARN_SECTIONS.map((section) => {
+    const entries = railEntries(section.id, {
+      liveTopics: Object.keys(levelCounts), inPlan, hasPlan, isMember: members.includes(section.id),
+      progress, extraUnlocks: new Set(extraUnlocks), lockOf,
+    });
+    const shown = new Set(entries.map((entry) => entry.topic));
+    const grouped = pillars.map((pillar) => ({ ...pillar, areas: pillar.areas.filter((area) => shown.has(area.topic)) }))
+      .filter((pillar) => pillar.areas.length > 0);
+    const covered = new Set(grouped.flatMap((pillar) => pillar.areas.map((area) => area.topic)));
+    const extra = entries.filter((entry) => !covered.has(entry.topic as RoadmapTopic)).map((entry) => ({
+      topic: entry.topic as RoadmapTopic, label: t(categoryLabelKey(entry.topic)), blurb: '',
+    }));
+    if (extra.length) grouped.push({ id: 'other', title: learnText('career.section.topics'), intro: '', areas: extra });
+    const figure = sectionProgress(entries, progress, levelCounts, section.id === 'forward-deployed-engineer' ? fde.steps : null);
+    return { section, pillars: grouped, figure };
+  });
 
   // Aggregate completion across the areas that belong to the chosen track.
   const overall = useMemo(() => {
@@ -314,25 +332,25 @@ export default function CareerRoadmap() {
         </Card>
         </div>
 
-        {/* Optional paths, above the pillars because they answer a different
-            question: the pillars are "what is left in my track", these are
-            "what else could I take on". */}
-        <PathDiscovery.Part />
-
         {/* The pillars, filtered to the chosen track (empty pillars are hidden).
             One shared CTA up top instead of repeating it under every pillar. */}
-        <HStack justify="center">
-          <Button
-            variant="primary"
-            size="md"
-            label={t('careerRoadmap.continueCta')}
-            onClick={() => navigate('/learn')}
-          />
-        </HStack>
-
-        <Grid columns={{ minWidth: 300, max: 2 }} gap={2}>
-          {pillars.map((pillar) => {
-            const areas = pillar.areas.filter((area) => inTrack(area.topic));
+        {groups.map(({ section, pillars: sectionPillars, figure }) => (
+        <section key={section.id} aria-labelledby={`career-${section.id}`} style={{ width: '100%' }}>
+          <VStack gap={2}>
+            <HStack justify="between" align="center" gap={1} wrap="wrap">
+              <Heading level={2} id={`career-${section.id}`}>
+                <Link to={`/learn/${section.id}`}>{learnText(`learn.section.${section.id}`)}</Link>
+              </Heading>
+              <Text type="supporting" color="secondary">
+                {section.id === 'forward-deployed-engineer' && fde.pending
+                  ? t('common.loading')
+                  : learnText('career.section.progress', { passed: figure.passed, total: figure.total })}
+              </Text>
+            </HStack>
+            <Text type="supporting" color="secondary">{learnText(`learn.section.line.${section.id}`)}</Text>
+            <Grid columns={{ minWidth: 300, max: 2 }} gap={2}>
+          {sectionPillars.map((pillar) => {
+            const areas = pillar.areas;
             if (areas.length === 0) return null;
             let pPassed = 0;
             let pTotal = 0;
@@ -392,7 +410,10 @@ export default function CareerRoadmap() {
               </div>
             );
           })}
-        </Grid>
+            </Grid>
+          </VStack>
+        </section>
+        ))}
 
         {/* The honest gap: what engineering seniority takes beyond this app. */}
         <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>

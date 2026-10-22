@@ -1,0 +1,4 @@
+interface:
+  display_name: "Supabase Migration"
+  short_description: "Write and verify an additive schema migration"
+  default_prompt: "Use $supabase-migration to write and test this numbered migration and document its required rollout."
