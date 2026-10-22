@@ -80,6 +80,7 @@ export function moduleSummary(module: MergedModule): ModuleSummary {
     estimatedMinutes: module.estimatedMinutes,
     ...(module.optional ? { optional: true } : {}),
     ...(module.shelf !== undefined ? { shelf: module.shelf } : {}),
+    ...(module.deliveryPhase !== undefined ? { deliveryPhase: module.deliveryPhase } : {}),
   };
 }
 

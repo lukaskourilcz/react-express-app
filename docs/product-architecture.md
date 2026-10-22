@@ -1804,3 +1804,21 @@ usage, approvals and publication; this operation reads no learner records and
 adds no model calls or publishing credentials. See
 [marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
 limits and setup.
+
+### FDE hub evidence (B2)
+
+The FDE overview adds a competency board and the five delivery phases. Phase
+membership is manifest metadata (`deliveryPhase`), carried through the source,
+merge and public projection; module counts come from those modules. The
+capstone and optional shelves sit apart from the phase list. A validator
+rejects unknown phases and missing phases on required FDE loop modules.
+
+The board groups the recorded activity states by competency. It never turns
+reading, self-review and machine verification into a competency score, and
+keeps diagnostic percentages in their own section. A failed progress read
+shows an error instead of a fresh board. The existing Continue button follows
+`nextActivityId`; the phase list only marks its phase. Completion artwork is
+available only when the server returns `guidedComplete`, contains the exact
+“FDE guided path completed” label plus manifest competency labels and recorded
+counts, and includes no identity or artifact text. It uses the existing
+1200×630 canvas share-card renderer in light and dark.

@@ -12,7 +12,7 @@ import { canWebShare, captureShare, shareLink, type ShareKind, type ShareSource 
 import './ShareMoments.css';
 
 export interface ResultShareActionsProps {
-  kind: Extract<ShareKind, 'challenge_result' | 'learn_topic_result'>;
+  kind: Extract<ShareKind, 'challenge_result' | 'learn_topic_result' | 'learning_path_result'>;
   /** What was played, as the card's label. */
   label: string;
   /** The result, as the card's headline. */
@@ -25,13 +25,15 @@ export interface ResultShareActionsProps {
   path: string;
   /** Centre the buttons, for a centred result card. */
   centered?: boolean;
+  evidenceLegend?: string;
+  evidence?: { label: string; verified: number; selfReviewed: number; total: number }[];
 }
 
 type Status = 'idle' | 'working' | 'shared' | 'copied' | 'saved' | 'failed';
 
-const SOURCE: Record<ResultShareActionsProps['kind'], ShareSource> = { challenge_result: 'challenge', learn_topic_result: 'learn_topic' };
+const SOURCE: Record<ResultShareActionsProps['kind'], ShareSource> = { challenge_result: 'challenge', learn_topic_result: 'learn_topic', learning_path_result: 'learning_path' };
 
-export default function ResultShareActions({ kind, label, headline, detail, text, path, centered = false }: ResultShareActionsProps) {
+export default function ResultShareActions({ kind, label, headline, detail, text, path, centered = false, evidence, evidenceLegend }: ResultShareActionsProps) {
   const { t } = useLanguage();
   const [status, setStatus] = useState<Status>('idle');
   const statusId = useId();
@@ -40,6 +42,8 @@ export default function ResultShareActions({ kind, label, headline, detail, text
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--brand-accent').trim();
     return createShareCardFile({
       brand: CURRENT_PRODUCT.brand,
+      theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+      ...(evidence ? { evidence, evidenceLegend } : {}),
       label,
       headline,
       detail,
