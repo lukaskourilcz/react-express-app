@@ -12,8 +12,8 @@
 //   * a module completes only with every plain requirement AND the quota,
 //     and the next action offers the quota's activities once the plain
 //     requirements are met
-//   * a module with a quota sends the database no requirements, because
-//     accept_learning_path_result can only AND them
+//   * a module with a quota preserves its plain requirements for the
+//     atomic quota routine
 //   * the decomposition cases module asks for its lessons and nine of its
 //     twelve cases, and each case is one scenario check of four or five
 //     questions that passes at 80 %
@@ -119,8 +119,8 @@ export function quotaContracts(fail: Fail): void {
     if (got !== expected) fail(`quota next action: for ${label} it is ${got}, not ${expected}`);
   }
 
-  /* ── 4. the database gets no requirements it cannot count ──────────── */
-  if (JSON.stringify(moduleRequirements(loop)) !== '[]') fail('quota database: a module with a quota sends requirements the routine would AND');
+  /* ── 4. the database gets both plain and quota requirements ───────── */
+  if (JSON.stringify(moduleRequirements(loop)) !== JSON.stringify([{ activityId: READ, states: ['self_reviewed', 'verified_pass'] }])) fail('quota database: the quota module lost its plain lesson requirement');
   if (moduleRequirements(plain).length === 0) fail('quota database: a module without a quota stopped sending its requirements');
 
   /* ── 5. the decomposition cases module ─────────────────────────────── */
@@ -158,5 +158,5 @@ export function quotaContracts(fail: Fail): void {
   if (moduleComplete(cases, states([...read.slice(1), ...passed(CASES_COUNT)]))) fail('quota cases: twelve cases complete the module with a lesson unread');
   const failedFirst = states([...read, [quota.of[0], 'needs_revision'], ...passed(CASES_NEEDED).slice(1)]);
   if (moduleComplete(cases, failedFirst)) fail('quota cases: eight passes and a failed case complete the module');
-  if (moduleRequirements(cases).length !== 0) fail('quota cases: the module sends the database requirements it cannot count');
+  if (moduleRequirements(cases).length !== 2) fail('quota cases: the database did not receive both lesson requirements');
 }
