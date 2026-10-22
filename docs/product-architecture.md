@@ -1670,12 +1670,13 @@ appearance and sound controls, and promotes no other product.
 
 ## Compatibility and rollback
 
-Existing DevQuiz/web-development records remain `webdev`. Migration 022 assigns
-that subject to legacy daily and challenge rows, while keeping legacy total XP
-alongside the subject map. Server-verified receipts and attempts make new
-progress idempotent. Rolling application code back should leave migrations
-021/022 in place: their new columns are backward-compatible and their revoked
-browser writes are security controls.
+Records from the DevQuiz era are `webdev`: migration 022 assigns that subject
+to legacy daily and challenge rows and keeps legacy total XP beside the
+subject map. Server-verified receipts and attempts make progress idempotent.
+Migrations only move forward. Rolling application code back leaves every
+applied migration in place: their new columns are backward-compatible, their
+revoked browser writes are security controls, and the handlers fall back to
+older routines where a newer one is missing (`npm run test:fallbacks`).
 
 ## No AI features
 
