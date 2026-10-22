@@ -10,7 +10,7 @@ Build on Astryx and the existing Shark primitives. Read `DESIGN_RULES.md`, `docs
 ## Rules
 
 - Use ocean-ink neutrals, tactile paper surfaces, one disciplined accent, editorial type, and restrained fins/waterlines.
-- Reuse Astryx, `SharkFin`, `SwimmingFin`, `Waterline`, `.ss-kicker`, `.ss-panel`, `.ss-raised`, `.ss-lift`, the devShark plate (`SubjectPlate`), and the technology glyphs (`CategoryGlyph`).
+- Reuse Astryx, `SharkFin`, `SwimmingFin`, `Waterline`, `.ss-kicker`, `.ss-panel`, `.ss-raised`, `.ss-lift`, `BrandLogo`, and the technology glyphs (`CategoryGlyph` in `client/src/components/ui/techIcons.tsx`). Never redraw the fin: the brand paths come from `client/src/components/brandGeometry.ts`.
 - Source brand, subject, URL, count, and accent data from the existing registries. Read the accent through `var(--brand-accent)`; never add a component-local palette or hard-code its hex.
 - Keep fin bases on their container waterline. Fin-school cards do not also lift or tilt. Repeated roadmap waves vary. Non-essential motion respects `prefers-reduced-motion`.
 - Use semantic tokens for shared meaning: backgrounds, text, borders, focus, selected, success, warning, error, info, overlays, and the accent.
