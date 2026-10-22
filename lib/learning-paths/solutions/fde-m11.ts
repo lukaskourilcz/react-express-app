@@ -103,7 +103,7 @@ const gateRelease = (candidate: ReleaseCandidate, log: DecisionLog): GateDecisio
   return { decision, release: candidate.release, reasons };
 };`;
 
-export const FDE_M11_DEPLOY_SOLUTIONS: Record<string, PathCodeSolution> = {
+export const FDE_M11_SOLUTIONS: Record<string, PathCodeSolution> = {
   'fde-v1-m11-deploy-release-gate': {
     solution: GATE_RELEASE,
     hiddenTests: [

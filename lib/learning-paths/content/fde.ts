@@ -18,17 +18,18 @@ import type { PathSource } from '../types';
 import { FDE_DIAGNOSTIC } from './fde/diagnostic';
 import { FDE_BRIDGES } from './fde/bridges';
 import { FDE_M01 } from './fde/m01';
-import { FDE_M02 } from './fde/m02';
 import { FDE_M03 } from './fde/m03';
 import { FDE_M04 } from './fde/m04';
-import { FDE_M05 } from './fde/m05';
-import { FDE_M05_DATA } from './fde/m05-data';
 import { FDE_M06 } from './fde/m06';
 import { FDE_M07 } from './fde/m07';
+import { FDE_M05 } from './fde/m05';
 import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
-import { FDE_M11_DEPLOY } from './fde/m11-deploy';
+import { FDE_M12 } from './fde/m12';
+import { FDE_M13 } from './fde/m13';
+import { FDE_M11 } from './fde/m11';
+import { FDE_M14 } from './fde/m14';
 import { FDE_C01 } from './fde/c01';
 
 export const FDE_PATH: PathSource = {
@@ -74,17 +75,18 @@ export const FDE_PATH: PathSource = {
     FDE_DIAGNOSTIC,
     FDE_BRIDGES,
     FDE_M01,
-    FDE_M02,
     FDE_M03,
-    FDE_M05_DATA,
     FDE_M04,
     FDE_M05,
     FDE_M06,
     FDE_M07,
     FDE_M08,
-    FDE_M11_DEPLOY,
     FDE_M09,
     FDE_M10,
+    FDE_M11,
+    FDE_M12,
+    FDE_M13,
+    FDE_M14,
     FDE_C01,
   ],
   bridges: [
@@ -151,6 +153,8 @@ export const FDE_PATH: PathSource = {
       competencies: ['python-reading', 'integration'],
       references: [
         { kind: 'path-activity', ref: 'fde-v1-bridge-python-reading', label: 'Bridge check: read typed and asynchronous Python' },
+        { kind: 'path-activity', ref: 'fde-v1-bridge-python-api-client', label: 'Bridge check: read an API client boundary' },
+        { kind: 'path-activity', ref: 'fde-v1-bridge-python-async-loader', label: 'Bridge check: read an asynchronous data loader' },
         { kind: 'doc', ref: 'https://docs.python.org/3/library/typing.html', label: 'Python docs — typing' },
         { kind: 'doc', ref: 'https://docs.python.org/3/library/asyncio-task.html', label: 'Python docs — asyncio tasks and coroutines' },
       ],
@@ -256,6 +260,6 @@ export const FDE_PATH: PathSource = {
       reviewedOn: '2026-09-08',
     },
   ],
-  reviewedOn: '2026-09-08',
+  reviewedOn: '2026-10-22',
   completionLabel: 'FDE guided path completed',
 };

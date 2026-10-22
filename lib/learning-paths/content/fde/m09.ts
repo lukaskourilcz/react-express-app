@@ -1,775 +1,915 @@
-/** M09 — Production delivery.
+/** M09: Evaluation (curriculum v2 numbers it M09; the id stays `fde-v1-m07`
+ * until B9 renumbers the manifest).
  *
- * M07 produced a number that says whether the change helped. M08 produced a
- * handler that refuses to act on text it cannot trust. This module is the
- * week after both of them ship: the signal that shows the failure before a
- * customer does, the rollout that can be stopped, the trace that says which
- * dependency ate the request, and the rollback that leaves three things
- * behind.
+ * M05 produced grounded answers and refusals; M06 produced tool calls a
+ * dispatcher was willing to run. This module is the number that says whether
+ * either of them got better, and the ways that number lies.
  *
- * Two lessons, one four-question check, one graded retry-and-circuit helper.
- * The first lesson is about what logs, metrics and traces each answer, and
- * about working backwards from the failure you expect to the one signal that
- * would catch it. The second is about the incident: mitigate before you
- * diagnose, read the trace to the span holding the latency, and know what
- * redeploying the old build does not undo.
+ * Two lessons, one six-question check, one graded metrics function. The
+ * first lesson is about the set: a golden set built from real failures, the
+ * reference solution that proves a task can be passed, the held-out half
+ * split off before any tuning, and the quiet ways an answer from that half
+ * leaks back into the system it was meant to measure. The second is about the
+ * report: accuracy, coverage, cost per request and p95 latency side by side,
+ * a failure-mode taxonomy read from each wrong answer's trace, the slice an
+ * aggregate hides, and the honest comparison against a deterministic baseline.
  *
- * One claim runs through both lessons and lands in the check: a health probe
- * that asserts a 200 proves the service answers, not that the answers are
- * right. The router failure this module keeps returning to is a 200 with a
- * shrug in it; the stated upper-latency/error monitors do not detect it.
- *
- * Everything the exercise touches is an authored fixture. `__dependency` in
- * the task harness replays a scripted list of outcomes and `sleep` runs on
- * the sandbox's virtual clock, so a 2 000 ms cooldown resolves instantly and
- * the recorded gaps still read 100, 200, 300. Nothing here opens a socket,
- * needs a key or calls a provider. Marlbrook Systems, its endpoints, its
- * release numbers and its trace ids are invented for this path; no real
- * customer data, credential or company appears in any of them. A fixture
- * dependency that fails on cue is evidence about this code on these inputs,
- * never a measurement of how a live service degrades. */
+ * Every case, prediction, trace, score, cost and latency figure in this
+ * module is an authored fixture. `__cases` and `__predictions` in the task
+ * harness build a 36-case held-out set and named prediction sets from a
+ * compact pattern table; nothing calls a provider, needs a key or opens a
+ * socket. Marlbrook Systems, its queues, its articles and its ticket ids are
+ * invented for this path, and no real customer data appears in them. A
+ * fixture accuracy is identical on every run, which is what makes it
+ * gradeable and exactly what a live model is not. */
 
 import type { ModuleSource } from '../../types';
 
-/** The scripted dependency, the circuit builder and the two probes the
- * assertions read. Immutable helpers are supplied before learner declarations;
- * deferred instrumentation initializes before graded calls.
+/** The held-out set, the prediction sets and the two accessors the metrics
+ * function is graded against. Appended after the learner's code so the
+ * fixtures cannot be shadowed.
  *
- * A plan is one entry per call — `'o'` resolves, `'5'` rejects 503, `'t'`
- * rejects 429, `'4'` rejects 422, `'x'` rejects with no status at all, and a
- * number rejects with that status. When the plan runs out its last entry
- * repeats, so `'5'` alone means a dependency that never recovers and `'444o'`
- * means three refusals and then a working probe. `sleep` schedules through
- * `setTimeout`, which the sandbox runs on a virtual clock: the cooldown
- * finishes in microseconds and the recorded call times still show the gap, so
- * the same submission grades the same way on every run. */
-const CIRCUIT_FIXTURES = `
-var sleep = function (ms) {
-  return new Promise(function (resolve) { setTimeout(resolve, ms); });
-};
-
-var __dependency = function (plan) {
-  var steps = typeof plan === 'string' ? plan.split('') : plan;
-  var dep = { calls: [], startedAt: Date.now() };
-  dep.call = function (request) {
-    var step = steps[Math.min(dep.calls.length, steps.length - 1)];
-    dep.calls.push({ request: request, at: Date.now() - dep.startedAt, step: step });
-    if (step === 'o') return Promise.resolve({ echo: request });
-    if (step === 'x') return Promise.reject({ message: 'socket hang up' });
-    if (step === 't') return Promise.reject({ status: 429, message: 'slow down' });
-    if (step === '4') return Promise.reject({ status: 422, message: 'unprocessable entity' });
-    if (step === '5') return Promise.reject({ status: 503, message: 'upstream unavailable' });
-    return Promise.reject({ status: Number(step), message: 'status ' + step });
-  };
-  return dep;
-};
-
-var __circuit = function (dep, overrides) {
-  var options = {
-    call: dep.call,
-    failureThreshold: 3,
-    windowMs: 10000,
-    cooldownMs: 2000,
-    retries: 2,
-    baseDelayMs: 100,
-    maxDelayMs: 400
-  };
-  var extra = overrides || {};
-  for (var key in extra) options[key] = extra[key];
-  return createCircuit(options);
-};
-
-var __gaps = function (dep) {
-  return dep.calls.map(function (entry, index) {
-    return index === 0 ? 0 : entry.at - dep.calls[index - 1].at;
+ * 36 cases in three slices of twelve. Each case names the article that
+ * supports its label (`sourceId`) and the tool the router should call. The
+ * prediction sets are written as one character per case (`c` correct, `w`
+ * wrong, `a` abstained, `n`/`e`/`o` a malformed answer, `x` no prediction at
+ * all) so the shape of each candidate is readable in one line. `candidate` is
+ * the important one: it wins on the aggregate, 30 correct against 27, while
+ * the returns slice falls from 10 to 7. `cautious` is the other trap: it is
+ * right on 22 of the 24 cases it answers and on 22 of all 36.
+ *
+ * `__RUNS` adds what a real run would log beside each answer: cost, latency
+ * and a trace of retrieved article ids and the tool called. One character per
+ * case again: `.` and `h` retrieve the right article and call queue.assign,
+ * `r` retrieves the wrong article, `t` calls refunds.create, and `-` records
+ * no trace at all, which is what the keyword baseline leaves behind. The
+ * candidate's three slow cases put its p95 at 2400 ms while 33 of 36 take
+ * 900 ms. */
+const EVALUATION_FIXTURES = `
+var __LABELS = ['tier-1', 'tier-2', 'finance', 'ops'];
+var __CASE_ROWS = [
+  ['C-01', 'billing', 'finance'], ['C-02', 'billing', 'finance'], ['C-03', 'billing', 'tier-1'],
+  ['C-04', 'billing', 'finance'], ['C-05', 'billing', 'finance'], ['C-06', 'billing', 'tier-2'],
+  ['C-07', 'billing', 'finance'], ['C-08', 'billing', 'finance'], ['C-09', 'billing', 'tier-1'],
+  ['C-10', 'billing', 'finance'], ['C-11', 'billing', 'finance'], ['C-12', 'billing', 'tier-2'],
+  ['C-13', 'delivery', 'ops'], ['C-14', 'delivery', 'ops'], ['C-15', 'delivery', 'tier-1'],
+  ['C-16', 'delivery', 'ops'], ['C-17', 'delivery', 'ops'], ['C-18', 'delivery', 'tier-1'],
+  ['C-19', 'delivery', 'ops'], ['C-20', 'delivery', 'ops'], ['C-21', 'delivery', 'tier-2'],
+  ['C-22', 'delivery', 'ops'], ['C-23', 'delivery', 'ops'], ['C-24', 'delivery', 'tier-1'],
+  ['C-25', 'returns', 'tier-2'], ['C-26', 'returns', 'ops'], ['C-27', 'returns', 'tier-2'],
+  ['C-28', 'returns', 'tier-2'], ['C-29', 'returns', 'ops'], ['C-30', 'returns', 'tier-2'],
+  ['C-31', 'returns', 'tier-1'], ['C-32', 'returns', 'tier-2'], ['C-33', 'returns', 'ops'],
+  ['C-34', 'returns', 'tier-2'], ['C-35', 'returns', 'tier-2'], ['C-36', 'returns', 'ops']
+];
+var __cases = function (which) {
+  var rows = which === 'twoSlices'
+    ? __CASE_ROWS.filter(function (row) { return row[1] !== 'returns'; })
+    : __CASE_ROWS;
+  return rows.map(function (row) {
+    return { id: row[0], slice: row[1], expected: row[2], sourceId: 'KB-' + row[1], tool: 'queue.assign' };
   });
 };
-
-var __drive = function (circuit, count, request) {
+var __wrong = function (expected) {
+  return __LABELS[(__LABELS.indexOf(expected) + 1) % __LABELS.length];
+};
+var __PATTERNS = {
+  baseline:   'ccccccccwwww' + 'cccccccccwww' + 'ccccccccccww',
+  candidate:  'cccccccccccw' + 'cccccccccccc' + 'cccccccwwwww',
+  cautious:   'cccccccwaaaa' + 'ccccccccaaaa' + 'cccccccwaaaa',
+  uniform:    'ccccccccccww' + 'ccccccccccww' + 'cccccccccccw',
+  reshuffle:  'cccccccccwww' + 'ccccccccwwww' + 'ccccccccccww',
+  allAbstain: 'aaaaaaaaaaaa' + 'aaaaaaaaaaaa' + 'aaaaaaaaaaaa',
+  malformed:  'nnnnnnnnnnnn' + 'eeeeeeeeeeee' + 'oooooooooooo',
+  messy:      'ccccccccwwxx' + 'ccccccccaane' + 'cccccccwwxxx'
+};
+var __RUNS = {
+  baseline:  { trace: '------------' + '------------' + '------------', costCents: 0, latencyMs: 12, slow: {} },
+  candidate: { trace: '...........h' + '............' + '.......rrrth', costCents: 0.35, latencyMs: 900, slow: { 'C-30': 2400, 'C-33': 2400, 'C-36': 2600 } },
+  cautious:  { trace: '.......h....' + '............' + '.......t....', costCents: 0.4, latencyMs: 1840, slow: {} }
+};
+var __traced = function (entry, row, run, index) {
+  if (!run) return entry;
+  entry.costCents = run.costCents;
+  entry.latencyMs = run.slow[row[0]] || run.latencyMs;
+  var mark = run.trace.charAt(index);
+  if (mark === '.' || mark === 'h') { entry.retrieved = ['KB-' + row[1]]; entry.tool = 'queue.assign'; }
+  else if (mark === 'r') { entry.retrieved = [row[1] === 'returns' ? 'KB-delivery' : 'KB-returns']; entry.tool = 'queue.assign'; }
+  else if (mark === 't') { entry.retrieved = ['KB-' + row[1]]; entry.tool = 'refunds.create'; }
+  return entry;
+};
+var __EXTRAS = {
+  messy: [
+    { caseId: 'C-01', answer: 'tier-1' },
+    { caseId: 'C-21', answer: 'tier-2' },
+    { caseId: 'X-99', answer: 'finance' },
+    { caseId: 'X-98', answer: 'ops' }
+  ]
+};
+var __predictions = function (name) {
+  if (name === 'duplicate') {
+    var once = __predictions('baseline');
+    return once.concat(once.map(function (entry) {
+      return { caseId: entry.caseId, answer: __wrong(entry.answer) };
+    }));
+  }
+  if (name === 'foreign') {
+    return __CASE_ROWS.map(function (row) { return { caseId: 'Z-' + row[0].slice(2), answer: row[2] }; });
+  }
+  var pattern = __PATTERNS[name] || '';
+  var run = __RUNS[name];
   var out = [];
-  var step = function (index) {
-    if (index >= count) return Promise.resolve(out);
-    return circuit.send(request === undefined ? { id: 'R-' + index } : request).then(function (result) {
-      out.push(result);
-      return step(index + 1);
-    });
-  };
-  return step(0);
+  __CASE_ROWS.forEach(function (row, index) {
+    var mark = pattern.charAt(index);
+    var entry = null;
+    if (mark === 'c') entry = { caseId: row[0], answer: row[2] };
+    else if (mark === 'w') entry = { caseId: row[0], answer: __wrong(row[2]) };
+    else if (mark === 'a') entry = { caseId: row[0], answer: null };
+    else if (mark === 'n') entry = { caseId: row[0], answer: 42 };
+    else if (mark === 'e') entry = { caseId: row[0], answer: '   ' };
+    else if (mark === 'o') entry = { caseId: row[0], answer: { label: row[2] } };
+    if (entry) out.push(__traced(entry, row, run, index));
+  });
+  return out.concat(__EXTRAS[name] || []);
 };
 `.trim();
 
 export const FDE_M09: ModuleSource = {
   id: 'fde-v1-m09',
-  title: 'Production delivery',
+  title: 'Evaluation',
   outcomes: [
-    'Say which of logs, metrics and traces answers a given question, and name what each one cannot tell you.',
-    'Work backwards from the failure you expect to the one signal that would show it before a customer does, and say why a health probe asserting a 200 is not that signal.',
-    'Write the abort condition for a staged rollout before the first stage opens, and give a stage enough traffic that it could fail.',
-    'Read a trace down to the span holding the latency, and mitigate before you have the cause.',
-    'Name what redeploying the old build leaves behind — a dropped column, a sent message, a consumed idempotency key — and run the review as a list of owned actions rather than a document.',
+    'Build a golden set out of real failures, give every case a slice label and a reviewed expected answer, and split the held-out half off once, before any tuning starts.',
+    'Name the three ways a held-out answer leaks back into the system measuring it, and say what each one inflates.',
+    'Report accuracy, coverage, cost per request and p95 latency side by side, and say which of them answers the question the customer actually asked.',
+    'Sort each wrong answer into retrieval miss, tool misuse, hallucination or unclassified from its trace, and say where the fix for each one starts.',
+    'Read a per-slice table and spot the slice a rising aggregate is hiding.',
+    'State the rule that decides which candidate wins before you run the comparison, and hold a deterministic baseline to the same measurement.',
   ],
-  competencies: ['operations'],
+  competencies: ['evaluation'],
   dependsOn: ['fde-v1-m07', 'fde-v1-m08'],
-  estimatedMinutes: 110,
+  estimatedMinutes: 140,
   lessons: [
     {
-      id: 'fde-v1-m09-l1',
-      title: 'Observability and rollout',
+      id: 'fde-v1-m07-l1',
+      title: 'Golden sets, reference cases and leakage',
       summary:
-        'What logs, metrics and traces each answer, how to pick the one signal that would catch your own failure, and how to stage a release behind an abort condition you wrote down first.',
-      estimatedMinutes: 25,
+        'What a golden set holds and where its first cases come from, the reference solution that proves a task can be passed, capability versus regression sets, recorded partitions, and what makes evaluation information contaminate selection.',
+      estimatedMinutes: 30,
       sources: [
         {
-          label: 'OpenTelemetry — Traces',
-          url: 'https://opentelemetry.io/docs/concepts/signals/traces/',
-          reviewedOn: '2026-09-08',
+          label: 'Anthropic, “Demystifying evals for AI agents” (9 January 2026): tasks, 20 to 50 tasks from real failures, reference solutions, capability and regression evals',
+          url: 'https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents',
+          reviewedOn: '2026-10-21',
         },
         {
-          label: 'Google SRE Book — Service level objectives',
-          url: 'https://sre.google/sre-book/service-level-objectives/',
-          reviewedOn: '2026-09-08',
+          label: 'Snowflake, Staff Applied AI Engineer (FDE) posting: quality metrics, evaluation frameworks and golden datasets',
+          url: 'https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Python docs: random, notes on reproducibility',
+          url: 'https://docs.python.org/3/library/random.html',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Marlbrook’s triage router went out on a Tuesday. It answered every request, returned a 200 every time, and kept its p95 under half a second. Nine days later an operations lead mentioned that returns tickets had stopped landing in the returns queue. Nobody on the team could say when that started, because nothing they collected would have shown it. Three kinds of signal were available to them, and each answers a different question; picking the wrong one is how a team ends up with four dashboards and no answer.',
+            'Marlbrook’s support workbench reads an incoming ticket and proposes a queue for it. It gets that right most of the time, and “most of the time” is the whole problem: nobody in the room can say whether last week’s change helped, hurt, or moved the failures somewhere quieter. What settles it is a set of tickets with the right queue written down before the system sees them.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Call that set the golden set: cases with inputs, an agreed expected answer, a slice label and a record of who agreed. Snowflake’s Staff Applied AI Engineer (FDE) posting asks the engineer to translate “ambiguous customer goals into measurable quality metrics, evaluation frameworks, and golden datasets”. Anthropic’s “Demystifying evals for AI agents” defines a task as “a single test with defined inputs and success criteria” and says “20-50 simple tasks drawn from real failures is a great start”. You do not need hundreds of cases before you measure anything.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'The same article asks for a reference solution per task: “a known working output that passes all graders”. It proves two things at once, that the task can be passed and that the grader is configured correctly. Every graded exercise in this path follows that rule: its reference solution must pass its own visible and hidden checks before the exercise ships.',
         },
         {
           kind: 'table',
-          caption: 'The three signals, and the question each one is bad at.',
-          headers: ['Signal', 'The question it answers', 'What it cannot tell you'],
+          caption: 'Two kinds of set, as the Anthropic article separates them. A case can move from the first to the second once the system passes it reliably.',
+          headers: ['Set', 'Expected pass rate', 'What it is for'],
+          rows: [
+            ['Capability set', 'Starts low', 'A hill to climb: cases the system cannot pass yet, which show whether a change made progress.'],
+            ['Regression set', 'Close to 100%', 'A guard: cases the system already passes, which catch a change that breaks them.'],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Escaped defects and operator corrections are useful regression cases, but they form a selected sample of problems rather than a representative traffic baseline. Verify labels and combine appropriate traffic sampling with deliberate difficult/safety cases. Use authorized, minimized or redacted data; do not put sensitive customer content into an unrestricted repository.',
+        },
+        {
+          kind: 'code',
+          language: 'javascript',
+          code: "const evaluationCase = {\n  id: 'C-27',\n  slice: 'returns',            // the labelled group this case belongs to\n  input: 'Sent back two chilled trays on Tuesday, still no credit.',\n  expected: 'tier-2',          // the queue an operator agreed it belongs in\n  sourceTicket: 'TKT-88104',   // where the case came from\n  labelledBy: 'ops-lead',\n  labelledOn: '2026-08-14',\n};",
+          caption: 'A hypothetical case with one expected queue for this exercise. Id supports joining predictions and slice supports grouped metrics; provenance helps review a disputed label.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Define the task and labelling policy, including ambiguous cases, acceptable alternatives and adjudication. This exercise uses one expected string per case, but real tasks need not have exactly one universally agreed answer. Preserve relevant input behavior while following data-minimization/access rules, and document any preprocessing. Record provenance, labels and relevant slices so disagreements and changes can be investigated.',
+        },
+        {
+          kind: 'callout',
+          tone: 'note',
+          body:
+            'All cases, predictions and reported figures here are authored fixtures, not measured model performance. Real systems can be deterministic or variable depending on their implementation and configuration. Use actual repeat-run evidence when variability matters; fixture repeatability alone does not establish production realism.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Choose development and held-out partitions before fitting or selecting the system. Split related cases together and respect time/tenant boundaries appropriate to the intended evaluation. A seeded draw can help reproduce a split for fixed input ordering and runtime/algorithm; it is not a guarantee across arbitrary data or library changes. Persist the actual split ids and versioned sampling method. A 50/50 split is not required; this example uses 24 development and 12 held-out cases.',
+        },
+        {
+          kind: 'trace',
+          caption: 'Development prompt variants and held-out feedback, with explicit correct/total counts.',
+          trace: {
+            shape: 'array',
+            frames: [
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v1", "dev 17/24 ≈ 0.71", "held-out: not run"],
+                note: 'The fixed partition has 24 development and 12 held-out cases. All cases are answered in this trace; prompt v1 gets 17 of 24 development labels right. No held-out result has been used.',
+                counter: { label: 'Held-out runs', value: 0 },
+              },
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v2", "dev 18/24 = 0.75", "held-out: not run"],
+                marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
+                note: 'Prompt v2 gets 18 of 24 development labels right. The held-out partition stays untouched.',
+                counter: { label: 'Held-out runs', value: 0 },
+              },
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v3", "dev 20/24 ≈ 0.83", "held-out: not run"],
+                marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
+                note: 'Prompt v3 gets 20 of 24 development labels right. This is selection using the same development cases, not fresh external evidence.',
+                counter: { label: 'Held-out runs', value: 0 },
+              },
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out: not run"],
+                marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
+                note: 'Prompt v4 gets 21 of 24 development labels right and is selected before the held-out run.',
+                counter: { label: 'Held-out runs', value: 0 },
+              },
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out 8/12 ≈ 0.67"],
+                marks: [{ index: 4, role: 'settled' }],
+                note: 'The selected v4 gets 8 of 12 held-out labels right. Report the actual counts and sampling limits. The difference from development performance does not isolate tuning bias or establish statistical significance.',
+                counter: { label: 'Held-out runs', value: 1 },
+              },
+              {
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v5", "dev 20/24 ≈ 0.83", "held-out 9/12 = 0.75"],
+                marks: [{ index: 4, role: 'excluded' }],
+                note: 'Prompt v5 is then selected because its held-out score rises to 9 of 12. Those cases have now influenced model/prompt selection and are development evidence for that decision. A fresh unexposed evaluation is needed for an independent estimate; the old observations remain reportable with their role disclosed.',
+                counter: { label: 'Held-out runs', value: 2 },
+              },
+            ],
+          },
+        },
+        {
+          kind: 'prose',
+          body:
+            'Evaluation contamination occurs when evaluation information influences the system or selection it was intended to assess independently. Re-running an unchanged frozen system to measure variability is not automatically leakage; using the feedback to choose prompts, thresholds or candidates is. Document what was exposed and used, and preserve a genuinely independent evaluation for the claim you need.',
+        },
+        {
+          kind: 'table',
+          caption: 'Three contamination or coverage risks, with repairs appropriate to the evidence claim.',
+          headers: ['How it happens', 'What it inflates', 'What to do about it'],
           rows: [
             [
-              'Logs',
-              'What happened inside this one request, in whatever words the handler chose',
-              'Whether it is happening more often than yesterday, until a query or log-based aggregation counts matching events',
+              'You run the held-out set after each change and keep the variant that scored best',
+              'Selecting from test feedback can bias the reported estimate; the amount is not guaranteed to grow on every added trial',
+              'Tune on development data, record assessment exposure and obtain independent evidence when earlier assessment feedback has guided later development',
             ],
             [
-              'Metrics',
-              'How often, how slow and how many, aggregated over the chosen instrumented population',
-              'Usually not an individual request payload; exemplars/trace links can connect selected observations',
+              'Few-shot examples in the prompt were copied out of the evaluation set',
+              'Exposure to the same labelled examples undermines an independent generalization claim, whether or not the observed score rises',
+              'Remove exposed cases/related examples from claims of independent evaluation and obtain fresh unexposed evidence; deleting only known copied cases may not undo broader selection effects',
             ],
             [
-              'Traces',
-              'Where one request spent its time, span by span, across the services that propagated and recorded it',
-              'Not necessarily the underlying cause; attributes/events and correlated telemetry may help',
+              'The same generator produced both the fixtures the system was built against and the cases it is measured on',
+              'Shared templates can narrow coverage or introduce related-case overlap; a common generator alone does not prove label leakage',
+              'Use independently constructed, appropriately sampled cases for the intended population. Authorized real traffic or carefully separated synthetic cases can be valid; record provenance and limits',
             ],
           ],
         },
         {
           kind: 'prose',
           body:
-            "Use structured event fields that answer operational questions: a request/trace correlation id, authorized tenant reference, release, actual flag branch, outcome and duration. Free-text logs can be searched, but stable fields make aggregation less ambiguous. Record outcome on failure paths too. IDs and tenant references can themselves be sensitive: minimize, restrict access and retention, and avoid high-cardinality metric labels unless the backend and cost policy support them.",
-        },
-        {
-          kind: 'code',
-          language: 'javascript',
-          code: "// One line per request, emitted whatever the outcome was.\nlog.info({\n  event: 'triage.completed',\n  requestId: ctx.requestId,   // the same id the trace carries\n  tenantId: ctx.tenantId,\n  release: '2026-09-08.3',\n  variant: 'kb-lookup:on',    // which branch of the flag produced this row\n  outcome: 'abstained',       // routed | abstained | failed\n  slice: 'returns',\n  durationMs: 412,\n});",
-          caption: 'What is missing matters as much as what is there: no ticket body, no retrieved article, no model output.',
+            'A shared template may miss useful variation: a keyword rule fitted to “still no credit” might fail on “nobody has refunded me.” That is a coverage risk to test, not proof it must fail or that all synthetic evaluation is invalid. Separate related/template-derived examples and evaluate the intended task population.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            "Logs can widen access and retention beyond the source system. This workbench policy excludes raw ticket bodies, retrieved article text and generated answers from routine operational logs. Use protected references and fetch content through authorized paths when needed. Other systems may retain carefully redacted content under an explicit approved policy; logging an id alone does not establish privacy.",
+            'On 12 cases, one changed correctness result is 1/12≈8.33 percentage points. That observed change is real for the sample but may be imprecise evidence about wider performance. Report counts, paired errors, relevant uncertainty and sampling limits; do not call a one-case difference statistically established or meaningless without analysis.',
         },
         {
           kind: 'prose',
           body:
-            "Metrics include counters, gauges and distributions. Label combinations drive time-series cardinality and cost; there is no universal tenant-count cutoff. Keep request ids out of ordinary metric labels and budget tenant/slice dimensions against the actual backend. Report relevant latency distributions alongside volume and errors. A mean of 400 ms cannot include 5% of requests taking 9 seconds with nonnegative remaining latencies: that tail alone contributes 450 ms. A valid comparison is all requests at 400 ms versus 95 at 0 ms and five at 8,000 ms per 100 requests. Both means are 400 ms but the tails differ. Define the SLI, target, window and error-budget policy before rollout; it is not unrestricted permission to spend reliability.",
+            'Once a defect case has guided a fix, keep it as development/regression evidence. Shipping the fix does not make that known case unseen again. New independent cases may join a future held-out evaluation under a documented separation policy; use an additional untouched set when known test feedback has steered development.',
         },
         {
           kind: 'prose',
           body:
-            "A trace groups related spans under a trace id, often with parent-child relationships across instrumented services. Missing instrumentation, sampling or propagation can leave gaps. Durations and attributes help locate waiting and work, but nesting alone does not establish exclusive time: children can overlap or run asynchronously. Correlated logs and dependency metrics can also identify slow operations. Keep attributes purposeful and protect tenant and request identifiers.",
-        },
-        {
-          kind: 'prose',
-          body:
-            "Name the failure and the signals that could reveal it. In this authored router incident, 40% of returns tickets receive a no-confident-queue response and go to manual review while HTTP responses remain 200. The stated upper latency/error/CPU monitors stay healthy. Abstention is not generally cheaper or faster; its cost and latency depend on work already done and the handoff. This case stipulates healthy operational monitors, not universal invisibility to every other monitor.",
-        },
-        {
-          kind: 'prose',
-          body:
-            "A returns-slice abstention rate compared with a relevant baseline directly tracks this symptom. Define numerator, eligible denominator, observation window, minimum volume, threshold and alert delivery. A counter/division can implement the rate, but one hour of guaranteed detection cannot be inferred without traffic and evaluation timing. Investigate traffic and policy changes as well as code; abstention can be appropriate.",
-        },
-        {
-          kind: 'callout',
-          tone: 'note',
-          body:
-            "A fixture request returning HTTP 200 confirms that sampled endpoint response, not all service availability or semantic correctness. This failure also returned 200. An explicit expected-answer probe can test a bounded correctness case, while broader quality needs representative evidence. Detection cost and coverage depend on the actual check; correctness is not inherently the expensive half.",
-        },
-        {
-          kind: 'prose',
-          body:
-            'Rollout is the other half. Send the change to 1% of traffic, then 5%, then 25%, then everything, and read the signal between stages. The value is not the caution; it is that each stage is a decision point where somebody can say no while the blast radius is still small.',
-        },
-        {
-          kind: 'prose',
-          body:
-            'Write the abort condition down before the first stage opens, in numbers, with the baseline next to it. “Roll back if returns abstention passes 12%” is a sentence anybody on call can act on at two in the morning. “Roll back if it looks bad” is an argument you will have while the queue backs up, with the person who shipped the change in the room.',
-        },
-        {
-          kind: 'trace',
-          caption: 'Four stages, one abort condition written down in advance, and the stage that trips it.',
-          trace: {
-            shape: 'array',
-            frames: [
-              {
-                cells: ['baseline · 2 weeks', 'error rate 0.3%', 'returns abstention 6%', 'abort above 12%'],
-                marks: [{ index: 3, role: 'settled' }],
-                note: 'Before anything ships, the team records the fortnight’s numbers and writes the abort condition beside them: roll back if returns abstention passes 12%. Nobody has to interpret that later.',
-                counter: { label: 'Tickets on the new path', value: 0 },
-              },
-              {
-                cells: ['stage 1% · 31 tickets', 'error rate 0.0%', 'returns abstention 3%', 'abort above 12%'],
-                marks: [{ index: 0, role: 'active' }, { index: 2, role: 'excluded' }],
-                note: 'All 31 first-stage tickets are returns tickets in this fixture; one abstention is 3.23%, displayed as 3%. One event moves the rate by about three points, so the displayed rounded rate is coarse. It is evidence about those requests, not enough by itself to establish release safety; the slice denominator must be retained with its rate.',
-                counter: { label: 'Tickets on the new path', value: 31 },
-              },
-              {
-                cells: ['stage 5% · 156 tickets', 'error rate 0.6%', 'returns abstention 7%', 'abort above 12%'],
-                marks: [{ index: 0, role: 'active' }, { index: 2, role: 'compare' }],
-                note: 'At this stage seven of 100 returns tickets abstain, among 156 total tickets; one overall error is about 0.6%. The 7% is below the agreed 12% operational threshold. Continuing is a policy decision, not proof of statistical equivalence to 6%; the total request count alone would not establish the slice sample size.',
-                counter: { label: 'Tickets on the new path', value: 156 },
-              },
-              {
-                cells: ['stage 25% · 790 tickets', 'error rate 0.5%', 'returns abstention 14%', 'abort above 12%'],
-                marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
-                note: 'At 25%, fourteen of 100 returns tickets abstain among 790 total tickets. The returns rate reaches 14% and crosses the line. The displayed error rate is still below its separate policy threshold and the latency is still fine, which is exactly why the abort condition was written against abstention instead.',
-                counter: { label: 'Tickets on the new path', value: 790 },
-              },
-              {
-                cells: ['flag off · 0 tickets', 'error rate 0.3%', 'returns abstention 6%', 'aborted at 14:52'],
-                marks: [{ index: 3, role: 'settled' }],
-                note: 'The flag goes off twelve minutes after the stage opened, the rates return to the baseline, and the investigation starts with 790 tickets of evidence and the prior workflow restored in this stipulated example. Re-check queued work and downstream impact; flag state alone does not prove recovery.',
-                counter: { label: 'Tickets on the new path', value: 0 },
-              },
-            ],
-          },
-        },
-        {
-          kind: 'callout',
-          tone: 'warning',
-          body:
-            "At 1% of 200 requests per day, expected volume is only two requests per day, and a particular slice may have fewer. One abstention in two observations is 50% and can cross a 12% threshold; zero is 0%. Such small samples are coarse and highly uncertain, not unable to cross the line. Specify per-slice minimum counts, observation time and a response policy. Treat early stages as smoke tests when volume cannot support the intended quality inference.",
+            'Version evaluation definitions, split ids and permitted provenance with the code or an appropriately protected data registry. Keep sensitive source content/access references under the applicable retention and access policy. Labels can change; record who adjudicated them, when and under which policy rather than treating a versioned answer as unquestionable truth.',
         },
       ],
     },
     {
-      id: 'fde-v1-m09-l2',
-      title: 'Incidents and rollback',
+      id: 'fde-v1-m07-l2',
+      title: 'Failure modes, cost and latency beside quality',
       summary:
-        'Mitigating before you have the cause, reading a trace down to the dependency holding the latency, what a rollback cannot undo, and running the review as a mechanism instead of a document.',
-      estimatedMinutes: 25,
+        'Explicit denominators, coverage and conditional quality, cost per request and p95 latency in the same report, a failure-mode taxonomy read from traces, observed slice changes and a predeclared comparison policy.',
+      estimatedMinutes: 35,
       sources: [
         {
-          label: 'Google SRE Book — Postmortem culture: learning from failure',
-          url: 'https://sre.google/sre-book/postmortem-culture/',
-          reviewedOn: '2026-09-08',
+          label: 'Anthropic, “Demystifying evals for AI agents” (9 January 2026): latency, token usage, cost per task and error rates tracked on a static bank of tasks; reading transcripts',
+          url: 'https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents',
+          reviewedOn: '2026-10-21',
         },
         {
-          label: 'RFC 9110 — HTTP Semantics',
-          url: 'https://www.rfc-editor.org/rfc/rfc9110',
-          reviewedOn: '2026-09-08',
+          label: 'Snowflake, Staff Applied AI Engineer (FDE) posting, preferred qualifications: failure-mode analysis that categorizes errors as hallucination, retrieval miss, planning failure and tool misuse',
+          url: 'https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Harvey, Founding Forward Deployed Engineer posting on Built In (listing removed 9 February 2026): evals and harnesses per client, success metrics for custom builds',
+          url: 'https://builtin.com/job/forward-deployment-engineer/7406694',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Google SRE Book: Service Level Objectives, latency as a distribution',
+          url: 'https://sre.google/sre-book/service-level-objectives/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'OpenTelemetry: Traces and spans',
+          url: 'https://opentelemetry.io/docs/concepts/signals/traces/',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Twenty minutes after release 2026-09-08.3, p95 on `POST /tickets/triage` goes from 400 ms to 8.9 seconds. Operators are watching a spinner, the queue is growing, and somebody has already asked in the channel whether it might be the database. You have two jobs and they compete: get the service working, and find out what broke it.',
+            'Report the metrics needed to assess the agreed quality, coverage, latency and cost objectives. Improvements can trade off, but not every improvement necessarily worsens another metric. Name each denominator, sample and measurement method before comparing candidates.',
         },
         {
           kind: 'prose',
           body:
-            "Prioritize reducing current impact using a tested, authorized mitigation with understood consequences. A safe flag bypass may be preferable to redeploying incompatible old code. Preserve useful evidence when feasible and verify recovery in latency, errors and the fallback workflow. Some investigation may be needed to choose a safe mitigation; do not wait for a complete explanation when a suitable response is available. Changing state can remove reproduction opportunities even when retained logs and traces remain.",
+            'Put cost and latency in the same report as quality, computed over the same cases. Anthropic’s evals article lists “latency, token usage, cost per task, and error rates” as numbers you can track on a static bank of tasks. Harvey’s founding FDE posting asked for evals and harnesses that capture real-world quality “on a client-by-client basis” and for “crisp success metrics” per custom build. A customer who agreed a latency limit and a budget reads all three numbers in one row.',
+        },
+        {
+          kind: 'table',
+          caption: 'The four numbers a candidate is reported on, side by side, and what each one leaves out.',
+          headers: ['Number', 'What it answers', 'What it cannot tell you'],
+          rows: [
+            [
+              'Correct-answer yield over all cases',
+              'Of everything that arrived, how much did the system get right',
+              'Whether it got there by answering everything badly or answering a little very well',
+            ],
+            [
+              'Coverage, and the abstention rate beside it',
+              'How much of the work the system took on at all',
+              'Whether the cases it declined were the hard ones or a random third',
+            ],
+            [
+              'Cost per request',
+              'Total agreed processing cost divided by every request in the set, abstentions included; state which costs are included',
+              'What an abstention costs, because that bill arrives as an operator’s time',
+            ],
+            [
+              'p95 latency',
+              'What the slow end of the distribution looks like',
+              'What the slowest 5% did. A p95 of 2s is compatible with a p99 of 40s',
+            ],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Coverage is the one that hides in plain sight. A system that answers 24 of 36 cases and is right on 22 of them can be reported two ways: 22 of 36, which is 0.61, or 22 of 24, which is 0.92. Both are arithmetic. They measure different quantities; label the denominator and coverage so conditional accuracy is not confused with all-case correct yield.',
+        },
+        {
+          kind: 'code',
+          language: 'javascript',
+          code: 'const report = {\n  total: 36, answered: 24, abstained: 12, correct: 22,\n  accuracy: 0.6111, // this exercise: correct / total, a correct-answer yield\n  coverage: 0.6667, // answered / total\n  accuracyWhenAnswered: 0.9167, // correct / answered, explicitly conditional accuracy\n  costPerRequestCents: 0.4, // authored included processing cost / total, abstentions included\n  p95LatencyMs: 1840, // authored, nearest-rank p95\n};',
+          caption: 'One authored run with explicit denominators, cost and latency in the same object. Conditional accuracy and correct-answer yield differ by about 30.56 percentage points.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            "A longer timeout may reduce timeout errors while increasing resource occupancy; it does not itself reduce dependency latency and can be appropriate only with a capacity/deadline policy. Restarting may mitigate some failures but loses in-process evidence and may not address the cause. Neither recurrence within minutes nor worsening every incident is established by these actions alone. Choose from the actual failure and verify the effect.",
+            'Answered-case accuracy is a legitimate metric when labelled and accompanied by coverage. Removing a wrong answer raises it; removing a correct answer can lower it. Abstaining more is not inherently monotonic improvement. With no answers, the conditional ratio has no observations; this exercise returns 0 as an explicit API convention, not evidence of zero quality or calibration. Whether abstention counts as an error is the scoring policy, not a universal definition.',
         },
         {
           kind: 'prose',
           body:
-            "Inspect a representative slow trace and its span relationships. Under explicitly sequential, non-overlapping, fully observed synchronous children, subtract their durations from their parent to find time outside those children. Otherwise use timestamps and intervals, not a naive sum. A dominant duration identifies where this request waited; it need not reveal the root cause or explain the whole incident.",
+            'Slices are how you find out where the accuracy came from. Split by whatever the customer would split by: ticket topic, tenant, language, channel, the accounts on the enterprise contract. Marlbrook’s set slices by topic into billing, delivery and returns. Twelve cases each is small, but a slice that is too small to prove a regression is also too small to prove there is not one.',
         },
         {
           kind: 'trace',
-          caption: 'A fixture with synchronous non-overlapping shown children. Durations locate waiting; omitted children and individual attempt timings remain unknown.',
+          caption: 'A candidate against the baseline, one slice at a time, ending with the aggregate that hides the third one.',
           trace: {
             shape: 'array',
             frames: [
               {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                note: 'One request, trace 7f21. The root took 8 940 ms and its children account for almost all of it. Read them, do not guess between them.',
+                cells: ['billing 0.67', 'delivery 0.75', 'returns 0.83', 'overall 0.75'],
+                note: 'The baseline on the held-out set: 8 of 12 billing tickets, 9 of 12 delivery, 10 of 12 returns, 27 of 36 overall.',
               },
               {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 1, role: 'excluded' }, { index: 2, role: 'excluded' }],
-                note: 'Auth and the ticket read cost 12 ms and 31 ms. Being first in the request does not make a span the cause; 43 ms cannot produce a nine-second page.',
+                cells: ['billing 0.92', 'delivery 0.75', 'returns 0.83', 'overall: not yet'],
+                marks: [{ index: 0, role: 'active' }],
+                note: 'The candidate’s billing slice goes from 8 of 12 to 11 of 12. Three tickets that used to reach the wrong queue now reach the right one.',
               },
               {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 1, role: 'excluded' }, { index: 2, role: 'excluded' }, { index: 5, role: 'excluded' }, { index: 6, role: 'excluded' }],
-                note: 'The model call is 180 ms and the write is 88 ms. Both are ruled out by arithmetic rather than by intuition, which matters because the model call is where everyone looks first.',
+                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.83', 'overall: not yet'],
+                marks: [{ index: 1, role: 'active' }],
+                note: 'Delivery goes from 9 of 12 to 12 of 12. Two slices out of three are better, and so far the change looks unambiguous.',
               },
               {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 3, role: 'active' }],
-                note: 'That leaves kb.search at 8 610 ms, which is 96% of the request. It is not a leaf, so it is a location and not yet an answer.',
+                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.58', 'overall: not yet'],
+                marks: [{ index: 2, role: 'compare' }],
+                note: 'Returns falls from 10 of 12 to 7 of 12. Three returns tickets that used to be routed correctly now are not, and nothing in the aggregate has been computed yet.',
               },
               {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 3, role: 'compare' }, { index: 4, role: 'active' }],
-                note: 'The displayed vector child holds 8,540 of 8,610 ms. Under the stated synchronous non-overlap model, 70 ms lies outside this shown child, which can include unshown work; it is not proven wrapper self-time.',
-              },
-              {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 4, role: 'settled' }],
-                note: 'Three attempts are recorded. Their individual durations and waits are not shown, so the 8,540 ms total cannot establish three equal 2.8-second calls. Retries add dependency calls; aggregate traffic amplification depends on affected requests and concurrent callers.',
-              },
-              {
-                cells: [
-                  'POST /tickets/triage · 8 940 ms',
-                  'auth.verify · 12 ms',
-                  'tickets.load · 31 ms',
-                  'kb.search · 8 610 ms',
-                  'kb.vector-query · 8 540 ms · 3 attempts',
-                  'router.classify · 180 ms',
-                  'tickets.write · 88 ms',
-                ],
-                marks: [{ index: 4, role: 'settled' }],
-                note: 'The trace names where the time went. It does not say why the vector store slowed down, and the mitigation did not wait for that answer.',
+                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.58', 'overall 0.83'],
+                marks: [{ index: 2, role: 'excluded' }, { index: 3, role: 'settled' }],
+                note: 'The aggregate rises from 0.75 to 0.83. A report saying “accuracy improved by eight points” is true and omits the only slice anybody would have objected to, which is why the comparison has to name the regressed slice next to the win.',
               },
             ],
           },
         },
         {
-          kind: 'code',
-          language: 'javascript',
-          code: "// Separate assumed failure scenario, not the trace timings.\nconst attemptMs = 2800; // every attempt fails after 2.8 seconds\nconst backoffMs = [0, 400, 800]; // waits before attempts 1, 2 and 3\nconst spent = backoffMs.reduce((total, wait) => total + wait, 0) + attemptMs * 3;\n// 1,200 + 8,400 = 9,600 ms. Each affected request makes three calls.\n// This is not a measured global traffic rate or a policy for unsafe replay.",
-          caption: 'A separate three-total-attempt illustration: 3 × 2,800 + 400 + 800 = 9,600 ms. It is not the 8,540 ms operation in the trace; retries must be triggered by failures, not slowness alone.',
+          kind: 'prose',
+          body:
+            'A slice tells you where the errors are. A failure-mode taxonomy tells you which part of the system made them. Snowflake’s FDE posting lists, as a preferred qualification, experience with “failure-mode analysis on agent or RAG systems”, categorizing errors as hallucination, retrieval miss, planning failure and tool misuse, and “driving each down with targeted evals”. This module uses three of those labels plus a fourth for errors you cannot read. The Marlbrook router makes one call per ticket, so it has no plan to fail. The posting names the labels without defining them, so the definitions below are this module’s convention. Hallucination is the catch-all for generation errors: the evidence arrived, the expected tool ran, and the answer is still wrong. That is narrower than the everyday sense of an invented or unsupported answer, which here would also cover a retrieval miss.',
+        },
+        {
+          kind: 'table',
+          caption: 'The four labels the exercise assigns to a wrong answer, checked in this order, and where the fix for each one starts.',
+          headers: ['Label', 'What the trace shows', 'Where the fix starts'],
+          rows: [
+            ['Unclassified', 'No retrieved ids and no tool name: nothing was logged', 'Instrumentation. Record the trace before you change the system.'],
+            ['Retrieval miss', 'The article that supports the case’s label is not among the retrieved ids', 'The index, the chunking or the access filter from M05. A prompt change cannot fix evidence the model never saw.'],
+            ['Tool misuse', 'The run called a different tool from the one the case expects', 'The tool definitions and the gates from M06.'],
+            ['Hallucination', 'The right article arrived and the right tool ran, and the answer is still wrong', 'The generation step: the prompt, the model choice, the output validation from M04.'],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Classify the candidate’s five wrong returns answers and the regression reads differently. Three never retrieved the returns article, one called refunds.create instead of assigning a queue, and one had the evidence and still answered wrong. A prompt edit aimed at the returns slice would address one of the five. The keyword baseline’s nine errors all land in unclassified, because a rule table logs no retrieval and no tool call.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            "The exercise combines a bounded retry policy and a circuit breaker. Backoff spaces attempts but does not by itself enforce a global rate/concurrency budget. An open circuit refuses new sends through that instance; already in-flight calls and other instances may still reach the dependency. This fixture admits one half-open probe, while real systems can choose other policies. Opening can reduce load but does not guarantee recovery.",
+            'A rule that reads two trace fields gives you a first sort of the errors. Anthropic’s article warns that you will not know whether your graders work “unless you read the transcripts and grades from many trials”. Read a sample from every label before you act on the counts, and expect some errors to need a label this rule does not have.',
         },
         {
           kind: 'prose',
           body:
-            "Retry only when the operation can safely be repeated and the deadline/load budget permits it. RFC 9110 distinguishes status classes and idempotent methods; it does not say every 4xx will always repeat unchanged. For example, authentication can change and 408 permits repeating a request. A 429 can include Retry-After. A 5xx or transport failure does not by itself make a non-idempotent effect safe to replay. The exercise uses an explicitly synthetic status-only policy over a safe replay fixture; production needs the actual operation/provider contract, timeout handling, jitter and deadline budgets.",
+            'Inspect latency distributions as well as any useful mean. For 95 requests at 400 ms and 5 at 30 s, the mean is 1880 ms; nearest-rank p95 is 400 ms and p99 is 30 s. Other quantile conventions can interpolate differently, so name the method and sample size. Include relevant failures/timeouts. Per-request spans can help explain waits/critical paths, but component p95 values do not generally add to endpoint p95 and traces do not automatically contain every measurement.',
         },
         {
           kind: 'prose',
           body:
-            "In this scenario rollback redeploys only the previous application artifact. No schema rollback, data restore or compensating external operation runs automatically. Other deployment systems can include those steps explicitly. Verify old-code compatibility before using this mitigation.",
+            'If included total cost is fixed, dividing by fewer answered cases makes cost per answered case higher than cost per input case, not lower. Compare actual totals and denominators; abstention may change processing cost and operator work. A handoff may still save part of the work, so measure operator time rather than assuming every abstention yields zero benefit.',
         },
         {
           kind: 'table',
-          caption: 'Release 2026-09-08.3, and what redeploying the previous build does to each part of it.',
-          headers: ['What the release did', 'What the rollback restores', 'What is still there afterwards'],
+          caption: 'An authored candidate comparison on the same fixed cases.',
+          headers: ['Candidate', 'Accuracy · coverage', 'Cost and p95', 'What it argues'],
           rows: [
             [
-              'Deployed new handler code',
-              'The previous artifact on instances once rollout completes; in-flight/new-version work may remain',
-              'Nothing. This is the part a rollback is for',
+              'Keyword router, 40 rules',
+              '0.75 · 1.00',
+              '0 cents per request · p95 12 ms',
+              'The authored baseline for the stated evaluation; compare all agreed objectives, not only speed and per-call cost',
             ],
             [
-              'Ran a migration that dropped `tickets.legacy_queue`',
-              'Nothing about the schema',
-              'The column is gone, and the old build queries a table that no longer has it',
+              'Model call with retrieval',
+              '0.83 · 1.00',
+              '0.35 cents per request · p95 2400 ms',
+              'About 8.33 percentage points on this sample for an authored 0.35 US cents per request; 33 of 36 requests take 900 ms, and three slow ones set the p95',
             ],
             [
-              'Wrote 6 200 rows in the new shape',
-              'The old writer',
-              'Every row already written, which the old reader may not parse',
-            ],
-            [
-              'Sent 4 100 “your ticket has moved” emails',
-              'Nothing',
-              'Delivered emails are not recalled by code rollback; further communication follows the incident policy',
-            ],
-            [
-              'Consumed idempotency keys at the billing partner',
-              'Nothing',
-              'Under this stipulated retained-key contract the partner replays the recorded result; real matching/retention rules vary',
+              'Model call with an abstention threshold',
+              '0.61 · 0.67',
+              '0.40 cents per request · p95 1840 ms',
+              'Right on 22 of the 24 it answers, and it hands 12 of 36 tickets back to a person',
             ],
           ],
         },
         {
-          kind: 'callout',
-          tone: 'note',
+          kind: 'prose',
           body:
-            "An expand/migrate/contract sequence can preserve compatibility: add fields, make readers/writers compatible, backfill and validate, then retire old fields only after deployed and rollback-supported versions no longer require them. Dual writing needs consistency/failure handling. Dropping a column is not automatically reversible, and preserving schema shape does not guarantee that old readers understand new data.",
+            'The rule baseline is a serious candidate, but its 0 cents is an authored included cost, not proof of zero compute/maintenance cost. The 12 ms figure is authored here, not a universal deterministic latency. Decide whether a candidate meets the actual quality, coverage, auditability and latency objectives; a 200 ms constraint alone does not establish every part of a release decision.',
         },
         {
           kind: 'prose',
           body:
-            'Then the review. The SRE Book’s postmortem chapter makes two demands that are easy to quote and hard to keep: write it without blaming a person, and give it a life beyond the document. The first is not politeness. An engineer who expects to be named as the cause will describe what happened less precisely, and you lose the detail you called the meeting for.',
-        },
-        {
-          kind: 'prose',
-          body:
-            "Turn the review into tracked actions with a specific owner, due date, priority and verification of completion. A short list can be easier to deliver, but neither three completed actions nor failure of a twelve-item list follows from list length alone. Consider detection, mitigation and prevention, and check whether each action reduces the observed risk.",
+            'Choose the comparison rule before seeing results. This exercise first rejects a coverage loss greater than 0.05, then prefers a correct-yield gain greater than 0.01 or the baseline for a loss below -0.01; otherwise it ties. A 0.05 rate difference is five percentage points and 0.01 is one percentage point. These are percentage-point differences in rates, not significance tests or universal release rules. Matching slice names is necessary for this summary comparison but cannot prove matching case ids, labels or sampling windows; verify those upstream. Report regressions and uncertainty even when the toy rule selects a candidate.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'The check and the exercise in this module grade decisions and code against fixtures written for them. A passing circuit here says your implementation handles these scripted failures; it is not a statement about your service, and no exercise on this path can make one. What it does give you is a helper whose behaviour you can describe precisely when somebody asks what happens when the dependency goes away.',
+            'Every model output, retrieval result, trace, cost and latency in this lesson and the exercise is an authored fixture, not a measured provider price, a recorded model response or a performance guarantee. Measure the full candidates, state included costs and operator effort, and re-evaluate when inputs, provider, model, prompt, policy or retrieval change.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'State the limits below the report: these 36 authored cases are not a measured representative production sample. Even a real fixed evaluation cannot guarantee performance on unseen ticket types, different source/index conditions or future model versions. Its evidence has a scope, uncertainty and date; document those before generalizing.',
         },
       ],
     },
   ],
   activities: [
     {
-      id: 'fde-v1-m09-l1-read',
+      id: 'fde-v1-m07-l1-read',
       kind: 'lesson',
       purpose: 'exercise',
       verification: 'self_reviewed',
-      title: 'Read: observability and rollout',
-      summary: 'Signal coverage and privacy, metric denominators, slice volume and a staged rollout governed by explicit response policy.',
-      competencies: ['operations'],
-      estimatedMinutes: 25,
-      lessonId: 'fde-v1-m09-l1',
+      title: 'Read: golden sets, reference cases and leakage',
+      summary: 'Golden sets built from real failures, reference solutions, capability versus regression sets, recorded independent partitions and contamination limits.',
+      competencies: ['evaluation'],
+      estimatedMinutes: 30,
+      lessonId: 'fde-v1-m07-l1',
     },
     {
-      id: 'fde-v1-m09-l2-read',
+      id: 'fde-v1-m07-l2-read',
       kind: 'lesson',
       purpose: 'exercise',
       verification: 'self_reviewed',
-      title: 'Read: incidents and rollback',
-      summary: 'Choose and verify a safe mitigation, interpret span timing assumptions and distinguish code-only rollback from external recovery.',
-      competencies: ['operations'],
-      estimatedMinutes: 25,
-      lessonId: 'fde-v1-m09-l2',
+      title: 'Read: failure modes, cost and latency beside quality',
+      summary: 'Explicit metric denominators, cost per request and p95 latency in one report, a failure-mode taxonomy, slice changes and a bounded comparison policy.',
+      competencies: ['evaluation'],
+      estimatedMinutes: 35,
+      lessonId: 'fde-v1-m07-l2',
     },
     {
-      id: 'fde-v1-m09-checks',
+      id: 'fde-v1-m07-checks',
       kind: 'check',
       purpose: 'exercise',
       verification: 'machine_verified',
-      title: 'Incident and rollout checks',
-      summary: 'Four bounded incident decisions: interpret inclusive trace timing, use a tested mitigation, identify code-only rollback limits and monitor slice abstention.',
-      competencies: ['operations'],
-      estimatedMinutes: 15,
+      title: 'Reading an evaluation report',
+      summary:
+        'Six evaluation decisions: explicit leakage, correctly labelled yield/error/abstention counts, aggregate-versus-slice observations, conditional quality alongside coverage, a failure mode read from a trace, and a release decision on quality, latency and cost together.',
+      competencies: ['evaluation'],
+      estimatedMinutes: 20,
       passThreshold: 0.8,
       questions: [
         {
-          id: "fde-v1-m09-q1",
-          prompt: "This triage trace shows total elapsed durations, including children. Assume the shown synchronous children run sequentially without overlap and the endpoint waits for each. Which shown operation dominates this request?",
-          context: {"language": "text", "code": "POST /tickets/triage            trace 7f21        8 940 ms\n├─ auth.verify                                        12 ms\n├─ tickets.load                                       31 ms\n├─ kb.search                                       8 610 ms\n│  ├─ kb.embed                                        44 ms\n│  └─ kb.vector-query          3 attempts          8 540 ms\n├─ router.classify                                   180 ms\n└─ tickets.write                                      88 ms"},
+          id: 'fde-v1-m07-q1',
+          prompt: "Each team compares a candidate router with its deterministic baseline. Assume the stated pre-tuning splits keep related ticket groups separate. Which report explicitly uses evaluation labels/examples to tune the candidate before reporting that same set?",
+          options: ["Team A split 30 rerouted-ticket cases into 20 development and 10 untouched test cases before tuning, then reported the 10.", "Team B reported a two-case win on 12 held-out cases, without further uncertainty analysis.", "Team C copied eight hard evaluation cases and their answers into the prompt, then reported performance on that evaluation set.", "Team D compared with a keyword router despite saying a non-model baseline is unfair."],
+          correct: 2,
+          explanation: "Team C directly supplies evaluated examples/answers to the candidate, so the reported set is no longer untouched evidence of generalization. Move those examples to development and obtain fresh unexposed evaluation data; removing only the eight does not automatically erase feedback or selection influence on the rest. Team A has a disjoint pre-tuning split under the stated assumption, though rerouted-ticket selection and a 10-case test limit its representativeness and precision. Team B raises sample-size/uncertainty questions, but a two-case difference alone does not prove leakage or establish its significance. Team D is a legitimate task baseline; compare agreed quality, critical errors, cost and latency rather than assuming a model must win because it uses language.",
+          competencies: ['evaluation'],
+        },
+        {
+          id: 'fde-v1-m07-q2',
+          prompt: "Coverage is 60% and accuracy among answered cases is 95%. For a hypothetical 400-ticket batch at those rates, which report gives the expected correct automatic decisions, wrong automatic decisions and abstentions? This arithmetic alone does not approve unattended closure.",
+          options: ["95% alone, because it is the fraction correct among the answers.", "40% abstention alone, because it is the work not answered automatically.", "57% correct-answer yield: 228 correct automatic decisions, 12 wrong decisions and 160 abstentions.", "p95 latency alone, because faster responses are automatically correct."],
+          correct: 2,
+          explanation: "Of 400 tickets, 0.60×400=240 are answered. Of those, 0.95×240=228 are correct and 12 are wrong; 160 are not answered. Thus coverage×conditional accuracy gives 0.57 correct-answer yield over all tickets, not a guarantee that 228 unattended closures are safe. Error tolerance, failure impact and latency remain separate acceptance decisions. Conditional accuracy alone omits how often the system answers, while abstention alone omits the quality of those answers. These counts follow the hypothetical rates; measured finite samples do not guarantee identical daily production counts.",
+          competencies: ['evaluation'],
+        },
+        {
+          id: 'fde-v1-m07-q3',
+          prompt: "The same held-out set has 12 cases each for billing, delivery and returns. Baseline→candidate correct counts are 8→11, 9→12 and 10→7. Overall that is 27/36→30/36 (75%→83.3%). How should these observations be read together?",
+          options: ["The aggregate must be wrong because one slice regressed.", "Report the observed aggregate gain and returns regression, then assess slice criteria and uncertainty before release.", "Ignore returns because a three-case change on 12 cases is necessarily noise.", "Omit returns because it did not improve the headline number."],
+          correct: 1,
+          explanation: "Billing gains 3 correct and delivery gains 3, while returns loses 3: net +3, from 27 to 30. Equivalently there are 6 fewer billing/delivery errors and 3 more returns errors on this sample. The aggregate can improve while a slice worsens. Report both, including counts and uncertainty, rather than declaring a guaranteed production tradeoff or dismissing the slice as noise. Twelve cases can motivate investigation without by themselves establishing a population regression or its absence. Apply the agreed critical-slice and overall criteria and collect suitable additional evidence where needed.",
+          competencies: ['evaluation'],
+        },
+        {
+          id: 'fde-v1-m07-q4',
+          prompt: "On 36 held-out cases, A answers 36 with 27 correct. B answers 24 with 22 correct. Why must coverage/abstention accompany their answered-case accuracy?",
+          options: ["B’s 22/24≈91.7% describes its answered subset; also report 24/36 coverage and 22/36 correct-answer yield.", "Because an abstention always costs more than an answer.", "Because more abstention proves better confidence calibration.", "Because abstentions must always be errors and 22/36 is the only honest metric."],
+          correct: 0,
+          explanation: "A has 75% conditional accuracy, 100% coverage and 75% correct-answer yield. B has about 91.7% conditional accuracy, 66.7% coverage and 61.1% yield, with 12 abstentions. B is more accurate on its selected answers, while A gets more of all 36 cases correct. Rejecting additional cases can raise or lower conditional accuracy depending on which cases are rejected; it is not automatically monotonic. A refusal-all system has undefined answered-case accuracy, not proof of calibration. Whether abstention counts as an error or a handoff cost depends on the evaluation/workflow definition, so label the metrics and report both coverage and conditional quality.",
+          competencies: ['evaluation'],
+        },
+        {
+          id: 'fde-v1-m07-q5',
+          prompt: 'A wrong answer on case C-33 carries this trace: the retriever returned only KB-delivery, and the router called queue.assign, the tool the case expects. The article that supports C-33’s label is KB-returns. Under this module’s taxonomy, which failure mode is it, and where does the fix start?',
           options: [
-            "kb.vector-query: its 8,540 ms covers most of the 8,940 ms request.",
-            "router.classify: every external model call must dominate retrieval time.",
-            "auth.verify: running first makes its duration include all later work.",
-            "tickets.write: running last makes its duration include all earlier work.",
+            'A retrieval miss: the supporting article never reached the model, so the fix starts in the index, the chunking or the access filter.',
+            'A hallucination: the model answered without support, so the fix starts with a prompt that forbids answers the context does not support.',
+            'Tool misuse: the router put the ticket in the wrong queue, so the fix starts in the queue.assign definition and its argument schema.',
+            'Unclassified: one trace cannot separate retrieval from generation, so the fix starts with more logging before any change.',
           ],
           correct: 0,
-          explanation: "The vector-query operation accounts for about 95.5% of this request under the stated timing model. Its three attempts show retrying, not the duration or cause of any individual attempt. The search span includes its 44 ms embed child and 8,540 ms vector child: 8,610 − 44 − 8,540 = 26 ms remains outside those children. The endpoint children sum to 8,921 ms, leaving 19 ms outside them. Total span duration includes children, not time spent before a span started. One trace identifies where this request waited; broader traces and dependency telemetry are needed to diagnose the incident.",
-          competencies: ['operations'],
+          explanation: 'The retrieved ids do not include KB-returns, so the model never saw the evidence for this label. That is a retrieval miss, and the fix belongs in M05’s territory: what the index holds, how it was chunked, and whether an access filter dropped the article. Calling it a hallucination skips the earlier check: in this module, hallucination applies only when the right evidence arrived and the answer is still wrong, and a stricter prompt cannot supply a missing article. It is not tool misuse, because the run called the tool the case expects; a wrong queue value is the wrong answer, not a wrong tool. It is not unclassified either: the trace records both the retrieved ids and the tool, which is enough to place it.',
+          competencies: ['evaluation'],
         },
         {
-          id: "fde-v1-m09-q2",
-          prompt: "Triage p95 is 8.9 s after a release added a knowledge-base lookup. Operators are waiting. A tested flag safely bypasses this lookup and restores the prior manual workflow; incident policy allows using it. Traces and logs from the affected window are retained. What is the best immediate mitigation?",
+          id: 'fde-v1-m07-q6',
+          prompt: 'Two candidates ran on the same 36-case golden set. A: correct-answer yield 0.83 (30 of 36), p95 latency 2400 ms, cost per request 0.35 cents. B: yield 0.81 (29 of 36), p95 900 ms, cost per request 0.12 cents. Before the run the customer agreed: yield at least 0.80, p95 under 2000 ms, and among candidates that meet both, the cheaper one wins. Which recommendation follows that agreement?',
           options: [
-            "Wait for a complete root-cause explanation before changing the affected workflow.",
-            "Disable the lookup, verify service recovery, then investigate the retained evidence.",
-            "Raise the client timeout to 15 s and assume the long-running dependency is repaired.",
-            "Restart every instance and assume the release no longer needs investigation.",
+            'Choose B: both meet the yield floor, only B meets the latency limit, and B costs less per request.',
+            'Choose A: it has the higher yield, and one more correct ticket in 36 outweighs both latency and cost.',
+            'Choose A: three slow requests set its p95, so its mean latency, well under 2000 ms, is the fairer figure to hold it to.',
+            'Choose neither: one ticket of difference on 36 cases is within noise, so the run cannot separate the candidates.',
           ],
-          correct: 1,
-          explanation: "The stated safe bypass offers a bounded way to reduce current impact. Verify latency, errors and the manual workflow after disabling it; recovery is not guaranteed merely because the flag changed. Retained evidence supports later diagnosis, but mitigation can change live state or remove opportunities to reproduce the fault, so preserve useful evidence when feasible. A longer timeout does not itself shorten dependency work. Restarting may sometimes help, but this scenario provides no reason to prefer it to the tested bypass, and does not establish that symptoms must return within minutes.",
-          competencies: ['operations'],
-        },
-        {
-          id: "fde-v1-m09-q3",
-          prompt: "A release dropped tickets.legacy_queue, delivered 4,100 notification emails and recorded billing-partner idempotency keys. The partner retains those keys through this incident. You now redeploy only the prior application artifact: no migration rollback, data restore or compensating partner operation runs. Which state is reversed automatically by this action?",
-          options: [
-            "The missing column is restored because the prior code predates its removal.",
-            "The delivered messages are recalled because their sending code no longer runs.",
-            "None of these three external effects is automatically reversed.",
-            "The partner keys are released because the application artifact changed.",
-          ],
-          correct: 2,
-          explanation: "This explicitly code-only deployment does not restore the dropped column, recall delivered messages or clear retained partner records. Old code that still requires the removed column can fail; whether it does depends on what it executes. Delivery does not prove that all 4,100 messages were read. A partner may replay a recorded response according to its own idempotency contract; key lifetime and request-matching rules are not universal. Other deployment systems can include explicit migration or compensation steps, but none runs in this scenario.",
-          competencies: ['operations'],
-        },
-        {
-          id: "fde-v1-m09-q4",
-          prompt: "Returns-ticket abstention rises from a stable 10% baseline to 40% after release. Each daily slice has enough reviewed volume for the agreed alert rule: alert above 20%. Responses remain HTTP 200, p95 stays below its upper limit, and CPU is unchanged. Which monitor directly detects this quality regression?",
-          options: [
-            "An alert only when triage 5xx responses exceed their existing limit.",
-            "An alert only when triage p95 exceeds its existing upper limit.",
-            "A probe that checks only whether a fixture request returns HTTP 200.",
-            "The daily returns-slice abstention rate checked against the agreed 20% limit.",
-          ],
-          correct: 3,
-          explanation: "The stated 40% abstention exceeds the 20% rule, while the other monitors check conditions that remain healthy here. This identifies a relevant quality signal, not a guaranteed earliest detector across every possible monitor. Abstention may be appropriate for difficult inputs; a change requires investigation of traffic, labels and policy rather than assuming every handoff is an error. Faster responses do not generally imply abstention is cheaper, and HTTP 200 alone establishes neither routing correctness nor useful automation.",
-          competencies: ['operations'],
+          correct: 0,
+          explanation: 'Apply the rule the customer agreed before seeing results. Both candidates clear the 0.80 yield floor; only B has a p95 under 2000 ms, so A is out, and B is also the cheaper one. Choosing A for its extra correct ticket rewrites the rule after the run, which is the move a predeclared rule exists to stop. Swapping p95 for the mean changes the metric the customer agreed; the slow tail is the experience the latency limit protects. The noise concern does not change what the agreed rule selects: yield is only a floor, both measured values clear it, and the rule then decides on latency and cost, where the gap is large. B clears the floor by one ticket (28 of 36 would be 0.78), so report that margin and its uncertainty beside the recommendation.',
+          competencies: ['evaluation'],
         },
       ],
     },
     {
-      id: 'fde-v1-m09-retry-circuit',
+      id: 'fde-v1-m07-evaluation-metrics',
       kind: 'code',
       purpose: 'exercise',
       verification: 'machine_verified',
-      title: 'Bounded retries and a circuit that opens',
+      title: 'Metrics that do not hide the slice',
       summary:
-        'Wrap a scripted dependency in capped exponential backoff and a circuit that opens after consecutive failures, refuses without calling through, and admits exactly one probe after the cooldown.',
-      competencies: ['operations'],
-      estimatedMinutes: 45,
+        'Score a held-out set into accuracy, coverage, cost per request, p95 latency, failure modes and per-slice numbers that keep abstentions visible, then compare two candidates under a rule fixed in advance and flag the slice the aggregate buried.',
+      competencies: ['evaluation'],
+      estimatedMinutes: 55,
       code: {
         language: 'javascript',
         prompt:
-          'In this synthetic scenario, each affected dependency request fails repeatedly and can be called three times in total. Retries add load while the store is struggling. Write the bounded retry/circuit helper; it does not by itself establish a global traffic limit or service recovery.\n\n`createCircuit(options)` returns `{ send, state }`. `options` carries `call`, `failureThreshold`, `windowMs`, `cooldownMs`, `retries`, `baseDelayMs` and `maxDelayMs`. `call(request)` may throw synchronously or return a settling promise; a rejection may carry a numeric `status`.\n\n**`send(request)`** returns a promise that always resolves, never rejects, with one of three shapes:\n\n- `{ ok: true, value, attempts }` — `value` is what `call` resolved with.\n- `{ ok: false, reason: \'failed\', status, attempts }` — `status` is the numeric `status` of the last rejection, or `null` when it carried none.\n- `{ ok: false, reason: \'circuit-open\', attempts: 0 }` — refused without calling through.\n\n`attempts` counts the calls this `send` made to `call`.\n\n**Retrying, while the circuit is closed.** A rejection is retryable when its `status` is 429, when its `status` is 500 or above, or when it carries no numeric `status` at all. This exercise’s policy does not retry any other numeric status: one call, then give up. That is a fixture rule, not a universal HTTP retry rule. A retryable failure waits `Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs)` milliseconds with `await sleep(...)` and tries again, for at most `retries` retries — so `retries: 2` means three calls at most, with waits of `baseDelayMs` and `2 × baseDelayMs`, each capped at `maxDelayMs`.\n\n**Opening.** A whole `send` that ends `ok: false, reason: \'failed\'` counts as one failure, however many attempts it made. Count consecutive failures: when a failure arrives more than `windowMs` after the previous one, the streak restarts at 1 instead of continuing. A successful `send` clears the count. Reaching `failureThreshold` opens the circuit and starts the cooldown. A refused `send` is not a failure and never touches the count.\n\n**Open, and the probe.** While the circuit is open, `send` returns `circuit-open` immediately and `call` is not invoked at all. Once `cooldownMs` has passed since it opened, the circuit is half-open: the next `send` is the probe, and it is exactly one call with no retries. Any other `send` arriving while that probe is in flight is refused. A probe that resolves closes the circuit and clears the failure count; a probe that rejects re-opens it and restarts the cooldown from that moment.\n\nDomain: options are trusted immutable configuration: failureThreshold is an integer from 1 to 100; retries is an integer from 0 to 8; windowMs, cooldownMs, baseDelayMs and maxDelayMs are integer durations from 0 to 100,000. Status values, when present, are finite integers from 100 to 599; errors can also be null, primitives or ordinary objects with no numeric status. call may throw synchronously or settle a promise, and settles within the sandbox budget; sleep resolves. Requests/results are opaque values forwarded unchanged. Closed-state sends are sequential: only half-open sends overlap in this exercise. Do not mutate configuration or requests. Multiple already in-flight closed sends, cancellation, distributed coordination and real request deadlines are outside this contract. There is no single input-size target for this stateful helper; its per-send attempt budget is explicit.\n\n**`state()`** returns `\'closed\'`, `\'open\'` or `\'half-open\'` — `\'half-open\'` meaning the cooldown has passed and the next `send` will be the probe.\n\nThe helper sleep and __dependency/__circuit/__gaps/__drive APIs are immutable harness helpers available before declarations, with deferred instrumentation initialized before graded calls. Do not redefine them.\n\nThe dependency is a fixture written for this exercise, not a live service. `sleep` runs on the sandbox’s virtual clock, so a 2 000 ms cooldown finishes instantly and the recorded gaps between calls still read 100, 200 and 300. Nothing here opens a network connection, and a fixture that fails on cue tells you about this code on these inputs rather than about how a real store degrades.',
+          'Marlbrook’s held-out set holds 36 support tickets, twelve in each of three slices (`billing`, `delivery` and `returns`), and each case records the queue an operator agreed it belongs in. You are writing the two functions the release check runs over it.\n\n**`evaluate(cases, predictions)`** returns one report:\n\n`{ total, answered, abstained, correct, accuracy, coverage, accuracyWhenAnswered, costPerRequestCents, p95LatencyMs, failures, bySlice }`\n\n`cases` is an array of `{ id, slice, expected, sourceId?, tool? }`. `predictions` is an array of `{ caseId, answer, costCents?, latencyMs?, retrieved?, tool? }`. Count like this:\n\n1. **Every case counts once**, whether or not a prediction exists for it. A case with no prediction is an abstention, not a missing row.\n2. **First prediction wins.** A second prediction for the same `caseId` is ignored, whatever it says. The pipeline delivers duplicates.\n3. **A prediction whose `caseId` matches no case is ignored.** It came from another run.\n4. **An answer counts as answered only when it is a string that is non-empty after trimming.** `null`, `undefined`, a number, an object and `\'   \'` are all abstentions.\n5. `accuracy` is `correct / total`, so an abstention counts against you. `coverage` is `answered / total`. `accuracyWhenAnswered` is `correct / answered`. Report `0` for any of them when the denominator is `0`.\n6. **Round every rate** with `Math.round(value * 10000) / 10000`. Counts stay integers.\n7. `bySlice` maps each slice name to an object with the same seven fields, over that slice’s cases only. A case whose `slice` is not a non-empty string joins the slice named `unlabelled`.\n8. A `cases` that is not an array gives a report of zeros with an empty `bySlice`. A `predictions` that is not an array means everything abstained.\n9. **Cost and latency.** The counted prediction for a case (the first one for its `caseId`) may carry `costCents` and `latencyMs`. Use a value only when it is a finite number of at least 0, and ignore it otherwise. `costPerRequestCents` is the sum of the usable `costCents` of counted predictions, abstentions included, divided by `total` and rounded like a rate; it is `0` when `total` is `0`. `p95LatencyMs` is the nearest-rank 95th percentile of the usable `latencyMs` values: sort them ascending as numbers and take the value at position `Math.ceil(0.95 * n)`, counting from 1. With no usable values it is `0`.\n10. **Failure modes.** `failures` is `{ retrievalMiss, toolMisuse, hallucination, unclassified }` and counts every answered case whose answer is wrong, over the whole set only. A prediction may carry a trace: `retrieved`, an array of article ids, and `tool`, the name of the tool it called. A case may carry `sourceId`, the article that supports its label, and `tool`, the tool it expects. Give each wrong answer the first label that matches:\n    1. The prediction has no `retrieved` array and no string `tool`: `unclassified`. There is no trace to read.\n    2. `retrieved` is an array, the case has a string `sourceId`, and the array does not contain it: `retrievalMiss`.\n    3. The prediction’s `tool` is a string, the case has a string `tool`, and the two differ: `toolMisuse`.\n    4. Anything else: `hallucination`, this module’s catch-all label for generation errors. The evidence arrived, the expected tool ran, and the answer is still wrong.\n\n**`compare(baseline, candidate)`** takes two of those reports and returns:\n\n`{ better, accuracyDelta, coverageDelta, regressedSlices, sliceMismatch, aggregateHidesRegression }`\n\n- If either argument is not a usable report (not an object, or missing `bySlice`, `accuracy` or `coverage`), return `better: \'not-comparable\'` with both deltas `0` and both arrays empty and aggregateHidesRegression:false. A usable report is a non-array ordinary object with finite accuracy/coverage rates in [0,1] and an ordinary non-array bySlice map whose own entries are non-array objects with finite accuracy in [0,1].\n- `sliceMismatch` lists, sorted ascending, every slice name present in one report and not the other. If it is non-empty the summary partitions differ under this comparison policy, so return `better: \'not-comparable\'`, both deltas `0` and `regressedSlices: []`, keeping the mismatch list.\n- Otherwise `accuracyDelta` is `candidate.accuracy - baseline.accuracy` and `coverageDelta` is `candidate.coverage - baseline.coverage`, each computed from the already-rounded rates and rounded again the same way.\n- `regressedSlices` holds one `{ slice, baselineAccuracy, candidateAccuracy, delta }` for every slice whose accuracy fell, sorted by slice name ascending. `delta` is candidate minus baseline, rounded.\n- **The rule for `better`, applied in this order:** `coverageDelta < -0.05` gives `\'baseline\'`, because a candidate that answers far less has bought its accuracy by handing work back. Then `accuracyDelta > 0.01` gives `\'candidate\'`, `accuracyDelta < -0.01` gives `\'baseline\'`, and anything left is `\'tie\'`.\n- `aggregateHidesRegression` is `true` when `better` is `\'candidate\'` or `\'tie\'` and `regressedSlices` is not empty. That is the flag: the aggregate did not lose, and at least one slice did.\n\nOne fixture matters more than the others. `__predictions(\'candidate\')` beats `__predictions(\'baseline\')` 30 correct to 27 while its returns slice falls from 10 of 12 to 7 of 12, so a comparison that only reads the aggregate reports a clean win while the observed returns count regresses. Slice-name equality alone does not establish identical case ids/labels or a valid statistical comparison; callers must verify dataset identity upstream. `compare` reads quality only; it does not read cost, latency or failures, which the report carries beside them for the person deciding.\n\nThe same candidate logs a trace for every answer. Its five wrong returns answers split into three retrieval misses, one call to `refunds.create` and one hallucination, and its cost and latency sit beside its accuracy: 0.35 cents per request and a p95 of 2400 ms, set by three slow requests. The keyword baseline logs no trace, so its nine errors stay unclassified.\n\nDomain: at most 1,000 ordinary case objects with unique non-empty string ids and string expected labels; unusable slice values join unlabelled. Predictions contain at most 2,000 ordinary values, with malformed entries ignored as described. Strings have at most 100 UTF-16 code units; no getters/proxies. Correctness compares the original answer string exactly to expected; trimming decides only whether an answer is non-empty. Preserve arbitrary valid ids and slice names, including __proto__. Comparison inputs follow the usable-report shape or are rejected and never mutated. A `retrieved` array holds at most 20 strings.\n\nTarget: O(n log n) time, where n is the combined input entry/slice count for each operation, using bounded-length fields and the usual dictionary/set model.\n\n`__cases`, `__predictions`, `__CASE_ROWS`, `__PATTERNS` and `__RUNS` come from the task harness. Every case, label, prediction, trace, cost and latency in them is authored for this exercise and identical on every run. Nothing here calls a model or opens a network connection, and a fixture accuracy, cost or latency is not evidence about how a live router would perform on these tickets.',
         contract: [
-          '`options.call` is the only way to reach the dependency, and it must not be called at all while the circuit is open.',
-          'The half-open probe is exactly one call. It does not retry, whatever the rejection says.',
-          'Retry only a rejection with `status` 429, `status` 500 or above, or no numeric `status`. Every other 4xx gets one call.',
-          'Wait with `await sleep(ms)` from the task harness. Do not define your own and do not use real timers.',
-          'Keep every counter, timestamp and flag inside `createCircuit`, so two circuits over the same dependency stay independent.',
-          '`send` always resolves. Report a failure in the returned object rather than rejecting.',
+          'Count every case in `cases` exactly once, including cases no prediction mentions.',
+          'The first prediction for a `caseId` wins; later ones are ignored. A `caseId` that matches no case is ignored.',
+          'An answer counts as answered only when it is a string that is non-empty after trimming.',
+          'Round every rate with `Math.round(value * 10000) / 10000`, and report 0 wherever the denominator is 0. Never divide by zero.',
+          'Never report `correct / answered` as `accuracy`. The two fields are separate and both are required.',
+          'Divide cost by every case in the set, and sort latencies as numbers before you read the p95.',
+          'Classify only wrong answers, by the first matching rule: no trace, then retrieval, then tool, then hallucination.',
+          'Do not mutate `cases` or `predictions`. `compare` reads the two reports only and never re-reads the cases.',
+          '`__cases`, `__predictions`, `__CASE_ROWS`, `__PATTERNS` and `__RUNS` come from the task harness. Read from them, do not redefine them.',
         ],
-        starter: `const createCircuit = options => {
+        starter: `const round4 = value => Math.round(value * 10000) / 10000;
+
+const evaluate = (cases, predictions) => {
 
 };
 
-// Scratch pad — change this before submitting.
-const demo = createCircuit({
-  call: () => Promise.resolve('routed'),
-  failureThreshold: 3,
-  windowMs: 10000,
-  cooldownMs: 2000,
-  retries: 2,
-  baseDelayMs: 100,
-  maxDelayMs: 400,
-});
-console.log(demo ? 'built' : 'createCircuit has not returned anything yet');
+const compare = (baseline, candidate) => {
+
+};
+
+// Scratch pad: change this before submitting.
+console.log(JSON.stringify(evaluate(__cases(), __predictions('baseline'))));
 `,
-        skeleton: `const createCircuit = options => {
-  let phase = 'closed';
-  let failures = 0;
-  let lastFailureAt = null;
-  let openedAt = 0;
-  let probeInFlight = false;
+        skeleton: `const round4 = value => Math.round(value * 10000) / 10000;
+const rate = (part, whole) => (whole > 0 ? round4(part / whole) : 0);
 
-  const statusOf = error => /* the numeric status, or null */;
-  const retryable = error => /* 429, 5xx, or no status at all */;
+const evaluate = (cases, predictions) => {
+  const caseList = Array.isArray(cases) ? cases : [];
+  const predictionList = Array.isArray(predictions) ? predictions : [];
 
-  const state = () => {
-    // 'half-open' once the cooldown has passed, otherwise whatever phase holds
+  const answers = Object.create(null);
+  for (const prediction of predictionList) {
+    // skip a non-object, a non-string caseId, and a caseId already recorded
+    // keep the whole prediction: cost, latency and trace ride along with the answer
+  }
+
+  const counts = { total: 0, answered: 0, abstained: 0, correct: 0 };
+  const slices = Object.create(null);
+  const failures = { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 0 };
+  const latencies = [];
+  let cost = 0;
+
+  const classify = (item, prediction) => {
+    // no trace, then a missing source article, then a different tool, then hallucination
   };
 
-  const recordFailure = () => {
-    // restart the streak when the previous failure is older than windowMs
-    // open, and stamp openedAt, once the streak reaches failureThreshold
+  for (const item of caseList) {
+    const name = /* item.slice when it is a non-empty string, otherwise 'unlabelled' */;
+    // add this case to counts and to slices[name]
+    // add a usable costCents to cost and a usable latencyMs to latencies
+    // an answer that is not a non-empty string is an abstention
+    // an answer equal to item.expected is correct; any other answer is classified
+  }
+
+  const shape = tally => ({
+    total: tally.total,
+    answered: tally.answered,
+    abstained: tally.abstained,
+    correct: tally.correct,
+    accuracy: /* correct over total */,
+    coverage: /* answered over total */,
+    accuracyWhenAnswered: /* correct over answered */,
+  });
+
+  const bySlice = Object.create(null);
+  // one shaped entry per slice name
+
+  const p95LatencyMs = /* sort latencies as numbers, take position Math.ceil(0.95 * n), or 0 */;
+
+  return { ...shape(counts), costPerRequestCents: /* cost over total */, p95LatencyMs, failures, bySlice };
+};
+
+const compare = (baseline, candidate) => {
+  const blank = {
+    better: 'not-comparable',
+    accuracyDelta: 0,
+    coverageDelta: 0,
+    regressedSlices: [],
+    sliceMismatch: [],
+    aggregateHidesRegression: false,
   };
+  if (/* either report is unusable */) return blank;
 
-  const send = async request => {
-    const current = state();
-    if (current === 'open') return { ok: false, reason: 'circuit-open', attempts: 0 };
+  const mismatch = /* slice names present in exactly one report, sorted */;
+  if (mismatch.length > 0) return { ...blank, sliceMismatch: mismatch };
 
-    if (current === 'half-open') {
-      // refuse when a probe is already in flight, otherwise claim the slot
-      // exactly one call: resolve closes the circuit, reject re-opens it
-    }
+  const accuracyDelta = round4(candidate.accuracy - baseline.accuracy);
+  const coverageDelta = round4(candidate.coverage - baseline.coverage);
+  const regressedSlices = /* every slice whose accuracy fell, sorted by name */;
 
-    let attempts = 0;
-    for (;;) {
-      attempts += 1;
-      try {
-        /* call through, clear the failure count, return the value */
-      } catch (error) {
-        // stop on a non-retryable error or a spent budget
-        // otherwise await sleep(the capped backoff) and go round again
-      }
-    }
+  const better = /* coverage rule first, then the accuracy gap, then 'tie' */;
+
+  return {
+    better,
+    accuracyDelta,
+    coverageDelta,
+    regressedSlices,
+    sliceMismatch: [],
+    aggregateHidesRegression: /* better is not 'baseline' and a slice regressed */,
   };
-
-  return { send, state };
 };`,
         hints: [
-          'Keep the phase in one variable and let `state()` do the cooldown arithmetic: if the phase is `open` and `Date.now() - openedAt >= cooldownMs`, report `half-open`. Then `send` reads `state()` once at the top and never has to check the clock again.',
-          'Claim the probe slot synchronously. Set `probeInFlight = true` before the `await`, so a second `send` that starts while the probe is still running sees the flag and is refused. If the first thing your half-open branch does is await, both sends get through.',
-          'Backoff for attempt `n` is `Math.min(baseDelayMs * 2 ** (n - 1), maxDelayMs)`: 100, 200, 400, 400 with a base of 100 and a cap of 400. Compute it after the failure, using the attempt that just failed.',
+          'Build the answer lookup in its own pass before you count anything. Record a `caseId` only when the map does not already hold it, and you get “first prediction wins” and “duplicates ignored” from one `hasOwnProperty` check. Make every map keyed by an id or slice name an `Object.create(null)` object, so a case or slice called `__proto__` is stored like any other key.',
+          'Keep one tally per slice and one for the whole set, and update both inside the same loop over `cases`. Then shape all of them with the same helper, so a slice can never be computed by a different rule than the total.',
+          'Write the abstention test as “this is not a non-empty string”, not as “this is null”. A number, an object and three spaces all have to land on the same side of it, and the fixture sets contain all three.',
+          '`Array.prototype.sort` with no comparator sorts as text, so 2400 lands before 900. Pass `(a, b) => a - b`.',
+          'Write the failure-mode rules as one function that returns a label, with an early return per rule in the stated order. The order is the point: a run that missed the article and also called the wrong tool is a retrieval miss.',
         ],
         approach: [
-          'Write `statusOf(error)` returning `error.status` when it is a number and `null` otherwise, then `retryable(error)` on top of it: true for `null`, true for 429, true for 500 and above, false for everything else.',
-          'Write `state()` so it reports `half-open` when the phase is `open` and the cooldown has elapsed, and write a small `open()` that sets the phase, stamps `openedAt` and clears the failure count.',
-          'Give `send` the three branches in order: refuse when `state()` is `open`; run the single probe when it is `half-open` and no probe is in flight; otherwise fall through to the retry loop.',
-          'In the retry loop, count the attempt, call through, and on a rejection stop when the error is not retryable or the attempt has used the budget. Otherwise `await sleep(...)` with the capped delay.',
-          'On the way out, clear the failure count after a success and call `recordFailure()` after a failure, comparing `Date.now() - lastFailureAt` against `windowMs` to decide whether the streak continues or restarts.',
+          'Walk `predictions` once into a `caseId → prediction` map, keeping the first entry for each id and skipping entries that are not objects or whose `caseId` is not a string.',
+          'Walk `cases` once, adding each case to the overall tally and to its slice tally: answered when its answer is a non-empty string, correct when that answer equals `expected`, abstained otherwise. In the same loop, add the usable cost and latency, and classify each wrong answer.',
+          'After the loop, divide the cost by `total`, sort the latencies as numbers and read the nearest-rank p95.',
+          'Turn every tally into the seven-field shape with one helper, dividing only when the denominator is above zero and rounding to four places.',
+          'In `compare`, reject an unusable report and then a slice-name mismatch before computing anything, so a comparison across two different sets never produces a delta.',
+          'Compute both deltas and the regressed-slice list, apply the coverage rule before the accuracy rule, and set the flag when the aggregate did not lose while a slice did.',
         ],
         criteria: [
           {
             id: 'core',
-            label: 'Correct outcomes, attempt counts and capped backoff',
+            label: 'Correct counts, rates and comparison rule',
             critical: true,
             weight: 3,
             detail:
-              'The result shape, the retry budget or the delay is off. Check that `send` always resolves, that `attempts` counts the calls this send made, that `retries: 2` means three calls at most, that the delay is `Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs)` and stops growing at the cap, and that a rejection carrying no numeric status reports `status: null`.',
+              'Check the four counting rules (every case once, first prediction wins, a foreign `caseId` ignored, a malformed answer treated as an abstention) plus the four-place rounding, the zero-denominator cases, and the order the `better` rule is applied in.',
           },
           {
-            id: 'open-refuses-fast',
-            label: 'An open circuit refuses without calling the dependency',
+            id: 'slice-aware',
+            label: 'The regressed slice is reported and flagged',
             critical: true,
-            weight: 2,
+            weight: 3,
             detail:
-              'A call reached the dependency while the circuit was open. The whole point of opening is to take load off something that is already failing, so the refusal has to happen before `options.call` is invoked: check the state at the top of `send`, return `{ ok: false, reason: \'circuit-open\', attempts: 0 }`, and leave the failure count untouched.',
+              'A slice whose accuracy fell has to appear in `regressedSlices`, sorted by name, with both accuracies and the delta, and `aggregateHidesRegression` has to fire when the aggregate did not lose. A comparison that only reads the two overall numbers passes the candidate silently and fails here.',
           },
           {
-            id: 'single-probe',
-            label: 'Half-open admits exactly one probe',
+            id: 'abstention-separate',
+            label: 'Abstentions stay visible in the numbers',
             critical: true,
-            weight: 2,
+            weight: 3,
             detail:
-              'More than one call went through after the cooldown, or the probe retried. A half-open circuit is asking one question of a dependency that just failed, so it is one call with no retries: claim the slot synchronously before the first `await`, refuse anything that arrives while it is in flight, close on a resolve, and re-open with a fresh `openedAt` on a reject.',
+              '`accuracy` is over every case and `accuracyWhenAnswered` is over the answered ones; reporting the second as the first is the failure this criterion catches. `coverage` and `abstained` have to move with them, and a run that answered nothing must not divide by zero.',
           },
           {
-            id: 'no-retry-on-4xx',
-            label: 'Fixture statuses outside the retryable set are called once',
-            critical: true,
+            id: 'cost-latency',
+            label: 'Cost per request and p95 latency sit beside quality',
+            critical: false,
             weight: 2,
             detail:
-              'A 4xx that is not 429 was retried, or a retryable rejection was not. Under this synthetic status policy, retry only the stated set; real HTTP retry safety depends on request semantics and current conditions. Retry only 429, 500 and above, and rejections with no numeric status; give every other 4xx exactly one call.',
+              'A cost or latency figure is off. Check that cost comes from the first prediction per case only, that abstentions’ costs count, that the sum is divided by every case rather than by the answered ones, that a negative, non-finite or non-number value is ignored, and that the p95 sorts latencies as numbers and reads position `Math.ceil(0.95 * n)` counting from 1.',
+          },
+          {
+            id: 'failure-taxonomy',
+            label: 'Every wrong answer gets one failure mode, read from its trace',
+            critical: false,
+            weight: 2,
+            detail:
+              'A wrong answer landed under the wrong label. Check that only answered, wrong cases are classified, and that the rules run in order: no trace at all is unclassified, a missing supporting article is a retrieval miss even when the tool was also wrong, a different tool is tool misuse, and anything left is a hallucination.',
           },
         ],
         tests: [
           {
             call:
-              "(function () { var d = __dependency('o'); var c = __circuit(d); return c.send({ id: 'R-1' }).then(function (out) { return { ok: out.ok, value: out.value, attempts: out.attempts, calls: d.calls.length, state: c.state() }; }); })()",
-            expected: { ok: true, value: { echo: { id: 'R-1' } }, attempts: 1, calls: 1, state: 'closed' },
-            label: 'a healthy call passes straight through',
-            async: true,
+              "(function () { var r = evaluate(__cases(), __predictions('baseline')); return { total: r.total, answered: r.answered, abstained: r.abstained, correct: r.correct, accuracy: r.accuracy, coverage: r.coverage, accuracyWhenAnswered: r.accuracyWhenAnswered }; })()",
+            expected: { total: 36, answered: 36, abstained: 0, correct: 27, accuracy: 0.75, coverage: 1, accuracyWhenAnswered: 0.75 },
+            label: 'the baseline answers every case and scores 27 of 36',
+          },
+          {
+            call: "evaluate(__cases(), __predictions('baseline')).bySlice.returns",
+            expected: { total: 12, answered: 12, abstained: 0, correct: 10, accuracy: 0.8333, coverage: 1, accuracyWhenAnswered: 0.8333 },
+            label: 'the returns slice carries the same seven fields as the whole set',
           },
           {
             call:
-              "(function () { var d = __dependency('5o'); var c = __circuit(d); return c.send({ id: 'R-2' }).then(function (out) { return { ok: out.ok, attempts: out.attempts, calls: d.calls.length }; }); })()",
-            expected: { ok: true, attempts: 2, calls: 2 },
-            label: 'a 503 recovers on the second attempt',
-            async: true,
-          },
-          {
-            call:
-              "(function () { var d = __dependency('5'); var c = __circuit(d); return c.send({ id: 'R-3' }).then(function (out) { return { ok: out.ok, reason: out.reason, status: out.status, attempts: out.attempts, calls: d.calls.length }; }); })()",
-            expected: { ok: false, reason: 'failed', status: 503, attempts: 3, calls: 3 },
-            label: 'two retries and no more: three calls, then it gives up',
-            async: true,
-          },
-          {
-            call:
-              "(function () { var d = __dependency('5'); var c = __circuit(d, { retries: 4, baseDelayMs: 100, maxDelayMs: 300 }); return c.send({ id: 'R-4' }).then(function () { return __gaps(d); }); })()",
-            expected: [0, 100, 200, 300, 300],
-            label: 'the backoff doubles and then stops at the cap',
-            async: true,
-          },
-          {
-            call:
-              "(function () { var d = __dependency('4'); var c = __circuit(d); return c.send({ id: 'R-5' }).then(function (out) { return { ok: out.ok, status: out.status, attempts: out.attempts, calls: d.calls.length }; }); })()",
-            expected: { ok: false, status: 422, attempts: 1, calls: 1 },
-            label: 'the fixture policy calls a 422 once',
+              "(function () { var r = evaluate(__cases(), __predictions('cautious')); return { answered: r.answered, abstained: r.abstained, correct: r.correct, accuracy: r.accuracy, coverage: r.coverage, accuracyWhenAnswered: r.accuracyWhenAnswered }; })()",
+            expected: { answered: 24, abstained: 12, correct: 22, accuracy: 0.6111, coverage: 0.6667, accuracyWhenAnswered: 0.9167 },
+            label: 'a cautious run is 0.9167 on what it answered and 0.6111 over the set',
             edge: true,
-            async: true,
-            criterion: 'no-retry-on-4xx',
+            criterion: 'abstention-separate',
           },
           {
             call:
-              "(function () { var d = __dependency('tto'); var c = __circuit(d); return c.send({ id: 'R-6' }).then(function (out) { return { ok: out.ok, attempts: out.attempts, calls: d.calls.length }; }); })()",
-            expected: { ok: true, attempts: 3, calls: 3 },
-            label: '429 is the 4xx that is retried',
+              "(function () { var r = evaluate(__cases(), __predictions('allAbstain')); return { total: r.total, answered: r.answered, abstained: r.abstained, correct: r.correct, accuracy: r.accuracy, coverage: r.coverage, accuracyWhenAnswered: r.accuracyWhenAnswered }; })()",
+            expected: { total: 36, answered: 0, abstained: 36, correct: 0, accuracy: 0, coverage: 0, accuracyWhenAnswered: 0 },
+            label: 'a run that answered nothing reports zeros instead of dividing by zero',
             edge: true,
-            async: true,
-            criterion: 'no-retry-on-4xx',
+            criterion: 'abstention-separate',
           },
           {
             call:
-              "(function () { var d = __dependency('4'); var c = __circuit(d); return __drive(c, 4).then(function (out) { return { state: c.state(), reason: out[3].reason, attempts: out[3].attempts, calls: d.calls.length }; }); })()",
-            expected: { state: 'open', reason: 'circuit-open', attempts: 0, calls: 3 },
-            label: 'three failed sends open the circuit, and the fourth never reaches the dependency',
-            async: true,
-            criterion: 'open-refuses-fast',
-          },
-          {
-            call:
-              "(function () { var d = __dependency('444o'); var c = __circuit(d); return __drive(c, 3).then(function () { return sleep(2000); }).then(function () { return Promise.all([c.send({ id: 'P' }), c.send({ id: 'Q' })]); }).then(function (out) { return { probe: out[0].ok, beside: out[1].reason, calls: d.calls.length, state: c.state() }; }); })()",
-            expected: { probe: true, beside: 'circuit-open', calls: 4, state: 'closed' },
-            label: 'half-open admits the probe and refuses the send beside it',
-            async: true,
-            criterion: 'single-probe',
-          },
-          {
-            call:
-              "(function () { var d = __dependency('4445'); var c = __circuit(d); return __drive(c, 3).then(function () { return sleep(2000); }).then(function () { return c.send({ id: 'P' }); }).then(function (probe) { return c.send({ id: 'Q' }).then(function (after) { return { probeAttempts: probe.attempts, state: c.state(), afterReason: after.reason, calls: d.calls.length }; }); }); })()",
-            expected: { probeAttempts: 1, state: 'open', afterReason: 'circuit-open', calls: 4 },
-            label: 'a failed probe is one call, re-opens the circuit and restarts the cooldown',
+              "(function () { var r = evaluate(__cases(), __predictions('messy')); return { total: r.total, answered: r.answered, abstained: r.abstained, correct: r.correct, accuracy: r.accuracy, coverage: r.coverage, accuracyWhenAnswered: r.accuracyWhenAnswered, delivery: r.bySlice.delivery }; })()",
+            expected: {
+              total: 36,
+              answered: 27,
+              abstained: 9,
+              correct: 23,
+              accuracy: 0.6389,
+              coverage: 0.75,
+              accuracyWhenAnswered: 0.8519,
+              delivery: { total: 12, answered: 8, abstained: 4, correct: 8, accuracy: 0.6667, coverage: 0.6667, accuracyWhenAnswered: 1 },
+            },
+            label: 'missing rows, duplicates, a foreign case id and three malformed answers all count as the rules say',
             edge: true,
-            async: true,
-            criterion: 'single-probe',
+          },
+          {
+            call:
+              "(function () { var b = evaluate(__cases(), __predictions('baseline')); var c = evaluate(__cases(), __predictions('candidate')); var r = compare(b, c); return { better: r.better, accuracyDelta: r.accuracyDelta, coverageDelta: r.coverageDelta, regressedSlices: r.regressedSlices, aggregateHidesRegression: r.aggregateHidesRegression }; })()",
+            expected: {
+              better: 'candidate',
+              accuracyDelta: 0.0833,
+              coverageDelta: 0,
+              regressedSlices: [{ slice: 'returns', baselineAccuracy: 0.8333, candidateAccuracy: 0.5833, delta: -0.25 }],
+              aggregateHidesRegression: true,
+            },
+            label: 'the candidate wins the aggregate and the returns regression is named beside it',
+            edge: true,
+            criterion: 'slice-aware',
+          },
+          {
+            call:
+              "(function () { var b = evaluate(__cases(), __predictions('baseline')); var c = evaluate(__cases(), __predictions('cautious')); var r = compare(b, c); return { better: r.better, accuracyDelta: r.accuracyDelta, coverageDelta: r.coverageDelta, candidateAccuracyWhenAnswered: c.accuracyWhenAnswered, aggregateHidesRegression: r.aggregateHidesRegression }; })()",
+            expected: {
+              better: 'baseline',
+              accuracyDelta: -0.1389,
+              coverageDelta: -0.3333,
+              candidateAccuracyWhenAnswered: 0.9167,
+              aggregateHidesRegression: false,
+            },
+            label: 'a candidate right on 0.9167 of what it answered still loses on coverage',
+            edge: true,
+            criterion: 'abstention-separate',
+          },
+          {
+            call:
+              "(function () { var b = evaluate(__cases(), __predictions('baseline')); var s = evaluate(__cases('twoSlices'), __predictions('baseline')); var r = compare(b, s); return { better: r.better, sliceMismatch: r.sliceMismatch, regressedSlices: r.regressedSlices, accuracyDelta: r.accuracyDelta, aggregateHidesRegression: r.aggregateHidesRegression }; })()",
+            expected: {
+              better: 'not-comparable',
+              sliceMismatch: ['returns'],
+              regressedSlices: [],
+              accuracyDelta: 0,
+              aggregateHidesRegression: false,
+            },
+            label: 'two runs over different sets produce a mismatch instead of a delta',
+            edge: true,
+          },
+          {
+            call:
+              "(function () { var b = evaluate(__cases(), __predictions('baseline')); var c = evaluate(__cases(), __predictions('candidate')); var k = evaluate(__cases(), __predictions('cautious')); return { baseline: [b.accuracy, b.costPerRequestCents, b.p95LatencyMs], candidate: [c.accuracy, c.costPerRequestCents, c.p95LatencyMs], cautious: [k.accuracy, k.costPerRequestCents, k.p95LatencyMs] }; })()",
+            expected: {
+              baseline: [0.75, 0, 12],
+              candidate: [0.8333, 0.35, 2400],
+              cautious: [0.6111, 0.4, 1840],
+            },
+            label: 'accuracy, cost per request and p95 latency in one row per candidate, abstentions’ cost included',
+            criterion: 'cost-latency',
+          },
+          {
+            call:
+              "(function () { return { candidate: evaluate(__cases(), __predictions('candidate')).failures, baseline: evaluate(__cases(), __predictions('baseline')).failures }; })()",
+            expected: {
+              candidate: { retrievalMiss: 3, toolMisuse: 1, hallucination: 2, unclassified: 0 },
+              baseline: { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 9 },
+            },
+            label: 'the candidate’s six errors split into three retrieval misses, one tool misuse and two hallucinations; the keyword baseline leaves no trace to classify',
+            criterion: 'failure-taxonomy',
           },
         ],
-        harness: CIRCUIT_FIXTURES,
+        harness: EVALUATION_FIXTURES,
       },
     },
   ],
   requires: [
-    { activityId: 'fde-v1-m09-checks', state: 'verified_pass' },
-    { activityId: 'fde-v1-m09-retry-circuit', state: 'verified_pass' },
+    { activityId: 'fde-v1-m07-checks', state: 'verified_pass' },
+    { activityId: 'fde-v1-m07-evaluation-metrics', state: 'verified_pass' },
   ],
 };
