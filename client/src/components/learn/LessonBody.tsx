@@ -7,7 +7,7 @@
 // carry a word as well as a border. Autoplay is opt-in and never starts under
 // a reduced-motion preference.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { runCodeTests } from '../../coding/runner/run-tests';
 import { TermsBar } from '../ui/Terms';
 import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
@@ -336,7 +336,11 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   );
 }
 
-export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto; headingLevel?: 1 | 2 }) {
+/** Memoised: a lesson is the largest thing a workspace renders, and the
+ * workspace re-renders on every busy, draft and result change while the lesson
+ * object itself stays the same. Each render also rescanned all its prose for
+ * glossary terms. */
+export const LessonView = memo(function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto; headingLevel?: 1 | 2 }) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const t = useT();
   return (
@@ -374,4 +378,4 @@ export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto
       )}
     </article>
   );
-}
+});
