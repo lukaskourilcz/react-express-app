@@ -29,7 +29,7 @@ import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } fr
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
 import { createLearningPathSession, pathCodeAttemptVersion } from './session';
-import { canonicalCodingTaskId } from './dsa-coding-tasks';
+import { canonicalCodingTaskId } from './coding-task-id';
 import {
   activityIn,
   activitySummary,
@@ -335,7 +335,7 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     }
     const {
       LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime, isSkillPathId,
+      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime,
       parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
     } = await import('../../shared/learning-paths');
 
@@ -353,10 +353,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     }
     if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
       return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
-    }
-    if (body.skillPaths !== undefined
-        && (!Array.isArray(body.skillPaths) || !body.skillPaths.every(isSkillPathId))) {
-      return jsonError(res, 400, 'bad_request', 'skillPaths must be known skill paths');
     }
     const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
     if (body.sections !== undefined
@@ -381,7 +377,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
       schemaVersion: 2 as const,
       baseTrack: body.baseTrack,
       specialization,
-      skillPaths: body.skillPaths ?? existing?.skillPaths ?? [],
       ...((body.sections ?? existing?.sections) ? { sections: Array.from(new Set(body.sections ?? existing?.sections)) } : {}),
       goals: body.goals ?? existing?.goals ?? [],
       experience: body.experience ?? existing?.experience ?? ('' as never),
@@ -1100,7 +1095,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
-    : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
+    : language;
   let accepted = activity.kind === 'code'
     ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', {
       p_accept: { ...acceptParams, p_module_requires: moduleRequirements(module) },

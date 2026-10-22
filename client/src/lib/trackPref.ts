@@ -33,7 +33,6 @@ import {
   type LearningPreference,
   type RequiredProfileField,
   type RoleSpecializationId,
-  type SkillPathId,
   type StudyTime,
 } from '../../../shared/learning-paths';
 import type { Track } from './tracks';
@@ -47,7 +46,6 @@ export interface ProfileAnswers {
   goals?: LearnerGoal[];
   experience?: ExperienceLevel;
   studyTime?: StudyTime;
-  skillPaths?: SkillPathId[];
   /** Opt-in Learn sections (`shared/learn-sections.ts`), such as Software Engineer. */
   sections?: LearnSectionId[];
 }

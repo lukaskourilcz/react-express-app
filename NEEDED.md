@@ -5,7 +5,12 @@
 The owner approved [docs/learn-sections-fde-flagship-plan.md](docs/learn-sections-fde-flagship-plan.md) and [docs/agent-workflow-audit.md](docs/agent-workflow-audit.md) on 21 October 2026 with the decisions in the plan's section 10. The GitHub issues of epics A to E are the backlog; [docs/handoff-opus-2026-10-21.md](docs/handoff-opus-2026-10-21.md) is the prompt that starts the implementation in a fresh terminal session.
 
 - [ ] **Set `LEARNING_PATH_FDE_ENABLED=true` in Vercel Production** once the FDE release verification issue (B14) is merged and its acceptance entry is in `docs/release-acceptance.md`; redeploy. The path then opens to Premium accounts, with the diagnostic and the first module free. [imp:4] [owner:me] [time:5m] [kind:deploy]
-- [ ] **Run the handoff prompt for the implementation session** — paste `docs/handoff-opus-2026-10-21.md` into a terminal session on this repository. It names the reading order, the issue order and the rules. [imp:5] [owner:me] [time:5m] [kind:setup]
+- [x] **Run the handoff prompt for the implementation session** — paste `docs/handoff-opus-2026-10-21.md` into a terminal session on this repository. It names the reading order, the issue order and the rules. [imp:5] [owner:me] [time:5m] [kind:setup]
+
+
+- [ ] **Verify a current production backup and authorize migration 066 before B3** — PR #545 is reviewed and its SQL checks pass, but the migration is not applied to Supabase project `rvlybcjdpafwyeuojvhl`. Follow `.claude/skills/supabase-migration/SKILL.md` and `docs/backup-restore.md`; then apply before merging dependent code. B9/B10/B11 and the B14 release depend on this. [imp:5] [owner:me] [time:30m] [kind:deploy]
+- [ ] **Finish the remaining Learn/FDE implementation** — Continue from GitHub handoff #539. E4 is authored with validation fixes awaiting final coding/browser proof; E5 is an incomplete retirement branch and must not merge yet. [imp:5] [owner:ai] [time:4h] [kind:content]
+- [ ] **Simplify Learn topic cards** — Owner, 22 October: keep only the logo, topic name and levels. Remove all “Also in …” text from these cards, including the equivalent accessibility suffix; update the affected SectionRail tests. The General card screenshot illustrates the unwanted line. [imp:4] [owner:ai] [time:30m] [kind:content]
 
 ## Launch audit, 29 Sep 2026 (before registrations open)
 

@@ -1063,7 +1063,5 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
 export const FdeOverview = () => <PathOverview pathId="fde" />;
 export const FdeModule = () => <ModuleWorkspace pathId="fde" />;
-export const DsaOverview = () => <PathOverview pathId="dsa-foundations" />;
-export const DsaModule = () => <ModuleWorkspace pathId="dsa-foundations" />;
 
 export type { PathCatalogEntry };

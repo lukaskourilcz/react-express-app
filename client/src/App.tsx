@@ -114,8 +114,6 @@ const CodingReviewScreen = lazyPage(() => loadCoding().then((m) => ({ default: m
 const GithubSettingsPage = lazyPage(() => loadGithubSettings().then((m) => ({ default: m.GithubSettingsPage })));
 const FdeOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeOverview })));
 const FdeModule = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeModule })));
-const DsaOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaOverview })));
-const DsaModule = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaModule })));
 
 /** The FDE path's old addresses, /roadmap/specializations/fde and
  * /roadmap/specializations/fde/<module>, land on its section's with the
@@ -819,13 +817,13 @@ function App() {
                   <Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} />
                   {/* Learning paths are devShark-only, like /coding and /roadmap.
                       The FDE path lives in its Learn section (#489); its old
-                      addresses redirect. DSA Foundations keeps its own route
+                      addresses redirect. The retired DSA path redirects to Learn
                       until epic E folds it into Learn. One workspace serves both. */}
                   <Route path={FDE_PATH} element={<FdeOverview />} />
                   <Route path={`${FDE_PATH}/:moduleId`} element={<FdeModule />} />
                   <Route path="/roadmap/specializations/fde/*" element={<OldFdePathRedirect />} />
-                  <Route path="/roadmap/paths/dsa-foundations" element={<DsaOverview />} />
-                  <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} />
+                  <Route path="/roadmap/paths/dsa-foundations" element={<Navigate to="/learn/software-engineer?topic=dsa" replace />} />
+                  <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<Navigate to="/learn/software-engineer?topic=dsa" replace />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings/github" element={<GithubSettingsPage />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />

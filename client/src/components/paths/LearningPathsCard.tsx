@@ -86,9 +86,6 @@ export default function LearningPathsCard() {
   const { lockOf } = useLocks();
 
   const fdeEntry = entryFor(catalog.data, 'fde');
-  // DSA Foundations is no longer chosen in the picker (epic E folds it into
-  // Learn), but a learner who runs it still finds it listed here.
-  const dsaEntry = entryFor(catalog.data, 'dsa-foundations');
 
   const enrollmentFor = useCallback(
     (pathId: LearningPathId) => enrollments.data?.enrollments.find((one) => one.pathId === pathId),
@@ -159,9 +156,6 @@ export default function LearningPathsCard() {
         }
       };
       try {
-        // The picker no longer asks about DSA Foundations, so saving it never
-        // starts or pauses that enrollment, and the save below leaves the
-        // account's skill paths as they are.
         await follow('fde', fdeEntry, result.specialization === 'fde', specialization === 'fde', result.track);
         await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
       } catch (error) {
@@ -212,7 +206,7 @@ export default function LearningPathsCard() {
     [barred, enrollmentFor, fdeEntry, preference, queryClient, setTrack, specialization, subject, t, user?.id],
   );
 
-  const activePaths = [fdeEntry, dsaEntry].filter(Boolean).map((entry) => {
+  const activePaths = [fdeEntry].filter(Boolean).map((entry) => {
     const manifest = entry!.manifest;
     const enrollment = enrollmentFor(manifest.id);
     return { manifest, entry: entry!, enrollment };

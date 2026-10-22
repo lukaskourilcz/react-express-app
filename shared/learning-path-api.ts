@@ -26,7 +26,6 @@ import type {
   PathCodeLanguage,
   PathInventory,
   RequiredProfileField,
-  SkillPathId,
   StudyTime,
   VerificationKind,
 } from './learning-paths';
@@ -77,7 +76,6 @@ export interface LearningPreferenceRequest {
   goals?: LearnerGoal[];
   experience?: ExperienceLevel;
   studyTime?: StudyTime;
-  skillPaths?: SkillPathId[];
   /** Opt-in Learn sections to keep on the profile; left out keeps the saved
    * list. Web Developer and Forward Deployed Engineer follow the base track
    * and the specialization and need no entry. */

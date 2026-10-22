@@ -35,8 +35,8 @@ import {
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
-import { DSA_FOUNDATIONS_WRONG, DSA_SOURCE_ACTIVITY } from './fixtures/dsa-foundations-known-answers';
-import { DSA_FOUNDATIONS_TASKS } from '../lib/coding/tasks/dsa-foundations';
+import { DSA_FOUNDATIONS_WRONG, DSA_SOURCE_ACTIVITY } from './fixtures/dsa-known-answers';
+import { DSA_FOUNDATIONS_TASKS } from '../lib/coding/tasks/dsa';
 import { activityIn, pathById } from '../lib/learning-paths/catalog';
 import { complexityGuidance } from '../shared/coding-complexity';
 import { REACT_VARIANTS } from './coding-react-variants';

@@ -30,7 +30,7 @@ import { TYPESCRIPT_LOOP_TASKS } from './tasks/typescript-loops';
 import { REACT_LOOP_TASKS } from './tasks/react-loops';
 import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
 import { ALGORITHM_TASKS } from './tasks/algorithms';
-import { DSA_FOUNDATIONS_TASKS } from './tasks/dsa-foundations';
+import { DSA_FOUNDATIONS_TASKS } from './tasks/dsa';
 import { EASY_JAVASCRIPT_A_TASKS } from './tasks/easy-javascript-a';
 import { EASY_JAVASCRIPT_B_TASKS } from './tasks/easy-javascript-b';
 import { EASY_JAVASCRIPT_C_TASKS } from './tasks/easy-javascript-c';

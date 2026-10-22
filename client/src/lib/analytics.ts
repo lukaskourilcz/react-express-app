@@ -314,7 +314,7 @@ export type PathFunnelEvent =
   | 'learning_path_returned';
 
 export interface PathFunnelProperties {
-  /** 'fde' | 'dsa-foundations' — a published id, not a learner's. */
+  /** 'fde' — a published id, not a learner's. */
   pathId: string;
   curriculumVersion: number;
   /** Manifest activity id. Public in the catalogue. */

@@ -222,8 +222,8 @@ export const FDE_PATH_ROUTE = '/learn/forward-deployed-engineer/path';
 
 /** The role specialization lives in its section; the skill path keeps its
  * route until epic E folds it into Learn. */
-export function pathHref(pathId: LearningPathId): string {
-  return pathId === 'fde' ? FDE_PATH_ROUTE : '/roadmap/paths/dsa-foundations';
+export function pathHref(_pathId: LearningPathId): string {
+  return FDE_PATH_ROUTE;
 }
 
 export function moduleHref(pathId: LearningPathId, moduleId: string): string {

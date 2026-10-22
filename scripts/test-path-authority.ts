@@ -1,20 +1,32 @@
 import assert from 'node:assert/strict';
-import { pathById, activityIn } from '../lib/learning-paths/catalog';
+import { pathById } from '../lib/learning-paths/catalog';
 import { gradePathCode } from '../lib/learning-paths/grade';
+import { solutionFor } from '../lib/learning-paths/solutions';
+import { PATH_AUTHORITY_FIXTURES } from './fixtures/path-authority-fixtures';
+import type { SourceCallTest } from '../lib/coding/types';
 import { protectedPathHarness } from '../lib/learning-paths/harness';
 import { runChecks } from '../lib/coding/sandbox';
 import { allPassed } from '../shared/coding-evaluate';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 await buildSandboxWorker();
-const dsa = pathById('dsa-foundations')!;
+// The public path is FDE only. Private historical regression fixtures keep
+// input-budget/probe attacks covered without publishing a retired curriculum.
+const executeFixture = async (id: string, source: string, extra: SourceCallTest[] = []) => {
+  const fixture = PATH_AUTHORITY_FIXTURES[id];
+  const visible = [...fixture.code.tests, ...extra];
+  const harness = protectedPathHarness(fixture.code.harness ?? '', [...visible, ...fixture.hiddenTests].map(test => test.call));
+  return runChecks({ code: `${harness.before}\n;\n${source}\n;\n${harness.after}`, visible, hidden: fixture.hiddenTests, shuffle: values => values });
+};
 const check = async (id: string, source: string, passed: boolean, label: string) => {
-  const activity = activityIn(dsa, id)!.activity;
-  assert(activity.code);
-  const result = await gradePathCode(activity, activity.code, source);
-  assert.equal(result.state === 'verified_pass', passed, label);
+  const result = await executeFixture(id, source);
+  assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), passed, label);
   console.log(`PASS path authority: ${label}`);
 };
+const fde = pathById('fde')!;
+const real = fde.modules.flatMap(module => module.activities).find(activity => activity.kind === 'code' && activity.code)!;
+assert.equal((await gradePathCode(real, real.code!, solutionFor(real.id)!.solution)).state, 'verified_pass', 'a published FDE reference uses the protected grading path');
+assert.notEqual((await gradePathCode(real, real.code!, '')).state, 'verified_pass', 'the same published FDE activity rejects a blank submission');
 
 // This candidate passed the old appended harness: warm up with a linear
 // call, replace the read helper, then perform quadratic input traversals.
@@ -27,29 +39,29 @@ function maxGap(values){
   let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;
 }`;
 for (let attempt = 0; attempt < 5; attempt++) {
-  await check('dsa-v1-d01-pair-versus-pass', forgedReads, false, `read-helper replacement rejected, shuffle ${attempt + 1}`);
+  await check('max-gap', forgedReads, false, `read-helper replacement rejected, shuffle ${attempt + 1}`);
 }
-await check('dsa-v1-d01-pair-versus-pass', `var __countReads=()=>({reads:0,result:8});
+await check('max-gap', `var __countReads=()=>({reads:0,result:8});
 function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'same-named helper declaration rejected');
-await check('dsa-v1-d01-pair-versus-pass', `var Proxy=function(values){return values;};
+await check('max-gap', `var Proxy=function(values){return values;};
 function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'learner Proxy replacement cannot bypass input reads');
-await check('dsa-v1-d01-pair-versus-pass', `globalThis.Proxy=function(values){return values;};
+await check('max-gap', `globalThis.Proxy=function(values){return values;};
 function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'global Proxy replacement cannot bypass input reads');
-await check('dsa-v1-d01-pair-versus-pass', `RegExp.prototype.test=()=>false;
+await check('max-gap', `RegExp.prototype.test=()=>false;
 function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'prototype replacement cannot disable captured index detection');
-await check('dsa-v1-d01-pair-versus-pass', `function maxGap(values){if(values.length<2)return 0;
+await check('max-gap', `function maxGap(values){if(values.length<2)return 0;
 let low=values[0],high=low;for(let i=1;i<values.length;i++){const v=values[i];low=Math.min(low,v);high=Math.max(high,v);}return high-low;}`, true, 'independent valid min/max loop accepted');
 
-await check('dsa-v1-d06-recursive-list-sum', `var __sumCalls=0;
+await check('recursive-sum', `var __sumCalls=0;
 function sumList(head){let total=0,count=0;for(let node=head;node;node=node.next){total+=node.value;count++;}__sumCalls=count+1;return total;}`, false, 'shadow counter cannot make iteration look recursive');
-await check('dsa-v1-d06-recursive-list-sum', `function sumList(head){return head===null?0:head.value+sumList(head.next);}`, true, 'valid recursive declaration accepted');
+await check('recursive-sum', `function sumList(head){return head===null?0:head.value+sumList(head.next);}`, true, 'valid recursive declaration accepted');
 
-await check('dsa-v1-d04-head-index-queue', `var __bufferOps=0;
+await check('counted-queue', `var __bufferOps=0;
 const createQueue=()=>{const items=newQueueBuffer();let length=0;return {
 enqueue(value){items.push(value);length++;},
 dequeue(){if(!length)return null;const value=items[0];for(let i=1;i<length;i++)items[i-1]=items[i];length--;__bufferOps=0;return value;},
 size(){return length;}};};`, false, 'shadow queue counter cannot hide element movement');
-await check('dsa-v1-d04-head-index-queue', `function createQueue(){const items=newQueueBuffer();let front=0;
+await check('counted-queue', `function createQueue(){const items=newQueueBuffer();let front=0;
 return {enqueue(value){items.push(value);},dequeue(){if(front===items.length)return null;const result=items[front];items[front++]=null;return result;},size(){return items.length-front;}};}`, true, 'independent valid head-index queue accepted');
 
 // Fixture objects exported to a trusted call are immutable too. The freezer
@@ -90,7 +102,7 @@ for (const [label, source, expected] of [
   ['delete-and-replace index operations exceed the budget', 'function reverseInPlace(values){const copy=values.slice().reverse();for(let i=0;i<copy.length;i++){delete values[i];values[i]=copy[i];}return values;}', false],
   ['captured definition survives a learner global replacement', 'Object.defineProperty=()=>{throw new Error("replaced");};function reverseInPlace(values){const copy=values.slice().reverse();for(let i=0;i<copy.length;i++)Reflect.defineProperty(values,String(i),{value:copy[i],writable:true,enumerable:true,configurable:true});return values;}', true],
 ] as const) {
-  await check('dsa-v1-d02-reverse-in-place', source, expected, label);
+  await check('reverse', source, expected, label);
 }
 
 
@@ -102,12 +114,11 @@ for (const [label, source, accepted] of [
   ['queue reflection definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);for(let i=0;i<10;i++)Reflect.defineProperty(a,String(a.length-1),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
   ['queue repeated deletions and definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);const index=String(a.length-1);for(let i=0;i<10;i++){delete a[index];Object.defineProperty(a,index,{value,writable:true,enumerable:true,configurable:true});}},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
   ['queue captured definition survives global replacement', 'Object.defineProperty=()=>{throw new Error("replaced");};function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){Reflect.defineProperty(a,String(a.length),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', true],
-] as const) await check('dsa-v1-d04-head-index-queue', source, accepted, label);
+] as const) await check('counted-queue', source, accepted, label);
 
 
-const countedQueue = activityIn(dsa, 'dsa-v1-d04-head-index-queue')!.activity;
 const singleWriteQueue = 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);},dequeue(){if(h>=a.length)return null;const value=a[h];a[h++]=null;return value;},size(){return a.length-h;}};}';
-const exactCount = await gradePathCode(countedQueue, { ...countedQueue.code!, tests: [...countedQueue.code!.tests, { call: '__measureQueue(32).ops', expected: 96, criterion: 'constant-dequeue' }] }, singleWriteQueue);
-assert.equal(exactCount.state, 'verified_pass', 'queue append/read/clear are exactly three counted operations per value');
+const exactCount = await executeFixture('counted-queue', singleWriteQueue, [{ call: '__measureQueue(32).ops', expected: 96, criterion: 'constant-dequeue' }]);
+assert.equal(allPassed(exactCount.visible) && Boolean(exactCount.hidden && allPassed(exactCount.hidden)), true, 'queue append/read/clear are exactly three counted operations per value');
 console.log('PASS path authority: queue ordinary assignment is counted once');
 console.log('Native path authority checks passed. No production tampering probe was performed.');
