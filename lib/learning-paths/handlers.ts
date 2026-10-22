@@ -253,6 +253,22 @@ function stateMap(rows: ProgressRow[]): Map<string, EvidenceState> {
   return states;
 }
 
+type RecordedActivity = NonNullable<ProgressRow['activity_states']>[string];
+
+/** One activity's recorded progress as the client reads it. */
+function activityProgress(activity: MergedActivity, value: RecordedActivity | undefined): ModuleProgress['activities'][number] {
+  const domainScores = activityDomainScores(activity, value?.domainScores);
+  return {
+    activityId: activity.id,
+    state: (value?.state as EvidenceState) ?? 'not_started',
+    verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
+    score: typeof value?.score === 'number' ? value.score : null,
+    ...(domainScores ? { domainScores } : {}),
+    attempts: Number(value?.attempts ?? 0),
+    updatedAt: value?.updatedAt ?? null,
+  };
+}
+
 function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgress[] {
   const byModule = new Map(rows.map((row) => [row.module_id, row]));
   const states = stateMap(rows);
@@ -263,18 +279,7 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
       moduleId: module.id,
       completed: !isOffLoopModule(module) && moduleComplete(module, states),
       completedAt: row?.completed_at ?? null,
-      activities: module.activities.map((activity) => {
-        const value = recorded[activity.id];
-        return {
-          activityId: activity.id,
-          state: (value?.state as EvidenceState) ?? 'not_started',
-          verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
-          score: typeof value?.score === 'number' ? value.score : null,
-          ...(activityDomainScores(activity, value?.domainScores) ? { domainScores: activityDomainScores(activity, value?.domainScores)! } : {}),
-          attempts: Number(value?.attempts ?? 0),
-          updatedAt: value?.updatedAt ?? null,
-        };
-      }),
+      activities: module.activities.map((activity) => activityProgress(activity, recorded[activity.id])),
     };
   });
 }
@@ -1200,30 +1205,16 @@ function projectModuleProgress(
   const row = rows.find((one) => one.module_id === module.id);
   const recorded = row?.activity_states ?? {};
   const now = new Date().toISOString();
-  const states = new Map<string, EvidenceState>();
-  for (const one of rows) {
-    for (const [id, value] of Object.entries(one.activity_states ?? {})) {
-      if (typeof value?.state === 'string') states.set(id, value.state as EvidenceState);
-    }
-  }
+  const states = stateMap(rows);
   states.set(activity.id, state);
+  const completed = !isOffLoopModule(module) && moduleComplete(module, states);
   return {
     moduleId: module.id,
-    completed: !isOffLoopModule(module) && moduleComplete(module, states),
-    completedAt: row?.completed_at ?? (moduleComplete(module, states) && !isOffLoopModule(module) ? now : null),
+    completed,
+    completedAt: row?.completed_at ?? (completed ? now : null),
     activities: module.activities.map((one) => {
       const value = recorded[one.id];
-      if (one.id !== activity.id) {
-        return {
-          activityId: one.id,
-          state: (value?.state as EvidenceState) ?? 'not_started',
-          verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
-          score: typeof value?.score === 'number' ? value.score : null,
-          ...(activityDomainScores(one, value?.domainScores) ? { domainScores: activityDomainScores(one, value?.domainScores)! } : {}),
-          attempts: Number(value?.attempts ?? 0),
-          updatedAt: value?.updatedAt ?? null,
-        };
-      }
+      if (one.id !== activity.id) return activityProgress(one, value);
       const bestScore = Math.max(typeof value?.score === 'number' ? value.score : 0, score ?? 0);
       return {
         activityId: one.id,
