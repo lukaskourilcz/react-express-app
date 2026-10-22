@@ -2,7 +2,7 @@
 
 ## Architecture
 
-devShark is a developer-learning product with one subject, `webdev`, and the only product this repository builds. StudyShark and its subject brands moved to their own repository, `lukaskourilcz/studyshark`, on 2026-09-24. The public name is exact: devShark. Product identity and links come from `client/product-catalog.ts` and `client/src/lib/products.ts`.
+devShark is a developer-learning product with one subject, `webdev`, and the only product this repository builds. The public name is exact: devShark. Product identity and links come from `client/product-catalog.ts` and `client/src/lib/products.ts`.
 
 ## Identity
 
@@ -24,9 +24,6 @@ Concise, direct, active, specific, encouraging, honest, technically accurate, an
 
 ## Freemium rule
 
-devShark is freemium. `shared/tiers.ts` sets what every account opens (HTML, CSS and JavaScript in full, React levels 1 to 12, the opening stages of every project and short path, and a starter set of coding challenges) and what Premium opens for 4.99 EUR a month or 59.88 EUR a year. Copy states the price before VAT and says VAT is added at checkout and never calls devShark free for everyone; "Free to start" is the claim. A lock reads "Premium" in text, so colour or an icon never carries it alone.
+devShark is freemium. `shared/tiers.ts` sets what every account opens (HTML, CSS and JavaScript in full, React levels 1 to 12, DSA levels 1 to 5, the opening stages of every project and short path, a starter set of coding challenges, and the FDE diagnostic and first module) and what Premium opens for 4.99 EUR a month or 59.88 EUR a year. Copy states the price before VAT and says VAT is added at checkout and never calls devShark free for everyone; "Free to start" is the claim. A lock reads "Premium" in text, so colour or an icon never carries it alone.
 
-Premium, coins, cosmetics and merchandise decide which content a learner may start. They leave explanations, grading, XP amounts, scores, streaks, ranks, leaderboards, matching and accounts as they are. Voluntary support is retired: `/support` redirects to `/premium`.
-
-History: this section was the "Free-forever rule" until the owner made devShark freemium on 25 September 2026 (`SECOND-HANDOFF-25-9-2026.md`).
-
+Premium, coins and cosmetics decide which content a learner may start or what they own. Merchandise is paused behind `MERCH_ENABLED`. They leave explanations, grading, XP amounts, scores, streaks, ranks, leaderboards, matching and accounts as they are. Voluntary support is retired: `/support` redirects to `/premium`.
