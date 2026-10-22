@@ -95,24 +95,24 @@ function checkProjectionKeys(fail: Fail, where: string, manifest: LearningPathMa
 
 export function schemaContracts(fail: Fail): void {
   // A newly authored teaching module must not be omitted from the capstone.
-  const fde = publicManifest(LEARNING_PATHS.find(path => path.id === 'fde')!);
-  const capstone = fde.modules.find(module => module.id === 'fde-v1-c01')!;
-  const teaching = fde.modules.filter(module => !isOffLoopModule(module) && module.id !== capstone.id);
+  const fdeManifest = publicManifest(LEARNING_PATHS.find(path => path.id === 'fde')!);
+  const capstone = fdeManifest.modules.find(module => module.id === 'fde-v1-c01')!;
+  const teaching = fdeManifest.modules.filter(module => !isOffLoopModule(module) && module.id !== capstone.id);
   if (JSON.stringify(capstone.dependsOn) !== JSON.stringify(teaching.map(module => module.id))) fail('capstone dependencies omit or reorder a required teaching module');
   // The final curriculum is exactly M01–M14; shelf modules never gate completion.
   const finalTeaching = Array.from({ length: 14 }, (_, index) => `fde-v1-m${String(index + 1).padStart(2, '0')}`);
   if (JSON.stringify(capstone.dependsOn) !== JSON.stringify(finalTeaching)) fail(`capstone dependsOn must be exactly M01–M14, got ${capstone.dependsOn.join(', ')}`);
   for (const id of capstone.dependsOn) {
-    const module = fde.modules.find(candidate => candidate.id === id);
+    const module = fdeManifest.modules.find(candidate => candidate.id === id);
     if (!module || isOffLoopModule(module)) fail(`capstone depends on ${id}, which is not a required teaching module`);
   }
   for (const id of ['fde-v1-c01-executive-update', 'fde-v1-c01-walkthrough-script']) {
     if (!capstone.requires.some(requirement => requirement.activityId === id && requirement.state === 'self_reviewed')) fail(`capstone does not require ${id}`);
     const states = new Map<string, EvidenceState>();
-    for (const module of fde.modules) for (const activity of module.activities) states.set(activity.id, activity.verification === 'self_reviewed' ? 'self_reviewed' : 'verified_pass');
-    if (!pathGuidedComplete(fde, states)) fail('all required capstone work should complete the authored path');
+    for (const module of fdeManifest.modules) for (const activity of module.activities) states.set(activity.id, activity.verification === 'self_reviewed' ? 'self_reviewed' : 'verified_pass');
+    if (!pathGuidedComplete(fdeManifest, states)) fail('all required capstone work should complete the authored path');
     states.delete(id);
-    if (pathGuidedComplete(fde, states)) fail(`guided completion skipped the required ${id}`);
+    if (pathGuidedComplete(fdeManifest, states)) fail(`guided completion skipped the required ${id}`);
   }
 
   /* ── 1. the base fixture validates ──────────────────────────────────── */
