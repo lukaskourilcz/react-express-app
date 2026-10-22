@@ -239,7 +239,8 @@ const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/daily,/not-found
 const RESPONSIVE_DARK = `-- --routes /,/topics/${TOPIC},/daily --widths 390,768,1280`;
 const BROWSER_SPECS = [
   'public', 'guide-startup profile-leaderboard-preferences profile-path-picker', 'evolving', 'coding-pages', 'coding-workbench',
-  'coding-drafts', 'learning-release learn-sections', 'segmented', 'on-accent', 'navigation', 'lazy-auth', 'sign-in',
+  'coding-drafts', 'learning-release learn-sections',
+  'fde-hub fde-taster fde-positioning interview-shelf', 'path-content-shapes portfolio-export diagnostic-overview dsa-advanced', 'segmented', 'on-accent', 'navigation', 'lazy-auth', 'sign-in',
   'route-errors', 'first-load', 'home-sample', 'routes-axe', 'daily', 'launch-offer',
 ].map((names) => names.split(' ').map((name) => `tests/browser/${name}.spec.ts`).join(' '));
 

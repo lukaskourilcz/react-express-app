@@ -88,7 +88,7 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
     input.evidence.forEach((item, index) => {
       const column = Math.floor(index / rows);
       const row = index % rows;
-      ctx.fillText(fit(ctx, `${item.label}: ${item.verified} / ${item.selfReviewed} / ${item.total}`, 450), 120 + column * 490, 290 + row * step);
+      ctx.fillText(fitLabel(ctx, item.label, `: ${item.verified} / ${item.selfReviewed} / ${item.total}`, 450), 120 + column * 490, 290 + row * step);
     });
     const evidenceBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png', 0.92));
     return evidenceBlob ? new File([evidenceBlob], 'devshark-fde-guided-path.png', { type: 'image/png' }) : null;
@@ -133,6 +133,13 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   return new File([blob], `${slug(input.brand)}-${slug(input.fileSuffix) || 'result'}.png`, {
     type: 'image/png',
   });
+}
+
+/** A label followed by figures: only the label shortens, so the figures always
+ * show whole. A long competency name once hid its counts behind the ellipsis. */
+export function fitLabel(ctx: Pick<CanvasRenderingContext2D, 'measureText'>, label: string, figures: string, max: number): string {
+  if (typeof ctx.measureText !== 'function') return `${label}${figures}`;
+  return `${fit(ctx as CanvasRenderingContext2D, label, Math.max(0, max - ctx.measureText(figures).width))}${figures}`;
 }
 
 /** Shorten a line with an ellipsis until it fits `max` pixels in the current font. */

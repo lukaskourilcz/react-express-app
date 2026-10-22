@@ -41,7 +41,7 @@ for (const theme of ['light', 'dark'] as const) {
     });
     await page.goto('/learn/forward-deployed-engineer/path');
     const section = page.locator('.lp-portfolio-export');await expect(section).toBeVisible();
-    await expect(section).toContainText('including drafts');
+    await expect(section).toContainText('drafts included');
     for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `reflow ${width}`).toBe(true);

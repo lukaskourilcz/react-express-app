@@ -160,6 +160,8 @@ jobs:
           npm run test:browser -- tests/browser/coding-workbench.spec.ts
           npm run test:browser -- tests/browser/coding-drafts.spec.ts
           npm run test:browser -- tests/browser/learning-release.spec.ts tests/browser/learn-sections.spec.ts
+          npm run test:browser -- tests/browser/fde-hub.spec.ts tests/browser/fde-taster.spec.ts tests/browser/fde-positioning.spec.ts tests/browser/interview-shelf.spec.ts
+          npm run test:browser -- tests/browser/path-content-shapes.spec.ts tests/browser/portfolio-export.spec.ts tests/browser/diagnostic-overview.spec.ts tests/browser/dsa-advanced.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts

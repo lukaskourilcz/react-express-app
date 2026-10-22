@@ -35,7 +35,9 @@ for(const theme of ['light','dark'] as const) test(`${theme}: diagnostic report 
   const link=report.getByRole('link',{name:'Open the diagnostic'});await link.focus();await expect(link).toBeFocused();
   await page.keyboard.press('Shift+Tab');await page.keyboard.press('Tab');await expect(link).toBeFocused();
   await expect(link).toHaveAttribute('href','/learn/forward-deployed-engineer/path/fde-v1-diagnostic?activity=fde-v1-diagnostic-check');
-  await page.setViewportSize({width:360,height:900});await page.addStyleTag({content:'html {font-size:200% !important;}'});
+  // 200% text in a wide font (Verdana, or DejaVu Sans on the Linux runner), so a
+  // long word overflows here on any machine if it can overflow on one (B14, #510).
+  await page.setViewportSize({width:360,height:900});await page.addStyleTag({content:'html {font-size:200% !important;} body, body * {font-family:Verdana,"DejaVu Sans",sans-serif !important;}'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   expect(await report.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   const findings=await new AxeBuilder({page}).include('section[aria-labelledby="path-diagnostic-title"]').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();

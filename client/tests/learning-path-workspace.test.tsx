@@ -425,9 +425,9 @@ describe('the content shapes of #497', () => {
     expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Optional');
   });
 
-  it('labels a loop module In progress until the server completes it', async () => {
+  it('labels a loop module by its evidence, never Optional: Not started before any (B14, #510)', async () => {
     await mount(null);
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'M01' })).toBeInTheDocument());
-    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('In progress');
+    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Not started');
   });
 });

@@ -260,6 +260,33 @@ describe('the path page', () => {
   });
 });
 
+describe('the module page status', () => {
+  const modulePage = (moduleId: string) => mount(`/p/${moduleId}`, '/p/:moduleId', async () => {
+    const { ModuleWorkspace } = await import('../src/components/paths/LearningPathScreens');
+    return <ModuleWorkspace pathId="fde" />;
+  });
+  // B14 (#510): an untouched module, or one seen before enrolling, said
+  // "In progress".
+  it('says Not started before any evidence', async () => {
+    state.secondModule = true;
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m02');
+    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+  });
+  it('says In progress once an activity of the module has evidence', async () => {
+    state.secondModule = true;
+    state.passedActivity = 'fde-m02-l1-read';
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m02');
+    expect(await screen.findByText('In progress', { selector: '.lp-module__meta' })).toBeInTheDocument();
+  });
+  it('says Not started to a learner who has not enrolled', async () => {
+    state.secondModule = true;
+    await modulePage('fde-m02');
+    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+  });
+});
+
 describe('the interview-prep shelf', () => {
   const modulesSection = () => screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
 

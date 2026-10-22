@@ -185,6 +185,9 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
 
 function Section({ section }: { section: LessonSection }) {
   const t = useT();
+  // A code block or table wider than a phone scrolls sideways; keyboard users
+  // reach that scroll by focusing the region, which its caption names.
+  const captionId = useId();
 
   switch (section.kind) {
     case 'prose':
@@ -203,17 +206,17 @@ function Section({ section }: { section: LessonSection }) {
     case 'code':
       return (
         <figure className="lp-figure">
-          <pre>
+          <pre className="lp-scroll-region" tabIndex={0} role="region" aria-labelledby={captionId}>
             <code>{section.code}</code>
           </pre>
-          <figcaption>{section.caption}</figcaption>
+          <figcaption id={captionId}>{section.caption}</figcaption>
         </figure>
       );
     case 'table': {
       const headers = section.headers;
       return (
         <figure className="lp-figure">
-          <div className="lp-table-wrap">
+          <div className="lp-table-wrap lp-scroll-region" tabIndex={0} role="region" aria-labelledby={captionId}>
             <table className="lp-table">
               <caption className="ss-sr-only">{section.caption}</caption>
               <thead>
@@ -245,7 +248,7 @@ function Section({ section }: { section: LessonSection }) {
               </tbody>
             </table>
           </div>
-          <figcaption>{section.caption}</figcaption>
+          <figcaption id={captionId}>{section.caption}</figcaption>
         </figure>
       );
     }
@@ -294,7 +297,7 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
     <figure className="lp-figure lp-example">
       <figcaption id={labelId}>{section.caption}</figcaption>
       {narrow ? (
-        <pre className="lp-code"><code>{code}</code></pre>
+        <pre className="lp-code lp-scroll-region" tabIndex={0} role="region" aria-labelledby={labelId}><code>{code}</code></pre>
       ) : (
         <>
           <label className="ss-sr-only" htmlFor={`${labelId}-editor`}>{section.caption}</label>
