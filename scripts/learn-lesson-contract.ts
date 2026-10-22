@@ -166,5 +166,5 @@ export async function learnLessonContracts() {
     Date.now = realNow;
   }
 
-  console.log('PASS learn lessons: level map, the path\'s text, guest read, ETag by content hash, refusals and the map\'s limit');
+  console.log('PASS learn lessons: level map, the original readings bound to their reviews, guest read, ETag by content hash, refusals and the map\'s limit');
 }
