@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -94,6 +94,32 @@ describe('searching a track', () => {
   it('finds a challenge by its title', () => {
     mount('/coding/javascript?q=zip%20two', <CodingTrackScreen />, '/coding/:track');
     expect(rows().some((row) => row.includes('Zip two lists'))).toBe(true);
+  });
+
+  // The box read its value from the URL, which the router updates in a
+  // transition: until the list re-rendered, React put the old value back, so
+  // a key typed in that time replaced the one before it.
+  it('keeps each key typed in the search box before the list catches up', async () => {
+    mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
+    const box = screen.getByRole('searchbox') as HTMLInputElement;
+    const env = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const wasAct = env.IS_REACT_ACT_ENVIRONMENT;
+    env.IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      // As a browser types: the value changes, then `input` fires.
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(box, 'z');
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(box.value).toBe('z');
+    } finally {
+      env.IS_REACT_ACT_ENVIRONMENT = wasAct;
+    }
+    await act(async () => {});
+    expect(screen.getByTestId('search').textContent).toBe('?q=z');
+    expect(box.value).toBe('z');
+    // Reset clears the box with the filters it belongs to.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByTestId('search').textContent).toBe('');
+    expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
   });
 });
 

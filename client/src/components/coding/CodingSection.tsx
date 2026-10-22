@@ -429,6 +429,11 @@ export function CodingTrackScreen() {
   // Every filter lives in the URL, so a filtered list is a link a learner can
   // keep, share with themselves on another device, or reload without losing.
   const query = params.get('q') ?? '';
+  // The search box keeps what is typed itself. Read back from the URL, which
+  // the router updates in a transition, it lost keys: React put the old value
+  // back until the list re-rendered, and the next key replaced the one before.
+  // Clearing the filters empties it, and another track starts a fresh one.
+  const searchBox = useRef<HTMLInputElement>(null);
   const difficulty = difficultyParam(params);
   const duration = params.get('time') ?? 'all';
   // No task is graded by a checklist since 29 Sep 2026, so an old
@@ -545,9 +550,11 @@ export function CodingTrackScreen() {
       <div className="cd-search">
         <label className="cd-visually-hidden" htmlFor={`${track}-search`}>{t('coding.filter.searchLabel')}</label>
         <input
+          key={track}
+          ref={searchBox}
           id={`${track}-search`}
           type="search"
-          value={query}
+          defaultValue={query}
           placeholder={t('coding.filter.searchPlaceholder')}
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
@@ -577,7 +584,7 @@ export function CodingTrackScreen() {
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
         {filtersOn && (
-          <Button variant="ghost" onClick={() => setParams(new URLSearchParams(), { replace: true })} label={t('coding.filter.reset')} />
+          <Button variant="ghost" onClick={() => { if (searchBox.current) searchBox.current.value = ''; setParams(new URLSearchParams(), { replace: true }); }} label={t('coding.filter.reset')} />
         )}
       </div>
       <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
