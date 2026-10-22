@@ -234,7 +234,7 @@ const TRACK_NAMES: Record<CodingTask['track'], string> = {
 
 export function commitMessageFor(task: CodingTask): string {
   const track = TRACK_NAMES[task.track];
-  return `Complete "${task.title}" (${track}${hasLearnLevel(task) ? `, level ${task.level}` : ''})`;
+  return `Complete "${task.title}" (${track}${hasLearnLevel(task) ? `, ${task.topic === 'dsa' ? 'DSA level' : 'level'} ${task.level}` : ''})`;
 }
 
 const LEVEL_TITLES: Record<string, string[]> = {
