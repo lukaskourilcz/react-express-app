@@ -488,7 +488,7 @@ export function CodeActivity({
 /* ── written artifact ──────────────────────────────────────────────────── */
 
 /** A field's length as the server measures it against `maxLength`
- * (lib/learning-paths/grade.ts): the trimmed text, or a list's trimmed,
+ * (the server artifact grader, grade.ts): the trimmed text, or a list's trimmed,
  * non-empty lines joined by newlines. Counting the raw box instead flagged
  * blank lines and trailing spaces the server never sees. */
 function artifactFieldLength(kind: PathArtifactPayload['fields'][number]['kind'], raw: string): number {
