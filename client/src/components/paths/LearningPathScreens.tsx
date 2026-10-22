@@ -337,7 +337,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
           {open && (barred || nextBarred) && premiumMark}
-          {isAuthenticated && !enrollment && open && (
+          {/* Only once the account's enrollments are known: while they load
+              (or after they failed) an enrolled learner would be offered Start. */}
+          {isAuthenticated && enrollments.data && !enrollment && open && (
             <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
           )}
           {isAuthenticated && enrollment?.status === 'paused' && open && (
@@ -586,7 +588,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const queryClient = useQueryClient();
-  const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const { userId, isAuthenticated, catalog, entry, enrollment, enrollments, progress } = usePathState(pathId);
   const pathManifests = useMemo(() => entry ? [entry.manifest] : [], [entry]);
   const { lockOf } = useLocks(undefined, { paths: pathManifests });
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
@@ -931,7 +933,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           <span>{t('paths.signInToRecord')}</span>
         </div>
       )}
-      {isAuthenticated && !enrollment && (
+      {/* A failed read says so; a missing enrollment is only claimed once the
+          list has loaded, never while it is on its way. */}
+      {isAuthenticated && (enrollments.error || progress.error) ? (
+        <ErrorRetry
+          message={pathCopy['paths.hub.error']}
+          onRetry={() => {
+            void enrollments.refetch();
+            if (enrollment) void progress.refetch();
+          }}
+        />
+      ) : isAuthenticated && enrollments.data && !enrollment && (
         <div className="lp-notice lp-notice--info">
           <span className="lp-notice__glyph" aria-hidden="true">
             ℹ

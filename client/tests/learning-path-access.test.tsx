@@ -36,6 +36,8 @@ const state = vi.hoisted(() => ({
   tier: 'premium' as 'premium' | 'free',
   availability: 'available',
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
+  enrollmentsRead: 'loaded' as 'loaded' | 'loading' | 'failed',
+  enrollmentRefetches: 0,
   progressLoaded: true,
   progressRequests: [] as string[],
   shelf: false,
@@ -89,7 +91,11 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         versions: {},
       },
     }),
-    useEnrollments: () => ({ data: { enrollments: state.enrollments.map((one) => ({ baseTrackAtEnrollment: null, startedAt: '', updatedAt: '', ...one })) } }),
+    useEnrollments: () => (state.enrollmentsRead === 'loading'
+      ? { data: undefined, isPending: true, error: null, refetch: () => {} }
+      : state.enrollmentsRead === 'failed'
+        ? { data: undefined, isPending: false, error: new Error('down'), refetch: () => { state.enrollmentRefetches += 1; } }
+        : { data: { enrollments: state.enrollments.map((one) => ({ baseTrackAtEnrollment: null, startedAt: '', updatedAt: '', ...one })) } }),
     usePathProgress: (_user: string | undefined, enrollmentId: string | undefined) => {
       const enrollment = state.enrollments.find((one) => one.enrollmentId === enrollmentId);
       return { data: enrollment && state.progressLoaded ? progressFor(enrollment.pathId) : undefined };
@@ -131,6 +137,8 @@ beforeEach(() => {
   state.tier = 'premium';
   state.availability = 'available';
   state.enrollments = [];
+  state.enrollmentsRead = 'loaded';
+  state.enrollmentRefetches = 0;
   state.progressLoaded = true;
   state.progressRequests = [];
   state.shelf = false;
@@ -251,6 +259,12 @@ describe('the path page', () => {
     expect(screen.queryByText(/are required to complete the path/)).toBeNull();
   });
 
+  it('offers no Start while the account\'s enrollments are still loading', async () => {
+    state.enrollmentsRead = 'loading';
+    await overview('fde');
+    expect(screen.queryByRole('button', { name: 'Start this path' })).toBeNull();
+  });
+
   it('a double click on Start sends one enrollment', async () => {
     await overview('fde');
     const start = screen.getByRole('button', { name: 'Start this path' });
@@ -286,6 +300,21 @@ describe('the module page status', () => {
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
     expect(await screen.findByText('In progress', { selector: '.lp-module__meta' })).toBeInTheDocument();
+  });
+  it('claims no missing enrollment while the list loads', async () => {
+    state.enrollmentsRead = 'loading';
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.queryByText('Start this path to open its activities.')).toBeNull();
+  });
+  it('says the evidence could not be loaded, with a retry, when the enrollments fail', async () => {
+    state.enrollmentsRead = 'failed';
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.queryByText('Start this path to open its activities.')).toBeNull();
+    expect(screen.getByText(/Your evidence could not be loaded/)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button'));
+    expect(state.enrollmentRefetches).toBe(1);
   });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;
