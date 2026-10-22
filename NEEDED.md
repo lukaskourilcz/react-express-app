@@ -2,7 +2,7 @@
 
 State on 22 October 2026: `main` runs on devshark.app with Supabase migrations applied through 066. The FDE path is built and merged but stays off in Production until you set its variable. Payments (#221) and merchandise are off.
 
-Task format: `- [ ] **Title** — desc. [imp:1-5] [owner:me|ai] [time:30m] [kind:K]`, where K is setup, deploy, legal, content or decision. Remove an item once it is done; Git history keeps it.
+Task format: `- [ ] **Title** — desc. [imp:1-5] [owner:me|ai] [time:30m] [kind:K]`, where K is setup, deploy, legal, content or decision. Tick an item when it is done; the next markdown checkup removes it, and Git history keeps it.
 
 ## Switch on
 
