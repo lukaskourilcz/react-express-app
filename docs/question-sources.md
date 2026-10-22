@@ -47,7 +47,9 @@ issues. Treat this as a curated, human-in-the-loop pipeline.
 
 The Learn bank combines the path's 52 original checks (including code context),
 62 corrected existing seeds and six original synthesis questions. The origin
-mapping and previous ledger rows are retained in `docs/audit/wip/history/`.
+mapping, previous ledger rows and 42 replaced foundation seeds are retained
+in `docs/audit/wip/history/`. The latter are an unserved historical archive
+with their original errors, not current learning material.
 Every current item has its own exact-hash ledger review and second-reading
 notes. Both passes were performed in the same Codex model session; these
 records claim neither an independent reviewer nor execution of question snippets.
