@@ -79,8 +79,6 @@ export interface RailEntry {
   /** open: selectable. locked: behind a prerequisite. dimmed: outside the plan
    * because the learner has not joined this section, with nothing passed. */
   state: RailState;
-  /** The other sections that list this topic. */
-  alsoIn: LearnSectionId[];
   /** Every level of the topic needs Premium for this visitor. */
   premium: boolean;
 }
@@ -110,7 +108,6 @@ export function railEntries(id: LearnSectionId, ctx: RailContext): RailEntry[] {
     entries.push({
       topic,
       state,
-      alsoIn: sectionsForTopic(topic).filter((other) => other !== id),
       premium: state !== 'dimmed' && isBarred(ctx.lockOf({ kind: 'learn-level', topic, level: 1 })),
     });
   }
