@@ -170,8 +170,8 @@ export function CheckActivity({
   const graded = verdicts.size > 0;
 
   return (
-    // Not `lp-check`: that class is the profile picker's checkbox label, whose
-    // rules would dim the whole check once its radios are disabled.
+    // Its own class: sharing the picker's checkbox-label class dimmed the
+    // whole check once its radios were disabled.
     <div className="lp-check-view">
       <div className="lp-notice">
         <span className="lp-notice__glyph" aria-hidden="true">
