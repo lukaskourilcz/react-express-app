@@ -25,6 +25,8 @@ import {
 } from '../../../../shared/progression';
 import { isBarred, type LockState } from '../../lib/locks';
 import type { GatedContent } from '../../../../shared/tiers';
+import type { PathProgressResponse } from '../../../../shared/learning-path-api';
+import type { ModuleSummary } from '../../../../shared/learning-paths';
 
 /** The last section opened on this device. */
 export const SECTION_KEY = 'devquiz:roadmap:section';
@@ -115,10 +117,43 @@ export function railEntries(id: LearnSectionId, ctx: RailContext): RailEntry[] {
   return entries;
 }
 
+/** What a learning path adds to its section's figure: one step per activity
+ * of its loop modules (optional and shelf modules stay out, as they stay out
+ * of completion), done once the server has recorded it as `verified_pass` or
+ * `self_reviewed`. An activity is about the size of a Learn level, so the two
+ * add up. Nothing here grades: it counts states the server recorded. */
+export interface PathSteps {
+  passed: number;
+  total: number;
+}
+
+const DONE_STATES: ReadonlySet<string> = new Set(['verified_pass', 'self_reviewed']);
+
+export function pathSteps(
+  modules: readonly Pick<ModuleSummary, 'activities' | 'optional' | 'shelf'>[],
+  progress: PathProgressResponse | undefined,
+): PathSteps {
+  const states = new Map<string, string>();
+  for (const module of progress?.modules ?? []) {
+    for (const activity of module.activities) states.set(activity.activityId, activity.state);
+  }
+  let passed = 0;
+  let total = 0;
+  for (const module of modules) {
+    if (module.optional === true || module.shelf !== undefined) continue;
+    for (const activity of module.activities) {
+      total += 1;
+      if (DONE_STATES.has(states.get(activity.id) ?? '')) passed += 1;
+    }
+  }
+  return { passed, total };
+}
+
 /** The section's progress figure: levels passed over levels available, across
  * the topics the learner can work toward (every entry but the dimmed ones;
- * all of them when every entry is dimmed). Topics only. null until the level
- * counts are known. A passed level always shows as at least 1%.
+ * all of them when every entry is dimmed), plus the steps of the section's
+ * path when one is open (`pathSteps`). null until the level counts are known.
+ * A passed level or step always shows as at least 1%.
  *
  * Joining a section can lower its figure, and Web Developer's: the joined
  * topics and their prerequisites (Node.js for a Frontend learner) join the
@@ -127,11 +162,12 @@ export function sectionProgress(
   entries: readonly RailEntry[],
   progress: VerifiedProgress,
   levelCounts: Readonly<Record<string, number>>,
+  path: PathSteps | null = null,
 ): { passed: number; total: number; percent: number | null } {
   const reachable = entries.filter((entry) => entry.state !== 'dimmed');
   const counted = reachable.length > 0 ? reachable : entries;
-  let passed = 0;
-  let total = 0;
+  let passed = path?.passed ?? 0;
+  let total = path?.total ?? 0;
   for (const { topic } of counted) {
     const count = levelCounts[topic] ?? 0;
     passed += Math.min(passedLevelCount(progress, topic), count);

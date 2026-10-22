@@ -88,7 +88,7 @@ async function expectNoAxeViolations(page: Page, selector: string) {
 for (const theme of ['light', 'dark'] as const) {
   test(`${theme}: the overview lists the interview-prep shelf apart from the loop`, async ({ page }, info) => {
     await setUp(page, theme);
-    await page.goto('/roadmap/specializations/fde');
+    await page.goto('/learn/forward-deployed-engineer/path');
     const shelf = page.getByRole('region', { name: 'Interview prep' });
     await expect(shelf).toBeVisible();
     await expect(shelf).toContainText('Learning round');
@@ -103,7 +103,7 @@ for (const theme of ['light', 'dark'] as const) {
 
   test(`${theme}: a scenario check keeps its case once, readable and first in reading order`, async ({ page }, info) => {
     await setUp(page, theme);
-    await page.goto(`/roadmap/specializations/fde/fde-v1-x01?activity=${check.id}`);
+    await page.goto(`/learn/forward-deployed-engineer/path/fde-v1-x01?activity=${check.id}`);
     const scenario = page.getByRole('region', { name: 'The scenario' });
     await expect(scenario).toBeVisible();
     await expect(page.getByText(SCENARIO_FIRST)).toHaveCount(1);
@@ -151,7 +151,7 @@ for (const theme of ['light', 'dark'] as const) {
 
   test(`${theme}: a code activity shows its fixture note above the editor`, async ({ page }, info) => {
     await setUp(page, theme);
-    await page.goto(`/roadmap/specializations/fde/fde-v1-x01?activity=${drill.id}`);
+    await page.goto(`/learn/forward-deployed-engineer/path/fde-v1-x01?activity=${drill.id}`);
     const note = page.locator('.lp-work > .lp-notice--info');
     await expect(note).toBeVisible();
     await expect(note).toContainText('Before you start');
