@@ -4180,6 +4180,10 @@ async function main() {
     'the retired DSA switch opens nothing');
   assert.equal(availabilityFor({ path: fdePath!, enabled: false, storageInstalled: true }), 'disabled');
   assert.equal(availabilityFor({ path: fdePath!, enabled: true, storageInstalled: false }), 'storage_missing');
+  assert.equal(availabilityFor({ path: fdePath!, enabled: true, storageInstalled: true }), 'available');
+  // The content verdict is cached per merged path; a different, broken path
+  // must still get its own verdict rather than the published one's.
+  assert.equal(availabilityFor({ path: { ...fdePath!, modules: [] }, enabled: true, storageInstalled: true }), 'content_incomplete');
 
   // The published manifest is answer-free. Every option a learner might be
   // shown arrives shuffled with the key sealed in the attempt session, so the
