@@ -1497,10 +1497,11 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   up. Both pages are client routes behind the catch-all rewrite, kept out
   of search (`NOINDEX_PATHS`), with no handler of their own.
 - **An account without Google.** It has no name or picture. Its header and
-  Profile show the first part of its address, which only the learner sees;
-  friends, the boards and live rooms never show the address (its sharkname,
-  "Learner", or "Player" and a number), a Challenge score saves under its
-  sharkname, and deleting it works as for any account: nothing in
+  Profile show the first part of its address. Friends and live rooms never
+  show the address (they show its sharkname, "Learner", or "Player" and a
+  number); the boards and Challenge scores show the sharkname unless the
+  learner picks the account name, the confirmed address's local part
+  ("Leaderboards"). Deleting it works as for any account: nothing in
   `delete-account` reads a Google identity (`npm run test:launch`,
   verified-caller suite).
 - **The token on a request.** `apiFetch` (`client/src/lib/api.ts`) attaches
