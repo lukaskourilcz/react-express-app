@@ -100,6 +100,21 @@ it('shows the solution without a warning once the task is passed', async () => {
   expect(revealCoding).toHaveBeenCalledTimes(1);
 });
 
+// After a pass the Solution button asks at once and stays until the answer
+// arrives; a second press sent a second reveal.
+it('sends one reveal for a double press after a pass', async () => {
+  vi.mocked(revealCoding).mockReset();
+  let answer!: (response: CodingRevealResponse) => void;
+  vi.mocked(revealCoding).mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+  mount({ progress: progress('passed') });
+  climbTheLadder();
+  fireEvent.click(screen.getByRole('button', { name: 'Solution' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Solution' }));
+  answer({ ...revealed, progress: progress('passed') });
+  expect(await screen.findByText('const one = () => 1;')).toBeVisible();
+  expect(revealCoding).toHaveBeenCalledTimes(1);
+});
+
 it('drops the XP warning after a pass in this session too, and inside a Learn level keeps only the level rule', async () => {
   vi.mocked(submitCoding).mockResolvedValue(verdict({}));
   mount({ mode: 'lesson' });

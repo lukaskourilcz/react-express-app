@@ -508,8 +508,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }
   }, [skipNote, skipReason, skipSubmitting, task.id, t]);
 
+  // One reveal at a time: after a pass the Solution button asks straight
+  // away and stays on screen until the answer comes, so a second press sent
+  // a second request.
+  const revealing = useRef(false);
   const reveal = useCallback(async () => {
-    if (!session) return;
+    if (!session || revealing.current) return;
+    revealing.current = true;
     setConfirming(null);
     setSubmitError(null);
     try {
@@ -521,6 +526,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
         : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
       revealRef.current?.focus();
+    } finally {
+      revealing.current = false;
     }
   }, [session, taken, onRevealed, rungs.length, t, submitFailure, task.track]);
   // The button that asked for the solution is gone once it shows, so focus
