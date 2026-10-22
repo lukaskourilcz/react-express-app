@@ -1,4 +1,4 @@
-/* Billing contract (#221, SECOND-HANDOFF-25-9-2026.md section 3.5).
+/* Billing contract (#221).
  *
  * Runs the real billing handlers against a fake Stripe API and an in-memory
  * model of the migration 039 routines. Nothing reaches Stripe: the client is

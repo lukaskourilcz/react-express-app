@@ -51,7 +51,7 @@ import { Section, captionStyle } from './DevSettings';
 const SETTINGS_KEY = ['admin', 'settings'] as const;
 const fulfilmentKey = (view: FulfilmentView) => ['admin', 'fulfilment', view] as const;
 
-/** Spreadshop's EU base prices in September 2026 (handoff section 8.1), shown
+/** Spreadshop's EU base prices in September 2026, shown
  * as a hint beside the field. A hint, not a value: the owner enters the price
  * the shop actually shows. */
 const HANDOFF_BASE_PRICE: Partial<Record<MerchSku, string>> = {

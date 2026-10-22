@@ -1,5 +1,5 @@
 // /premium (#222): what Premium costs, what it opens, and how to buy, cancel
-// or withdraw. Section 4.2 of the second handoff.
+// or withdraw.
 //
 //   signed out           the plan buttons sign in with Google and come back here
 //   signed in, free      the plan buttons open Stripe Checkout

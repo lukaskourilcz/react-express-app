@@ -1,4 +1,4 @@
-// "Invite a friend" on the Rewards screen (#228, handoff section 7.2).
+// "Invite a friend" on the Rewards screen (#228).
 //
 // The link, a button that copies it, and how many friends have paid off so
 // far. The server sends counts only, so this section cannot show who a friend

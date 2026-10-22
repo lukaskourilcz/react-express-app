@@ -14,7 +14,7 @@ import { LEARNING_PATHS } from './learning-paths/catalog';
  *     to sign in (review finding integrity-4: otherwise signing out, or
  *     leaving the token off a request, opened every Premium level and
  *     challenge with grading and explanations). The guest previews the
- *     handoff names are free content already: stage one of every project
+ *     the product allows are free content already: stage one of every project
  *     and path, and the landing's sample question, which never reaches here.
  *   * Free content never costs a query. The tier is resolved only when the
  *     content is Premium, and at most once per request.

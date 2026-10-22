@@ -1413,7 +1413,7 @@ export const en = {
   'error.prerequisiteNotMet': 'Pass the steps before this one first.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
-  // Section 4 of the second handoff. The landing keys above keep their names;
+  // The landing keys above keep their names;
   // these are the keys the rewrite added.
   'nav.premium': 'Premium',
   'title.premium': 'Premium · devShark',
