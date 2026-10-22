@@ -448,15 +448,14 @@ for (const width of [360, 1440]) {
 
 // #493 review: the DSA checks carry their fixtures and probe source inline,
 // up to 2,618 characters a call. The Results row prints the short `shown`
-// form, Run still executes the full call, and a task on a DSA level that
-// does not issue it yet names no level.
+// form, Run still executes the full call, and task metadata follows the level that issues it after the E3 rebuild.
 for (const width of [360, 1280]) {
   test(`DSA Results rows print the short form at ${width}px, and Run executes the full checks`, async ({ page }) => {
     await prepare(page);
     await page.setViewportSize({ width, height: 900 });
     const id = 'alg-dsa-bst-search-insert';
     await openTask(page, `/coding/algorithms/${id}`);
-    await expect(page.locator('.cd-brief__meta')).toHaveText(/DSA · Level 13$/);
+    await expect(page.locator('.cd-brief__meta')).toHaveText(/DSA Foundations · Level 13$/);
     const calls = page.locator('.cd-result__call');
     await expect(calls).toHaveCount(7);
     for (const text of await calls.allInnerTexts()) {
@@ -475,9 +474,9 @@ for (const width of [360, 1280]) {
   });
 }
 
-test('a DSA task on a level that does not issue it yet names no level', async ({ page }) => {
+test('the former deferred DSA task names its now-issued foundations level', async ({ page }) => {
   await prepare(page);
   await openTask(page, '/coding/algorithms/alg-dsa-repair-level-order');
-  await expect(page.locator('.cd-brief__meta')).toHaveText(/· DSA$/);
+  await expect(page.locator('.cd-brief__meta')).toHaveText(/DSA Foundations · Level 14$/);
   for (const text of await page.locator('.cd-result__call').allInnerTexts()) expect(text).not.toContain('__probe');
 });
